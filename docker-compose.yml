@@ -1,0 +1,34 @@
+services:
+  techdaily-postgres:
+    image: pgvector/pgvector:pg17
+    container_name: techdaily_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: techdaily_db
+      POSTGRES_USER: techdaily_user
+      POSTGRES_PASSWORD: techdaily_password_secret
+    ports:
+      - "5433:5432"
+    volumes:
+      - techdaily_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U techdaily_user -d techdaily_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  techdaily-pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: techdaily_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@techdaily.local
+      PGADMIN_DEFAULT_PASSWORD: admin_password_secret
+    ports:
+      - "5051:80"
+    depends_on:
+      techdaily-postgres:
+        condition: service_healthy
+
+volumes:
+  techdaily_pgdata:

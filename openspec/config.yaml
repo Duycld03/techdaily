@@ -1,0 +1,23 @@
+schema: spec-driven
+
+context: |
+  TechDaily is a daily micro-learning and Senior interview preparation platform.
+  Key Guidelines:
+  - 100% English codebase (code, symbols, tests, comments, API contracts, logs).
+  - Source documents retain their original language (English docs stay in English, Vietnamese docs stay in Vietnamese).
+  - Multi-language UI (i18n: en-US, vi-VN).
+  - Dark Mode first for night-time developer usage.
+  Tech stack:
+  - Backend: ASP.NET Core (.NET 10), C# 13, Clean Architecture with Plain Use-Case Handlers (Pure DI), Rich Domain Model, EF Core 10, PostgreSQL 17 (pgvector)
+  - Frontend: Nuxt 4 (Vue 3, SSR/PWA), Tailwind CSS, Pinia, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode (Dark/Light), CodeMirror 6 + Shiki Live Preview, Floating UI Inline Explainer, HTML5 MediaRecorder
+  - AI Engine: Gemini 2.5 / 2.0 Flash (1-Pass Multimodal voice & text evaluation, Structured JSON Output, Semantic Term Cache)
+  - Background Jobs: BackgroundService / Quartz.NET for 08:00 AM dispatch & Spaced Repetition (SM-2)
+  - Notifications: Telegram Bot API (alerts with Web deep links)
+
+rules:
+  proposal:
+    - Keep proposals focused on clear business value and architectural boundaries
+  tasks:
+    - Group tasks by component (Domain, Application, Infrastructure, Api, Frontend)
+    - Ensure every task is actionable and testable
+    - Ensure 100% English in codebase and documentation
