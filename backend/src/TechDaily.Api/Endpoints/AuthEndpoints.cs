@@ -46,7 +46,9 @@ public static class AuthEndpoints
                 Email = normalizedEmail,
                 Name = string.IsNullOrWhiteSpace(request.Name) ? normalizedEmail.Split('@')[0] : request.Name.Trim(),
                 PasswordHash = PasswordHasher.HashPassword(request.Password),
-                PreferredLocale = request.Locale ?? "en"
+                PreferredLocale = request.Locale ?? "en",
+                TargetRole = "Senior Engineer",
+                DailyGoalMinutes = 10
             };
 
             await db.Users.AddAsync(user);
@@ -65,7 +67,9 @@ public static class AuthEndpoints
                     user.Id,
                     user.Email,
                     user.Name,
-                    user.PreferredLocale
+                    user.PreferredLocale,
+                    user.TargetRole,
+                    user.DailyGoalMinutes
                 }
             });
         })
@@ -104,7 +108,10 @@ public static class AuthEndpoints
                     user.Id,
                     user.Email,
                     user.Name,
-                    user.PreferredLocale
+                    user.PreferredLocale,
+                    user.TargetRole,
+                    user.DailyGoalMinutes,
+                    user.AvatarUrl
                 }
             });
         })
@@ -138,7 +145,10 @@ public static class AuthEndpoints
                         Email = payload.Email,
                         Name = payload.Name ?? payload.Email.Split('@')[0],
                         AvatarUrl = payload.Picture,
-                        GoogleSubjectId = payload.Subject
+                        GoogleSubjectId = payload.Subject,
+                        PreferredLocale = "vi",
+                        TargetRole = "Senior Engineer",
+                        DailyGoalMinutes = 10
                     };
                     await db.Users.AddAsync(user);
 
@@ -146,6 +156,41 @@ public static class AuthEndpoints
                     await db.StreakRecords.AddAsync(streak);
 
                     await db.SaveChangesAsync();
+                }
+                else
+                {
+                    bool updated = false;
+                    if (string.IsNullOrWhiteSpace(user.GoogleSubjectId) && !string.IsNullOrWhiteSpace(payload.Subject))
+                    {
+                        user.GoogleSubjectId = payload.Subject;
+                        updated = true;
+                    }
+                    if (!string.IsNullOrWhiteSpace(payload.Picture) && user.AvatarUrl != payload.Picture)
+                    {
+                        user.AvatarUrl = payload.Picture;
+                        updated = true;
+                    }
+                    if (string.IsNullOrWhiteSpace(user.Name) && !string.IsNullOrWhiteSpace(payload.Name))
+                    {
+                        user.Name = payload.Name;
+                        updated = true;
+                    }
+                    if (string.IsNullOrWhiteSpace(user.TargetRole))
+                    {
+                        user.TargetRole = "Senior Engineer";
+                        updated = true;
+                    }
+                    if (user.DailyGoalMinutes <= 0)
+                    {
+                        user.DailyGoalMinutes = 10;
+                        updated = true;
+                    }
+
+                    if (updated)
+                    {
+                        user.UpdatedAt = DateTime.UtcNow;
+                        await db.SaveChangesAsync();
+                    }
                 }
 
                 var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
@@ -158,7 +203,9 @@ public static class AuthEndpoints
                         user.Email,
                         user.Name,
                         user.PreferredLocale,
-                        user.AvatarUrl
+                        user.AvatarUrl,
+                        user.TargetRole,
+                        user.DailyGoalMinutes
                     }
                 });
             }
