@@ -53,6 +53,7 @@ export function useApiClient() {
       request<T>(url, {
         method: 'POST',
         body
-      })
+      }),
+    delete: <T>(url: string) => request<T>(url, { method: 'DELETE' })
   }
 }

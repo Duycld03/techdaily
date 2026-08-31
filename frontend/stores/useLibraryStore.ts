@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { useApiClient } from '~/composables/useApiClient'
 
 export interface Book {
   id: string

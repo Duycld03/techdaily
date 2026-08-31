@@ -11,7 +11,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-slate-950 text-slate-100 antialiased selection:bg-brand-500/30 selection:text-brand-300">
+  <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
     <AppHeader />
     <div class="flex-1 flex overflow-hidden">
       <AppSidebar />

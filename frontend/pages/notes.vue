@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Highlighter, Tag, Trash2, BookOpen, Quote, Sparkles } from 'lucide-vue-next'
+import { Highlighter, Trash2, BookOpen } from 'lucide-vue-next'
 
 const notesStore = useNotesStore()
 const filterTag = ref<string | null>(null)
@@ -8,11 +8,6 @@ const filterTag = ref<string | null>(null)
 onMounted(() => {
   notesStore.fetchHighlights()
 })
-
-function selectTag(tag: string | null) {
-  filterTag.value = tag
-  notesStore.fetchHighlights(tag || undefined)
-}
 
 async function handleDelete(id: string) {
   if (confirm('Are you sure you want to delete this highlight?')) {
@@ -22,18 +17,18 @@ async function handleDelete(id: string) {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto p-6 md:p-10 space-y-8">
+  <div class="max-w-4xl mx-auto p-6 md:p-10 space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-        <Highlighter class="w-7 h-7 text-brand-400" />
+      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+        <Highlighter class="w-7 h-7 text-brand-600 dark:text-brand-400" />
         <span>{{ $t('notes.title') }}</span>
       </h1>
-      <p class="text-xs text-slate-400 mt-1">{{ $t('notes.subtitle') }}</p>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{{ $t('notes.subtitle') }}</p>
     </div>
 
     <!-- Highlights List -->
-    <div v-if="notesStore.isLoading" class="flex flex-col items-center justify-center py-20 text-slate-400 text-sm">
+    <div v-if="notesStore.isLoading" class="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 text-sm">
       <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mb-3"></div>
       <span>Loading saved highlights...</span>
     </div>
@@ -42,20 +37,20 @@ async function handleDelete(id: string) {
       <div
         v-for="item in notesStore.highlights"
         :key="item.id"
-        class="p-6 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all space-y-4 shadow-sm"
+        class="p-6 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-400 dark:hover:border-slate-700 transition-all space-y-4 shadow-md dark:shadow-sm"
       >
         <!-- Reference bar -->
-        <div class="flex items-center justify-between text-xs text-slate-400">
+        <div class="flex items-center justify-between text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
           <div class="flex items-center gap-2">
-            <BookOpen class="w-3.5 h-3.5 text-brand-400" />
-            <span class="font-semibold text-slate-300">{{ item.bookTitle }}</span>
-            <span class="text-slate-600">•</span>
+            <BookOpen class="w-4 h-4 text-brand-600 dark:text-brand-400" />
+            <span class="text-slate-800 dark:text-slate-200">{{ item.bookTitle }}</span>
+            <span class="text-slate-400 dark:text-slate-600">•</span>
             <span>{{ item.chapterTitle }}</span>
           </div>
 
           <button
             @click="handleDelete(item.id)"
-            class="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-colors"
+            class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors"
             title="Delete Highlight"
           >
             <Trash2 class="w-4 h-4" />
@@ -63,13 +58,13 @@ async function handleDelete(id: string) {
         </div>
 
         <!-- Highlighted Text Quote -->
-        <div class="p-4 rounded-xl bg-slate-950/80 border-l-4 border-brand-500 text-sm text-slate-200 leading-relaxed font-sans italic">
+        <div class="p-4.5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border-l-4 border-brand-500 text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed font-sans italic">
           "{{ item.selectedText }}"
         </div>
 
         <!-- Note (if any) -->
-        <p v-if="item.note" class="text-xs text-slate-300 bg-slate-800/40 p-3 rounded-lg border border-slate-800">
-          <strong class="text-slate-400">Note:</strong> {{ item.note }}
+        <p v-if="item.note" class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
+          <strong class="text-slate-900 dark:text-slate-400">Note:</strong> {{ item.note }}
         </p>
 
         <!-- Tags -->
@@ -77,7 +72,7 @@ async function handleDelete(id: string) {
           <span
             v-for="(tag, i) in item.tags"
             :key="i"
-            class="px-2.5 py-0.5 rounded-md bg-slate-800 text-[11px] font-medium text-slate-300 border border-slate-700"
+            class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
           >
             #{{ tag }}
           </span>
@@ -86,9 +81,9 @@ async function handleDelete(id: string) {
     </div>
 
     <!-- Empty State -->
-    <div v-else class="text-center py-16 bg-slate-900/40 rounded-3xl border border-slate-800/80 p-8">
-      <Highlighter class="w-12 h-12 text-slate-600 mx-auto mb-3" />
-      <h3 class="text-base font-bold text-slate-200">No Highlights Saved</h3>
+    <div v-else class="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-sm">
+      <Highlighter class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
+      <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">No Highlights Saved</h3>
       <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">{{ $t('notes.no_notes') }}</p>
     </div>
   </div>

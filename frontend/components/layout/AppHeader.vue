@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { BookOpen, LogOut, User as UserIcon } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { BookOpen, LogOut } from 'lucide-vue-next'
 import StreakBadge from '~/components/common/StreakBadge.vue'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
@@ -12,18 +13,18 @@ const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 
 </script>
 
 <template>
-  <header class="h-14 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between">
+  <header class="h-15 border-b border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/80 backdrop-blur sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between transition-colors duration-200">
     <!-- Brand & Day order -->
     <div class="flex items-center gap-4">
-      <NuxtLink to="/today" class="flex items-center gap-2.5 font-bold tracking-tight text-white hover:opacity-90 transition-opacity">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-lg shadow-brand-500/20">
+      <NuxtLink to="/today" class="flex items-center gap-2.5 font-bold tracking-tight hover:opacity-90 transition-opacity">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-md shadow-brand-500/20">
           <BookOpen class="w-4 h-4 text-slate-950 font-bold" />
         </div>
-        <span class="text-base tracking-tight font-black bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">TechDaily</span>
+        <span class="text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-brand-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">TechDaily</span>
       </NuxtLink>
 
-      <span v-if="focusStore.data?.topic" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-950/60 border border-brand-800/60 text-brand-300">
-        <span class="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse"></span>
+      <span v-if="focusStore.data?.topic" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-100 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/60 text-brand-800 dark:text-brand-300">
+        <span class="w-2 h-2 rounded-full bg-brand-500 dark:bg-brand-400 animate-pulse"></span>
         Day {{ focusStore.data.topic.dayOrder }} / 30
       </span>
     </div>
@@ -35,13 +36,13 @@ const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 
       <ThemeToggle />
 
       <!-- User Profile / Auth Status -->
-      <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center gap-2 pl-2 border-l border-slate-800">
-        <div class="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-semibold text-slate-300">
+      <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center gap-2.5 pl-3 border-l border-slate-200 dark:border-slate-800">
+        <div class="w-8 h-8 rounded-full bg-brand-100 dark:bg-slate-800 border border-brand-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-brand-800 dark:text-slate-200 shadow-sm">
           {{ authStore.user.name.charAt(0).toUpperCase() }}
         </div>
         <button
           @click="authStore.logout()"
-          class="p-1.5 rounded-lg text-slate-400 hover:text-red-400 transition-colors"
+          class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
           title="Sign Out"
         >
           <LogOut class="w-4 h-4" />
@@ -51,7 +52,7 @@ const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 
       <NuxtLink
         v-else
         to="/login"
-        class="text-xs font-medium px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-slate-950 font-semibold transition-colors shadow-sm"
+        class="text-xs font-bold px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 transition-all shadow-md shadow-brand-500/20 active:scale-95"
       >
         {{ $t('nav.login') }}
       </NuxtLink>

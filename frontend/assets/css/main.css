@@ -3,8 +3,13 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-slate-950 text-slate-100 antialiased font-sans selection:bg-brand-500/30 selection:text-brand-300;
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased font-sans transition-colors duration-200 selection:bg-brand-500/30 selection:text-brand-500 dark:selection:text-brand-300;
   }
 }
 
@@ -19,34 +24,46 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-800 rounded hover:bg-slate-700;
+  @apply bg-slate-300 dark:bg-slate-800 rounded hover:bg-slate-400 dark:hover:bg-slate-700;
 }
 
-/* Markdown render styling */
+/* Markdown render styling with enhanced typography & dual theme */
+.markdown-body {
+  @apply text-base leading-relaxed;
+}
+
 .markdown-body h1 {
-  @apply text-2xl font-bold mt-6 mb-4 text-slate-100;
+  @apply text-2xl md:text-3xl font-extrabold mt-6 mb-4 text-slate-900 dark:text-white tracking-tight;
 }
+
 .markdown-body h2 {
-  @apply text-xl font-semibold mt-5 mb-3 text-slate-200;
+  @apply text-xl md:text-2xl font-bold mt-5 mb-3 text-slate-800 dark:text-slate-100 tracking-tight;
 }
+
 .markdown-body h3 {
-  @apply text-lg font-medium mt-4 mb-2 text-slate-300;
+  @apply text-lg md:text-xl font-semibold mt-4 mb-2 text-slate-800 dark:text-slate-200;
 }
+
 .markdown-body p {
-  @apply leading-relaxed mb-4 text-slate-300;
+  @apply leading-relaxed mb-4 text-slate-700 dark:text-slate-300 text-sm md:text-base;
 }
+
 .markdown-body ul {
-  @apply list-disc list-inside mb-4 space-y-1 text-slate-300;
+  @apply list-disc list-inside mb-4 space-y-1.5 text-slate-700 dark:text-slate-300 text-sm md:text-base;
 }
+
 .markdown-body ol {
-  @apply list-decimal list-inside mb-4 space-y-1 text-slate-300;
+  @apply list-decimal list-inside mb-4 space-y-1.5 text-slate-700 dark:text-slate-300 text-sm md:text-base;
 }
+
 .markdown-body code:not(pre code) {
-  @apply font-mono text-sm px-1.5 py-0.5 rounded bg-slate-800 text-brand-300 border border-slate-700/60;
+  @apply font-mono text-sm px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-brand-700 dark:text-brand-300 border border-slate-300 dark:border-slate-700/60 font-medium;
 }
+
 .markdown-body pre {
-  @apply font-mono text-sm p-4 rounded-xl bg-slate-900 border border-slate-800 my-4 overflow-x-auto;
+  @apply font-mono text-sm p-4 rounded-2xl bg-slate-900 text-slate-100 border border-slate-800 my-4 overflow-x-auto shadow-sm;
 }
+
 .markdown-body blockquote {
-  @apply border-l-4 border-brand-500/80 pl-4 my-4 italic text-slate-400 bg-brand-950/20 py-2 rounded-r;
+  @apply border-l-4 border-brand-500 pl-4 my-4 italic text-slate-600 dark:text-slate-400 bg-brand-50/50 dark:bg-brand-950/20 py-2.5 rounded-r text-sm md:text-base;
 }

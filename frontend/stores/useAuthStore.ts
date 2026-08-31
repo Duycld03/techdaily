@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useApiClient } from '~/composables/useApiClient'
 
 export interface AuthUser {
   id: string
@@ -17,7 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => !!token.value)
 
   function init() {
-    if (import.meta.client && !isInitialized.value) {
+    if (typeof window !== 'undefined' && !isInitialized.value) {
       token.value = localStorage.getItem('techdaily_token')
       const storedUser = localStorage.getItem('techdaily_user')
       if (storedUser) {
@@ -63,7 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
   function setSession(newToken: string, newUser: AuthUser) {
     token.value = newToken
     user.value = newUser
-    if (import.meta.client) {
+    if (typeof window !== 'undefined') {
       localStorage.setItem('techdaily_token', newToken)
       localStorage.setItem('techdaily_user', JSON.stringify(newUser))
     }
@@ -72,7 +73,7 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     token.value = null
     user.value = null
-    if (import.meta.client) {
+    if (typeof window !== 'undefined') {
       localStorage.removeItem('techdaily_token')
       localStorage.removeItem('techdaily_user')
     }
