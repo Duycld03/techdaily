@@ -1,3 +1,4 @@
+using TechDaily.Application.DTOs;
 using TechDaily.Domain.Enums;
 using TechDaily.Domain.ValueObjects;
 
@@ -47,5 +48,5 @@ public class DailyDrillDto
     public string? UserAudioUrl { get; set; }
     public int AttemptCount { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }
-    public DTOs.AiReviewDto? AiReview { get; set; }
+    public AiReviewDto? AiReview { get; set; }
 }

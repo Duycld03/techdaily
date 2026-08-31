@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TechDaily.Application.Common;
+using TechDaily.Application.DTOs;
 using TechDaily.Application.Features.DailyFocus.DTOs;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
@@ -147,7 +148,7 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                 UserAudioUrl = drill.UserAudioUrl,
                 AttemptCount = drill.AttemptCount,
                 SubmittedAt = drill.SubmittedAt,
-                AiReview = drill.AiReview == null ? null : new DTOs.AiReviewDto
+                AiReview = drill.AiReview == null ? null : new AiReviewDto
                 {
                     Score = drill.AiReview.Score,
                     SummaryFeedback = drill.AiReview.SummaryFeedback,

@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using TechDaily.Application.Interfaces;
@@ -28,11 +29,33 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Enable pgvector extension in PostgreSQL
-        modelBuilder.HasPostgresExtension("vector");
-
         // Apply all entity configurations in this assembly
         modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+        var isNpgsql = Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+
+        if (isNpgsql)
+        {
+            // Enable pgvector extension in PostgreSQL
+            modelBuilder.HasPostgresExtension("vector");
+            modelBuilder.Entity<DocumentChunk>().Property(c => c.Embedding).HasColumnType("vector(768)");
+            modelBuilder.Entity<TermExplanationCache>().Property(t => t.Embedding).HasColumnType("vector(768)");
+        }
+        else
+        {
+            // For SQLite / InMemory test providers, convert Vector to string directly to avoid EF 9 primitive collection conflicts
+            modelBuilder.Entity<DocumentChunk>()
+                .Property(c => c.Embedding)
+                .HasConversion(
+                    v => v == null ? null : string.Join(";", v.ToArray()),
+                    s => s == null ? null : new Pgvector.Vector(s.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(float.Parse).ToArray()));
+
+            modelBuilder.Entity<TermExplanationCache>()
+                .Property(t => t.Embedding)
+                .HasConversion(
+                    v => v == null ? null : string.Join(";", v.ToArray()),
+                    s => s == null ? null : new Pgvector.Vector(s.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(float.Parse).ToArray()));
+        }
 
         // Global query filter for soft delete
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -45,11 +68,11 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
         }
     }
 
-    private static System.Linq.Expressions.LambdaExpression ConvertFilterExpression(Type entityType)
+    private static LambdaExpression ConvertFilterExpression(Type entityType)
     {
-        var parameter = System.Linq.Expressions.Expression.Parameter(entityType, "e");
-        var property = System.Linq.Expressions.Expression.Property(parameter, nameof(BaseEntity.IsDeleted));
-        var condition = System.Linq.Expressions.Expression.Equal(property, System.Linq.Expressions.Expression.Constant(false));
-        return System.Linq.Expressions.Expression.Lambda(condition, parameter);
+        var parameter = Expression.Parameter(entityType, "e");
+        var property = Expression.Property(parameter, nameof(BaseEntity.IsDeleted));
+        var condition = Expression.Equal(property, Expression.Constant(false));
+        return Expression.Lambda(condition, parameter);
     }
 }

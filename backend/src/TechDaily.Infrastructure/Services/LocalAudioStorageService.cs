@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using TechDaily.Application.Interfaces;
 
@@ -9,10 +9,13 @@ public class LocalAudioStorageService : IAudioStorageService
     private readonly string _storageDirectory;
     private readonly ILogger<LocalAudioStorageService> _logger;
 
-    public LocalAudioStorageService(IHostEnvironment env, ILogger<LocalAudioStorageService> logger)
+    public LocalAudioStorageService(IConfiguration configuration, ILogger<LocalAudioStorageService> logger)
     {
         _logger = logger;
-        _storageDirectory = Path.Combine(env.ContentRootPath, "..", "..", "storage", "audios");
+        var configPath = configuration["Storage:AudioPath"];
+        _storageDirectory = !string.IsNullOrWhiteSpace(configPath)
+            ? configPath
+            : Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "storage", "audios");
 
         if (!Directory.Exists(_storageDirectory))
         {

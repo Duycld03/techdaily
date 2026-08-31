@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TechDaily.Domain.Entities;
@@ -12,6 +13,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Email).HasMaxLength(255).IsRequired();
         builder.HasIndex(u => u.Email).IsUnique();
         builder.Property(u => u.Name).HasMaxLength(255).IsRequired();
+        builder.Property(u => u.AvatarUrl).HasMaxLength(500);
+        builder.Property(u => u.GoogleSubjectId).HasMaxLength(255);
+        builder.Property(u => u.TelegramChatId);
         builder.Property(u => u.PreferredLocale).HasMaxLength(10).HasDefaultValue("en");
 
         builder.HasOne(u => u.StreakRecord)
@@ -49,6 +53,11 @@ public class InterviewQuestionConfiguration : IEntityTypeConfiguration<Interview
         builder.Property(q => q.QuestionText).IsRequired();
         builder.Property(q => q.ModelAnswerMarkdown).IsRequired();
         builder.Property(q => q.Difficulty).HasConversion<string>().HasMaxLength(50).IsRequired();
+
+        builder.Property(q => q.ExpectedKeyPoints)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
     }
 }
 
@@ -81,11 +90,18 @@ public class DocumentChunkConfiguration : IEntityTypeConfiguration<DocumentChunk
         builder.Property(c => c.Language).HasMaxLength(10).HasDefaultValue("en");
         builder.Property(c => c.ChunkOrder).IsRequired();
 
-        // Vector embedding (768 dimensions for Gemini text-embedding-004)
-        builder.Property(c => c.Embedding).HasColumnType("vector(768)");
+        builder.Property(c => c.KeyTakeaways)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
 
-        // JSONB mapping for MicroQuizVo
-        builder.OwnsOne(c => c.MicroQuiz, b => b.ToJson());
+        builder.OwnsOne(c => c.MicroQuiz, b =>
+        {
+            b.Property(q => q.Options)
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
+        });
     }
 }
 
@@ -98,7 +114,6 @@ public class DailyDrillConfiguration : IEntityTypeConfiguration<DailyDrill>
         builder.Property(d => d.ScheduledDate).IsRequired();
         builder.Property(d => d.UserAudioUrl).HasMaxLength(500);
 
-        // Unique constraint: 1 daily drill per user per day per question
         builder.HasIndex(d => new { d.UserId, d.ScheduledDate, d.QuestionId }).IsUnique();
 
         builder.HasOne(d => d.User)
@@ -131,7 +146,17 @@ public class AiReviewConfiguration : IEntityTypeConfiguration<AiReview>
         builder.Property(r => r.Score).IsRequired();
         builder.Property(r => r.SummaryFeedback).IsRequired();
         builder.Property(r => r.ImprovedAnswerMarkdown).IsRequired();
-        builder.Property(r => r.AiModelUsed).HasMaxLength(50).HasDefaultValue("gemini-2.5-flash");
+        builder.Property(r => r.AiModelUsed).HasMaxLength(100).IsRequired();
+
+        builder.Property(r => r.Strengths)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
+
+        builder.Property(r => r.MissingPoints)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
     }
 }
 
@@ -142,6 +167,7 @@ public class SpacedRepetitionCardConfiguration : IEntityTypeConfiguration<Spaced
         builder.HasKey(c => c.Id);
         builder.Property(c => c.EaseFactor).HasPrecision(5, 2).HasDefaultValue(2.50m);
         builder.Property(c => c.IntervalDays).HasDefaultValue(1);
+        builder.Property(c => c.RepetitionCount).HasDefaultValue(0);
         builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(c => c.NextReviewDate).IsRequired();
 
@@ -168,7 +194,9 @@ public class StreakRecordConfiguration : IEntityTypeConfiguration<StreakRecord>
         builder.Property(s => s.CurrentStreak).HasDefaultValue(0);
         builder.Property(s => s.LongestStreak).HasDefaultValue(0);
         builder.Property(s => s.FreezeCreditsRemaining).HasDefaultValue(2);
-        builder.Property(s => s.AverageScore).HasPrecision(4, 2).HasDefaultValue(0.00m);
+        builder.Property(s => s.TotalDrillsCompleted).HasDefaultValue(0);
+        builder.Property(s => s.AverageScore).HasPrecision(5, 2).HasDefaultValue(0.00m);
+
         builder.HasIndex(s => s.UserId).IsUnique();
     }
 }
@@ -179,6 +207,12 @@ public class UserHighlightConfiguration : IEntityTypeConfiguration<UserHighlight
     {
         builder.HasKey(h => h.Id);
         builder.Property(h => h.SelectedText).IsRequired();
+        builder.Property(h => h.Note);
+
+        builder.Property(h => h.Tags)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
 
         builder.HasOne(h => h.User)
             .WithMany(u => u.UserHighlights)
@@ -197,12 +231,12 @@ public class TermExplanationCacheConfiguration : IEntityTypeConfiguration<TermEx
     public void Configure(EntityTypeBuilder<TermExplanationCache> builder)
     {
         builder.HasKey(t => t.Id);
-        builder.Property(t => t.Term).HasMaxLength(255).IsRequired();
+        builder.Property(t => t.Term).HasMaxLength(200).IsRequired();
         builder.Property(t => t.Category).HasMaxLength(50).IsRequired();
-        builder.Property(t => t.Locale).HasMaxLength(10).HasDefaultValue("en").IsRequired();
+        builder.Property(t => t.Locale).HasMaxLength(10).HasDefaultValue("en");
         builder.Property(t => t.ExplanationText).IsRequired();
-        builder.Property(t => t.Embedding).HasColumnType("vector(768)");
+        builder.Property(t => t.HitCount).HasDefaultValue(1);
 
-        builder.HasIndex(t => new { t.Term, t.Locale }).IsUnique();
+        builder.HasIndex(t => new { t.Term, t.Locale });
     }
 }

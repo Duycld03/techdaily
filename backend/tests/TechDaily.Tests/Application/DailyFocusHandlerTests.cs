@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using TechDaily.Application.Common;
 using TechDaily.Application.DTOs;
@@ -12,23 +13,37 @@ using Xunit;
 
 namespace TechDaily.Tests.Application;
 
-public class DailyFocusHandlerTests
+public class DailyFocusHandlerTests : IDisposable
 {
-    private TechDailyDbContext CreateDbContext()
+    private readonly SqliteConnection _connection;
+    private readonly TechDailyDbContext _db;
+
+    public DailyFocusHandlerTests()
     {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+
         var options = new DbContextOptionsBuilder<TechDailyDbContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .UseSqlite(_connection)
             .Options;
 
-        return new TechDailyDbContext(options);
+        _db = new TechDailyDbContext(options);
+        _db.Database.EnsureCreated();
+    }
+
+    public void Dispose()
+    {
+        _db.Dispose();
+        _connection.Dispose();
     }
 
     [Fact]
     public async Task GetTodayFocus_ShouldCreateIdempotentDrill_WhenNoneExists()
     {
         // Arrange
-        using var db = CreateDbContext();
         var userId = Guid.NewGuid();
+        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        await _db.Users.AddAsync(user);
 
         var topic = new Topic
         {
@@ -50,11 +65,11 @@ public class DailyFocusHandlerTests
         };
         topic.InterviewQuestions.Add(question);
 
-        await db.Topics.AddAsync(topic);
-        await db.InterviewQuestions.AddAsync(question);
-        await db.SaveChangesAsync();
+        await _db.Topics.AddAsync(topic);
+        await _db.InterviewQuestions.AddAsync(question);
+        await _db.SaveChangesAsync();
 
-        var handler = new GetTodayFocusHandler(db);
+        var handler = new GetTodayFocusHandler(_db);
         var request = new GetTodayFocusRequest(userId);
 
         // Act
@@ -75,8 +90,10 @@ public class DailyFocusHandlerTests
     public async Task SubmitDailyDrill_ValidText_ShouldEvaluateAndIncrementStreak()
     {
         // Arrange
-        using var db = CreateDbContext();
         var userId = Guid.NewGuid();
+        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        await _db.Users.AddAsync(user);
+
         var topicId = Guid.NewGuid();
         var questionId = Guid.NewGuid();
 
@@ -84,10 +101,10 @@ public class DailyFocusHandlerTests
         var question = new InterviewQuestion { Id = questionId, TopicId = topicId, QuestionText = "Explain LOH", ModelAnswerMarkdown = "Model answer", Difficulty = Difficulty.Senior };
         var drill = new DailyDrill { Id = Guid.NewGuid(), UserId = userId, QuestionId = questionId, ScheduledDate = DateOnly.FromDateTime(DateTime.UtcNow) };
 
-        await db.Topics.AddAsync(topic);
-        await db.InterviewQuestions.AddAsync(question);
-        await db.DailyDrills.AddAsync(drill);
-        await db.SaveChangesAsync();
+        await _db.Topics.AddAsync(topic);
+        await _db.InterviewQuestions.AddAsync(question);
+        await _db.DailyDrills.AddAsync(drill);
+        await _db.SaveChangesAsync();
 
         var mockAiService = new MockAiService(new AiReviewDto
         {
@@ -102,7 +119,7 @@ public class DailyFocusHandlerTests
         var mockStorage = new MockAudioStorage();
         var validator = new SubmitDailyDrillValidator();
 
-        var handler = new SubmitDailyDrillHandler(db, mockAiService, mockStorage, validator);
+        var handler = new SubmitDailyDrillHandler(_db, mockAiService, mockStorage, validator);
         var request = new SubmitDailyDrillRequest(drill.Id, userId, "This is a detailed explanation of LOH and Gen 2 garbage collection.");
 
         // Act
@@ -113,7 +130,7 @@ public class DailyFocusHandlerTests
         result.Value.Review.Score.Should().Be(9);
         result.Value.CurrentStreak.Should().Be(1);
 
-        var updatedDrill = await db.DailyDrills.Include(d => d.AiReview).FirstAsync(d => d.Id == drill.Id);
+        var updatedDrill = await _db.DailyDrills.Include(d => d.AiReview).FirstAsync(d => d.Id == drill.Id);
         updatedDrill.Status.Should().Be(DrillStatus.Reviewed);
         updatedDrill.AiReview.Should().NotBeNull();
         updatedDrill.AiReview!.Score.Should().Be(9);
