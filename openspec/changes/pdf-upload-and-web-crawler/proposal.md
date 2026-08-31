@@ -11,7 +11,7 @@ Currently, importing a document in TechDaily requires users to manually copy and
 
 ## Proposed Solution
 - **PDF Upload & Ingestion (`POST /api/v1/library/upload-pdf`):**
-  - Accept `.pdf` multipart file upload supporting large technical books up to **500 MB**.
+  - Accept `.pdf` multipart file upload bounded to **50–60% of Gemini Free context window**: maximum **200 MB** or **800 pages** (~500,000 tokens).
   - Stream directly from the HTTP request stream into `UglyToad.PdfPig` without full in-memory byte array buffering to avoid Large Object Heap (LOH) fragmentation.
   - Extract text and bookmarks page-by-page, automatically segmenting pages into 3–5 minute reading slices (`DocumentChunk`) with chapter titles.
 - **Web URL Document Crawler (`POST /api/v1/library/crawl-url`):**
@@ -20,5 +20,5 @@ Currently, importing a document in TechDaily requires users to manually copy and
 - **Enhanced Import Modal in `/library`:**
   - Modern 3-tab import interface:
     1. **📝 Paste Markdown** (Fast direct input).
-    2. **📄 Upload PDF** (Drag & drop zone supporting up to 500 MB, live upload progress bar and page extraction indicator).
+    2. **📄 Upload PDF** (Drag & drop zone supporting up to 200 MB / 800 pages, live upload progress bar and page extraction indicator).
     3. **🌐 Import from URL** (URL input with "Fetch & Preview" button to review and edit markdown before saving).

@@ -24,13 +24,17 @@ Backend (ASP.NET Core)
 
 ## PDF Processing Strategy & Large File Memory Architecture
 1. **Extraction Engine:** Use `UglyToad.PdfPig` (.NET 10 compatible, zero native dependency, fast managed memory).
-2. **Streaming Pipeline (Zero-LOH Buffering):**
+2. **50–60% Safety Threshold:**
+   - Gemini Free context window is 1,000,000 tokens (~1,500 pages).
+   - TechDaily bounds PDF uploads to **50–60% of capacity**: **Max 200 MB** and **Max 800 pages** (~500,000 tokens).
+   - This guarantees that even if a full-book synthesis is performed later, it stays safely within the free quota limits.
+3. **Streaming Pipeline (Zero-LOH Buffering):**
    - Stream directly from `IFormFile.OpenReadStream()` to `PdfDocument.Open(stream)`.
-   - Never load the entire 500MB PDF as a single contiguous `byte[]` in memory. This eliminates Gen 2 GC pauses and avoids Large Object Heap (LOH) OutOfMemory fragmentation.
-3. **Kestrel & FormOptions Configuration:**
-   - Configure `[RequestSizeLimit(524_288_000)]` (500 MB) on `POST /api/v1/library/upload-pdf`.
-   - Set `FormOptions.MultipartBodyLengthLimit = 524_288_000` in endpoint DI wiring.
-4. **Text Normalization & Chunk Segmentation:**
+   - Never load the entire 200MB PDF as a single contiguous `byte[]` in memory. This eliminates Gen 2 GC pauses and avoids Large Object Heap (LOH) OutOfMemory fragmentation.
+4. **Kestrel & FormOptions Configuration:**
+   - Configure `[RequestSizeLimit(209_715_200)]` (200 MB) on `POST /api/v1/library/upload-pdf`.
+   - Set `FormOptions.MultipartBodyLengthLimit = 209_715_200` in endpoint DI wiring.
+5. **Text Normalization & Chunk Segmentation:**
    - Strip repeating running headers and footers (page numbers).
    - Detect chapter titles via font size / uppercase headings or group by contiguous 500-word page blocks.
    - Each `DocumentChunk` is tagged with `ChapterTitle = "Part {N}: ..."` or actual heading.
