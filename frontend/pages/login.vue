@@ -113,7 +113,9 @@ async function handleSubmit() {
           @click="authMode = 'login'; error = null"
           :class="[
             'flex-1 py-2.5 rounded-xl transition-all outline-none focus:outline-none',
-            authMode === 'login' ? 'bg-brand-600 text-white shadow-md font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            authMode === 'login'
+              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium'
           ]"
         >
           Sign In
@@ -123,7 +125,9 @@ async function handleSubmit() {
           @click="authMode = 'register'; error = null"
           :class="[
             'flex-1 py-2.5 rounded-xl transition-all outline-none focus:outline-none',
-            authMode === 'register' ? 'bg-brand-600 text-white shadow-md font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            authMode === 'register'
+              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium'
           ]"
         >
           Register

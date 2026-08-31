@@ -68,13 +68,13 @@ function resetToScheduledDay() {
           <select
             v-model="currentDayOrder"
             @change="navigateDay(currentDayOrder)"
-            class="appearance-none pl-3 pr-8 py-1.5 rounded-xl bg-brand-100 dark:bg-brand-950 border border-brand-200 dark:border-brand-800 text-brand-900 dark:text-brand-300 text-xs sm:text-sm font-bold focus:outline-none focus:border-brand-500 cursor-pointer shadow-sm"
+            class="appearance-none pl-3 pr-8 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-bold focus:outline-none focus:border-brand-500 cursor-pointer shadow-sm"
           >
             <option v-for="d in 30" :key="d" :value="d">
               Day {{ d }} / 30
             </option>
           </select>
-          <div class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-brand-700 dark:text-brand-400 text-xs">▼</div>
+          <div class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 text-xs">▼</div>
         </div>
 
         <span v-if="focusStore.data?.drill?.status === 2" class="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold">

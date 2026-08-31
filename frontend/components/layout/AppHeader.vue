@@ -72,8 +72,8 @@ function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => 
         <span class="text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-brand-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">TechDaily</span>
       </NuxtLink>
 
-      <span v-if="focusStore.data?.topic" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-100 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/60 text-brand-800 dark:text-brand-300">
-        <span class="w-2 h-2 rounded-full bg-brand-500 dark:bg-brand-400 animate-pulse"></span>
+      <span v-if="focusStore.data?.topic" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
+        <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
         Day {{ focusStore.data.topic.dayOrder }} / 30
       </span>
     </div>

@@ -108,10 +108,10 @@ async function handleImportSubmit() {
           :key="cat.label"
           @click="handleCategorySelect(cat.id)"
           :class="[
-            'px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition-all',
+            'px-4 py-2 rounded-xl text-xs sm:text-sm border transition-colors outline-none focus:outline-none',
             selectedCategory === cat.id
-              ? 'bg-brand-600 text-white border-brand-500 shadow-sm font-semibold'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700'
+              ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-slate-700 font-medium'
           ]"
         >
           {{ cat.label }}

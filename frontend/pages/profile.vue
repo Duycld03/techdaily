@@ -186,7 +186,9 @@ async function handlePasswordChange() {
           @click="activeTab = 'personal'"
           :class="[
             'flex-1 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 outline-none focus:outline-none',
-            activeTab === 'personal' ? 'bg-brand-600 text-white shadow-md font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            activeTab === 'personal'
+              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium'
           ]"
         >
           <User class="w-4 h-4" />
@@ -198,7 +200,9 @@ async function handlePasswordChange() {
           @click="activeTab = 'security'"
           :class="[
             'flex-1 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 outline-none focus:outline-none',
-            activeTab === 'security' ? 'bg-brand-600 text-white shadow-md font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            activeTab === 'security'
+              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium'
           ]"
         >
           <Shield class="w-4 h-4" />
