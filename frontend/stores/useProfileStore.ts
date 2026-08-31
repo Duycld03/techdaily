@@ -64,7 +64,7 @@ export const useProfileStore = defineStore('profile', () => {
     successMessage.value = null
     try {
       const api = useApiClient()
-      const updated = await api.post<{
+      const updated = await api.put<{
         id: string
         email: string
         name: string
@@ -106,7 +106,7 @@ export const useProfileStore = defineStore('profile', () => {
     successMessage.value = null
     try {
       const api = useApiClient()
-      const res = await api.post<{ message: string }>('/api/v1/user/change-password', {
+      const res = await api.put<{ message: string }>('/api/v1/user/change-password', {
         currentPassword,
         newPassword
       })

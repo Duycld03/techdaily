@@ -33,7 +33,7 @@ vi.mock('~/composables/useApiClient', () => ({
       if (url.includes('/profile')) return mockProfile
       throw new Error('Not found')
     }),
-    post: vi.fn(async (url: string, body: any) => {
+    put: vi.fn(async (url: string, body: any) => {
       if (url.includes('/change-password')) {
         return { message: 'Password updated successfully.' }
       }

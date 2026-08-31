@@ -54,6 +54,11 @@ export function useApiClient() {
         method: 'POST',
         body
       }),
+    put: <T>(url: string, body?: any) =>
+      request<T>(url, {
+        method: 'PUT',
+        body: body ? JSON.stringify(body) : undefined
+      }),
     delete: <T>(url: string) => request<T>(url, { method: 'DELETE' })
   }
 }

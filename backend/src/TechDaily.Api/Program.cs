@@ -1,5 +1,9 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using TechDaily.Api.Endpoints;
 using TechDaily.Api.Middleware;
 using TechDaily.Application;
@@ -22,6 +26,29 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
+// Configure JWT Authentication
+var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "TechDaily_Senior_Super_Secret_Key_2026_Min_32_Chars!";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "TechDaily";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "TechDailyUsers";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            ValidateIssuer = true,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = jwtAudience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -41,6 +68,30 @@ builder.Services.AddSwaggerGen(options =>
         Title = "TechDaily API",
         Version = "v1",
         Description = "Daily Senior Engineering & Interview Drill Platform API"
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
     });
 });
 
@@ -69,6 +120,9 @@ app.UseStaticFiles(new StaticFileOptions
     FileProvider = new PhysicalFileProvider(audioStoragePath),
     RequestPath = "/uploads/audios"
 });
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Auto-migrate and seed database on startup
 using (var scope = app.Services.CreateScope())
@@ -111,23 +165,32 @@ app.MapGroup("/api/v1/auth")
 
 app.MapGroup("/api/v1/user")
     .WithTags("User Profile & Settings")
+    .RequireAuthorization()
     .MapUserEndpoints();
 
 // Health Check Endpoint
 app.MapGet("/health", async (TechDailyDbContext db) =>
 {
-    var canConnect = await db.Database.CanConnectAsync();
-    return Results.Ok(new
+    try
     {
-        Status = "Healthy",
-        Timestamp = DateTimeOffset.UtcNow,
-        DatabaseConnected = canConnect,
-        Environment = app.Environment.EnvironmentName
-    });
-})
-.WithName("HealthCheck")
-.WithTags("System");
+        var canConnect = await db.Database.CanConnectAsync();
+        return Results.Ok(new
+        {
+            status = canConnect ? "healthy" : "degraded",
+            database = canConnect ? "connected" : "unavailable",
+            timestamp = DateTime.UtcNow
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            status = "unhealthy",
+            database = "error",
+            error = ex.Message,
+            timestamp = DateTime.UtcNow
+        }, statusCode: 503);
+    }
+});
 
 app.Run();
-
-public partial class Program { }

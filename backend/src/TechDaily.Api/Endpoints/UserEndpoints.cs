@@ -10,21 +10,24 @@ public static class UserEndpoints
 {
     public static RouteGroupBuilder MapUserEndpoints(this RouteGroupBuilder group)
     {
-        // Get Current User Profile with Real-time Learning Analytics
+        // Get Current Authenticated User Profile with Real-time Learning Analytics
         group.MapGet("/profile", async (
             ClaimsPrincipal userClaims,
             TechDailyDbContext db) =>
         {
             var userId = GetCurrentUserId(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
             var user = await db.Users
                 .Include(u => u.StreakRecord)
-                .FirstOrDefaultAsync(u => u.Id == userId);
+                .FirstOrDefaultAsync(u => u.Id == userId.Value);
 
             if (user == null)
             {
-                // Fallback to first active user if in guest mode or token is default
-                user = await db.Users.Include(u => u.StreakRecord).FirstOrDefaultAsync() 
-                       ?? throw new InvalidOperationException("No user found.");
+                return Results.Unauthorized();
             }
 
             var drills = await db.DailyDrills
@@ -71,7 +74,7 @@ public static class UserEndpoints
             });
         })
         .WithName("GetUserProfile")
-        .WithSummary("Fetches current user profile and aggregated learning statistics.");
+        .WithSummary("Fetches current authenticated user profile and aggregated learning statistics.");
 
         // Update User Profile
         group.MapPut("/profile", async (
@@ -80,12 +83,15 @@ public static class UserEndpoints
             TechDailyDbContext db) =>
         {
             var userId = GetCurrentUserId(userClaims);
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
 
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId.Value);
             if (user == null)
             {
-                user = await db.Users.FirstOrDefaultAsync() 
-                       ?? throw new InvalidOperationException("No user found.");
+                return Results.Unauthorized();
             }
 
             if (!string.IsNullOrWhiteSpace(request.Name))
@@ -122,7 +128,7 @@ public static class UserEndpoints
             });
         })
         .WithName("UpdateUserProfile")
-        .WithSummary("Updates user profile metadata.");
+        .WithSummary("Updates current authenticated user profile metadata.");
 
         // Change Password
         group.MapPut("/change-password", async (
@@ -130,17 +136,21 @@ public static class UserEndpoints
             ClaimsPrincipal userClaims,
             TechDailyDbContext db) =>
         {
+            var userId = GetCurrentUserId(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
             if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
             {
                 return Results.BadRequest(new { error = "New password must be at least 6 characters." });
             }
 
-            var userId = GetCurrentUserId(userClaims);
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId.Value);
             if (user == null)
             {
-                return Results.NotFound(new { error = "User not found." });
+                return Results.Unauthorized();
             }
 
             // If user has existing password, verify current password
@@ -159,12 +169,12 @@ public static class UserEndpoints
             return Results.Ok(new { message = "Password updated successfully." });
         })
         .WithName("ChangePassword")
-        .WithSummary("Changes or sets password for current user account.");
+        .WithSummary("Changes or sets password for current authenticated user account.");
 
         return group;
     }
 
-    private static Guid GetCurrentUserId(ClaimsPrincipal claims)
+    private static Guid? GetCurrentUserId(ClaimsPrincipal claims)
     {
         var idClaim = claims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (Guid.TryParse(idClaim, out var guid))
@@ -172,8 +182,7 @@ public static class UserEndpoints
             return guid;
         }
 
-        // Default fallback for development
-        return Guid.Parse("00000000-0000-0000-0000-000000000001");
+        return null;
     }
 }
 

@@ -2,13 +2,23 @@ export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore()
 
   // Initialize from storage on client if needed
-  if (import.meta.client && !authStore.isLoggedIn) {
+  if (typeof window !== 'undefined' && !authStore.isLoggedIn) {
     authStore.init()
   }
 
   const isGuestOnly = to.path === '/login'
+  const isAuthRequired = to.path.startsWith('/profile') || to.path.startsWith('/notes')
 
+  // Logged-in users cannot visit /login
   if (isGuestOnly && authStore.isLoggedIn) {
     return navigateTo('/today')
+  }
+
+  // Unauthenticated users cannot visit protected pages (/profile, /notes)
+  if (isAuthRequired && !authStore.isLoggedIn) {
+    return navigateTo({
+      path: '/login',
+      query: { redirect: to.fullPath }
+    })
   }
 })
