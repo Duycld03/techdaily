@@ -1,21 +1,52 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { BookOpen, LogOut, User } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import {
+  BookOpen,
+  LogOut,
+  User,
+  Menu,
+  X,
+  Target,
+  Layers,
+  Highlighter,
+  Settings
+} from 'lucide-vue-next'
 import StreakBadge from '~/components/common/StreakBadge.vue'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
 
+const route = useRoute()
 const authStore = useAuthStore()
 const focusStore = useDailyFocusStore()
 
+const isMobileNavOpen = ref(false)
+
 const currentStreak = computed(() => focusStore.data?.currentStreak ?? 0)
 const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 2)
+
+const links = [
+  { name: 'nav.today', path: '/today', icon: Target },
+  { name: 'nav.review', path: '/review', icon: Layers },
+  { name: 'nav.library', path: '/library', icon: BookOpen },
+  { name: 'nav.notes', path: '/notes', icon: Highlighter },
+  { name: 'nav.profile', path: '/profile', icon: User },
+  { name: 'nav.settings', path: '/settings', icon: Settings }
+]
 </script>
 
 <template>
-  <header class="h-15 border-b border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/80 backdrop-blur sticky top-0 z-40 px-4 md:px-6 flex items-center justify-between transition-colors duration-200">
-    <!-- Brand & Day order -->
-    <div class="flex items-center gap-4">
+  <header class="h-15 border-b border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/80 backdrop-blur sticky top-0 z-40 px-3 sm:px-6 flex items-center justify-between transition-colors duration-200">
+    <!-- Brand & Mobile Hamburger -->
+    <div class="flex items-center gap-2 sm:gap-4">
+      <!-- Mobile Menu Button -->
+      <button
+        @click="isMobileNavOpen = true"
+        class="md:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        title="Open Navigation Menu"
+      >
+        <Menu class="w-5 h-5" />
+      </button>
+
       <NuxtLink to="/today" class="flex items-center gap-2.5 font-bold tracking-tight hover:opacity-90 transition-opacity">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-md shadow-brand-500/20">
           <BookOpen class="w-4 h-4 text-slate-950 font-bold" />
@@ -30,13 +61,13 @@ const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 
     </div>
 
     <!-- Header Actions -->
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 sm:gap-3">
       <StreakBadge :streak="currentStreak" :freeze-credits="freezeCredits" />
       <LocaleSelector />
       <ThemeToggle />
 
       <!-- User Profile / Auth Status -->
-      <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center gap-2.5 pl-3 border-l border-slate-200 dark:border-slate-800">
+      <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center gap-2 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800">
         <NuxtLink
           to="/profile"
           class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors group"
@@ -62,10 +93,79 @@ const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 
       <NuxtLink
         v-else
         to="/login"
-        class="text-xs font-bold px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 transition-all shadow-md shadow-brand-500/20 active:scale-95"
+        class="text-xs font-bold px-3 sm:px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 transition-all shadow-md shadow-brand-500/20 active:scale-95"
       >
         {{ $t('nav.login') }}
       </NuxtLink>
+    </div>
+
+    <!-- Mobile Slide-Out Navigation Drawer -->
+    <div
+      v-if="isMobileNavOpen"
+      class="md:hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex justify-start animate-in fade-in"
+    >
+      <div class="w-4/5 max-w-xs bg-white dark:bg-slate-900 h-full flex flex-col justify-between p-6 shadow-2xl animate-in slide-in-from-left">
+        <div>
+          <!-- Drawer Header -->
+          <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+            <div class="flex items-center gap-2.5 font-bold tracking-tight">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-md">
+                <BookOpen class="w-4 h-4 text-slate-950 font-bold" />
+              </div>
+              <span class="text-base font-black text-slate-900 dark:text-white">TechDaily Menu</span>
+            </div>
+            <button
+              @click="isMobileNavOpen = false"
+              class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            >
+              <X class="w-5 h-5" />
+            </button>
+          </div>
+
+          <!-- Navigation Links -->
+          <nav class="space-y-1.5 mt-6">
+            <NuxtLink
+              v-for="link in links"
+              :key="link.path"
+              :to="link.path"
+              @click="isMobileNavOpen = false"
+              :class="[
+                'flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-semibold transition-all',
+                route.path === link.path
+                  ? 'bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/20 text-brand-700 dark:text-brand-400 font-bold shadow-sm'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+              ]"
+            >
+              <component :is="link.icon" class="w-5 h-5 text-brand-500" />
+              <span>{{ $t(link.name) }}</span>
+            </NuxtLink>
+          </nav>
+        </div>
+
+        <!-- Drawer Footer -->
+        <div class="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+          <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center justify-between p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/60">
+            <div class="flex items-center gap-2.5 truncate">
+              <div class="w-8 h-8 rounded-full bg-brand-500 text-slate-950 flex items-center justify-center font-bold text-xs">
+                {{ authStore.user.name.charAt(0).toUpperCase() }}
+              </div>
+              <span class="text-xs font-bold text-slate-900 dark:text-white truncate">
+                {{ authStore.user.name }}
+              </span>
+            </div>
+            <button
+              @click="authStore.logout(); isMobileNavOpen = false"
+              class="text-xs font-semibold text-rose-600 dark:text-rose-400"
+            >
+              Log Out
+            </button>
+          </div>
+
+          <div class="text-[11px] text-slate-400 text-center">
+            Senior Engineering Daily Platform
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 </template>
