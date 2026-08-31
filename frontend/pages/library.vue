@@ -136,11 +136,12 @@ async function handlePdfUpload() {
   pdfError.value = null
 
   try {
+    const { locale } = useI18n()
     const formData = new FormData()
-    formData.append('file', pdfFile.value)
+    formData.append('file', pdfFile.value, pdfFile.value.name)
     if (pdfTitle.value) formData.append('title', pdfTitle.value)
     formData.append('category', pdfCategory.value.toString())
-    formData.append('language', 'en')
+    formData.append('language', locale.value || 'vi')
 
     await libraryStore.uploadPdf(formData)
 

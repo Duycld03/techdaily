@@ -154,6 +154,11 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
     private static string GenerateSlug(string title)
     {
         var clean = Regex.Replace(title.ToLowerInvariant(), @"[^a-z0-9\s-]", "");
-        return Regex.Replace(clean, @"\s+", "-").Trim('-') + "-" + Guid.NewGuid().ToString().Substring(0, 6);
+        var slug = Regex.Replace(clean, @"\s+", "-").Trim('-');
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            slug = "document";
+        }
+        return slug + "-" + Guid.NewGuid().ToString().Substring(0, 6);
     }
 }
