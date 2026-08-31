@@ -11,7 +11,7 @@ function changeLocale(newLocale: string) {
     <button
       @click="changeLocale('en')"
       :class="[
-        'px-2.5 py-1 rounded-lg transition-all',
+        'px-2.5 py-1 rounded-lg transition-all outline-none focus:outline-none',
         locale === 'en'
           ? 'bg-white dark:bg-slate-800 text-brand-700 dark:text-brand-400 font-bold shadow-sm'
           : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -22,7 +22,7 @@ function changeLocale(newLocale: string) {
     <button
       @click="changeLocale('vi')"
       :class="[
-        'px-2.5 py-1 rounded-lg transition-all',
+        'px-2.5 py-1 rounded-lg transition-all outline-none focus:outline-none',
         locale === 'vi'
           ? 'bg-white dark:bg-slate-800 text-brand-700 dark:text-brand-400 font-bold shadow-sm'
           : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'

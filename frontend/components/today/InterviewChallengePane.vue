@@ -82,7 +82,7 @@ async function handleSubmit() {
           <button
             @click="inputMode = 'write'"
             :class="[
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors outline-none focus:outline-none',
               inputMode === 'write' ? 'bg-white dark:bg-slate-800 text-brand-700 dark:text-brand-400 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
             ]"
           >
@@ -92,7 +92,7 @@ async function handleSubmit() {
           <button
             @click="inputMode = 'voice'"
             :class="[
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors outline-none focus:outline-none',
               inputMode === 'voice' ? 'bg-white dark:bg-slate-800 text-brand-700 dark:text-brand-400 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
             ]"
           >

@@ -112,7 +112,7 @@ async function handleSubmit() {
           type="button"
           @click="authMode = 'login'; error = null"
           :class="[
-            'flex-1 py-2.5 rounded-xl transition-all',
+            'flex-1 py-2.5 rounded-xl transition-all outline-none focus:outline-none',
             authMode === 'login' ? 'bg-brand-600 text-white shadow-md font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           ]"
         >
@@ -122,7 +122,7 @@ async function handleSubmit() {
           type="button"
           @click="authMode = 'register'; error = null"
           :class="[
-            'flex-1 py-2.5 rounded-xl transition-all',
+            'flex-1 py-2.5 rounded-xl transition-all outline-none focus:outline-none',
             authMode === 'register' ? 'bg-brand-600 text-white shadow-md font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           ]"
         >
