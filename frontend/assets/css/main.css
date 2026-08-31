@@ -12,12 +12,16 @@
     @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased font-sans transition-colors duration-200 selection:bg-brand-500/30 selection:text-brand-500 dark:selection:text-brand-300;
   }
 
-  /* Prevent sticky focus outlines/borders on mouse click while preserving keyboard accessibility */
-  button:focus:not(:focus-visible),
-  a:focus:not(:focus-visible),
-  [role="button"]:focus:not(:focus-visible) {
+  /* Prevent sticky focus outlines/borders on mouse/touch clicks while preserving keyboard accessibility */
+  button:focus,
+  button:focus-visible,
+  a:focus,
+  a:focus-visible,
+  [role="button"]:focus,
+  [role="button"]:focus-visible {
     outline: none !important;
-    box-shadow: none;
+    box-shadow: none !important;
+    -webkit-tap-highlight-color: transparent !important;
   }
 }
 

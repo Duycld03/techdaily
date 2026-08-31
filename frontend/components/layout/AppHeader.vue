@@ -33,13 +33,22 @@ const links = [
 ]
 
 function isLinkActive(linkPath: string): boolean {
+  const currentPath = route.path
   if (linkPath === '/today') {
-    return route.path === '/today' || route.path === '/'
+    return currentPath === '/today' || currentPath === '/'
   }
   if (linkPath === '/library') {
-    return route.path.startsWith('/library') || route.path.startsWith('/read')
+    return currentPath === '/library' || currentPath.startsWith('/read')
   }
-  return route.path === linkPath || route.path.startsWith(linkPath + '/')
+  return currentPath === linkPath
+}
+
+function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => Promise<unknown>) {
+  navigate(event)
+  isMobileNavOpen.value = false
+  if (event.currentTarget && typeof (event.currentTarget as HTMLElement).blur === 'function') {
+    (event.currentTarget as HTMLElement).blur()
+  }
 }
 </script>
 
@@ -142,9 +151,9 @@ function isLinkActive(linkPath: string): boolean {
             >
               <a
                 :href="href"
-                @click="navigate(); isMobileNavOpen = false"
+                @click="handleMobileLinkClick($event, navigate)"
                 :class="[
-                  'flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm transition-all border outline-none focus:outline-none focus:ring-0',
+                  'flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm transition-all border outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0',
                   isLinkActive(link.path)
                     ? 'bg-brand-500/10 dark:bg-brand-500/15 border-brand-500/30 dark:border-brand-500/30 text-brand-700 dark:text-brand-400 font-bold shadow-sm'
                     : 'border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium'

@@ -1,6 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
+  future: {
+    hoverOnlyWhenSupported: true
+  },
   content: [
     './components/**/*.{js,vue,ts}',
     './layouts/**/*.vue',
