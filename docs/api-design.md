@@ -139,7 +139,91 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ---
 
-## 5. Technical Library & Notes (`/api/v1/library`, `/api/v1/notes`)
+## 5. Technical Library (`/api/v1/library`)
 
-### `GET /api/v1/library/books` | `POST /api/v1/library/import`
-### `GET /api/v1/notes/highlights` | `POST /api/v1/notes/highlights` | `DELETE /api/v1/notes/highlights/{id}`
+### `GET /api/v1/library/books`
+- **Auth:** Public
+- **Query Params:** `category` (optional int), `search` (optional string)
+- **Response (200 OK):** List of published, non-deleted books with metadata and total chunk count.
+
+### `GET /api/v1/library/books/{id}`
+- **Auth:** Public
+- **Response (200 OK):** Full book details including all ordered `DocumentChunk` slices.
+
+### `POST /api/v1/library/import`
+- **Auth:** Required (`Bearer`)
+- **Request Body:**
+  ```json
+  {
+    "title": "Clean Architecture in .NET 10",
+    "markdownContent": "# Domain Layer\n\n...",
+    "category": 0,
+    "sourceUrl": "https://github.com/...",
+    "language": "en"
+  }
+  ```
+- **Response (201 Created):** Created `BookDto`.
+
+### `POST /api/v1/library/upload-pdf`
+- **Auth:** Required (`Bearer`)
+- **Content-Type:** `multipart/form-data` (Supports up to 200 MB, max 800 pages)
+- **Form Fields:**
+  - `file`: Binary PDF file stream (`.pdf`)
+  - `title` *(optional)*: Custom book title
+  - `category` *(optional int)*: Category enum value
+  - `language` *(optional string)*: `en` or `vi`
+- **Response (201 Created):**
+  ```json
+  {
+    "book": {
+      "id": "bf7c9a22-c619-4bbf-81ac-b97ed3c482e9",
+      "title": "Microsoft.Win32 Namespace (.NET 10.0)",
+      "slug": "microsoftwin32-namespace-net-100-aee32b",
+      "sourceType": 0,
+      "category": 0,
+      "authorOrSourceUrl": "microsoft.win32-net-10.0.pdf",
+      "totalChunks": 67,
+      "isPublished": true,
+      "createdAt": "2026-08-31T17:44:31.0257833+00:00"
+    }
+  }
+  ```
+
+### `POST /api/v1/library/crawl-url`
+- **Auth:** Required (`Bearer`)
+- **Request Body:**
+  ```json
+  {
+    "url": "https://learn.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "title": "Dependency injection in ASP.NET Core",
+    "sourceUrl": "https://learn.microsoft.com/...",
+    "markdownContent": "## Keyed services\n\n```csharp\n...",
+    "estimatedWordCount": 3200
+  }
+  ```
+
+### `DELETE /api/v1/library/books/{id}`
+- **Auth:** Required (`Bearer`)
+- **Response (204 No Content):** Soft-deletes document and all associated chunks.
+
+---
+
+## 6. Reading Notes & Highlights (`/api/v1/notes`)
+
+### `GET /api/v1/notes/highlights`
+- **Auth:** Required (`Bearer`)
+- **Response (200 OK):** User's highlighted excerpts with tags and timestamps.
+
+### `POST /api/v1/notes/highlights`
+- **Auth:** Required (`Bearer`)
+- **Request Body:** `{ "documentChunkId": "...", "highlightedText": "...", "note": "...", "tags": ["csharp"] }`
+- **Response (201 Created):** Created highlight object.
+
+### `DELETE /api/v1/notes/highlights/{id}`
+- **Auth:** Required (`Bearer`)
+- **Response (204 No Content):** Deletes specified user highlight.

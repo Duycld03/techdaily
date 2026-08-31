@@ -20,40 +20,51 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 
 ---
 
-## 2. Frontend Routing & State Invariants
-1. **Explicit Route Protection:**
-   - Any authenticated user view (`/profile`, `/notes`, `/settings`) MUST be registered in `frontend/middleware/auth.global.ts`.
-   - Unauthenticated visitors accessing protected routes MUST be redirected to `/login?redirect={targetPath}`.
-   - Authenticated users visiting `/login` MUST be redirected to `/today`.
-2. **API Client Contract:**
-   - `useApiClient` MUST attach `Authorization: Bearer <token>` from localStorage when available.
-   - When an API call returns `401 Unauthorized`, clear local session state and redirect to `/login`.
+## 2. Document Processing & Ingestion Invariants
+
+### A. PDF Ingestion & Extraction (`PdfPigExtractor`)
+1. **Zero Large-Object-Heap (LOH) Streaming:**
+   - PDF files MUST be processed via non-buffering streams (`IFormFile.OpenReadStream()`).
+   - If the incoming stream is non-seekable, it must be safely buffered into a temporary seekable stream without leaking unmanaged memory.
+2. **Safety Boundaries (50-60% Gemini Free Tier Capacity):**
+   - Maximum file size: **200 MB**.
+   - Maximum page count: **800 pages** (~500,000 tokens). Exceeding this throws `InvalidOperationException`.
+3. **Geometric Baseline Line Grouping:**
+   - Words extracted via `page.GetWords()` MUST be grouped geometrically by their baseline Y-coordinate (`BoundingBox.Bottom`) with a tolerance factor (~3.5 points) to preserve natural paragraph line breaks and code indentations.
+4. **PostgreSQL UTF-8 Null-Byte (`\0`) Sanitization:**
+   - Raw PDF text extractions containing null bytes (`\0`, `0x00`) or control characters MUST be sanitized via `Regex.Replace(text, @"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "")` before writing to PostgreSQL text columns.
+5. **Continuous Code Block Unification:**
+   - Heuristics MUST detect continuous code lines, comments (`//`, `/*`), keywords, and block braces to prevent fragmented, multi-box code rendering.
+
+### B. Web Article Crawling (`WebArticleCrawler`)
+1. **Target Content Isolation:**
+   - HTML documents MUST be cleaned with `HtmlAgilityPack` to isolate primary article containers (`<article>`, `<main>`, `.markdown-body`).
+   - All junk tags (`<script>`, `<style>`, `<nav>`, `<footer>`, `<aside>`, ads, iframes) MUST be stripped.
+2. **Code Syntax & Alert Preservation:**
+   - Code classes (`lang-csharp`, `language-typescript`) MUST be mapped to standardized Markdown code fences ` ```{lang} `.
+   - Documentation callouts (`<div class="NOTE">`, `<div class="TIP">`, `<div class="WARNING">`) MUST be converted to Markdown blockquotes.
+3. **GitHub Raw Link Auto-Resolution:**
+   - GitHub web URLs (`github.com/.../blob/...`) MUST be auto-resolved to `raw.githubusercontent.com` before fetching.
 
 ---
 
-## 3. UI/UX & Interaction Invariants
-1. **Text Selection & Tooltip Etiquette:**
+## 3. UI/UX, Typography & Syntax Highlighting Invariants
+1. **Shiki Syntax Highlighting & Code Copying:**
+   - Code blocks MUST be rendered with **Shiki** (TextMate grammar engine) matching IDE-grade syntax colors for C#, TypeScript, JavaScript, SQL, Python, Go, JSON, Bash, YAML, Dockerfile.
+   - Every code block MUST feature a language header badge and an animated **1-Click Copy** button.
+   - Code block language auto-detection MUST infer the correct language (e.g. C# for `.NET` constructs, SQL for database statements) when untagged.
+2. **Text Selection & Tooltip Etiquette:**
    - NEVER attach global or root-level selection listeners that trigger full modals or API calls on `@mouseup`.
    - Selection actions MUST appear as a **discreet floating mini-menu** near the highlighted text inside the reading pane only.
    - Interactive elements (Micro Quizzes, buttons, textareas, inputs) MUST NEVER trigger selection tooltips or AI lookups.
    - Users selecting text to copy (`Ctrl+C`) or translate MUST NOT have their flow interrupted.
-2. **Typography & Readability Standards:**
+3. **Typography & Dual Theme Standards:**
    - Base font size MUST be at least `14px` (`text-sm`) to `16px` (`text-base`) with comfortable line height (`leading-relaxed`).
    - All components MUST support dual theme classes (`bg-white dark:bg-slate-900`, `text-slate-900 dark:text-white`, `border-slate-200 dark:border-slate-800`).
-   - Never hardcode background colors (`bg-slate-950`) without light mode equivalents.
 
 ---
 
-## 4. AI & Multimodal Evaluation Invariants
-1. **Model Assignment:**
-   - Multimodal Senior Drill Evaluation: `gemini-3.5-flash` with structured JSON schema.
-   - Instant Inline Term Explanation: `gemini-3.5-flash-lite` with semantic caching in `TermExplanationCaches`.
-2. **Graceful Degradation:**
-   - If AI evaluation or network times out, the backend MUST log the incident and return a clean RFC 7807 problem details response rather than crashing.
-
----
-
-## 5. Spaced Repetition (SM-2) Invariants
+## 4. Spaced Repetition (SM-2) Invariants
 1. **Mathematical Boundaries:**
    - $EF' = EF + (0.1 - (5 - q) \times (0.08 + (5 - q) \times 0.02))$
    - Ease Factor ($EF$) is bounded to $[1.30, 2.50]$.
@@ -62,12 +73,13 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 
 ---
 
-## 6. Anti-Patterns to NEVER Repeat
+## 5. Anti-Patterns to NEVER Repeat
 
 | Anti-Pattern | Why it is Forbidden | Correct Approach |
 | :--- | :--- | :--- |
 | **Dev 1-Click Login Bypass** | Bypasses real security flow and leads to broken production auth | Standard Email/Password registration + Google OAuth 2.0 with real JWT tokens |
 | **Hardcoded User Fallback Guids** | Masks missing authentication, leaks fake data to unauthenticated users | Return `401 Unauthorized` and enforce `.RequireAuthorization()` |
 | **Indiscriminate `@mouseup` Listeners** | Triggers unwanted popups during quiz clicks, copy, or translate | Scoped selection listener with floating mini-toolbar on reading markdown only |
-| **Skipping OpenSpec Planning** | Causes haphazard implementations, missing invariants, and edge-case bugs | Always create or update an OpenSpec change (`proposal.md`, `spec.md`, `tasks.md`) before implementation |
+| **Unsanitized PDF Binary Ingestion** | Null bytes `0x00` in raw PDF streams crash PostgreSQL database with error 22021 | Sanitize control characters before saving entities in EF Core |
+| **Inline Composable Invocations** | Calling `useI18n()` inside async event handlers throws Vue lifecycle errors | Destructure composables at top level of `<script setup>` |
 | **Hardcoded Dark Theme Classes** | Breaks light mode and makes UI illegible in bright environments | Dual Tailwind classes (`dark:bg-slate-950 bg-slate-50`) synced with `@nuxtjs/color-mode` |

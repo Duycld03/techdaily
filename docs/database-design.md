@@ -34,9 +34,11 @@ erDiagram
 | `SourceType` | `varchar(50)` | NOT NULL | Enum: `PdfBook`, `MarkdownSeries`, `WebDocUrl` |
 | `Category` | `varchar(50)` | NOT NULL | Enum: `Frontend`, `Backend`, `Database`, `Architecture` |
 | `TotalChunks` | `int` | NOT NULL, Default 0 | Total number of daily reading slices |
-| `AuthorOrSourceUrl` | `varchar(500)` | NULL | Original author or documentation link |
+| `AuthorOrSourceUrl` | `varchar(500)` | NULL | Original author, source file, or documentation link |
 | `IsPublished` | `boolean` | NOT NULL, Default true | Publishing status |
+| `IsDeleted` | `boolean` | NOT NULL, Default false | Soft delete flag |
 | `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
+| `UpdatedAt` | `timestamptz` | NULL | Last updated timestamp |
 
 ---
 
@@ -47,14 +49,16 @@ erDiagram
 | `DocumentBookId` | `uuid` | FK $\rightarrow$ `DocumentBooks(Id)`, NOT NULL | Reference to parent book |
 | `ChunkOrder` | `int` | NOT NULL | Day index in series (1, 2, 3...) |
 | `ChapterTitle` | `varchar(255)` | NOT NULL | Chapter/Topic Title |
-| `OriginalTextMarkdown` | `text` | NOT NULL | Raw official documentation excerpt (preserves source language) |
+| `OriginalTextMarkdown` | `text` | NOT NULL | Sanitized Markdown content with code blocks |
 | `SummaryMarkdown` | `text` | NOT NULL | 3-5 core takeaways |
 | `KeyTakeaways` | `jsonb` | NOT NULL | Array of bullet point strings `string[]` |
 | `MicroQuiz` | `jsonb` | NOT NULL | `{ question: string, options: string[], answerIndex: int, explanation: string }` |
 | `Language` | `varchar(10)` | NOT NULL, Default 'en' | ISO language code (`en`, `vi`, etc.) |
 | `Embedding` | `vector(768)` | NULL | Vector embedding for semantic search (pgvector) |
 | `EstimatedReadMinutes` | `int` | NOT NULL, Default 3 | Estimated reading time |
+| `IsDeleted` | `boolean` | NOT NULL, Default false | Soft delete flag |
 | `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
+| `UpdatedAt` | `timestamptz` | NULL | Last updated timestamp |
 
 ---
 
