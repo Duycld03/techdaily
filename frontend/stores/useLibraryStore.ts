@@ -98,6 +98,25 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
+  async function deleteBook(id: string) {
+    isLoading.value = true
+    error.value = null
+    try {
+      const api = useApiClient()
+      await api.delete(`/api/v1/library/books/${id}`)
+      books.value = books.value.filter(b => b.id !== id)
+      if (selectedBook.value?.id === id) {
+        selectedBook.value = null
+      }
+      return true
+    } catch (err: any) {
+      error.value = err.message || 'Failed to delete document.'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     books,
     selectedBook,
@@ -106,6 +125,7 @@ export const useLibraryStore = defineStore('library', () => {
     error,
     fetchBooks,
     fetchBookById,
-    importDocument
+    importDocument,
+    deleteBook
   }
 })

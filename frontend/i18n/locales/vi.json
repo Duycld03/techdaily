@@ -74,7 +74,13 @@
     "importing": "Đang Xử Lý Chunks & Embeddings...",
     "chunks": "lát cắt",
     "read_book": "Đọc Tài Liệu",
-    "no_books": "Không tìm thấy tài liệu phù hợp."
+    "no_books": "Không tìm thấy tài liệu phù hợp.",
+    "delete_doc": "Xóa Tài Liệu",
+    "confirm_delete_title": "Xác Nhận Xóa Tài Liệu",
+    "confirm_delete_desc": "Bạn có chắc chắn muốn xóa tài liệu \"{title}\"? Toàn bộ các lát cắt đọc, câu hỏi và dấu trang sẽ bị xóa.",
+    "confirm_delete_btn": "Đồng Ý Xóa",
+    "cancel": "Hủy Bỏ",
+    "deleting": "Đang xóa..."
   },
   "reader": {
     "library": "Thư Viện",

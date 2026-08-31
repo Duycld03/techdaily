@@ -4,6 +4,7 @@ using TechDaily.Application.Common;
 using TechDaily.Application.Features.DailyFocus.ExplainTerm;
 using TechDaily.Application.Features.DailyFocus.GetTodayFocus;
 using TechDaily.Application.Features.DailyFocus.SubmitDailyDrill;
+using TechDaily.Application.Features.Library.DeleteBook;
 using TechDaily.Application.Features.Library.GetBookById;
 using TechDaily.Application.Features.Library.GetBooks;
 using TechDaily.Application.Features.Library.ImportDocument;
@@ -34,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<GetBooksRequest, GetBooksResponse>, GetBooksHandler>();
         services.AddScoped<IUseCase<GetBookByIdRequest, GetBookByIdResponse>, GetBookByIdHandler>();
         services.AddScoped<IUseCase<ImportDocumentRequest, ImportDocumentResponse>, ImportDocumentHandler>();
+        services.AddScoped<IUseCase<DeleteBookRequest, DeleteBookResponse>, DeleteBookHandler>();
 
         // Notes / Highlights Handlers
         services.AddScoped<IUseCase<GetHighlightsRequest, GetHighlightsResponse>, GetHighlightsHandler>();

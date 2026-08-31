@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark } from 'lucide-vue-next'
+import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle } from 'lucide-vue-next'
 
 const libraryStore = useLibraryStore()
 
@@ -14,6 +14,11 @@ const importTitle = ref('')
 const importCategory = ref(0)
 const importSourceUrl = ref('')
 const importContent = ref('')
+
+// Delete modal state
+const bookToDelete = ref<{ id: string; title: string } | null>(null)
+const isDeleteModalOpen = ref(false)
+const isDeleting = ref(false)
 
 const categories = [
   { id: undefined, label: 'All Categories' },
@@ -74,6 +79,25 @@ async function handleImportSubmit() {
     isImportModalOpen.value = false
   } catch (err) {
     // error handled
+  }
+}
+
+function openDeleteModal(book: { id: string; title: string }) {
+  bookToDelete.value = book
+  isDeleteModalOpen.value = true
+}
+
+async function confirmDeleteBook() {
+  if (!bookToDelete.value) return
+  isDeleting.value = true
+  try {
+    await libraryStore.deleteBook(bookToDelete.value.id)
+    isDeleteModalOpen.value = false
+    bookToDelete.value = null
+  } catch (err) {
+    // error handled
+  } finally {
+    isDeleting.value = false
   }
 }
 </script>
@@ -170,7 +194,18 @@ async function handleImportSubmit() {
         </div>
 
         <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-          <span class="text-xs text-slate-400">GitBook Reader</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">GitBook Reader</span>
+            <button
+              @click.stop="openDeleteModal(book)"
+              class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 transition-colors"
+              :title="$t('library.delete_doc')"
+              :aria-label="$t('library.delete_doc')"
+            >
+              <Trash2 class="w-3.5 h-3.5" />
+            </button>
+          </div>
+
           <NuxtLink
             :to="`/read/${book.id}`"
             class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs transition-transform active:scale-95 shadow-sm"
@@ -190,7 +225,7 @@ async function handleImportSubmit() {
     </div>
 
     <!-- Import Document Modal -->
-    <div v-if="isImportModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div v-if="isImportModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
       <div class="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-9 space-y-6 animate-in zoom-in-95">
         <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
           <div>
@@ -230,7 +265,7 @@ async function handleImportSubmit() {
             </div>
 
             <div>
-              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.source_url_label') }}</label>
+              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.url_label') }}</label>
               <input
                 v-model="importSourceUrl"
                 type="url"
@@ -257,7 +292,7 @@ async function handleImportSubmit() {
               @click="isImportModalOpen = false"
               class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             >
-              Cancel
+              {{ $t('library.cancel') }}
             </button>
             <button
               type="submit"
@@ -269,6 +304,43 @@ async function handleImportSubmit() {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
+      <div class="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-5 animate-in zoom-in-95">
+        <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 flex items-center justify-center mx-auto">
+          <AlertTriangle class="w-6 h-6" />
+        </div>
+
+        <div class="text-center space-y-2">
+          <h3 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
+            {{ $t('library.confirm_delete_title') }}
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            {{ $t('library.confirm_delete_desc', { title: bookToDelete?.title }) }}
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3 pt-2">
+          <button
+            type="button"
+            @click="isDeleteModalOpen = false; bookToDelete = null"
+            class="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-xs sm:text-sm transition-colors"
+          >
+            {{ $t('library.cancel') }}
+          </button>
+          <button
+            type="button"
+            :disabled="isDeleting"
+            @click="confirmDeleteBook"
+            class="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-rose-600/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <span v-if="isDeleting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            <span>{{ isDeleting ? $t('library.deleting') : $t('library.confirm_delete_btn') }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

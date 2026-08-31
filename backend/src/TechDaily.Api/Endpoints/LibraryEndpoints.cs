@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TechDaily.Application.Common;
+using TechDaily.Application.Features.Library.DeleteBook;
 using TechDaily.Application.Features.Library.GetBookById;
 using TechDaily.Application.Features.Library.GetBooks;
 using TechDaily.Application.Features.Library.ImportDocument;
@@ -57,6 +58,21 @@ public static class LibraryEndpoints
         })
         .RequireAuthorization()
         .WithName("ImportDocument");
+
+        // Protected Document Deletion (Requires Authentication)
+        group.MapDelete("/books/{id:guid}", async (
+            Guid id,
+            [FromServices] IUseCase<DeleteBookRequest, DeleteBookResponse> handler,
+            CancellationToken ct) =>
+        {
+            var result = await handler.ExecuteAsync(new DeleteBookRequest(id), ct);
+            return result.Match(
+                success => Results.NoContent(),
+                error => error == Error.NotFound ? Results.NotFound() : Results.BadRequest(new { error = error.Message })
+            );
+        })
+        .RequireAuthorization()
+        .WithName("DeleteBook");
 
         return app;
     }

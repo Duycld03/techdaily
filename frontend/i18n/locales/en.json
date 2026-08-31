@@ -74,7 +74,13 @@
     "importing": "Processing Chunks & Embeddings...",
     "chunks": "slices",
     "read_book": "Read Slices",
-    "no_books": "No documents found."
+    "no_books": "No documents found.",
+    "delete_doc": "Delete Document",
+    "confirm_delete_title": "Delete Technical Document",
+    "confirm_delete_desc": "Are you sure you want to delete \"{title}\"? All reading slices, quizzes, and associated bookmarks will be removed.",
+    "confirm_delete_btn": "Yes, Delete Document",
+    "cancel": "Cancel",
+    "deleting": "Deleting..."
   },
   "reader": {
     "library": "Library",
