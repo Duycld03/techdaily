@@ -176,15 +176,18 @@ public class PdfPigExtractor : IPdfExtractor
 
     private static ExtractedPdfSlice CreateSlice(int order, string title, string content)
     {
-        var words = content.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        var sanitizedContent = SanitizeText(content);
+        var sanitizedTitle = SanitizeText(title);
+
+        var words = sanitizedContent.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
         var readMinutes = Math.Max(1, words.Length / 200);
 
-        var takeaways = ExtractKeyTakeaways(content);
+        var takeaways = ExtractKeyTakeaways(sanitizedContent);
 
         return new ExtractedPdfSlice(
             Order: order,
-            ChapterTitle: CleanTitle(title, order),
-            ContentMarkdown: FormatAsMarkdown(content, title),
+            ChapterTitle: CleanTitle(sanitizedTitle, order),
+            ContentMarkdown: FormatAsMarkdown(sanitizedContent, sanitizedTitle),
             EstimatedReadMinutes: readMinutes,
             KeyTakeaways: takeaways
         );
@@ -192,7 +195,7 @@ public class PdfPigExtractor : IPdfExtractor
 
     private static string CleanTitle(string rawTitle, int order)
     {
-        var cleaned = rawTitle.Replace("#", "").Trim();
+        var cleaned = SanitizeText(rawTitle).Replace("#", "").Trim();
         if (string.IsNullOrWhiteSpace(cleaned) || cleaned.Length < 3)
         {
             return $"Slice {order}";
@@ -212,6 +215,7 @@ public class PdfPigExtractor : IPdfExtractor
     private static List<string> ExtractKeyTakeaways(string text)
     {
         var sentences = text.Split(new[] { '.', '!', '?', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(SanitizeText)
             .Where(s => s.Length >= 25 && s.Length <= 140)
             .Take(3)
             .ToList();
@@ -222,5 +226,12 @@ public class PdfPigExtractor : IPdfExtractor
         }
 
         return sentences;
+    }
+
+    private static string SanitizeText(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+        // Strip null bytes (\0) and illegal ASCII/UTF-8 control chars that break PostgreSQL
+        return Regex.Replace(text, @"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "").Trim();
     }
 }

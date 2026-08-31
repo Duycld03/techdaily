@@ -80,10 +80,11 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
             return Error.Custom("PdfExtraction.Failed", $"Could not process PDF: {ex.Message}");
         }
 
-        var bookTitle = !string.IsNullOrWhiteSpace(request.Title)
+        var rawTitle = !string.IsNullOrWhiteSpace(request.Title)
             ? request.Title
             : extraction.DocumentTitle;
 
+        var bookTitle = SanitizeText(rawTitle);
         var slug = GenerateSlug(bookTitle);
 
         var book = new DocumentBook
@@ -92,30 +93,32 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
             Slug = slug,
             Category = request.Category,
             SourceType = SourceType.PdfBook,
-            AuthorOrSourceUrl = request.FileName,
+            AuthorOrSourceUrl = SanitizeText(request.FileName),
             IsPublished = true,
             TotalChunks = extraction.Slices.Count
         };
 
         foreach (var slice in extraction.Slices)
         {
-            var summary = slice.ContentMarkdown.Length > 300
-                ? slice.ContentMarkdown.Substring(0, 300) + "..."
-                : slice.ContentMarkdown;
+            var content = SanitizeText(slice.ContentMarkdown);
+            var chapter = SanitizeText(slice.ChapterTitle);
+            var summary = content.Length > 300
+                ? content.Substring(0, 300) + "..."
+                : content;
 
             var chunk = new DocumentChunk
             {
                 DocumentBookId = book.Id,
                 ChunkOrder = slice.Order,
-                ChapterTitle = slice.ChapterTitle,
-                OriginalTextMarkdown = slice.ContentMarkdown,
+                ChapterTitle = chapter,
+                OriginalTextMarkdown = content,
                 SummaryMarkdown = summary,
                 Language = request.Language,
                 EstimatedReadMinutes = slice.EstimatedReadMinutes,
-                KeyTakeaways = slice.KeyTakeaways,
+                KeyTakeaways = slice.KeyTakeaways.Select(SanitizeText).ToList(),
                 MicroQuiz = new MicroQuizVo
                 {
-                    Question = $"What is the primary technical concept discussed in {slice.ChapterTitle}?",
+                    Question = $"What is the primary technical concept discussed in {chapter}?",
                     Options = new()
                     {
                         "Core Architecture Invariant & Implementation",
@@ -124,7 +127,7 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
                         "Unused Abstract Syntax"
                     },
                     AnswerIndex = 0,
-                    Explanation = $"Understanding {slice.ChapterTitle} reinforces core technical architecture principles."
+                    Explanation = $"Understanding {chapter} reinforces core technical architecture principles."
                 }
             };
 
@@ -149,6 +152,12 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
                 CreatedAt = book.CreatedAt
             }
         };
+    }
+
+    private static string SanitizeText(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+        return Regex.Replace(text, @"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "").Trim();
     }
 
     private static string GenerateSlug(string title)
