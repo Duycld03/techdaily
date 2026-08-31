@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { Languages } from 'lucide-vue-next'
-
 const { locale, setLocale } = useI18n()
 
 function changeLocale(newLocale: string) {
@@ -9,12 +7,14 @@ function changeLocale(newLocale: string) {
 </script>
 
 <template>
-  <div class="flex items-center rounded-lg bg-slate-900 border border-slate-800 p-0.5 text-xs font-medium">
+  <div class="flex items-center rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-0.5 text-xs font-semibold transition-colors">
     <button
       @click="changeLocale('en')"
       :class="[
-        'px-2 py-1 rounded transition-colors',
-        locale === 'en' ? 'bg-slate-800 text-brand-400 font-semibold shadow-sm' : 'text-slate-400 hover:text-slate-200'
+        'px-2.5 py-1 rounded-lg transition-all',
+        locale === 'en'
+          ? 'bg-white dark:bg-slate-800 text-brand-700 dark:text-brand-400 font-bold shadow-sm'
+          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
       ]"
     >
       EN
@@ -22,8 +22,10 @@ function changeLocale(newLocale: string) {
     <button
       @click="changeLocale('vi')"
       :class="[
-        'px-2 py-1 rounded transition-colors',
-        locale === 'vi' ? 'bg-slate-800 text-brand-400 font-semibold shadow-sm' : 'text-slate-400 hover:text-slate-200'
+        'px-2.5 py-1 rounded-lg transition-all',
+        locale === 'vi'
+          ? 'bg-white dark:bg-slate-800 text-brand-700 dark:text-brand-400 font-bold shadow-sm'
+          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
       ]"
     >
       VI
