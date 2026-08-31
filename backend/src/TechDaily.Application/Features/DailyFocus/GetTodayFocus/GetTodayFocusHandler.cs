@@ -8,7 +8,7 @@ using TechDaily.Domain.Enums;
 
 namespace TechDaily.Application.Features.DailyFocus.GetTodayFocus;
 
-public record GetTodayFocusRequest(Guid? UserId = null, DateOnly? TargetDate = null, string Locale = "en");
+public record GetTodayFocusRequest(Guid? UserId = null, int? DayOrder = null, DateOnly? TargetDate = null, string Locale = "en");
 
 public class GetTodayFocusResponse
 {
@@ -37,12 +37,13 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         var today = request.TargetDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var isAuthenticated = request.UserId.HasValue && request.UserId.Value != Guid.Empty;
 
-        // 1. If Guest (unauthenticated), serve public preview for Day 1
+        // 1. If Guest (unauthenticated), serve public preview for requested DayOrder (or Day 1)
         if (!isAuthenticated)
         {
+            var requestedDay = request.DayOrder ?? 1;
             var previewTopic = await _dbContext.Topics
                 .Include(t => t.InterviewQuestions)
-                .FirstOrDefaultAsync(t => t.DayOrder == 1, cancellationToken)
+                .FirstOrDefaultAsync(t => t.DayOrder == requestedDay, cancellationToken)
                 ?? await _dbContext.Topics.Include(t => t.InterviewQuestions).FirstOrDefaultAsync(cancellationToken);
 
             if (previewTopic == null || !previewTopic.InterviewQuestions.Any())
@@ -52,7 +53,7 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
 
             var previewQuestion = previewTopic.InterviewQuestions.First();
             var previewChunk = await _dbContext.DocumentChunks
-                .FirstOrDefaultAsync(c => c.ChunkOrder == 1, cancellationToken);
+                .FirstOrDefaultAsync(c => c.ChunkOrder == previewTopic.DayOrder, cancellationToken);
 
             var previewDrill = new DailyDrill
             {
@@ -85,26 +86,21 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        // 3. Check if a DailyDrill already exists for today for this specific user
-        var existingDrill = await _dbContext.DailyDrills
-            .Include(d => d.Question)
-                .ThenInclude(q => q.Topic)
-            .Include(d => d.DocumentChunk)
-            .Include(d => d.AiReview)
-            .FirstOrDefaultAsync(d => d.UserId == userId && d.ScheduledDate == today, cancellationToken);
-
-        if (existingDrill != null)
+        // 3. Determine the curriculum day based on request.DayOrder or total drills completed
+        int targetDayOrder;
+        if (request.DayOrder.HasValue && request.DayOrder.Value >= 1 && request.DayOrder.Value <= 30)
         {
-            return MapResponse(existingDrill, streak);
+            targetDayOrder = request.DayOrder.Value;
         }
-
-        // 4. Determine the curriculum day based on total drills completed
-        var totalCompleted = streak.TotalDrillsCompleted;
-        var dayOrder = (totalCompleted % 30) + 1;
+        else
+        {
+            var totalCompleted = streak.TotalDrillsCompleted;
+            targetDayOrder = (totalCompleted % 30) + 1;
+        }
 
         var topic = await _dbContext.Topics
             .Include(t => t.InterviewQuestions)
-            .FirstOrDefaultAsync(t => t.DayOrder == dayOrder, cancellationToken)
+            .FirstOrDefaultAsync(t => t.DayOrder == targetDayOrder, cancellationToken)
             ?? await _dbContext.Topics.Include(t => t.InterviewQuestions).FirstOrDefaultAsync(cancellationToken);
 
         if (topic == null || !topic.InterviewQuestions.Any())
@@ -114,9 +110,22 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
 
         var question = topic.InterviewQuestions.First();
         var documentChunk = await _dbContext.DocumentChunks
-            .FirstOrDefaultAsync(c => c.ChunkOrder == dayOrder, cancellationToken);
+            .FirstOrDefaultAsync(c => c.ChunkOrder == targetDayOrder, cancellationToken);
 
-        // 5. Create new idempotent DailyDrill record for today for this authenticated user
+        // 4. Check if a DailyDrill already exists for this user and question
+        var existingDrill = await _dbContext.DailyDrills
+            .Include(d => d.Question)
+                .ThenInclude(q => q.Topic)
+            .Include(d => d.DocumentChunk)
+            .Include(d => d.AiReview)
+            .FirstOrDefaultAsync(d => d.UserId == userId && d.QuestionId == question.Id, cancellationToken);
+
+        if (existingDrill != null)
+        {
+            return MapResponse(existingDrill, streak);
+        }
+
+        // 5. Create new idempotent DailyDrill record for this topic
         var newDrill = new DailyDrill
         {
             UserId = userId,

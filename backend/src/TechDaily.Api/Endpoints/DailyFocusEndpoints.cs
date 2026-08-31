@@ -13,6 +13,7 @@ public static class DailyFocusEndpoints
     {
         // Public / Authenticated Today Curriculum
         group.MapGet("/today", async (
+            [FromQuery] int? dayOrder,
             [FromQuery] string? date,
             [FromQuery] string? locale,
             ClaimsPrincipal userClaims,
@@ -26,7 +27,7 @@ public static class DailyFocusEndpoints
             }
 
             var userId = GetUserIdFromClaims(userClaims);
-            var request = new GetTodayFocusRequest(userId, parsedDate, locale ?? "en");
+            var request = new GetTodayFocusRequest(userId, dayOrder, parsedDate, locale ?? "en");
             var result = await handler.ExecuteAsync(request, ct);
 
             return result.IsSuccess

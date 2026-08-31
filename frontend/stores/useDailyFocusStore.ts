@@ -77,17 +77,19 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
   const isSubmitting = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchTodayFocus(date?: string, locale: string = 'en') {
+  async function fetchTodayFocus(dayOrder?: number, date?: string, locale: string = 'en') {
     isLoading.value = true
     error.value = null
     try {
       const api = useApiClient()
       const query = new URLSearchParams()
+      if (dayOrder !== undefined && dayOrder !== null) query.append('dayOrder', dayOrder.toString())
       if (date) query.append('date', date)
       if (locale) query.append('locale', locale)
 
       const res = await api.get<TodayFocusResponse>(`/api/v1/daily/today?${query.toString()}`)
       data.value = res
+      return res
     } catch (err: any) {
       error.value = err.message || 'Failed to load daily focus.'
     } finally {
