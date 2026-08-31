@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using TechDaily.Api.Endpoints;
 using TechDaily.Api.Middleware;
+using TechDaily.Application;
 using TechDaily.Infrastructure;
 using TechDaily.Infrastructure.Persistence;
 using TechDaily.Infrastructure.Persistence.Seeders;
@@ -10,6 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 builder.Services.AddCors(options =>
@@ -47,6 +51,19 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 
+// Serve Static Audio Files (/uploads/audios/...)
+var audioStoragePath = Path.Combine(app.Environment.ContentRootPath, "..", "..", "storage", "audios");
+if (!Directory.Exists(audioStoragePath))
+{
+    Directory.CreateDirectory(audioStoragePath);
+}
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(audioStoragePath),
+    RequestPath = "/uploads/audios"
+});
+
 // Auto-migrate and seed database on startup
 using (var scope = app.Services.CreateScope())
 {
@@ -68,6 +85,19 @@ using (var scope = app.Services.CreateScope())
         logger.LogWarning(ex, "Could not apply migrations automatically. Please ensure PostgreSQL is running.");
     }
 }
+
+// Map API Endpoints
+app.MapGroup("/api/v1/daily")
+    .WithTags("Daily Focus Hub")
+    .MapDailyFocusEndpoints();
+
+app.MapGroup("/api/v1/review")
+    .WithTags("Spaced Repetition Review")
+    .MapReviewEndpoints();
+
+app.MapGroup("/api/v1/auth")
+    .WithTags("Authentication")
+    .MapAuthEndpoints(builder.Configuration);
 
 // Health Check Endpoint
 app.MapGet("/health", async (TechDailyDbContext db) =>

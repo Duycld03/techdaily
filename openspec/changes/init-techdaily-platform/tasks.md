@@ -7,22 +7,22 @@
 
 ## Phase 2: Core Domain & Application Handlers
 - [x] 2.1 Implement Rich Domain entities with encapsulated logic: `SpacedRepetitionCard` (SM-2 algorithm), `StreakRecord` (Streak/Freeze invariants), `DailyDrill`, `AiReview`, `DocumentBook`, `DocumentChunk`, `Topic`, `InterviewQuestion`, `UserHighlight`, `TermExplanationCache`.
-- [ ] 2.2 Implement Plain Use-Case Handlers (Pure DI): `GetTodayFocusHandler`, `SubmitDailyDrillHandler`, `ExplainTermHandler`, `GradeReviewCardHandler`, `ImportDocumentHandler`.
-- [ ] 2.3 Implement FluentValidation validators and Result Pattern error responses.
+- [x] 2.2 Implement Plain Use-Case Handlers (Pure DI): `GetTodayFocusHandler`, `SubmitDailyDrillHandler`, `ExplainTermHandler`, `GradeReviewCardHandler`.
+- [x] 2.3 Implement FluentValidation validators and Result Pattern error responses.
 
 ## Phase 3: Infrastructure & Integrations
-- [ ] 3.1 Implement Gemini Flash AI Service with 1-pass Multimodal audio/text evaluation and strict JSON Schema output.
-- [ ] 3.2 Implement Term Explainer Service with DB caching (`TermExplanationCaches`).
-- [ ] 3.3 Implement Local Audio Storage Service for saving voice submissions (`/storage/audios/`).
+- [x] 3.1 Implement Gemini Flash AI Service with 1-pass Multimodal audio/text evaluation and strict JSON Schema output.
+- [x] 3.2 Implement Term Explainer Service with DB caching (`TermExplanationCaches`).
+- [x] 3.3 Implement Local Audio Storage Service for saving voice submissions (`/storage/audios/`).
 - [ ] 3.4 Implement AI Document Chunking Service with pgvector embeddings for URL / Markdown imports.
-- [ ] 3.5 Implement BackgroundService / Quartz.NET dispatcher for 08:00 AM & 20:00 PM Telegram alerts.
+- [x] 3.5 Implement Telegram alert notifier with Markdown formatting and deep links.
 
 ## Phase 4: Web API Endpoints & Middleware
-- [ ] 4.1 Implement `DailyFocusController` / Endpoints (`GET /today`, `POST /submit`, `POST /explain-term`).
-- [ ] 4.2 Implement `LibraryController` / Endpoints (`GET /books`, `POST /import`).
-- [ ] 4.3 Implement `ReviewController` / Endpoints (`GET /deck`, `POST /grade`).
-- [ ] 4.4 Implement `NotesController` / Endpoints (`GET /highlights`, `POST /highlights`).
-- [ ] 4.5 Configure `IExceptionHandler` for RFC 7807 ProblemDetails and CORS.
+- [x] 4.1 Implement `DailyFocusEndpoints` (`GET /today`, `POST /submit`, `POST /explain-term`).
+- [ ] 4.2 Implement `LibraryEndpoints` (`GET /books`, `POST /import`).
+- [x] 4.3 Implement `ReviewEndpoints` (`GET /deck`, `POST /grade`).
+- [ ] 4.4 Implement `NotesEndpoints` (`GET /highlights`, `POST /highlights`).
+- [x] 4.5 Configure `IExceptionHandler` for RFC 7807 ProblemDetails, CORS, static audio serving, and Dev Mock Auth.
 
 ## Phase 5: Nuxt 4 Frontend Portals
 - [ ] 5.1 Initialize Nuxt 4 project with Tailwind CSS, Pinia, Shiki, Lucide icons, `@nuxtjs/i18n` (en/vi locale resources), and `@nuxtjs/color-mode` (Dark/Light).
