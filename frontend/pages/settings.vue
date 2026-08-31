@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { Settings as SettingsIcon, Globe, Bell, User } from 'lucide-vue-next'
+import { Settings as SettingsIcon, Globe, Bell } from 'lucide-vue-next'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
-
-const authStore = useAuthStore()
 </script>
 
 <template>
@@ -13,28 +11,7 @@ const authStore = useAuthStore()
         <SettingsIcon class="w-7 h-7 text-brand-600 dark:text-brand-400" />
         <span>{{ $t('nav.settings') }}</span>
       </h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">Manage your preferences, language, and notifications</p>
-    </div>
-
-    <!-- Account Details -->
-    <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-        <User class="w-4 h-4 text-brand-600 dark:text-brand-400" />
-        <span>Profile & Account</span>
-      </h2>
-      <div v-if="authStore.user" class="space-y-2 text-sm sm:text-base">
-        <div class="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-          <span class="text-slate-500">Name</span>
-          <span class="font-bold text-slate-900 dark:text-white">{{ authStore.user.name }}</span>
-        </div>
-        <div class="flex justify-between py-2.5 border-b border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300">
-          <span class="text-slate-500">Email</span>
-          <span class="font-mono text-slate-900 dark:text-white">{{ authStore.user.email }}</span>
-        </div>
-      </div>
-      <div v-else class="text-sm text-slate-600 dark:text-slate-400">
-        You are currently using guest mode. <NuxtLink to="/login" class="text-brand-600 dark:text-brand-400 font-bold underline">Sign In</NuxtLink> to sync your streak across devices.
-      </div>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">Manage your system preferences, interface theme, and notifications</p>
     </div>
 
     <!-- Appearance & Language -->
