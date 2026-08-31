@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud } from 'lucide-vue-next'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const libraryStore = useLibraryStore()
 
 const searchQuery = ref('')
@@ -136,7 +136,6 @@ async function handlePdfUpload() {
   pdfError.value = null
 
   try {
-    const { locale } = useI18n()
     const formData = new FormData()
     formData.append('file', pdfFile.value, pdfFile.value.name)
     if (pdfTitle.value) formData.append('title', pdfTitle.value)
