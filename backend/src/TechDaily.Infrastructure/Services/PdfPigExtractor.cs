@@ -73,28 +73,7 @@ public class PdfPigExtractor : IPdfExtractor
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                string pageText = string.Empty;
-                try
-                {
-                    var words = page.GetWords()?.ToList();
-                    if (words != null && words.Count > 0)
-                    {
-                        pageText = string.Join(" ", words.Select(w => w.Text)).Trim();
-                    }
-                }
-                catch
-                {
-                    // Fallback to basic page.Text if word extraction encounters custom font glyphs
-                    try
-                    {
-                        pageText = page.Text?.Trim() ?? string.Empty;
-                    }
-                    catch
-                    {
-                        pageText = string.Empty;
-                    }
-                }
-
+                var pageText = ExtractPageLines(page);
                 if (string.IsNullOrWhiteSpace(pageText))
                 {
                     continue;
@@ -171,6 +150,42 @@ public class PdfPigExtractor : IPdfExtractor
             {
                 await bufferStream.DisposeAsync();
             }
+        }
+    }
+
+    private static string ExtractPageLines(UglyToad.PdfPig.Content.Page page)
+    {
+        try
+        {
+            var words = page.GetWords()?.ToList();
+            if (words != null && words.Count > 0)
+            {
+                // Group words by baseline Y coordinate (tolerance ~3 points)
+                var lines = words
+                    .GroupBy(w => (int)Math.Round(w.BoundingBox.Bottom / 3.5))
+                    .OrderByDescending(g => g.Key)
+                    .Select(g => string.Join(" ", g.OrderBy(w => w.BoundingBox.Left).Select(w => w.Text)).Trim())
+                    .Where(line => !string.IsNullOrWhiteSpace(line));
+
+                var text = string.Join("\n", lines).Trim();
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    return text;
+                }
+            }
+        }
+        catch
+        {
+            // fallback to basic text
+        }
+
+        try
+        {
+            return page.Text?.Trim() ?? string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
         }
     }
 
