@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { BookOpen, Search, Plus, ExternalLink, Clock, Layers, X, FileText } from 'lucide-vue-next'
-import MarkdownIt from 'markdown-it'
-import type { BookDetail } from '~/stores/useLibraryStore'
+import { ref, onMounted } from 'vue'
+import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark } from 'lucide-vue-next'
 
 const libraryStore = useLibraryStore()
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
 
 const searchQuery = ref('')
 const selectedCategory = ref<number | undefined>(undefined)
+const bookmarks = ref<Record<string, number>>({})
 
 // Import modal state
 const isImportModalOpen = ref(false)
@@ -16,11 +14,6 @@ const importTitle = ref('')
 const importCategory = ref(0)
 const importSourceUrl = ref('')
 const importContent = ref('')
-
-// Reader drawer state
-const isReaderOpen = ref(false)
-const activeBook = ref<BookDetail | null>(null)
-const activeChunkIndex = ref(0)
 
 const categories = [
   { id: undefined, label: 'All Categories' },
@@ -33,7 +26,26 @@ const categories = [
 
 onMounted(() => {
   libraryStore.fetchBooks()
+  loadBookmarks()
 })
+
+function loadBookmarks() {
+  if (typeof window === 'undefined') return
+  try {
+    const loaded: Record<string, number> = {}
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith('techdaily_bookmark_')) {
+        const bookId = key.replace('techdaily_bookmark_', '')
+        const slice = parseInt(localStorage.getItem(key) || '1', 10)
+        loaded[bookId] = slice
+      }
+    }
+    bookmarks.value = loaded
+  } catch (e) {
+    // ignore
+  }
+}
 
 function handleCategorySelect(catId?: number) {
   selectedCategory.value = catId
@@ -42,17 +54,6 @@ function handleCategorySelect(catId?: number) {
 
 function handleSearch() {
   libraryStore.fetchBooks(selectedCategory.value, searchQuery.value)
-}
-
-async function openBookReader(bookId: string) {
-  try {
-    const detail = await libraryStore.fetchBookById(bookId)
-    activeBook.value = detail
-    activeChunkIndex.value = 0
-    isReaderOpen.value = true
-  } catch (err) {
-    // error handled
-  }
 }
 
 async function handleImportSubmit() {
@@ -75,16 +76,6 @@ async function handleImportSubmit() {
     // error handled
   }
 }
-
-const currentChunk = computed(() => {
-  if (!activeBook.value?.chunks?.length) return null
-  return activeBook.value.chunks[activeChunkIndex.value]
-})
-
-const renderedChunkMarkdown = computed(() => {
-  if (!currentChunk.value) return ''
-  return md.render(currentChunk.value.originalTextMarkdown || currentChunk.value.summaryMarkdown)
-})
 </script>
 
 <template>
@@ -170,17 +161,23 @@ const renderedChunkMarkdown = computed(() => {
           <p v-if="book.authorOrSourceUrl" class="text-xs text-slate-500 mt-2 truncate font-mono">
             {{ book.authorOrSourceUrl }}
           </p>
+
+          <!-- Bookmark Badge if exists -->
+          <div v-if="bookmarks[book.id]" class="mt-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900 text-brand-700 dark:text-brand-300 text-xs font-semibold">
+            <Bookmark class="w-3 h-3 text-brand-500 fill-brand-500" />
+            <span>Resumes at Slice {{ bookmarks[book.id] }}</span>
+          </div>
         </div>
 
         <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-          <span class="text-xs text-slate-400">Auto-chunked</span>
-          <button
-            @click="openBookReader(book.id)"
-            class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-brand-700 dark:text-brand-400 font-bold text-xs transition-colors shadow-sm"
+          <span class="text-xs text-slate-400">GitBook Reader</span>
+          <NuxtLink
+            :to="`/read/${book.id}`"
+            class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold text-xs transition-transform active:scale-95 shadow-sm"
           >
-            <span>{{ $t('library.read_book') }}</span>
+            <span>{{ bookmarks[book.id] ? 'Continue Reading' : $t('library.read_book') }}</span>
             <ExternalLink class="w-3.5 h-3.5" />
-          </button>
+          </NuxtLink>
         </div>
       </div>
     </div>
@@ -222,7 +219,7 @@ const renderedChunkMarkdown = computed(() => {
               <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
               <select
                 v-model="importCategory"
-                class="w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
+                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
               >
                 <option :value="0">Frontend & Web</option>
                 <option :value="1">Backend & Distributed</option>
@@ -233,7 +230,7 @@ const renderedChunkMarkdown = computed(() => {
             </div>
 
             <div>
-              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.url_label') }}</label>
+              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.source_url_label') }}</label>
               <input
                 v-model="importSourceUrl"
                 type="url"
@@ -272,69 +269,6 @@ const renderedChunkMarkdown = computed(() => {
             </button>
           </div>
         </form>
-      </div>
-    </div>
-
-    <!-- Reading Slices Drawer / Modal -->
-    <div v-if="isReaderOpen && activeBook" class="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md">
-      <div class="w-full max-w-5xl h-[85vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95">
-        <!-- Header -->
-        <div class="h-16 px-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-slate-950/60">
-          <div class="flex items-center gap-3">
-            <div class="p-2 rounded-xl bg-brand-100 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 border border-brand-200 dark:border-brand-500/20">
-              <BookOpen class="w-4 h-4" />
-            </div>
-            <div>
-              <h2 class="text-base font-bold text-slate-900 dark:text-white leading-tight truncate max-w-md">{{ activeBook.title }}</h2>
-              <span class="text-xs text-slate-500 dark:text-slate-400">Slice {{ activeChunkIndex + 1 }} of {{ activeBook.chunks.length }}</span>
-            </div>
-          </div>
-          <button @click="isReaderOpen = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800">
-            <X class="w-5 h-5" />
-          </button>
-        </div>
-
-        <!-- Content Area with Slices Sidebar + Reader Body -->
-        <div class="flex-1 flex overflow-hidden">
-          <!-- Chunk Slices Navigation List -->
-          <div class="w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 p-3 overflow-y-auto shrink-0 hidden md:block">
-            <div class="text-xs font-bold uppercase tracking-wider text-slate-500 px-3 py-2">Document Slices</div>
-            <div class="space-y-1">
-              <button
-                v-for="(chunk, idx) in activeBook.chunks"
-                :key="chunk.id"
-                @click="activeChunkIndex = idx"
-                :class="[
-                  'w-full text-left p-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center justify-between',
-                  activeChunkIndex === idx
-                    ? 'bg-brand-600 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-                ]"
-              >
-                <span class="truncate">#{{ chunk.chunkOrder }} {{ chunk.chapterTitle }}</span>
-                <span class="text-xs opacity-75 font-mono">{{ chunk.estimatedReadMinutes }}m</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Active Reading Slice Body -->
-          <div class="flex-1 p-6 md:p-10 overflow-y-auto bg-white dark:bg-slate-950/60">
-            <div v-if="currentChunk" class="space-y-6 max-w-3xl mx-auto">
-              <div>
-                <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-2">
-                  <Clock class="w-4 h-4" />
-                  <span>{{ currentChunk.estimatedReadMinutes }} {{ $t('today.estimated_read') }}</span>
-                </div>
-                <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white leading-snug">
-                  {{ currentChunk.chapterTitle }}
-                </h1>
-              </div>
-
-              <!-- Markdown Body -->
-              <div class="markdown-body text-slate-800 dark:text-slate-200" v-html="renderedChunkMarkdown"></div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
