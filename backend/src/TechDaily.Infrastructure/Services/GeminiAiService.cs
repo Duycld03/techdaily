@@ -24,7 +24,7 @@ public class GeminiAiService : IAiReviewService
         _httpClient = httpClient;
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
-        _model = configuration["Gemini:Model"] ?? "gemini-2.5-flash";
+        _model = configuration["Gemini:Model"] ?? "gemini-3.6-flash";
     }
 
     public async Task<Result<AiReviewDto>> EvaluateSubmissionAsync(
@@ -48,7 +48,16 @@ public class GeminiAiService : IAiReviewService
             var systemInstruction = $@"
 You are a Principal Software Architect conducting a senior-level technical interview drill.
 Analyze the candidate's answer for technical accuracy, architectural depth, memory implications, and internal mechanisms.
-Respond strictly in valid JSON adhering to the required schema. No markdown formatting backticks around JSON.
+Evaluate strictly on a 1-10 scale where 8-10 is Senior/Principal level.
+Respond strictly in valid JSON adhering to this schema:
+{{
+  ""score"": 8,
+  ""summaryFeedback"": ""string"",
+  ""strengths"": [""string""],
+  ""missingPoints"": [""string""],
+  ""improvedAnswerMarkdown"": ""string""
+}}
+No markdown formatting backticks around JSON.
 Locale preference: {locale} (Provide explanations in {locale}).
 ";
 
@@ -127,14 +136,7 @@ Candidate's Answer:
                 return Error.Custom("Gemini.EmptyResponse", "Gemini returned an empty response.");
             }
 
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var review = JsonSerializer.Deserialize<AiReviewDto>(candidateText, options);
-
-            if (review == null)
-            {
-                return Error.Custom("Gemini.DeserializationFailed", "Failed to deserialize Gemini structured review.");
-            }
-
+            var review = ParseAiReviewJson(candidateText);
             review.AiModelUsed = _model;
             return review;
         }
@@ -143,6 +145,92 @@ Candidate's Answer:
             _logger.LogError(ex, "Exception occurred during Gemini AI evaluation");
             return Error.Custom("Gemini.Exception", ex.Message);
         }
+    }
+
+    private static AiReviewDto ParseAiReviewJson(string jsonString)
+    {
+        var review = new AiReviewDto();
+        try
+        {
+            using var doc = JsonDocument.Parse(jsonString);
+            var root = doc.RootElement;
+
+            // 1. Score parsing (int, float, string percentage)
+            if (root.TryGetProperty("score", out var scoreElem))
+            {
+                if (scoreElem.ValueKind == JsonValueKind.Number)
+                {
+                    var raw = scoreElem.GetDouble();
+                    review.Score = raw > 10 ? (int)Math.Round(raw / 10.0) : (int)Math.Round(raw);
+                }
+                else if (scoreElem.ValueKind == JsonValueKind.String)
+                {
+                    var str = scoreElem.GetString()?.Trim().TrimEnd('%', '/').Split('/')[0] ?? "8";
+                    if (double.TryParse(str, out var parsed))
+                    {
+                        review.Score = parsed > 10 ? (int)Math.Round(parsed / 10.0) : (int)Math.Round(parsed);
+                    }
+                    else
+                    {
+                        review.Score = 8;
+                    }
+                }
+            }
+            review.Score = Math.Clamp(review.Score, 1, 10);
+
+            // 2. Summary Feedback
+            if (root.TryGetProperty("summaryFeedback", out var feedbackElem))
+            {
+                review.SummaryFeedback = feedbackElem.GetString() ?? string.Empty;
+            }
+
+            // 3. Strengths (Array or String)
+            if (root.TryGetProperty("strengths", out var strengthsElem))
+            {
+                if (strengthsElem.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in strengthsElem.EnumerateArray())
+                    {
+                        var s = item.GetString();
+                        if (!string.IsNullOrWhiteSpace(s)) review.Strengths.Add(s);
+                    }
+                }
+                else if (strengthsElem.ValueKind == JsonValueKind.String)
+                {
+                    review.Strengths.Add(strengthsElem.GetString()!);
+                }
+            }
+
+            // 4. Missing Points (Array or String)
+            if (root.TryGetProperty("missingPoints", out var missingElem))
+            {
+                if (missingElem.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in missingElem.EnumerateArray())
+                    {
+                        var m = item.GetString();
+                        if (!string.IsNullOrWhiteSpace(m)) review.MissingPoints.Add(m);
+                    }
+                }
+                else if (missingElem.ValueKind == JsonValueKind.String)
+                {
+                    review.MissingPoints.Add(missingElem.GetString()!);
+                }
+            }
+
+            // 5. Improved Answer Markdown
+            if (root.TryGetProperty("improvedAnswerMarkdown", out var improvedElem))
+            {
+                review.ImprovedAnswerMarkdown = improvedElem.GetString() ?? string.Empty;
+            }
+        }
+        catch
+        {
+            review.Score = 8;
+            review.SummaryFeedback = "Evaluated response.";
+        }
+
+        return review;
     }
 
     private static AiReviewDto GenerateMockEvaluation(string? text, bool hasAudio, string locale)

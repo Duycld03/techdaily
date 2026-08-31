@@ -49,6 +49,9 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }
+      ],
+      script: [
+        { src: 'https://accounts.google.com/gsi/client', async: true, defer: true }
       ]
     }
   }
