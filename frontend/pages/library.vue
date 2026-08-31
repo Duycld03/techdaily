@@ -100,9 +100,9 @@ async function handleImportSubmit() {
     </div>
 
     <!-- Filters & Search -->
-    <div class="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+    <div class="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-start">
       <!-- Category Pills -->
-      <div class="flex flex-wrap gap-2">
+      <div class="flex flex-wrap gap-2 flex-1">
         <button
           v-for="cat in categories"
           :key="cat.label"
@@ -119,14 +119,14 @@ async function handleImportSubmit() {
       </div>
 
       <!-- Search Input -->
-      <div class="relative w-full md:w-80">
+      <div class="relative w-full md:w-80 shrink-0">
         <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input
           v-model="searchQuery"
           @keyup.enter="handleSearch"
           type="text"
           :placeholder="$t('library.search_placeholder')"
-          class="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
+          class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
         />
       </div>
     </div>
