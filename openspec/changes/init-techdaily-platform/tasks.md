@@ -1,12 +1,12 @@
 # Implementation Tasks: Initialize TechDaily Platform
 
 ## Phase 1: Database & Solution Scaffolding
-- [ ] 1.1 Initialize .NET 10 Clean Architecture solution (`TechDaily.sln`, `Domain`, `Application`, `Infrastructure`, `Api`, `Tests`).
-- [ ] 1.2 Configure PostgreSQL 17 DbContext with `pgvector` extension, JSONB mappings (`ToJson()`), `TermExplanationCaches`, and initial EF Core migration.
-- [ ] 1.3 Seed 30-day curriculum topics, questions, and sample document chunks.
+- [x] 1.1 Initialize .NET 10 Clean Architecture solution (`TechDaily.sln`, `Domain`, `Application`, `Infrastructure`, `Api`, `Tests`).
+- [x] 1.2 Configure PostgreSQL 17 DbContext with `pgvector` extension, JSONB mappings (`ToJson()`), `TermExplanationCaches`, and initial EF Core migration.
+- [x] 1.3 Seed 30-day curriculum topics, questions, and sample document chunks.
 
 ## Phase 2: Core Domain & Application Handlers
-- [ ] 2.1 Implement Rich Domain entities with encapsulated logic: `SpacedRepetitionCard` (SM-2 algorithm), `StreakRecord` (Streak/Freeze invariants), `DailyDrill`, `AiReview`, `DocumentBook`, `DocumentChunk`, `Topic`, `InterviewQuestion`, `UserHighlight`, `TermExplanationCache`.
+- [x] 2.1 Implement Rich Domain entities with encapsulated logic: `SpacedRepetitionCard` (SM-2 algorithm), `StreakRecord` (Streak/Freeze invariants), `DailyDrill`, `AiReview`, `DocumentBook`, `DocumentChunk`, `Topic`, `InterviewQuestion`, `UserHighlight`, `TermExplanationCache`.
 - [ ] 2.2 Implement Plain Use-Case Handlers (Pure DI): `GetTodayFocusHandler`, `SubmitDailyDrillHandler`, `ExplainTermHandler`, `GradeReviewCardHandler`, `ImportDocumentHandler`.
 - [ ] 2.3 Implement FluentValidation validators and Result Pattern error responses.
 

@@ -21,3 +21,8 @@ rules:
     - Group tasks by component (Domain, Application, Infrastructure, Api, Frontend)
     - Ensure every task is actionable and testable
     - Ensure 100% English in codebase and documentation
+  git_workflow:
+    - Always create a dedicated feature branch for each task/feature (`feat/<feature-name>`)
+    - Never commit directly to `main` during development
+    - Write clean conventional commit messages without any Co-authored-by or AI trailers
+    - Merge feature branch into `main` after verification is completed
