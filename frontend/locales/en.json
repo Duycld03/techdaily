@@ -51,6 +51,30 @@
     "learning": "Learning",
     "reviewing": "Reviewing"
   },
+  "library": {
+    "title": "Technical Library & Documentation",
+    "subtitle": "Curated senior engineering textbooks, architecture RFCs, and runtime deep dives",
+    "search_placeholder": "Search books, docs, and runtime architectures...",
+    "import_btn": "Import Document",
+    "import_modal_title": "Import Technical Document or Article",
+    "import_modal_desc": "Paste Markdown content or link. TechDaily will chunk it into reading slices and generate micro-quizzes.",
+    "title_label": "Document Title",
+    "category_label": "Domain Category",
+    "url_label": "Original Source URL (Optional)",
+    "content_label": "Markdown Content",
+    "import_action": "Parse & Chunk Document",
+    "importing": "Processing Chunks & Embeddings...",
+    "chunks": "slices",
+    "read_book": "Read Slices",
+    "no_books": "No documents found."
+  },
+  "notes": {
+    "title": "Saved Highlights & Architectural Notes",
+    "subtitle": "Active highlights captured during daily reading drills",
+    "search_placeholder": "Filter highlights by tag or keywords...",
+    "delete_btn": "Delete",
+    "no_notes": "No highlights captured yet. Select text while reading in the Daily Focus hub to save highlights."
+  },
   "streak": {
     "current": "Day Streak",
     "longest": "Best Streak",

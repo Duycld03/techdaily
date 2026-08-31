@@ -51,6 +51,30 @@
     "learning": "Đang Học",
     "reviewing": "Đang Ôn Tập"
   },
+  "library": {
+    "title": "Thư Viện Tài Liệu Kỹ Thuật",
+    "subtitle": "Tuyển tập sách giáo khoa Senior, RFC kiến trúc hệ thống và phân tích runtime sâu",
+    "search_placeholder": "Tìm kiếm sách, tài liệu, kiến trúc...",
+    "import_btn": "Thêm Tài Liệu Mới",
+    "import_modal_title": "Nhập Tài Liệu Hoặc Bài Viết Kỹ Thuật",
+    "import_modal_desc": "Dán nội dung Markdown hoặc liên kết. TechDaily sẽ tự động chia nhỏ thành các lát cắt đọc và tạo câu hỏi tương tác.",
+    "title_label": "Tiêu Đề Tài Liệu",
+    "category_label": "Chuyên Mục Kiến Trúc",
+    "url_label": "Liên Kết Nguồn Gốc (Không bắt buộc)",
+    "content_label": "Nội Dung Markdown",
+    "import_action": "Phân Tích & Chia Nhỏ Lát Cắt",
+    "importing": "Đang Xử Lý Chunks & Embeddings...",
+    "chunks": "lát cắt",
+    "read_book": "Đọc Tài Liệu",
+    "no_books": "Không tìm thấy tài liệu phù hợp."
+  },
+  "notes": {
+    "title": "Kho Highlight & Ghi Chú Kiến Trúc",
+    "subtitle": "Tổng hợp các đoạn trích dẫn quan trọng được lưu lại trong quá trình luyện tập",
+    "search_placeholder": "Lọc ghi chú theo thẻ tag hoặc từ khóa...",
+    "delete_btn": "Xóa",
+    "no_notes": "Chưa có đoạn highlight nào. Bạn có thể bôi đen văn bản khi đọc bài ở Trung tâm luyện tập để lưu lại."
+  },
   "streak": {
     "current": "Chuỗi Ngày Liên Tiếp",
     "longest": "Kỷ Lục Chuỗi",
