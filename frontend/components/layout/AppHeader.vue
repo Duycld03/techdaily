@@ -137,18 +137,28 @@ function isLinkActive(linkPath: string): boolean {
               v-for="link in links"
               :key="link.path"
               :to="link.path"
-              active-class=""
-              exact-active-class=""
-              @click="isMobileNavOpen = false"
-              :class="[
-                'flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-semibold border transition-all outline-none focus:outline-none',
-                isLinkActive(link.path)
-                  ? 'bg-brand-50 dark:bg-brand-500/10 border-brand-200 dark:border-brand-500/20 text-brand-700 dark:text-brand-400 font-bold shadow-sm'
-                  : 'border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              ]"
+              custom
+              v-slot="{ navigate, href }"
             >
-              <component :is="link.icon" class="w-5 h-5 text-brand-500" />
-              <span>{{ $t(link.name) }}</span>
+              <a
+                :href="href"
+                @click="navigate(); isMobileNavOpen = false"
+                :class="[
+                  'flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm transition-all border outline-none focus:outline-none focus:ring-0',
+                  isLinkActive(link.path)
+                    ? 'bg-brand-500/10 dark:bg-brand-500/15 border-brand-500/30 dark:border-brand-500/30 text-brand-700 dark:text-brand-400 font-bold shadow-sm'
+                    : 'border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium'
+                ]"
+              >
+                <component
+                  :is="link.icon"
+                  :class="[
+                    'w-5 h-5 transition-colors',
+                    isLinkActive(link.path) ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'
+                  ]"
+                />
+                <span>{{ $t(link.name) }}</span>
+              </a>
             </NuxtLink>
           </nav>
         </div>
