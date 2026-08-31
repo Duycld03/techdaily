@@ -239,10 +239,12 @@ public class PdfPigExtractor : IPdfExtractor
             {
                 if (inCodeBlock)
                 {
-                    sb.AppendLine("```");
-                    inCodeBlock = false;
+                    sb.AppendLine();
                 }
-                sb.AppendLine();
+                else
+                {
+                    sb.AppendLine();
+                }
                 continue;
             }
 
@@ -274,8 +276,22 @@ public class PdfPigExtractor : IPdfExtractor
             }
 
             // Code line heuristic detection
-            bool isCodeLine = Regex.IsMatch(trimmed, @"^(public|private|protected|internal|class|interface|record|struct|enum|using|import|export|function|const|let|var|def|return|SELECT|FROM|WHERE|INSERT|CREATE)\s+", RegexOptions.IgnoreCase) ||
-                              trimmed.EndsWith(';') || trimmed.EndsWith('{') || trimmed.EndsWith('}') || trimmed.Contains("=>");
+            bool isCodeLine = false;
+
+            if (inCodeBlock)
+            {
+                // When already inside a code block, stay inside code block unless line is clearly prose or section header
+                bool isProseSentence = (trimmed.EndsWith('.') && char.IsUpper(trimmed[0]) && !trimmed.Contains(';') && !trimmed.Contains('{') && !trimmed.Contains('}') && !trimmed.StartsWith("//") && !trimmed.Contains("()"));
+                bool isExplicitHeading = trimmed.StartsWith('#');
+                isCodeLine = !isProseSentence && !isExplicitHeading;
+            }
+            else
+            {
+                // Start a code block on programming keywords, comments, method calls or braces
+                isCodeLine = Regex.IsMatch(trimmed, @"^(public|private|protected|internal|class|interface|record|struct|enum|using|import|export|function|const|let|var|def|return|namespace|static|void|async|Task<|Console\.|Registry\.|RegistryKey|for\(|while\(|foreach\(|if\()", RegexOptions.IgnoreCase) ||
+                             trimmed.StartsWith("//") || trimmed.StartsWith("/*") ||
+                             trimmed.EndsWith(';') || trimmed.EndsWith('{') || trimmed.EndsWith('}') || trimmed.Contains("=>");
+            }
 
             if (isCodeLine && !trimmed.StartsWith('#') && !trimmed.StartsWith('-'))
             {
@@ -284,7 +300,7 @@ public class PdfPigExtractor : IPdfExtractor
                     sb.AppendLine("```csharp");
                     inCodeBlock = true;
                 }
-                sb.AppendLine(trimmed);
+                sb.AppendLine(line);
                 continue;
             }
 
