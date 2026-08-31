@@ -1,0 +1,67 @@
+{
+  "nav": {
+    "today": "Today's Drill",
+    "review": "Flashcards",
+    "library": "Knowledge Base",
+    "notes": "Highlights",
+    "analytics": "Streak Analytics",
+    "settings": "Settings",
+    "login": "Sign In",
+    "logout": "Sign Out"
+  },
+  "today": {
+    "title": "Daily Focus Hub",
+    "day": "Day",
+    "of": "of",
+    "curriculum": "Senior Core Curriculum",
+    "doc_reader": "Reading Slice & Source Context",
+    "estimated_read": "min read",
+    "quiz_title": "Active Recall Check",
+    "quiz_submit": "Check Answer",
+    "quiz_correct": "Correct! Well done.",
+    "quiz_incorrect": "Not quite. Check the explanation below.",
+    "interview_challenge": "System Scenario Challenge",
+    "expected_points": "Required Senior Key Points",
+    "write_mode": "Markdown Editor",
+    "voice_mode": "Audio Recording",
+    "editor_placeholder": "Write your Senior Architect breakdown here using Markdown and code blocks...",
+    "submit_drill": "Submit for AI Evaluation",
+    "submitting": "Evaluating with Gemini 2.5 Flash...",
+    "submitted": "Submitted",
+    "reviewed": "Reviewed by AI",
+    "pending": "Pending Drill",
+    "score": "Score",
+    "strengths": "Strengths Identified",
+    "missing_points": "Missing Architectural Points",
+    "improved_answer": "Principal-Level Benchmark Answer",
+    "explain_term_tooltip": "Explain with AI"
+  },
+  "review": {
+    "title": "Spaced Repetition Review Deck",
+    "subtitle": "SuperMemo SM-2 Active Recall",
+    "cards_due": "Cards Due Today",
+    "no_cards": "All caught up! No cards due for review today.",
+    "show_answer": "Show Concept & Answer",
+    "hide_answer": "Hide Answer",
+    "grade_again": "Again (< 1d)",
+    "grade_hard": "Hard",
+    "grade_good": "Good",
+    "grade_easy": "Easy",
+    "mastered": "Mastered",
+    "learning": "Learning",
+    "reviewing": "Reviewing"
+  },
+  "streak": {
+    "current": "Day Streak",
+    "longest": "Best Streak",
+    "freezes": "Freeze Credits",
+    "month_reset": "Resets every 1st of month"
+  },
+  "auth": {
+    "welcome_title": "Sign in to TechDaily",
+    "welcome_subtitle": "Master Senior Software Engineering Daily",
+    "google_sign_in": "Sign in with Google",
+    "dev_login_btn": "Instant Dev 1-Click Login",
+    "dev_login_desc": "For local development and rapid testing"
+  }
+}

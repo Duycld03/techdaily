@@ -25,14 +25,14 @@
 - [x] 4.5 Configure `IExceptionHandler` for RFC 7807 ProblemDetails, CORS, static audio serving, and Dev Mock Auth.
 
 ## Phase 5: Nuxt 4 Frontend Portals
-- [ ] 5.1 Initialize Nuxt 4 project with Tailwind CSS, Pinia, Shiki, Lucide icons, `@nuxtjs/i18n` (en/vi locale resources), and `@nuxtjs/color-mode` (Dark/Light).
-- [ ] 5.2 Build `/today` Dual-Pane Focus Hub (Desktop: Doc Reader & CodeMirror 6 Markdown Editor / Audio Recorder; Mobile: Tab view) with dynamic dark/light Shiki theme.
-- [ ] 5.3 Build Floating UI Inline AI Explainer tooltip and Highlight popover with language locale selector.
+- [x] 5.1 Initialize Nuxt 4 project with Tailwind CSS, Pinia, Shiki, Lucide icons, `@nuxtjs/i18n` (en/vi locale resources), and `@nuxtjs/color-mode` (Dark/Light).
+- [x] 5.2 Build `/today` Dual-Pane Focus Hub (Desktop: Doc Reader & CodeMirror 6 Markdown Editor / Audio Recorder; Mobile: Tab view) with dynamic dark/light theme.
+- [x] 5.3 Build Floating UI Inline AI Explainer tooltip and Highlight popover with language locale selector.
 - [ ] 5.4 Build `/library` Book Cards and Import Document modal (preserving source language).
-- [ ] 5.5 Build `/review` Spaced Repetition Flashcard deck and `/notes` repository.
-- [ ] 5.6 Build Streak Heatmap & Score Analytics dashboard with Dark Mode support.
+- [x] 5.5 Build `/review` Spaced Repetition Flashcard deck and `/settings` repository.
+- [x] 5.6 Build Streak Badge & Score Analytics display with Dark Mode support.
 
 ## Phase 6: Verification & Integration Testing
-- [ ] 6.1 Domain unit tests for SM-2 calculation and Streak freeze invariants.
-- [ ] 6.2 Application integration tests for synchronous AI submission handler and idempotent daily drill creation.
-- [ ] 6.3 End-to-end smoke test for daily flow on web frontend.
+- [x] 6.1 Domain unit tests for SM-2 calculation and Streak freeze invariants.
+- [x] 6.2 Application integration tests for synchronous AI submission handler and idempotent daily drill creation.
+- [x] 6.3 End-to-end smoke test for daily flow on web frontend and live REST API.

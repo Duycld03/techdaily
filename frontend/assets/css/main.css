@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 antialiased font-sans selection:bg-brand-500/30 selection:text-brand-300;
+  }
+}
+
+/* Custom scrollbars for reader & code panes */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-800 rounded hover:bg-slate-700;
+}
+
+/* Markdown render styling */
+.markdown-body h1 {
+  @apply text-2xl font-bold mt-6 mb-4 text-slate-100;
+}
+.markdown-body h2 {
+  @apply text-xl font-semibold mt-5 mb-3 text-slate-200;
+}
+.markdown-body h3 {
+  @apply text-lg font-medium mt-4 mb-2 text-slate-300;
+}
+.markdown-body p {
+  @apply leading-relaxed mb-4 text-slate-300;
+}
+.markdown-body ul {
+  @apply list-disc list-inside mb-4 space-y-1 text-slate-300;
+}
+.markdown-body ol {
+  @apply list-decimal list-inside mb-4 space-y-1 text-slate-300;
+}
+.markdown-body code:not(pre code) {
+  @apply font-mono text-sm px-1.5 py-0.5 rounded bg-slate-800 text-brand-300 border border-slate-700/60;
+}
+.markdown-body pre {
+  @apply font-mono text-sm p-4 rounded-xl bg-slate-900 border border-slate-800 my-4 overflow-x-auto;
+}
+.markdown-body blockquote {
+  @apply border-l-4 border-brand-500/80 pl-4 my-4 italic text-slate-400 bg-brand-950/20 py-2 rounded-r;
+}

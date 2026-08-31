@@ -1,0 +1,67 @@
+{
+  "nav": {
+    "today": "Thử Thách Hôm Nay",
+    "review": "Ôn Tập Flashcards",
+    "library": "Thư Viện Kiến Thức",
+    "notes": "Ghi Chú & Highlight",
+    "analytics": "Phân Tích Streak",
+    "settings": "Cài Đặt",
+    "login": "Đăng Nhập",
+    "logout": "Đăng Xuất"
+  },
+  "today": {
+    "title": "Trung Tâm Luyện Tập Hằng Ngày",
+    "day": "Ngày",
+    "of": "trên",
+    "curriculum": "Lộ Trình Senior Core 30 Ngày",
+    "doc_reader": "Tài Liệu Đọc & Ngữ Cảnh Gốc",
+    "estimated_read": "phút đọc",
+    "quiz_title": "Kiểm Tra Nhận Thức Nhanh",
+    "quiz_submit": "Kiểm Tra Đáp Án",
+    "quiz_correct": "Chính xác! Làm rất tốt.",
+    "quiz_incorrect": "Chưa chính xác. Xem giải thích bên dưới.",
+    "interview_challenge": "Kịch Bản Phỏng Vấn Kiến Trúc",
+    "expected_points": "Ý Cốt Lõi Trình Độ Senior",
+    "write_mode": "Viết Markdown",
+    "voice_mode": "Ghi Âm Giọng Nói",
+    "editor_placeholder": "Trình bày phân tích kỹ thuật của bạn theo chuẩn Senior Architect tại đây...",
+    "submit_drill": "Nộp Bài Để AI Đánh Giá",
+    "submitting": "Gemini 2.5 Flash đang chấm điểm...",
+    "submitted": "Đã Nộp",
+    "reviewed": "AI Đã Đánh Giá",
+    "pending": "Chờ Hoàn Thành",
+    "score": "Điểm Số",
+    "strengths": "Điểm Mạnh Được Ghi Nhận",
+    "missing_points": "Các Điểm Kiến Trúc Cần Bổ Sung",
+    "improved_answer": "Câu Trả Lời Mẫu Trình Độ Principal",
+    "explain_term_tooltip": "Giải Thích Bằng AI"
+  },
+  "review": {
+    "title": "Bộ Thẻ Ôn Tập Lặp Lại Ngắt Quãng",
+    "subtitle": "Thuật Toán SuperMemo SM-2",
+    "cards_due": "Thẻ Cần Ôn Hôm Nay",
+    "no_cards": "Tuyệt vời! Bạn đã hoàn thành toàn bộ thẻ ôn tập của hôm nay.",
+    "show_answer": "Xem Khái Niệm & Đáp Án",
+    "hide_answer": "Ẩn Đáp Án",
+    "grade_again": "Học Lại (< 1 ngày)",
+    "grade_hard": "Khó",
+    "grade_good": "Tốt",
+    "grade_easy": "Dễ",
+    "mastered": "Đã Thành Thạo",
+    "learning": "Đang Học",
+    "reviewing": "Đang Ôn Tập"
+  },
+  "streak": {
+    "current": "Chuỗi Ngày Liên Tiếp",
+    "longest": "Kỷ Lục Chuỗi",
+    "freezes": "Lượt Đóng Băng Còn Lại",
+    "month_reset": "Cấp lại 2 lượt vào ngày 1 hàng tháng"
+  },
+  "auth": {
+    "welcome_title": "Đăng nhập vào TechDaily",
+    "welcome_subtitle": "Luyện tập tư duy Senior Software Engineer mỗi ngày",
+    "google_sign_in": "Đăng nhập bằng Google",
+    "dev_login_btn": "Đăng Nhập Dev 1-Click Nhanh",
+    "dev_login_desc": "Dành cho môi trường phát triển và test nhanh"
+  }
+}

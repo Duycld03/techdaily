@@ -1,0 +1,159 @@
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+
+export interface Topic {
+  id: string
+  slug: string
+  title: string
+  category: number
+  difficulty: number
+  dayOrder: number
+  summary: string
+  deepDiveMarkdown: string
+  benchmarkSnippet?: string
+}
+
+export interface InterviewQuestion {
+  id: string
+  questionText: string
+  expectedKeyPoints: string[]
+  modelAnswerMarkdown: string
+  difficulty: number
+}
+
+export interface MicroQuiz {
+  question: string
+  options: string[]
+  answerIndex: number
+  explanation: string
+}
+
+export interface DocumentChunk {
+  id: string
+  chunkOrder: number
+  chapterTitle: string
+  originalTextMarkdown: string
+  summaryMarkdown: string
+  keyTakeaways: string[]
+  microQuiz: MicroQuiz
+  language: string
+  estimatedReadMinutes: number
+}
+
+export interface AiReview {
+  score: number
+  summaryFeedback: string
+  strengths: string[]
+  missingPoints: string[]
+  improvedAnswerMarkdown: string
+  aiModelUsed: string
+}
+
+export interface DailyDrill {
+  id: string
+  scheduledDate: string
+  status: number // 0=Pending, 1=Submitted, 2=Reviewed
+  userAnswerText?: string
+  userAudioUrl?: string
+  attemptCount: number
+  submittedAt?: string
+  aiReview?: AiReview
+}
+
+export interface TodayFocusResponse {
+  topic: Topic
+  question: InterviewQuestion
+  documentChunk?: DocumentChunk
+  drill: DailyDrill
+  currentStreak: number
+  longestStreak: number
+  freezeCreditsRemaining: number
+}
+
+export const useDailyFocusStore = defineStore('dailyFocus', () => {
+  const data = ref<TodayFocusResponse | null>(null)
+  const isLoading = ref(false)
+  const isSubmitting = ref(false)
+  const error = ref<string | null>(null)
+
+  async function fetchTodayFocus(date?: string, locale: string = 'en') {
+    isLoading.value = true
+    error.value = null
+    try {
+      const api = useApiClient()
+      const query = new URLSearchParams()
+      if (date) query.append('date', date)
+      if (locale) query.append('locale', locale)
+
+      const res = await api.get<TodayFocusResponse>(`/api/v1/daily/today?${query.toString()}`)
+      data.value = res
+    } catch (err: any) {
+      error.value = err.message || 'Failed to load daily focus.'
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function submitDrill(params: {
+    answerText?: string
+    audioBase64?: string
+    audioMimeType?: string
+    locale?: string
+  }) {
+    if (!data.value?.drill) return null
+
+    isSubmitting.value = true
+    error.value = null
+    try {
+      const api = useApiClient()
+      const res = await api.post<{
+        review: AiReview
+        currentStreak: number
+        longestStreak: number
+        totalDrillsCompleted: number
+        averageScore: number
+        audioUrl?: string
+      }>(`/api/v1/daily/drills/${data.value.drill.id}/submit`, {
+        answerText: params.answerText,
+        audioBase64: params.audioBase64,
+        audioMimeType: params.audioMimeType,
+        locale: params.locale || 'en'
+      })
+
+      if (data.value) {
+        data.value.drill.status = 2 // Reviewed
+        data.value.drill.userAnswerText = params.answerText
+        data.value.drill.aiReview = res.review
+        data.value.currentStreak = res.currentStreak
+        data.value.longestStreak = res.longestStreak
+      }
+
+      return res
+    } catch (err: any) {
+      error.value = err.message || 'Failed to submit drill.'
+      throw err
+    } finally {
+      isSubmitting.value = false
+    }
+  }
+
+  async function explainTerm(term: string, category: string, context: string, locale: string = 'en') {
+    const api = useApiClient()
+    return await api.post<{ term: string; explanation: string; locale: string }>('/api/v1/daily/explain-term', {
+      term,
+      category,
+      context,
+      locale
+    })
+  }
+
+  return {
+    data,
+    isLoading,
+    isSubmitting,
+    error,
+    fetchTodayFocus,
+    submitDrill,
+    explainTerm
+  }
+})
