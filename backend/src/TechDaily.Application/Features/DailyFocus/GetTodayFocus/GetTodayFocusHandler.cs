@@ -8,7 +8,7 @@ using TechDaily.Domain.Enums;
 
 namespace TechDaily.Application.Features.DailyFocus.GetTodayFocus;
 
-public record GetTodayFocusRequest(Guid UserId, DateOnly? TargetDate = null, string Locale = "en");
+public record GetTodayFocusRequest(Guid? UserId = null, DateOnly? TargetDate = null, string Locale = "en");
 
 public class GetTodayFocusResponse
 {
@@ -35,32 +35,70 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         CancellationToken cancellationToken = default)
     {
         var today = request.TargetDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var isAuthenticated = request.UserId.HasValue && request.UserId.Value != Guid.Empty;
 
-        // 1. Get or create user's streak record
+        // 1. If Guest (unauthenticated), serve public preview for Day 1
+        if (!isAuthenticated)
+        {
+            var previewTopic = await _dbContext.Topics
+                .Include(t => t.InterviewQuestions)
+                .FirstOrDefaultAsync(t => t.DayOrder == 1, cancellationToken)
+                ?? await _dbContext.Topics.Include(t => t.InterviewQuestions).FirstOrDefaultAsync(cancellationToken);
+
+            if (previewTopic == null || !previewTopic.InterviewQuestions.Any())
+            {
+                return Error.NotFound;
+            }
+
+            var previewQuestion = previewTopic.InterviewQuestions.First();
+            var previewChunk = await _dbContext.DocumentChunks
+                .FirstOrDefaultAsync(c => c.ChunkOrder == 1, cancellationToken);
+
+            var previewDrill = new DailyDrill
+            {
+                Id = Guid.Empty,
+                UserId = Guid.Empty,
+                QuestionId = previewQuestion.Id,
+                DocumentChunkId = previewChunk?.Id,
+                ScheduledDate = today,
+                Status = DrillStatus.Pending,
+                Question = previewQuestion,
+                DocumentChunk = previewChunk
+            };
+            previewDrill.Question.Topic = previewTopic;
+
+            var guestStreak = StreakRecord.Create(Guid.Empty);
+
+            return MapResponse(previewDrill, guestStreak);
+        }
+
+        var userId = request.UserId!.Value;
+
+        // 2. Authenticated user: Get or create user's streak record
         var streak = await _dbContext.StreakRecords
-            .FirstOrDefaultAsync(s => s.UserId == request.UserId, cancellationToken);
+            .FirstOrDefaultAsync(s => s.UserId == userId, cancellationToken);
 
         if (streak == null)
         {
-            streak = StreakRecord.Create(request.UserId);
+            streak = StreakRecord.Create(userId);
             await _dbContext.StreakRecords.AddAsync(streak, cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        // 2. Check if a DailyDrill already exists for today
+        // 3. Check if a DailyDrill already exists for today for this specific user
         var existingDrill = await _dbContext.DailyDrills
             .Include(d => d.Question)
                 .ThenInclude(q => q.Topic)
             .Include(d => d.DocumentChunk)
             .Include(d => d.AiReview)
-            .FirstOrDefaultAsync(d => d.UserId == request.UserId && d.ScheduledDate == today, cancellationToken);
+            .FirstOrDefaultAsync(d => d.UserId == userId && d.ScheduledDate == today, cancellationToken);
 
         if (existingDrill != null)
         {
             return MapResponse(existingDrill, streak);
         }
 
-        // 3. Determine the curriculum day based on total drills completed or DayOrder modulo 30
+        // 4. Determine the curriculum day based on total drills completed
         var totalCompleted = streak.TotalDrillsCompleted;
         var dayOrder = (totalCompleted % 30) + 1;
 
@@ -75,14 +113,13 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         }
 
         var question = topic.InterviewQuestions.First();
-
         var documentChunk = await _dbContext.DocumentChunks
             .FirstOrDefaultAsync(c => c.ChunkOrder == dayOrder, cancellationToken);
 
-        // 4. Create new idempotent DailyDrill record for today
+        // 5. Create new idempotent DailyDrill record for today for this authenticated user
         var newDrill = new DailyDrill
         {
-            UserId = request.UserId,
+            UserId = userId,
             QuestionId = question.Id,
             DocumentChunkId = documentChunk?.Id,
             ScheduledDate = today,

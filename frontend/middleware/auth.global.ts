@@ -7,14 +7,18 @@ export default defineNuxtRouteMiddleware((to) => {
   }
 
   const isGuestOnly = to.path === '/login'
-  const isAuthRequired = to.path.startsWith('/profile') || to.path.startsWith('/notes')
+  const isAuthRequired =
+    to.path.startsWith('/review') ||
+    to.path.startsWith('/notes') ||
+    to.path.startsWith('/profile') ||
+    to.path.startsWith('/settings')
 
   // Logged-in users cannot visit /login
   if (isGuestOnly && authStore.isLoggedIn) {
     return navigateTo('/today')
   }
 
-  // Unauthenticated users cannot visit protected pages (/profile, /notes)
+  // Unauthenticated visitors cannot access protected pages
   if (isAuthRequired && !authStore.isLoggedIn) {
     return navigateTo({
       path: '/login',

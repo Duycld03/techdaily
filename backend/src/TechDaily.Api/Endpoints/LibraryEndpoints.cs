@@ -14,6 +14,7 @@ public static class LibraryEndpoints
         var group = app.MapGroup("/api/v1/library")
             .WithTags("Library");
 
+        // Public Book Browsing
         group.MapGet("/books", async (
             [FromQuery] Category? category,
             [FromQuery] string? search,
@@ -28,6 +29,7 @@ public static class LibraryEndpoints
         })
         .WithName("GetBooks");
 
+        // Public Book Details
         group.MapGet("/books/{id:guid}", async (
             Guid id,
             [FromServices] IUseCase<GetBookByIdRequest, GetBookByIdResponse> handler,
@@ -41,6 +43,7 @@ public static class LibraryEndpoints
         })
         .WithName("GetBookById");
 
+        // Protected Document Import (Requires Authentication)
         group.MapPost("/import", async (
             [FromBody] ImportDocumentRequest request,
             [FromServices] IUseCase<ImportDocumentRequest, ImportDocumentResponse> handler,
@@ -52,6 +55,7 @@ public static class LibraryEndpoints
                 error => Results.BadRequest(new { error = error.Message })
             );
         })
+        .RequireAuthorization()
         .WithName("ImportDocument");
 
         return app;

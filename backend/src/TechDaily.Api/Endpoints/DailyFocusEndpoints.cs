@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.DailyFocus.ExplainTerm;
@@ -10,12 +11,11 @@ public static class DailyFocusEndpoints
 {
     public static RouteGroupBuilder MapDailyFocusEndpoints(this RouteGroupBuilder group)
     {
-        // Default dev user ID until full auth header is hooked up
-        var defaultUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
-
+        // Public / Authenticated Today Curriculum
         group.MapGet("/today", async (
             [FromQuery] string? date,
             [FromQuery] string? locale,
+            ClaimsPrincipal userClaims,
             IUseCase<GetTodayFocusRequest, GetTodayFocusResponse> handler,
             CancellationToken ct) =>
         {
@@ -25,7 +25,8 @@ public static class DailyFocusEndpoints
                 parsedDate = d;
             }
 
-            var request = new GetTodayFocusRequest(defaultUserId, parsedDate, locale ?? "en");
+            var userId = GetUserIdFromClaims(userClaims);
+            var request = new GetTodayFocusRequest(userId, parsedDate, locale ?? "en");
             var result = await handler.ExecuteAsync(request, ct);
 
             return result.IsSuccess
@@ -35,12 +36,20 @@ public static class DailyFocusEndpoints
         .WithName("GetTodayFocus")
         .WithSummary("Retrieves today's reading slice, micro-quiz, and interview scenario challenge.");
 
+        // Protected Drill Submission (Requires Logged-In User)
         group.MapPost("/drills/{id:guid}/submit", async (
             Guid id,
             [FromBody] SubmitDrillJsonRequest body,
+            ClaimsPrincipal userClaims,
             IUseCase<SubmitDailyDrillRequest, SubmitDailyDrillResponse> handler,
             CancellationToken ct) =>
         {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
             byte[]? audioBytes = null;
             if (!string.IsNullOrWhiteSpace(body.AudioBase64))
             {
@@ -49,7 +58,7 @@ public static class DailyFocusEndpoints
 
             var request = new SubmitDailyDrillRequest(
                 DrillId: id,
-                UserId: defaultUserId,
+                UserId: userId.Value,
                 AnswerText: body.AnswerText,
                 AudioBytes: audioBytes,
                 AudioMimeType: body.AudioMimeType,
@@ -59,11 +68,13 @@ public static class DailyFocusEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message, code = result.Error.Code });
+                : Results.BadRequest(new { error = result.Error.Message });
         })
+        .RequireAuthorization()
         .WithName("SubmitDailyDrill")
-        .WithSummary("Submits written or audio response and returns instant AI evaluation.");
+        .WithSummary("Evaluates senior interview answer with Gemini 3.5 Flash and updates user streak.");
 
+        // Public Term Explanation (Backed by Semantic Cache)
         group.MapPost("/explain-term", async (
             [FromBody] ExplainTermRequest request,
             IUseCase<ExplainTermRequest, ExplainTermResponse> handler,
@@ -76,9 +87,19 @@ public static class DailyFocusEndpoints
                 : Results.BadRequest(new { error = result.Error.Message });
         })
         .WithName("ExplainTerm")
-        .WithSummary("Provides 2-sentence technical explanation of a highlighted term with DB caching.");
+        .WithSummary("Provides instant AI terminology explanation tooltip.");
 
         return group;
+    }
+
+    private static Guid? GetUserIdFromClaims(ClaimsPrincipal claims)
+    {
+        var idClaim = claims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(idClaim, out var guid))
+        {
+            return guid;
+        }
+        return null;
     }
 }
 
@@ -87,5 +108,5 @@ public class SubmitDrillJsonRequest
     public string? AnswerText { get; set; }
     public string? AudioBase64 { get; set; }
     public string? AudioMimeType { get; set; }
-    public string? Locale { get; set; } = "en";
+    public string? Locale { get; set; }
 }
