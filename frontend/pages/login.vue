@@ -113,7 +113,7 @@ async function handleSubmit() {
           @click="authMode = 'login'; error = null"
           :class="[
             'flex-1 py-2.5 rounded-xl transition-all',
-            authMode === 'login' ? 'bg-brand-600 text-slate-950 shadow-md font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            authMode === 'login' ? 'bg-brand-600 text-white shadow-md font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           ]"
         >
           Sign In
@@ -123,7 +123,7 @@ async function handleSubmit() {
           @click="authMode = 'register'; error = null"
           :class="[
             'flex-1 py-2.5 rounded-xl transition-all',
-            authMode === 'register' ? 'bg-brand-600 text-slate-950 shadow-md font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            authMode === 'register' ? 'bg-brand-600 text-white shadow-md font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           ]"
         >
           Register
@@ -182,9 +182,9 @@ async function handleSubmit() {
         <button
           type="submit"
           :disabled="isLoading"
-          class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+          class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
         >
-          <span v-if="isLoading" class="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+          <span v-if="isLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
           <span>{{ authMode === 'login' ? 'Sign In' : 'Create Account' }}</span>
           <ArrowRight v-if="!isLoading" class="w-4 h-4" />
         </button>

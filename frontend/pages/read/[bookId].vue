@@ -465,13 +465,13 @@ function handleExplainSelection() {
             <button
               v-if="activeChunkIndex < totalChunks - 1"
               @click="goToNextSlice"
-              class="p-5 rounded-2xl bg-brand-500 hover:bg-brand-400 text-slate-950 text-right transition-all group shadow-lg shadow-brand-500/20 active:scale-[0.99] flex flex-col justify-between"
+              class="p-5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white text-right transition-all group shadow-lg shadow-brand-500/20 active:scale-[0.99] flex flex-col justify-between"
             >
-              <span class="text-xs font-bold text-slate-950/70 flex items-center justify-end gap-1">
+              <span class="text-xs font-semibold text-white/80 flex items-center justify-end gap-1">
                 Next Slice
                 <ChevronRight class="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </span>
-              <span class="text-sm font-black text-slate-950 mt-2 line-clamp-1">
+              <span class="text-sm font-bold text-white mt-2 line-clamp-1">
                 #{{ book?.chunks[activeChunkIndex + 1]?.chunkOrder }} {{ book?.chunks[activeChunkIndex + 1]?.chapterTitle }}
               </span>
             </button>
@@ -498,7 +498,7 @@ function handleExplainSelection() {
     >
       <button
         @click="handleExplainSelection"
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-400 text-slate-950 font-bold text-xs shadow transition-colors"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow transition-colors"
       >
         <Sparkles class="w-3.5 h-3.5" />
         <span>Explain with Gemini</span>

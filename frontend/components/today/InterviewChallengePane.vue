@@ -167,11 +167,11 @@ async function handleSubmit() {
         <button
           @click="handleSubmit"
           :disabled="!canSubmit"
-          class="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-brand-500 hover:bg-brand-400 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98]"
+          class="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98]"
         >
           <Lock v-if="!authStore.isLoggedIn" class="w-4 h-4" />
           <Send v-else-if="!focusStore.isSubmitting" class="w-4 h-4" />
-          <span v-if="focusStore.isSubmitting" class="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+          <span v-if="focusStore.isSubmitting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
           <span>
             {{ !authStore.isLoggedIn ? 'Sign In to Submit with AI' : (focusStore.isSubmitting ? $t('today.submitting') : $t('today.submit_drill')) }}
           </span>

@@ -69,7 +69,7 @@ async function onGrade(score: number) {
 
       <NuxtLink
         to="/today"
-        class="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-95"
+        class="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-95"
       >
         <Sparkles class="w-4 h-4" />
         <span>Continue Today's Drill</span>

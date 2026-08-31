@@ -92,7 +92,7 @@ async function handleImportSubmit() {
 
       <button
         @click="isImportModalOpen = true"
-        class="flex items-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold text-sm transition-all shadow-md shadow-brand-500/20 active:scale-[0.98] shrink-0"
+        class="flex items-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm transition-all shadow-md shadow-brand-500/20 active:scale-[0.98] shrink-0"
       >
         <Plus class="w-4 h-4" />
         <span>{{ $t('library.import_btn') }}</span>
@@ -110,7 +110,7 @@ async function handleImportSubmit() {
           :class="[
             'px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border transition-all',
             selectedCategory === cat.id
-              ? 'bg-brand-600 text-slate-950 border-brand-500 shadow-sm font-bold'
+              ? 'bg-brand-600 text-white border-brand-500 shadow-sm font-semibold'
               : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-700'
           ]"
         >
@@ -173,7 +173,7 @@ async function handleImportSubmit() {
           <span class="text-xs text-slate-400">GitBook Reader</span>
           <NuxtLink
             :to="`/read/${book.id}`"
-            class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold text-xs transition-transform active:scale-95 shadow-sm"
+            class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs transition-transform active:scale-95 shadow-sm"
           >
             <span>{{ bookmarks[book.id] ? 'Continue Reading' : $t('library.read_book') }}</span>
             <ExternalLink class="w-3.5 h-3.5" />
@@ -262,9 +262,9 @@ async function handleImportSubmit() {
             <button
               type="submit"
               :disabled="libraryStore.isImporting"
-              class="flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold text-sm shadow-md transition-colors"
+              class="flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-colors"
             >
-              <span v-if="libraryStore.isImporting" class="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+              <span v-if="libraryStore.isImporting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               <span>{{ libraryStore.isImporting ? $t('library.importing') : $t('library.import_action') }}</span>
             </button>
           </div>

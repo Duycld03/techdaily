@@ -88,7 +88,7 @@ async function handlePasswordChange() {
     <!-- Header Banner -->
     <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
       <div class="flex items-center gap-5">
-        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-2xl sm:text-3xl shadow-lg shadow-brand-500/20">
+        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-brand-600 to-emerald-500 flex items-center justify-center text-white font-black text-2xl sm:text-3xl shadow-lg shadow-brand-500/20">
           {{ profileStore.profile?.name?.charAt(0).toUpperCase() || 'U' }}
         </div>
 
@@ -186,7 +186,7 @@ async function handlePasswordChange() {
           @click="activeTab = 'personal'"
           :class="[
             'flex-1 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2',
-            activeTab === 'personal' ? 'bg-brand-600 text-slate-950 shadow-md font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            activeTab === 'personal' ? 'bg-brand-600 text-white shadow-md font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           ]"
         >
           <User class="w-4 h-4" />
@@ -198,7 +198,7 @@ async function handlePasswordChange() {
           @click="activeTab = 'security'"
           :class="[
             'flex-1 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2',
-            activeTab === 'security' ? 'bg-brand-600 text-slate-950 shadow-md font-bold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            activeTab === 'security' ? 'bg-brand-600 text-white shadow-md font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
           ]"
         >
           <Shield class="w-4 h-4" />
@@ -275,10 +275,10 @@ async function handlePasswordChange() {
           <button
             type="submit"
             :disabled="profileStore.isUpdating"
-            class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
+            class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
           >
             <Save v-if="!profileStore.isUpdating" class="w-4 h-4" />
-            <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+            <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             <span>{{ profileStore.isUpdating ? 'Saving...' : 'Save Profile Changes' }}</span>
           </button>
         </div>
@@ -338,9 +338,9 @@ async function handlePasswordChange() {
           <button
             type="submit"
             :disabled="profileStore.isUpdating"
-            class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
+            class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
           >
-            <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
+            <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             <span>{{ profileStore.profile?.hasPassword ? 'Update Password' : 'Set Account Password' }}</span>
           </button>
         </div>

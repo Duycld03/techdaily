@@ -93,7 +93,7 @@ const links = [
       <NuxtLink
         v-else
         to="/login"
-        class="text-xs font-bold px-3 sm:px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 transition-all shadow-md shadow-brand-500/20 active:scale-95"
+        class="text-xs font-semibold px-3 sm:px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-all shadow-md shadow-brand-500/20 active:scale-95"
       >
         {{ $t('nav.login') }}
       </NuxtLink>
@@ -146,7 +146,7 @@ const links = [
         <div class="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
           <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center justify-between p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/60">
             <div class="flex items-center gap-2.5 truncate">
-              <div class="w-8 h-8 rounded-full bg-brand-500 text-slate-950 flex items-center justify-center font-bold text-xs">
+              <div class="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
                 {{ authStore.user.name.charAt(0).toUpperCase() }}
               </div>
               <span class="text-xs font-bold text-slate-900 dark:text-white truncate">

@@ -97,7 +97,7 @@ function resetToScheduledDay() {
       <button
         @click="navigateDay(currentDayOrder + 1)"
         :disabled="currentDayOrder >= 30 || focusStore.isLoading"
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 text-xs sm:text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-brand-500/20 active:scale-95"
+        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-brand-500/20 active:scale-95"
       >
         <span class="hidden sm:inline">Day {{ currentDayOrder + 1 }}</span>
         <span class="sm:hidden">Next</span>

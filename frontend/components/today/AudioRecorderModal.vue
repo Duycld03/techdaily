@@ -81,7 +81,7 @@ function formatDuration(seconds: number): string {
       <button
         v-if="!isRecording && !audioBlob"
         @click="startRecording"
-        class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold text-sm shadow-md transition-colors"
+        class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-colors"
       >
         <Mic class="w-4 h-4" />
         <span>Start Recording</span>

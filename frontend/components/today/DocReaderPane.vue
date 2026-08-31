@@ -169,7 +169,7 @@ onUnmounted(() => {
       >
         <button
           @click.stop="triggerExplainWithAi"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-slate-950 font-bold text-xs shadow transition-all active:scale-95"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow transition-all active:scale-95"
         >
           <Sparkles class="w-3.5 h-3.5" />
           <span>{{ $t('today.explain_term_tooltip') || 'Explain with Gemini' }}</span>

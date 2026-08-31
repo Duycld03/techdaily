@@ -59,7 +59,7 @@ function submitAnswer() {
       <button
         @click="submitAnswer"
         :disabled="selectedOption === null"
-        class="px-5 py-2.5 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 transition-all shadow-sm active:scale-95"
+        class="px-5 py-2.5 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all shadow-sm active:scale-95"
       >
         {{ $t('today.quiz_submit') }}
       </button>
