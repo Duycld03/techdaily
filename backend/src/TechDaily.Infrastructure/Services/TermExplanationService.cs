@@ -74,9 +74,13 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
 
                 var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
                 var jsonPayload = JsonSerializer.Serialize(requestBody);
-                var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+                using var request = new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
+                };
+                request.Headers.Add("X-goog-api-key", _apiKey);
 
-                var response = await _httpClient.PostAsync(url, content, cancellationToken);
+                var response = await _httpClient.SendAsync(request, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
                     var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
