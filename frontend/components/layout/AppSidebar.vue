@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Target, Layers, BookOpen, Highlighter, Settings } from 'lucide-vue-next'
+import { Target, Layers, BookOpen, Highlighter, User, Settings } from 'lucide-vue-next'
 
 const route = useRoute()
 
@@ -8,6 +8,7 @@ const links = [
   { name: 'nav.review', path: '/review', icon: Layers },
   { name: 'nav.library', path: '/library', icon: BookOpen },
   { name: 'nav.notes', path: '/notes', icon: Highlighter },
+  { name: 'nav.profile', path: '/profile', icon: User },
   { name: 'nav.settings', path: '/settings', icon: Settings }
 ]
 </script>

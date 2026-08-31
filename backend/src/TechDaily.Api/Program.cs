@@ -109,6 +109,10 @@ app.MapGroup("/api/v1/auth")
     .WithTags("Authentication")
     .MapAuthEndpoints(builder.Configuration);
 
+app.MapGroup("/api/v1/user")
+    .WithTags("User Profile & Settings")
+    .MapUserEndpoints();
+
 // Health Check Endpoint
 app.MapGet("/health", async (TechDailyDbContext db) =>
 {

@@ -2,9 +2,10 @@
   "nav": {
     "today": "Thử Thách Hôm Nay",
     "review": "Ôn Tập Flashcards",
-    "library": "Thư Viện Kiến Thức",
-    "notes": "Ghi Chú & Highlight",
-    "analytics": "Phân Tích Streak",
+    "library": "Kho Tài Liệu",
+    "notes": "Đoạn Trích Dẫn",
+    "profile": "Hồ Sơ Cá Nhân",
+    "analytics": "Thống Kê Học Tập",
     "settings": "Cài Đặt",
     "login": "Đăng Nhập",
     "logout": "Đăng Xuất"

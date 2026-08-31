@@ -11,6 +11,8 @@ public class User : BaseEntity
     public string? PasswordHash { get; set; }
     public long? TelegramChatId { get; set; }
     public string PreferredLocale { get; set; } = "en"; // "en" or "vi"
+    public string TargetRole { get; set; } = "Senior Engineer";
+    public int DailyGoalMinutes { get; set; } = 10;
 
     // Navigation properties
     public StreakRecord? StreakRecord { get; set; }
