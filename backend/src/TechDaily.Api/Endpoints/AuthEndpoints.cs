@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TechDaily.Domain.Entities;
 using TechDaily.Infrastructure.Persistence;
+using TechDaily.Infrastructure.Security;
 
 namespace TechDaily.Api.Endpoints;
 
@@ -18,21 +19,80 @@ public static class AuthEndpoints
         var jwtIssuer = configuration["Jwt:Issuer"] ?? "TechDaily";
         var jwtAudience = configuration["Jwt:Audience"] ?? "TechDailyUsers";
 
-        // Dev Mock Auth (Active in Development mode)
-        group.MapPost("/dev-login", async (TechDailyDbContext db) =>
+        // Standard Email & Password Registration
+        group.MapPost("/register", async (
+            [FromBody] RegisterRequest request,
+            TechDailyDbContext db) =>
         {
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == "senior.dev@techdaily.local");
-            if (user == null)
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                user = new User
+                return Results.BadRequest(new { error = "Email and password are required." });
+            }
+
+            if (request.Password.Length < 6)
+            {
+                return Results.BadRequest(new { error = "Password must be at least 6 characters." });
+            }
+
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+            var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+            if (existingUser != null)
+            {
+                return Results.BadRequest(new { error = "An account with this email already exists." });
+            }
+
+            var user = new User
+            {
+                Email = normalizedEmail,
+                Name = string.IsNullOrWhiteSpace(request.Name) ? normalizedEmail.Split('@')[0] : request.Name.Trim(),
+                PasswordHash = PasswordHasher.HashPassword(request.Password),
+                PreferredLocale = request.Locale ?? "en"
+            };
+
+            await db.Users.AddAsync(user);
+
+            var streak = StreakRecord.Create(user.Id);
+            await db.StreakRecords.AddAsync(streak);
+
+            await db.SaveChangesAsync();
+
+            var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
+            return Results.Ok(new
+            {
+                Token = token,
+                User = new
                 {
-                    Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
-                    Email = "senior.dev@techdaily.local",
-                    Name = "Senior Engineer (Dev)",
-                    PreferredLocale = "en"
-                };
-                await db.Users.AddAsync(user);
-                await db.SaveChangesAsync();
+                    user.Id,
+                    user.Email,
+                    user.Name,
+                    user.PreferredLocale
+                }
+            });
+        })
+        .WithName("Register")
+        .WithSummary("Registers a new user with standard email and password.");
+
+        // Standard Email & Password Login
+        group.MapPost("/login", async (
+            [FromBody] LoginRequest request,
+            TechDailyDbContext db) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+            {
+                return Results.BadRequest(new { error = "Email and password are required." });
+            }
+
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+
+            if (user == null || string.IsNullOrWhiteSpace(user.PasswordHash))
+            {
+                return Results.BadRequest(new { error = "Invalid email or password." });
+            }
+
+            if (!PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
+            {
+                return Results.BadRequest(new { error = "Invalid email or password." });
             }
 
             var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
@@ -48,8 +108,8 @@ public static class AuthEndpoints
                 }
             });
         })
-        .WithName("DevLogin")
-        .WithSummary("Provides instant 1-click test login for development without Google OAuth.");
+        .WithName("Login")
+        .WithSummary("Authenticates with standard email and password.");
 
         // Google OAuth Login
         group.MapPost("/google", async (
@@ -60,10 +120,7 @@ public static class AuthEndpoints
             var clientId = config["Authentication:Google:ClientId"];
             if (string.IsNullOrWhiteSpace(clientId))
             {
-                // Fallback for development if Google Client ID not configured
-                var defaultUser = await db.Users.FirstAsync(u => u.Id == Guid.Parse("00000000-0000-0000-0000-000000000001"));
-                var devToken = GenerateJwtToken(defaultUser, jwtSecret, jwtIssuer, jwtAudience);
-                return Results.Ok(new { Token = devToken, User = defaultUser });
+                return Results.BadRequest(new { error = "Google Client ID is not configured." });
             }
 
             try
@@ -92,7 +149,18 @@ public static class AuthEndpoints
                 }
 
                 var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
-                return Results.Ok(new { Token = token, User = user });
+                return Results.Ok(new
+                {
+                    Token = token,
+                    User = new
+                    {
+                        user.Id,
+                        user.Email,
+                        user.Name,
+                        user.PreferredLocale,
+                        user.AvatarUrl
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -129,7 +197,6 @@ public static class AuthEndpoints
     }
 }
 
-public class GoogleAuthRequest
-{
-    public string IdToken { get; set; } = string.Empty;
-}
+public record RegisterRequest(string Email, string Password, string? Name = null, string? Locale = "en");
+public record LoginRequest(string Email, string Password);
+public record GoogleAuthRequest(string IdToken);

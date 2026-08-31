@@ -8,6 +8,7 @@ public class User : BaseEntity
     public string Name { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
     public string? GoogleSubjectId { get; set; }
+    public string? PasswordHash { get; set; }
     public long? TelegramChatId { get; set; }
     public string PreferredLocale { get; set; } = "en"; // "en" or "vi"
 

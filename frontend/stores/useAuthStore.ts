@@ -31,9 +31,24 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function devLogin() {
+  async function login(email: string, password: string) {
     const api = useApiClient()
-    const response = await api.post<{ token: string; user: AuthUser }>('/api/v1/auth/dev-login')
+    const response = await api.post<{ token: string; user: AuthUser }>('/api/v1/auth/login', {
+      email,
+      password
+    })
+    setSession(response.token, response.user)
+    return response
+  }
+
+  async function register(email: string, password: string, name?: string, locale: string = 'en') {
+    const api = useApiClient()
+    const response = await api.post<{ token: string; user: AuthUser }>('/api/v1/auth/register', {
+      email,
+      password,
+      name,
+      locale
+    })
     setSession(response.token, response.user)
     return response
   }
@@ -68,7 +83,8 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isLoggedIn,
     init,
-    devLogin,
+    login,
+    register,
     googleLogin,
     logout
   }
