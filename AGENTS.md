@@ -1,14 +1,28 @@
 # TechDaily — Conventions for AI Agents & Developers
 
-## 1. Project Vision & Architecture
-TechDaily transforms 5–10 daily minutes into Senior & Principal software engineering mastery through curated authoritative documentation slices, scenario interview drills with multimodal AI evaluation, and SM-2 spaced repetition flashcards.
+Read `docs/` before writing code. The specs and invariants there are the single source of truth.
 
+| Question | Source of Truth |
+|---|---|
+| What are the business rules and invariants? | `docs/domain-rules.md` |
+| What endpoints exist & what are their contracts? | `docs/api-design.md` |
+| What does the database schema look like? | `docs/database-design.md` |
+| What is the 30-day curriculum structure? | `docs/curriculum-30-days.md` |
+| What active features are being planned or built? | `openspec/changes/` |
+
+---
+
+## 1. Project Layering & Clean Architecture
 ```
-Api            → Minimal APIs, DI wiring, JWT authentication, exception handling (RFC 7807)
+Api            → Minimal APIs, DI wiring, JWT authentication (JwtBearer), RFC 7807 problem details
 Application    → Pure DI use-case handlers, DTOs, FluentValidation validators, Result Pattern
-Domain         → Rich domain entities, business invariants, SM-2 algorithm, streak rules (No EF, No I/O)
+Domain         → Rich domain entities, business invariants, SM-2 algorithm (No EF, No I/O)
 Infrastructure → PostgreSQL DbContext (pgvector), Gemini 3.5 Flash Client, PasswordHasher (PBKDF2)
 ```
+
+Dependencies point inward only: `Api → Application → Domain`, `Infrastructure → Application → Domain`.
+
+---
 
 ## 2. Core Invariants & Rules
 - **100% English Codebase:** All classes, methods, variables, database entities, code comments, commits, and unit tests MUST be in English.
@@ -19,7 +33,18 @@ Infrastructure → PostgreSQL DbContext (pgvector), Gemini 3.5 Flash Client, Pas
 - **Soft Deletes:** Use `IsDeleted` query filter and partial unique indexes (`WHERE "IsDeleted" = false`).
 - **Secrets Management:** Secrets NEVER belong in committed files. Local secrets reside in `appsettings.Local.json` and `.env` (gitignored).
 
-## 3. Quick Start
+---
+
+## 3. Strict Rules & Anti-Patterns to NEVER Repeat
+1. **Never use Fake/Default Fallback Users:** Endpoints requiring auth must use `.RequireAuthorization()` and return `401 Unauthorized` when no valid JWT is present. Never inject hardcoded default GUIDs.
+2. **Never add Dev 1-Click Bypass Auth:** Always implement real, production-ready standard email/password and OAuth flows.
+3. **Never attach Global `@mouseup` Selection Listeners:** Scoped floating action toolbars must only appear on reading markdown and must NEVER trigger on quiz clicks, copy, or translate.
+4. **Never skip OpenSpec on New Features:** Major capabilities or schema changes MUST be specified in `openspec/changes/` before writing code.
+5. **Always test Every Invariant:** Every new handler, store, and component gets automated tests (`dotnet test` for backend, `npm test` for frontend).
+
+---
+
+## 4. Quick Start
 Run the fullstack development environment with a single command:
 ```bash
 ./run-dev.sh
