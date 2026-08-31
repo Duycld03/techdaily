@@ -206,9 +206,87 @@ public class PdfPigExtractor : IPdfExtractor
     private static string FormatAsMarkdown(string text, string heading)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"# {heading}");
-        sb.AppendLine();
-        sb.AppendLine(text);
+        if (!string.IsNullOrWhiteSpace(heading))
+        {
+            sb.AppendLine($"# {heading}");
+            sb.AppendLine();
+        }
+
+        var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        bool inCodeBlock = false;
+
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.TrimEnd();
+            var trimmed = line.Trim();
+
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                if (inCodeBlock)
+                {
+                    sb.AppendLine("```");
+                    inCodeBlock = false;
+                }
+                sb.AppendLine();
+                continue;
+            }
+
+            // Bullet points detection: •, ▪, ⁃, ‣, -, *
+            if (Regex.IsMatch(trimmed, @"^[\u2022\u25AA\u2043\u2023\-\*]\s*"))
+            {
+                if (inCodeBlock)
+                {
+                    sb.AppendLine("```");
+                    inCodeBlock = false;
+                }
+                var bulletContent = Regex.Replace(trimmed, @"^[\u2022\u25AA\u2043\u2023\-\*]\s*", "").Trim();
+                sb.AppendLine($"- {bulletContent}");
+                continue;
+            }
+
+            // Subheading detection: ALL CAPS lines (e.g. WORK EXPERIENCE, EDUCATION, SKILLS)
+            if (Regex.IsMatch(trimmed, @"^[A-Z0-9\s/&-]{4,40}$") && trimmed.Length >= 4 && !trimmed.Contains('.') && !trimmed.Contains(':'))
+            {
+                if (inCodeBlock)
+                {
+                    sb.AppendLine("```");
+                    inCodeBlock = false;
+                }
+                sb.AppendLine();
+                sb.AppendLine($"### {trimmed}");
+                sb.AppendLine();
+                continue;
+            }
+
+            // Code line heuristic detection
+            bool isCodeLine = Regex.IsMatch(trimmed, @"^(public|private|protected|internal|class|interface|record|struct|enum|using|import|export|function|const|let|var|def|return|SELECT|FROM|WHERE|INSERT|CREATE)\s+", RegexOptions.IgnoreCase) ||
+                              trimmed.EndsWith(';') || trimmed.EndsWith('{') || trimmed.EndsWith('}') || trimmed.Contains("=>");
+
+            if (isCodeLine && !trimmed.StartsWith('#') && !trimmed.StartsWith('-'))
+            {
+                if (!inCodeBlock)
+                {
+                    sb.AppendLine("```csharp");
+                    inCodeBlock = true;
+                }
+                sb.AppendLine(trimmed);
+                continue;
+            }
+
+            if (inCodeBlock)
+            {
+                sb.AppendLine("```");
+                inCodeBlock = false;
+            }
+
+            sb.AppendLine(trimmed);
+        }
+
+        if (inCodeBlock)
+        {
+            sb.AppendLine("```");
+        }
+
         return sb.ToString();
     }
 

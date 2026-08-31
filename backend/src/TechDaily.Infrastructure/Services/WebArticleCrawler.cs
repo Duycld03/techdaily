@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using ReverseMarkdown;
@@ -12,31 +13,32 @@ public class WebArticleCrawler : IWebArticleCrawler
     public WebArticleCrawler(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        if (!_httpClient.DefaultRequestHeaders.Contains("User-Agent"))
-        {
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "TechDaily-Crawler/1.0 (Senior Engineering Micro-Learning; +https://techdaily.dev)");
-        }
     }
 
     public async Task<CrawlArticleResult> CrawlUrlAsync(string url, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(url) || !Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        if (string.IsNullOrWhiteSpace(url))
         {
-            throw new ArgumentException("Invalid URL format.", nameof(url));
+            throw new ArgumentException("URL cannot be empty.", nameof(url));
         }
 
-        // 1. Auto-resolve GitHub blob URLs to raw user content
+        // 1. Resolve raw GitHub URLs if needed
         var targetUrl = ResolveGitHubRawUrl(url);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, targetUrl);
-        var response = await _httpClient.SendAsync(request, cancellationToken);
+        request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 TechDailyCrawler/1.0");
+        request.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7");
+        request.Headers.Add("Accept-Language", "en-US,en;q=0.9,vi;q=0.8");
+
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        var contentType = response.Content.Headers.ContentType?.MediaType?.ToLowerInvariant() ?? string.Empty;
         var rawContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        // 2. Direct Markdown / Plain Text Response
-        if (contentType.Contains("markdown") || contentType.Contains("text/plain") || targetUrl.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        // 2. Direct Markdown / Plaintext File Handling
+        if (targetUrl.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
+            targetUrl.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
+            response.Content.Headers.ContentType?.MediaType?.Equals("text/plain", StringComparison.OrdinalIgnoreCase) == true)
         {
             var title = ExtractMarkdownTitle(rawContent, targetUrl);
             var words = rawContent.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
@@ -69,8 +71,8 @@ public class WebArticleCrawler : IWebArticleCrawler
             throw new InvalidOperationException("Could not extract readable article content from the web page.");
         }
 
-        // Remove junk elements: script, style, nav, footer, aside, noscript, svg, form
-        var junkNodes = contentNode.SelectNodes(".//script|.//style|.//nav|.//footer|.//aside|.//header|.//noscript|.//svg|.//form|.//button|.//iframe");
+        // Remove junk elements: script, style, nav, footer, aside, noscript, svg, form, buttons
+        var junkNodes = contentNode.SelectNodes(".//script|.//style|.//nav|.//footer|.//aside|.//header|.//noscript|.//svg|.//form|.//button|.//iframe|.//feedback|.//div[contains(@class, 'feedback')]");
         if (junkNodes != null)
         {
             foreach (var junk in junkNodes)
@@ -79,12 +81,19 @@ public class WebArticleCrawler : IWebArticleCrawler
             }
         }
 
+        // Preprocess Code Blocks to ensure syntax highlighting preservation
+        PreprocessCodeBlocks(contentNode);
+
+        // Preprocess Alert / Callout Boxes
+        PreprocessAlertBoxes(contentNode);
+
         // Convert cleaned HTML to Markdown
         var converter = new Converter(new Config
         {
-            UnknownTags = Config.UnknownTagsOption.Drop,
+            UnknownTags = Config.UnknownTagsOption.Bypass,
             GithubFlavored = true,
-            RemoveComments = true
+            RemoveComments = true,
+            SmartHrefHandling = true
         });
 
         var markdown = converter.Convert(contentNode.InnerHtml);
@@ -105,9 +114,55 @@ public class WebArticleCrawler : IWebArticleCrawler
         );
     }
 
+    private static void PreprocessCodeBlocks(HtmlNode root)
+    {
+        var preNodes = root.SelectNodes(".//pre");
+        if (preNodes == null) return;
+
+        foreach (var pre in preNodes)
+        {
+            var codeNode = pre.SelectSingleNode(".//code") ?? pre;
+            var classAttr = codeNode.GetAttributeValue("class", "") + " " + pre.GetAttributeValue("class", "") + " " + pre.GetAttributeValue("data-lang", "");
+
+            var langMatch = Regex.Match(classAttr, @"(?:lang|language|highlight)-([a-zA-Z0-9_-]+)", RegexOptions.IgnoreCase);
+            var lang = langMatch.Success ? langMatch.Groups[1].Value.ToLowerInvariant() : "";
+
+            // Normalize common aliases
+            if (lang == "csharp" || lang == "cs" || lang == "dotnet") lang = "csharp";
+            else if (lang == "javascript" || lang == "js") lang = "javascript";
+            else if (lang == "typescript" || lang == "ts") lang = "typescript";
+            else if (lang == "python" || lang == "py") lang = "python";
+            else if (lang == "shell" || lang == "sh" || lang == "terminal") lang = "bash";
+            else if (lang == "yml") lang = "yaml";
+
+            if (!string.IsNullOrEmpty(lang))
+            {
+                codeNode.SetAttributeValue("class", $"language-{lang}");
+            }
+        }
+    }
+
+    private static void PreprocessAlertBoxes(HtmlNode root)
+    {
+        var alertNodes = root.SelectNodes(".//div[contains(@class, 'NOTE') or contains(@class, 'TIP') or contains(@class, 'WARNING') or contains(@class, 'CAUTION') or contains(@class, 'alert')]");
+        if (alertNodes == null) return;
+
+        foreach (var alert in alertNodes)
+        {
+            var alertClass = alert.GetAttributeValue("class", "").ToUpperInvariant();
+            string alertType = "NOTE";
+            if (alertClass.Contains("TIP")) alertType = "TIP";
+            else if (alertClass.Contains("WARNING")) alertType = "WARNING";
+            else if (alertClass.Contains("CAUTION") || alertClass.Contains("DANGER")) alertType = "CAUTION";
+            else if (alertClass.Contains("IMPORTANT")) alertType = "IMPORTANT";
+
+            var blockquote = HtmlNode.CreateNode($"<blockquote><p><strong>[{alertType}]</strong> {alert.InnerHtml}</p></blockquote>");
+            alert.ParentNode.ReplaceChild(blockquote, alert);
+        }
+    }
+
     private static string ResolveGitHubRawUrl(string url)
     {
-        // Convert https://github.com/{user}/{repo}/blob/{branch}/{path} -> https://raw.githubusercontent.com/{user}/{repo}/{branch}/{path}
         var match = Regex.Match(url, @"^https?://github\.com/([^/]+)/([^/]+)/blob/([^/]+)/(.*)$", RegexOptions.IgnoreCase);
         if (match.Success)
         {
@@ -137,24 +192,20 @@ public class WebArticleCrawler : IWebArticleCrawler
 
     private static string ExtractHtmlTitle(HtmlDocument doc, string url)
     {
-        // 1. Try OpenGraph Title
         var ogTitle = doc.DocumentNode.SelectSingleNode("//meta[@property='og:title']")?.GetAttributeValue("content", null);
         if (!string.IsNullOrWhiteSpace(ogTitle))
         {
             return CleanHtmlString(ogTitle);
         }
 
-        // 2. Try <title>
         var titleNode = doc.DocumentNode.SelectSingleNode("//title");
         if (!string.IsNullOrWhiteSpace(titleNode?.InnerText))
         {
             var cleaned = CleanHtmlString(titleNode.InnerText);
-            // Split common suffix " - Microsoft Learn" or " | Medium"
             var parts = cleaned.Split(new[] { " - ", " | ", " — " }, StringSplitOptions.RemoveEmptyEntries);
             return parts.Length > 0 ? parts[0].Trim() : cleaned;
         }
 
-        // 3. Fallback to <h1>
         var h1 = doc.DocumentNode.SelectSingleNode("//h1");
         if (!string.IsNullOrWhiteSpace(h1?.InnerText))
         {
@@ -172,8 +223,9 @@ public class WebArticleCrawler : IWebArticleCrawler
 
     private static string CleanMarkdown(string markdown)
     {
-        // Collapse excessive newlines (more than 2)
-        var normalized = Regex.Replace(markdown, @"\n{3,}", "\n\n");
-        return normalized.Trim();
+        // Fix escaped brackets and excessive newlines
+        var cleaned = markdown.Replace(@"\[", "[").Replace(@"\]", "]");
+        cleaned = Regex.Replace(cleaned, @"\n{3,}", "\n\n");
+        return cleaned.Trim();
     }
 }

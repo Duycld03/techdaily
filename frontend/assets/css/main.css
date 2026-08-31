@@ -45,15 +45,15 @@
 }
 
 .markdown-body h1 {
-  @apply text-2xl md:text-3xl font-extrabold mt-6 mb-4 text-slate-900 dark:text-white tracking-tight;
+  @apply text-2xl md:text-3xl font-extrabold mt-8 mb-4 text-slate-900 dark:text-white tracking-tight;
 }
 
 .markdown-body h2 {
-  @apply text-xl md:text-2xl font-bold mt-5 mb-3 text-slate-800 dark:text-slate-100 tracking-tight;
+  @apply text-xl md:text-2xl font-bold mt-6 mb-3 text-slate-900 dark:text-slate-100 tracking-tight;
 }
 
 .markdown-body h3 {
-  @apply text-lg md:text-xl font-semibold mt-4 mb-2 text-slate-800 dark:text-slate-200;
+  @apply text-lg md:text-xl font-semibold mt-5 mb-2 text-slate-800 dark:text-slate-200;
 }
 
 .markdown-body p {
@@ -61,21 +61,47 @@
 }
 
 .markdown-body ul {
-  @apply list-disc list-inside mb-4 space-y-1.5 text-slate-700 dark:text-slate-300 text-sm md:text-base;
+  @apply list-disc list-outside ml-6 mb-4 space-y-1.5 text-slate-700 dark:text-slate-300 text-sm md:text-base;
 }
 
 .markdown-body ol {
-  @apply list-decimal list-inside mb-4 space-y-1.5 text-slate-700 dark:text-slate-300 text-sm md:text-base;
+  @apply list-decimal list-outside ml-6 mb-4 space-y-1.5 text-slate-700 dark:text-slate-300 text-sm md:text-base;
+}
+
+.markdown-body li {
+  @apply pl-1 leading-relaxed;
 }
 
 .markdown-body code:not(pre code) {
-  @apply font-mono text-sm px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-brand-700 dark:text-brand-300 border border-slate-300 dark:border-slate-700/60 font-medium;
+  @apply font-mono text-sm px-2 py-0.5 rounded bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-medium;
 }
 
-.markdown-body pre {
-  @apply font-mono text-sm p-4 rounded-2xl bg-slate-900 text-slate-100 border border-slate-800 my-4 overflow-x-auto shadow-sm;
+.markdown-body pre.shiki {
+  @apply font-mono text-sm p-4 bg-[#22272e] text-slate-200 overflow-x-auto m-0 !important;
+}
+
+.markdown-body .code-block-wrapper pre {
+  margin: 0 !important;
+  border-radius: 0 0 1rem 1rem !important;
+  border: none !important;
 }
 
 .markdown-body blockquote {
-  @apply border-l-4 border-brand-500 pl-4 my-4 italic text-slate-600 dark:text-slate-400 bg-brand-50/50 dark:bg-brand-950/20 py-2.5 rounded-r text-sm md:text-base;
+  @apply border-l-4 border-emerald-500 pl-4 my-4 italic text-slate-600 dark:text-slate-400 bg-emerald-500/5 dark:bg-emerald-950/20 py-2.5 px-4 rounded-r-xl text-sm md:text-base;
+}
+
+.markdown-body table {
+  @apply w-full text-left text-sm border-collapse my-4;
+}
+
+.markdown-body thead {
+  @apply bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 font-semibold;
+}
+
+.markdown-body th {
+  @apply p-3 font-semibold text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800;
+}
+
+.markdown-body td {
+  @apply p-3 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300;
 }

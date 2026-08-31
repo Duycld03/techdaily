@@ -15,14 +15,13 @@ import {
   HelpCircle,
   X
 } from 'lucide-vue-next'
-import MarkdownIt from 'markdown-it'
 import type { BookDetail, ChunkSummary } from '~/stores/useLibraryStore'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const libraryStore = useLibraryStore()
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+const { render: renderMarkdown, initHighlighter, isHighlighterReady } = useMarkdownRenderer()
 
 const bookId = computed(() => route.params.bookId as string)
 const book = ref<BookDetail | null>(null)
@@ -59,7 +58,9 @@ const progressPercentage = computed(() => {
 
 const renderedMarkdown = computed(() => {
   if (!currentChunk.value?.originalTextMarkdown) return ''
-  return md.render(currentChunk.value.originalTextMarkdown)
+  // Watch highlighter readiness to re-render with syntax highlighting once loaded
+  const _ = isHighlighterReady.value
+  return renderMarkdown(currentChunk.value.originalTextMarkdown)
 })
 
 onMounted(async () => {
@@ -418,7 +419,7 @@ function handleExplainSelection() {
 
           <!-- Markdown Body -->
           <article
-            class="prose prose-slate dark:prose-invert prose-base sm:prose-lg max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-brand-600 dark:prose-a:text-brand-400 prose-pre:bg-slate-950 prose-pre:border prose-pre:border-slate-800 prose-code:text-brand-700 dark:prose-code:text-brand-300 leading-relaxed"
+            class="markdown-body prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm leading-relaxed"
             v-html="renderedMarkdown"
           ></article>
 
