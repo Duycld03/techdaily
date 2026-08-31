@@ -9,28 +9,28 @@ import LocaleSelector from '~/components/common/LocaleSelector.vue'
     <div>
       <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
         <SettingsIcon class="w-7 h-7 text-brand-600 dark:text-brand-400" />
-        <span>{{ $t('nav.settings') }}</span>
+        <span>{{ $t('settings.title') }}</span>
       </h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">Manage your system preferences, interface theme, and notifications</p>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{{ $t('settings.subtitle') }}</p>
     </div>
 
     <!-- Appearance & Language -->
     <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
       <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
         <Globe class="w-4 h-4 text-brand-600 dark:text-brand-400" />
-        <span>Language & Theme</span>
+        <span>{{ $t('settings.lang_theme_title') }}</span>
       </h2>
       <div class="flex items-center justify-between py-3 border-b border-slate-100 dark:border-slate-800">
         <div>
-          <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Interface Language</div>
-          <div class="text-xs sm:text-sm text-slate-500">Select your preferred app UI language</div>
+          <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">{{ $t('settings.interface_lang') }}</div>
+          <div class="text-xs sm:text-sm text-slate-500">{{ $t('settings.interface_lang_desc') }}</div>
         </div>
         <LocaleSelector />
       </div>
       <div class="flex items-center justify-between py-3">
         <div>
-          <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Color Theme</div>
-          <div class="text-xs sm:text-sm text-slate-500">Switch between Dark Mode and Light Mode</div>
+          <div class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">{{ $t('settings.color_theme') }}</div>
+          <div class="text-xs sm:text-sm text-slate-500">{{ $t('settings.color_theme_desc') }}</div>
         </div>
         <ThemeToggle />
       </div>
@@ -40,13 +40,13 @@ import LocaleSelector from '~/components/common/LocaleSelector.vue'
     <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
       <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
         <Bell class="w-4 h-4 text-brand-600 dark:text-brand-400" />
-        <span>Telegram Daily Dispatch & Streak Warning</span>
+        <span>{{ $t('settings.telegram_title') }}</span>
       </h2>
       <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-        Connect your Telegram bot to receive daily 08:00 AM curriculum links and 20:00 PM streak preservation reminders.
+        {{ $t('settings.telegram_desc') }}
       </p>
       <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 text-xs sm:text-sm font-mono text-brand-700 dark:text-brand-300">
-        Telegram Bot: @TechDailyBot (configured via backend settings)
+        {{ $t('settings.telegram_bot_info') }}
       </div>
     </div>
   </div>

@@ -58,8 +58,8 @@ function resetToScheduledDay() {
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95"
       >
         <ChevronLeft class="w-4 h-4" />
-        <span class="hidden sm:inline">{{ currentDayOrder > 1 ? `Day ${currentDayOrder - 1}` : 'Prev' }}</span>
-        <span class="sm:hidden">Prev</span>
+        <span class="hidden sm:inline">{{ currentDayOrder > 1 ? `${$t('today.day')} ${currentDayOrder - 1}` : $t('today.prev') }}</span>
+        <span class="sm:hidden">{{ $t('today.prev') }}</span>
       </button>
 
       <!-- Center: Day Selector & Topic Title -->
@@ -71,7 +71,7 @@ function resetToScheduledDay() {
             class="appearance-none pl-3 pr-8 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-bold focus:outline-none focus:border-brand-500 cursor-pointer shadow-sm"
           >
             <option v-for="d in 30" :key="d" :value="d">
-              Day {{ d }} / 30
+              {{ $t('today.day') }} {{ d }} / 30
             </option>
           </select>
           <div class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 text-xs">▼</div>
@@ -79,7 +79,7 @@ function resetToScheduledDay() {
 
         <span v-if="focusStore.data?.drill?.status === 2" class="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold">
           <CheckCircle2 class="w-3.5 h-3.5" />
-          <span>Completed</span>
+          <span>{{ $t('today.completed') }}</span>
         </span>
 
         <button
@@ -89,7 +89,7 @@ function resetToScheduledDay() {
           title="Back to today's scheduled curriculum"
         >
           <RotateCcw class="w-3 h-3 text-brand-600 dark:text-brand-400" />
-          <span>Today's Focus</span>
+          <span>{{ $t('today.today_focus') }}</span>
         </button>
       </div>
 
@@ -99,8 +99,8 @@ function resetToScheduledDay() {
         :disabled="currentDayOrder >= 30 || focusStore.isLoading"
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-brand-500/20 active:scale-95"
       >
-        <span class="hidden sm:inline">Day {{ currentDayOrder + 1 }}</span>
-        <span class="sm:hidden">Next</span>
+        <span class="hidden sm:inline">{{ $t('today.day') }} {{ currentDayOrder + 1 }}</span>
+        <span class="sm:hidden">{{ $t('today.next') }}</span>
         <ChevronRight class="w-4 h-4" />
       </button>
     </div>

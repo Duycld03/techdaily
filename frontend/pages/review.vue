@@ -64,7 +64,7 @@ async function onGrade(score: number) {
       </h2>
 
       <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-7">
-        You've reviewed all pending flashcards for today. Come back tomorrow for new SM-2 intervals!
+        {{ $t('review.no_cards_desc') }}
       </p>
 
       <NuxtLink
@@ -72,7 +72,7 @@ async function onGrade(score: number) {
         class="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-95"
       >
         <Sparkles class="w-4 h-4" />
-        <span>Continue Today's Drill</span>
+        <span>{{ $t('review.continue_drill') }}</span>
       </NuxtLink>
     </div>
   </div>

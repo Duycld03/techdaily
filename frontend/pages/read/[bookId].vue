@@ -216,7 +216,7 @@ function handleExplainSelection() {
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
         >
           <ArrowLeft class="w-4 h-4" />
-          <span class="hidden sm:inline">Library</span>
+          <span class="hidden sm:inline">{{ $t('reader.library') }}</span>
         </NuxtLink>
 
         <!-- Desktop TOC Toggle -->
@@ -230,7 +230,7 @@ function handleExplainSelection() {
           ]"
         >
           <List class="w-4 h-4" />
-          <span>Contents</span>
+          <span>{{ $t('reader.contents') }}</span>
         </button>
 
         <!-- Mobile TOC Drawer Button -->
@@ -239,7 +239,7 @@ function handleExplainSelection() {
           class="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300"
         >
           <List class="w-4 h-4" />
-          <span>Chapters</span>
+          <span>{{ $t('reader.chapters') }}</span>
         </button>
       </div>
 
@@ -249,7 +249,7 @@ function handleExplainSelection() {
           {{ book?.title || 'Technical Document' }}
         </h1>
         <p v-if="currentChunk" class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-          Slice {{ currentChunk.chunkOrder }} of {{ totalChunks }}: {{ currentChunk.chapterTitle }}
+          {{ $t('reader.slice_of', { current: currentChunk.chunkOrder, total: totalChunks, chapter: currentChunk.chapterTitle }) }}
         </p>
       </div>
 
@@ -300,10 +300,10 @@ function handleExplainSelection() {
         <div class="p-4 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
           <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             <BookOpen class="w-3.5 h-3.5" />
-            <span>Table of Contents</span>
+            <span>{{ $t('reader.toc') }}</span>
           </div>
           <span class="text-xs font-semibold text-slate-400">
-            {{ completedSlices.size }}/{{ totalChunks }} done
+            {{ $t('reader.done', { count: completedSlices.size, total: totalChunks }) }}
           </span>
         </div>
 
@@ -334,7 +334,7 @@ function handleExplainSelection() {
               <div class="truncate">{{ chunk.chapterTitle }}</div>
               <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1 font-normal">
                 <Clock class="w-3 h-3" />
-                <span>{{ chunk.estimatedReadMinutes || 3 }}m read</span>
+                <span>{{ $t('reader.read_min', { minutes: chunk.estimatedReadMinutes || 3 }) }}</span>
               </div>
             </div>
           </button>
@@ -350,7 +350,7 @@ function handleExplainSelection() {
           <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
               <BookOpen class="w-4 h-4 text-brand-500" />
-              <span>Table of Contents</span>
+              <span>{{ $t('reader.toc') }}</span>
             </div>
             <button
               @click="isMobileTocOpen = false"
@@ -403,11 +403,11 @@ function handleExplainSelection() {
           <div class="space-y-4 pb-6 border-b border-slate-200 dark:border-slate-800/80">
             <div class="flex items-center gap-3 text-xs font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider">
               <span class="px-2.5 py-1 rounded-lg bg-brand-100 dark:bg-brand-950/70 border border-brand-200 dark:border-brand-800">
-                Slice {{ currentChunk.chunkOrder }} of {{ totalChunks }}
+                {{ $t('today.day') }} {{ currentChunk.chunkOrder }} {{ $t('today.of') }} {{ totalChunks }}
               </span>
               <span class="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-normal">
                 <Clock class="w-3.5 h-3.5" />
-                {{ currentChunk.estimatedReadMinutes || 3 }} min read
+                {{ currentChunk.estimatedReadMinutes || 3 }} {{ $t('today.estimated_read') }}
               </span>
             </div>
 
@@ -429,7 +429,7 @@ function handleExplainSelection() {
           >
             <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
               <Sparkles class="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <span>Key Takeaways</span>
+              <span>{{ $t('reader.key_takeaways') }}</span>
             </div>
             <ul class="space-y-2">
               <li
@@ -453,7 +453,7 @@ function handleExplainSelection() {
             >
               <span class="text-xs font-bold text-slate-400 flex items-center gap-1 group-hover:text-brand-600 dark:group-hover:text-brand-400">
                 <ChevronLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-                Previous Slice
+                {{ $t('reader.prev_slice') }}
               </span>
               <span class="text-sm font-bold text-slate-900 dark:text-white mt-2 line-clamp-1">
                 #{{ book?.chunks[activeChunkIndex - 1]?.chunkOrder }} {{ book?.chunks[activeChunkIndex - 1]?.chapterTitle }}
@@ -468,7 +468,7 @@ function handleExplainSelection() {
               class="p-5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white text-right transition-all group shadow-lg shadow-brand-500/20 active:scale-[0.99] flex flex-col justify-between"
             >
               <span class="text-xs font-semibold text-white/80 flex items-center justify-end gap-1">
-                Next Slice
+                {{ $t('reader.next_slice') }}
                 <ChevronRight class="w-4 h-4 transition-transform group-hover:translate-x-1" />
               </span>
               <span class="text-sm font-bold text-white mt-2 line-clamp-1">
@@ -482,8 +482,8 @@ function handleExplainSelection() {
               to="/library"
               class="p-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-center transition-all shadow-lg shadow-emerald-600/20 flex flex-col items-center justify-center gap-1"
             >
-              <span class="text-xs font-bold text-emerald-200">🎉 Completed Entire Document</span>
-              <span class="text-sm font-black">Return to Library</span>
+              <span class="text-xs font-bold text-emerald-200">{{ $t('reader.completed_doc') }}</span>
+              <span class="text-sm font-black">{{ $t('reader.return_library') }}</span>
             </NuxtLink>
           </div>
         </div>
@@ -501,7 +501,7 @@ function handleExplainSelection() {
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow transition-colors"
       >
         <Sparkles class="w-3.5 h-3.5" />
-        <span>Explain with Gemini</span>
+        <span>{{ $t('reader.explain_with_gemini') }}</span>
       </button>
 
       <button
@@ -509,7 +509,7 @@ function handleExplainSelection() {
         class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
       >
         <Copy class="w-3.5 h-3.5" />
-        <span>Copy</span>
+        <span>{{ $t('reader.copy') }}</span>
       </button>
     </div>
 

@@ -107,7 +107,7 @@ async function handlePasswordChange() {
           </p>
 
           <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
-            Target Pace: {{ profileStore.profile?.dailyGoalMinutes || 10 }} mins / day
+            {{ $t('profile.target_pace', { minutes: profileStore.profile?.dailyGoalMinutes || 10 }) }}
           </p>
         </div>
       </div>
@@ -118,52 +118,52 @@ async function handlePasswordChange() {
       <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
         <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-500">
           <Flame class="w-4 h-4" />
-          <span>Active Streak</span>
+          <span>{{ $t('profile.active_streak') }}</span>
         </div>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-          {{ profileStore.stats?.currentStreak ?? 0 }} <span class="text-xs font-normal text-slate-500">days</span>
+          {{ profileStore.stats?.currentStreak ?? 0 }} <span class="text-xs font-normal text-slate-500">{{ $t('profile.days') }}</span>
         </div>
         <div class="text-[11px] text-slate-400">
-          {{ profileStore.stats?.freezeCreditsRemaining ?? 2 }} freeze credits
+          {{ $t('profile.freeze_credits', { count: profileStore.stats?.freezeCreditsRemaining ?? 2 }) }}
         </div>
       </div>
 
       <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
         <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-500">
           <CheckCircle2 class="w-4 h-4" />
-          <span>Drills Completed</span>
+          <span>{{ $t('profile.drills_completed') }}</span>
         </div>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
           {{ profileStore.stats?.totalDrillsCompleted ?? 0 }}
         </div>
         <div class="text-[11px] text-slate-400">
-          Daily interview challenges
+          {{ $t('profile.interview_challenges') }}
         </div>
       </div>
 
       <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
         <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
           <Award class="w-4 h-4" />
-          <span>Avg AI Score</span>
+          <span>{{ $t('profile.avg_score') }}</span>
         </div>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
           {{ profileStore.stats?.averageScore ?? 0 }} <span class="text-xs font-normal text-slate-500">/ 10</span>
         </div>
         <div class="text-[11px] text-slate-400">
-          Gemini 3.5 Flash evaluated
+          {{ $t('profile.ai_evaluated') }}
         </div>
       </div>
 
       <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
         <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-500">
           <Layers class="w-4 h-4" />
-          <span>Cards in Deck</span>
+          <span>{{ $t('profile.cards_in_deck') }}</span>
         </div>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
           {{ profileStore.stats?.totalCardsInDeck ?? 0 }}
         </div>
         <div class="text-[11px] text-slate-400">
-          SM-2 spaced repetition
+          {{ $t('profile.spaced_repetition') }}
         </div>
       </div>
     </div>
@@ -192,7 +192,7 @@ async function handlePasswordChange() {
           ]"
         >
           <User class="w-4 h-4" />
-          <span>Profile & Goals</span>
+          <span>{{ $t('profile.tab_personal') }}</span>
         </button>
 
         <button
@@ -206,7 +206,7 @@ async function handlePasswordChange() {
           ]"
         >
           <Shield class="w-4 h-4" />
-          <span>Security & Password</span>
+          <span>{{ $t('profile.tab_security') }}</span>
         </button>
       </div>
 
@@ -214,7 +214,7 @@ async function handlePasswordChange() {
       <form v-if="activeTab === 'personal'" @submit.prevent="handleProfileSave" class="space-y-5">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
+            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.full_name') }}</label>
             <div class="relative">
               <User class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -227,7 +227,7 @@ async function handlePasswordChange() {
           </div>
 
           <div>
-            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Target Engineering Level</label>
+            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.target_role') }}</label>
             <div class="relative">
               <Briefcase class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <select
@@ -246,29 +246,29 @@ async function handlePasswordChange() {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Daily Goal (Minutes / Day)</label>
+            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.daily_goal') }}</label>
             <div class="relative">
               <Clock class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <select
                 v-model="dailyGoalMinutes"
                 class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
               >
-                <option :value="5">5 Minutes (Quick Drill)</option>
-                <option :value="10">10 Minutes (Standard Daily Focus)</option>
-                <option :value="15">15 Minutes (Deep Dive & Quiz)</option>
-                <option :value="30">30 Minutes (Mastery Sprint)</option>
+                <option :value="5">5 Minutes</option>
+                <option :value="10">10 Minutes</option>
+                <option :value="15">15 Minutes</option>
+                <option :value="30">30 Minutes</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Telegram Chat ID (Notifications)</label>
+            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.telegram_id') }}</label>
             <div class="relative">
               <Send class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 v-model.number="telegramChatId"
                 type="number"
-                placeholder="e.g. 123456789 (optional)"
+                :placeholder="$t('profile.telegram_placeholder')"
                 class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
               />
             </div>
@@ -283,7 +283,7 @@ async function handlePasswordChange() {
           >
             <Save v-if="!profileStore.isUpdating" class="w-4 h-4" />
             <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <span>{{ profileStore.isUpdating ? 'Saving...' : 'Save Profile Changes' }}</span>
+            <span>{{ profileStore.isUpdating ? $t('profile.saving') : $t('profile.save_btn') }}</span>
           </button>
         </div>
       </form>
@@ -295,7 +295,7 @@ async function handlePasswordChange() {
         </div>
 
         <div v-if="profileStore.profile?.hasPassword">
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Current Password</label>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.current_password') }}</label>
           <div class="relative">
             <Lock class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -309,7 +309,7 @@ async function handlePasswordChange() {
         </div>
 
         <div>
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">New Password (at least 6 chars)</label>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.new_password') }}</label>
           <div class="relative">
             <Lock class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -324,7 +324,7 @@ async function handlePasswordChange() {
         </div>
 
         <div>
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Confirm New Password</label>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.confirm_password') }}</label>
           <div class="relative">
             <Lock class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -345,7 +345,7 @@ async function handlePasswordChange() {
             class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
           >
             <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <span>{{ profileStore.profile?.hasPassword ? 'Update Password' : 'Set Account Password' }}</span>
+            <span>{{ profileStore.profile?.hasPassword ? $t('profile.update_password_btn') : $t('profile.set_password_btn') }}</span>
           </button>
         </div>
       </form>

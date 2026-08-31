@@ -118,7 +118,7 @@ async function handleSubmit() {
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium'
           ]"
         >
-          Sign In
+          {{ $t('auth.sign_in_tab') }}
         </button>
         <button
           type="button"
@@ -130,7 +130,7 @@ async function handleSubmit() {
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium'
           ]"
         >
-          Register
+          {{ $t('auth.register_tab') }}
         </button>
       </div>
 
@@ -142,20 +142,19 @@ async function handleSubmit() {
       <!-- Email & Password Form -->
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <div v-if="authMode === 'register'">
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.name_label') }}</label>
           <div class="relative">
             <User class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               v-model="name"
               type="text"
-              placeholder="Your Name (e.g. Senior Architect)"
               class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
 
         <div>
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Email Address</label>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.email_label') }}</label>
           <div class="relative">
             <Mail class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -169,7 +168,7 @@ async function handleSubmit() {
         </div>
 
         <div>
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.password_label') }}</label>
           <div class="relative">
             <Lock class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -177,7 +176,7 @@ async function handleSubmit() {
               required
               type="password"
               minlength="6"
-              placeholder="•••••••• (at least 6 chars)"
+              placeholder="••••••••"
               class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
@@ -189,7 +188,7 @@ async function handleSubmit() {
           class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
         >
           <span v-if="isLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          <span>{{ authMode === 'login' ? 'Sign In' : 'Create Account' }}</span>
+          <span>{{ authMode === 'login' ? $t('auth.submit_sign_in') : $t('auth.submit_register') }}</span>
           <ArrowRight v-if="!isLoading" class="w-4 h-4" />
         </button>
       </form>
