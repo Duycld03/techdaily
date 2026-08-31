@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle } from 'lucide-vue-next'
+import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const libraryStore = useLibraryStore()
@@ -11,10 +11,27 @@ const bookmarks = ref<Record<string, number>>({})
 
 // Import modal state
 const isImportModalOpen = ref(false)
+const activeTab = ref<'markdown' | 'pdf' | 'url'>('markdown')
+
+// Tab 1: Markdown form state
 const importTitle = ref('')
 const importCategory = ref(0)
 const importSourceUrl = ref('')
 const importContent = ref('')
+
+// Tab 2: PDF Upload state
+const pdfFile = ref<File | null>(null)
+const pdfTitle = ref('')
+const pdfCategory = ref(0)
+const isDraggingPdf = ref(false)
+const isUploadingPdf = ref(false)
+const pdfError = ref<string | null>(null)
+
+// Tab 3: URL Crawler state
+const crawlUrlInput = ref('')
+const isCrawling = ref(false)
+const crawlError = ref<string | null>(null)
+const crawlSuccess = ref(false)
 
 // Delete modal state
 const bookToDelete = ref<{ id: string; title: string } | null>(null)
@@ -79,7 +96,83 @@ async function handleImportSubmit() {
     importSourceUrl.value = ''
     isImportModalOpen.value = false
   } catch (err) {
-    // error handled
+    // error handled in store
+  }
+}
+
+function onPdfFileChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files[0]) {
+    selectPdf(target.files[0])
+  }
+}
+
+function onPdfDrop(event: DragEvent) {
+  isDraggingPdf.value = false
+  if (event.dataTransfer?.files && event.dataTransfer.files[0]) {
+    selectPdf(event.dataTransfer.files[0])
+  }
+}
+
+function selectPdf(file: File) {
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    pdfError.value = 'Only .pdf files are supported.'
+    return
+  }
+  if (file.size > 209_715_200) {
+    pdfError.value = 'File exceeds the maximum limit of 200 MB.'
+    return
+  }
+  pdfError.value = null
+  pdfFile.value = file
+  if (!pdfTitle.value) {
+    pdfTitle.value = file.name.replace(/\.pdf$/i, '')
+  }
+}
+
+async function handlePdfUpload() {
+  if (!pdfFile.value) return
+  isUploadingPdf.value = true
+  pdfError.value = null
+
+  try {
+    const formData = new FormData()
+    formData.append('file', pdfFile.value)
+    if (pdfTitle.value) formData.append('title', pdfTitle.value)
+    formData.append('category', pdfCategory.value.toString())
+    formData.append('language', 'en')
+
+    await libraryStore.uploadPdf(formData)
+
+    // Reset & close
+    pdfFile.value = null
+    pdfTitle.value = ''
+    isImportModalOpen.value = false
+  } catch (err: any) {
+    pdfError.value = err.message || 'Failed to process PDF.'
+  } finally {
+    isUploadingPdf.value = false
+  }
+}
+
+async function handleCrawlUrl() {
+  if (!crawlUrlInput.value) return
+  isCrawling.value = true
+  crawlError.value = null
+  crawlSuccess.value = false
+
+  try {
+    const result = await libraryStore.crawlUrl(crawlUrlInput.value)
+    importTitle.value = result.title
+    importSourceUrl.value = result.sourceUrl
+    importContent.value = result.markdownContent
+    crawlSuccess.value = true
+    // Switch to markdown tab for preview & confirmation
+    activeTab.value = 'markdown'
+  } catch (err: any) {
+    crawlError.value = err.message || 'Failed to crawl article from URL.'
+  } finally {
+    isCrawling.value = false
   }
 }
 
@@ -96,7 +189,7 @@ async function confirmDeleteBook() {
     isDeleteModalOpen.value = false
     bookToDelete.value = null
   } catch (err) {
-    // error handled
+    // error handled in store
   } finally {
     isDeleting.value = false
   }
@@ -227,7 +320,7 @@ async function confirmDeleteBook() {
 
     <!-- Import Document Modal -->
     <div v-if="isImportModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in">
-      <div class="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-9 space-y-6 animate-in zoom-in-95">
+      <div class="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-9 space-y-6 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
           <div>
             <h3 class="text-xl font-bold text-slate-900 dark:text-white">{{ $t('library.import_modal_title') }}</h3>
@@ -238,7 +331,53 @@ async function confirmDeleteBook() {
           </button>
         </div>
 
-        <form @submit.prevent="handleImportSubmit" class="space-y-4">
+        <!-- 3-Tab Selector -->
+        <div class="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-950/80 rounded-2xl border border-slate-200/80 dark:border-slate-800/80">
+          <button
+            type="button"
+            @click="activeTab = 'markdown'"
+            :class="[
+              'flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all',
+              activeTab === 'markdown'
+                ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            ]"
+          >
+            <FileText class="w-4 h-4" />
+            <span>{{ $t('library.tab_markdown') }}</span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeTab = 'pdf'"
+            :class="[
+              'flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all',
+              activeTab === 'pdf'
+                ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            ]"
+          >
+            <FileUp class="w-4 h-4" />
+            <span>{{ $t('library.tab_pdf') }}</span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeTab = 'url'"
+            :class="[
+              'flex-1 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all',
+              activeTab === 'url'
+                ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            ]"
+          >
+            <Globe class="w-4 h-4" />
+            <span>{{ $t('library.tab_url') }}</span>
+          </button>
+        </div>
+
+        <!-- TAB 1: Markdown Direct Form -->
+        <form v-if="activeTab === 'markdown'" @submit.prevent="handleImportSubmit" class="space-y-4">
           <div>
             <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.title_label') }}</label>
             <input
@@ -281,7 +420,7 @@ async function confirmDeleteBook() {
             <textarea
               v-model="importContent"
               required
-              rows="8"
+              rows="7"
               placeholder="Paste Markdown document with # and ## headers here..."
               class="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-mono text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none resize-none"
             ></textarea>
@@ -298,13 +437,152 @@ async function confirmDeleteBook() {
             <button
               type="submit"
               :disabled="libraryStore.isImporting"
-              class="flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-colors"
+              class="flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-colors disabled:opacity-50"
             >
               <span v-if="libraryStore.isImporting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               <span>{{ libraryStore.isImporting ? $t('library.importing') : $t('library.import_action') }}</span>
             </button>
           </div>
         </form>
+
+        <!-- TAB 2: PDF Drag & Drop Upload Form -->
+        <form v-else-if="activeTab === 'pdf'" @submit.prevent="handlePdfUpload" class="space-y-4">
+          <!-- Dropzone -->
+          <div
+            @dragover.prevent="isDraggingPdf = true"
+            @dragleave.prevent="isDraggingPdf = false"
+            @drop.prevent="onPdfDrop"
+            :class="[
+              'border-2 border-dashed rounded-3xl p-8 text-center transition-all cursor-pointer relative',
+              isDraggingPdf
+                ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40'
+                : 'border-slate-300 dark:border-slate-800 hover:border-brand-400 dark:hover:border-slate-700 bg-slate-50/60 dark:bg-slate-950/40'
+            ]"
+            @click="($refs.pdfInput as HTMLInputElement)?.click()"
+          >
+            <input
+              ref="pdfInput"
+              type="file"
+              accept=".pdf,application/pdf"
+              class="hidden"
+              @change="onPdfFileChange"
+            />
+
+            <div class="flex flex-col items-center justify-center space-y-3">
+              <div class="w-14 h-14 rounded-2xl bg-brand-100 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 flex items-center justify-center border border-brand-200 dark:border-brand-900 shadow-sm">
+                <UploadCloud class="w-7 h-7" />
+              </div>
+
+              <div v-if="!pdfFile" class="space-y-1">
+                <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200">
+                  {{ $t('library.pdf_drop_title') }}
+                </h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  {{ $t('library.pdf_drop_desc') }}
+                </p>
+                <p class="text-[11px] text-brand-600 dark:text-brand-400 font-mono pt-1">
+                  {{ $t('library.pdf_size_limit') }}
+                </p>
+              </div>
+
+              <div v-else class="space-y-1">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+                  <CheckCircle2 class="w-4 h-4" />
+                  <span>{{ pdfFile.name }} ({{ (pdfFile.size / (1024 * 1024)).toFixed(1) }} MB)</span>
+                </div>
+                <p class="text-xs text-slate-400">Click or drop another file to replace</p>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="pdfError" class="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs font-medium">
+            {{ pdfError }}
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.title_label') }}</label>
+              <input
+                v-model="pdfTitle"
+                type="text"
+                placeholder="Optional: Auto-extracted from PDF if blank"
+                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
+              <select
+                v-model="pdfCategory"
+                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
+              >
+                <option :value="0">Frontend & Web</option>
+                <option :value="1">Backend & Distributed</option>
+                <option :value="2">Database & Storage</option>
+                <option :value="3">Cloud & DevOps</option>
+                <option :value="4">System Design</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              @click="isImportModalOpen = false"
+              class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+            >
+              {{ $t('library.cancel') }}
+            </button>
+            <button
+              type="submit"
+              :disabled="!pdfFile || isUploadingPdf"
+              class="flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-colors disabled:opacity-50"
+            >
+              <span v-if="isUploadingPdf" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ isUploadingPdf ? $t('library.parsing_pdf') : $t('library.upload_pdf_action') }}</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- TAB 3: Web URL Crawler Form -->
+        <div v-else-if="activeTab === 'url'" class="space-y-4">
+          <div>
+            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              {{ $t('library.url_crawler_title') }}
+            </label>
+            <div class="flex gap-2">
+              <input
+                v-model="crawlUrlInput"
+                type="url"
+                :placeholder="$t('library.url_input_placeholder')"
+                class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
+                @keyup.enter="handleCrawlUrl"
+              />
+              <button
+                type="button"
+                :disabled="!crawlUrlInput || isCrawling"
+                @click="handleCrawlUrl"
+                class="flex items-center gap-2 px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-colors disabled:opacity-50 shrink-0"
+              >
+                <span v-if="isCrawling" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <Globe v-else class="w-4 h-4" />
+                <span>{{ isCrawling ? $t('library.fetching_url') : $t('library.fetch_url_btn') }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="crawlError" class="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs font-medium">
+            {{ crawlError }}
+          </div>
+
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-2">
+            <h5 class="font-bold text-slate-700 dark:text-slate-300">Supported Sources:</h5>
+            <ul class="list-disc list-inside space-y-1">
+              <li><strong>GitHub Repositories:</strong> Links to <code>README.md</code> or any <code>.md</code> file in a repository.</li>
+              <li><strong>Technical Blogs & RFCs:</strong> Microsoft Learn, Martin Fowler, Dev.to, Medium, Substack architecture posts.</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
 

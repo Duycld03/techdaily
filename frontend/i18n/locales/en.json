@@ -92,7 +92,21 @@
     "confirm_delete_desc": "Are you sure you want to delete \"{title}\"? All reading slices, quizzes, and associated bookmarks will be removed.",
     "confirm_delete_btn": "Yes, Delete Document",
     "cancel": "Cancel",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "tab_markdown": "Markdown",
+    "tab_pdf": "PDF Document",
+    "tab_url": "Web URL Crawler",
+    "pdf_drop_title": "Upload Technical PDF Book or Spec",
+    "pdf_drop_desc": "Drag and drop your PDF file here, or click to browse",
+    "pdf_size_limit": "Supports up to 200 MB (~800 pages)",
+    "pdf_selected": "Selected PDF:",
+    "upload_pdf_action": "Upload & Extract Slices",
+    "parsing_pdf": "Extracting text and chunking slices...",
+    "url_crawler_title": "Crawl & Convert Article from Web",
+    "url_input_placeholder": "https://github.com/.../README.md or tech blog URL",
+    "fetch_url_btn": "Fetch Content",
+    "fetching_url": "Crawling & Converting...",
+    "fetch_success": "Article content fetched successfully! Review below before importing."
   },
   "reader": {
     "library": "Library",

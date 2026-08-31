@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using TechDaily.Api.Endpoints;
 using TechDaily.Api.Middleware;
 using TechDaily.Application;
+using Microsoft.AspNetCore.Http.Features;
 using TechDaily.Infrastructure;
 using TechDaily.Infrastructure.Persistence;
 using TechDaily.Infrastructure.Persistence.Seeders;
@@ -18,6 +19,19 @@ builder.Configuration
     .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
     .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
+
+// Configure 200MB Upload Body Limit (50-60% of Gemini Context Window)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 209_715_200; // 200 MB
+    options.ValueLengthLimit = int.MaxValue;
+    options.MultipartHeadersLengthLimit = int.MaxValue;
+});
+
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.MaxRequestBodySize = 209_715_200; // 200 MB
+});
 
 // Add Services
 builder.Services.AddProblemDetails();

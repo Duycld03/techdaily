@@ -92,7 +92,21 @@
     "confirm_delete_desc": "Bạn có chắc chắn muốn xóa tài liệu \"{title}\"? Toàn bộ các lát cắt đọc, câu hỏi và dấu trang sẽ bị xóa.",
     "confirm_delete_btn": "Đồng Ý Xóa",
     "cancel": "Hủy Bỏ",
-    "deleting": "Đang xóa..."
+    "deleting": "Đang xóa...",
+    "tab_markdown": "Văn Bản Markdown",
+    "tab_pdf": "Tải Lên PDF",
+    "tab_url": "Crawl Từ URL",
+    "pdf_drop_title": "Tải Lên Sách Hoặc Tài Liệu PDF",
+    "pdf_drop_desc": "Kéo thả file PDF vào đây hoặc bấm để chọn file từ máy",
+    "pdf_size_limit": "Hỗ trợ tối đa 200 MB (~800 trang)",
+    "pdf_selected": "File PDF đã chọn:",
+    "upload_pdf_action": "Tải Lên & Bóc Tách Lát Cắt",
+    "parsing_pdf": "Đang trích xuất văn bản & tạo slices...",
+    "url_crawler_title": "Cào & Chuyển Đổi Bài Viết Từ Web",
+    "url_input_placeholder": "https://github.com/.../README.md hoặc link bài viết kỹ thuật",
+    "fetch_url_btn": "Cào Dữ Liệu",
+    "fetching_url": "Đang cào & chuyển đổi Markdown...",
+    "fetch_success": "Đã cào nội dung thành công! Kiểm tra lại bên dưới trước khi lưu."
   },
   "reader": {
     "library": "Thư Viện",

@@ -98,6 +98,42 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
+  async function uploadPdf(formData: FormData) {
+    isImporting.value = true
+    error.value = null
+    try {
+      const api = useApiClient()
+      const res = await api.postRaw<{ book: Book }>('/api/v1/library/upload-pdf', formData)
+      books.value.unshift(res.book)
+      return res.book
+    } catch (err: any) {
+      error.value = err.message || 'Failed to upload and process PDF.'
+      throw err
+    } finally {
+      isImporting.value = false
+    }
+  }
+
+  async function crawlUrl(url: string) {
+    isImporting.value = true
+    error.value = null
+    try {
+      const api = useApiClient()
+      const res = await api.post<{
+        title: string
+        sourceUrl: string
+        markdownContent: string
+        estimatedWordCount: number
+      }>('/api/v1/library/crawl-url', { url })
+      return res
+    } catch (err: any) {
+      error.value = err.message || 'Failed to crawl article from URL.'
+      throw err
+    } finally {
+      isImporting.value = false
+    }
+  }
+
   async function deleteBook(id: string) {
     isLoading.value = true
     error.value = null
@@ -126,6 +162,8 @@ export const useLibraryStore = defineStore('library', () => {
     fetchBooks,
     fetchBookById,
     importDocument,
+    uploadPdf,
+    crawlUrl,
     deleteBook
   }
 })

@@ -4,10 +4,12 @@ using TechDaily.Application.Common;
 using TechDaily.Application.Features.DailyFocus.ExplainTerm;
 using TechDaily.Application.Features.DailyFocus.GetTodayFocus;
 using TechDaily.Application.Features.DailyFocus.SubmitDailyDrill;
+using TechDaily.Application.Features.Library.CrawlUrl;
 using TechDaily.Application.Features.Library.DeleteBook;
 using TechDaily.Application.Features.Library.GetBookById;
 using TechDaily.Application.Features.Library.GetBooks;
 using TechDaily.Application.Features.Library.ImportDocument;
+using TechDaily.Application.Features.Library.UploadPdf;
 using TechDaily.Application.Features.Notes.CreateHighlight;
 using TechDaily.Application.Features.Notes.DeleteHighlight;
 using TechDaily.Application.Features.Notes.GetHighlights;
@@ -36,6 +38,8 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<GetBookByIdRequest, GetBookByIdResponse>, GetBookByIdHandler>();
         services.AddScoped<IUseCase<ImportDocumentRequest, ImportDocumentResponse>, ImportDocumentHandler>();
         services.AddScoped<IUseCase<DeleteBookRequest, DeleteBookResponse>, DeleteBookHandler>();
+        services.AddScoped<IUseCase<UploadPdfRequest, UploadPdfResponse>, UploadPdfHandler>();
+        services.AddScoped<IUseCase<CrawlUrlRequest, CrawlUrlResponse>, CrawlUrlHandler>();
 
         // Notes / Highlights Handlers
         services.AddScoped<IUseCase<GetHighlightsRequest, GetHighlightsResponse>, GetHighlightsHandler>();

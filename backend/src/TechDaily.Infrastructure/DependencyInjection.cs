@@ -31,12 +31,14 @@ public static class DependencyInjection
         services.AddHttpClient<GeminiAiService>();
         services.AddHttpClient<TermExplanationService>();
         services.AddHttpClient<TelegramNotifier>();
+        services.AddHttpClient<IWebArticleCrawler, WebArticleCrawler>();
 
         // Service Registrations
         services.AddScoped<IAiReviewService, GeminiAiService>();
         services.AddScoped<ITermExplanationService, TermExplanationService>();
         services.AddScoped<ITelegramNotifier, TelegramNotifier>();
         services.AddScoped<IAudioStorageService, LocalAudioStorageService>();
+        services.AddScoped<IPdfExtractor, PdfPigExtractor>();
 
         return services;
     }
