@@ -141,7 +141,7 @@ function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => 
           </div>
 
           <!-- Navigation Links -->
-          <nav class="space-y-1.5 mt-6">
+          <nav class="space-y-1 mt-6">
             <NuxtLink
               v-for="link in links"
               :key="link.path"
@@ -151,12 +151,12 @@ function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => 
             >
               <a
                 :href="href"
-                @click="handleMobileLinkClick($event, navigate)"
+                @click="navigate(); isMobileNavOpen = false"
                 :class="[
-                  'flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm transition-all border outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0',
+                  'flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm transition-colors',
                   isLinkActive(link.path)
-                    ? 'bg-brand-500/10 dark:bg-brand-500/15 border-brand-500/30 dark:border-brand-500/30 text-brand-700 dark:text-brand-400 font-bold shadow-sm'
-                    : 'border-transparent text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium'
+                    ? 'bg-slate-100 dark:bg-slate-800/80 text-brand-600 dark:text-brand-400 font-bold'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/50 font-medium'
                 ]"
               >
                 <component
