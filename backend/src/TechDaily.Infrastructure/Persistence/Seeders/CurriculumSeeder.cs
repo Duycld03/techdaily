@@ -146,6 +146,36 @@ public static class CurriculumSeeder
             new() { Question = "Which condition directly triggers a Vue 3 Hydration Mismatch?", Options = new() { "Using async/await in setup()", "Rendering Date.now() or window.innerWidth directly in template during SSR", "Importing CSS modules", "Using Pinia store" }, AnswerIndex = 1, Explanation = "Non-deterministic values differ between server render time and client execution time." }
         );
 
+        // --- Day 3: ASP.NET Core Kestrel Internals & System.IO.Pipelines ---
+        AddDay(
+            3, "dotnet-kestrel-pipelines", "ASP.NET Core Kestrel Internals & System.IO.Pipelines",
+            Category.BackendDotNet, Difficulty.Senior,
+            "Deep dive into Kestrel transport layers, Socket abstractions, System.IO.Pipelines (PipeReader/PipeWriter), and zero-allocation HTTP request parsing.",
+            "### Kestrel Transport & Request Pipeline\nKestrel uses `System.IO.Pipelines` to achieve high-throughput zero-copy I/O...",
+            "How does System.IO.Pipelines solve the buffer management problem and eliminate Gen 2 GC pressure during high-concurrency HTTP streaming in ASP.NET Core?",
+            new() { "PipeReader/PipeWriter manages pooled contiguous memory buffers", "AdvanceTo allows consuming partial bytes without allocating intermediate arrays", "Zero-copy parsing avoids Large Object Heap (LOH) fragmentation under heavy payload traffic" },
+            "Traditional stream architectures require continuous allocation of byte arrays (byte[] buffers) which quickly promotes short-lived streams into Gen 2 and LOH fragmentation. System.IO.Pipelines decouples buffer allocation from parsing by managing a shared memory pool via PipeReader and PipeWriter...",
+            "In ASP.NET Core, Kestrel leverages `System.IO.Pipelines` to parse incoming HTTP/1.1 and HTTP/2 frames. Unlike classic `Stream` approaches where callers allocate byte arrays, `PipeReader.ReadAsync()` returns a `ReadOnlySequence<byte>` sliced directly from memory pool blocks. Callers inspect data and call `PipeReader.AdvanceTo(consumed, examined)` to release memory back to the pool without GC overhead.",
+            "Kestrel uses System.IO.Pipelines to eliminate GC pressure in high-throughput network I/O.",
+            new() { "PipeReader uses pooled memory blocks", "AdvanceTo marks consumed vs examined boundaries", "ReadOnlySequence<byte> supports multi-segment zero-copy slicing" },
+            new() { Question = "How does System.IO.Pipelines avoid buffer allocations when parsing incoming HTTP requests?", Options = new() { "It creates a new Task<byte[]> for each packet", "It manages a pool of memory buffers and passes ReadOnlySequence<byte> directly to the parser", "It delegates request parsing to the OS kernel driver", "It converts requests to base64 strings" }, AnswerIndex = 1, Explanation = "System.IO.Pipelines uses a pooled buffer architecture that exposes slices via ReadOnlySequence<byte> without allocating new byte arrays." }
+        );
+
+        // --- Day 4: C# Async/Await State Machine & SynchronizationContext ---
+        AddDay(
+            4, "csharp-async-state-machine", "C# Async/Await State Machine & SynchronizationContext",
+            Category.BackendDotNet, Difficulty.Senior,
+            "IAsyncStateMachine lowering, ValueTask<T> vs Task<T> allocation mechanics, ConfigureAwait(false), and avoiding ThreadPool starvation.",
+            "### Async State Machine Lowering\nThe C# compiler transforms async methods into a struct implementing `IAsyncStateMachine`...",
+            "Why does ValueTask<T> provide significant performance gains for synchronously completing hot paths, and why must you never await a ValueTask<T> multiple times?",
+            new() { "ValueTask is a discriminated union struct avoiding heap Task allocation for synchronous completions", "Awaiting a ValueTask multiple times causes undefined behavior when backed by pooled IValueTaskSource", "Use AsTask() if multiple awaits or concurrent operations are needed" },
+            "When an async method completes synchronously (e.g. cache hit), `ValueTask<T>` creates zero heap allocations because it is a stack-allocated struct. When returning `Task<T>`, the CLR must allocate a `Task` object on the Managed Heap even if the result was immediately available. However, because `ValueTask<T>` may wrap an `IValueTaskSource` that is pooled and reset upon consumption, awaiting it more than once or calling `.Result` concurrently can corrupt the underlying pool state...",
+            "In .NET, the compiler lowers async methods into state machine structs. `ValueTask<T>` eliminates allocations on hot synchronous paths by avoiding heap-allocated Task objects. Always use `ConfigureAwait(false)` in non-UI libraries to prevent SynchronizationContext deadlocks and context-switching overhead.",
+            "ValueTask<T> eliminates heap allocations for synchronous paths. Never await a ValueTask multiple times.",
+            new() { "ValueTask<T> is a struct avoiding heap Task allocation", "Never await a ValueTask<T> multiple times", "ConfigureAwait(false) bypasses SynchronizationContext capture" },
+            new() { Question = "Why should you never await a ValueTask<T> more than once?", Options = new() { "It throws an OutOfMemoryException", "The underlying IValueTaskSource may be pooled and reused, leading to race conditions and corrupted results", "It cancels the background thread", "ValueTask only works on the UI thread" }, AnswerIndex = 1, Explanation = "ValueTask instances backed by IValueTaskSource are reset and returned to object pools upon completion; awaiting twice accesses a reused or recycled object." }
+        );
+
         // --- Day 8: Garbage Collection (.NET) ---
         AddDay(
             8, "dotnet-gc-internals", "Garbage Collection (GC) Internals & Allocations",
