@@ -58,7 +58,7 @@ function resetToScheduledDay() {
         class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95"
       >
         <ChevronLeft class="w-4 h-4" />
-        <span class="hidden sm:inline">Day {{ currentDayOrder - 1 }}</span>
+        <span class="hidden sm:inline">{{ currentDayOrder > 1 ? `Day ${currentDayOrder - 1}` : 'Prev' }}</span>
         <span class="sm:hidden">Prev</span>
       </button>
 
