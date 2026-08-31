@@ -7,7 +7,7 @@ An AI-powered, daily bite-sized learning and technical interview preparation pla
 ## 🎯 Project Overview
 
 TechDaily is built to solve two critical developer challenges:
-1. **Daily Micro-Learning from Real Docs:** Extracting curated, 3–5 minute reading slices from authoritative technical documentation (Microsoft Learn, PostgreSQL 17 Manual, Vue 3 / Nuxt 3 Docs, DDIA, CLR via C#) with structured takeaways, inline AI explanations, and IDE-grade Shiki syntax highlighting.
+1. **Daily Micro-Learning from Real Docs:** Extracting curated, 3–5 minute reading slices from authoritative technical documentation (Microsoft Learn, PostgreSQL 17 Manual, Vue 3 / Nuxt 4 Docs, DDIA, CLR via C#) with structured takeaways, inline AI explanations, and IDE-grade Shiki syntax highlighting.
 2. **Active Recall & Mock Interview Drills:** Providing daily Senior-level engineering challenges with instant AI evaluation (scoring, technical gap analysis, model answers) and voice response capability.
 
 ---
@@ -20,7 +20,7 @@ TechDaily is built to solve two critical developer challenges:
 | **Data Persistence** | **EF Core 10 + Npgsql** | PostgreSQL 17 (`pgvector`), JSONB (`ToJson()`) for takeaways/quizzes/reviews, Local Volume Audio Storage |
 | **AI Evaluation Engine** | **Gemini 2.5 / 3.5 Flash API** | 1-Pass Multimodal voice/text evaluation, Structured Output (JSON Schema), Semantic Term Cache, AI Slicing |
 | **Document Ingestion** | **PdfPig + ReverseMarkdown** | Zero-LOH streaming for PDFs up to 200MB (800 pages), Geometric Baseline line-grouping, HTML-to-Markdown Web Crawler with syntax preservation |
-| **Frontend Web** | **Nuxt 3 + Vue 3** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
+| **Frontend Web** | **Nuxt 4 + Vue 3** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
 | **Notifications** | **Telegram Bot API** | Lightweight morning alerts and streak retention reminders with direct deep links to Web |
 
 ---
