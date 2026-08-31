@@ -1,8 +1,9 @@
 export default defineNuxtRouteMiddleware((to) => {
-  const authStore = useAuthStore()
+  // Defer auth routing checks to client where localStorage / session state lives
+  if (import.meta.server) return
 
-  // Initialize from storage on client if needed
-  if (typeof window !== 'undefined' && !authStore.isLoggedIn) {
+  const authStore = useAuthStore()
+  if (!authStore.isLoggedIn) {
     authStore.init()
   }
 
