@@ -39,7 +39,16 @@ export function useApiClient() {
       throw new Error(errorMessage)
     }
 
-    return response.json()
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return {} as T
+    }
+
+    const text = await response.text()
+    if (!text || text.trim() === '') {
+      return {} as T
+    }
+
+    return JSON.parse(text)
   }
 
   return {
