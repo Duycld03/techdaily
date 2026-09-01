@@ -308,22 +308,6 @@ async function handlePasswordChange() {
 
       <!-- Tab 2: Security & Password -->
       <form v-else @submit.prevent="handlePasswordChange" class="space-y-5">
-        <!-- Notice for Google Accounts Without Password -->
-        <div
-          v-if="!profileStore.profile?.hasPassword"
-          class="p-4 sm:p-5 rounded-2xl bg-brand-500/10 border border-brand-500/30 text-slate-800 dark:text-slate-200 flex items-start gap-3.5"
-        >
-          <Sparkles class="w-5 h-5 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5" />
-          <div class="space-y-1">
-            <div class="font-bold text-sm sm:text-base text-brand-700 dark:text-brand-300">
-              {{ $t('profile.mobile_handoff_banner_title') }}
-            </div>
-            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              {{ $t('profile.google_no_password_notice') }}
-            </p>
-          </div>
-        </div>
-
         <div v-if="passwordError" class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-sm text-rose-800 dark:text-rose-300 text-center font-semibold">
           {{ passwordError }}
         </div>

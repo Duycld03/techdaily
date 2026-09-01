@@ -185,15 +185,11 @@
     "confirm_password": "Xác Nhận Mật Khẩu Mới",
     "update_password_btn": "Cập Nhật Mật Khẩu",
     "set_password_btn": "Thiết Lập Mật Khẩu",
-    "google_no_password_notice": "Tài khoản của bạn đăng nhập qua Google và chưa có mật khẩu riêng. Hãy thiết lập mật khẩu bên dưới để có thể đăng nhập bằng Email và Mật khẩu trên mọi thiết bị di động hoặc máy tính.",
-    "password_set_success": "Thiết lập mật khẩu thành công! Bây giờ bạn có thể đăng nhập bằng Email và Mật khẩu trên bất kỳ thiết bị nào.",
+    "password_set_success": "Cập nhật mật khẩu thành công.",
     "password_strength_weak": "Mật khẩu yếu (cần tối thiểu 6 ký tự)",
     "password_strength_good": "Mật khẩu tốt",
     "password_strength_strong": "Mật khẩu rất mạnh",
-    "passwords_must_match": "Mật khẩu xác nhận không khớp.",
-    "mobile_handoff_banner_title": "Đăng Nhập Trên Điện Thoại Dễ Dàng",
-    "mobile_handoff_banner_desc": "Tạo mật khẩu cho tài khoản Google để đăng nhập trên app điện thoại mà không cần lo lỗi kết nối Google OAuth.",
-    "mobile_handoff_banner_btn": "Tạo Mật Khẩu Ngay"
+    "passwords_must_match": "Mật khẩu xác nhận không khớp."
   },
   "settings": {
     "title": "Cài Đặt",

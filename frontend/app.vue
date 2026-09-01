@@ -2,7 +2,6 @@
 import { onMounted } from 'vue'
 import AppHeader from '~/components/layout/AppHeader.vue'
 import AppSidebar from '~/components/layout/AppSidebar.vue'
-import MobileHandoffBanner from '~/components/common/MobileHandoffBanner.vue'
 
 const authStore = useAuthStore()
 
@@ -14,7 +13,6 @@ onMounted(() => {
 <template>
   <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
     <AppHeader />
-    <MobileHandoffBanner />
     <div class="flex-1 flex overflow-hidden">
       <AppSidebar />
       <main class="flex-1 overflow-y-auto">

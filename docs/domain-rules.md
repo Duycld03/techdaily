@@ -73,6 +73,10 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
    - Action buttons in header banners (e.g., *Ngẫu Nhiên* and *Tạo Với AI* on Insights) MUST maintain visual balance and avoid awkward wrapping.
    - On large screens (`≥ sm`), action buttons MUST sit side-by-side horizontally (`flex-nowrap`, `shrink-0`) aligned with the header.
    - On mobile screens, button pairs MUST distribute space evenly (`flex-1`) with minimum 44px touch targets (`h-11 sm:h-12`) and `text-sm md:text-base font-bold`.
+6. **Production-Grade UI Purity & Zero Local-Dev Workarounds:**
+   - All frontend components, layouts, banners, toasts, and localized copy MUST be designed strictly for production environments (e.g. registered domains, HTTPS, fully functional OAuth).
+   - NEVER inject UI banners, callouts, or workarounds explaining or mitigating local development constraints (e.g. LAN IP OAuth origin mismatches, localhost port conflicts).
+   - Infrastructure, environment troubleshooting, and local machine setup guides belong strictly in developer documentation (`README.md`, `docs/dev-setup.md`), NEVER in production user-facing UI.
 
 ---
 

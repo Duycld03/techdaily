@@ -185,15 +185,11 @@
     "confirm_password": "Confirm New Password",
     "update_password_btn": "Update Password",
     "set_password_btn": "Set Account Password",
-    "google_no_password_notice": "Your account is linked with Google and does not have a standard password yet. Set a password below to enable logging in with email and password on any mobile or desktop device.",
-    "password_set_success": "Password set successfully! You can now log in using your email and password on any device.",
+    "password_set_success": "Password updated successfully.",
     "password_strength_weak": "Weak password (minimum 6 characters)",
     "password_strength_good": "Good password",
     "password_strength_strong": "Strong password",
-    "passwords_must_match": "Passwords do not match.",
-    "mobile_handoff_banner_title": "Access TechDaily on Mobile",
-    "mobile_handoff_banner_desc": "Create a password for your Google-linked account to log in effortlessly on your phone without Google OAuth issues.",
-    "mobile_handoff_banner_btn": "Set Password Now"
+    "passwords_must_match": "Passwords do not match."
   },
   "settings": {
     "title": "Settings",
