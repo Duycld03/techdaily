@@ -86,6 +86,6 @@ jobs:
           script: |
             cd ~/techdaily || cd /home/${{ secrets.VPS_USERNAME }}/techdaily
             git pull origin main
-            sudo docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
-            sudo docker image prune -f
+            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+            docker image prune -f
 
