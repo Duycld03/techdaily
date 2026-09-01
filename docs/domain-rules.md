@@ -17,6 +17,10 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
    - `Jwt:Issuer` and `Jwt:Audience` MUST be strictly synchronized across token generation (`AuthEndpoints.cs`) and validation pipeline (`Program.cs`).
 4. **Secrets Management:**
    - Secrets, API keys, and private tokens MUST NEVER be committed to Git. They reside exclusively in gitignored `appsettings.Local.json` and `.env`.
+5. **Hybrid Identity & Password Initialization for OAuth Accounts:**
+   - Accounts created via Google OAuth (`PasswordHash == null`) MUST be permitted to establish an initial password via `PUT /api/v1/user/change-password` without requiring an existing `CurrentPassword`.
+   - Once established, the account transitions to `hasPassword: true`, enabling login via both Google OAuth and standard Email/Password credentials across all devices (desktops, mobile networks, private browsers).
+   - Accounts with existing passwords (`PasswordHash != null`) MUST verify `CurrentPassword` before applying any password changes.
 
 ---
 

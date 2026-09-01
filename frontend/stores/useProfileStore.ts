@@ -100,14 +100,14 @@ export const useProfileStore = defineStore('profile', () => {
     }
   }
 
-  async function changePassword(currentPassword: string, newPassword: string) {
+  async function changePassword(currentPassword: string | null | undefined, newPassword: string) {
     isUpdating.value = true
     error.value = null
     successMessage.value = null
     try {
       const api = useApiClient()
       const res = await api.put<{ message: string }>('/api/v1/user/change-password', {
-        currentPassword,
+        currentPassword: currentPassword || null,
         newPassword
       })
 

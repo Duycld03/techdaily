@@ -94,4 +94,16 @@ describe('useProfileStore', () => {
     expect(res.message).toBe('Password updated successfully.')
     expect(store.profile?.hasPassword).toBe(true)
   })
+
+  it('allows Google OAuth user to establish initial password without current password', async () => {
+    const store = useProfileStore()
+    await store.fetchProfile()
+    if (store.profile) {
+      store.profile.hasPassword = false
+    }
+
+    const res = await store.changePassword(null, 'BrandNewGooglePassword123!')
+    expect(res.message).toBe('Password updated successfully.')
+    expect(store.profile?.hasPassword).toBe(true)
+  })
 })

@@ -35,6 +35,24 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 const passwordError = ref<string | null>(null)
 
+const passwordStrength = computed(() => {
+  const pwd = newPassword.value
+  if (!pwd) return { score: 0, label: '', color: '', width: 0 }
+  if (pwd.length < 6) {
+    return { score: 1, label: t('profile.password_strength_weak'), color: 'bg-rose-500 text-rose-500', width: 25 }
+  }
+  const hasUpper = /[A-Z]/.test(pwd)
+  const hasLower = /[a-z]/.test(pwd)
+  const hasNumber = /[0-9]/.test(pwd)
+  const hasSpecial = /[^A-Za-z0-9]/.test(pwd)
+  const complexity = (hasUpper ? 1 : 0) + (hasLower ? 1 : 0) + (hasNumber ? 1 : 0) + (hasSpecial ? 1 : 0)
+
+  if (pwd.length >= 8 && complexity >= 3) {
+    return { score: 3, label: t('profile.password_strength_strong'), color: 'bg-emerald-500 text-emerald-500', width: 100 }
+  }
+  return { score: 2, label: t('profile.password_strength_good'), color: 'bg-amber-500 text-amber-500', width: 60 }
+})
+
 onMounted(async () => {
   const data = await profileStore.fetchProfile()
   if (data?.user) {
@@ -63,12 +81,12 @@ async function handleProfileSave() {
 async function handlePasswordChange() {
   passwordError.value = null
   if (newPassword.value.length < 6) {
-    passwordError.value = 'New password must be at least 6 characters.'
+    passwordError.value = t('profile.password_strength_weak')
     return
   }
 
   if (newPassword.value !== confirmPassword.value) {
-    passwordError.value = 'Passwords do not match.'
+    passwordError.value = t('profile.passwords_must_match')
     return
   }
 
@@ -290,8 +308,28 @@ async function handlePasswordChange() {
 
       <!-- Tab 2: Security & Password -->
       <form v-else @submit.prevent="handlePasswordChange" class="space-y-5">
+        <!-- Notice for Google Accounts Without Password -->
+        <div
+          v-if="!profileStore.profile?.hasPassword"
+          class="p-4 sm:p-5 rounded-2xl bg-brand-500/10 border border-brand-500/30 text-slate-800 dark:text-slate-200 flex items-start gap-3.5"
+        >
+          <Sparkles class="w-5 h-5 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5" />
+          <div class="space-y-1">
+            <div class="font-bold text-sm sm:text-base text-brand-700 dark:text-brand-300">
+              {{ $t('profile.mobile_handoff_banner_title') }}
+            </div>
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              {{ $t('profile.google_no_password_notice') }}
+            </p>
+          </div>
+        </div>
+
         <div v-if="passwordError" class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-sm text-rose-800 dark:text-rose-300 text-center font-semibold">
           {{ passwordError }}
+        </div>
+
+        <div v-if="profileStore.successMessage" class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-sm text-emerald-800 dark:text-emerald-300 text-center font-semibold animate-in fade-in">
+          {{ profileStore.successMessage }}
         </div>
 
         <div v-if="profileStore.profile?.hasPassword">
@@ -321,6 +359,20 @@ async function handlePasswordChange() {
               class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
+
+          <!-- Password Strength Indicator -->
+          <div v-if="newPassword" class="mt-2 space-y-1.5">
+            <div class="flex items-center gap-1.5 h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div
+                class="h-full transition-all duration-300 rounded-full"
+                :class="passwordStrength.color.split(' ')[0]"
+                :style="{ width: `${passwordStrength.width}%` }"
+              ></div>
+            </div>
+            <div class="text-xs font-semibold" :class="passwordStrength.color.split(' ')[1]">
+              {{ passwordStrength.label }}
+            </div>
+          </div>
         </div>
 
         <div>
@@ -336,12 +388,15 @@ async function handlePasswordChange() {
               class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
+          <div v-if="confirmPassword && newPassword !== confirmPassword" class="text-xs text-rose-500 mt-1 font-medium">
+            {{ $t('profile.passwords_must_match') }}
+          </div>
         </div>
 
         <div class="flex justify-end pt-3">
           <button
             type="submit"
-            :disabled="profileStore.isUpdating"
+            :disabled="profileStore.isUpdating || (confirmPassword !== '' && newPassword !== confirmPassword)"
             class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm md:text-base shadow-md transition-all active:scale-95 disabled:opacity-50"
           >
             <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
