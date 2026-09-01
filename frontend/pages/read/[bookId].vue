@@ -13,6 +13,7 @@ import {
   Bookmark,
   Share2,
   HelpCircle,
+  Highlighter,
   X
 } from 'lucide-vue-next'
 import type { BookDetail, ChunkSummary } from '~/stores/useLibraryStore'
@@ -21,6 +22,7 @@ import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
 const route = useRoute()
 const router = useRouter()
 const libraryStore = useLibraryStore()
+const notesStore = useNotesStore()
 const { render: renderMarkdown, initHighlighter, isHighlighterReady } = useMarkdownRenderer()
 
 const bookId = computed(() => route.params.bookId as string)
@@ -206,6 +208,21 @@ function handleExplainSelection() {
   currentContext.value = currentChunk.value?.chapterTitle || ''
   floatingToolbar.value.visible = false
   isExplainerOpen.value = true
+}
+
+async function handleHighlightSelection() {
+  if (!floatingToolbar.value.selectedText || !currentChunk.value?.id) return
+  try {
+    await notesStore.createHighlight({
+      documentChunkId: currentChunk.value.id,
+      selectedText: floatingToolbar.value.selectedText
+    })
+    toast.success('Đã lưu đoạn văn vào Ghi chú & Highlight!')
+  } catch (err: any) {
+    toast.error(err.message || 'Không thể lưu highlight.')
+  } finally {
+    floatingToolbar.value.visible = false
+  }
 }
 </script>
 
@@ -512,6 +529,15 @@ function handleExplainSelection() {
         >
           <Sparkles class="w-3.5 h-3.5" />
           <span>{{ $t('reader.explain_with_gemini') }}</span>
+        </button>
+
+        <button
+          @click="handleHighlightSelection"
+          class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
+          title="Highlight & Lưu Ghi Chú"
+        >
+          <Highlighter class="w-3.5 h-3.5" />
+          <span>Highlight</span>
         </button>
 
         <button

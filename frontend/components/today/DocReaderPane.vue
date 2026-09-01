@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { BookOpen, Clock, Tag, Sparkles, Copy, Check } from 'lucide-vue-next'
+import { BookOpen, Clock, Tag, Sparkles, Copy, Check, Highlighter } from 'lucide-vue-next'
 import MarkdownIt from 'markdown-it'
 import type { Topic, DocumentChunk } from '~/stores/useDailyFocusStore'
 import MicroQuizCard from '~/components/today/MicroQuizCard.vue'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
 
 const { t, locale } = useI18n()
+const notesStore = useNotesStore()
+const toast = useToast()
 
 const props = defineProps<{
   topic: Topic
@@ -104,10 +106,30 @@ function copySelectedText() {
   if (!floatingMenu.value.text) return
   navigator.clipboard.writeText(floatingMenu.value.text)
   copied.value = true
+  toast.info('Đã sao chép đoạn văn bản!')
   setTimeout(() => {
     copied.value = false
     floatingMenu.value.visible = false
   }, 1200)
+}
+
+async function handleHighlightSelection() {
+  const chunkId = props.documentChunk?.id
+  if (!floatingMenu.value.text || !chunkId) {
+    toast.error('Không tìm thấy tài liệu liên kết để lưu highlight.')
+    return
+  }
+  try {
+    await notesStore.createHighlight({
+      documentChunkId: chunkId,
+      selectedText: floatingMenu.value.text
+    })
+    toast.success('Đã lưu đoạn văn vào Ghi chú & Highlight!')
+  } catch (err: any) {
+    toast.error(err.message || 'Không thể lưu highlight.')
+  } finally {
+    floatingMenu.value.visible = false
+  }
 }
 
 onMounted(() => {
@@ -195,6 +217,15 @@ onUnmounted(() => {
         >
           <Sparkles class="w-3.5 h-3.5" />
           <span>{{ $t('today.explain_term_tooltip') || 'Explain with Gemini' }}</span>
+        </button>
+
+        <button
+          @click.stop="handleHighlightSelection"
+          class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
+          title="Highlight & Lưu Ghi Chú"
+        >
+          <Highlighter class="w-3.5 h-3.5" />
+          <span>Highlight</span>
         </button>
 
         <button
