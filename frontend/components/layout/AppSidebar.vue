@@ -63,7 +63,7 @@ function isLinkActive(linkPath: string): boolean {
     <!-- Bottom summary banner -->
     <div class="hidden md:block p-3.5 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/60 text-xs text-slate-600 dark:text-slate-400">
       <div class="font-bold text-slate-800 dark:text-slate-200 mb-1">Senior 30-Day Sprint</div>
-      <div class="text-slate-500 text-[11px] leading-relaxed">Multimodal AI + SM-2 spaced repetition</div>
+      <div class="text-slate-500 text-xs leading-relaxed">Multimodal AI + SM-2 spaced repetition</div>
     </div>
   </aside>
 </template>

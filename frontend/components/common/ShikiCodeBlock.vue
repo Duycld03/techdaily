@@ -174,7 +174,7 @@ async function copyCode() {
         <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
         <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
-        <span class="ml-2 font-mono uppercase tracking-wider text-[11px] text-slate-400 font-semibold">{{ displayLabel }}</span>
+        <span class="ml-2 font-mono uppercase tracking-wider text-xs text-slate-400 font-semibold">{{ displayLabel }}</span>
       </div>
 
       <button
@@ -184,7 +184,7 @@ async function copyCode() {
       >
         <Check v-if="copied" class="w-3.5 h-3.5 text-emerald-400" />
         <Copy v-else class="w-3.5 h-3.5 text-slate-400" />
-        <span class="text-[11px]">{{ copied ? 'Copied!' : 'Copy' }}</span>
+        <span class="text-xs font-medium">{{ copied ? 'Copied!' : 'Copy' }}</span>
       </button>
     </div>
 

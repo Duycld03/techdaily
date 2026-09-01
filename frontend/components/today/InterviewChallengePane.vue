@@ -131,13 +131,13 @@ async function handleLegacySubmit() {
         </div>
 
         <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <span class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold uppercase tracking-wider bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+          <span class="px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
             Senior Drill
           </span>
           <span
             v-if="isReviewed"
             :class="[
-              'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 border',
+              'px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border',
               isCorrect
                 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                 : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
@@ -211,16 +211,16 @@ async function handleLegacySubmit() {
             <div v-if="isReviewed" class="shrink-0 flex items-center gap-1 sm:gap-1.5 pt-0.5">
               <span
                 v-if="index === question.correctOptionIndex"
-                class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-emerald-600 text-white shadow-sm"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-sm"
               >
-                <Check class="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                <Check class="w-3.5 h-3.5" />
                 <span>{{ $t('today.optimal_choice') }}</span>
               </span>
               <span
                 v-else-if="selectedOption === index && index !== question.correctOptionIndex"
-                class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-rose-600 text-white shadow-sm"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-sm"
               >
-                <XCircle class="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                <XCircle class="w-3.5 h-3.5" />
                 <span>{{ $t('today.your_choice') }}</span>
               </span>
             </div>

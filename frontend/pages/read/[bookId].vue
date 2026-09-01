@@ -249,7 +249,7 @@ function handleExplainSelection() {
         <h1 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
           {{ book?.title || 'Technical Document' }}
         </h1>
-        <p v-if="currentChunk" class="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
+        <p v-if="currentChunk" class="text-xs text-slate-500 dark:text-slate-400 truncate">
           {{ $t('reader.slice_of', { current: currentChunk.chunkOrder, total: totalChunks, chapter: currentChunk.chapterTitle }) }}
         </p>
       </div>
@@ -326,14 +326,14 @@ function handleExplainSelection() {
             />
             <span
               v-else
-              class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-700 flex items-center justify-center text-[10px] text-slate-500 shrink-0 mt-0.5"
+              class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-700 flex items-center justify-center text-xs text-slate-500 shrink-0 mt-0.5"
             >
               {{ chunk.chunkOrder }}
             </span>
 
             <div class="flex-1 min-w-0">
               <div class="truncate">{{ chunk.chapterTitle }}</div>
-              <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1 font-normal">
+              <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-1 font-normal">
                 <Clock class="w-3 h-3" />
                 <span>{{ $t('reader.read_min', { minutes: chunk.estimatedReadMinutes || 3 }) }}</span>
               </div>

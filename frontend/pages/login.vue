@@ -197,7 +197,7 @@ async function handleSubmit() {
       <div class="space-y-4">
         <div class="relative flex items-center justify-center">
           <div class="w-full border-t border-slate-200 dark:border-slate-800"></div>
-          <span class="px-3 bg-white dark:bg-slate-900 text-xs text-slate-500 font-semibold uppercase">Or continue with</span>
+          <span class="px-3 bg-white dark:bg-slate-900 text-xs text-slate-500 font-semibold uppercase">{{ $t('auth.or_continue_with') }}</span>
         </div>
 
         <!-- Google OAuth Button Container -->
@@ -207,8 +207,8 @@ async function handleSubmit() {
       </div>
 
       <div class="text-center">
-        <p class="text-xs text-slate-500 dark:text-slate-500">
-          By continuing, you agree to TechDaily terms and privacy policy.
+        <p class="text-xs text-slate-500 dark:text-slate-500 leading-relaxed">
+          {{ $t('auth.terms_agreement') }}
         </p>
       </div>
     </div>

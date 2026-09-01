@@ -206,7 +206,7 @@ function getCategoryBadge(cat: number) {
             <span
               v-for="tag in insightsStore.currentInsight.tags"
               :key="tag"
-              class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px] font-mono font-medium"
+              class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-mono font-medium"
             >
               #{{ tag }}
             </span>
@@ -272,7 +272,7 @@ function getCategoryBadge(cat: number) {
             </button>
           </div>
 
-          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider hidden sm:inline">
+          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:inline">
             Side-by-side Architectural Comparison
           </span>
         </div>
@@ -328,7 +328,7 @@ function getCategoryBadge(cat: number) {
             {{ $t('insights.card_counter', { current: insightsStore.currentIndex + 1, total: insightsStore.insights.length }) }}
           </span>
           <span class="hidden sm:inline-block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
-          <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300">
+          <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-xs font-mono text-slate-600 dark:text-slate-300">
             {{ $t('insights.keyboard_hint') }}
           </span>
         </div>

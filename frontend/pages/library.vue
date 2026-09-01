@@ -338,13 +338,13 @@ async function confirmDeleteBook() {
               type="button"
               @click="activeTab = 'markdown'"
               :class="[
-                'flex-1 py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs md:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all',
+                'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all',
                 activeTab === 'markdown'
                   ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
-              <FileText class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <FileText class="w-4 h-4 shrink-0" />
               <span class="truncate">{{ $t('library.tab_markdown') }}</span>
             </button>
 
@@ -352,13 +352,13 @@ async function confirmDeleteBook() {
               type="button"
               @click="activeTab = 'pdf'"
               :class="[
-                'flex-1 py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs md:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all',
+                'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all',
                 activeTab === 'pdf'
                   ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
-              <FileUp class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <FileUp class="w-4 h-4 shrink-0" />
               <span class="truncate">{{ $t('library.tab_pdf') }}</span>
             </button>
 
@@ -366,13 +366,13 @@ async function confirmDeleteBook() {
               type="button"
               @click="activeTab = 'url'"
               :class="[
-                'flex-1 py-2 sm:py-2.5 px-1.5 sm:px-3 rounded-xl text-[11px] sm:text-xs md:text-sm font-bold flex items-center justify-center gap-1 sm:gap-2 transition-all',
+                'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all',
                 activeTab === 'url'
                   ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
-              <Globe class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <Globe class="w-4 h-4 shrink-0" />
               <span class="truncate">{{ $t('library.tab_url') }}</span>
             </button>
           </div>
@@ -481,7 +481,7 @@ async function confirmDeleteBook() {
                   <p class="text-xs text-slate-500 dark:text-slate-400">
                     {{ $t('library.pdf_drop_desc') }}
                   </p>
-                  <p class="text-[11px] text-brand-600 dark:text-brand-400 font-mono pt-1">
+                  <p class="text-xs text-brand-600 dark:text-brand-400 font-mono pt-1">
                     {{ $t('library.pdf_size_limit') }}
                   </p>
                 </div>
