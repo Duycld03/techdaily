@@ -16,6 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isInitialized = ref(false)
 
   const isLoggedIn = computed(() => !!token.value)
+  const isAuthenticated = computed(() => !!token.value)
 
   function init() {
     if (typeof window !== 'undefined' && !isInitialized.value) {
@@ -86,6 +87,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     user,
     isLoggedIn,
+    isAuthenticated,
     init,
     login,
     register,

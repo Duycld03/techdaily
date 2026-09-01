@@ -16,12 +16,19 @@ const isLoading = ref(false)
 const googleBtnContainer = ref<HTMLElement | null>(null)
 
 onMounted(() => {
-  if (authStore.isAuthenticated) {
-    router.push('/today')
+  authStore.init()
+  if (authStore.isLoggedIn) {
+    navigateTo('/today')
     return
   }
 
   initGoogleButton()
+})
+
+watch(() => authStore.isLoggedIn, (loggedIn) => {
+  if (loggedIn) {
+    navigateTo('/today')
+  }
 })
 
 function initGoogleButton() {
@@ -64,7 +71,7 @@ async function handleGoogleCredentialResponse(response: any) {
   try {
     await authStore.googleLogin(response.credential)
     toast.success('Đăng nhập Google thành công!')
-    router.push('/today')
+    await navigateTo('/today')
   } catch (err: any) {
     toast.error(err.message || 'Google authentication failed')
   } finally {
@@ -88,7 +95,7 @@ async function handleSubmit() {
       await authStore.register(email.value, password.value, name.value, locale.value)
       toast.success('Đăng ký tài khoản thành công!')
     }
-    router.push('/today')
+    await navigateTo('/today')
   } catch (err: any) {
     toast.error(err.message || 'Authentication failed')
   } finally {
