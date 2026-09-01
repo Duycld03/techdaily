@@ -1,6 +1,6 @@
 # 🚀 TechDaily — Senior Engineering & Interview Drill Platform
 
-> **Live Production:** [http://techdaily.duckdns.org](http://techdaily.duckdns.org)
+> **Live Production (HTTPS):** [https://techdaily.duckdns.org](https://techdaily.duckdns.org)
 
 An AI-powered, daily bite-sized learning and technical interview preparation platform designed for Senior Fullstack & Backend (.NET) Engineers.
 
