@@ -104,7 +104,31 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 
 ---
 
-## 6. Anti-Patterns to NEVER Repeat
+## 6. Infrastructure, Reverse Proxy & Deployment Invariants
+1. **Docker Compose Upstream DNS Caching (502 Bad Gateway Prevention):**
+   - Nginx caches upstream container IPs at startup. When backend/frontend containers are rebuilt and assigned new internal IPs, Nginx MUST be restarted via `docker compose restart nginx` as the final step in the CI/CD deploy pipeline.
+2. **Reverse Proxy Relative Path Routing:**
+   - In production behind Nginx reverse proxy, frontend API requests MUST use relative paths (`""`) on port 80/443 rather than attempting to connect to closed backend ports (e.g. `:5000`), which are blocked by host firewalls.
+3. **SSH Key Standards (ED25519 & Cloud Metadata Synchronization):**
+   - All SSH keys MUST use modern `ED25519` format (`ssh-ed25519`) for compatibility with modern Linux distros (Debian 13+).
+   - On cloud virtual machines (GCP Compute Engine), public keys MUST be registered in VM Metadata (`<protocol> <key-data> <username>`) to prevent the Cloud Guest Agent from removing them from `~/.ssh/authorized_keys` upon VM reboot.
+4. **SSL / HTTPS Bootstrapping Discipline:**
+   - Nginx fails to start if `ssl_certificate` directives point to non-existent certificate paths.
+   - When configuring SSL for a new domain, obtain Let's Encrypt certificates first (`certbot certonly --standalone` or via webroot `/.well-known/acme-challenge/`), verify certificate existence, and then mount `/etc/letsencrypt` and enable `listen 443 ssl`.
+
+---
+
+## 7. AI Terminology & Floating Explainer Invariants
+1. **Selection Length Capacity:**
+   - Scoped floating selection listeners in reader panes MUST support text selections between **2 and 500 characters** (approx. 70–80 words), accommodating compound technical concepts and multi-clause architectural definitions.
+2. **Category Resilience & Defaults:**
+   - The `ExplainTerm` use-case handler and validator MUST treat `Category` as optional. If omitted or whitespace, default to `"Software Architecture"` rather than failing validation.
+3. **Markdown Rendering Purity:**
+   - AI-generated terminology explanations containing Markdown (`**bold**`, `` `code` ``, lists) MUST be rendered using `useMarkdownRenderer()` (`v-html="renderedExplanation"`) styled with Tailwind `prose` classes, NEVER raw string interpolation.
+
+---
+
+## 8. Anti-Patterns to NEVER Repeat
 
 | Anti-Pattern | Why it is Forbidden | Correct Approach |
 | :--- | :--- | :--- |
@@ -116,3 +140,6 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 | **Hardcoded Dark Theme Classes** | Breaks light mode and makes UI illegible in bright environments | Dual Tailwind classes (`dark:bg-slate-950 bg-slate-50`) synced with `@nuxtjs/color-mode` |
 | **Hardcoded C# Language in Code Blocks** | Causes SQL, Rust, Python, and TypeScript to be labeled and styled as C# | Dynamic language inference + explicit tag priority with Shiki highlighter |
 | **Low Token Budget for AI Reasoning Models** | Causes `MAX_TOKENS` truncation and broken JSON fallbacks | Set `maxOutputTokens >= 8192` for structured JSON output |
+| **Omission of Nginx Restart on Deploy** | Causes Nginx to hold stale container IPs and return `502 Bad Gateway` after container recreate | Add `docker compose restart nginx` after `docker compose up -d --build` |
+| **RSA Key Exclusivity on Modern Linux** | Debian 13/OpenSSH 9.8+ deprecates legacy RSA and causes publickey auth failures | Standardize on modern `ED25519` keys across local config and CI/CD secrets |
+| **Raw Text Interpolation for AI Tooltips** | Shows raw `**bold**` asterisks and backticks in UI popups | Parse AI markdown through `useMarkdownRenderer()` in a `prose` container |

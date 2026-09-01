@@ -162,8 +162,23 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ### `POST /api/v1/daily/explain-term`
 - **Auth:** Public
-- **Request Body:** `{ "term": "Optimistic Locking", "category": "Database", "context": "...", "locale": "en" }`
-- **Response (200 OK):** `{ "term": "...", "explanation": "...", "isCached": true }`
+- **Request Body:**
+  ```json
+  {
+    "term": "Optimistic Locking",
+    "category": "Database", // optional, defaults to "Software Architecture"
+    "context": "Surrounding excerpt context...", // optional
+    "locale": "vi" // "en" or "vi"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "term": "Optimistic Locking",
+    "explanation": "Markdown-formatted 2-sentence explanation...",
+    "locale": "vi"
+  }
+  ```
 
 ---
 
