@@ -427,18 +427,18 @@ async function confirmDeleteBook() {
               ></textarea>
             </div>
 
-            <div class="flex justify-end gap-3 pt-2">
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3 pt-3 sm:pt-4">
               <button
                 type="button"
                 @click="isImportModalOpen = false"
-                class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 sm:border-transparent transition-colors text-center"
               >
                 {{ $t('library.cancel') }}
               </button>
               <button
                 type="submit"
                 :disabled="libraryStore.isImporting"
-                class="flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-colors disabled:opacity-50"
+                class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
               >
                 <span v-if="libraryStore.isImporting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 <span>{{ libraryStore.isImporting ? $t('library.importing') : $t('library.import_action') }}</span>
@@ -526,18 +526,18 @@ async function confirmDeleteBook() {
               </div>
             </div>
 
-            <div class="flex justify-end gap-3 pt-2">
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3 pt-3 sm:pt-4">
               <button
                 type="button"
                 @click="isImportModalOpen = false"
-                class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 sm:border-transparent transition-colors text-center"
               >
                 {{ $t('library.cancel') }}
               </button>
               <button
                 type="submit"
                 :disabled="!pdfFile || isUploadingPdf"
-                class="flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-colors disabled:opacity-50"
+                class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
               >
                 <span v-if="isUploadingPdf" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                 <span>{{ isUploadingPdf ? $t('library.parsing_pdf') : $t('library.upload_pdf_action') }}</span>
@@ -563,7 +563,7 @@ async function confirmDeleteBook() {
                   type="button"
                   :disabled="!crawlUrlInput || isCrawling"
                   @click="handleCrawlUrl"
-                  class="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-colors disabled:opacity-50 shrink-0"
+                  class="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 shrink-0"
                 >
                   <span v-if="isCrawling" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                   <Globe v-else class="w-4 h-4" />
@@ -582,6 +582,16 @@ async function confirmDeleteBook() {
                 <li><strong>GitHub Repositories:</strong> Links to <code>README.md</code> or any <code>.md</code> file in a repository.</li>
                 <li><strong>Technical Blogs & RFCs:</strong> Microsoft Learn, Martin Fowler, Dev.to, Medium, Substack architecture posts.</li>
               </ul>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button
+                type="button"
+                @click="isImportModalOpen = false"
+                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 sm:border-transparent transition-colors text-center"
+              >
+                {{ $t('library.cancel') }}
+              </button>
             </div>
           </div>
         </div>
