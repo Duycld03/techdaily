@@ -283,12 +283,14 @@ function getCategoryBadge(cat: number) {
           <CommonShikiCodeBlock
             v-if="activeCodeTab === 'solution'"
             :code="insightsStore.currentInsight.solutionSnippet"
-            language="csharp"
+            :category="insightsStore.currentInsight.category"
+            :tags="insightsStore.currentInsight.tags"
           />
           <CommonShikiCodeBlock
             v-else
             :code="insightsStore.currentInsight.problemSnippet"
-            language="csharp"
+            :category="insightsStore.currentInsight.category"
+            :tags="insightsStore.currentInsight.tags"
           />
         </div>
       </div>

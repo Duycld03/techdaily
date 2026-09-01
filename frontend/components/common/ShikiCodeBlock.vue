@@ -1,16 +1,93 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Copy, Check } from 'lucide-vue-next'
 
 const props = withDefaults(
   defineProps<{
     code: string
     language?: string
+    category?: number
+    tags?: string[]
   }>(),
   {
-    language: 'csharp'
+    language: 'auto'
   }
 )
+
+const detectedLanguage = computed(() => {
+  if (props.language && props.language !== 'auto') {
+    return props.language.toLowerCase()
+  }
+
+  const code = props.code || ''
+  const trimmed = code.trim()
+
+  // Heuristic 1: SQL / PostgreSQL
+  if (
+    props.category === 2 ||
+    props.tags?.some(t => ['sql', 'postgres', 'postgresql', 'database', 'indexing'].includes(t.toLowerCase())) ||
+    trimmed.startsWith('--') ||
+    /\b(SELECT|INSERT|UPDATE|DELETE|CREATE TABLE|CREATE INDEX|ALTER TABLE|FILLFACTOR|EXPLAIN ANALYZE|VACUUM|INCLUDE)\b/i.test(trimmed)
+  ) {
+    return 'sql'
+  }
+
+  // Heuristic 2: Vue / TypeScript / JavaScript / JSX
+  if (
+    props.category === 0 ||
+    props.tags?.some(t => ['vue', 'vue3', 'nuxt', 'react', 'javascript', 'typescript', 'frontend', 'dom'].includes(t.toLowerCase())) ||
+    /\b(const |let |ref<|shallowRef|reactive|triggerRef|computed<|defineProps|import |export default|socket\.on|useState|useEffect)\b/.test(trimmed)
+  ) {
+    return 'typescript'
+  }
+
+  // Heuristic 3: C# / .NET
+  if (
+    props.category === 1 ||
+    props.tags?.some(t => ['csharp', 'csharp13', 'dotnet', 'dotnet10', 'aspnet', 'efcore'].includes(t.toLowerCase())) ||
+    /\b(public async Task|public void|Span<|ReadOnlySpan<|stackalloc|ArrayPool<|Channel<|using var|class |namespace |\[Fact\]|\[HttpGet\])\b/.test(trimmed)
+  ) {
+    return 'csharp'
+  }
+
+  // Heuristic 4: JSON
+  if (trimmed.startsWith('{') && trimmed.endsWith('}') || trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      JSON.parse(trimmed)
+      return 'json'
+    } catch {
+      // not strict json
+    }
+  }
+
+  return 'csharp'
+})
+
+const displayLabel = computed(() => {
+  switch (detectedLanguage.value) {
+    case 'sql':
+    case 'postgresql':
+      return 'PostgreSQL / SQL'
+    case 'typescript':
+    case 'ts':
+      return 'TypeScript'
+    case 'javascript':
+    case 'js':
+      return 'JavaScript'
+    case 'vue':
+      return 'Vue 3'
+    case 'csharp':
+    case 'cs':
+      return 'C# / .NET 10'
+    case 'json':
+      return 'JSON'
+    case 'bash':
+    case 'sh':
+      return 'Bash / Shell'
+    default:
+      return detectedLanguage.value.toUpperCase()
+  }
+})
 
 const copied = ref(false)
 
@@ -36,7 +113,7 @@ async function copyCode() {
         <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
         <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
-        <span class="ml-2 font-mono uppercase tracking-wider text-[11px] text-slate-500 font-semibold">{{ language }}</span>
+        <span class="ml-2 font-mono uppercase tracking-wider text-[11px] text-slate-400 font-semibold">{{ displayLabel }}</span>
       </div>
 
       <button
