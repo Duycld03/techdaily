@@ -114,8 +114,8 @@ function getCategoryBadge(cat: number) {
   <div class="max-w-4xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-300">
     <!-- Header Banner -->
     <div class="p-4 sm:p-7 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-brand-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/40 border border-slate-200/90 dark:border-slate-800 text-slate-900 dark:text-white shadow-md dark:shadow-xl relative overflow-hidden transition-all">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 relative z-10">
-        <div class="space-y-1 sm:space-y-2">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 relative z-10">
+        <div class="space-y-1 sm:space-y-2 flex-1 min-w-0">
           <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20 text-xs font-bold uppercase tracking-wider">
             <Sparkles class="w-3.5 h-3.5" />
             <span>{{ $t('insights.badge') }}</span>
@@ -130,21 +130,21 @@ function getCategoryBadge(cat: number) {
           </p>
         </div>
 
-        <div class="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+        <div class="flex items-center gap-2.5 sm:gap-3 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
           <button
             @click="insightsStore.shuffle()"
-            class="flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all border border-slate-200 dark:border-slate-700 shadow-sm active:scale-95"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm md:text-base font-bold transition-all border border-slate-200 dark:border-slate-700 shadow-sm active:scale-95"
             :title="$t('insights.shuffle')"
           >
-            <Shuffle class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-500" />
+            <Shuffle class="w-4 h-4 text-slate-500 dark:text-slate-400" />
             <span>{{ $t('insights.shuffle') }}</span>
           </button>
 
           <button
             @click="isGenerateModalOpen = true"
-            class="flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-brand-600 hover:from-indigo-500 hover:to-brand-500 text-white text-xs sm:text-sm font-bold transition-all shadow-md shadow-indigo-500/20 active:scale-95"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-brand-600 hover:from-indigo-500 hover:to-brand-500 text-white text-sm md:text-base font-bold transition-all shadow-md shadow-indigo-500/20 active:scale-95"
           >
-            <Plus class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Plus class="w-4 h-4" />
             <span>{{ $t('insights.generate_ai') }}</span>
           </button>
         </div>
