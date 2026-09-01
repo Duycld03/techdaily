@@ -18,9 +18,25 @@ import {
   X
 } from 'lucide-vue-next'
 import { useInsightsStore } from '~/stores/useInsightsStore'
+import MarkdownIt from 'markdown-it'
 
 const { locale } = useI18n()
 const insightsStore = useInsightsStore()
+const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+
+function renderMarkdown(raw: string | undefined | null): string {
+  if (!raw) return ''
+  const clean = raw.replace(/\\n/g, '\n')
+  return md.render(clean)
+}
+
+const renderedSummaryHtml = computed(() => {
+  return renderMarkdown(insightsStore.currentInsight?.summaryMarkdown)
+})
+
+const renderedUnderTheHoodHtml = computed(() => {
+  return renderMarkdown(insightsStore.currentInsight?.underTheHoodMarkdown)
+})
 
 const isGenerateModalOpen = ref(false)
 const customTopicInput = ref('')
@@ -220,9 +236,10 @@ function getCategoryBadge(cat: number) {
           {{ insightsStore.currentInsight.title }}
         </h2>
 
-        <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
-          {{ insightsStore.currentInsight.summaryMarkdown }}
-        </p>
+        <div
+          class="prose prose-sm dark:prose-invert max-w-none text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed font-normal"
+          v-html="renderedSummaryHtml"
+        ></div>
       </div>
 
       <!-- Code Snippets Showcase -->
@@ -283,11 +300,10 @@ function getCategoryBadge(cat: number) {
           <span>{{ $t('insights.underthehood_title') }}</span>
         </div>
 
-        <div class="prose prose-sm dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed space-y-2">
-          <div class="whitespace-pre-line text-sm leading-relaxed">
-            {{ insightsStore.currentInsight.underTheHoodMarkdown }}
-          </div>
-        </div>
+        <div
+          class="prose prose-sm dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed"
+          v-html="renderedUnderTheHoodHtml"
+        ></div>
 
         <div v-if="insightsStore.currentInsight.sourceUrl" class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
           <span>Official Documentation & Architecture Benchmark:</span>
