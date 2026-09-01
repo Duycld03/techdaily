@@ -423,7 +423,7 @@ function handleExplainSelection() {
 
           <!-- Markdown Body -->
           <article
-            class="markdown-body prose prose-slate dark:prose-invert max-w-full overflow-x-hidden break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm leading-relaxed text-sm sm:text-base"
+            class="markdown-body prose prose-slate dark:prose-invert max-w-full overflow-x-hidden break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm leading-relaxed text-sm md:text-lg"
             v-html="renderedMarkdown"
           ></article>
 
@@ -440,7 +440,7 @@ function handleExplainSelection() {
               <li
                 v-for="(takeaway, idx) in currentChunk.keyTakeaways"
                 :key="idx"
-                class="text-sm sm:text-base text-slate-700 dark:text-slate-300 flex items-start gap-2.5 leading-relaxed"
+                class="text-sm md:text-lg text-slate-700 dark:text-slate-300 flex items-start gap-2.5 leading-relaxed"
               >
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0"></span>
                 <span>{{ takeaway }}</span>

@@ -205,7 +205,7 @@ async function confirmDeleteBook() {
           <BookOpen class="w-7 h-7 text-brand-600 dark:text-brand-400" />
           <span>{{ $t('library.title') }}</span>
         </h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{{ $t('library.subtitle') }}</p>
+        <p class="text-sm md:text-lg text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{{ $t('library.subtitle') }}</p>
       </div>
 
       <button

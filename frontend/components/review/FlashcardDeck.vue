@@ -55,7 +55,7 @@ function handleGrade(score: number) {
           {{ card.topicTitle }}
         </h2>
 
-        <p class="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-950/60 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80">
+        <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-950/60 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80">
           {{ card.topicSummary }}
         </p>
 
@@ -65,7 +65,7 @@ function handleGrade(score: number) {
             <Sparkles class="w-4 h-4" />
             <span>Deep Dive Explanation:</span>
           </div>
-          <div class="markdown-body text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed" v-html="renderedDeepDive"></div>
+          <div class="markdown-body text-sm md:text-lg text-slate-800 dark:text-slate-200 leading-relaxed" v-html="renderedDeepDive"></div>
         </div>
       </div>
 

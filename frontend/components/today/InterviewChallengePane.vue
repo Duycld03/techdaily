@@ -172,7 +172,7 @@ async function handleLegacySubmit() {
             @click="handleOptionSelect(index)"
             :disabled="isReviewed || focusStore.isSubmitting"
             :class="[
-              'w-full text-left p-3.5 sm:p-5 rounded-2xl text-sm sm:text-base font-medium border transition-all duration-200 flex items-start gap-3 sm:gap-4 relative group select-none',
+              'w-full text-left p-3.5 sm:p-5 rounded-2xl text-sm md:text-lg font-medium border transition-all duration-200 flex items-start gap-3 sm:gap-4 relative group select-none',
               !isReviewed && selectedOption === index
                 ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-950 dark:text-brand-100 ring-2 ring-brand-500/30 shadow-sm'
                 : !isReviewed
@@ -279,7 +279,7 @@ async function handleLegacySubmit() {
             <h3 class="font-bold text-sm sm:text-base">
               {{ isCorrect ? $t('today.correct_solution') : $t('today.incorrect_solution') }}
             </h3>
-            <p class="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed">
               {{ isCorrect ? 'Your senior engineering analysis matches optimal production best practices.' : $t('today.scheduled_sm2') }}
             </p>
           </div>
@@ -293,7 +293,7 @@ async function handleLegacySubmit() {
           </div>
 
           <div
-            class="prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed text-slate-700 dark:text-slate-300"
+            class="prose dark:prose-invert max-w-none text-sm md:text-lg leading-relaxed text-slate-700 dark:text-slate-300"
             v-html="renderedExplanation"
           ></div>
         </div>

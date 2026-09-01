@@ -125,7 +125,7 @@ function getCategoryBadge(cat: number) {
             {{ $t('insights.title') }}
           </h1>
 
-          <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl">
+          <p class="text-slate-600 dark:text-slate-300 text-sm md:text-lg leading-relaxed max-w-2xl">
             {{ $t('insights.subtitle') }}
           </p>
         </div>
@@ -238,7 +238,7 @@ function getCategoryBadge(cat: number) {
         </h2>
 
         <div
-          class="prose dark:prose-invert max-w-none text-sm sm:text-base text-slate-700 dark:text-slate-200 leading-relaxed font-normal"
+          class="prose dark:prose-invert max-w-none text-sm md:text-lg text-slate-700 dark:text-slate-200 leading-relaxed font-normal"
           v-html="renderedSummaryHtml"
         ></div>
       </div>
@@ -304,7 +304,7 @@ function getCategoryBadge(cat: number) {
         </div>
 
         <div
-          class="prose dark:prose-invert max-w-none text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed"
+          class="prose dark:prose-invert max-w-none text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed"
           v-html="renderedUnderTheHoodHtml"
         ></div>
 

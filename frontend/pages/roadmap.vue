@@ -75,7 +75,7 @@ function navigateToDay(dayOrder: number) {
           <h1 class="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             {{ $t('roadmap.title') }}
           </h1>
-          <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
+          <p class="text-slate-600 dark:text-slate-300 text-sm md:text-lg leading-relaxed">
             {{ $t('roadmap.subtitle') }}
           </p>
         </div>
