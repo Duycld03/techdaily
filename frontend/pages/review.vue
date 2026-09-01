@@ -43,7 +43,7 @@ async function onGrade(score: number) {
         <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           {{ $t('review.title') }}
         </h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5">{{ $t('review.subtitle') }}</p>
+        <p class="text-sm md:text-lg text-slate-500 dark:text-slate-400 mt-1.5">{{ $t('review.subtitle') }}</p>
       </div>
 
       <FlashcardDeck
@@ -63,13 +63,13 @@ async function onGrade(score: number) {
         {{ $t('review.no_cards') }}
       </h2>
 
-      <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-7">
+      <p class="text-sm md:text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-7">
         {{ $t('review.no_cards_desc') }}
       </p>
 
       <NuxtLink
         to="/today"
-        class="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-95"
+        class="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm md:text-base shadow-lg shadow-brand-500/20 transition-all active:scale-95"
       >
         <Sparkles class="w-4 h-4" />
         <span>{{ $t('review.continue_drill') }}</span>

@@ -101,13 +101,13 @@ async function handleSubmit() {
         <h1 class="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           {{ authMode === 'login' ? 'Sign In to TechDaily' : 'Create Your Account' }}
         </h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">
+        <p class="text-sm md:text-base text-slate-500 dark:text-slate-400 mt-1.5 font-medium">
           Master Senior Software Engineering Daily
         </p>
       </div>
 
       <!-- Mode Switcher Tabs -->
-      <div class="flex p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm font-semibold">
+      <div class="flex p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm md:text-base font-semibold">
         <button
           type="button"
           @click="authMode = 'login'; error = null"
@@ -135,26 +135,26 @@ async function handleSubmit() {
       </div>
 
       <!-- Error Alert -->
-      <div v-if="error" class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-sm text-rose-700 dark:text-rose-300 text-center font-medium animate-in fade-in">
+      <div v-if="error" class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-sm md:text-base text-rose-700 dark:text-rose-300 text-center font-medium animate-in fade-in">
         {{ error }}
       </div>
 
       <!-- Email & Password Form -->
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <div v-if="authMode === 'register'">
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.name_label') }}</label>
+          <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.name_label') }}</label>
           <div class="relative">
             <User class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               v-model="name"
               type="text"
-              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
 
         <div>
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.email_label') }}</label>
+          <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.email_label') }}</label>
           <div class="relative">
             <Mail class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -162,13 +162,13 @@ async function handleSubmit() {
               required
               type="email"
               placeholder="you@example.com"
-              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
 
         <div>
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.password_label') }}</label>
+          <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.password_label') }}</label>
           <div class="relative">
             <Lock class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -177,7 +177,7 @@ async function handleSubmit() {
               type="password"
               minlength="6"
               placeholder="••••••••"
-              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -185,7 +185,7 @@ async function handleSubmit() {
         <button
           type="submit"
           :disabled="isLoading"
-          class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+          class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm md:text-base shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
         >
           <span v-if="isLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
           <span>{{ authMode === 'login' ? $t('auth.submit_sign_in') : $t('auth.submit_register') }}</span>
@@ -197,7 +197,7 @@ async function handleSubmit() {
       <div class="space-y-4">
         <div class="relative flex items-center justify-center">
           <div class="w-full border-t border-slate-200 dark:border-slate-800"></div>
-          <span class="px-3 bg-white dark:bg-slate-900 text-xs text-slate-500 font-semibold uppercase">{{ $t('auth.or_continue_with') }}</span>
+          <span class="px-3 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-500 font-semibold uppercase">{{ $t('auth.or_continue_with') }}</span>
         </div>
 
         <!-- Google OAuth Button Container -->
@@ -207,7 +207,7 @@ async function handleSubmit() {
       </div>
 
       <div class="text-center">
-        <p class="text-xs text-slate-500 dark:text-slate-500 leading-relaxed">
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
           {{ $t('auth.terms_agreement') }}
         </p>
       </div>

@@ -102,11 +102,11 @@ async function handlePasswordChange() {
             </span>
           </div>
 
-          <p class="text-xs sm:text-sm font-mono text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 truncate">
+          <p class="text-xs sm:text-sm md:text-base font-mono text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 truncate">
             {{ profileStore.profile?.email }}
           </p>
 
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1">
+          <p class="text-xs sm:text-sm md:text-base text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 font-medium">
             {{ $t('profile.target_pace', { minutes: profileStore.profile?.dailyGoalMinutes || 10 }) }}
           </p>
         </div>
@@ -214,25 +214,25 @@ async function handlePasswordChange() {
       <form v-if="activeTab === 'personal'" @submit.prevent="handleProfileSave" class="space-y-5">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.full_name') }}</label>
+            <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.full_name') }}</label>
             <div class="relative">
               <User class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 v-model="name"
                 required
                 type="text"
-                class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
+                class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.target_role') }}</label>
+            <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.target_role') }}</label>
             <div class="relative">
               <Briefcase class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <select
                 v-model="targetRole"
-                class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
+                class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
               >
                 <option value="Senior Engineer">Senior Software Engineer</option>
                 <option value="Principal Architect">Principal Software Architect</option>
@@ -246,12 +246,12 @@ async function handlePasswordChange() {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.daily_goal') }}</label>
+            <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.daily_goal') }}</label>
             <div class="relative">
               <Clock class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <select
                 v-model="dailyGoalMinutes"
-                class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
+                class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
               >
                 <option :value="5">5 Minutes</option>
                 <option :value="10">10 Minutes</option>
@@ -262,14 +262,14 @@ async function handlePasswordChange() {
           </div>
 
           <div>
-            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.telegram_id') }}</label>
+            <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.telegram_id') }}</label>
             <div class="relative">
               <Send class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 v-model.number="telegramChatId"
                 type="number"
                 :placeholder="$t('profile.telegram_placeholder')"
-                class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
+                class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
               />
             </div>
           </div>
@@ -279,7 +279,7 @@ async function handlePasswordChange() {
           <button
             type="submit"
             :disabled="profileStore.isUpdating"
-            class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
+            class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm md:text-base shadow-md transition-all active:scale-95 disabled:opacity-50"
           >
             <Save v-if="!profileStore.isUpdating" class="w-4 h-4" />
             <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -295,7 +295,7 @@ async function handlePasswordChange() {
         </div>
 
         <div v-if="profileStore.profile?.hasPassword">
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.current_password') }}</label>
+          <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.current_password') }}</label>
           <div class="relative">
             <Lock class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -303,13 +303,13 @@ async function handlePasswordChange() {
               required
               type="password"
               placeholder="••••••••"
-              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
 
         <div>
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.new_password') }}</label>
+          <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.new_password') }}</label>
           <div class="relative">
             <Lock class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -318,13 +318,13 @@ async function handlePasswordChange() {
               type="password"
               minlength="6"
               placeholder="••••••••"
-              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
 
         <div>
-          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.confirm_password') }}</label>
+          <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.confirm_password') }}</label>
           <div class="relative">
             <Lock class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -333,7 +333,7 @@ async function handlePasswordChange() {
               type="password"
               minlength="6"
               placeholder="••••••••"
-              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -342,7 +342,7 @@ async function handlePasswordChange() {
           <button
             type="submit"
             :disabled="profileStore.isUpdating"
-            class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
+            class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm md:text-base shadow-md transition-all active:scale-95 disabled:opacity-50"
           >
             <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
             <span>{{ profileStore.profile?.hasPassword ? $t('profile.update_password_btn') : $t('profile.set_password_btn') }}</span>
