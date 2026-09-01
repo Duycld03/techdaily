@@ -98,11 +98,24 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ### `PUT /api/v1/user/change-password`
 - **Auth:** Required (`Bearer`)
-- **Request Body:**
+- **Description:** Sets or changes user password. For Google OAuth users without an existing password (`hasPassword: false`), `currentPassword` can be omitted or null.
+- **Request Body (Standard Update):**
   ```json
   {
     "currentPassword": "OldPassword123!",
     "newPassword": "NewPassword456!"
+  }
+  ```
+- **Request Body (Google Account Initial Setup):**
+  ```json
+  {
+    "newPassword": "NewPassword456!"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "message": "Password updated successfully."
   }
   ```
 
@@ -341,7 +354,7 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ### `POST /api/v1/notes/highlights`
 - **Auth:** Required (`Bearer`)
-- **Request Body:** `{ "documentChunkId": "...", "highlightedText": "...", "note": "...", "tags": ["csharp"] }`
+- **Request Body:** `{ "documentChunkId": "...", "selectedText": "...", "note": "...", "tags": ["csharp"] }`
 - **Response (201 Created):** Created highlight object.
 
 ### `DELETE /api/v1/notes/highlights/{id}`

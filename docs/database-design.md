@@ -25,6 +25,25 @@ erDiagram
 
 ## 2. Table Definitions
 
+### `Users`
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `Id` | `uuid` | PK | Unique User Identifier |
+| `Email` | `varchar(255)` | NOT NULL, UNIQUE | User email address |
+| `Name` | `varchar(255)` | NOT NULL | User display name |
+| `AvatarUrl` | `varchar(500)` | NULL | Profile image URL |
+| `GoogleSubjectId` | `varchar(255)` | NULL | Google OAuth Subject Identifier |
+| `PasswordHash` | `varchar(500)` | NULL | PBKDF2 Password Hash (100,000 iterations SHA-256) |
+| `TelegramChatId` | `bigint` | NULL | Telegram Chat ID for automated notifications |
+| `PreferredLocale` | `varchar(10)` | NOT NULL, Default 'en' | User language preference (`en` / `vi`) |
+| `TargetRole` | `varchar(100)` | NOT NULL, Default 'Senior Engineer' | Target engineering role |
+| `DailyGoalMinutes` | `int` | NOT NULL, Default 10 | Daily study goal in minutes |
+| `IsDeleted` | `boolean` | NOT NULL, Default false | Soft delete flag |
+| `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
+| `UpdatedAt` | `timestamptz` | NULL | Last updated timestamp |
+
+---
+
 ### `DocumentBooks`
 | Column | Type | Constraints | Description |
 |---|---|---|---|
