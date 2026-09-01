@@ -43,7 +43,7 @@ const renderedImprovedAnswer = computed(() => {
     </div>
 
     <!-- Summary Feedback -->
-    <div class="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-base sm:text-lg text-slate-800 dark:text-slate-200 leading-relaxed font-normal shadow-inner">
+    <div class="p-5 sm:p-6 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 text-sm md:text-lg text-slate-800 dark:text-slate-200 leading-relaxed font-normal shadow-inner">
       {{ review.summaryFeedback }}
     </div>
 
@@ -57,7 +57,7 @@ const renderedImprovedAnswer = computed(() => {
         <li
           v-for="(s, i) in review.strengths"
           :key="i"
-          class="text-sm sm:text-base text-slate-800 dark:text-slate-200 flex items-start gap-3 bg-emerald-50/80 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/40 leading-relaxed"
+          class="text-sm md:text-lg text-slate-800 dark:text-slate-200 flex items-start gap-3 bg-emerald-50/80 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/40 leading-relaxed"
         >
           <span class="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span>
           <span>{{ s }}</span>
@@ -75,7 +75,7 @@ const renderedImprovedAnswer = computed(() => {
         <li
           v-for="(m, i) in review.missingPoints"
           :key="i"
-          class="text-sm sm:text-base text-slate-800 dark:text-slate-200 flex items-start gap-3 bg-amber-50/80 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200 dark:border-amber-900/40 leading-relaxed"
+          class="text-sm md:text-lg text-slate-800 dark:text-slate-200 flex items-start gap-3 bg-amber-50/80 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200 dark:border-amber-900/40 leading-relaxed"
         >
           <span class="w-2 h-2 rounded-full bg-amber-500 mt-2 shrink-0"></span>
           <span>{{ m }}</span>
@@ -96,7 +96,7 @@ const renderedImprovedAnswer = computed(() => {
         <component :is="showModelAnswer ? ChevronUp : ChevronDown" class="w-5 h-5 text-slate-500 dark:text-slate-400" />
       </button>
 
-      <div v-if="showModelAnswer" class="mt-4 p-6 sm:p-8 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 markdown-body text-sm sm:text-base leading-relaxed animate-in fade-in zoom-in-95 duration-200 shadow-inner" v-html="renderedImprovedAnswer"></div>
+      <div v-if="showModelAnswer" class="mt-4 p-6 sm:p-8 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 markdown-body text-sm md:text-lg leading-relaxed animate-in fade-in zoom-in-95 duration-200 shadow-inner" v-html="renderedImprovedAnswer"></div>
     </div>
   </div>
 </template>

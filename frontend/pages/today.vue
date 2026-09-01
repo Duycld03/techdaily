@@ -74,7 +74,7 @@ function resetToScheduledDay() {
               {{ $t('today.day') }} {{ d }} / 30
             </option>
           </select>
-          <div class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 text-[10px] sm:text-xs">▼</div>
+          <div class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 text-xs">▼</div>
         </div>
 
         <span v-if="focusStore.data?.drill?.status === 2" class="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold">

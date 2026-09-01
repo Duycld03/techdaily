@@ -131,13 +131,13 @@ async function handleLegacySubmit() {
         </div>
 
         <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <span class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold uppercase tracking-wider bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+          <span class="px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
             Senior Drill
           </span>
           <span
             v-if="isReviewed"
             :class="[
-              'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 border',
+              'px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border',
               isCorrect
                 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                 : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
@@ -172,7 +172,7 @@ async function handleLegacySubmit() {
             @click="handleOptionSelect(index)"
             :disabled="isReviewed || focusStore.isSubmitting"
             :class="[
-              'w-full text-left p-3.5 sm:p-5 rounded-2xl text-xs sm:text-sm font-medium border transition-all duration-200 flex items-start gap-3 sm:gap-4 relative group select-none',
+              'w-full text-left p-3.5 sm:p-5 rounded-2xl text-sm md:text-lg font-medium border transition-all duration-200 flex items-start gap-3 sm:gap-4 relative group select-none',
               !isReviewed && selectedOption === index
                 ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-950 dark:text-brand-100 ring-2 ring-brand-500/30 shadow-sm'
                 : !isReviewed
@@ -211,16 +211,16 @@ async function handleLegacySubmit() {
             <div v-if="isReviewed" class="shrink-0 flex items-center gap-1 sm:gap-1.5 pt-0.5">
               <span
                 v-if="index === question.correctOptionIndex"
-                class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-emerald-600 text-white shadow-sm"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-sm"
               >
-                <Check class="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                <Check class="w-3.5 h-3.5" />
                 <span>{{ $t('today.optimal_choice') }}</span>
               </span>
               <span
                 v-else-if="selectedOption === index && index !== question.correctOptionIndex"
-                class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-rose-600 text-white shadow-sm"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-sm"
               >
-                <XCircle class="w-3 sm:w-3.5 h-3 sm:h-3.5" />
+                <XCircle class="w-3.5 h-3.5" />
                 <span>{{ $t('today.your_choice') }}</span>
               </span>
             </div>
@@ -279,7 +279,7 @@ async function handleLegacySubmit() {
             <h3 class="font-bold text-sm sm:text-base">
               {{ isCorrect ? $t('today.correct_solution') : $t('today.incorrect_solution') }}
             </h3>
-            <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed">
               {{ isCorrect ? 'Your senior engineering analysis matches optimal production best practices.' : $t('today.scheduled_sm2') }}
             </p>
           </div>
@@ -287,13 +287,13 @@ async function handleLegacySubmit() {
 
         <!-- Architectural Deep-Dive Explanation Card -->
         <div v-if="question.explanationMarkdown" class="p-5 sm:p-6 rounded-3xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-          <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+          <div class="flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
             <Sparkles class="w-4 h-4" />
             <span>{{ $t('today.correct_explanation_header') }}</span>
           </div>
 
           <div
-            class="prose dark:prose-invert max-w-none text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300"
+            class="prose dark:prose-invert max-w-none text-sm md:text-lg leading-relaxed text-slate-700 dark:text-slate-300"
             v-html="renderedExplanation"
           ></div>
         </div>

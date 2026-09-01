@@ -242,8 +242,10 @@
     "name_label": "Họ và Tên",
     "google_sign_in": "Đăng nhập bằng Google",
     "submit_sign_in": "Đăng Nhập",
-    "submit_register": "Tạo Tài Khoản",
+    "submit_register": "Đăng Ký Tài Khoản",
     "already_have_account": "Đã có tài khoản?",
-    "dont_have_account": "Chưa có tài khoản?"
+    "dont_have_account": "Chưa có tài khoản?",
+    "or_continue_with": "Hoặc tiếp tục bằng",
+    "terms_agreement": "Bằng việc tiếp tục, bạn đồng ý với Điều khoản và Chính sách của TechDaily."
   }
 }

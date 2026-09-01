@@ -75,7 +75,7 @@ function navigateToDay(dayOrder: number) {
           <h1 class="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             {{ $t('roadmap.title') }}
           </h1>
-          <p class="text-slate-600 dark:text-slate-300 text-xs sm:text-base leading-relaxed">
+          <p class="text-slate-600 dark:text-slate-300 text-sm md:text-lg leading-relaxed">
             {{ $t('roadmap.subtitle') }}
           </p>
         </div>
@@ -86,7 +86,7 @@ function navigateToDay(dayOrder: number) {
             <Award class="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <div class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
+            <div class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
               {{ $t('roadmap.progress') }}
             </div>
             <div class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-baseline gap-1.5">
@@ -135,7 +135,7 @@ function navigateToDay(dayOrder: number) {
                 <h2 class="text-sm sm:text-lg font-bold text-slate-900 dark:text-slate-100">
                   {{ module.moduleTitle }}
                 </h2>
-                <span class="text-[11px] sm:text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold">
+                <span class="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold">
                   Days {{ module.startDay }}–{{ module.endDay }}
                 </span>
               </div>
@@ -194,7 +194,7 @@ function navigateToDay(dayOrder: number) {
 
                 <span
                   :class="[
-                    'text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border',
+                    'text-xs px-2 py-0.5 rounded-md font-bold uppercase tracking-wider border',
                     getDifficultyColor(day.difficulty)
                   ]"
                 >
@@ -206,28 +206,28 @@ function navigateToDay(dayOrder: number) {
               <div>
                 <span
                   v-if="day.isActiveToday"
-                  class="flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 animate-pulse"
+                  class="flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/60 px-2.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 animate-pulse"
                 >
                   <Flame class="w-3.5 h-3.5 text-amber-500" />
                   <span>{{ $t('roadmap.today') }}</span>
                 </span>
                 <span
                   v-else-if="day.isCompleted"
-                  class="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800"
+                  class="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800"
                 >
                   <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
                   <span>{{ day.drillScore !== null ? `+${day.drillScore}` : 'Pass' }}</span>
                 </span>
                 <span
                   v-else-if="day.isUnlocked"
-                  class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full"
+                  class="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full"
                 >
                   <Eye class="w-3.5 h-3.5 inline mr-0.5" />
                   <span>{{ $t('roadmap.ready') }}</span>
                 </span>
                 <span
                   v-else
-                  class="text-[11px] font-semibold text-slate-400 dark:text-slate-600 bg-slate-100/50 dark:bg-slate-800/40 px-2 py-0.5 rounded-full"
+                  class="text-xs font-semibold text-slate-400 dark:text-slate-600 bg-slate-100/50 dark:bg-slate-800/40 px-2.5 py-0.5 rounded-full"
                 >
                   <Lock class="w-3 h-3 inline mr-0.5" />
                   <span>{{ $t('roadmap.locked') }}</span>
@@ -240,13 +240,13 @@ function navigateToDay(dayOrder: number) {
               <h3 class="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
                 {{ day.title }}
               </h3>
-              <p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+              <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
                 {{ day.summary }}
               </p>
             </div>
 
             <!-- Action Link -->
-            <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-semibold">
+            <div class="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs sm:text-sm font-semibold">
               <span
                 :class="[
                   day.isActiveToday

@@ -59,7 +59,8 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
    - Interactive elements (Micro Quizzes, buttons, textareas, inputs) MUST NEVER trigger selection tooltips or AI lookups.
    - Users selecting text to copy (`Ctrl+C`) or translate MUST NOT have their flow interrupted.
 3. **Typography & Dual Theme Standards:**
-   - Base font size MUST be at least `14px` (`text-sm`) to `16px` (`text-base`) with comfortable line height (`leading-relaxed`).
+   - **Responsive Typography Scale:** Body text, article paragraphs, summaries, card descriptions, scenario options, and explanations MUST be at least `text-sm` (14px) on mobile viewports and scale to at least `text-base` (16px) or `text-lg` (18px) on large viewports (`≥ md`).
+   - Micro text (`text-xs` / 12px) is forbidden for readable copy/descriptions and is strictly reserved for compact metadata (tags, badges, timestamps, tooltips). Sub-12px micro text (e.g. `text-[10px]`) is prohibited.
    - All components MUST support dual theme classes (`bg-white dark:bg-slate-900`, `text-slate-900 dark:text-white`, `border-slate-200 dark:border-slate-800`).
 4. **UI Verification & Localization Testing Rule:**
    - When performing manual or automated visual/UI tests (e.g. Playwright, mobile responsive checks), if testing only in a single language, **always use Vietnamese (`vi`)** as the default test locale.

@@ -24,7 +24,7 @@ function submitAnswer() {
       <span>{{ $t('today.quiz_title') }}</span>
     </div>
 
-    <div class="text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 mb-4 leading-snug">
+    <div class="text-sm md:text-lg font-bold text-slate-900 dark:text-white mb-4 leading-snug">
       {{ quiz.question }}
     </div>
 
@@ -35,22 +35,22 @@ function submitAnswer() {
         @click="!isSubmitted && (selectedOption = index)"
         :disabled="isSubmitted"
         :class="[
-          'w-full text-left p-3.5 rounded-2xl text-xs sm:text-sm font-semibold border transition-all flex items-center justify-between',
+          'w-full text-left p-3.5 sm:p-4 rounded-2xl text-sm md:text-lg font-medium border transition-all flex items-center justify-between',
           selectedOption === index && !isSubmitted
-            ? 'border-brand-500 bg-brand-50 dark:bg-brand-500/10 text-brand-900 dark:text-brand-300 shadow-sm'
+            ? 'border-brand-500 bg-brand-50 dark:bg-brand-500/10 text-brand-950 dark:text-brand-100 shadow-sm'
             : isSubmitted && index === quiz.answerIndex
-            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-900 dark:text-emerald-300'
+            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-950 dark:text-emerald-100 font-semibold'
             : isSubmitted && selectedOption === index && index !== quiz.answerIndex
-            ? 'border-rose-500 bg-rose-50 dark:bg-rose-500/15 text-rose-900 dark:text-rose-300'
-            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100/60 dark:hover:bg-slate-800/40'
+            ? 'border-rose-500 bg-rose-50 dark:bg-rose-500/15 text-rose-950 dark:text-rose-100'
+            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40 text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100/60 dark:hover:bg-slate-800/40'
         ]"
       >
         <span>{{ option }}</span>
         <span v-if="isSubmitted && index === quiz.answerIndex">
-          <CheckCircle2 class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <CheckCircle2 class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
         </span>
         <span v-else-if="isSubmitted && selectedOption === index && index !== quiz.answerIndex">
-          <XCircle class="w-4 h-4 text-rose-600 dark:text-rose-400" />
+          <XCircle class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
         </span>
       </button>
     </div>
@@ -59,7 +59,7 @@ function submitAnswer() {
       <button
         @click="submitAnswer"
         :disabled="selectedOption === null"
-        class="px-5 py-2.5 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all shadow-sm active:scale-95"
+        class="px-5 py-2.5 rounded-xl text-sm md:text-base font-semibold bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all shadow-sm active:scale-95"
       >
         {{ $t('today.quiz_submit') }}
       </button>
@@ -69,16 +69,16 @@ function submitAnswer() {
     <div
       v-else
       :class="[
-        'p-4 rounded-2xl text-xs sm:text-sm leading-relaxed border space-y-1',
+        'p-4 sm:p-5 rounded-2xl text-sm md:text-lg leading-relaxed border space-y-1.5',
         selectedOption === quiz.answerIndex
-          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-300'
-          : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-300'
+          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-950 dark:text-emerald-200'
+          : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/60 text-amber-950 dark:text-amber-200'
       ]"
     >
-      <div class="font-bold">
+      <div class="font-bold text-sm md:text-base">
         {{ selectedOption === quiz.answerIndex ? $t('today.quiz_correct') : $t('today.quiz_incorrect') }}
       </div>
-      <p class="text-slate-700 dark:text-slate-300">{{ quiz.explanation }}</p>
+      <p class="text-slate-700 dark:text-slate-300 leading-relaxed">{{ quiz.explanation }}</p>
     </div>
   </div>
 </template>
