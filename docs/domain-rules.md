@@ -65,6 +65,10 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 4. **UI Verification & Localization Testing Rule:**
    - When performing manual or automated visual/UI tests (e.g. Playwright, mobile responsive checks), if testing only in a single language, **always use Vietnamese (`vi`)** as the default test locale.
    - **Rationale:** Vietnamese strings are typically longer than English strings (e.g., *"Bảo Mật & Mật Khẩu"* vs *"Security"*, *"Trích Đoạn Tài Liệu Gốc"* vs *"Source Context"*), making Vietnamese the optimal stress test for detecting text wrapping, truncation, container overflow, and layout collisions early.
+5. **Header Action Buttons & Touch Targets:**
+   - Action buttons in header banners (e.g., *Ngẫu Nhiên* and *Tạo Với AI* on Insights) MUST maintain visual balance and avoid awkward wrapping.
+   - On large screens (`≥ sm`), action buttons MUST sit side-by-side horizontally (`flex-nowrap`, `shrink-0`) aligned with the header.
+   - On mobile screens, button pairs MUST distribute space evenly (`flex-1`) with minimum 44px touch targets (`h-11 sm:h-12`) and `text-sm md:text-base font-bold`.
 
 ---
 
