@@ -70,3 +70,22 @@ jobs:
 
       - name: Verify Frontend Production Build (Nuxt Nitro)
         run: npm run build
+
+  deploy:
+    name: Deploy to Google Cloud VPS
+    needs: [backend-ci, frontend-ci]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd ~/techdaily || cd /home/${{ secrets.VPS_USERNAME }}/techdaily
+            git pull origin main
+            sudo docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+            sudo docker image prune -f
+
