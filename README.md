@@ -1,5 +1,7 @@
 # 🚀 TechDaily — Senior Engineering & Interview Drill Platform
 
+> **Live Demo (Google Cloud VPS):** [http://techdaily.duckdns.org](http://techdaily.duckdns.org) *(or [http://34.87.135.163](http://34.87.135.163))*
+
 An AI-powered, daily bite-sized learning and technical interview preparation platform designed for Senior Fullstack & Backend (.NET) Engineers.
 
 ---
