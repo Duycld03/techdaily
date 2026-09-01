@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import {
   BookOpen,
   LogOut,
@@ -54,6 +54,25 @@ function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => 
     (event.currentTarget as HTMLElement).blur()
   }
 }
+
+watch(isMobileNavOpen, (open) => {
+  if (typeof document !== 'undefined') {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.touchAction = 'none'
+    } else {
+      document.body.style.overflow = ''
+      document.body.style.touchAction = ''
+    }
+  }
+})
+
+onUnmounted(() => {
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = ''
+    document.body.style.touchAction = ''
+  }
+})
 </script>
 
 <template>
@@ -126,12 +145,12 @@ function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => 
     <Teleport to="body">
       <div
         v-if="isMobileNavOpen"
-        class="md:hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex justify-start animate-in fade-in"
+        class="md:hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm touch-none animate-in fade-in"
         @click.self="isMobileNavOpen = false"
       >
-        <div class="w-4/5 max-w-xs bg-white dark:bg-slate-900 h-full flex flex-col justify-between p-5 sm:p-6 shadow-2xl border-r border-slate-200 dark:border-slate-800 animate-in slide-in-from-left">
+        <div class="fixed inset-y-0 left-0 z-50 w-[85%] max-w-xs bg-white dark:bg-slate-900 h-full min-h-[100dvh] flex flex-col justify-between p-4.5 sm:p-6 shadow-2xl border-r border-slate-200 dark:border-slate-800 animate-in slide-in-from-left">
           <!-- Drawer Header -->
-          <div class="shrink-0 flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div class="shrink-0 flex items-center justify-between pb-3.5 border-b border-slate-200 dark:border-slate-800">
             <div class="flex items-center gap-2.5 font-bold tracking-tight">
               <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-md">
                 <BookOpen class="w-4 h-4 text-slate-950 font-bold" />
@@ -148,7 +167,7 @@ function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => 
           </div>
 
           <!-- Navigation Links (Scrollable) -->
-          <div class="flex-1 overflow-y-auto min-h-0 py-4 -mx-2 px-2">
+          <div class="flex-1 overflow-y-auto min-h-0 py-3 -mx-2 px-2 overscroll-contain">
             <nav class="space-y-1">
               <NuxtLink
                 v-for="link in links"
@@ -161,7 +180,7 @@ function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => 
                   :href="href"
                   @click="navigate(); isMobileNavOpen = false"
                   :class="[
-                    'flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm transition-colors',
+                    'flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm transition-colors',
                     isLinkActive(link.path)
                       ? 'bg-slate-100 dark:bg-slate-800/80 text-brand-600 dark:text-brand-400 font-bold'
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/50 font-medium'
@@ -181,10 +200,10 @@ function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => 
           </div>
 
           <!-- Drawer Footer (Fixed Pinned) -->
-          <div class="shrink-0 pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
-            <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center justify-between p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/60">
+          <div class="shrink-0 pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center justify-between p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800/60">
               <div class="flex items-center gap-2.5 min-w-0 pr-2">
-                <div class="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
+                <div class="w-7 h-7 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
                   {{ authStore.user.name.charAt(0).toUpperCase() }}
                 </div>
                 <span class="text-xs font-bold text-slate-900 dark:text-white truncate">
@@ -208,7 +227,7 @@ function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => 
               {{ $t('nav.login') }}
             </NuxtLink>
 
-            <div class="text-[11px] text-slate-400 text-center">
+            <div class="text-[10px] text-slate-400 text-center">
               Senior Engineering Daily Platform
             </div>
           </div>

@@ -113,7 +113,7 @@ function getCategoryBadge(cat: number) {
 <template>
   <div class="max-w-4xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-300">
     <!-- Header Banner -->
-    <div class="p-4 sm:p-7 rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-brand-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/40 border border-slate-200/90 dark:border-slate-800 text-slate-900 dark:text-white shadow-md dark:shadow-xl relative overflow-hidden transition-all">
+    <div class="p-4 sm:p-7 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-brand-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/40 border border-slate-200/90 dark:border-slate-800 text-slate-900 dark:text-white shadow-md dark:shadow-xl relative overflow-hidden transition-all">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 relative z-10">
         <div class="space-y-1.5 sm:space-y-2">
           <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold uppercase tracking-wider">
@@ -150,7 +150,7 @@ function getCategoryBadge(cat: number) {
     </div>
 
     <!-- Category Filter Bar -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+    <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
       <button
         v-for="cat in categories"
         :key="String(cat.id)"
@@ -175,7 +175,7 @@ function getCategoryBadge(cat: number) {
     <!-- Empty State -->
     <div
       v-else-if="!insightsStore.currentInsight"
-      class="p-8 sm:p-12 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4"
+      class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4"
     >
       <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center mx-auto text-indigo-600 dark:text-indigo-400">
         <Sparkles class="w-6 h-6" />
@@ -193,36 +193,36 @@ function getCategoryBadge(cat: number) {
     <!-- Active Insight Card -->
     <div
       v-else
-      class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300"
+      class="rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300"
     >
       <!-- Card Top Header -->
-      <div class="p-4.5 sm:p-8 border-b border-slate-100 dark:border-slate-800/80 space-y-3.5 sm:space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex flex-wrap items-center gap-2">
-            <span :class="['px-3 py-1 rounded-full text-xs font-bold border', getCategoryBadge(insightsStore.currentInsight.category).color]">
+      <div class="p-4 sm:p-7 md:p-8 border-b border-slate-100 dark:border-slate-800/80 space-y-3.5 sm:space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <span :class="['px-2.5 sm:px-3 py-1 rounded-full text-xs font-bold border shrink-0', getCategoryBadge(insightsStore.currentInsight.category).color]">
               {{ getCategoryBadge(insightsStore.currentInsight.category).text }}
             </span>
 
             <span
               v-for="tag in insightsStore.currentInsight.tags"
               :key="tag"
-              class="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px] font-mono font-medium"
+              class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px] font-mono font-medium"
             >
               #{{ tag }}
             </span>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
             <!-- Benchmark Badge -->
-            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
-              <Zap class="w-3.5 h-3.5 fill-emerald-500 text-emerald-500" />
-              <span>{{ insightsStore.currentInsight.benchmarkStats }}</span>
+            <div class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-400 text-xs font-bold break-words min-w-0 max-w-full">
+              <Zap class="w-3.5 h-3.5 fill-emerald-500 text-emerald-500 shrink-0" />
+              <span class="truncate sm:whitespace-normal">{{ insightsStore.currentInsight.benchmarkStats }}</span>
             </div>
 
             <!-- Bookmark Button -->
             <button
               @click="insightsStore.toggleBookmark(insightsStore.currentInsight.id)"
-              class="p-2 rounded-xl text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              class="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
               :title="$t('insights.save_bookmark')"
             >
               <BookmarkCheck v-if="insightsStore.currentInsight.isBookmarkedByUser" class="w-5 h-5 text-indigo-600 dark:text-indigo-400 fill-indigo-600/20" />
@@ -242,7 +242,7 @@ function getCategoryBadge(cat: number) {
       </div>
 
       <!-- Code Snippets Showcase -->
-      <div class="p-4 sm:p-8 bg-slate-50/60 dark:bg-slate-950/40 border-b border-slate-100 dark:border-slate-800/80 space-y-4 sm:space-y-5">
+      <div class="p-4 sm:p-7 md:p-8 bg-slate-50/60 dark:bg-slate-950/40 border-b border-slate-100 dark:border-slate-800/80 space-y-4 sm:space-y-5">
         <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div class="flex items-center gap-2">
             <button
@@ -278,7 +278,7 @@ function getCategoryBadge(cat: number) {
         </div>
 
         <!-- Code Block Render -->
-        <div class="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm max-w-full">
+        <div class="max-w-full">
           <CommonShikiCodeBlock
             v-if="activeCodeTab === 'solution'"
             :code="insightsStore.currentInsight.solutionSnippet"
