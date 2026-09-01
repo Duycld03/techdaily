@@ -63,37 +63,37 @@ function navigateToDay(dayOrder: number) {
 <template>
   <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-8 animate-in fade-in duration-300">
     <!-- Header Banner -->
-    <div class="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-brand-950 border border-slate-800 text-white shadow-xl relative overflow-hidden">
+    <div class="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-brand-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-brand-950 border border-slate-200/90 dark:border-slate-800 text-slate-900 dark:text-white shadow-md dark:shadow-xl relative overflow-hidden transition-all duration-300">
       <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
       
       <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div class="space-y-2 max-w-2xl">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-500/20 border border-brand-500/30 text-brand-300 text-xs font-bold tracking-wide uppercase">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-500/20 border border-brand-200 dark:border-brand-500/30 text-brand-700 dark:text-brand-300 text-xs font-bold tracking-wide uppercase">
             <Map class="w-3.5 h-3.5" />
             <span>{{ $t('roadmap.badge') }}</span>
           </div>
-          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             {{ $t('roadmap.title') }}
           </h1>
-          <p class="text-slate-300 text-sm sm:text-base leading-relaxed">
+          <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
             {{ $t('roadmap.subtitle') }}
           </p>
         </div>
 
         <!-- Metric Counter Card -->
-        <div class="flex items-center gap-4 bg-slate-800/80 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-700/80 shrink-0">
-          <div class="w-12 h-12 rounded-xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400">
+        <div class="flex items-center gap-4 bg-white/90 dark:bg-slate-800/80 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 shadow-sm shrink-0">
+          <div class="w-12 h-12 rounded-xl bg-brand-50 dark:bg-brand-500/20 border border-brand-200 dark:border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400">
             <Award class="w-6 h-6" />
           </div>
           <div>
-            <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">
+            <div class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
               {{ $t('roadmap.progress') }}
             </div>
-            <div class="text-2xl font-black text-white flex items-baseline gap-1.5">
+            <div class="text-2xl font-black text-slate-900 dark:text-white flex items-baseline gap-1.5">
               <span>{{ roadmapStore.roadmapData?.completedDaysCount ?? 0 }}</span>
-              <span class="text-xs text-slate-400 font-medium">/ 30 {{ $t('roadmap.days') }}</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">/ 30 {{ $t('roadmap.days') }}</span>
             </div>
-            <div class="text-xs text-brand-400 font-bold mt-0.5">
+            <div class="text-xs text-brand-600 dark:text-brand-400 font-bold mt-0.5">
               {{ roadmapStore.roadmapData?.overallProgressPercentage ?? 0 }}% {{ $t('roadmap.completed') }}
             </div>
           </div>
@@ -102,7 +102,7 @@ function navigateToDay(dayOrder: number) {
 
       <!-- Global Progress Bar -->
       <div class="mt-6 space-y-1.5">
-        <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
+        <div class="w-full h-2.5 bg-slate-200/80 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700/50">
           <div
             class="h-full bg-gradient-to-r from-brand-500 to-emerald-400 rounded-full transition-all duration-500 shadow-sm"
             :style="{ width: `${roadmapStore.roadmapData?.overallProgressPercentage ?? 0}%` }"

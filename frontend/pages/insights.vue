@@ -112,19 +112,19 @@ function getCategoryBadge(cat: number) {
 <template>
   <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6 animate-in fade-in duration-300">
     <!-- Header Banner -->
-    <div class="p-6 sm:p-7 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 border border-slate-800 text-white shadow-xl relative overflow-hidden">
+    <div class="p-6 sm:p-7 rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-sky-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950 border border-slate-200/90 dark:border-slate-800 text-slate-900 dark:text-white shadow-md dark:shadow-xl relative overflow-hidden transition-all duration-300">
       <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
       <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div class="space-y-2">
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold tracking-wide uppercase">
-            <Sparkles class="w-3.5 h-3.5 text-indigo-400" />
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold tracking-wide uppercase">
+            <Sparkles class="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
             <span>{{ $t('insights.badge') }}</span>
           </div>
-          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             {{ $t('insights.title') }}
           </h1>
-          <p class="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl">
+          <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl">
             {{ $t('insights.subtitle') }}
           </p>
         </div>
@@ -132,10 +132,10 @@ function getCategoryBadge(cat: number) {
         <div class="flex items-center gap-2.5 shrink-0">
           <button
             @click="insightsStore.shuffle()"
-            class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700 shadow-sm active:scale-95"
+            class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-800/90 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all border border-slate-200 dark:border-slate-700 shadow-sm active:scale-95"
             :title="$t('insights.shuffle')"
           >
-            <Shuffle class="w-4 h-4 text-indigo-400" />
+            <Shuffle class="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
             <span>{{ $t('insights.shuffle') }}</span>
           </button>
 
