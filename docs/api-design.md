@@ -111,13 +111,41 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 ## 3. Daily Focus Hub (`/api/v1/daily`)
 
 ### `GET /api/v1/daily/today`
-- **Auth:** Optional / Recommended
-- **Response:** Daily topic, reading chunk, scenario question, active streak.
+- **Auth:** Optional / Recommended (`Bearer`)
+- **Query Params:** `dayOrder` (optional int: 1–30), `date` (optional string), `locale` (en/vi)
+- **Response (200 OK):**
+  - `topic`: `TopicDto` (id, slug, title, category, difficulty, dayOrder, summary, deepDiveMarkdown)
+  - `question`: `InterviewQuestionDto` (id, questionText, options: `string[]`, difficulty, expectedKeyPoints; `correctOptionIndex` and `explanationMarkdown` masked until reviewed)
+  - `documentChunk`: `DocumentChunkDto` (id, chunkOrder, chapterTitle, originalTextMarkdown, summaryMarkdown, keyTakeaways, microQuiz)
+  - `drill`: `DailyDrillDto` (id, status, selectedOptionIndex, isCorrect, score)
+  - `currentStreak`: int
+  - `longestStreak`: int
+  - `freezeCreditsRemaining`: int
 
-### `POST /api/v1/daily/submit`
-- **Auth:** Optional / Recommended
-- **Request Body (Multipart or JSON):** `answerText` (string), `audioFile` (multipart WebM/WAV), `locale` (en/vi).
-- **Response (200 OK):** Gemini 3.5 Flash scorecard review (score, strengths, missing points, improved answer).
+### `POST /api/v1/daily/drills/{id}/submit`
+- **Auth:** Required (`Bearer`)
+- **Request Body (JSON):**
+  ```json
+  {
+    "selectedOptionIndex": 1,
+    "answerText": "...",
+    "locale": "en"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "drillId": "...",
+    "status": 2,
+    "score": 10,
+    "isCorrect": true,
+    "selectedOptionIndex": 1,
+    "correctOptionIndex": 1,
+    "explanationMarkdown": "Deep architectural breakdown...",
+    "newStreak": 6,
+    "scheduledNextReview": null
+  }
+  ```
 
 ### `POST /api/v1/daily/explain-term`
 - **Auth:** Public
@@ -126,7 +154,48 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ---
 
-## 4. Spaced Repetition (`/api/v1/review`)
+## 4. Curriculum Roadmap (`/api/v1/curriculum`)
+
+### `GET /api/v1/curriculum/roadmap`
+- **Auth:** Required (`Bearer`)
+- **Response (200 OK):**
+  ```json
+  {
+    "totalDays": 30,
+    "completedDaysCount": 4,
+    "currentActiveDay": 5,
+    "overallProgressPercentage": 13.3,
+    "modules": [
+      {
+        "category": 0,
+        "moduleTitle": "Frontend & Browser Internals",
+        "description": "Vue 3 Reactivity, Rendering Strategies, Browser Pipeline, Web Vitals, State Management, WebSockets & Bundlers.",
+        "startDay": 1,
+        "endDay": 7,
+        "completedCount": 4,
+        "totalCount": 7,
+        "days": [
+          {
+            "dayOrder": 1,
+            "slug": "vue3-reactivity-engine",
+            "title": "Vue 3 Reactivity Engine Under The Hood",
+            "summary": "Deep dive into Proxy, Reflect, track(), trigger()...",
+            "difficulty": 1,
+            "isCompleted": true,
+            "isActiveToday": false,
+            "isUnlocked": true,
+            "drillScore": 10
+          }
+        ]
+      }
+    ]
+  }
+  ```
+- **Response (401 Unauthorized):** Missing or invalid JWT token.
+
+---
+
+## 5. Spaced Repetition (`/api/v1/review`)
 
 ### `GET /api/v1/review/deck`
 - **Auth:** Optional / Recommended
@@ -139,7 +208,7 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ---
 
-## 5. Technical Library (`/api/v1/library`)
+## 6. Technical Library (`/api/v1/library`)
 
 ### `GET /api/v1/library/books`
 - **Auth:** Public
@@ -213,7 +282,7 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ---
 
-## 6. Reading Notes & Highlights (`/api/v1/notes`)
+## 7. Reading Notes & Highlights (`/api/v1/notes`)
 
 ### `GET /api/v1/notes/highlights`
 - **Auth:** Required (`Bearer`)
