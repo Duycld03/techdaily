@@ -554,6 +554,7 @@ async function handleHighlightSelection() {
     <TermExplainerModal
       v-if="isExplainerOpen"
       :term="currentTerm"
+      :category="book?.title || 'System Architecture'"
       :context="currentContext"
       @close="isExplainerOpen = false"
     />

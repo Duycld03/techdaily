@@ -22,7 +22,6 @@ public class ExplainTermValidator : AbstractValidator<ExplainTermRequest>
     public ExplainTermValidator()
     {
         RuleFor(x => x.Term).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Category).NotEmpty().MaximumLength(255);
         RuleFor(x => x.Locale).NotEmpty().MaximumLength(10);
     }
 }
@@ -50,10 +49,13 @@ public class ExplainTermHandler : IUseCase<ExplainTermRequest, ExplainTermRespon
             return Error.Custom("Validation.Failed", validation.Errors.First().ErrorMessage);
         }
 
+        var safeCategory = string.IsNullOrWhiteSpace(request.Category) ? "Software Architecture" : request.Category;
+        var safeContext = request.Context ?? string.Empty;
+
         var explanationResult = await _termExplanationService.ExplainTermAsync(
             request.Term,
-            request.Category,
-            request.Context,
+            safeCategory,
+            safeContext,
             request.Locale,
             cancellationToken);
 

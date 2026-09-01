@@ -2,11 +2,14 @@
 import { ref, onMounted } from 'vue'
 import { Sparkles, X, Check, Copy } from 'lucide-vue-next'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   term: string
-  category: string
-  context: string
-}>()
+  category?: string
+  context?: string
+}>(), {
+  category: 'Software Architecture',
+  context: ''
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -22,10 +25,17 @@ const copied = ref(false)
 async function loadExplanation() {
   isLoading.value = true
   try {
-    const res = await focusStore.explainTerm(props.term, props.category, props.context, locale.value)
+    const res = await focusStore.explainTerm(
+      props.term,
+      props.category || 'Software Architecture',
+      props.context || '',
+      locale.value
+    )
     explanation.value = res.explanation
-  } catch {
-    explanation.value = 'Could not load explanation at this moment.'
+  } catch (err: any) {
+    explanation.value = locale.value === 'vi'
+      ? 'Không thể tải giải thích vào lúc này. Vui lòng thử lại sau.'
+      : (err.message || 'Could not load explanation at this moment.')
   } finally {
     isLoading.value = false
   }
