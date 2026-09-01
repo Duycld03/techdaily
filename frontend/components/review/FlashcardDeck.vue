@@ -41,21 +41,21 @@ function handleGrade(score: number) {
     </div>
 
     <!-- Active Card Box -->
-    <div class="w-full min-h-[320px] sm:min-h-[380px] p-4.5 sm:p-9 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl flex flex-col justify-between transition-all">
+    <div class="w-full min-h-[320px] sm:min-h-[380px] p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl flex flex-col justify-between transition-all">
       <!-- Front Content -->
       <div>
-        <div class="flex items-center gap-2 mb-3.5 sm:mb-4.5">
+        <div class="flex items-center gap-2 mb-3.5 sm:mb-4">
           <span class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-xl bg-brand-100 dark:bg-brand-950/80 border border-brand-200 dark:border-brand-800/60 text-brand-800 dark:text-brand-300 text-xs font-bold">
             Senior Core
           </span>
           <span class="text-xs text-slate-500 font-mono">Repetition #{{ card.repetitionCount }}</span>
         </div>
 
-        <h2 class="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-tight mb-3.5 sm:mb-4.5">
+        <h2 class="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-tight mb-3.5 sm:mb-4">
           {{ card.topicTitle }}
         </h2>
 
-        <p class="text-xs sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-950/60 p-3.5 sm:p-4.5 rounded-2xl border border-slate-200 dark:border-slate-800/80">
+        <p class="text-xs sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-950/60 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80">
           {{ card.topicSummary }}
         </p>
 

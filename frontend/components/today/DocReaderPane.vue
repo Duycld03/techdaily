@@ -135,7 +135,7 @@ onUnmounted(() => {
         {{ topic.title }}
       </h1>
 
-      <p class="text-xs sm:text-sm md:text-base text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-slate-900/60 p-3.5 sm:p-4.5 rounded-2xl border border-slate-200 dark:border-slate-800/80 font-normal">
+      <p class="text-xs sm:text-sm md:text-base text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-slate-900/60 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 font-normal">
         {{ topic.summary }}
       </p>
 
@@ -167,7 +167,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Benchmark Snippet (if available) -->
-    <div v-if="topic.benchmarkSnippet" class="mt-6 p-4.5 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs sm:text-sm text-brand-700 dark:text-brand-300 shadow-sm">
+    <div v-if="topic.benchmarkSnippet" class="mt-6 p-4 sm:p-5 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs sm:text-sm text-brand-700 dark:text-brand-300 shadow-sm">
       <div class="text-slate-700 dark:text-slate-400 font-bold mb-2 font-sans flex items-center gap-1.5">
         <Sparkles class="w-4 h-4 text-brand-600 dark:text-brand-400" />
         <span>Performance Benchmark Context:</span>

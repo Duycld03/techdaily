@@ -297,7 +297,7 @@ function getCategoryBadge(cat: number) {
       <!-- Under The Hood Deep Dive -->
       <div class="p-4 sm:p-8 space-y-3.5 sm:space-y-4">
         <div class="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm sm:text-base">
-          <Cpu class="w-4.5 h-4.5 sm:w-5 sm:h-5 text-indigo-600 dark:text-indigo-400" />
+          <Cpu class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
           <span>{{ $t('insights.underthehood_title') }}</span>
         </div>
 

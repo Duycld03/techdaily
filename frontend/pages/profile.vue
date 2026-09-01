@@ -86,7 +86,7 @@ async function handlePasswordChange() {
 <template>
   <div class="max-w-4xl mx-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
     <!-- Header Banner -->
-    <div class="p-4.5 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+    <div class="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
       <div class="flex items-center gap-3.5 sm:gap-5 min-w-0 w-full">
         <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-gradient-to-tr from-brand-600 to-emerald-500 flex items-center justify-center text-white font-black text-xl sm:text-3xl shadow-lg shadow-brand-500/20 shrink-0">
           {{ profileStore.profile?.name?.charAt(0).toUpperCase() || 'U' }}

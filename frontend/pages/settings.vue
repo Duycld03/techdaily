@@ -15,7 +15,7 @@ import LocaleSelector from '~/components/common/LocaleSelector.vue'
     </div>
 
     <!-- Appearance & Language -->
-    <div class="p-4.5 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+    <div class="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
       <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
         <Globe class="w-4 h-4 text-brand-600 dark:text-brand-400" />
         <span>{{ $t('settings.lang_theme_title') }}</span>

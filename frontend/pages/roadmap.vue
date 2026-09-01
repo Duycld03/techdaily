@@ -128,7 +128,7 @@ function navigateToDay(dayOrder: number) {
         <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm gap-3 sm:gap-4">
           <div class="flex items-center gap-3 sm:gap-3.5">
             <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0">
-              <component :is="getModuleIcon(module.category)" class="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+              <component :is="getModuleIcon(module.category)" class="w-5 h-5" />
             </div>
             <div>
               <div class="flex items-center gap-2 flex-wrap">

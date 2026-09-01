@@ -37,7 +37,7 @@ async function handleDelete(id: string) {
       <div
         v-for="item in notesStore.highlights"
         :key="item.id"
-        class="p-4.5 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-400 dark:hover:border-slate-700 transition-all space-y-3.5 sm:space-y-4 shadow-md dark:shadow-sm"
+        class="p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-400 dark:hover:border-slate-700 transition-all space-y-3.5 sm:space-y-4 shadow-md dark:shadow-sm"
       >
         <!-- Reference bar -->
         <div class="flex items-center justify-between text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
@@ -58,7 +58,7 @@ async function handleDelete(id: string) {
         </div>
 
         <!-- Highlighted Text Quote -->
-        <div class="p-4.5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border-l-4 border-brand-500 text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed font-sans italic">
+        <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border-l-4 border-brand-500 text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed font-sans italic">
           "{{ item.selectedText }}"
         </div>
 
