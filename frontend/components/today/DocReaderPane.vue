@@ -137,7 +137,7 @@ onUnmounted(() => {
         {{ topic.title }}
       </h1>
 
-      <p class="text-xs sm:text-sm md:text-base text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-slate-900/60 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 font-normal">
+      <p class="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80 font-normal">
         {{ topic.summary }}
       </p>
 
@@ -157,7 +157,7 @@ onUnmounted(() => {
     <div class="w-full h-px bg-slate-200 dark:bg-slate-800/80 mb-5 sm:mb-6"></div>
 
     <!-- Reading Content (Rendered Architectural Deep Dive) -->
-    <div ref="readerContentRef" class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200 max-w-full overflow-x-hidden break-words space-y-4" v-html="renderedDeepDiveHtml"></div>
+    <div ref="readerContentRef" class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200 max-w-full overflow-x-hidden break-words space-y-4 text-sm sm:text-base leading-relaxed" v-html="renderedDeepDiveHtml"></div>
 
     <!-- Authoritative Source Excerpt (if distinct) -->
     <div v-if="renderedChunkHtml" class="mt-6 p-4 sm:p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-2">
@@ -165,7 +165,7 @@ onUnmounted(() => {
         <BookOpen class="w-3.5 h-3.5" />
         <span>{{ t('today.source_context') || (locale === 'vi' ? 'Ngữ Cảnh Trích Xuất Gốc' : 'Authoritative Source Context') }}</span>
       </div>
-      <div class="markdown-body text-xs sm:text-sm text-slate-700 dark:text-slate-300" v-html="renderedChunkHtml"></div>
+      <div class="markdown-body text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed" v-html="renderedChunkHtml"></div>
     </div>
 
     <!-- Benchmark Snippet (if available) -->

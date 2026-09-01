@@ -75,7 +75,7 @@ function navigateToDay(dayOrder: number) {
           <h1 class="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             {{ $t('roadmap.title') }}
           </h1>
-          <p class="text-slate-600 dark:text-slate-300 text-xs sm:text-base leading-relaxed">
+          <p class="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed">
             {{ $t('roadmap.subtitle') }}
           </p>
         </div>
@@ -240,13 +240,13 @@ function navigateToDay(dayOrder: number) {
               <h3 class="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
                 {{ day.title }}
               </h3>
-              <p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+              <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
                 {{ day.summary }}
               </p>
             </div>
 
             <!-- Action Link -->
-            <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-semibold">
+            <div class="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs sm:text-sm font-semibold">
               <span
                 :class="[
                   day.isActiveToday

@@ -172,7 +172,7 @@ async function handleLegacySubmit() {
             @click="handleOptionSelect(index)"
             :disabled="isReviewed || focusStore.isSubmitting"
             :class="[
-              'w-full text-left p-3.5 sm:p-5 rounded-2xl text-xs sm:text-sm font-medium border transition-all duration-200 flex items-start gap-3 sm:gap-4 relative group select-none',
+              'w-full text-left p-3.5 sm:p-5 rounded-2xl text-sm sm:text-base font-medium border transition-all duration-200 flex items-start gap-3 sm:gap-4 relative group select-none',
               !isReviewed && selectedOption === index
                 ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-950 dark:text-brand-100 ring-2 ring-brand-500/30 shadow-sm'
                 : !isReviewed
@@ -279,7 +279,7 @@ async function handleLegacySubmit() {
             <h3 class="font-bold text-sm sm:text-base">
               {{ isCorrect ? $t('today.correct_solution') : $t('today.incorrect_solution') }}
             </h3>
-            <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p class="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed">
               {{ isCorrect ? 'Your senior engineering analysis matches optimal production best practices.' : $t('today.scheduled_sm2') }}
             </p>
           </div>
@@ -287,13 +287,13 @@ async function handleLegacySubmit() {
 
         <!-- Architectural Deep-Dive Explanation Card -->
         <div v-if="question.explanationMarkdown" class="p-5 sm:p-6 rounded-3xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
-          <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+          <div class="flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
             <Sparkles class="w-4 h-4" />
             <span>{{ $t('today.correct_explanation_header') }}</span>
           </div>
 
           <div
-            class="prose dark:prose-invert max-w-none text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300"
+            class="prose dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed text-slate-700 dark:text-slate-300"
             v-html="renderedExplanation"
           ></div>
         </div>

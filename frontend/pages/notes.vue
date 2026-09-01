@@ -24,7 +24,7 @@ async function handleDelete(id: string) {
         <Highlighter class="w-6 h-6 sm:w-7 sm:h-7 text-brand-600 dark:text-brand-400" />
         <span>{{ $t('notes.title') }}</span>
       </h1>
-      <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">{{ $t('notes.subtitle') }}</p>
+      <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1 font-medium">{{ $t('notes.subtitle') }}</p>
     </div>
 
     <!-- Highlights List -->
@@ -63,7 +63,7 @@ async function handleDelete(id: string) {
         </div>
 
         <!-- Note (if any) -->
-        <p v-if="item.note" class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
+        <p v-if="item.note" class="text-sm sm:text-base text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
           <strong class="text-slate-900 dark:text-slate-400">Note:</strong> {{ item.note }}
         </p>
 
@@ -84,7 +84,7 @@ async function handleDelete(id: string) {
     <div v-else class="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-sm">
       <Highlighter class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
       <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">No Highlights Saved</h3>
-      <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">{{ $t('notes.no_notes') }}</p>
+      <p class="text-sm text-slate-500 mt-1 max-w-sm mx-auto">{{ $t('notes.no_notes') }}</p>
     </div>
   </div>
 </template>
