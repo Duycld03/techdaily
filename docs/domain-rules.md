@@ -61,6 +61,9 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 3. **Typography & Dual Theme Standards:**
    - Base font size MUST be at least `14px` (`text-sm`) to `16px` (`text-base`) with comfortable line height (`leading-relaxed`).
    - All components MUST support dual theme classes (`bg-white dark:bg-slate-900`, `text-slate-900 dark:text-white`, `border-slate-200 dark:border-slate-800`).
+4. **UI Verification & Localization Testing Rule:**
+   - When performing manual or automated visual/UI tests (e.g. Playwright, mobile responsive checks), if testing only in a single language, **always use Vietnamese (`vi`)** as the default test locale.
+   - **Rationale:** Vietnamese strings are typically longer than English strings (e.g., *"Bảo Mật & Mật Khẩu"* vs *"Security"*, *"Trích Đoạn Tài Liệu Gốc"* vs *"Source Context"*), making Vietnamese the optimal stress test for detecting text wrapping, truncation, container overflow, and layout collisions early.
 
 ---
 
