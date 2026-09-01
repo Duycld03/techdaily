@@ -18,6 +18,7 @@ import {
 } from 'lucide-vue-next'
 
 const profileStore = useProfileStore()
+const toast = useToast()
 const { t } = useI18n()
 
 const activeTab = ref<'personal' | 'security'>('personal')
@@ -33,7 +34,6 @@ const telegramChatId = ref<number | undefined>(undefined)
 const currentPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
-const passwordError = ref<string | null>(null)
 
 const passwordStrength = computed(() => {
   const pwd = newPassword.value
@@ -64,12 +64,6 @@ onMounted(async () => {
   }
 })
 
-watch(activeTab, () => {
-  profileStore.successMessage = null
-  profileStore.error = null
-  passwordError.value = null
-})
-
 async function handleProfileSave() {
   try {
     await profileStore.updateProfile({
@@ -79,32 +73,31 @@ async function handleProfileSave() {
       preferredLocale: preferredLocale.value,
       telegramChatId: telegramChatId.value
     })
-    profileStore.successMessage = t('profile.save_success')
-  } catch {
-    // handled in store
+    toast.success(t('profile.save_success'))
+  } catch (err: any) {
+    toast.error(err.message || 'Failed to save profile.')
   }
 }
 
 async function handlePasswordChange() {
-  passwordError.value = null
   if (newPassword.value.length < 6) {
-    passwordError.value = t('profile.password_strength_weak')
+    toast.error(t('profile.password_strength_weak'))
     return
   }
 
   if (newPassword.value !== confirmPassword.value) {
-    passwordError.value = t('profile.passwords_must_match')
+    toast.error(t('profile.passwords_must_match'))
     return
   }
 
   try {
     await profileStore.changePassword(currentPassword.value, newPassword.value)
-    profileStore.successMessage = t('profile.password_set_success')
+    toast.success(t('profile.password_set_success'))
     currentPassword.value = ''
     newPassword.value = ''
     confirmPassword.value = ''
   } catch (err: any) {
-    passwordError.value = err.message || 'Failed to change password.'
+    toast.error(err.message || 'Failed to change password.')
   }
 }
 </script>
@@ -192,15 +185,6 @@ async function handlePasswordChange() {
           {{ $t('profile.spaced_repetition') }}
         </div>
       </div>
-    </div>
-
-    <!-- Alert / Feedback Message -->
-    <div v-if="profileStore.successMessage" class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-sm text-emerald-800 dark:text-emerald-300 font-semibold text-center animate-in fade-in">
-      {{ profileStore.successMessage }}
-    </div>
-
-    <div v-if="profileStore.error" class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-sm text-rose-800 dark:text-rose-300 font-semibold text-center animate-in fade-in">
-      {{ profileStore.error }}
     </div>
 
     <!-- Tabs Container -->
@@ -316,10 +300,6 @@ async function handlePasswordChange() {
 
       <!-- Tab 2: Security & Password -->
       <form v-else @submit.prevent="handlePasswordChange" class="space-y-5">
-        <div v-if="passwordError" class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-sm text-rose-800 dark:text-rose-300 text-center font-semibold">
-          {{ passwordError }}
-        </div>
-
         <div v-if="profileStore.profile?.hasPassword">
           <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('profile.current_password') }}</label>
           <div class="relative">
