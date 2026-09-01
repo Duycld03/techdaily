@@ -48,22 +48,25 @@ jobs:
   frontend-ci:
     name: Frontend CI (Nuxt 4 / Vue 3)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Frontend Dependencies
-        run: npm --prefix frontend ci
+        run: npm ci
 
       - name: Run Frontend Tests (Vitest - 36 Tests)
-        run: npm --prefix frontend test
+        run: npm test
 
       - name: Verify Frontend Production Build (Nuxt Nitro)
-        run: npm --prefix frontend run build
+        run: npm run build
