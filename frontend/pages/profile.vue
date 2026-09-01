@@ -84,29 +84,29 @@ async function handlePasswordChange() {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto p-6 md:p-10 space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+  <div class="max-w-4xl mx-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
     <!-- Header Banner -->
-    <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-      <div class="flex items-center gap-5">
-        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-brand-600 to-emerald-500 flex items-center justify-center text-white font-black text-2xl sm:text-3xl shadow-lg shadow-brand-500/20">
+    <div class="p-4.5 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-md dark:shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+      <div class="flex items-center gap-3.5 sm:gap-5 min-w-0 w-full">
+        <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-gradient-to-tr from-brand-600 to-emerald-500 flex items-center justify-center text-white font-black text-xl sm:text-3xl shadow-lg shadow-brand-500/20 shrink-0">
           {{ profileStore.profile?.name?.charAt(0).toUpperCase() || 'U' }}
         </div>
 
-        <div>
-          <div class="flex items-center gap-2.5">
-            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight truncate">
               {{ profileStore.profile?.name || 'Engineer' }}
             </h1>
-            <span class="px-3 py-1 rounded-xl bg-brand-100 dark:bg-brand-950 border border-brand-200 dark:border-brand-800 text-brand-800 dark:text-brand-300 font-bold text-xs">
+            <span class="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-xl bg-brand-100 dark:bg-brand-950 border border-brand-200 dark:border-brand-800 text-brand-800 dark:text-brand-300 font-bold text-[11px] sm:text-xs shrink-0">
               {{ profileStore.profile?.targetRole || 'Senior Engineer' }}
             </span>
           </div>
 
-          <p class="text-sm font-mono text-slate-500 dark:text-slate-400 mt-1">
+          <p class="text-xs sm:text-sm font-mono text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 truncate">
             {{ profileStore.profile?.email }}
           </p>
 
-          <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+          <p class="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5 sm:mt-1">
             {{ $t('profile.target_pace', { minutes: profileStore.profile?.dailyGoalMinutes || 10 }) }}
           </p>
         </div>
@@ -114,49 +114,49 @@ async function handlePasswordChange() {
     </div>
 
     <!-- Learning Metrics Cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
-        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-500">
-          <Flame class="w-4 h-4" />
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div class="p-3.5 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
+        <div class="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-500">
+          <Flame class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span>{{ $t('profile.active_streak') }}</span>
         </div>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+        <div class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white">
           {{ profileStore.stats?.currentStreak ?? 0 }} <span class="text-xs font-normal text-slate-500">{{ $t('profile.days') }}</span>
         </div>
-        <div class="text-[11px] text-slate-400">
+        <div class="text-[10px] sm:text-[11px] text-slate-400">
           {{ $t('profile.freeze_credits', { count: profileStore.stats?.freezeCreditsRemaining ?? 2 }) }}
         </div>
       </div>
 
-      <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
-        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-500">
-          <CheckCircle2 class="w-4 h-4" />
+      <div class="p-3.5 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
+        <div class="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-emerald-500">
+          <CheckCircle2 class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span>{{ $t('profile.drills_completed') }}</span>
         </div>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+        <div class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white">
           {{ profileStore.stats?.totalDrillsCompleted ?? 0 }}
         </div>
-        <div class="text-[11px] text-slate-400">
+        <div class="text-[10px] sm:text-[11px] text-slate-400">
           {{ $t('profile.interview_challenges') }}
         </div>
       </div>
 
-      <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
-        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-          <Award class="w-4 h-4" />
+      <div class="p-3.5 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
+        <div class="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+          <Award class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span>{{ $t('profile.avg_score') }}</span>
         </div>
-        <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+        <div class="text-xl sm:text-3xl font-black text-slate-900 dark:text-white">
           {{ profileStore.stats?.averageScore ?? 0 }} <span class="text-xs font-normal text-slate-500">/ 10</span>
         </div>
-        <div class="text-[11px] text-slate-400">
+        <div class="text-[10px] sm:text-[11px] text-slate-400">
           {{ $t('profile.ai_evaluated') }}
         </div>
       </div>
 
-      <div class="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
-        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-500">
-          <Layers class="w-4 h-4" />
+      <div class="p-3.5 sm:p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-1">
+        <div class="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-blue-500">
+          <Layers class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           <span>{{ $t('profile.cards_in_deck') }}</span>
         </div>
         <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">

@@ -91,14 +91,14 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-3.75rem)] flex items-center justify-center p-6 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-    <div class="w-full max-w-md p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] flex items-center justify-center p-3.5 sm:p-6 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+    <div class="w-full max-w-md p-5 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl space-y-5 sm:space-y-6 animate-in zoom-in-95 duration-200">
       <!-- Brand Header -->
       <div class="text-center">
-        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand-500/20">
-          <BookOpen class="w-7 h-7 text-slate-950 font-bold" />
+        <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center mx-auto mb-3.5 sm:mb-4 shadow-lg shadow-brand-500/20">
+          <BookOpen class="w-6 h-6 sm:w-7 sm:h-7 text-slate-950 font-bold" />
         </div>
-        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+        <h1 class="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           {{ authMode === 'login' ? 'Sign In to TechDaily' : 'Create Your Account' }}
         </h1>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">

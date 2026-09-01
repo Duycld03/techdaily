@@ -5,17 +5,17 @@ import LocaleSelector from '~/components/common/LocaleSelector.vue'
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto p-6 md:p-10 space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+  <div class="max-w-3xl mx-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
     <div>
-      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-        <SettingsIcon class="w-7 h-7 text-brand-600 dark:text-brand-400" />
+      <h1 class="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5 sm:gap-3">
+        <SettingsIcon class="w-6 h-6 sm:w-7 sm:h-7 text-brand-600 dark:text-brand-400" />
         <span>{{ $t('settings.title') }}</span>
       </h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{{ $t('settings.subtitle') }}</p>
+      <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">{{ $t('settings.subtitle') }}</p>
     </div>
 
     <!-- Appearance & Language -->
-    <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+    <div class="p-4.5 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
       <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
         <Globe class="w-4 h-4 text-brand-600 dark:text-brand-400" />
         <span>{{ $t('settings.lang_theme_title') }}</span>

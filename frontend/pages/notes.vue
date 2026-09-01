@@ -17,14 +17,14 @@ async function handleDelete(id: string) {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto p-6 md:p-10 space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+  <div class="max-w-4xl mx-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-        <Highlighter class="w-7 h-7 text-brand-600 dark:text-brand-400" />
+      <h1 class="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5 sm:gap-3">
+        <Highlighter class="w-6 h-6 sm:w-7 sm:h-7 text-brand-600 dark:text-brand-400" />
         <span>{{ $t('notes.title') }}</span>
       </h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{{ $t('notes.subtitle') }}</p>
+      <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">{{ $t('notes.subtitle') }}</p>
     </div>
 
     <!-- Highlights List -->
@@ -37,7 +37,7 @@ async function handleDelete(id: string) {
       <div
         v-for="item in notesStore.highlights"
         :key="item.id"
-        class="p-6 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-400 dark:hover:border-slate-700 transition-all space-y-4 shadow-md dark:shadow-sm"
+        class="p-4.5 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-400 dark:hover:border-slate-700 transition-all space-y-3.5 sm:space-y-4 shadow-md dark:shadow-sm"
       >
         <!-- Reference bar -->
         <div class="flex items-center justify-between text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">

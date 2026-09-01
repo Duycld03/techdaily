@@ -107,11 +107,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col bg-white/60 dark:bg-slate-950/40 overflow-y-auto p-6 md:p-9 transition-colors duration-200" @mouseup="handleMouseUp">
+  <div class="h-full flex flex-col bg-white/60 dark:bg-slate-950/40 overflow-y-auto p-4 sm:p-6 md:p-9 transition-colors duration-200" @mouseup="handleMouseUp">
     <!-- Header info -->
-    <div class="mb-6">
-      <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-2.5">
-        <BookOpen class="w-4 h-4" />
+    <div class="mb-5 sm:mb-6">
+      <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-2">
+        <BookOpen class="w-4 h-4 shrink-0" />
         <span>{{ $t('today.doc_reader') }}</span>
         <span class="text-slate-400 dark:text-slate-600">•</span>
         <span class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
@@ -120,31 +120,31 @@ onUnmounted(() => {
         </span>
       </div>
 
-      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-snug mb-3.5">
+      <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-snug mb-3">
         {{ topic.title }}
       </h1>
 
-      <p class="text-sm md:text-base text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-slate-900/60 p-4.5 rounded-2xl border border-slate-200 dark:border-slate-800/80 font-normal">
+      <p class="text-xs sm:text-sm md:text-base text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-slate-900/60 p-3.5 sm:p-4.5 rounded-2xl border border-slate-200 dark:border-slate-800/80 font-normal">
         {{ topic.summary }}
       </p>
 
       <!-- Key Takeaways -->
-      <div v-if="documentChunk?.keyTakeaways?.length" class="mt-4 flex flex-wrap gap-2">
+      <div v-if="documentChunk?.keyTakeaways?.length" class="mt-3.5 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2">
         <span
           v-for="(takeaway, i) in documentChunk.keyTakeaways"
           :key="i"
-          class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 shadow-sm"
+          class="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 shadow-sm"
         >
           <Tag class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 shrink-0" />
-          {{ takeaway }}
+          <span>{{ takeaway }}</span>
         </span>
       </div>
     </div>
 
-    <div class="w-full h-px bg-slate-200 dark:bg-slate-800/80 mb-6"></div>
+    <div class="w-full h-px bg-slate-200 dark:bg-slate-800/80 mb-5 sm:mb-6"></div>
 
     <!-- Reading Content (Rendered Markdown) -->
-    <div ref="readerContentRef" class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200" v-html="renderedDocHtml"></div>
+    <div ref="readerContentRef" class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200 max-w-full overflow-x-hidden break-words" v-html="renderedDocHtml"></div>
 
     <!-- Benchmark Snippet (if available) -->
     <div v-if="topic.benchmarkSnippet" class="mt-6 p-4.5 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs sm:text-sm text-brand-700 dark:text-brand-300 shadow-sm">

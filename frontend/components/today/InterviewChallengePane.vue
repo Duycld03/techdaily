@@ -121,23 +121,23 @@ async function handleLegacySubmit() {
 </script>
 
 <template>
-  <div class="h-full flex flex-col bg-white dark:bg-slate-900/60 p-6 md:p-9 overflow-y-auto space-y-6 transition-colors duration-200">
+  <div class="h-full flex flex-col bg-white dark:bg-slate-900/60 p-4 sm:p-6 md:p-9 overflow-y-auto space-y-5 sm:space-y-6 transition-colors duration-200">
     <!-- Header -->
-    <div class="space-y-3">
-      <div class="flex items-center justify-between">
+    <div class="space-y-2.5 sm:space-y-3">
+      <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
-          <Terminal class="w-4 h-4" />
+          <Terminal class="w-4 h-4 shrink-0" />
           <span>{{ $t('today.scenario_challenge') }}</span>
         </div>
 
-        <div class="flex items-center gap-2">
-          <span class="px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <span class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold uppercase tracking-wider bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
             Senior Drill
           </span>
           <span
             v-if="isReviewed"
             :class="[
-              'px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border',
+              'px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold flex items-center gap-1 sm:gap-1.5 border',
               isCorrect
                 ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                 : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
@@ -151,20 +151,20 @@ async function handleLegacySubmit() {
       </div>
 
       <!-- Question Text -->
-      <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-snug">
+      <h2 class="text-base sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-snug">
         {{ question.questionText }}
       </h2>
     </div>
 
     <!-- Scenario Multiple-Choice Interface -->
-    <div v-if="isMultipleChoice" class="space-y-6 flex-1 flex flex-col justify-between">
+    <div v-if="isMultipleChoice" class="space-y-5 sm:space-y-6 flex-1 flex flex-col justify-between">
       <!-- Options List -->
       <div class="space-y-3">
         <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           {{ $t('today.select_option_hint') }}
         </div>
 
-        <div class="space-y-3">
+        <div class="space-y-2.5 sm:space-y-3">
           <button
             v-for="(option, index) in question.options"
             :key="index"
@@ -172,7 +172,7 @@ async function handleLegacySubmit() {
             @click="handleOptionSelect(index)"
             :disabled="isReviewed || focusStore.isSubmitting"
             :class="[
-              'w-full text-left p-4 sm:p-5 rounded-2xl text-xs sm:text-sm font-medium border transition-all duration-200 flex items-start gap-3.5 sm:gap-4 relative group select-none',
+              'w-full text-left p-3.5 sm:p-5 rounded-2xl text-xs sm:text-sm font-medium border transition-all duration-200 flex items-start gap-3 sm:gap-4 relative group select-none',
               !isReviewed && selectedOption === index
                 ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-950 dark:text-brand-100 ring-2 ring-brand-500/30 shadow-sm'
                 : !isReviewed
@@ -187,7 +187,7 @@ async function handleLegacySubmit() {
             <!-- Option Letter Badge -->
             <div
               :class="[
-                'w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors duration-200',
+                'w-6.5 h-6.5 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors duration-200 mt-0.5 sm:mt-0',
                 !isReviewed && selectedOption === index
                   ? 'bg-brand-600 text-white'
                   : !isReviewed
@@ -203,24 +203,24 @@ async function handleLegacySubmit() {
             </div>
 
             <!-- Option Text -->
-            <div class="flex-1 pt-0.5 leading-relaxed">
+            <div class="flex-1 min-w-0 break-words pt-0.5 leading-relaxed">
               {{ option }}
             </div>
 
             <!-- Status Indicator Icon / Badges -->
-            <div v-if="isReviewed" class="shrink-0 flex items-center gap-1.5 pt-0.5">
+            <div v-if="isReviewed" class="shrink-0 flex items-center gap-1 sm:gap-1.5 pt-0.5">
               <span
                 v-if="index === question.correctOptionIndex"
-                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-sm"
+                class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-emerald-600 text-white shadow-sm"
               >
-                <Check class="w-3.5 h-3.5" />
+                <Check class="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                 <span>{{ $t('today.optimal_choice') }}</span>
               </span>
               <span
                 v-else-if="selectedOption === index && index !== question.correctOptionIndex"
-                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-sm"
+                class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-rose-600 text-white shadow-sm"
               >
-                <XCircle class="w-3.5 h-3.5" />
+                <XCircle class="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                 <span>{{ $t('today.your_choice') }}</span>
               </span>
             </div>
@@ -231,7 +231,7 @@ async function handleLegacySubmit() {
       <!-- Guest Sign-in prompt banner if not logged in -->
       <div
         v-if="!authStore.isLoggedIn"
-        class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs sm:text-sm"
+        class="p-3.5 sm:p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs sm:text-sm"
       >
         <div class="flex items-center gap-2.5 text-amber-900 dark:text-amber-200 font-semibold">
           <Lock class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -239,7 +239,7 @@ async function handleLegacySubmit() {
         </div>
         <NuxtLink
           to="/login"
-          class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 shadow transition-transform active:scale-95"
+          class="w-full sm:w-auto text-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 shadow transition-transform active:scale-95"
         >
           Sign In Now
         </NuxtLink>
@@ -251,7 +251,7 @@ async function handleLegacySubmit() {
           type="button"
           @click="handleOptionSubmit"
           :disabled="selectedOption === null || focusStore.isSubmitting"
-          class="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98]"
+          class="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98]"
         >
           <span v-if="focusStore.isSubmitting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
           <ArrowRight v-else class="w-4 h-4" />

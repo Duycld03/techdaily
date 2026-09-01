@@ -30,7 +30,7 @@ async function onGrade(score: number) {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-3.75rem)] p-6 md:p-10 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] p-4 sm:p-6 md:p-10 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
     <!-- Loading -->
     <div v-if="reviewStore.isLoading" class="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
       <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"></div>

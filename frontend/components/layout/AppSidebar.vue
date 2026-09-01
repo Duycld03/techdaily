@@ -27,7 +27,7 @@ function isLinkActive(linkPath: string): boolean {
 </script>
 
 <template>
-  <aside class="w-16 md:w-60 border-r border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/60 flex flex-col justify-between p-3.5 shrink-0 transition-colors duration-200 select-none">
+  <aside class="hidden md:flex md:w-60 border-r border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/60 flex-col justify-between p-3.5 shrink-0 transition-colors duration-200 select-none">
     <nav class="space-y-1">
       <NuxtLink
         v-for="link in links"

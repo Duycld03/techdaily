@@ -209,12 +209,12 @@ function handleExplainSelection() {
 <template>
   <div class="h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden bg-white dark:bg-slate-950 transition-colors duration-200">
     <!-- Top Sticky Reader Navigation Bar -->
-    <header class="h-14 px-4 md:px-7 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 backdrop-blur flex items-center justify-between shrink-0 gap-4 z-20">
+    <header class="h-14 px-3 sm:px-6 md:px-7 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 backdrop-blur flex items-center justify-between shrink-0 gap-2 sm:gap-4 z-20">
       <!-- Left: Back to Library & TOC Toggle -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
         <NuxtLink
           to="/library"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
         >
           <ArrowLeft class="w-4 h-4" />
           <span class="hidden sm:inline">{{ $t('reader.library') }}</span>
@@ -237,25 +237,25 @@ function handleExplainSelection() {
         <!-- Mobile TOC Drawer Button -->
         <button
           @click="isMobileTocOpen = true"
-          class="md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300"
+          class="md:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0"
         >
-          <List class="w-4 h-4" />
+          <List class="w-3.5 h-3.5" />
           <span>{{ $t('reader.chapters') }}</span>
         </button>
       </div>
 
       <!-- Center: Book Title & Active Chapter Indicator -->
-      <div class="flex-1 max-w-xl text-center truncate">
+      <div class="flex-1 min-w-0 text-center px-1 sm:px-2">
         <h1 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
           {{ book?.title || 'Technical Document' }}
         </h1>
-        <p v-if="currentChunk" class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+        <p v-if="currentChunk" class="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate">
           {{ $t('reader.slice_of', { current: currentChunk.chunkOrder, total: totalChunks, chapter: currentChunk.chapterTitle }) }}
         </p>
       </div>
 
       <!-- Right: Reading Progress Bar & Next/Prev Quick Buttons -->
-      <div class="flex items-center gap-3 shrink-0">
+      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
         <!-- Progress Bar (Desktop) -->
         <div class="hidden lg:flex items-center gap-2.5">
           <div class="w-28 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
@@ -342,54 +342,58 @@ function handleExplainSelection() {
         </div>
       </aside>
 
-      <!-- Mobile Table of Contents Modal Drawer -->
-      <div
-        v-if="isMobileTocOpen"
-        class="md:hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex justify-start animate-in fade-in"
-      >
-        <div class="w-4/5 max-w-xs bg-white dark:bg-slate-900 h-full flex flex-col shadow-2xl">
-          <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-            <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
-              <BookOpen class="w-4 h-4 text-brand-500" />
-              <span>{{ $t('reader.toc') }}</span>
+      <!-- Mobile Table of Contents Modal Drawer (Teleported to Body) -->
+      <Teleport to="body">
+        <div
+          v-if="isMobileTocOpen"
+          class="md:hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex justify-start animate-in fade-in"
+          @click.self="isMobileTocOpen = false"
+        >
+          <div class="w-4/5 max-w-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-white h-full flex flex-col shadow-2xl border-r border-slate-200 dark:border-slate-800 animate-in slide-in-from-left">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+                <BookOpen class="w-4 h-4 text-brand-500" />
+                <span>{{ $t('reader.toc') }}</span>
+              </div>
+              <button
+                @click="isMobileTocOpen = false"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                aria-label="Close contents"
+              >
+                <X class="w-5 h-5" />
+              </button>
             </div>
-            <button
-              @click="isMobileTocOpen = false"
-              class="p-1 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white"
-            >
-              <X class="w-5 h-5" />
-            </button>
-          </div>
 
-          <div class="flex-1 overflow-y-auto p-2 space-y-1">
-            <button
-              v-for="(chunk, idx) in book?.chunks"
-              :key="chunk.id"
-              @click="selectChunk(idx)"
-              :class="[
-                'w-full text-left p-3 rounded-xl text-xs font-semibold transition-all flex items-start gap-2.5',
-                activeChunkIndex === idx
-                  ? 'bg-brand-500/10 dark:bg-brand-500/20 text-brand-900 dark:text-brand-300 font-bold'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-              ]"
-            >
-              <CheckCircle2
-                v-if="completedSlices.has(chunk.chunkOrder)"
-                class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"
-              />
-              <span v-else class="text-xs text-slate-400 shrink-0 mt-0.5">
-                #{{ chunk.chunkOrder }}
-              </span>
-              <div class="flex-1 truncate">{{ chunk.chapterTitle }}</div>
-            </button>
+            <div class="flex-1 overflow-y-auto p-2 space-y-1">
+              <button
+                v-for="(chunk, idx) in book?.chunks"
+                :key="chunk.id"
+                @click="selectChunk(idx)"
+                :class="[
+                  'w-full text-left p-3 rounded-xl text-xs font-semibold transition-all flex items-start gap-2.5',
+                  activeChunkIndex === idx
+                    ? 'bg-brand-500/10 dark:bg-brand-500/20 text-brand-900 dark:text-brand-300 font-bold border-l-4 border-brand-500'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                ]"
+              >
+                <CheckCircle2
+                  v-if="completedSlices.has(chunk.chunkOrder)"
+                  class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"
+                />
+                <span v-else class="text-xs text-slate-400 shrink-0 mt-0.5">
+                  #{{ chunk.chunkOrder }}
+                </span>
+                <div class="flex-1 truncate">{{ chunk.chapterTitle }}</div>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </Teleport>
 
       <!-- Main Reading Article Pane -->
       <main
         ref="articleScrollContainer"
-        class="flex-1 overflow-y-auto p-6 md:p-12 lg:p-16 flex justify-center selection:bg-brand-500/30"
+        class="flex-1 overflow-y-auto p-4 sm:p-8 md:p-12 lg:p-16 flex justify-center selection:bg-brand-500/30"
         @mouseup="handleTextSelection"
       >
         <!-- Loading State -->
@@ -399,10 +403,10 @@ function handleExplainSelection() {
         </div>
 
         <!-- Article Content Card -->
-        <div v-else-if="currentChunk" class="w-full max-w-3xl space-y-10">
+        <div v-else-if="currentChunk" class="w-full max-w-3xl space-y-8 sm:space-y-10">
           <!-- Chapter Meta Header -->
-          <div class="space-y-4 pb-6 border-b border-slate-200 dark:border-slate-800/80">
-            <div class="flex items-center gap-3 text-xs font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider">
+          <div class="space-y-3 sm:space-y-4 pb-5 sm:pb-6 border-b border-slate-200 dark:border-slate-800/80">
+            <div class="flex items-center gap-2 sm:gap-3 text-xs font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider">
               <span class="px-2.5 py-1 rounded-lg bg-brand-100 dark:bg-brand-950/70 border border-brand-200 dark:border-brand-800">
                 {{ $t('today.day') }} {{ currentChunk.chunkOrder }} {{ $t('today.of') }} {{ totalChunks }}
               </span>
@@ -412,21 +416,21 @@ function handleExplainSelection() {
               </span>
             </div>
 
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
+            <h1 class="text-xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
               {{ currentChunk.chapterTitle }}
             </h1>
           </div>
 
           <!-- Markdown Body -->
           <article
-            class="markdown-body prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm leading-relaxed"
+            class="markdown-body prose prose-slate dark:prose-invert max-w-full overflow-x-hidden break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm leading-relaxed"
             v-html="renderedMarkdown"
           ></article>
 
           <!-- Key Takeaways Callout -->
           <div
             v-if="currentChunk.keyTakeaways?.length"
-            class="p-6 rounded-3xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 space-y-3"
+            class="p-4 sm:p-6 rounded-3xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 space-y-3"
           >
             <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
               <Sparkles class="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -445,7 +449,7 @@ function handleExplainSelection() {
           </div>
 
           <!-- Bottom Compact Navigation Footer -->
-          <div class="pt-6 mt-12 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="pt-6 mt-8 sm:mt-12 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
             <!-- Left: Prev Button -->
             <div class="w-full sm:w-auto">
               <button
@@ -492,28 +496,30 @@ function handleExplainSelection() {
       </main>
     </div>
 
-    <!-- Scoped Floating Selection Action Toolbar -->
-    <div
-      v-if="floatingToolbar.visible"
-      class="fixed z-50 -translate-x-1/2 flex items-center gap-1 p-1 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white shadow-2xl border border-slate-700 animate-in fade-in zoom-in-95 duration-150"
-      :style="{ left: `${floatingToolbar.x}px`, top: `${floatingToolbar.y}px` }"
-    >
-      <button
-        @click="handleExplainSelection"
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow transition-colors"
+    <!-- Scoped Floating Selection Action Toolbar (Teleported to Body) -->
+    <Teleport to="body">
+      <div
+        v-if="floatingToolbar.visible"
+        class="fixed z-50 -translate-x-1/2 flex items-center gap-1 p-1 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white shadow-2xl border border-slate-700 animate-in fade-in zoom-in-95 duration-150"
+        :style="{ left: `${floatingToolbar.x}px`, top: `${floatingToolbar.y}px` }"
       >
-        <Sparkles class="w-3.5 h-3.5" />
-        <span>{{ $t('reader.explain_with_gemini') }}</span>
-      </button>
+        <button
+          @click="handleExplainSelection"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow transition-colors"
+        >
+          <Sparkles class="w-3.5 h-3.5" />
+          <span>{{ $t('reader.explain_with_gemini') }}</span>
+        </button>
 
-      <button
-        @click="handleCopySelection"
-        class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
-      >
-        <Copy class="w-3.5 h-3.5" />
-        <span>{{ $t('reader.copy') }}</span>
-      </button>
-    </div>
+        <button
+          @click="handleCopySelection"
+          class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+        >
+          <Copy class="w-3.5 h-3.5" />
+          <span>{{ $t('reader.copy') }}</span>
+        </button>
+      </div>
+    </Teleport>
 
     <!-- Term Explainer Tooltip Modal -->
     <TermExplainerModal
