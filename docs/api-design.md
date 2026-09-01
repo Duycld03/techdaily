@@ -195,7 +195,58 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ---
 
-## 5. Spaced Repetition (`/api/v1/review`)
+## 5. Tech Insights Feed (`/api/v1/insights`)
+
+### `GET /api/v1/insights/feed`
+- **Auth:** Public / Optional (`Bearer`)
+- **Query Params:** `category` (optional int: 0=Frontend, 1=DotNet, 2=Database, 3=SystemDesign), `tag` (optional string), `page` (optional int), `pageSize` (optional int), `randomize` (optional bool)
+- **Response (200 OK):**
+  ```json
+  {
+    "insights": [
+      {
+        "id": "56314f47-7596-4d30-ae82-b3ca7e9f0a95",
+        "slug": "dotnet-channels-backpressure",
+        "title": "High-Throughput In-Memory Queues with System.Threading.Channels",
+        "category": 1,
+        "tags": ["dotnet10", "csharp13", "channels"],
+        "summaryMarkdown": "`BlockingCollection<T>` relies on heavy monitor locks...",
+        "problemSnippet": "// ❌ BAD: Heavy lock synchronization...",
+        "solutionSnippet": "// ✅ SENIOR PATTERN: Bounded Channel...",
+        "underTheHoodMarkdown": "### Lock-Free Ring Buffer Mechanics...",
+        "benchmarkStats": "⚡ Throughput: 4.2M ops/sec",
+        "sourceUrl": "https://learn.microsoft.com/en-us/dotnet/core/extensions/channels",
+        "likesCount": 12,
+        "bookmarksCount": 4,
+        "isBookmarkedByUser": false
+      }
+    ],
+    "totalCount": 8,
+    "page": 1,
+    "pageSize": 10,
+    "hasMore": false
+  }
+  ```
+
+### `POST /api/v1/insights/generate`
+- **Auth:** Public / Authenticated
+- **Request Body (JSON):**
+  ```json
+  {
+    "preferredCategory": 1,
+    "preferredTopic": "Span<T> vs Memory<T> in high-throughput parsing",
+    "locale": "en"
+  }
+  ```
+- **Response (200 OK):** Synthesized `TechInsightDto` saved to the catalog.
+
+### `POST /api/v1/insights/{id}/bookmark`
+- **Auth:** Optional / Authenticated
+- **Response (200 OK):** `{ "insightId": "...", "isBookmarked": true, "totalBookmarks": 5 }`
+
+---
+
+## 6. Spaced Repetition (`/api/v1/review`)
 
 ### `GET /api/v1/review/deck`
 - **Auth:** Optional / Recommended
@@ -208,7 +259,7 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ---
 
-## 6. Technical Library (`/api/v1/library`)
+## 7. Technical Library (`/api/v1/library`)
 
 ### `GET /api/v1/library/books`
 - **Auth:** Public
@@ -282,7 +333,7 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ---
 
-## 7. Reading Notes & Highlights (`/api/v1/notes`)
+## 8. Reading Notes & Highlights (`/api/v1/notes`)
 
 ### `GET /api/v1/notes/highlights`
 - **Auth:** Required (`Bearer`)

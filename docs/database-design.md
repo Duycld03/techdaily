@@ -173,3 +173,26 @@ erDiagram
 | `Embedding` | `vector(768)` | NULL | Vector embedding for semantic match |
 | `HitCount` | `int` | NOT NULL, Default 1 | Frequency of lookups |
 | `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
+
+---
+
+### `TechInsights` (Infinite Tech Insights Feed)
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `Id` | `uuid` | PK | Unique Identifier |
+| `Slug` | `varchar(255)` | NOT NULL, UNIQUE | URL slug identifier |
+| `Title` | `varchar(255)` | NOT NULL | Senior insight title |
+| `Category` | `int` | NOT NULL | Enum: `0=FrontendWeb`, `1=BackendDotNet`, `2=DatabaseStorage`, `3=SystemDesign` |
+| `Tags` | `jsonb/text` | NOT NULL | Array of tag keywords `string[]` |
+| `SummaryMarkdown` | `text` | NOT NULL | Problem summary hook |
+| `ProblemSnippet` | `text` | NOT NULL | Anti-pattern code example |
+| `SolutionSnippet` | `text` | NOT NULL | Optimal senior implementation |
+| `UnderTheHoodMarkdown` | `text` | NOT NULL | Deep dive runtime engine mechanics |
+| `BenchmarkStats` | `varchar(255)` | NOT NULL | Performance improvement metric |
+| `SourceUrl` | `varchar(500)` | NULL | Official documentation or benchmark reference |
+| `LikesCount` | `int` | NOT NULL, Default 0 | Likes counter |
+| `BookmarksCount` | `int` | NOT NULL, Default 0 | Bookmarks counter |
+| `IsPublished` | `boolean` | NOT NULL, Default true | Publishing visibility |
+| `IsDeleted` | `boolean` | NOT NULL, Default false | Soft delete flag |
+| `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
+| `UpdatedAt` | `timestamptz` | NULL | Last update timestamp |
