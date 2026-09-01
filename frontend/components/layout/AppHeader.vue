@@ -226,10 +226,6 @@ onUnmounted(() => {
             >
               {{ $t('nav.login') }}
             </NuxtLink>
-
-            <div class="text-[11px] text-slate-400 text-center">
-              Senior Engineering Daily Platform
-            </div>
           </div>
         </div>
       </div>

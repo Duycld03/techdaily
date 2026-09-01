@@ -6,6 +6,8 @@ import type { Topic, DocumentChunk } from '~/stores/useDailyFocusStore'
 import MicroQuizCard from '~/components/today/MicroQuizCard.vue'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
 
+const { t, locale } = useI18n()
+
 const props = defineProps<{
   topic: Topic
   documentChunk?: DocumentChunk
@@ -161,7 +163,7 @@ onUnmounted(() => {
     <div v-if="renderedChunkHtml" class="mt-6 p-4 sm:p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-2">
       <div class="flex items-center gap-2 text-xs font-bold tracking-wider text-emerald-700 dark:text-emerald-400">
         <BookOpen class="w-3.5 h-3.5" />
-        <span>{{ $t('today.source_context') }}</span>
+        <span>{{ t('today.source_context') || (locale === 'vi' ? 'Ngữ Cảnh Trích Xuất Gốc' : 'Authoritative Source Context') }}</span>
       </div>
       <div class="markdown-body text-xs sm:text-sm text-slate-700 dark:text-slate-300" v-html="renderedChunkHtml"></div>
     </div>
