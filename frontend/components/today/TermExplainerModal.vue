@@ -70,7 +70,7 @@ function copyText() {
       <div class="py-2">
         <div v-if="isLoading" class="flex items-center gap-3 py-8 justify-center text-slate-500 dark:text-slate-400 text-sm">
           <span class="w-3 h-3 rounded-full bg-brand-500 animate-ping"></span>
-          <span>Analyzing term with Gemini 3.5 Flash-Lite...</span>
+          <span>Analyzing term with Gemini 3.6 Flash...</span>
         </div>
 
         <div v-else class="space-y-3">
@@ -82,7 +82,7 @@ function copyText() {
 
       <!-- Footer -->
       <div class="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
-        <span class="font-medium">Powered by Gemini 3.5 Flash-Lite</span>
+        <span class="font-medium">Powered by Gemini 3.6 Flash</span>
         <button
           @click="copyText"
           class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors shadow-sm"

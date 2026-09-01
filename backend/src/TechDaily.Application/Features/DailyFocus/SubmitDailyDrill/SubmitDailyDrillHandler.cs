@@ -10,14 +10,20 @@ namespace TechDaily.Application.Features.DailyFocus.SubmitDailyDrill;
 public record SubmitDailyDrillRequest(
     Guid DrillId,
     Guid UserId,
-    string? AnswerText,
+    int? SelectedOptionIndex = null,
+    string? AnswerText = null,
     byte[]? AudioBytes = null,
     string? AudioMimeType = null,
     string Locale = "en");
 
 public class SubmitDailyDrillResponse
 {
-    public AiReviewDto Review { get; set; } = null!;
+    public bool IsCorrect { get; set; }
+    public int? SelectedOptionIndex { get; set; }
+    public int CorrectOptionIndex { get; set; }
+    public int Score { get; set; }
+    public string ExplanationMarkdown { get; set; } = string.Empty;
+    public AiReviewDto? Review { get; set; }
     public int CurrentStreak { get; set; }
     public int LongestStreak { get; set; }
     public int TotalDrillsCompleted { get; set; }
@@ -33,10 +39,17 @@ public class SubmitDailyDrillValidator : AbstractValidator<SubmitDailyDrillReque
         RuleFor(x => x.UserId).NotEmpty();
 
         RuleFor(x => x)
-            .Must(x => !string.IsNullOrWhiteSpace(x.AnswerText) || (x.AudioBytes != null && x.AudioBytes.Length > 0))
-            .WithMessage("Either written answer text or voice recording must be provided.");
+            .Must(x => x.SelectedOptionIndex.HasValue || !string.IsNullOrWhiteSpace(x.AnswerText) || (x.AudioBytes != null && x.AudioBytes.Length > 0))
+            .WithMessage("Either a selected option, written answer text, or voice recording must be provided.");
 
-        When(x => !string.IsNullOrWhiteSpace(x.AnswerText), () =>
+        When(x => x.SelectedOptionIndex.HasValue, () =>
+        {
+            RuleFor(x => x.SelectedOptionIndex!.Value)
+                .GreaterThanOrEqualTo(0)
+                .WithMessage("Selected option index must be non-negative.");
+        });
+
+        When(x => !string.IsNullOrWhiteSpace(x.AnswerText) && !x.SelectedOptionIndex.HasValue, () =>
         {
             RuleFor(x => x.AnswerText).MinimumLength(10)
                 .WithMessage("Answer text must be at least 10 characters long.");
@@ -85,7 +98,63 @@ public class SubmitDailyDrillHandler : IUseCase<SubmitDailyDrillRequest, SubmitD
             return Error.NotFound;
         }
 
-        // 1. Save audio file to local storage if provided
+        var question = drill.Question;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        // Fetch or create user streak
+        var streak = await _dbContext.StreakRecords
+            .FirstOrDefaultAsync(s => s.UserId == request.UserId, cancellationToken);
+
+        if (streak == null)
+        {
+            streak = StreakRecord.Create(request.UserId);
+            await _dbContext.StreakRecords.AddAsync(streak, cancellationToken);
+        }
+
+        // Branch A: Scenario Multiple-Choice Option Submission
+        if (request.SelectedOptionIndex.HasValue)
+        {
+            var selectedIndex = request.SelectedOptionIndex.Value;
+            if (question.Options.Count > 0 && (selectedIndex < 0 || selectedIndex >= question.Options.Count))
+            {
+                return Error.Custom("Validation.InvalidOption", $"Selected option index {selectedIndex} is out of bounds (0..{question.Options.Count - 1}).");
+            }
+
+            var isCorrect = selectedIndex == question.CorrectOptionIndex;
+            var score = isCorrect ? 10 : 0;
+
+            drill.SubmitOption(selectedIndex, isCorrect, score);
+            streak.RecordCompletion(today, score);
+
+            if (!isCorrect)
+            {
+                var card = await _dbContext.SpacedRepetitionCards
+                    .FirstOrDefaultAsync(c => c.UserId == request.UserId && c.TopicId == question.TopicId, cancellationToken);
+
+                if (card == null)
+                {
+                    card = SpacedRepetitionCard.Create(request.UserId, question.TopicId, today.AddDays(1));
+                    await _dbContext.SpacedRepetitionCards.AddAsync(card, cancellationToken);
+                }
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            return new SubmitDailyDrillResponse
+            {
+                IsCorrect = isCorrect,
+                SelectedOptionIndex = selectedIndex,
+                CorrectOptionIndex = question.CorrectOptionIndex,
+                Score = score,
+                ExplanationMarkdown = question.ExplanationMarkdown,
+                CurrentStreak = streak.CurrentStreak,
+                LongestStreak = streak.LongestStreak,
+                TotalDrillsCompleted = streak.TotalDrillsCompleted,
+                AverageScore = streak.AverageScore
+            };
+        }
+
+        // Branch B: Free-text or Voice submission (AI Review flow)
         string? audioRelativePath = null;
         if (request.AudioBytes != null && request.AudioBytes.Length > 0)
         {
@@ -94,8 +163,6 @@ public class SubmitDailyDrillHandler : IUseCase<SubmitDailyDrillRequest, SubmitD
             audioRelativePath = await _audioStorageService.SaveAudioAsync(drill.Id, memoryStream, extension, cancellationToken);
         }
 
-        // 2. Perform 1-Pass Multimodal AI Evaluation via Gemini Flash
-        var question = drill.Question;
         var evaluationResult = await _aiReviewService.EvaluateSubmissionAsync(
             questionText: question.QuestionText,
             expectedKeyPoints: question.ExpectedKeyPoints,
@@ -113,7 +180,6 @@ public class SubmitDailyDrillHandler : IUseCase<SubmitDailyDrillRequest, SubmitD
 
         var reviewDto = evaluationResult.Value;
 
-        // 3. Update drill state
         drill.Submit(request.AnswerText, audioRelativePath ?? drill.UserAudioUrl);
         drill.MarkReviewed();
 
@@ -143,20 +209,8 @@ public class SubmitDailyDrillHandler : IUseCase<SubmitDailyDrillRequest, SubmitD
             drill.AiReview.MarkUpdated();
         }
 
-        // 4. Update Streak Record
-        var streak = await _dbContext.StreakRecords
-            .FirstOrDefaultAsync(s => s.UserId == request.UserId, cancellationToken);
-
-        if (streak == null)
-        {
-            streak = StreakRecord.Create(request.UserId);
-            await _dbContext.StreakRecords.AddAsync(streak, cancellationToken);
-        }
-
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         streak.RecordCompletion(today, reviewDto.Score);
 
-        // 5. Ensure Spaced Repetition Card exists if score < 7 or concepts missed
         if (reviewDto.Score < 7 || reviewDto.MissingPoints.Any())
         {
             var card = await _dbContext.SpacedRepetitionCards
@@ -173,6 +227,10 @@ public class SubmitDailyDrillHandler : IUseCase<SubmitDailyDrillRequest, SubmitD
 
         return new SubmitDailyDrillResponse
         {
+            IsCorrect = reviewDto.Score >= 7,
+            CorrectOptionIndex = question.CorrectOptionIndex,
+            Score = reviewDto.Score,
+            ExplanationMarkdown = question.ExplanationMarkdown,
             Review = reviewDto,
             CurrentStreak = streak.CurrentStreak,
             LongestStreak = streak.LongestStreak,

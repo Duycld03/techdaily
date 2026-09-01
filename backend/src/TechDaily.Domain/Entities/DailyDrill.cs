@@ -10,6 +10,9 @@ public class DailyDrill : BaseEntity
     public Guid? DocumentChunkId { get; set; }
     public DateOnly ScheduledDate { get; set; }
     public DrillStatus Status { get; set; } = DrillStatus.Pending;
+    public int? SelectedOptionIndex { get; set; }
+    public bool? IsCorrect { get; set; }
+    public int? Score { get; set; }
     public string? UserAnswerText { get; set; }
     public string? UserAudioUrl { get; set; }
     public int AttemptCount { get; set; } = 0;
@@ -20,6 +23,17 @@ public class DailyDrill : BaseEntity
     public InterviewQuestion Question { get; set; } = null!;
     public DocumentChunk? DocumentChunk { get; set; }
     public AiReview? AiReview { get; set; }
+
+    public void SubmitOption(int selectedIndex, bool isCorrect, int score)
+    {
+        SelectedOptionIndex = selectedIndex;
+        IsCorrect = isCorrect;
+        Score = score;
+        Status = DrillStatus.Reviewed;
+        AttemptCount++;
+        SubmittedAt = DateTimeOffset.UtcNow;
+        MarkUpdated();
+    }
 
     public void Submit(string? answerText, string? audioUrl)
     {

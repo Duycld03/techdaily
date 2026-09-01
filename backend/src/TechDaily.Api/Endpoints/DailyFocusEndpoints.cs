@@ -60,6 +60,7 @@ public static class DailyFocusEndpoints
             var request = new SubmitDailyDrillRequest(
                 DrillId: id,
                 UserId: userId.Value,
+                SelectedOptionIndex: body.SelectedOptionIndex,
                 AnswerText: body.AnswerText,
                 AudioBytes: audioBytes,
                 AudioMimeType: body.AudioMimeType,
@@ -73,7 +74,7 @@ public static class DailyFocusEndpoints
         })
         .RequireAuthorization()
         .WithName("SubmitDailyDrill")
-        .WithSummary("Evaluates senior interview answer with Gemini 3.5 Flash and updates user streak.");
+        .WithSummary("Evaluates senior interview answer or multiple-choice option and updates user streak.");
 
         // Public Term Explanation (Backed by Semantic Cache)
         group.MapPost("/explain-term", async (
@@ -106,6 +107,7 @@ public static class DailyFocusEndpoints
 
 public class SubmitDrillJsonRequest
 {
+    public int? SelectedOptionIndex { get; set; }
     public string? AnswerText { get; set; }
     public string? AudioBase64 { get; set; }
     public string? AudioMimeType { get; set; }

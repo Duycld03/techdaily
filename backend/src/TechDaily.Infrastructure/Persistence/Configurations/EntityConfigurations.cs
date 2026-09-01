@@ -1,9 +1,36 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TechDaily.Domain.Entities;
 
 namespace TechDaily.Infrastructure.Persistence.Configurations;
+
+internal static class ConfigurationHelpers
+{
+    public static readonly ValueComparer<List<string>> StringListComparer = new(
+        (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+        c => c.ToList());
+
+    public static string SerializeStringList(List<string>? list)
+    {
+        return JsonSerializer.Serialize(list ?? new List<string>(), (JsonSerializerOptions)null!);
+    }
+
+    public static List<string> DeserializeStringList(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new List<string>();
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json, (JsonSerializerOptions)null!) ?? new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+}
 
 public class UserConfiguration : IEntityTypeConfiguration<User>
 {
@@ -53,11 +80,20 @@ public class InterviewQuestionConfiguration : IEntityTypeConfiguration<Interview
         builder.Property(q => q.QuestionText).IsRequired();
         builder.Property(q => q.ModelAnswerMarkdown).IsRequired();
         builder.Property(q => q.Difficulty).HasConversion<string>().HasMaxLength(50).IsRequired();
+        builder.Property(q => q.CorrectOptionIndex).HasDefaultValue(0);
+        builder.Property(q => q.ExplanationMarkdown).HasDefaultValue(string.Empty);
+
+        builder.Property(q => q.Options)
+            .HasConversion(
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
 
         builder.Property(q => q.ExpectedKeyPoints)
             .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
     }
 }
 
@@ -92,15 +128,17 @@ public class DocumentChunkConfiguration : IEntityTypeConfiguration<DocumentChunk
 
         builder.Property(c => c.KeyTakeaways)
             .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
 
         builder.OwnsOne(c => c.MicroQuiz, b =>
         {
             b.Property(q => q.Options)
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                    v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
+                    v => ConfigurationHelpers.SerializeStringList(v),
+                    v => ConfigurationHelpers.DeserializeStringList(v))
+                .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
         });
     }
 }
@@ -113,6 +151,9 @@ public class DailyDrillConfiguration : IEntityTypeConfiguration<DailyDrill>
         builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(d => d.ScheduledDate).IsRequired();
         builder.Property(d => d.UserAudioUrl).HasMaxLength(500);
+        builder.Property(d => d.SelectedOptionIndex);
+        builder.Property(d => d.IsCorrect);
+        builder.Property(d => d.Score);
 
         builder.HasIndex(d => new { d.UserId, d.ScheduledDate, d.QuestionId }).IsUnique();
 
@@ -150,13 +191,15 @@ public class AiReviewConfiguration : IEntityTypeConfiguration<AiReview>
 
         builder.Property(r => r.Strengths)
             .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
 
         builder.Property(r => r.MissingPoints)
             .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
     }
 }
 
@@ -211,8 +254,9 @@ public class UserHighlightConfiguration : IEntityTypeConfiguration<UserHighlight
 
         builder.Property(h => h.Tags)
             .HasConversion(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
-                v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions)null!) ?? new List<string>());
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
 
         builder.HasOne(h => h.User)
             .WithMany(u => u.UserHighlights)
@@ -232,7 +276,7 @@ public class TermExplanationCacheConfiguration : IEntityTypeConfiguration<TermEx
     {
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Term).HasMaxLength(200).IsRequired();
-        builder.Property(t => t.Category).HasMaxLength(50).IsRequired();
+        builder.Property(t => t.Category).HasMaxLength(255).IsRequired();
         builder.Property(t => t.Locale).HasMaxLength(10).HasDefaultValue("en");
         builder.Property(t => t.ExplanationText).IsRequired();
         builder.Property(t => t.HitCount).HasDefaultValue(1);

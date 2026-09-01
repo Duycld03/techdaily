@@ -4,14 +4,17 @@
 set -e
 
 # Cleanup child processes on exit (Ctrl+C)
-trap 'echo -e "\n🛑 Stopping TechDaily services..."; kill $(jobs -p) 2>/dev/null || true; exit 0' SIGINT SIGTERM EXIT
+trap 'echo -e "\n🛑 Stopping TechDaily services..."; kill $(jobs -p) 2>/dev/null || true; fuser -k 5000/tcp 3000/tcp 2>/dev/null || true; exit 0' SIGINT SIGTERM EXIT
 
 echo "=========================================================="
 echo "⚡ TechDaily - Senior Engineering Micro-Learning Platform"
 echo "=========================================================="
 
+# Clean up any lingering processes on ports 5000 and 3000
+fuser -k 5000/tcp 3000/tcp 2>/dev/null || true
+
 # 1. Check if database container is running
-if ! docker ps --format '{{.Names}}' | grep -q 'techdaily-db'; then
+if ! docker ps --format '{{.Names}}' | grep -q 'techdaily_postgres'; then
   echo "📦 Starting PostgreSQL 17 (pgvector) container..."
   docker compose up -d db
 fi

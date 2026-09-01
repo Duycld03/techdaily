@@ -21,6 +21,9 @@ public class InterviewQuestionDto
 {
     public Guid Id { get; set; }
     public string QuestionText { get; set; } = string.Empty;
+    public List<string> Options { get; set; } = new();
+    public int? CorrectOptionIndex { get; set; }
+    public string? ExplanationMarkdown { get; set; }
     public List<string> ExpectedKeyPoints { get; set; } = new();
     public string ModelAnswerMarkdown { get; set; } = string.Empty;
     public Difficulty Difficulty { get; set; }
@@ -44,6 +47,9 @@ public class DailyDrillDto
     public Guid Id { get; set; }
     public DateOnly ScheduledDate { get; set; }
     public DrillStatus Status { get; set; }
+    public int? SelectedOptionIndex { get; set; }
+    public bool? IsCorrect { get; set; }
+    public int? Score { get; set; }
     public string? UserAnswerText { get; set; }
     public string? UserAudioUrl { get; set; }
     public int AttemptCount { get; set; }

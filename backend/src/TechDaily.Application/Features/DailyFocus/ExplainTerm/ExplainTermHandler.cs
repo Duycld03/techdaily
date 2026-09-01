@@ -22,7 +22,7 @@ public class ExplainTermValidator : AbstractValidator<ExplainTermRequest>
     public ExplainTermValidator()
     {
         RuleFor(x => x.Term).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.Category).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.Category).NotEmpty().MaximumLength(255);
         RuleFor(x => x.Locale).NotEmpty().MaximumLength(10);
     }
 }

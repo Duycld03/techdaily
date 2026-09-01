@@ -14,7 +14,7 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Port=5433;Database=techdaily_db;Username=techdaily_user;Password=techdaily_password_secret";
+            ?? "Host=localhost;Port=5432;Database=techdaily_db;Username=techdaily_user;Password=techdaily_password_secret";
 
         services.AddDbContext<TechDailyDbContext>(options =>
         {

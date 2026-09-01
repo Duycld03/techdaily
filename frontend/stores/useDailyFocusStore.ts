@@ -17,6 +17,9 @@ export interface Topic {
 export interface InterviewQuestion {
   id: string
   questionText: string
+  options: string[]
+  correctOptionIndex?: number
+  explanationMarkdown?: string
   expectedKeyPoints: string[]
   modelAnswerMarkdown: string
   difficulty: number
@@ -54,6 +57,9 @@ export interface DailyDrill {
   id: string
   scheduledDate: string
   status: number // 0=Pending, 1=Submitted, 2=Reviewed
+  selectedOptionIndex?: number
+  isCorrect?: boolean
+  score?: number
   userAnswerText?: string
   userAudioUrl?: string
   attemptCount: number
@@ -140,6 +146,49 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
     }
   }
 
+  async function submitOption(selectedOptionIndex: number, locale: string = 'en') {
+    if (!data.value?.drill) return null
+
+    isSubmitting.value = true
+    error.value = null
+    try {
+      const api = useApiClient()
+      const res = await api.post<{
+        isCorrect: boolean
+        selectedOptionIndex: number
+        correctOptionIndex: number
+        score: number
+        explanationMarkdown: string
+        review?: AiReview
+        currentStreak: number
+        longestStreak: number
+        totalDrillsCompleted: number
+        averageScore: number
+      }>(`/api/v1/daily/drills/${data.value.drill.id}/submit`, {
+        selectedOptionIndex,
+        locale
+      })
+
+      if (data.value) {
+        data.value.drill.status = 2 // Reviewed
+        data.value.drill.selectedOptionIndex = selectedOptionIndex
+        data.value.drill.isCorrect = res.isCorrect
+        data.value.drill.score = res.score
+        data.value.question.correctOptionIndex = res.correctOptionIndex
+        data.value.question.explanationMarkdown = res.explanationMarkdown
+        data.value.currentStreak = res.currentStreak
+        data.value.longestStreak = res.longestStreak
+      }
+
+      return res
+    } catch (err: any) {
+      error.value = err.message || 'Failed to submit scenario option.'
+      throw err
+    } finally {
+      isSubmitting.value = false
+    }
+  }
+
   async function explainTerm(term: string, category: string, context: string, locale: string = 'en') {
     const api = useApiClient()
     return await api.post<{ term: string; explanation: string; locale: string }>('/api/v1/daily/explain-term', {
@@ -157,6 +206,7 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
     error,
     fetchTodayFocus,
     submitDrill,
+    submitOption,
     explainTerm
   }
 })

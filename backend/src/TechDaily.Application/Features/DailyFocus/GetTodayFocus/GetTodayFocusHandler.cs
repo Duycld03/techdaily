@@ -151,6 +151,8 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         var question = drill.Question;
         var chunk = drill.DocumentChunk;
 
+        var isReviewed = drill.Status == DrillStatus.Reviewed;
+
         return new GetTodayFocusResponse
         {
             Topic = new TopicDto
@@ -169,8 +171,11 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
             {
                 Id = question.Id,
                 QuestionText = question.QuestionText,
+                Options = question.Options,
+                CorrectOptionIndex = isReviewed ? question.CorrectOptionIndex : null,
+                ExplanationMarkdown = isReviewed ? question.ExplanationMarkdown : null,
                 ExpectedKeyPoints = question.ExpectedKeyPoints,
-                ModelAnswerMarkdown = question.ModelAnswerMarkdown,
+                ModelAnswerMarkdown = isReviewed ? question.ModelAnswerMarkdown : string.Empty,
                 Difficulty = question.Difficulty
             },
             DocumentChunk = chunk == null ? null : new DocumentChunkDto
@@ -190,6 +195,9 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                 Id = drill.Id,
                 ScheduledDate = drill.ScheduledDate,
                 Status = drill.Status,
+                SelectedOptionIndex = drill.SelectedOptionIndex,
+                IsCorrect = drill.IsCorrect,
+                Score = drill.Score,
                 UserAnswerText = drill.UserAnswerText,
                 UserAudioUrl = drill.UserAudioUrl,
                 AttemptCount = drill.AttemptCount,

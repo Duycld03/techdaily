@@ -27,7 +27,7 @@ public class TermExplanationService : ITermExplanationService
         _httpClient = httpClient;
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
-        _model = configuration["Gemini:Model"] ?? "gemini-3.5-flash-lite";
+        _model = configuration["Gemini:Model"] ?? "gemini-3.6-flash";
     }
 
     public async Task<Result<string>> ExplainTermAsync(
@@ -52,7 +52,7 @@ public class TermExplanationService : ITermExplanationService
         }
 
         // 2. Generate via Gemini Flash
-        string explanation;
+        string explanation = string.Empty;
         if (!string.IsNullOrWhiteSpace(_apiKey))
         {
             try
@@ -78,41 +78,52 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
                 {
                     Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
                 };
-                request.Headers.Add("X-goog-api-key", _apiKey);
 
                 var response = await _httpClient.SendAsync(request, cancellationToken);
                 if (response.IsSuccessStatusCode)
                 {
                     var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
                     using var doc = JsonDocument.Parse(responseJson);
-                    explanation = doc.RootElement
-                        .GetProperty("candidates")[0]
-                        .GetProperty("content")
-                        .GetProperty("parts")[0]
-                        .GetProperty("text")
-                        .GetString()?.Trim() ?? GetFallbackExplanation(term, category, locale);
+                    if (doc.RootElement.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
+                    {
+                        var parts = candidates[0].GetProperty("content").GetProperty("parts");
+                        foreach (var part in parts.EnumerateArray())
+                        {
+                            if (part.TryGetProperty("text", out var textProp))
+                            {
+                                var t = textProp.GetString();
+                                if (!string.IsNullOrWhiteSpace(t))
+                                {
+                                    explanation = t.Trim();
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
                 else
                 {
-                    explanation = GetFallbackExplanation(term, category, locale);
+                    var errBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                    _logger.LogWarning("Gemini API call returned status {Status}: {Error}", response.StatusCode, errBody);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Gemini API error during term explanation. Using fallback.");
-                explanation = GetFallbackExplanation(term, category, locale);
             }
         }
-        else
+
+        if (string.IsNullOrWhiteSpace(explanation))
         {
             explanation = GetFallbackExplanation(term, category, locale);
         }
 
         // 3. Save to DB Cache
+        var safeCategory = category.Length > 200 ? category.Substring(0, 200) : category;
         var newCache = new TermExplanationCache
         {
             Term = normalizedTerm,
-            Category = category,
+            Category = safeCategory,
             Locale = locale,
             ExplanationText = explanation,
             HitCount = 1

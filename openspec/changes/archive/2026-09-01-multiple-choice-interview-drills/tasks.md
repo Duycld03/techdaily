@@ -1,0 +1,23 @@
+# Tasks: Multiple-Choice Senior Scenario Interview Drills
+
+- [x] 1. Update Domain Model Entities <!-- id: task-domain-entities -->
+  - [x] 1.1 Add `Options`, `CorrectOptionIndex`, `ExplanationMarkdown` to `InterviewQuestion.cs`
+  - [x] 1.2 Add `SelectedOptionIndex`, `IsCorrect`, `Score` to `DailyDrill.cs` and implement `SubmitOption()` domain method
+- [x] 2. Update Infrastructure & Database Migrations <!-- id: task-infra-migration -->
+  - [x] 2.1 Configure EF Core entity mappings in `TechDailyDbContext.cs`
+  - [x] 2.2 Create and apply EF Core migration `AddMultipleChoiceToInterviewQuestions`
+  - [x] 2.3 Update seed data / topics with high-yield multiple-choice interview questions and options
+- [x] 3. Update Application Layer & Use-Case Handlers <!-- id: task-app-handlers -->
+  - [x] 3.1 Update `InterviewQuestionDto`, `SubmitDailyDrillRequest`, and `SubmitDailyDrillResponse` DTOs
+  - [x] 3.2 Update `SubmitDailyDrillValidator` and `SubmitDailyDrillHandler` to support deterministic option verification, streak updates, and SM-2 flashcard creation
+  - [x] 3.3 Update `GetTodayFocusHandler` to mask answer keys until drill completion
+- [x] 4. Update Web API Endpoints <!-- id: task-api-endpoints -->
+  - [x] 4.1 Update `POST /api/v1/daily/drills/{id}/submit` endpoint schema and parameter bindings
+- [x] 5. Redesign Frontend Challenge UI <!-- id: task-frontend-ui -->
+  - [x] 5.1 Update `useDailyFocusStore.ts` types and submit actions
+  - [x] 5.2 Redesign `InterviewChallengePane.vue` with interactive option cards (A, B, C, D), active state styling, submit triggers, and animated review state
+  - [x] 5.3 Add i18n localization keys in `locales/en.json` and `locales/vi.json`
+- [x] 6. Testing & Automated Verification <!-- id: task-tests-verification -->
+  - [x] 6.1 Add backend unit tests for `SubmitDailyDrillHandler` (correct choice, incorrect choice, SM-2 trigger)
+  - [x] 6.2 Add frontend unit tests for `InterviewChallengePane.vue` option selection and submission
+  - [x] 6.3 Run full test suites (`dotnet test` & `npm test`) and verify production build
