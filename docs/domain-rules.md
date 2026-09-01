@@ -66,9 +66,9 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
    - **Responsive Typography Scale:** Body text, article paragraphs, summaries, card descriptions, scenario options, and explanations MUST be at least `text-sm` (14px) on mobile viewports and scale to at least `text-base` (16px) or `text-lg` (18px) on large viewports (`≥ md`).
    - Micro text (`text-xs` / 12px) is forbidden for readable copy/descriptions and is strictly reserved for compact metadata (tags, badges, timestamps, tooltips). Sub-12px micro text (e.g. `text-[10px]`) is prohibited.
    - All components MUST support dual theme classes (`bg-white dark:bg-slate-900`, `text-slate-900 dark:text-white`, `border-slate-200 dark:border-slate-800`).
-4. **UI Verification & Localization Testing Rule:**
-   - When performing manual or automated visual/UI tests (e.g. Playwright, mobile responsive checks), if testing only in a single language, **always use Vietnamese (`vi`)** as the default test locale.
-   - **Rationale:** Vietnamese strings are typically longer than English strings (e.g., *"Bảo Mật & Mật Khẩu"* vs *"Security"*, *"Trích Đoạn Tài Liệu Gốc"* vs *"Source Context"*), making Vietnamese the optimal stress test for detecting text wrapping, truncation, container overflow, and layout collisions early.
+4. **Bilingual UI Verification & Length Resilience (English & Vietnamese):**
+   - Both English and Vietnamese MUST be verified in responsive layouts. While Vietnamese phrases are often longer for general prose (*"Bảo Mật & Mật Khẩu"* vs *"Security"*), English phrases can be significantly longer for action calls (*"Continue Reading"* vs *"Đọc tiếp"*, *"Resumes at Slice 8"* vs *"Đọc tiếp lát 8"*).
+   - All interactive action buttons, card footers, and badges MUST enforce `whitespace-nowrap shrink-0` with minimum `gap-2` or `gap-3` to prevent multi-line text wrapping or layout collisions across all screen sizes and language switches.
 5. **Header Action Buttons & Touch Targets:**
    - Action buttons in header banners (e.g., *Ngẫu Nhiên* and *Tạo Với AI* on Insights) MUST maintain visual balance and avoid awkward wrapping.
    - On large screens (`≥ sm`), action buttons MUST sit side-by-side horizontally (`flex-nowrap`, `shrink-0`) aligned with the header.

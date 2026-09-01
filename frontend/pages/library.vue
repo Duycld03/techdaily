@@ -286,22 +286,22 @@ async function confirmDeleteBook() {
           </div>
         </div>
 
-        <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-xs sm:text-sm text-slate-400">GitBook Reader</span>
+        <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-1.5 min-w-0">
             <button
               @click.stop="openDeleteModal(book)"
-              class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 transition-colors"
+              class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 transition-colors shrink-0"
               :title="$t('library.delete_doc')"
               :aria-label="$t('library.delete_doc')"
             >
               <Trash2 class="w-4 h-4" />
             </button>
+            <span class="text-xs text-slate-400 font-medium truncate hidden sm:inline">GitBook Reader</span>
           </div>
 
           <NuxtLink
             :to="`/read/${book.id}`"
-            class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm transition-transform active:scale-95 shadow-sm"
+            class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm transition-transform active:scale-95 shadow-sm whitespace-nowrap shrink-0"
           >
             <span>{{ bookmarks[book.id] ? $t('library.continue_reading') : $t('library.read_book') }}</span>
             <ExternalLink class="w-3.5 h-3.5" />
