@@ -1,6 +1,7 @@
 {
   "nav": {
     "today": "Thử Thách Hôm Nay",
+    "roadmap": "Lộ Trình 30 Ngày",
     "review": "Ôn Tập Flashcards",
     "library": "Thư Viện Kiến Thức",
     "notes": "Ghi Chú & Highlight",
@@ -51,6 +52,21 @@
     "today_focus": "Bài Hôm Nay",
     "prev": "Trước",
     "next": "Tiếp"
+  },
+  "roadmap": {
+    "badge": "Tiến Độ Làm Chủ Kiến Thức",
+    "title": "Bản Đồ Lộ Trình 30 Ngày Senior Fullstack",
+    "subtitle": "Theo dõi hành trình chinh phục 4 trụ cột kỹ thuật. Xem lại bài đọc kiến trúc cũ hoặc bắt đầu thử thách hôm nay.",
+    "progress": "Tiến Độ Sprint",
+    "days": "Ngày",
+    "completed": "Hoàn Thành",
+    "loading": "Đang tải Bản đồ Lộ trình 30 Ngày...",
+    "today": "Mục Tiêu Hôm Nay",
+    "ready": "Sẵn Sàng",
+    "locked": "Chưa Mở",
+    "start_today": "Bắt Đầu Bài Hôm Nay",
+    "review_day": "Ôn Lại Kiến Trúc",
+    "view_lesson": "Khám Phá Chủ Đề"
   },
   "review": {
     "title": "Bộ Thẻ Ôn Tập Lặp Lại Ngắt Quãng",

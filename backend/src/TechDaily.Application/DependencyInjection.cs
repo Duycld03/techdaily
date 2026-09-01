@@ -1,6 +1,8 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using TechDaily.Application.Common;
+using TechDaily.Application.Features.Curriculum.DTOs;
+using TechDaily.Application.Features.Curriculum.GetCurriculumRoadmap;
 using TechDaily.Application.Features.DailyFocus.ExplainTerm;
 using TechDaily.Application.Features.DailyFocus.GetTodayFocus;
 using TechDaily.Application.Features.DailyFocus.SubmitDailyDrill;
@@ -23,6 +25,9 @@ public static class DependencyInjection
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+
+        // Curriculum / Roadmap Handlers
+        services.AddScoped<IUseCase<GetCurriculumRoadmapRequest, CurriculumRoadmapResponse>, GetCurriculumRoadmapHandler>();
 
         // Daily Focus Handlers
         services.AddScoped<IUseCase<GetTodayFocusRequest, GetTodayFocusResponse>, GetTodayFocusHandler>();

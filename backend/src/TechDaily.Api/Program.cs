@@ -161,6 +161,10 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Map API Endpoints
+app.MapGroup("/api/v1/curriculum")
+    .WithTags("Curriculum Roadmap")
+    .MapCurriculumEndpoints();
+
 app.MapGroup("/api/v1/daily")
     .WithTags("Daily Focus Hub")
     .MapDailyFocusEndpoints();

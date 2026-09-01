@@ -1,6 +1,7 @@
 {
   "nav": {
     "today": "Today's Drill",
+    "roadmap": "Roadmap",
     "review": "Flashcards",
     "library": "Knowledge Base",
     "notes": "Highlights",
@@ -51,6 +52,21 @@
     "today_focus": "Today's Focus",
     "prev": "Prev",
     "next": "Next"
+  },
+  "roadmap": {
+    "badge": "Mastery Timeline",
+    "title": "30-Day Senior Fullstack Roadmap",
+    "subtitle": "Track your journey across 4 core technical pillars. Review past architectures or jump into today's challenge.",
+    "progress": "Sprint Progress",
+    "days": "Days",
+    "completed": "Completed",
+    "loading": "Loading 30-Day Master Roadmap...",
+    "today": "Today's Goal",
+    "ready": "Ready",
+    "locked": "Locked",
+    "start_today": "Start Today's Drill",
+    "review_day": "Review Architecture",
+    "view_lesson": "Explore Topic"
   },
   "review": {
     "title": "Spaced Repetition Review Deck",
