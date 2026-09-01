@@ -9,22 +9,28 @@ public static class CurriculumEndpoints
 {
     public static RouteGroupBuilder MapCurriculumEndpoints(this RouteGroupBuilder group)
     {
-        // Public / Authenticated Curriculum Roadmap
+        // Protected Curriculum Roadmap (Requires Logged-In User)
         group.MapGet("/roadmap", async (
             ClaimsPrincipal userClaims,
             IUseCase<GetCurriculumRoadmapRequest, CurriculumRoadmapResponse> handler,
             CancellationToken ct) =>
         {
             var userId = GetUserIdFromClaims(userClaims);
-            var request = new GetCurriculumRoadmapRequest(userId);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var request = new GetCurriculumRoadmapRequest(userId.Value);
             var result = await handler.ExecuteAsync(request, ct);
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
                 : Results.BadRequest(new { error = result.Error.Message });
         })
+        .RequireAuthorization()
         .WithName("GetCurriculumRoadmap")
-        .WithSummary("Retrieves the full 30-day curriculum roadmap grouped into 4 core technical modules with user progress.");
+        .WithSummary("Retrieves the full 30-day curriculum roadmap grouped into 4 core technical modules with authenticated user progress.");
 
         return group;
     }

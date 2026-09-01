@@ -61,9 +61,10 @@ public class CurriculumRoadmapTests : IDisposable
         await _db.SaveChangesAsync();
 
         var handler = new GetCurriculumRoadmapHandler(_db);
+        var testUserId = Guid.NewGuid();
 
         // Act
-        var result = await handler.ExecuteAsync(new GetCurriculumRoadmapRequest(null));
+        var result = await handler.ExecuteAsync(new GetCurriculumRoadmapRequest(testUserId));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -150,5 +151,15 @@ public class CurriculumRoadmapTests : IDisposable
         day1.IsCompleted.Should().BeTrue();
         day1.DrillScore.Should().Be(10);
         day1.IsUnlocked.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetCurriculumRoadmap_ShouldReturnUnauthorized_WhenUserIdIsEmpty()
+    {
+        var handler = new GetCurriculumRoadmapHandler(_db);
+        var result = await handler.ExecuteAsync(new GetCurriculumRoadmapRequest(Guid.Empty));
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Should().Be(TechDaily.Application.Common.Error.Unauthorized);
     }
 }

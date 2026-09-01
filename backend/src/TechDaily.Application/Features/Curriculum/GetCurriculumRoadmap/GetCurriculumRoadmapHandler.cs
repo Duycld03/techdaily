@@ -6,7 +6,7 @@ using TechDaily.Domain.Enums;
 
 namespace TechDaily.Application.Features.Curriculum.GetCurriculumRoadmap;
 
-public record GetCurriculumRoadmapRequest(Guid? UserId = null);
+public record GetCurriculumRoadmapRequest(Guid UserId);
 
 public class GetCurriculumRoadmapHandler : IUseCase<GetCurriculumRoadmapRequest, CurriculumRoadmapResponse>
 {
@@ -21,6 +21,11 @@ public class GetCurriculumRoadmapHandler : IUseCase<GetCurriculumRoadmapRequest,
         GetCurriculumRoadmapRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (request.UserId == Guid.Empty)
+        {
+            return Error.Unauthorized;
+        }
+
         var topics = await _dbContext.Topics
             .OrderBy(t => t.DayOrder)
             .ToListAsync(cancellationToken);
@@ -28,27 +33,24 @@ public class GetCurriculumRoadmapHandler : IUseCase<GetCurriculumRoadmapRequest,
         int currentActiveDay = 1;
         var completedTopicIds = new Dictionary<Guid, int>(); // TopicId -> Score
 
-        if (request.UserId.HasValue && request.UserId.Value != Guid.Empty)
+        var userId = request.UserId;
+        var streak = await _dbContext.StreakRecords
+            .FirstOrDefaultAsync(s => s.UserId == userId, cancellationToken);
+
+        if (streak != null)
         {
-            var userId = request.UserId.Value;
-            var streak = await _dbContext.StreakRecords
-                .FirstOrDefaultAsync(s => s.UserId == userId, cancellationToken);
+            currentActiveDay = (streak.TotalDrillsCompleted % 30) + 1;
+        }
 
-            if (streak != null)
-            {
-                currentActiveDay = (streak.TotalDrillsCompleted % 30) + 1;
-            }
+        var reviewedDrills = await _dbContext.DailyDrills
+            .Include(d => d.Question)
+            .Where(d => d.UserId == userId && d.Status == DrillStatus.Reviewed)
+            .ToListAsync(cancellationToken);
 
-            var reviewedDrills = await _dbContext.DailyDrills
-                .Include(d => d.Question)
-                .Where(d => d.UserId == userId && d.Status == DrillStatus.Reviewed)
-                .ToListAsync(cancellationToken);
-
-            foreach (var drill in reviewedDrills)
-            {
-                var score = drill.Score ?? (drill.IsCorrect == true ? 10 : 0);
-                completedTopicIds[drill.Question.TopicId] = score;
-            }
+        foreach (var drill in reviewedDrills)
+        {
+            var score = drill.Score ?? (drill.IsCorrect == true ? 10 : 0);
+            completedTopicIds[drill.Question.TopicId] = score;
         }
 
         var moduleDefinitions = new List<(Category Category, string Title, string Description, int StartDay, int EndDay)>
