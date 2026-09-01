@@ -153,11 +153,15 @@
     "copy": "Copy"
   },
   "notes": {
-    "title": "Saved Highlights & Architectural Notes",
-    "subtitle": "Active highlights captured during daily reading drills",
-    "search_placeholder": "Filter highlights by tag or keywords...",
+    "title": "Architectural Highlights & Notes",
+    "subtitle": "Important excerpts and snippets curated during your daily practice",
+    "search_placeholder": "Filter notes by tags or keywords...",
     "delete_btn": "Delete",
-    "no_notes": "No highlights captured yet. Select text while reading in the Daily Focus hub to save highlights."
+    "delete_confirm_title": "Delete Highlight",
+    "delete_confirm_desc": "Are you sure you want to delete this saved highlight? This action cannot be undone.",
+    "cancel_btn": "Cancel",
+    "confirm_delete_btn": "Delete Highlight",
+    "no_notes": "No highlights saved yet. Select text while reading to save important concepts."
   },
   "profile": {
     "title": "Profile & Statistics",

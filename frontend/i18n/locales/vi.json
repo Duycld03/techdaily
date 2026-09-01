@@ -157,6 +157,10 @@
     "subtitle": "Tổng hợp các đoạn trích dẫn quan trọng được lưu lại trong quá trình luyện tập",
     "search_placeholder": "Lọc ghi chú theo thẻ tag hoặc từ khóa...",
     "delete_btn": "Xóa",
+    "delete_confirm_title": "Xác Nhận Xóa Ghi Chú",
+    "delete_confirm_desc": "Bạn có chắc chắn muốn xóa đoạn trích highlight này khỏi danh sách không? Thao tác này không thể hoàn tác.",
+    "cancel_btn": "Hủy Bỏ",
+    "confirm_delete_btn": "Xóa Ghi Chú",
     "no_notes": "Chưa có đoạn highlight nào. Bạn có thể bôi đen văn bản khi đọc bài ở Trung tâm luyện tập để lưu lại."
   },
   "profile": {

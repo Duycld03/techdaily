@@ -1,23 +1,37 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Highlighter, Trash2, BookOpen } from 'lucide-vue-next'
+import { Highlighter, Trash2, BookOpen, AlertTriangle } from 'lucide-vue-next'
 
 const notesStore = useNotesStore()
 const toast = useToast()
 const filterTag = ref<string | null>(null)
 
+// Delete Modal State
+const highlightToDelete = ref<string | null>(null)
+const isDeleteModalOpen = ref(false)
+const isDeleting = ref(false)
+
 onMounted(() => {
   notesStore.fetchHighlights()
 })
 
-async function handleDelete(id: string) {
-  if (confirm('Are you sure you want to delete this highlight?')) {
-    try {
-      await notesStore.deleteHighlight(id)
-      toast.success('Đã xóa ghi chú.')
-    } catch (err: any) {
-      toast.error(err.message || 'Không thể xóa ghi chú.')
-    }
+function openDeleteModal(id: string) {
+  highlightToDelete.value = id
+  isDeleteModalOpen.value = true
+}
+
+async function confirmDeleteHighlight() {
+  if (!highlightToDelete.value) return
+  isDeleting.value = true
+  try {
+    await notesStore.deleteHighlight(highlightToDelete.value)
+    toast.success('Đã xóa đoạn ghi chú.')
+    isDeleteModalOpen.value = false
+    highlightToDelete.value = null
+  } catch (err: any) {
+    toast.error(err.message || 'Không thể xóa ghi chú.')
+  } finally {
+    isDeleting.value = false
   }
 }
 </script>
@@ -55,7 +69,7 @@ async function handleDelete(id: string) {
           </div>
 
           <button
-            @click="handleDelete(item.id)"
+            @click="openDeleteModal(item.id)"
             class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors"
             title="Delete Highlight"
           >
@@ -92,5 +106,50 @@ async function handleDelete(id: string) {
       <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">No Highlights Saved</h3>
       <p class="text-sm text-slate-500 mt-1 max-w-sm mx-auto">{{ $t('notes.no_notes') }}</p>
     </div>
+
+    <!-- Delete Confirmation Modal (Teleported to Body) -->
+    <Teleport to="body">
+      <div
+        v-if="isDeleteModalOpen && highlightToDelete"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      >
+        <div
+          class="w-full max-w-md p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200"
+        >
+          <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 flex items-center justify-center">
+            <AlertTriangle class="w-6 h-6" />
+          </div>
+
+          <div class="space-y-1.5">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+              {{ $t('notes.delete_confirm_title') }}
+            </h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              {{ $t('notes.delete_confirm_desc') }}
+            </p>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              @click="isDeleteModalOpen = false; highlightToDelete = null"
+              class="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+            >
+              {{ $t('notes.cancel_btn') }}
+            </button>
+
+            <button
+              type="button"
+              :disabled="isDeleting"
+              @click="confirmDeleteHighlight"
+              class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-600/20 active:scale-95 transition-all disabled:opacity-50"
+            >
+              <span v-if="isDeleting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ isDeleting ? 'Đang xóa...' : $t('notes.confirm_delete_btn') }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

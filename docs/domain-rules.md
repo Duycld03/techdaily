@@ -77,6 +77,9 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
    - All frontend components, layouts, banners, toasts, and localized copy MUST be designed strictly for production environments (e.g. registered domains, HTTPS, fully functional OAuth).
    - NEVER inject UI banners, callouts, or workarounds explaining or mitigating local development constraints (e.g. LAN IP OAuth origin mismatches, localhost port conflicts).
    - Infrastructure, environment troubleshooting, and local machine setup guides belong strictly in developer documentation (`README.md`, `docs/dev-setup.md`), NEVER in production user-facing UI.
+7. **Prohibition of Browser Native Dialogs (`alert`, `confirm`, `prompt`):**
+   - Native popups block execution threads, are impossible to theme, and degrade the user experience.
+   - All interactive confirmations (e.g. deleting highlights, removing library documents) MUST use custom Vue modals rendered via `<Teleport to="body">` with standard dark/light theme tokens and bilingual localization.
 
 ---
 
