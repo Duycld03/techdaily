@@ -23,35 +23,64 @@ const detectedLanguage = computed(() => {
   const code = props.code || ''
   const trimmed = code.trim()
 
-  // Heuristic 1: SQL / PostgreSQL
+  // Priority 1: Check Explicit Tags first
+  if (props.tags && props.tags.length > 0) {
+    const lowerTags = props.tags.map(t => t.toLowerCase())
+    if (lowerTags.some(t => ['rust', 'rs', 'cargo'].includes(t))) return 'rust'
+    if (lowerTags.some(t => ['go', 'golang'].includes(t))) return 'go'
+    if (lowerTags.some(t => ['python', 'py'].includes(t))) return 'python'
+    if (lowerTags.some(t => ['sql', 'postgres', 'postgresql', 'database', 'indexing'].includes(t))) return 'sql'
+    if (lowerTags.some(t => ['vue', 'vue3', 'nuxt', 'react', 'reactjs', 'javascript', 'typescript', 'frontend', 'dom'].includes(t))) return 'typescript'
+    if (lowerTags.some(t => ['csharp', 'csharp13', 'dotnet', 'dotnet10', 'aspnet', 'efcore'].includes(t))) return 'csharp'
+  }
+
+  // Priority 2: SQL / PostgreSQL
   if (
     props.category === 2 ||
-    props.tags?.some(t => ['sql', 'postgres', 'postgresql', 'database', 'indexing'].includes(t.toLowerCase())) ||
     trimmed.startsWith('--') ||
     /\b(SELECT|INSERT|UPDATE|DELETE|CREATE TABLE|CREATE INDEX|ALTER TABLE|FILLFACTOR|EXPLAIN ANALYZE|VACUUM|INCLUDE)\b/i.test(trimmed)
   ) {
     return 'sql'
   }
 
-  // Heuristic 2: Vue / TypeScript / JavaScript / JSX
+  // Priority 3: Rust
+  if (
+    /\b(fn |println!|format!|eprintln!|impl |pub struct|&str|String::|let mut |match |unsafe \{|std::|BufWriter|Result<)\b/.test(trimmed)
+  ) {
+    return 'rust'
+  }
+
+  // Priority 4: Go
+  if (
+    /\b(package |func |fmt\.Print|chan |go func|make\(map|defer )\b/.test(trimmed)
+  ) {
+    return 'go'
+  }
+
+  // Priority 5: Python
+  if (
+    /\b(def |elif |import sys|print\(|__init__|async def )\b/.test(trimmed)
+  ) {
+    return 'python'
+  }
+
+  // Priority 6: Vue / TypeScript / JavaScript / JSX
   if (
     props.category === 0 ||
-    props.tags?.some(t => ['vue', 'vue3', 'nuxt', 'react', 'javascript', 'typescript', 'frontend', 'dom'].includes(t.toLowerCase())) ||
-    /\b(const |let |ref<|shallowRef|reactive|triggerRef|computed<|defineProps|import |export default|socket\.on|useState|useEffect)\b/.test(trimmed)
+    /\b(ref<|shallowRef|reactive|triggerRef|computed<|defineProps|import |export default|socket\.on|useState|useEffect)\b/.test(trimmed)
   ) {
     return 'typescript'
   }
 
-  // Heuristic 3: C# / .NET
+  // Priority 7: C# / .NET
   if (
     props.category === 1 ||
-    props.tags?.some(t => ['csharp', 'csharp13', 'dotnet', 'dotnet10', 'aspnet', 'efcore'].includes(t.toLowerCase())) ||
     /\b(public async Task|public void|Span<|ReadOnlySpan<|stackalloc|ArrayPool<|Channel<|using var|class |namespace |\[Fact\]|\[HttpGet\])\b/.test(trimmed)
   ) {
     return 'csharp'
   }
 
-  // Heuristic 4: JSON
+  // Heuristic 7: JSON
   if (trimmed.startsWith('{') && trimmed.endsWith('}') || trimmed.startsWith('[') && trimmed.endsWith(']')) {
     try {
       JSON.parse(trimmed)
@@ -77,6 +106,15 @@ const displayLabel = computed(() => {
       return 'JavaScript'
     case 'vue':
       return 'Vue 3'
+    case 'rust':
+    case 'rs':
+      return 'Rust'
+    case 'go':
+    case 'golang':
+      return 'Go'
+    case 'python':
+    case 'py':
+      return 'Python'
     case 'csharp':
     case 'cs':
       return 'C# / .NET 10'

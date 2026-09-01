@@ -168,27 +168,28 @@ Language: {(locale.Equals("vi", StringComparison.OrdinalIgnoreCase) ? "Vietnames
         {
             var systemInstruction = $@"
 You are a Principal Software Architect and Staff Engineer.
-Generate an authoritative, bite-sized Senior Technical Insight on the requested topic or category.
-Focus on under-the-hood runtime mechanisms, memory allocation savings, or latency optimizations.
-Provide realistic, concrete code snippets (bad vs senior pattern) and benchmark statistics.
-Language: {(isVi ? "Vietnamese (Technical terms in English with Vietnamese explanations)" : "English")}.
+Generate an authoritative, bite-sized Senior Technical Insight on the requested topic or language.
+IMPORTANT: If the user's prompt mentions or implies a specific language or technology (such as Rust, Go, Python, C#, TypeScript, Vue, React, PostgreSQL, Docker, Kafka, etc.), you MUST write the code snippets (`problemSnippet`, `solutionSnippet`) strictly in that requested language! Never default to C# unless C# or .NET was requested.
+Focus on under-the-hood runtime mechanisms, memory allocation savings, zero-cost abstractions, or latency optimizations.
+Provide realistic, concrete code snippets (bad/naive pattern vs senior optimal pattern) and benchmark statistics.
+Language of explanations: {(isVi ? "Vietnamese (Technical terminology in English with Vietnamese explanations)" : "English")}.
 Respond strictly in valid JSON adhering to this schema:
 {{
   ""title"": ""Catchy, precise senior title"",
-  ""category"": 1,
+  ""category"": 3,
   ""tags"": [""tag1"", ""tag2""],
-  ""summaryMarkdown"": ""Markdown summary of why the bad pattern harms production and why the solution works."",
-  ""problemSnippet"": ""// ❌ BAD: snippet showing anti-pattern"",
+  ""summaryMarkdown"": ""Markdown summary explaining why the naive pattern is suboptimal and why the senior pattern is superior."",
+  ""problemSnippet"": ""// ❌ BAD: snippet showing naive or anti-pattern"",
   ""solutionSnippet"": ""// ✅ SENIOR PATTERN: snippet showing optimal implementation"",
-  ""underTheHoodMarkdown"": ""### Under The Hood Mechanics\\n- Deep dive explanation of runtime/engine internals."",
-  ""benchmarkStats"": ""⚡ 10x faster | 0 B allocated"",
+  ""underTheHoodMarkdown"": ""### Under The Hood Mechanics\\n- Deep dive explanation of runtime/engine/compiler internals."",
+  ""benchmarkStats"": ""⚡ Benchmark metric (e.g. 10x faster | 0 B allocated)"",
   ""sourceUrl"": ""https://docs...""
 }}
-Category mapping: 0=FrontendWeb, 1=BackendDotNet, 2=DatabaseStorage, 3=SystemDesign.
+Category mapping: 0=FrontendWeb, 1=BackendDotNet, 2=DatabaseStorage, 3=SystemDesign (use 3 for general systems languages like Rust/Go/C++ or distributed systems).
 No markdown backticks around JSON.";
 
             var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
-            var promptText = $"Category: {categoryName}. Topic focus: {topicPrompt}. Generate a high-yield senior technical insight.";
+            var promptText = $"User requested topic: '{topicPrompt}'. Preferred category: {categoryName}. Generate a comprehensive, accurate Senior Technical Insight.";
 
             var requestPayload = new
             {
@@ -212,8 +213,8 @@ No markdown backticks around JSON.";
                 },
                 generationConfig = new
                 {
-                    temperature = 0.4,
-                    maxOutputTokens = 2048,
+                    temperature = 0.3,
+                    maxOutputTokens = 8192,
                     responseMimeType = "application/json"
                 }
             };

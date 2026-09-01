@@ -16,7 +16,10 @@ export function getShikiHighlighter(): Promise<Highlighter> {
         'bash',
         'html',
         'css',
-        'yaml'
+        'yaml',
+        'rust',
+        'go',
+        'python'
       ]
     })
   }
@@ -42,7 +45,10 @@ export async function highlightCode(
       'bash',
       'html',
       'css',
-      'yaml'
+      'yaml',
+      'rust',
+      'go',
+      'python'
     ]
 
     const normalizedLang = lang.toLowerCase()
@@ -54,6 +60,12 @@ export async function highlightCode(
       ? 'javascript'
       : normalizedLang === 'cs'
       ? 'csharp'
+      : normalizedLang === 'rs'
+      ? 'rust'
+      : normalizedLang === 'golang'
+      ? 'go'
+      : normalizedLang === 'py'
+      ? 'python'
       : normalizedLang === 'postgresql'
       ? 'sql'
       : 'csharp'
