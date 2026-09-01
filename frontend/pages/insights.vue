@@ -83,14 +83,17 @@ async function handleCategorySelect(catId: number | null) {
   await insightsStore.fetchFeed(catId)
 }
 
+const toast = useToast()
+
 async function handleGenerateSubmit() {
   if (insightsStore.isGenerating) return
   try {
     await insightsStore.generateWithAi(customTopicInput.value, locale.value)
+    toast.success('Đã tạo thẻ kiến thức mới với AI thành công!')
     isGenerateModalOpen.value = false
     customTopicInput.value = ''
-  } catch {
-    // Handled in store
+  } catch (err: any) {
+    toast.error(err?.message || 'Tạo thẻ với AI thất bại.')
   }
 }
 

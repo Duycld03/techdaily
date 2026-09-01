@@ -11,6 +11,12 @@ const { isRecording, durationSeconds, error, startRecording, stopRecording } = u
 const audioBlob = ref<Blob | null>(null)
 const audioUrl = ref<string | null>(null)
 
+const toast = useToast()
+
+watch(error, (err) => {
+  if (err) toast.error(err)
+})
+
 async function handleStop() {
   const blob = await stopRecording()
   if (blob) {
@@ -31,10 +37,7 @@ async function handleStop() {
 
 function handleReset() {
   audioBlob.value = null
-  if (audioUrl.value) {
-    URL.revokeObjectURL(audioUrl.value)
-    audioUrl.value = null
-  }
+  audioUrl.value = null
   emit('update:audio', null, null)
 }
 
@@ -46,20 +49,27 @@ function formatDuration(seconds: number): string {
 </script>
 
 <template>
-  <div class="p-6 rounded-3xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-center transition-colors duration-200">
-    <div class="mb-4">
+  <div class="flex flex-col items-center justify-center p-6 sm:p-8 text-center">
+    <!-- Visual Pulsing Ring -->
+    <div class="relative mb-6">
       <div
+        class="w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300"
         :class="[
-          'w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-lg',
           isRecording
-            ? 'bg-rose-500 text-white animate-pulse shadow-rose-500/30'
+            ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 scale-110'
             : audioBlob
             ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40'
-            : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
         ]"
       >
-        <Mic class="w-7 h-7" />
+        <Mic class="w-10 h-10" :class="{ 'animate-pulse text-rose-600': isRecording }" />
       </div>
+
+      <!-- Outer ripple when recording -->
+      <div
+        v-if="isRecording"
+        class="absolute inset-0 rounded-full bg-rose-500/30 animate-ping pointer-events-none"
+      ></div>
     </div>
 
     <!-- Timer -->
@@ -70,11 +80,6 @@ function formatDuration(seconds: number): string {
     <p class="text-xs text-slate-600 dark:text-slate-400 max-w-xs mb-6 font-medium">
       {{ isRecording ? 'Recording your Senior engineering response... Speak clearly.' : 'Record your spoken answer. Evaluated multimodal by Gemini Flash.' }}
     </p>
-
-    <!-- Error message -->
-    <div v-if="error" class="text-xs text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-xl border border-rose-200 dark:border-rose-900 mb-4">
-      {{ error }}
-    </div>
 
     <!-- Controls -->
     <div class="flex items-center gap-3">

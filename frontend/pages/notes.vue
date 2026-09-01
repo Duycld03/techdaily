@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { Highlighter, Trash2, BookOpen } from 'lucide-vue-next'
 
 const notesStore = useNotesStore()
+const toast = useToast()
 const filterTag = ref<string | null>(null)
 
 onMounted(() => {
@@ -11,7 +12,12 @@ onMounted(() => {
 
 async function handleDelete(id: string) {
   if (confirm('Are you sure you want to delete this highlight?')) {
-    await notesStore.deleteHighlight(id)
+    try {
+      await notesStore.deleteHighlight(id)
+      toast.success('Đã xóa ghi chú.')
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xóa ghi chú.')
+    }
   }
 }
 </script>

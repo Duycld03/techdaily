@@ -12,37 +12,38 @@ const authMode = ref<'login' | 'register'>('login')
 const email = ref('')
 const password = ref('')
 const name = ref('')
-
 const isLoading = ref(false)
-const error = ref<string | null>(null)
-const googleBtnContainer = ref<HTMLDivElement | null>(null)
-
-const googleClientId = (config.public.googleClientId as string) || '982684500709-75solmbterlbdvut85btisallcsf83ef.apps.googleusercontent.com'
 
 onMounted(() => {
-  initGoogleAuth()
+  if (authStore.isAuthenticated) {
+    router.push('/today')
+    return
+  }
+
+  initGoogleButton()
 })
 
-function initGoogleAuth() {
+function initGoogleButton() {
   if (typeof window === 'undefined') return
 
   const interval = setInterval(() => {
     if ((window as any).google?.accounts?.id) {
       clearInterval(interval)
-      const google = (window as any).google
-
-      google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleCredentialResponse
+      ;(window as any).google.accounts.id.initialize({
+        client_id: config.public.googleClientId,
+        callback: handleGoogleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true
       })
-
-      if (googleBtnContainer.value) {
-        google.accounts.id.renderButton(googleBtnContainer.value, {
-          theme: colorMode.value === 'dark' ? 'filled_black' : 'outline',
+      const btnContainer = document.getElementById('google-signin-btn')
+      if (btnContainer) {
+        ;(window as any).google.accounts.id.renderButton(btnContainer, {
+          theme: 'outline',
           size: 'large',
+          width: '100%',
+          text: 'continue_with',
           shape: 'rectangular',
-          width: 320,
-          text: 'signin_with'
+          logo_alignment: 'left'
         })
       }
     }
@@ -55,12 +56,12 @@ async function handleGoogleCredentialResponse(response: any) {
   if (!response?.credential) return
 
   isLoading.value = true
-  error.value = null
   try {
     await authStore.googleLogin(response.credential)
+    toast.success('Đăng nhập Google thành công!')
     router.push('/today')
   } catch (err: any) {
-    error.value = err.message || 'Google authentication failed'
+    toast.error(err.message || 'Google authentication failed')
   } finally {
     isLoading.value = false
   }
@@ -68,22 +69,23 @@ async function handleGoogleCredentialResponse(response: any) {
 
 async function handleSubmit() {
   if (!email.value || !password.value) {
-    error.value = 'Please enter your email and password.'
+    toast.error('Please enter your email and password.')
     return
   }
 
   isLoading.value = true
-  error.value = null
 
   try {
     if (authMode.value === 'login') {
       await authStore.login(email.value, password.value)
+      toast.success('Đăng nhập thành công!')
     } else {
       await authStore.register(email.value, password.value, name.value, locale.value)
+      toast.success('Đăng ký tài khoản thành công!')
     }
     router.push('/today')
   } catch (err: any) {
-    error.value = err.message || 'Authentication failed'
+    toast.error(err.message || 'Authentication failed')
   } finally {
     isLoading.value = false
   }
@@ -110,7 +112,7 @@ async function handleSubmit() {
       <div class="flex p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm md:text-base font-semibold">
         <button
           type="button"
-          @click="authMode = 'login'; error = null"
+          @click="authMode = 'login'"
           :class="[
             'flex-1 py-2.5 rounded-xl transition-all outline-none focus:outline-none',
             authMode === 'login'
@@ -122,7 +124,7 @@ async function handleSubmit() {
         </button>
         <button
           type="button"
-          @click="authMode = 'register'; error = null"
+          @click="authMode = 'register'"
           :class="[
             'flex-1 py-2.5 rounded-xl transition-all outline-none focus:outline-none',
             authMode === 'register'
@@ -132,11 +134,6 @@ async function handleSubmit() {
         >
           {{ $t('auth.register_tab') }}
         </button>
-      </div>
-
-      <!-- Error Alert -->
-      <div v-if="error" class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-sm md:text-base text-rose-700 dark:text-rose-300 text-center font-medium animate-in fade-in">
-        {{ error }}
       </div>
 
       <!-- Email & Password Form -->

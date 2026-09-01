@@ -192,9 +192,12 @@ function handleTextSelection(event: MouseEvent) {
   }
 }
 
+const toast = useToast()
+
 function handleCopySelection() {
   if (!floatingToolbar.value.selectedText) return
   navigator.clipboard.writeText(floatingToolbar.value.selectedText)
+  toast.info('Đã sao chép đoạn văn bản!')
   floatingToolbar.value.visible = false
 }
 

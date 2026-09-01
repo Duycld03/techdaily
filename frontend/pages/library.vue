@@ -4,6 +4,7 @@ import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Tr
 
 const { t, locale } = useI18n()
 const libraryStore = useLibraryStore()
+const toast = useToast()
 
 const searchQuery = ref('')
 const selectedCategory = ref<number | undefined>(undefined)
@@ -25,12 +26,10 @@ const pdfTitle = ref('')
 const pdfCategory = ref(0)
 const isDraggingPdf = ref(false)
 const isUploadingPdf = ref(false)
-const pdfError = ref<string | null>(null)
 
 // Tab 3: URL Crawler state
 const crawlUrlInput = ref('')
 const isCrawling = ref(false)
-const crawlError = ref<string | null>(null)
 const crawlSuccess = ref(false)
 
 // Delete modal state
@@ -90,13 +89,13 @@ async function handleImportSubmit() {
       sourceUrl: importSourceUrl.value || undefined
     })
 
-    // Reset & close
+    toast.success('Nhập tài liệu vào thư viện thành công!')
     importTitle.value = ''
     importContent.value = ''
     importSourceUrl.value = ''
     isImportModalOpen.value = false
-  } catch (err) {
-    // error handled in store
+  } catch (err: any) {
+    toast.error(err.message || 'Lỗi khi nhập tài liệu.')
   }
 }
 
@@ -116,14 +115,13 @@ function onPdfDrop(event: DragEvent) {
 
 function selectPdf(file: File) {
   if (!file.name.toLowerCase().endsWith('.pdf')) {
-    pdfError.value = 'Only .pdf files are supported.'
+    toast.error('Chỉ hỗ trợ tệp định dạng .pdf')
     return
   }
   if (file.size > 209_715_200) {
-    pdfError.value = 'File exceeds the maximum limit of 200 MB.'
+    toast.error('Kích thước tệp vượt quá giới hạn 200 MB.')
     return
   }
-  pdfError.value = null
   pdfFile.value = file
   if (!pdfTitle.value) {
     pdfTitle.value = file.name.replace(/\.pdf$/i, '')
@@ -133,7 +131,6 @@ function selectPdf(file: File) {
 async function handlePdfUpload() {
   if (!pdfFile.value) return
   isUploadingPdf.value = true
-  pdfError.value = null
 
   try {
     const formData = new FormData()
@@ -143,13 +140,14 @@ async function handlePdfUpload() {
     formData.append('language', locale.value || 'vi')
 
     await libraryStore.uploadPdf(formData)
+    toast.success('Tải lên và xử lý PDF thành công!')
 
     // Reset & close
     pdfFile.value = null
     pdfTitle.value = ''
     isImportModalOpen.value = false
   } catch (err: any) {
-    pdfError.value = err.message || 'Failed to process PDF.'
+    toast.error(err.message || 'Không thể xử lý tệp PDF.')
   } finally {
     isUploadingPdf.value = false
   }
@@ -158,7 +156,6 @@ async function handlePdfUpload() {
 async function handleCrawlUrl() {
   if (!crawlUrlInput.value) return
   isCrawling.value = true
-  crawlError.value = null
   crawlSuccess.value = false
 
   try {
@@ -167,10 +164,11 @@ async function handleCrawlUrl() {
     importSourceUrl.value = result.sourceUrl
     importContent.value = result.markdownContent
     crawlSuccess.value = true
+    toast.success('Đã trích xuất nội dung bài viết từ URL!')
     // Switch to markdown tab for preview & confirmation
     activeTab.value = 'markdown'
   } catch (err: any) {
-    crawlError.value = err.message || 'Failed to crawl article from URL.'
+    toast.error(err.message || 'Không thể trích xuất bài viết từ URL.')
   } finally {
     isCrawling.value = false
   }
@@ -186,10 +184,11 @@ async function confirmDeleteBook() {
   isDeleting.value = true
   try {
     await libraryStore.deleteBook(bookToDelete.value.id)
+    toast.success('Đã xóa tài liệu khỏi thư viện.')
     isDeleteModalOpen.value = false
     bookToDelete.value = null
-  } catch (err) {
-    // error handled in store
+  } catch (err: any) {
+    toast.error(err.message || 'Không thể xóa tài liệu.')
   } finally {
     isDeleting.value = false
   }
@@ -496,10 +495,6 @@ async function confirmDeleteBook() {
               </div>
             </div>
 
-            <div v-if="pdfError" class="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs font-medium">
-              {{ pdfError }}
-            </div>
-
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.title_label') }}</label>
@@ -570,10 +565,6 @@ async function confirmDeleteBook() {
                   <span>{{ isCrawling ? $t('library.fetching_url') : $t('library.fetch_url_btn') }}</span>
                 </button>
               </div>
-            </div>
-
-            <div v-if="crawlError" class="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 text-xs font-medium">
-              {{ crawlError }}
             </div>
 
             <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-2">
