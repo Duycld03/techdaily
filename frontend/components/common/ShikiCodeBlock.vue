@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Copy, Check } from 'lucide-vue-next'
+import { highlightCode } from '~/utils/shikiHighlighter'
 
 const props = withDefaults(
   defineProps<{
@@ -89,6 +90,28 @@ const displayLabel = computed(() => {
   }
 })
 
+const highlightedHtml = ref('')
+
+async function updateHighlighting() {
+  if (!props.code) {
+    highlightedHtml.value = ''
+    return
+  }
+  const html = await highlightCode(props.code, detectedLanguage.value)
+  highlightedHtml.value = html
+}
+
+onMounted(() => {
+  updateHighlighting()
+})
+
+watch(
+  () => [props.code, detectedLanguage.value],
+  () => {
+    updateHighlighting()
+  }
+)
+
 const copied = ref(false)
 
 async function copyCode() {
@@ -127,7 +150,31 @@ async function copyCode() {
       </button>
     </div>
 
-    <!-- Code Body -->
-    <pre class="p-4 sm:p-5 overflow-x-auto leading-relaxed text-slate-200 selection:bg-indigo-500/30"><code>{{ code }}</code></pre>
+    <!-- Highlighted Code Body -->
+    <div
+      v-if="highlightedHtml"
+      class="shiki-container p-4 sm:p-5 overflow-x-auto text-xs sm:text-sm leading-relaxed"
+      v-html="highlightedHtml"
+    ></div>
+    <pre
+      v-else
+      class="p-4 sm:p-5 overflow-x-auto leading-relaxed text-slate-200 selection:bg-indigo-500/30"
+    ><code>{{ code }}</code></pre>
   </div>
 </template>
+
+<style>
+.shiki-container pre.shiki {
+  background-color: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: visible !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+.shiki-container code {
+  font-family: inherit !important;
+  background-color: transparent !important;
+}
+</style>
