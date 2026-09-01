@@ -13,9 +13,20 @@ const props = defineProps<{
 
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
 
-const renderedDocHtml = computed(() => {
-  const content = props.documentChunk?.originalTextMarkdown || props.topic.deepDiveMarkdown || props.topic.summary
+const renderedDeepDiveHtml = computed(() => {
+  const content = props.topic.deepDiveMarkdown || props.documentChunk?.originalTextMarkdown || props.topic.summary || ''
   return md.render(content)
+})
+
+const renderedChunkHtml = computed(() => {
+  if (
+    props.documentChunk?.originalTextMarkdown &&
+    props.topic.deepDiveMarkdown &&
+    props.documentChunk.originalTextMarkdown !== props.topic.deepDiveMarkdown
+  ) {
+    return md.render(props.documentChunk.originalTextMarkdown)
+  }
+  return ''
 })
 
 // Floating Action Bar state
@@ -107,7 +118,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col bg-white/60 dark:bg-slate-950/40 overflow-y-auto p-4 sm:p-6 md:p-9 transition-colors duration-200" @mouseup="handleMouseUp">
+  <div class="h-full bg-white/60 dark:bg-slate-950/40 overflow-y-auto p-4 sm:p-6 md:p-9 transition-colors duration-200" @mouseup="handleMouseUp">
     <!-- Header info -->
     <div class="mb-5 sm:mb-6">
       <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-2">
@@ -143,8 +154,17 @@ onUnmounted(() => {
 
     <div class="w-full h-px bg-slate-200 dark:bg-slate-800/80 mb-5 sm:mb-6"></div>
 
-    <!-- Reading Content (Rendered Markdown) -->
-    <div ref="readerContentRef" class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200 max-w-full overflow-x-hidden break-words" v-html="renderedDocHtml"></div>
+    <!-- Reading Content (Rendered Architectural Deep Dive) -->
+    <div ref="readerContentRef" class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200 max-w-full overflow-x-hidden break-words space-y-4" v-html="renderedDeepDiveHtml"></div>
+
+    <!-- Authoritative Source Excerpt (if distinct) -->
+    <div v-if="renderedChunkHtml" class="mt-6 p-4 sm:p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-2">
+      <div class="flex items-center gap-2 text-xs font-bold tracking-wider text-emerald-700 dark:text-emerald-400">
+        <BookOpen class="w-3.5 h-3.5" />
+        <span>{{ $t('today.source_context') }}</span>
+      </div>
+      <div class="markdown-body text-xs sm:text-sm text-slate-700 dark:text-slate-300" v-html="renderedChunkHtml"></div>
+    </div>
 
     <!-- Benchmark Snippet (if available) -->
     <div v-if="topic.benchmarkSnippet" class="mt-6 p-4.5 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs sm:text-sm text-brand-700 dark:text-brand-300 shadow-sm">

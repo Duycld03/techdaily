@@ -15,7 +15,8 @@ import {
   Search,
   ExternalLink,
   Plus,
-  X
+  X,
+  Lightbulb
 } from 'lucide-vue-next'
 import { useInsightsStore } from '~/stores/useInsightsStore'
 import MarkdownIt from 'markdown-it'
@@ -131,7 +132,7 @@ function getCategoryBadge(cat: number) {
           <button
             @click="insightsStore.shuffle()"
             class="flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm active:scale-95"
-            :title="$t('insights.shuffle_hint')"
+            :title="$t('insights.shuffle')"
           >
             <Shuffle class="w-3.5 h-3.5 text-indigo-500" />
             <span>{{ $t('insights.shuffle') }}</span>
