@@ -73,7 +73,19 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 
 ---
 
-## 5. Anti-Patterns to NEVER Repeat
+## 5. Infinite Tech Insights Feed & AI Synthesis Invariants
+1. **AI Output Token Budget & Reasoning Resilience:**
+   - LLM generation endpoints (e.g. Gemini 3.6 Flash) MUST specify a sufficient `maxOutputTokens` budget (at least **8,192 tokens**) to account for internal reasoning thought tokens and prevent truncated JSON structures.
+2. **Language Strictness in AI Synthesis:**
+   - If the user explicitly mentions a target programming language (e.g., Rust, Go, Python, TypeScript, C#, SQL, Zig), the AI generator MUST generate valid, idiomatic code snippets (`problemSnippet`, `solutionSnippet`) written strictly in that requested language.
+3. **Syntax Highlighter Tag Priority:**
+   - Shiki code block language detection MUST check explicit tags (e.g., `#rust`, `#go`, `#python`, `#sql`, `#vue`) before falling back to generic token regexes to avoid false positives (e.g., Rust `let mut` vs JavaScript `let`).
+4. **Header Banner & Reader Theme Parity:**
+   - All banner headers, progress trackers, and reader cards MUST dynamically adapt between Light Mode (`bg-gradient-to-br from-indigo-50/80 via-white to-sky-50/50 text-slate-900`) and Dark Mode (`dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950 dark:text-white`).
+
+---
+
+## 6. Anti-Patterns to NEVER Repeat
 
 | Anti-Pattern | Why it is Forbidden | Correct Approach |
 | :--- | :--- | :--- |
@@ -83,3 +95,5 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 | **Unsanitized PDF Binary Ingestion** | Null bytes `0x00` in raw PDF streams crash PostgreSQL database with error 22021 | Sanitize control characters before saving entities in EF Core |
 | **Inline Composable Invocations** | Calling `useI18n()` inside async event handlers throws Vue lifecycle errors | Destructure composables at top level of `<script setup>` |
 | **Hardcoded Dark Theme Classes** | Breaks light mode and makes UI illegible in bright environments | Dual Tailwind classes (`dark:bg-slate-950 bg-slate-50`) synced with `@nuxtjs/color-mode` |
+| **Hardcoded C# Language in Code Blocks** | Causes SQL, Rust, Python, and TypeScript to be labeled and styled as C# | Dynamic language inference + explicit tag priority with Shiki highlighter |
+| **Low Token Budget for AI Reasoning Models** | Causes `MAX_TOKENS` truncation and broken JSON fallbacks | Set `maxOutputTokens >= 8192` for structured JSON output |

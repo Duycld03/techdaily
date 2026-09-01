@@ -45,12 +45,19 @@ TechDaily is built to solve two critical developer challenges:
 - **1-Click Code Copying:** Copy any code snippet directly to clipboard with visual checkmark feedback.
 - **Compact Bottom Navigation Bar:** Clean, balanced navigation footer with progress indicator, previous/next slice shortcuts, and document completion badges.
 
-### 4. 🧠 Spaced Repetition & Notes (`/review` & `/notes`)
-- **SM-2 Anki Flashcards:** Automatically resurface concepts you struggled with after 3, 7, and 21 days (encapsulated domain logic).
-- **Searchable Highlights:** Centralized vault of all your highlighted notes and code snippets.
+### 5. 🗺️ 30-Day Senior Fullstack Roadmap (`/roadmap`)
+- **4 Core Technical Pillars:** Frontend & Browser Internals, .NET 10 & C# 13 Runtime Internals, PostgreSQL 17 Storage Engine, and Distributed Systems Architecture.
+- **Skill Tree & Milestone Progression:** Daily unlockable modules with instant drill scores, completed days counter, and sprint progress tracking.
+- **Strict Authentication Guard:** Requires verified JWT session with seamless auto-redirect to `/login` upon logout.
 
-### 5. 🌙 Dark Mode & 🌐 Internationalization (i18n)
-- **Dark Mode First:** Full dark/light theme switching with `@nuxtjs/color-mode` and synchronized syntax highlighting for night study sessions.
+### 6. ✨ Infinite Senior Tech Insights Feed (`/insights`)
+- **Bite-Sized Architectural Lessons:** Curated feed of Senior Anti-Patterns vs Idiomatic Solutions across C#, Rust, Go, Python, TypeScript, Vue 3, and PostgreSQL.
+- **Deep Under-The-Hood Breakdown:** Detailed mechanics explaining memory layout, lock contention, compiler lowerings, and OS syscalls with benchmark statistics.
+- **Multimodal AI Synthesis:** Generate on-demand, deep-dive insights on any custom technology or topic using Gemini 3.6 Flash.
+- **IDE-Grade Shiki Highlighting & Navigation:** Dynamic multi-language theme (`one-dark-pro`), 1-click code copying, category filtering, and `[Space]`/`[→]` keyboard navigation.
+
+### 7. 🌙 Dark/Light Mode & 🌐 Internationalization (i18n)
+- **Responsive Dual Theming:** Full dark/light theme switching with `@nuxtjs/color-mode` featuring balanced header banners and syntax highlighting.
 - **Multilingual UI:** Full i18n support for English (`en-US`) and Vietnamese (`vi-VN`) via `@nuxtjs/i18n`.
 
 ---
