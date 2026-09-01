@@ -19,9 +19,15 @@ if ! docker ps --format '{{.Names}}' | grep -q 'techdaily_postgres'; then
   docker compose up -d db
 fi
 
+# Get Local IP address for mobile access
+LOCAL_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+if [ -z "$LOCAL_IP" ]; then
+  LOCAL_IP="localhost"
+fi
+
 # 2. Start Backend API with Hot Reload
-echo "🚀 Starting ASP.NET Core API on http://localhost:5000..."
-dotnet watch --project backend/src/TechDaily.Api --urls "http://localhost:5000" &
+echo "🚀 Starting ASP.NET Core API on http://0.0.0.0:5000..."
+dotnet watch --project backend/src/TechDaily.Api --urls "http://0.0.0.0:5000" &
 BACKEND_PID=$!
 
 # Wait for backend port to be open
@@ -30,9 +36,10 @@ until curl -s http://localhost:5000/health > /dev/null 2>&1 || [ ! -e /proc/$BAC
   sleep 1
 done
 
-# 3. Start Frontend Nuxt 4 with HMR
-echo "✨ Starting Nuxt 4 Frontend on http://localhost:3000..."
-npm --prefix frontend run dev
+# 3. Start Frontend Nuxt 4 with HMR (binding to 0.0.0.0)
+echo "✨ Starting Nuxt 4 Frontend on http://0.0.0.0:3000..."
+echo "📱 Mobile Access URL: http://${LOCAL_IP}:3000"
+npm --prefix frontend run dev -- --host 0.0.0.0
 
 # Wait for background jobs
 wait

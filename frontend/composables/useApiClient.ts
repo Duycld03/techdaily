@@ -1,6 +1,22 @@
 export function useApiClient() {
   const config = useRuntimeConfig()
-  const baseUrl = config.public.apiBaseUrl as string
+
+  function getBaseUrl(): string {
+    const configuredUrl = config.public.apiBaseUrl as string
+    // If a custom API URL is explicitly configured (e.g. in production: https://api.yourdomain.com), use it directly
+    if (configuredUrl && configuredUrl !== 'http://localhost:5000') {
+      return configuredUrl
+    }
+    // In local development / LAN environment, adapt dynamically to current hostname
+    if (import.meta.client && typeof window !== 'undefined' && window.location?.hostname) {
+      const protocol = window.location.protocol || 'http:'
+      const hostname = window.location.hostname
+      return `${protocol}//${hostname}:5000`
+    }
+    return configuredUrl || 'http://localhost:5000'
+  }
+
+  const baseUrl = getBaseUrl()
 
   function getAuthToken(): string | null {
     if (import.meta.client) {
