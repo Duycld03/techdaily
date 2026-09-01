@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Sparkles, X, Check, Copy } from 'lucide-vue-next'
 
 const props = withDefaults(defineProps<{
@@ -17,10 +17,16 @@ const emit = defineEmits<{
 
 const focusStore = useDailyFocusStore()
 const { locale } = useI18n()
+const { render: renderMarkdown } = useMarkdownRenderer()
 
 const explanation = ref<string | null>(null)
 const isLoading = ref(false)
 const copied = ref(false)
+
+const renderedExplanation = computed(() => {
+  if (!explanation.value) return ''
+  return renderMarkdown(explanation.value)
+})
 
 async function loadExplanation() {
   isLoading.value = true
@@ -84,9 +90,10 @@ function copyText() {
         </div>
 
         <div v-else class="space-y-3">
-          <p class="text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-slate-950/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80">
-            {{ explanation }}
-          </p>
+          <div
+            class="prose prose-slate dark:prose-invert max-w-none text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-slate-950/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80"
+            v-html="renderedExplanation"
+          />
         </div>
       </div>
 

@@ -66,7 +66,7 @@ function handleMouseUp(e: MouseEvent) {
   }
 
   const text = selection.toString().trim()
-  if (text.length >= 2 && text.length <= 80) {
+  if (text.length >= 2 && text.length <= 500) {
     const range = selection.getRangeAt(0)
     const rect = range.getBoundingClientRect()
 
@@ -77,7 +77,7 @@ function handleMouseUp(e: MouseEvent) {
         x: Math.max(10, rect.left + rect.width / 2),
         y: Math.max(10, rect.top - 46),
         text,
-        context: selection.anchorNode?.textContent?.slice(0, 200) || text
+        context: selection.anchorNode?.textContent?.slice(0, 300) || text
       }
       return
     }

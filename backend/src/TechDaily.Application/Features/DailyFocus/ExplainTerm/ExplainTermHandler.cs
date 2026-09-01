@@ -21,7 +21,7 @@ public class ExplainTermValidator : AbstractValidator<ExplainTermRequest>
 {
     public ExplainTermValidator()
     {
-        RuleFor(x => x.Term).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Term).NotEmpty().MaximumLength(500);
         RuleFor(x => x.Locale).NotEmpty().MaximumLength(10);
     }
 }

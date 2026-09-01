@@ -178,7 +178,7 @@ function handleTextSelection(event: MouseEvent) {
   }
 
   const selectedStr = selection.toString().trim()
-  if (selectedStr.length < 2 || selectedStr.length > 200) {
+  if (selectedStr.length < 2 || selectedStr.length > 500) {
     floatingToolbar.value.visible = false
     return
   }
