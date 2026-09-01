@@ -28,3 +28,5 @@ import { vi } from 'vitest'
   value: 'dark',
   preference: 'dark'
 })
+
+;(globalThis as any).navigateTo = vi.fn()

@@ -77,6 +77,9 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.removeItem('techdaily_token')
       localStorage.removeItem('techdaily_user')
     }
+    if (typeof navigateTo === 'function') {
+      navigateTo('/login')
+    }
   }
 
   return {
