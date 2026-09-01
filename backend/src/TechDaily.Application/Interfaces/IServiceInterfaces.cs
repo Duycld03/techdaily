@@ -51,3 +51,12 @@ public interface IAudioStorageService
 
     string GetAudioUrl(string relativePath);
 }
+
+public interface ITechInsightGenerator
+{
+    Task<Result<TechDaily.Domain.Entities.TechInsight>> GenerateInsightAsync(
+        TechDaily.Domain.Enums.Category? preferredCategory,
+        string? preferredTopic,
+        string locale = "en",
+        CancellationToken cancellationToken = default);
+}

@@ -152,6 +152,8 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("PostgreSQL database migrations applied successfully.");
             await CurriculumSeeder.SeedAsync(context);
             logger.LogInformation("Master 30-Day Curriculum seeded successfully.");
+            await TechInsightsSeeder.SeedAsync(context);
+            logger.LogInformation("Tech Insights Catalog seeded successfully.");
         }
     }
     catch (Exception ex)
@@ -164,6 +166,10 @@ using (var scope = app.Services.CreateScope())
 app.MapGroup("/api/v1/curriculum")
     .WithTags("Curriculum Roadmap")
     .MapCurriculumEndpoints();
+
+app.MapGroup("/api/v1/insights")
+    .WithTags("Tech Insights Feed")
+    .MapInsightsEndpoints();
 
 app.MapGroup("/api/v1/daily")
     .WithTags("Daily Focus Hub")

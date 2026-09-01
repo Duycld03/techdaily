@@ -30,6 +30,10 @@
     <None Update="Data\curriculum-30-days.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <EmbeddedResource Include="Data\tech-insights.json" />
+    <None Update="Data\tech-insights.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,397 @@
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import {
+  Sparkles,
+  Shuffle,
+  ChevronLeft,
+  ChevronRight,
+  Bookmark,
+  BookmarkCheck,
+  Zap,
+  CheckCircle2,
+  XCircle,
+  Cpu,
+  Layers,
+  Search,
+  ExternalLink,
+  Plus,
+  X
+} from 'lucide-vue-next'
+import { useInsightsStore } from '~/stores/useInsightsStore'
+import ShikiCodeBlock from '~/components/common/ShikiCodeBlock.vue'
+
+const { locale } = useI18n()
+const insightsStore = useInsightsStore()
+
+const isGenerateModalOpen = ref(false)
+const customTopicInput = ref('')
+const activeCodeTab = ref<'solution' | 'problem'>('solution')
+
+const categories = [
+  { id: null, label: 'insights.all_categories' },
+  { id: 0, label: 'insights.cat_frontend' },
+  { id: 1, label: 'insights.cat_dotnet' },
+  { id: 2, label: 'insights.cat_database' },
+  { id: 3, label: 'insights.cat_system' }
+]
+
+onMounted(async () => {
+  await insightsStore.fetchFeed()
+  window.addEventListener('keydown', handleKeyDown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+})
+
+function handleKeyDown(e: KeyboardEvent) {
+  // Prevent keydown during text input in modal
+  if (isGenerateModalOpen.value || ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+    return
+  }
+
+  if (e.code === 'Space' || e.key === 'ArrowRight') {
+    e.preventDefault()
+    if (insightsStore.hasNext) {
+      insightsStore.nextInsight()
+    }
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault()
+    if (insightsStore.hasPrev) {
+      insightsStore.prevInsight()
+    }
+  }
+}
+
+async function handleCategorySelect(catId: number | null) {
+  await insightsStore.fetchFeed(catId)
+}
+
+async function handleGenerateSubmit() {
+  if (insightsStore.isGenerating) return
+  try {
+    await insightsStore.generateWithAi(customTopicInput.value, locale.value)
+    isGenerateModalOpen.value = false
+    customTopicInput.value = ''
+  } catch {
+    // Handled in store
+  }
+}
+
+function getCategoryBadge(cat: number) {
+  switch (cat) {
+    case 0:
+      return { text: 'Frontend & Browser', color: 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800' }
+    case 1:
+      return { text: '.NET 10 & C# 13', color: 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800' }
+    case 2:
+      return { text: 'PostgreSQL 17 Engine', color: 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' }
+    case 3:
+      return { text: 'System Design & Distributed', color: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' }
+    default:
+      return { text: 'Core Architecture', color: 'bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800' }
+  }
+}
+</script>
+
+<template>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6 animate-in fade-in duration-300">
+    <!-- Header Banner -->
+    <div class="p-6 sm:p-7 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950 border border-slate-800 text-white shadow-xl relative overflow-hidden">
+      <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div class="space-y-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs font-bold tracking-wide uppercase">
+            <Sparkles class="w-3.5 h-3.5 text-indigo-400" />
+            <span>{{ $t('insights.badge') }}</span>
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+            {{ $t('insights.title') }}
+          </h1>
+          <p class="text-slate-300 text-sm sm:text-base leading-relaxed max-w-xl">
+            {{ $t('insights.subtitle') }}
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2.5 shrink-0">
+          <button
+            @click="insightsStore.shuffle()"
+            class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all border border-slate-700 shadow-sm active:scale-95"
+            :title="$t('insights.shuffle')"
+          >
+            <Shuffle class="w-4 h-4 text-indigo-400" />
+            <span>{{ $t('insights.shuffle') }}</span>
+          </button>
+
+          <button
+            @click="isGenerateModalOpen = true"
+            class="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-brand-600 hover:from-indigo-500 hover:to-brand-500 text-white text-xs font-bold transition-all shadow-md shadow-indigo-500/20 active:scale-95"
+          >
+            <Plus class="w-4 h-4" />
+            <span>{{ $t('insights.generate_ai') }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Filter Bar -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <button
+        v-for="cat in categories"
+        :key="String(cat.id)"
+        @click="handleCategorySelect(cat.id)"
+        :class="[
+          'px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 border',
+          insightsStore.selectedCategory === cat.id
+            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 border-transparent shadow-sm'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+        ]"
+      >
+        {{ $t(cat.label) }}
+      </button>
+    </div>
+
+    <!-- Main Card Container -->
+    <div v-if="insightsStore.isLoading" class="flex flex-col items-center justify-center py-20 space-y-4">
+      <div class="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-600 rounded-full animate-spin"></div>
+      <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading senior technical insights...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div
+      v-else-if="!insightsStore.currentInsight"
+      class="p-12 text-center rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4"
+    >
+      <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center mx-auto text-indigo-600 dark:text-indigo-400">
+        <Sparkles class="w-6 h-6" />
+      </div>
+      <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ $t('insights.empty_title') }}</h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ $t('insights.empty_desc') }}</p>
+      <button
+        @click="isGenerateModalOpen = true"
+        class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 shadow-md shadow-indigo-500/20 transition-all"
+      >
+        {{ $t('insights.generate_ai') }}
+      </button>
+    </div>
+
+    <!-- Active Insight Card -->
+    <div
+      v-else
+      class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300"
+    >
+      <!-- Card Top Header -->
+      <div class="p-6 sm:p-8 border-b border-slate-100 dark:border-slate-800/80 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span :class="['px-3 py-1 rounded-full text-xs font-bold border', getCategoryBadge(insightsStore.currentInsight.category).color]">
+              {{ getCategoryBadge(insightsStore.currentInsight.category).text }}
+            </span>
+
+            <span
+              v-for="tag in insightsStore.currentInsight.tags"
+              :key="tag"
+              class="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[11px] font-mono font-medium"
+            >
+              #{{ tag }}
+            </span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <!-- Benchmark Badge -->
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+              <Zap class="w-3.5 h-3.5 fill-emerald-500 text-emerald-500" />
+              <span>{{ insightsStore.currentInsight.benchmarkStats }}</span>
+            </div>
+
+            <!-- Bookmark Button -->
+            <button
+              @click="insightsStore.toggleBookmark(insightsStore.currentInsight.id)"
+              class="p-2 rounded-xl text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              :title="$t('insights.save_bookmark')"
+            >
+              <BookmarkCheck v-if="insightsStore.currentInsight.isBookmarkedByUser" class="w-5 h-5 text-indigo-600 dark:text-indigo-400 fill-indigo-600/20" />
+              <Bookmark v-else class="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-snug">
+          {{ insightsStore.currentInsight.title }}
+        </h2>
+
+        <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+          {{ insightsStore.currentInsight.summaryMarkdown }}
+        </p>
+      </div>
+
+      <!-- Code Snippets Showcase -->
+      <div class="p-6 sm:p-8 bg-slate-50/60 dark:bg-slate-950/40 border-b border-slate-100 dark:border-slate-800/80 space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <button
+              @click="activeCodeTab = 'solution'"
+              :class="[
+                'flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all',
+                activeCodeTab === 'solution'
+                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+              ]"
+            >
+              <CheckCircle2 class="w-4 h-4 text-emerald-500" />
+              <span>{{ $t('insights.solution_tab') }}</span>
+            </button>
+
+            <button
+              @click="activeCodeTab = 'problem'"
+              :class="[
+                'flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all',
+                activeCodeTab === 'problem'
+                  ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+              ]"
+            >
+              <XCircle class="w-4 h-4 text-rose-500" />
+              <span>{{ $t('insights.problem_tab') }}</span>
+            </button>
+          </div>
+
+          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider hidden sm:inline">
+            Side-by-side Architectural Comparison
+          </span>
+        </div>
+
+        <!-- Code Block Render -->
+        <div class="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
+          <ShikiCodeBlock
+            v-if="activeCodeTab === 'solution'"
+            :code="insightsStore.currentInsight.solutionSnippet"
+            language="csharp"
+          />
+          <ShikiCodeBlock
+            v-else
+            :code="insightsStore.currentInsight.problemSnippet"
+            language="csharp"
+          />
+        </div>
+      </div>
+
+      <!-- Under The Hood Deep Dive -->
+      <div class="p-6 sm:p-8 space-y-4">
+        <div class="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-base">
+          <Cpu class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <span>{{ $t('insights.underthehood_title') }}</span>
+        </div>
+
+        <div class="prose prose-sm dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed space-y-2">
+          <div class="whitespace-pre-line text-sm leading-relaxed">
+            {{ insightsStore.currentInsight.underTheHoodMarkdown }}
+          </div>
+        </div>
+
+        <div v-if="insightsStore.currentInsight.sourceUrl" class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-400">
+          <span>Official Documentation & Architecture Benchmark:</span>
+          <a
+            :href="insightsStore.currentInsight.sourceUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+          >
+            <span>Learn More</span>
+            <ExternalLink class="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
+
+      <!-- Navigation & Action Footer -->
+      <div class="p-5 sm:p-6 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <!-- Counter and Keyboard Hint -->
+        <div class="flex items-center gap-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <span>
+            {{ $t('insights.card_counter', { current: insightsStore.currentIndex + 1, total: insightsStore.insights.length }) }}
+          </span>
+          <span class="hidden sm:inline-block w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+          <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300">
+            {{ $t('insights.keyboard_hint') }}
+          </span>
+        </div>
+
+        <!-- Prev / Next Controls -->
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <button
+            @click="insightsStore.prevInsight()"
+            :disabled="!insightsStore.hasPrev"
+            class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-all"
+          >
+            <ChevronLeft class="w-4 h-4" />
+            <span>{{ $t('insights.prev') }}</span>
+          </button>
+
+          <button
+            @click="insightsStore.nextInsight()"
+            :disabled="!insightsStore.hasNext"
+            class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-500/20 disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95"
+          >
+            <span>{{ $t('insights.next') }}</span>
+            <ChevronRight class="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Generator Modal Dialog -->
+    <div
+      v-if="isGenerateModalOpen"
+      class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+    >
+      <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-2xl animate-in zoom-in-95">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 font-black text-lg text-slate-900 dark:text-white">
+            <Sparkles class="w-5 h-5 text-indigo-500" />
+            <span>{{ $t('insights.generate_modal_title') }}</span>
+          </div>
+          <button
+            @click="isGenerateModalOpen = false"
+            class="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+          >
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          {{ $t('insights.generate_modal_desc') }}
+        </p>
+
+        <div class="space-y-2">
+          <input
+            v-model="customTopicInput"
+            @keyup.enter="handleGenerateSubmit"
+            type="text"
+            :placeholder="$t('insights.generate_topic_placeholder')"
+            class="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            autofocus
+          />
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button
+            @click="isGenerateModalOpen = false"
+            class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            Cancel
+          </button>
+
+          <button
+            @click="handleGenerateSubmit"
+            :disabled="insightsStore.isGenerating"
+            class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-500/20 disabled:opacity-50 transition-all"
+          >
+            <div v-if="insightsStore.isGenerating" class="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+            <span>{{ insightsStore.isGenerating ? $t('insights.generating_btn') : $t('insights.generate_btn') }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

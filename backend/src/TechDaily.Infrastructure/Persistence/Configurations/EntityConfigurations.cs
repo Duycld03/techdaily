@@ -284,3 +284,32 @@ public class TermExplanationCacheConfiguration : IEntityTypeConfiguration<TermEx
         builder.HasIndex(t => new { t.Term, t.Locale });
     }
 }
+
+public class TechInsightConfiguration : IEntityTypeConfiguration<TechInsight>
+{
+    public void Configure(EntityTypeBuilder<TechInsight> builder)
+    {
+        builder.HasKey(t => t.Id);
+        builder.Property(t => t.Slug).HasMaxLength(255).IsRequired();
+        builder.HasIndex(t => t.Slug).IsUnique();
+        builder.Property(t => t.Title).HasMaxLength(255).IsRequired();
+        builder.Property(t => t.Category).IsRequired();
+        builder.Property(t => t.SummaryMarkdown).IsRequired();
+        builder.Property(t => t.ProblemSnippet).IsRequired();
+        builder.Property(t => t.SolutionSnippet).IsRequired();
+        builder.Property(t => t.UnderTheHoodMarkdown).IsRequired();
+        builder.Property(t => t.BenchmarkStats).HasMaxLength(255);
+        builder.Property(t => t.SourceUrl).HasMaxLength(500);
+        builder.Property(t => t.LikesCount).HasDefaultValue(0);
+        builder.Property(t => t.BookmarksCount).HasDefaultValue(0);
+        builder.Property(t => t.IsPublished).HasDefaultValue(true);
+
+        builder.Property(t => t.Tags)
+            .HasConversion(
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
+
+        builder.HasIndex(t => new { t.Category, t.IsPublished });
+    }
+}

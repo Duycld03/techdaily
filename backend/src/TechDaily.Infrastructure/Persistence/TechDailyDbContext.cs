@@ -24,6 +24,7 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
     public DbSet<StreakRecord> StreakRecords => Set<StreakRecord>();
     public DbSet<UserHighlight> UserHighlights => Set<UserHighlight>();
     public DbSet<TermExplanationCache> TermExplanationCaches => Set<TermExplanationCache>();
+    public DbSet<TechInsight> TechInsights => Set<TechInsight>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,6 +56,18 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
                 .HasConversion(
                     v => v == null ? null : string.Join(";", v.ToArray()),
                     s => s == null ? null : new Pgvector.Vector(s.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(float.Parse).ToArray()));
+
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                var properties = entityType.ClrType.GetProperties()
+                    .Where(p => p.PropertyType == typeof(DateTimeOffset) || p.PropertyType == typeof(DateTimeOffset?));
+                foreach (var property in properties)
+                {
+                    modelBuilder.Entity(entityType.ClrType)
+                        .Property(property.Name)
+                        .HasConversion(new Microsoft.EntityFrameworkCore.Storage.ValueConversion.DateTimeOffsetToBinaryConverter());
+                }
+            }
         }
 
         // Global query filter for soft delete

@@ -16,6 +16,7 @@ public interface ITechDailyDbContext
     DbSet<StreakRecord> StreakRecords { get; }
     DbSet<UserHighlight> UserHighlights { get; }
     DbSet<TermExplanationCache> TermExplanationCaches { get; }
+    DbSet<TechInsight> TechInsights { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
