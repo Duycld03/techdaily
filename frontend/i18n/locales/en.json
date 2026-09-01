@@ -180,6 +180,7 @@
     "telegram_placeholder": "e.g. 123456789 (optional)",
     "save_btn": "Save Profile Changes",
     "saving": "Saving...",
+    "save_success": "Profile updated successfully.",
     "current_password": "Current Password",
     "new_password": "New Password (at least 6 chars)",
     "confirm_password": "Confirm New Password",

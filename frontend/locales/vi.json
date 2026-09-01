@@ -180,6 +180,7 @@
     "telegram_placeholder": "Ví dụ: 123456789 (không bắt buộc)",
     "save_btn": "Lưu Thay Đổi Hồ Sơ",
     "saving": "Đang lưu...",
+    "save_success": "Cập nhật hồ sơ thành công.",
     "current_password": "Mật Khẩu Hiện Tại",
     "new_password": "Mật Khẩu Mới (ít nhất 6 ký tự)",
     "confirm_password": "Xác Nhận Mật Khẩu Mới",

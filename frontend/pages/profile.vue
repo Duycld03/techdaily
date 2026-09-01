@@ -64,6 +64,12 @@ onMounted(async () => {
   }
 })
 
+watch(activeTab, () => {
+  profileStore.successMessage = null
+  profileStore.error = null
+  passwordError.value = null
+})
+
 async function handleProfileSave() {
   try {
     await profileStore.updateProfile({
@@ -73,6 +79,7 @@ async function handleProfileSave() {
       preferredLocale: preferredLocale.value,
       telegramChatId: telegramChatId.value
     })
+    profileStore.successMessage = t('profile.save_success')
   } catch {
     // handled in store
   }
@@ -92,6 +99,7 @@ async function handlePasswordChange() {
 
   try {
     await profileStore.changePassword(currentPassword.value, newPassword.value)
+    profileStore.successMessage = t('profile.password_set_success')
     currentPassword.value = ''
     newPassword.value = ''
     confirmPassword.value = ''
@@ -310,10 +318,6 @@ async function handlePasswordChange() {
       <form v-else @submit.prevent="handlePasswordChange" class="space-y-5">
         <div v-if="passwordError" class="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-sm text-rose-800 dark:text-rose-300 text-center font-semibold">
           {{ passwordError }}
-        </div>
-
-        <div v-if="profileStore.successMessage" class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-sm text-emerald-800 dark:text-emerald-300 text-center font-semibold animate-in fade-in">
-          {{ profileStore.successMessage }}
         </div>
 
         <div v-if="profileStore.profile?.hasPassword">
