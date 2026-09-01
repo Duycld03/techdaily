@@ -18,7 +18,6 @@ import {
   X
 } from 'lucide-vue-next'
 import { useInsightsStore } from '~/stores/useInsightsStore'
-import ShikiCodeBlock from '~/components/common/ShikiCodeBlock.vue'
 
 const { locale } = useI18n()
 const insightsStore = useInsightsStore()
@@ -264,12 +263,12 @@ function getCategoryBadge(cat: number) {
 
         <!-- Code Block Render -->
         <div class="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm">
-          <ShikiCodeBlock
+          <CommonShikiCodeBlock
             v-if="activeCodeTab === 'solution'"
             :code="insightsStore.currentInsight.solutionSnippet"
             language="csharp"
           />
-          <ShikiCodeBlock
+          <CommonShikiCodeBlock
             v-else
             :code="insightsStore.currentInsight.problemSnippet"
             language="csharp"
