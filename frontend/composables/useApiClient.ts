@@ -7,11 +7,20 @@ export function useApiClient() {
     if (configuredUrl && configuredUrl !== 'http://localhost:5000') {
       return configuredUrl
     }
-    // In local development / LAN environment, adapt dynamically to current hostname
-    if (import.meta.client && typeof window !== 'undefined' && window.location?.hostname) {
-      const protocol = window.location.protocol || 'http:'
-      const hostname = window.location.hostname
-      return `${protocol}//${hostname}:5000`
+    // In browser environment
+    if (import.meta.client && typeof window !== 'undefined') {
+      // Local development on port 3000 -> Backend is on port 5000
+      if (window.location?.port === '3000') {
+        const protocol = window.location.protocol || 'http:'
+        const hostname = window.location.hostname
+        return `${protocol}//${hostname}:5000`
+      }
+      // In production behind Nginx reverse proxy (port 80 or 443) -> relative path
+      return ''
+    }
+    // Server-side inside Docker / SSR
+    if (process.env.API_INTERNAL_URL) {
+      return process.env.API_INTERNAL_URL
     }
     return configuredUrl || 'http://localhost:5000'
   }

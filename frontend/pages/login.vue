@@ -13,6 +13,7 @@ const email = ref('')
 const password = ref('')
 const name = ref('')
 const isLoading = ref(false)
+const googleBtnContainer = ref<HTMLElement | null>(null)
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
@@ -29,22 +30,26 @@ function initGoogleButton() {
   const interval = setInterval(() => {
     if ((window as any).google?.accounts?.id) {
       clearInterval(interval)
-      ;(window as any).google.accounts.id.initialize({
-        client_id: config.public.googleClientId,
-        callback: handleGoogleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true
-      })
-      const btnContainer = document.getElementById('google-signin-btn')
-      if (btnContainer) {
-        ;(window as any).google.accounts.id.renderButton(btnContainer, {
-          theme: 'outline',
-          size: 'large',
-          width: '100%',
-          text: 'continue_with',
-          shape: 'rectangular',
-          logo_alignment: 'left'
+      try {
+        ;(window as any).google.accounts.id.initialize({
+          client_id: config.public.googleClientId,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true
         })
+        const btnContainer = googleBtnContainer.value || document.getElementById('google-signin-btn')
+        if (btnContainer) {
+          ;(window as any).google.accounts.id.renderButton(btnContainer, {
+            theme: colorMode.value === 'dark' ? 'filled_black' : 'outline',
+            size: 'large',
+            width: '100%',
+            text: 'continue_with',
+            shape: 'rectangular',
+            logo_alignment: 'left'
+          })
+        }
+      } catch (e) {
+        console.warn('Google Sign-In initialization:', e)
       }
     }
   }, 200)

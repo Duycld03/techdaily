@@ -46,6 +46,8 @@ services:
     environment:
       NODE_ENV: production
       NUXT_PUBLIC_API_BASE_URL: ""
+      NUXT_PUBLIC_GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-982684500709-75solmbterlbdvut85btisallcsf83ef.apps.googleusercontent.com}"
+      API_INTERNAL_URL: "http://backend:5000"
     depends_on:
       - backend
 
