@@ -15,8 +15,9 @@ This document serves as the single source of truth for all implemented, active, 
 ## 🏗️ 1. Core Platform, Navigation & Layout
 | Feature | Description | Status | Reference / Spec |
 |---|---|---|---|
+| **3-Tier Grouped Navigation Shell** | Desktop sidebar & mobile drawer structured into *Practice*, *Knowledge*, *System* | 🟢 DONE | `frontend/components/layout/` |
 | **Dual-Pane Responsive App Shell** | Collapsible desktop sidebar, mobile bottom navigation, and sticky topbar | 🟢 DONE | `frontend/layouts/default.vue` |
-| **Bilingual Localization (i18n)** | 100% parity across English (`en-US`) and Vietnamese (`vi-VN`) | 🟢 DONE | `frontend/locales/`, `frontend/i18n/` |
+| **Bilingual Localization (i18n)** | 100% parity across English (`en-US`) and Vietnamese (`vi-VN`) | 🟢 DONE | `frontend/i18n/locales/` |
 | **Dark / Light Mode Switching** | Seamless theme persistence with zero CSS flashing | 🟢 DONE | `@nuxtjs/color-mode` |
 | **Global Toast Notification** | Glassmorphic floating feedback system without blocking dialogs | 🟢 DONE | `frontend/composables/useToast.ts` |
 | **Production Modal System** | Custom Vue teleported modals with Tailwind CSS (Zero `alert`/`confirm`) | 🟢 DONE | `AGENTS.md` Rule 7 |
@@ -58,6 +59,7 @@ This document serves as the single source of truth for all implemented, active, 
 | Feature | Description | Status | Reference / Spec |
 |---|---|---|---|
 | **Chapter Table of Contents** | Real-time chapter tree navigation and active reading slice indicator | 🟢 DONE | `openspec/changes/immersive-book-reader/` |
+| **1-Click AI Quiz Practice** | 1-Click "Luyện Quiz Chương Này" jump prefilling `/quiz?topic=...` | 🟢 DONE | `frontend/pages/read/[bookId].vue` |
 | **IDE-Grade Syntax Highlighting**| Shiki TextMate highlighting for C#, TS, JS, SQL, Python, Go, Dockerfile | 🟢 DONE | `frontend/plugins/shiki.client.ts` |
 | **Reading Progress Persistence** | Live scroll percentage counter and local slice progress bookmarking | 🟢 DONE | `frontend/pages/read/[bookId].vue` |
 | **Floating Action Toolbar** | Scoped text selection toolbar for AI Explainer, highlight, copy | 🟢 DONE | `AGENTS.md` Rule 3 & 10 |

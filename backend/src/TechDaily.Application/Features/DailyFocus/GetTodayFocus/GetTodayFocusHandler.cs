@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using TechDaily.Application.Common;
-using TechDaily.Application.DTOs;
 using TechDaily.Application.Features.DailyFocus.DTOs;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
@@ -117,7 +116,6 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
             .Include(d => d.Question)
                 .ThenInclude(q => q.Topic)
             .Include(d => d.DocumentChunk)
-            .Include(d => d.AiReview)
             .FirstOrDefaultAsync(d => d.UserId == userId && d.QuestionId == question.Id, cancellationToken);
 
         if (existingDrill != null)
@@ -198,19 +196,8 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                 SelectedOptionIndex = drill.SelectedOptionIndex,
                 IsCorrect = drill.IsCorrect,
                 Score = drill.Score,
-                UserAnswerText = drill.UserAnswerText,
-                UserAudioUrl = drill.UserAudioUrl,
                 AttemptCount = drill.AttemptCount,
-                SubmittedAt = drill.SubmittedAt,
-                AiReview = drill.AiReview == null ? null : new AiReviewDto
-                {
-                    Score = drill.AiReview.Score,
-                    SummaryFeedback = drill.AiReview.SummaryFeedback,
-                    Strengths = drill.AiReview.Strengths,
-                    MissingPoints = drill.AiReview.MissingPoints,
-                    ImprovedAnswerMarkdown = drill.AiReview.ImprovedAnswerMarkdown,
-                    AiModelUsed = drill.AiReview.AiModelUsed
-                }
+                SubmittedAt = drill.SubmittedAt
             },
             CurrentStreak = streak.CurrentStreak,
             LongestStreak = streak.LongestStreak,

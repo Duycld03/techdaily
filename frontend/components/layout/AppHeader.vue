@@ -26,16 +26,40 @@ const isMobileNavOpen = ref(false)
 const currentStreak = computed(() => focusStore.data?.currentStreak ?? 0)
 const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 2)
 
-const links = [
-  { name: 'nav.today', path: '/today', icon: Target },
-  { name: 'nav.roadmap', path: '/roadmap', icon: Map },
-  { name: 'nav.insights', path: '/insights', icon: Sparkles },
-  { name: 'nav.quiz', path: '/quiz', icon: HelpCircle },
-  { name: 'nav.review', path: '/review', icon: Layers },
-  { name: 'nav.library', path: '/library', icon: BookOpen },
-  { name: 'nav.notes', path: '/notes', icon: Highlighter },
-  { name: 'nav.profile', path: '/profile', icon: User },
-  { name: 'nav.settings', path: '/settings', icon: Settings }
+interface NavGroup {
+  titleKey: string
+  links: Array<{
+    name: string
+    path: string
+    icon: any
+  }>
+}
+
+const navGroups: NavGroup[] = [
+  {
+    titleKey: 'nav.group_practice',
+    links: [
+      { name: 'nav.today', path: '/today', icon: Target },
+      { name: 'nav.roadmap', path: '/roadmap', icon: Map },
+      { name: 'nav.quiz', path: '/quiz', icon: HelpCircle },
+      { name: 'nav.review', path: '/review', icon: Layers }
+    ]
+  },
+  {
+    titleKey: 'nav.group_knowledge',
+    links: [
+      { name: 'nav.insights', path: '/insights', icon: Sparkles },
+      { name: 'nav.library', path: '/library', icon: BookOpen },
+      { name: 'nav.notes', path: '/notes', icon: Highlighter }
+    ]
+  },
+  {
+    titleKey: 'nav.group_account',
+    links: [
+      { name: 'nav.profile', path: '/profile', icon: User },
+      { name: 'nav.settings', path: '/settings', icon: Settings }
+    ]
+  }
 ]
 
 function isLinkActive(linkPath: string): boolean {
@@ -170,34 +194,41 @@ onUnmounted(() => {
 
           <!-- Navigation Links (Scrollable) -->
           <div class="flex-1 overflow-y-auto min-h-0 py-4 -mx-1 px-1 overscroll-contain">
-            <nav class="space-y-1.5">
-              <NuxtLink
-                v-for="link in links"
-                :key="link.path"
-                :to="link.path"
-                custom
-                v-slot="{ navigate, href }"
-              >
-                <a
-                  :href="href"
-                  @click="navigate(); isMobileNavOpen = false"
-                  :class="[
-                    'flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm transition-colors',
-                    isLinkActive(link.path)
-                      ? 'bg-slate-100 dark:bg-slate-800/80 text-brand-600 dark:text-brand-400 font-bold'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/50 font-medium'
-                  ]"
+            <nav class="space-y-4">
+              <div v-for="group in navGroups" :key="group.titleKey" class="space-y-1">
+                <!-- Category Header -->
+                <div class="px-4 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  {{ $t(group.titleKey) }}
+                </div>
+
+                <NuxtLink
+                  v-for="link in group.links"
+                  :key="link.path"
+                  :to="link.path"
+                  custom
+                  v-slot="{ navigate, href }"
                 >
-                  <component
-                    :is="link.icon"
+                  <a
+                    :href="href"
+                    @click="navigate(); isMobileNavOpen = false"
                     :class="[
-                      'w-5 h-5 transition-colors shrink-0',
-                      isLinkActive(link.path) ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'
+                      'flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm transition-colors',
+                      isLinkActive(link.path)
+                        ? 'bg-slate-100 dark:bg-slate-800/80 text-brand-600 dark:text-brand-400 font-bold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/50 font-medium'
                     ]"
-                  />
-                  <span>{{ $t(link.name) }}</span>
-                </a>
-              </NuxtLink>
+                  >
+                    <component
+                      :is="link.icon"
+                      :class="[
+                        'w-4 h-4 transition-colors shrink-0',
+                        isLinkActive(link.path) ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'
+                      ]"
+                    />
+                    <span>{{ $t(link.name) }}</span>
+                  </a>
+                </NuxtLink>
+              </div>
             </nav>
           </div>
 

@@ -13,8 +13,6 @@ public class DailyDrill : BaseEntity
     public int? SelectedOptionIndex { get; set; }
     public bool? IsCorrect { get; set; }
     public int? Score { get; set; }
-    public string? UserAnswerText { get; set; }
-    public string? UserAudioUrl { get; set; }
     public int AttemptCount { get; set; } = 0;
     public DateTimeOffset? SubmittedAt { get; set; }
 
@@ -22,7 +20,6 @@ public class DailyDrill : BaseEntity
     public User User { get; set; } = null!;
     public InterviewQuestion Question { get; set; } = null!;
     public DocumentChunk? DocumentChunk { get; set; }
-    public AiReview? AiReview { get; set; }
 
     public void SubmitOption(int selectedIndex, bool isCorrect, int score)
     {
@@ -32,22 +29,6 @@ public class DailyDrill : BaseEntity
         Status = DrillStatus.Reviewed;
         AttemptCount++;
         SubmittedAt = DateTimeOffset.UtcNow;
-        MarkUpdated();
-    }
-
-    public void Submit(string? answerText, string? audioUrl)
-    {
-        UserAnswerText = answerText;
-        UserAudioUrl = audioUrl;
-        Status = DrillStatus.Submitted;
-        AttemptCount++;
-        SubmittedAt = DateTimeOffset.UtcNow;
-        MarkUpdated();
-    }
-
-    public void MarkReviewed()
-    {
-        Status = DrillStatus.Reviewed;
         MarkUpdated();
     }
 }

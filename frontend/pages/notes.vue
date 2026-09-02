@@ -5,6 +5,7 @@ import { useNotesStore } from '~/stores/useNotesStore'
 import { useInsightsStore } from '~/stores/useInsightsStore'
 import MarkdownIt from 'markdown-it'
 
+const { t } = useI18n()
 const notesStore = useNotesStore()
 const insightsStore = useInsightsStore()
 const toast = useToast()
@@ -60,11 +61,11 @@ async function confirmDeleteHighlight() {
   isDeleting.value = true
   try {
     await notesStore.deleteHighlight(highlightToDelete.value)
-    toast.success('Đã xóa đoạn ghi chú.')
+    toast.success(t('notes.toast_delete_success'))
     isDeleteModalOpen.value = false
     highlightToDelete.value = null
   } catch (err: any) {
-    toast.error(err.message || 'Không thể xóa ghi chú.')
+    toast.error(err.message || t('notes.toast_delete_error'))
   } finally {
     isDeleting.value = false
   }
@@ -80,11 +81,11 @@ async function confirmUnbookmark() {
   isUnbookmarking.value = true
   try {
     await insightsStore.toggleBookmark(insightToUnbookmark.value)
-    toast.success('Đã gỡ mẫu kiến thức khỏi danh sách lưu.')
+    toast.success(t('notes.toast_unbookmark_success'))
     isUnbookmarkModalOpen.value = false
     insightToUnbookmark.value = null
   } catch (err: any) {
-    toast.error(err.message || 'Không thể gỡ bookmark.')
+    toast.error(err.message || t('notes.toast_unbookmark_error'))
   } finally {
     isUnbookmarking.value = false
   }
@@ -215,7 +216,7 @@ async function confirmUnbookmark() {
           to="/insights"
           class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-indigo-500/20 transition-all"
         >
-          <span>Khám Phá Insights Ngay</span>
+          <span>{{ $t('notes.explore_insights_btn') }}</span>
           <ArrowRight class="w-4 h-4" />
         </NuxtLink>
       </div>
@@ -278,8 +279,7 @@ async function confirmUnbookmark() {
       <!-- Empty State for Highlights -->
       <div v-else class="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-sm">
         <Highlighter class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
-        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">No Highlights Saved</h3>
-        <p class="text-sm text-slate-500 mt-1 max-w-sm mx-auto">{{ $t('notes.no_notes') }}</p>
+        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $t('notes.no_notes') }}</h3>
       </div>
     </div>
 
@@ -343,10 +343,10 @@ async function confirmUnbookmark() {
 
           <div class="space-y-1.5">
             <h3 class="text-lg font-bold text-slate-900 dark:text-white">
-              Gỡ Lưu Mẫu Kiến Thức
+              {{ $t('notes.unbookmark_title') }}
             </h3>
             <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Bạn có chắc chắn muốn gỡ mẫu kiến thức này khỏi danh sách đã lưu không?
+              {{ $t('notes.unbookmark_desc') }}
             </p>
           </div>
 
@@ -366,7 +366,7 @@ async function confirmUnbookmark() {
               class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-600/20 active:scale-95 transition-all disabled:opacity-50"
             >
               <span v-if="isUnbookmarking" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              <span>{{ isUnbookmarking ? 'Đang gỡ...' : 'Gỡ Bookmark' }}</span>
+              <span>{{ isUnbookmarking ? $t('notes.unbookmarking') : $t('notes.confirm_unbookmark_btn') }}</span>
             </button>
           </div>
         </div>

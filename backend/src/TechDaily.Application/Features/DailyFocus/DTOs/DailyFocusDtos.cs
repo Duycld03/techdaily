@@ -1,4 +1,3 @@
-using TechDaily.Application.DTOs;
 using TechDaily.Domain.Enums;
 using TechDaily.Domain.ValueObjects;
 
@@ -50,9 +49,6 @@ public class DailyDrillDto
     public int? SelectedOptionIndex { get; set; }
     public bool? IsCorrect { get; set; }
     public int? Score { get; set; }
-    public string? UserAnswerText { get; set; }
-    public string? UserAudioUrl { get; set; }
     public int AttemptCount { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }
-    public AiReviewDto? AiReview { get; set; }
 }

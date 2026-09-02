@@ -19,6 +19,8 @@ import {
 import type { BookDetail, ChunkSummary } from '~/stores/useLibraryStore'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
 
+const { t } = useI18n()
+const toast = useToast()
 const route = useRoute()
 const router = useRouter()
 const libraryStore = useLibraryStore()
@@ -194,12 +196,10 @@ function handleTextSelection(event: MouseEvent) {
   }
 }
 
-const toast = useToast()
-
 function handleCopySelection() {
   if (!floatingToolbar.value.selectedText) return
   navigator.clipboard.writeText(floatingToolbar.value.selectedText)
-  toast.info('Đã sao chép đoạn văn bản!')
+  toast.info(t('reader.toast_copy'))
   floatingToolbar.value.visible = false
 }
 
@@ -217,9 +217,9 @@ async function handleHighlightSelection() {
       documentChunkId: currentChunk.value.id,
       selectedText: floatingToolbar.value.selectedText
     })
-    toast.success('Đã lưu đoạn văn vào Ghi chú & Highlight!')
+    toast.success(t('reader.toast_highlight_success'))
   } catch (err: any) {
-    toast.error(err.message || 'Không thể lưu highlight.')
+    toast.error(err.message || t('reader.toast_highlight_error'))
   } finally {
     floatingToolbar.value.visible = false
   }
@@ -274,8 +274,19 @@ async function handleHighlightSelection() {
         </p>
       </div>
 
-      <!-- Right: Reading Progress Bar & Next/Prev Quick Buttons -->
+      <!-- Right: Quiz Chapter, Reading Progress Bar & Next/Prev Quick Buttons -->
       <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+        <!-- 1-Click Quiz Chapter Action -->
+        <NuxtLink
+          v-if="currentChunk"
+          :to="{ path: '/quiz', query: { topic: currentChunk.chapterTitle || book?.title } }"
+          class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-xs font-bold transition-colors shrink-0"
+          :title="$t('reader.quiz_chapter_btn')"
+        >
+          <HelpCircle class="w-3.5 h-3.5" />
+          <span>{{ $t('reader.quiz_chapter_btn') }}</span>
+        </NuxtLink>
+
         <!-- Progress Bar (Desktop) -->
         <div class="hidden lg:flex items-center gap-2.5">
           <div class="w-28 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">

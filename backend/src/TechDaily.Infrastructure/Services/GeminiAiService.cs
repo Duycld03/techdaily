@@ -4,14 +4,13 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using TechDaily.Application.Common;
-using TechDaily.Application.DTOs;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
 using TechDaily.Domain.Enums;
 
 namespace TechDaily.Infrastructure.Services;
 
-public class GeminiAiService : IAiReviewService, ITechInsightGenerator, IQuizGeneratorService
+public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
@@ -27,122 +26,6 @@ public class GeminiAiService : IAiReviewService, ITechInsightGenerator, IQuizGen
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
         _model = configuration["Gemini:Model"] ?? "gemini-3.6-flash";
-    }
-
-    public async Task<Result<AiReviewDto>> EvaluateSubmissionAsync(
-        string questionText,
-        List<string> expectedKeyPoints,
-        string modelAnswer,
-        string? userAnswerText,
-        byte[]? audioBytes,
-        string? audioMimeType,
-        string locale = "en",
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(_apiKey))
-        {
-            _logger.LogWarning("Gemini API key is not configured. Falling back to local mock evaluation.");
-            return GenerateMockEvaluation(userAnswerText, audioBytes != null, locale);
-        }
-
-        try
-        {
-            var systemInstruction = $@"
-You are a Principal Software Architect conducting a senior-level technical interview drill.
-Analyze the candidate's answer for technical accuracy, architectural depth, memory implications, and internal mechanisms.
-Evaluate strictly on a 1-10 scale where 8-10 is Senior/Principal level.
-Respond strictly in valid JSON adhering to this schema:
-{{
-  ""score"": 8,
-  ""summaryFeedback"": ""string"",
-  ""strengths"": [""string""],
-  ""missingPoints"": [""string""],
-  ""improvedAnswerMarkdown"": ""string""
-}}
-No markdown formatting backticks around JSON.
-Language: {(locale.Equals("vi", StringComparison.OrdinalIgnoreCase) ? "Vietnamese" : "English")}.";
-
-            var promptBuilder = new StringBuilder();
-            promptBuilder.AppendLine($"### Technical Question\n{questionText}\n");
-            promptBuilder.AppendLine($"### Expected Key Points\n{string.Join("\n- ", expectedKeyPoints)}\n");
-            promptBuilder.AppendLine($"### Model Answer\n{modelAnswer}\n");
-
-            if (!string.IsNullOrWhiteSpace(userAnswerText))
-            {
-                promptBuilder.AppendLine($"### Candidate Text Answer\n{userAnswerText}\n");
-            }
-
-            var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
-
-            var parts = new List<object>();
-
-            if (audioBytes != null && audioBytes.Length > 0 && !string.IsNullOrWhiteSpace(audioMimeType))
-            {
-                parts.Add(new
-                {
-                    inlineData = new
-                    {
-                        mimeType = audioMimeType,
-                        data = Convert.ToBase64String(audioBytes)
-                    }
-                });
-                parts.Add(new
-                {
-                    text = $"{promptBuilder}\nPlease listen to the attached audio recording of the candidate's answer and evaluate it thoroughly."
-                });
-            }
-            else
-            {
-                parts.Add(new
-                {
-                    text = promptBuilder.ToString()
-                });
-            }
-
-            var requestPayload = new
-            {
-                contents = new[]
-                {
-                    new
-                    {
-                        role = "user",
-                        parts = parts.ToArray()
-                    }
-                },
-                systemInstruction = new
-                {
-                    parts = new[]
-                    {
-                        new { text = systemInstruction }
-                    }
-                },
-                generationConfig = new
-                {
-                    temperature = 0.2,
-                    maxOutputTokens = 2048,
-                    responseMimeType = "application/json"
-                }
-            };
-
-            var jsonContent = JsonSerializer.Serialize(requestPayload);
-            using var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.PostAsync(requestUri, httpContent, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogError("Gemini API error ({StatusCode}): {Error}", response.StatusCode, errorBody);
-                return GenerateMockEvaluation(userAnswerText, audioBytes != null, locale);
-            }
-
-            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            return ParseGeminiResponse(responseBody, _model);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Exception while calling Gemini API. Falling back to local mock evaluation.");
-            return GenerateMockEvaluation(userAnswerText, audioBytes != null, locale);
-        }
     }
 
     public async Task<Result<TechInsight>> GenerateInsightAsync(
@@ -349,96 +232,6 @@ No markdown backticks around JSON.";
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
-    }
-
-    private static Result<AiReviewDto> ParseGeminiResponse(string responseBody, string modelUsed)
-    {
-        var review = new AiReviewDto
-        {
-            Score = 7,
-            SummaryFeedback = "Evaluation completed.",
-            Strengths = new(),
-            MissingPoints = new(),
-            ImprovedAnswerMarkdown = string.Empty,
-            AiModelUsed = modelUsed
-        };
-
-        try
-        {
-            using var doc = JsonDocument.Parse(responseBody);
-            var candidates = doc.RootElement.GetProperty("candidates");
-            var content = candidates[0].GetProperty("content");
-            var text = content.GetProperty("parts")[0].GetProperty("text").GetString();
-
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return review;
-            }
-
-            var cleanJson = text.Trim();
-            if (cleanJson.StartsWith("```"))
-            {
-                cleanJson = cleanJson.Substring(cleanJson.IndexOf('\n') + 1);
-                cleanJson = cleanJson.Substring(0, cleanJson.LastIndexOf("```")).Trim();
-            }
-
-            using var scoreDoc = JsonDocument.Parse(cleanJson);
-            var root = scoreDoc.RootElement;
-
-            if (root.TryGetProperty("score", out var scoreElem))
-            {
-                if (scoreElem.TryGetInt32(out var scoreInt)) review.Score = Math.Clamp(scoreInt, 1, 10);
-            }
-
-            if (root.TryGetProperty("summaryFeedback", out var summaryElem))
-            {
-                review.SummaryFeedback = summaryElem.GetString() ?? "Evaluated response.";
-            }
-
-            if (root.TryGetProperty("strengths", out var strengthsElem))
-            {
-                if (strengthsElem.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var item in strengthsElem.EnumerateArray())
-                    {
-                        var s = item.GetString();
-                        if (!string.IsNullOrWhiteSpace(s)) review.Strengths.Add(s);
-                    }
-                }
-                else if (strengthsElem.ValueKind == JsonValueKind.String)
-                {
-                    review.Strengths.Add(strengthsElem.GetString()!);
-                }
-            }
-
-            if (root.TryGetProperty("missingPoints", out var missingElem))
-            {
-                if (missingElem.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var item in missingElem.EnumerateArray())
-                    {
-                        var m = item.GetString();
-                        if (!string.IsNullOrWhiteSpace(m)) review.MissingPoints.Add(m);
-                    }
-                }
-                else if (missingElem.ValueKind == JsonValueKind.String)
-                {
-                    review.MissingPoints.Add(missingElem.GetString()!);
-                }
-            }
-
-            if (root.TryGetProperty("improvedAnswerMarkdown", out var improvedElem))
-            {
-                review.ImprovedAnswerMarkdown = improvedElem.GetString() ?? string.Empty;
-            }
-        }
-        catch
-        {
-            review.Score = 8;
-            review.SummaryFeedback = "Evaluated response.";
-        }
-
-        return review;
     }
 
     public async Task<Result<List<QuizQuestion>>> GenerateQuestionsAsync(
@@ -750,28 +543,5 @@ No markdown backticks around JSON.";
             });
         }
         return list;
-    }
-
-    private static AiReviewDto GenerateMockEvaluation(string? text, bool hasAudio, string locale)
-    {
-        var isVi = locale.Equals("vi", StringComparison.OrdinalIgnoreCase);
-
-        return new AiReviewDto
-        {
-            Score = 8,
-            SummaryFeedback = isVi
-                ? "Câu trả lời nắm rất chắc kiến trúc cơ bản và các cơ chế cốt lõi. Cần bổ sung thêm ví dụ thực tế về tối ưu hóa bộ nhớ."
-                : "Solid response showing strong grasp of underlying runtime mechanisms and architectural trade-offs. Elaborate slightly more on edge-case memory overhead.",
-            Strengths = isVi
-                ? new() { "Nêu chính xác cơ chế hoạt động", "Giải thích rõ ràng sự khác biệt về hiệu năng", "Tư duy thiết kế mạch lạc" }
-                : new() { "Accurate explanation of internal runtime mechanisms", "Clear reasoning on performance implications", "Structured architectural thinking" },
-            MissingPoints = isVi
-                ? new() { "Chưa đào sâu vào ảnh hưởng của Large Object Heap (LOH)", "Cần phân tích thêm về chi phí của GC Pause" }
-                : new() { "Could emphasize Large Object Heap (LOH) impact", "Mention specific GC Pause latency mitigations" },
-            ImprovedAnswerMarkdown = isVi
-                ? "Để trả lời ở mức Principal: Hãy bắt đầu bằng cách nêu cơ chế cấp phát, sau đó liên hệ trực tiếp với `ArrayPool<T>.Shared` để loại bỏ GC Gen 2 pauses..."
-                : "To answer at Principal level: Begin with the allocation mechanics, then immediately cite `ArrayPool<T>.Shared` to eliminate Gen 2 GC pauses in high-throughput pipelines...",
-            AiModelUsed = "gemini-mock-dev"
-        };
     }
 }

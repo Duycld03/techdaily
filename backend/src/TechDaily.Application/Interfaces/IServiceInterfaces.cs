@@ -1,20 +1,6 @@
 using TechDaily.Application.Common;
-using TechDaily.Application.DTOs;
 
 namespace TechDaily.Application.Interfaces;
-
-public interface IAiReviewService
-{
-    Task<Result<AiReviewDto>> EvaluateSubmissionAsync(
-        string questionText,
-        List<string> expectedKeyPoints,
-        string modelAnswer,
-        string? userAnswerText,
-        byte[]? audioBytes,
-        string? audioMimeType,
-        string locale = "en",
-        CancellationToken cancellationToken = default);
-}
 
 public interface ITermExplanationService
 {
@@ -39,17 +25,6 @@ public interface ITelegramNotifier
         int currentStreak,
         string locale = "en",
         CancellationToken cancellationToken = default);
-}
-
-public interface IAudioStorageService
-{
-    Task<string> SaveAudioAsync(
-        Guid drillId,
-        Stream audioStream,
-        string fileExtension,
-        CancellationToken cancellationToken = default);
-
-    string GetAudioUrl(string relativePath);
 }
 
 public interface ITechInsightGenerator

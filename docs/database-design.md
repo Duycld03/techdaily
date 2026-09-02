@@ -9,19 +9,24 @@ ORM: **EF Core 10 (Npgsql)**
 
 ```mermaid
 erDiagram
-    DOCUMENT_BOOK ||--o{ DOCUMENT_CHUNK : contains
-    DOCUMENT_CHUNK ||--o{ DAILY_DRILL : scheduled_as
-    TOPIC ||--o{ INTERVIEW_QUESTION : contains
-    USER ||--o{ DAILY_DRILL : attempts
-    INTERVIEW_QUESTION ||--o{ DAILY_DRILL : answered_in
-    DAILY_DRILL ||--o| AI_REVIEW : evaluated_by
-    USER ||--o{ SPACED_REPETITION_CARD : owns
-    USER ||--o{ STREAK_RECORD : logs
-    USER ||--o{ USER_HIGHLIGHT : creates
-    USER ||--o{ USER_INSIGHT_BOOKMARK : bookmarks
-    TECH_INSIGHT ||--o{ USER_INSIGHT_BOOKMARK : bookmarked_in
-    QUIZ_QUESTION ||--o{ USER_QUIZ_PROGRESS : tracks
-    USER ||--o{ USER_QUIZ_PROGRESS : records
+    USERS ||--o{ DAILY_DRILLS : "attempts"
+    USERS ||--o{ SPACED_REPETITION_CARDS : "owns"
+    USERS ||--o{ STREAK_RECORDS : "logs"
+    USERS ||--o{ USER_HIGHLIGHTS : "creates"
+    USERS ||--o{ USER_INSIGHT_BOOKMARKS : "bookmarks"
+    USERS ||--o{ USER_QUIZ_PROGRESS : "records"
+
+    DOCUMENT_BOOKS ||--o{ DOCUMENT_CHUNKS : "contains (1-N)"
+    DOCUMENT_CHUNKS ||--o{ USER_HIGHLIGHTS : "highlighted_in"
+    DOCUMENT_CHUNKS ||--o{ DAILY_DRILLS : "scheduled_as"
+
+    TOPICS ||--o{ INTERVIEW_QUESTIONS : "contains (1-N)"
+    TOPICS ||--o{ SPACED_REPETITION_CARDS : "tracked_in"
+    INTERVIEW_QUESTIONS ||--o{ DAILY_DRILLS : "answered_in"
+
+    TECH_INSIGHTS ||--o{ USER_INSIGHT_BOOKMARKS : "saved_in"
+    QUIZ_QUESTIONS ||--o{ USER_QUIZ_PROGRESS : "practiced_in"
+
     TERM_EXPLANATION_CACHE
 ```
 
@@ -132,7 +137,9 @@ erDiagram
 
 ---
 
-### `AiReviews`
+### `AiReviews` *(Deprecated / Legacy)*
+> [!NOTE]
+> Deprecated in favor of deterministic instant Scenario Multiple-Choice grading embedded directly within `DailyDrills` (`SelectedOptionIndex`, `IsCorrect`, `Score`).
 | Column | Type | Constraints | Description |
 |---|---|---|---|
 | `Id` | `uuid` | PK | Unique Identifier |

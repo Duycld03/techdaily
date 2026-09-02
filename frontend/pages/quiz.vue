@@ -24,6 +24,7 @@ import { useAuthStore } from '~/stores/useAuthStore'
 import { useProfileStore } from '~/stores/useProfileStore'
 import MarkdownIt from 'markdown-it'
 
+const route = useRoute()
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
 const profileStore = useProfileStore()
@@ -64,6 +65,11 @@ onMounted(async () => {
       path: '/login',
       query: { redirect: '/quiz' }
     })
+  }
+
+  // Pre-fill topic from query param (e.g. from Reader)
+  if (route.query.topic) {
+    customTopicInput.value = (route.query.topic as string).trim()
   }
 
   // Pre-fill level based on user profile if available

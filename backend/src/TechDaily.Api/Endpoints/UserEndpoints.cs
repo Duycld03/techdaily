@@ -42,7 +42,7 @@ public static class UserEndpoints
 
             var totalDrills = drills.Count;
             var avgScore = totalDrills > 0 
-                ? Math.Round(drills.Average(d => d.AiReview?.Score ?? 0), 1) 
+                ? Math.Round(drills.Average(d => d.Score ?? 0), 1) 
                 : 0.0;
 
             return Results.Ok(new

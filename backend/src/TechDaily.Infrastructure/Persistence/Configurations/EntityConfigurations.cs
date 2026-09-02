@@ -150,7 +150,6 @@ public class DailyDrillConfiguration : IEntityTypeConfiguration<DailyDrill>
         builder.HasKey(d => d.Id);
         builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(d => d.ScheduledDate).IsRequired();
-        builder.Property(d => d.UserAudioUrl).HasMaxLength(500);
         builder.Property(d => d.SelectedOptionIndex);
         builder.Property(d => d.IsCorrect);
         builder.Property(d => d.Score);
@@ -171,35 +170,6 @@ public class DailyDrillConfiguration : IEntityTypeConfiguration<DailyDrill>
             .WithMany(c => c.DailyDrills)
             .HasForeignKey(d => d.DocumentChunkId)
             .OnDelete(DeleteBehavior.SetNull);
-
-        builder.HasOne(d => d.AiReview)
-            .WithOne(r => r.DailyDrill)
-            .HasForeignKey<AiReview>(r => r.DailyDrillId)
-            .OnDelete(DeleteBehavior.Cascade);
-    }
-}
-
-public class AiReviewConfiguration : IEntityTypeConfiguration<AiReview>
-{
-    public void Configure(EntityTypeBuilder<AiReview> builder)
-    {
-        builder.HasKey(r => r.Id);
-        builder.Property(r => r.Score).IsRequired();
-        builder.Property(r => r.SummaryFeedback).IsRequired();
-        builder.Property(r => r.ImprovedAnswerMarkdown).IsRequired();
-        builder.Property(r => r.AiModelUsed).HasMaxLength(100).IsRequired();
-
-        builder.Property(r => r.Strengths)
-            .HasConversion(
-                v => ConfigurationHelpers.SerializeStringList(v),
-                v => ConfigurationHelpers.DeserializeStringList(v))
-            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
-
-        builder.Property(r => r.MissingPoints)
-            .HasConversion(
-                v => ConfigurationHelpers.SerializeStringList(v),
-                v => ConfigurationHelpers.DeserializeStringList(v))
-            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
     }
 }
 

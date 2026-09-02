@@ -51,19 +51,10 @@ public static class DailyFocusEndpoints
                 return Results.Unauthorized();
             }
 
-            byte[]? audioBytes = null;
-            if (!string.IsNullOrWhiteSpace(body.AudioBase64))
-            {
-                audioBytes = Convert.FromBase64String(body.AudioBase64);
-            }
-
             var request = new SubmitDailyDrillRequest(
                 DrillId: id,
                 UserId: userId.Value,
                 SelectedOptionIndex: body.SelectedOptionIndex,
-                AnswerText: body.AnswerText,
-                AudioBytes: audioBytes,
-                AudioMimeType: body.AudioMimeType,
                 Locale: body.Locale ?? "en");
 
             var result = await handler.ExecuteAsync(request, ct);
@@ -74,7 +65,7 @@ public static class DailyFocusEndpoints
         })
         .RequireAuthorization()
         .WithName("SubmitDailyDrill")
-        .WithSummary("Evaluates senior interview answer or multiple-choice option and updates user streak.");
+        .WithSummary("Evaluates multiple-choice senior scenario decision and updates user streak.");
 
         // Public Term Explanation (Backed by Semantic Cache)
         group.MapPost("/explain-term", async (
@@ -107,9 +98,6 @@ public static class DailyFocusEndpoints
 
 public class SubmitDrillJsonRequest
 {
-    public int? SelectedOptionIndex { get; set; }
-    public string? AnswerText { get; set; }
-    public string? AudioBase64 { get; set; }
-    public string? AudioMimeType { get; set; }
+    public int SelectedOptionIndex { get; set; }
     public string? Locale { get; set; }
 }

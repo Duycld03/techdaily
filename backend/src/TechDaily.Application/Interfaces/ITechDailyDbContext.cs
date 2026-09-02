@@ -11,7 +11,6 @@ public interface ITechDailyDbContext
     DbSet<DocumentBook> DocumentBooks { get; }
     DbSet<DocumentChunk> DocumentChunks { get; }
     DbSet<DailyDrill> DailyDrills { get; }
-    DbSet<AiReview> AiReviews { get; }
     DbSet<SpacedRepetitionCard> SpacedRepetitionCards { get; }
     DbSet<StreakRecord> StreakRecords { get; }
     DbSet<UserHighlight> UserHighlights { get; }
