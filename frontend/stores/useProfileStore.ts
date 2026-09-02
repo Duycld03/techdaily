@@ -82,13 +82,13 @@ export const useProfileStore = defineStore('profile', () => {
         }
       }
 
-      // Sync with auth store
+      // Sync with auth store & localStorage
       const authStore = useAuthStore()
-      if (authStore.user) {
-        authStore.user.name = updated.name
-        authStore.user.preferredLocale = updated.preferredLocale
-        authStore.user.avatarUrl = updated.avatarUrl
-      }
+      authStore.updateUser({
+        name: updated.name,
+        preferredLocale: updated.preferredLocale,
+        avatarUrl: updated.avatarUrl
+      })
 
       successMessage.value = 'Profile updated successfully.'
       return updated

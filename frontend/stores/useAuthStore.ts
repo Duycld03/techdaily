@@ -83,6 +83,15 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function updateUser(updated: Partial<AuthUser>) {
+    if (user.value) {
+      user.value = { ...user.value, ...updated }
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('techdaily_user', JSON.stringify(user.value))
+      }
+    }
+  }
+
   return {
     token,
     user,
@@ -92,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     googleLogin,
+    updateUser,
     logout
   }
 })
