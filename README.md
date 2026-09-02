@@ -38,8 +38,7 @@ TechDaily (Clean Architecture)
 
 ## 🌟 Comprehensive Feature Set
 
-> 📖 **Feature Matrix & Status:** See [docs/features.md](docs/features.md)  
-> 📌 **Product Backlog & Upcoming Sprints:** See [docs/backlog.md](docs/backlog.md)
+> 📖 **Feature Matrix & Specifications:** See [docs/features.md](docs/features.md)
 
 ### 1. 🏠 Daily Focus Hub (`/today`)
 - **Daily Doc Slice:** Curated 3–5 minute excerpt from official docs preserving original source language with structured takeaways and quick check quiz.
