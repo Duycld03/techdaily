@@ -7,7 +7,7 @@
 - [x] 1.4 Create and apply EF Core database migration `AddInterviewQuizTables`
 
 ## Phase 2: AI Generation & Application Use Cases
-- [x] 2.1 Define `IQuizGeneratorService` and implement Gemini 3.6 Flash structured quiz generation with JSON parsing and fallback in `TechDaily.Infrastructure/Services/`
+- [x] 2.1 Define `IQuizGeneratorService` and implement Gemini 3.1 Flash Lite structured quiz generation with JSON parsing and fallback in `TechDaily.Infrastructure/Services/`
 - [x] 2.2 Implement `GenerateQuizHandler` (loads unmastered questions, prompts Gemini for remainder, deduplicates titles, persists questions)
 - [x] 2.3 Implement `SubmitQuizAnswerHandler` (evaluates option, idempotent upsert to `UserQuizProgress`, updates mastery status)
 - [x] 2.4 Implement `GetQuizReviewQueueHandler` and `GetQuizStatsHandler`

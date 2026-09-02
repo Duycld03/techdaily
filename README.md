@@ -29,7 +29,7 @@ TechDaily (Clean Architecture)
 |---|---|---|
 | **Backend API** | **ASP.NET Core (.NET 10)** | Clean Architecture, C# 13, Plain Use-Case Handlers (Pure DI), Rich Domain Model, RFC 7807 problem details, 100% English codebase |
 | **Data Persistence** | **EF Core 10 + Npgsql** | PostgreSQL 17 (`pgvector`), JSONB (`ToJson()`) for takeaways/quizzes/options, User Bookmarks with Unique Indexes |
-| **AI Synthesis Engine** | **Gemini 3.5 Flash API** | Structured Output (JSON Schema), Semantic Term Cache, AI Slicing, On-Demand Insights Generator |
+| **AI Synthesis Engine** | **Gemini 3.1 Flash Lite API** | Structured Output (JSON Schema), High-Speed Quiz Synthesis (<5s), Semantic Term Cache, AI Slicing, On-Demand Insights Generator |
 | **Document Ingestion** | **PdfPig + ReverseMarkdown** | Zero-LOH streaming for PDFs up to 200MB (800 pages), Geometric Baseline line-grouping, HTML-to-Markdown Web Crawler |
 | **Frontend Web** | **Nuxt 4 + Vue 3** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
 | **Notifications** | **Telegram Bot API** | Lightweight morning alerts and streak retention reminders with direct deep links to Web |
@@ -71,7 +71,7 @@ TechDaily (Clean Architecture)
 - **Bite-Sized Architectural Lessons:** Curated feed of Senior Anti-Patterns vs Idiomatic Solutions across C#, Rust, Go, Python, TypeScript, Vue 3, and PostgreSQL.
 - **Under-The-Hood Mechanics:** Memory layouts, lock contention, compiler lowerings, and OS syscalls with benchmark statistics.
 - **Database-Persisted Bookmarks:** Save important lessons with real-time bookmark toggle and "🔖 Đã Lưu" filter view.
-- **Multimodal AI Synthesis:** Generate on-demand, deep-dive insights on any custom technology or topic using Gemini 3.5 Flash.
+- **Multimodal AI Synthesis:** Generate on-demand, deep-dive insights on any custom technology or topic using Gemini 3.1 Flash Lite.
 - **Keyboard Navigation:** Fast card flipping using `[Space]`, `[→]`, and `[←]` keys.
 
 ### 7. 🖍️ Architectural Highlights & Saved Insights Hub (`/notes`)
@@ -80,7 +80,13 @@ TechDaily (Clean Architecture)
   - **🖍️ Reading Highlights:** Centralized archive of all highlighted quotes categorized by book and chapter with custom reflections and tagging.
 - **Production Confirmation Modals:** Sleek, accessible delete and unbookmark confirmation dialogs (Zero native browser popups).
 
-### 8. 🛡️ Hybrid Authentication & User Profile (`/login`, `/profile`)
+### 8. 🎯 Senior Technical Interview Quiz & Mastery Arena (`/quiz`)
+- **High-Speed AI Quiz Synthesis:** Generate 5 or 10 real-world interview scenario questions tailored to seniority level (Fresher to Senior/Staff) in under 5 seconds with Gemini 3.1 Flash Lite.
+- **Interactive Arena & Mistake Review:** Timed scenario questions with instant option grading, detailed markdown architectural explanations, and 1-click mistake retry sessions.
+- **Spaced Repetition Mastery:** Automatically tracks user progress in PostgreSQL. Questions are marked as `Mastered` after 2 consecutive correct submissions.
+- **Weak Topics Analysis:** Aggregated analytics dashboard tracking accuracy rate, mastered cards, and ranking weakest vs strongest engineering topics.
+
+### 9. 🛡️ Hybrid Authentication & User Profile (`/login`, `/profile`)
 - **Standard Email/Password:** Secure PBKDF2 hashing with 16-byte random salt and 100,000 SHA-256 iterations.
 - **Google OAuth 2.0:** One-Tap & standard Google authentication.
 - **Hybrid Password Setup:** Seamlessly set an initial password for Google accounts to enable multi-device / mobile login without OAuth.
@@ -115,10 +121,10 @@ Run the fullstack development environment with all services wired:
 Run the entire automated test suite:
 
 ```bash
-# Run Backend Unit & Integration Tests (35 Tests)
+# Run Backend Unit & Integration Tests (42 Tests)
 dotnet test backend/TechDaily.sln
 
-# Run Frontend Component & Store Tests (36 Tests)
+# Run Frontend Component & Store Tests (49 Tests)
 npm --prefix frontend test
 ```
 

@@ -394,3 +394,111 @@ The `/notes` page serves as the centralized knowledge base with a 2-tab manageme
 - **Auth:** Required (`Bearer`)
 - **Response (204 No Content):** Deletes specified user highlight.
 
+---
+
+## 9. Senior Technical Interview Quiz & Mastery Arena (`/api/v1/quiz`)
+
+The `/quiz` route powers high-intensity interview scenario drills generated with Gemini 3.1 Flash Lite and tracks question-level spaced repetition mastery in PostgreSQL.
+
+### `POST /api/v1/quiz/generate`
+- **Auth:** Required (`Bearer`)
+- **Description:** Fetches unmastered questions from the database first, and synthesizes missing questions on-demand via Gemini 3.1 Flash Lite.
+- **Request Body:**
+  ```json
+  {
+    "topic": "Clean Architecture in .NET 10",
+    "level": 3,
+    "count": 5,
+    "category": null,
+    "locale": "vi"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "questions": [
+      {
+        "id": "439b8361-ed91-4bb2-83ba-7cc2e632418e",
+        "topic": "Clean Architecture in .NET 10",
+        "category": 1,
+        "level": 3,
+        "questionText": "Trong Clean Architecture, tại sao Domain Layer không được phụ thuộc vào bất kỳ framework hoặc cơ sở dữ liệu nào?",
+        "options": [
+          "Để cô lập Core Business Logic khỏi biến động công nghệ bên ngoài",
+          "Để tăng tốc độ biên dịch ứng dụng",
+          "Bắt buộc bởi compiler của C#",
+          "Để giảm dung lượng file DLL"
+        ],
+        "correctOptionIndex": 0,
+        "explanationMarkdown": "### Phân Tích Kỹ Thuật Chuyên Sâu\n...",
+        "tags": ["clean-architecture", "senior", "domain-model"],
+        "isMastered": false,
+        "lastSelectedOptionIndex": null,
+        "isLastAnswerCorrect": null,
+        "correctCount": 0,
+        "incorrectCount": 0
+      }
+    ],
+    "topic": "Clean Architecture in .NET 10",
+    "level": 3,
+    "totalCount": 5
+  }
+  ```
+
+### `POST /api/v1/quiz/submit`
+- **Auth:** Required (`Bearer`)
+- **Description:** Evaluates the selected option, updates user answer history, increments consecutive streaks, and marks question as `isMastered: true` upon 2 consecutive correct answers.
+- **Request Body:**
+  ```json
+  {
+    "questionId": "439b8361-ed91-4bb2-83ba-7cc2e632418e",
+    "selectedOptionIndex": 0
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "questionId": "439b8361-ed91-4bb2-83ba-7cc2e632418e",
+    "isCorrect": true,
+    "correctOptionIndex": 0,
+    "explanationMarkdown": "### Phân Tích Kỹ Thuật Chuyên Sâu\n...",
+    "isMastered": false,
+    "correctCount": 1,
+    "incorrectCount": 0,
+    "consecutiveCorrectCount": 1
+  }
+  ```
+
+### `GET /api/v1/quiz/review-queue`
+- **Auth:** Required (`Bearer`)
+- **Query Params:** `page` (default 1), `pageSize` (default 20)
+- **Response (200 OK):**
+  ```json
+  {
+    "questions": [ ... ],
+    "totalCount": 8,
+    "page": 1,
+    "pageSize": 20
+  }
+  ```
+
+### `GET /api/v1/quiz/stats`
+- **Auth:** Required (`Bearer`)
+- **Response (200 OK):**
+  ```json
+  {
+    "totalAttempted": 42,
+    "totalCorrect": 36,
+    "totalIncorrect": 6,
+    "masteredCount": 15,
+    "accuracyRate": 85.7,
+    "weakestTopics": [
+      { "topic": "PostgreSQL MVCC", "accuracy": 50.0, "totalAttempts": 4 }
+    ],
+    "strongestTopics": [
+      { "topic": ".NET Memory & GC", "accuracy": 100.0, "totalAttempts": 8 }
+    ]
+  }
+  ```
+
+

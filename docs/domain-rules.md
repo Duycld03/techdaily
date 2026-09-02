@@ -132,7 +132,24 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 
 ---
 
-## 8. Anti-Patterns to NEVER Repeat
+## 8. Interview Quiz & Mastery Arena Invariants
+1. **Model Selection & Latency Standard:**
+   - Real-time quiz generation MUST use high-speed models (e.g. `gemini-3.1-flash-lite`) capable of generating 5 full questions with 4 options, explanations, and tags within **5 seconds**.
+   - Outbound `HttpClient` timeout MUST be configured to at least 60 seconds, and Nginx `proxy_read_timeout` for `/api/` MUST be configured to at least 120 seconds to eliminate `504 Gateway Time-out` on high-traffic intervals.
+2. **CancellationToken Propagation (ACID & Zero Orphan Records):**
+   - The `/api/v1/quiz/generate` endpoint MUST pass `HttpContext.RequestAborted` as `CancellationToken` down to `GeminiAiService` and EF Core.
+   - If the user refreshes (F5), closes the tab, or navigates away, the outbound HTTP request to Google Gemini MUST be immediately aborted and no partial/orphan records are written to PostgreSQL.
+3. **Explicit Action Triggering for Quiz Generation:**
+   - Quick Topic chips MUST only populate the topic input box and apply active visual highlights. Clicking a topic chip MUST NOT auto-trigger the generation API.
+   - Generation is strictly triggered by clicking the primary **"Tạo Bộ Đề AI" / "Generate Quiz"** button or pressing Enter within the topic input field.
+4. **Resilient Fallback Scenario Diversity:**
+   - The fallback generator in `GeminiAiService` MUST maintain at least 10 distinct architectural topics (Concurrency, Lock-Free, Memory Allocation, Circuit Breakers, Non-blocking I/O, Rate Limiting, Indexing, Deadlock prevention, Connection Pooling, Zero-Downtime deployments) with rotating correct answer indices (0 to 3) so mock questions are never repetitive or identical.
+5. **Database-First Unmastered Question Reuse:**
+   - Before requesting new AI questions, `GenerateQuizHandler` MUST query PostgreSQL for unmastered existing questions matching `(lower(Topic), Level)` to conserve API tokens and maximize question bank reuse.
+
+---
+
+## 9. Anti-Patterns to NEVER Repeat
 
 | Anti-Pattern | Why it is Forbidden | Correct Approach |
 | :--- | :--- | :--- |
@@ -147,3 +164,6 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 | **Omission of Nginx Restart on Deploy** | Causes Nginx to hold stale container IPs and return `502 Bad Gateway` after container recreate | Add `docker compose restart nginx` after `docker compose up -d --build` |
 | **RSA Key Exclusivity on Modern Linux** | Debian 13/OpenSSH 9.8+ deprecates legacy RSA and causes publickey auth failures | Standardize on modern `ED25519` keys across local config and CI/CD secrets |
 | **Raw Text Interpolation for AI Tooltips** | Shows raw `**bold**` asterisks and backticks in UI popups | Parse AI markdown through `useMarkdownRenderer()` in a `prose` container |
+| **Auto-Triggering Heavy AI Requests on Chip Selection** | Causes accidental expensive AI generations when user is merely selecting topics | Require explicit button click or Enter key to trigger AI generation |
+| **Unbenchmarked Heavy AI Models in Sync Web Requests** | Heavy models take >60s leading to Nginx 504 Gateway Time-out | Benchmark model response time and standardize on `gemini-3.1-flash-lite` (<5s) with 120s Nginx proxy timeout |
+

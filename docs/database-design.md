@@ -20,6 +20,8 @@ erDiagram
     USER ||--o{ USER_HIGHLIGHT : creates
     USER ||--o{ USER_INSIGHT_BOOKMARK : bookmarks
     TECH_INSIGHT ||--o{ USER_INSIGHT_BOOKMARK : bookmarked_in
+    QUIZ_QUESTION ||--o{ USER_QUIZ_PROGRESS : tracks
+    USER ||--o{ USER_QUIZ_PROGRESS : records
     TERM_EXPLANATION_CACHE
 ```
 
@@ -234,4 +236,50 @@ erDiagram
 
 > **Unique Index:** `IX_UserInsightBookmarks_UserId_InsightId` ON `(UserId, InsightId)`.  
 > **Cascade Delete:** Deleting either the parent `User` or `TechInsight` automatically cascades to remove related bookmarks.
+
+---
+
+### `QuizQuestions` (Interview Arena Question Bank)
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `Id` | `uuid` | PK | Unique Identifier |
+| `Topic` | `varchar(255)` | NOT NULL | Interview topic keyword (e.g. *.NET 10 Memory*, *PostgreSQL MVCC*) |
+| `Category` | `int` | NOT NULL | Enum: `0=FrontendWeb`, `1=BackendDotNet`, `2=DatabaseStorage`, `3=SystemDesign` |
+| `Level` | `int` | NOT NULL | Enum: `0=Fresher`, `1=Junior`, `2=Middle`, `3=Senior` |
+| `QuestionText` | `text` | NOT NULL | Technical scenario problem statement |
+| `Options` | `jsonb` | NOT NULL | Array of 4 answer options `string[]` |
+| `CorrectOptionIndex` | `int` | NOT NULL | 0-based index of correct option (0-3) |
+| `ExplanationMarkdown` | `text` | NOT NULL | Technical analysis and distractor breakdown |
+| `Tags` | `jsonb` | NOT NULL | Array of tag keywords `string[]` |
+| `CreatedByUserId` | `uuid` | NULL | Creator user ID if custom generated |
+| `IsDeleted` | `boolean` | NOT NULL, Default false | Soft delete flag |
+| `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
+| `UpdatedAt` | `timestamptz` | NULL | Last update timestamp |
+
+> **Indexes:**  
+> - `IX_QuizQuestions_Topic_Level` ON `(lower(Topic), Level)` WHERE `"IsDeleted" = false`  
+> - `IX_QuizQuestions_Category` ON `(Category)` WHERE `"IsDeleted" = false`
+
+---
+
+### `UserQuizProgresses` (Spaced Repetition & Question Mastery)
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `Id` | `uuid` | PK | Unique Identifier |
+| `UserId` | `uuid` | FK $\rightarrow$ `Users(Id)`, NOT NULL | Owner user identifier |
+| `QuestionId` | `uuid` | FK $\rightarrow$ `QuizQuestions(Id)`, NOT NULL | Reference to quiz question |
+| `IsMastered` | `boolean` | NOT NULL, Default false | True after 2 consecutive correct submissions |
+| `LastSelectedOptionIndex` | `int` | NULL | Index chosen in last attempt |
+| `IsLastAnswerCorrect` | `boolean` | NULL | Correctness of latest attempt |
+| `CorrectCount` | `int` | NOT NULL, Default 0 | Total correct submissions |
+| `IncorrectCount` | `int` | NOT NULL, Default 0 | Total incorrect submissions |
+| `ConsecutiveCorrectCount` | `int` | NOT NULL, Default 0 | Current consecutive correct streak |
+| `LastAttemptedAt` | `timestamptz` | NULL | Timestamp of last attempt |
+| `IsDeleted` | `boolean` | NOT NULL, Default false | Soft delete flag |
+| `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
+| `UpdatedAt` | `timestamptz` | NULL | Last update timestamp |
+
+> **Unique Index:** `IX_UserQuizProgresses_UserId_QuestionId` ON `(UserId, QuestionId)` WHERE `"IsDeleted" = false`  
+> **Query Index:** `IX_UserQuizProgresses_UserId_IsMastered` ON `(UserId, IsMastered)` WHERE `"IsDeleted" = false`
+
 
