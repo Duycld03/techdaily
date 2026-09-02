@@ -18,6 +18,8 @@ erDiagram
     USER ||--o{ SPACED_REPETITION_CARD : owns
     USER ||--o{ STREAK_RECORD : logs
     USER ||--o{ USER_HIGHLIGHT : creates
+    USER ||--o{ USER_INSIGHT_BOOKMARK : bookmarks
+    TECH_INSIGHT ||--o{ USER_INSIGHT_BOOKMARK : bookmarked_in
     TERM_EXPLANATION_CACHE
 ```
 
@@ -215,3 +217,17 @@ erDiagram
 | `IsDeleted` | `boolean` | NOT NULL, Default false | Soft delete flag |
 | `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
 | `UpdatedAt` | `timestamptz` | NULL | Last update timestamp |
+
+---
+
+### `UserInsightBookmarks` (Persisted Insight Saves)
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `Id` | `uuid` | PK | Unique Identifier |
+| `UserId` | `uuid` | FK $\rightarrow$ `Users(Id)`, NOT NULL | Owner user identifier |
+| `InsightId` | `uuid` | FK $\rightarrow$ `TechInsights(Id)`, NOT NULL | Bookmarked insight identifier |
+| `CreatedAt` | `timestamptz` | NOT NULL | Bookmark creation timestamp |
+
+> **Unique Index:** `IX_UserInsightBookmarks_UserId_InsightId` ON `(UserId, InsightId)`.  
+> **Cascade Delete:** Deleting either the parent `User` or `TechInsight` automatically cascades to remove related bookmarks.
+

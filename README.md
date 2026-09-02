@@ -71,13 +71,15 @@ TechDaily (Clean Architecture)
 ### 6. ✨ Infinite Senior Tech Insights Feed (`/insights`)
 - **Bite-Sized Architectural Lessons:** Curated feed of Senior Anti-Patterns vs Idiomatic Solutions across C#, Rust, Go, Python, TypeScript, Vue 3, and PostgreSQL.
 - **Under-The-Hood Mechanics:** Memory layouts, lock contention, compiler lowerings, and OS syscalls with benchmark statistics.
+- **Database-Persisted Bookmarks:** Save important lessons with real-time bookmark toggle and "🔖 Đã Lưu" filter view.
 - **Multimodal AI Synthesis:** Generate on-demand, deep-dive insights on any custom technology or topic using Gemini 3.5 Flash.
 - **Keyboard Navigation:** Fast card flipping using `[Space]`, `[→]`, and `[←]` keys.
 
-### 7. 🖍️ Architectural Highlights & Notes (`/notes`)
-- **Captured Snippets:** Centralized archive of all highlighted quotes categorized by book and chapter.
-- **Tagging & Reflection:** Custom notes and multi-tag filtering.
-- **Production Confirmation Modal:** Sleek, accessible delete confirmation dialog (Zero native browser popups).
+### 7. 🖍️ Architectural Highlights & Saved Insights Hub (`/notes`)
+- **2-Tab Knowledge Base:**
+  - **🔖 Saved Insights:** Manage all bookmarked senior technical insights with summaries, fast jump links, and unbookmarking.
+  - **🖍️ Reading Highlights:** Centralized archive of all highlighted quotes categorized by book and chapter with custom reflections and tagging.
+- **Production Confirmation Modals:** Sleek, accessible delete and unbookmark confirmation dialogs (Zero native browser popups).
 
 ### 8. 🛡️ Hybrid Authentication & User Profile (`/login`, `/profile`)
 - **Standard Email/Password:** Secure PBKDF2 hashing with 16-byte random salt and 100,000 SHA-256 iterations.

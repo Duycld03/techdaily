@@ -101,6 +101,10 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
    - Shiki code block language detection MUST check explicit tags (e.g., `#rust`, `#go`, `#python`, `#sql`, `#vue`) before falling back to generic token regexes to avoid false positives (e.g., Rust `let mut` vs JavaScript `let`).
 4. **Header Banner & Reader Theme Parity:**
    - All banner headers, progress trackers, and reader cards MUST dynamically adapt between Light Mode (`bg-gradient-to-br from-indigo-50/80 via-white to-sky-50/50 text-slate-900`) and Dark Mode (`dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950 dark:text-white`).
+5. **Database-Persisted Bookmarking & Auth Enforcement:**
+   - Bookmarking tech insights MUST NOT rely on client-side memory or fake fallback IDs. It MUST enforce `.RequireAuthorization()` and persist records in `UserInsightBookmarks`.
+   - The feed endpoint MUST return `isBookmarkedByUser: true/false` reflecting database state and support `onlyBookmarked=true` filtering for the `/notes` and `/insights` bookmark views.
+   - User profile updates on `/profile` MUST automatically synchronize to in-memory auth store and `techdaily_user` in `localStorage` to avoid stale session hydration on page reloads.
 
 ---
 

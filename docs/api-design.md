@@ -227,7 +227,13 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ### `GET /api/v1/insights/feed`
 - **Auth:** Public / Optional (`Bearer`)
-- **Query Params:** `category` (optional int: 0=Frontend, 1=DotNet, 2=Database, 3=SystemDesign), `tag` (optional string), `page` (optional int), `pageSize` (optional int), `randomize` (optional bool)
+- **Query Params:**
+  - `category` *(optional int)*: `0=FrontendWeb`, `1=BackendDotNet`, `2=DatabaseStorage`, `3=SystemDesign`
+  - `tag` *(optional string)*: Filter by keyword tag
+  - `page` *(optional int)*: Page index (default: 1)
+  - `pageSize` *(optional int)*: Items per page (default: 10, max: 50)
+  - `randomize` *(optional bool)*: Randomize feed order
+  - `onlyBookmarked` *(optional bool)*: If `true` and authenticated, returns only insights bookmarked by the current user.
 - **Response (200 OK):**
   ```json
   {
@@ -246,7 +252,7 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
         "sourceUrl": "https://learn.microsoft.com/en-us/dotnet/core/extensions/channels",
         "likesCount": 12,
         "bookmarksCount": 4,
-        "isBookmarkedByUser": false
+        "isBookmarkedByUser": true
       }
     ],
     "totalCount": 8,
@@ -269,8 +275,17 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 - **Response (200 OK):** Synthesized `TechInsightDto` saved to the catalog.
 
 ### `POST /api/v1/insights/{id}/bookmark`
-- **Auth:** Optional / Authenticated
-- **Response (200 OK):** `{ "insightId": "...", "isBookmarked": true, "totalBookmarks": 5 }`
+- **Auth:** Required (`Bearer`)
+- **Description:** Toggles bookmark status for the authenticated user. Increments or decrements `BookmarksCount` and persists state in `UserInsightBookmarks`.
+- **Response (200 OK):**
+  ```json
+  {
+    "insightId": "56314f47-7596-4d30-ae82-b3ca7e9f0a95",
+    "isBookmarked": true,
+    "totalBookmarks": 5
+  }
+  ```
+- **Response (401 Unauthorized):** Returned when no valid JWT is present.
 
 ---
 
@@ -361,7 +376,11 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ---
 
-## 8. Reading Notes & Highlights (`/api/v1/notes`)
+## 8. Architectural Highlights & Saved Insights Hub (`/api/v1/notes`)
+
+The `/notes` page serves as the centralized knowledge base with a 2-tab management hub:
+1. **🔖 Saved Insights:** Powered by `GET /api/v1/insights/feed?onlyBookmarked=true` and toggled via `POST /api/v1/insights/{id}/bookmark`.
+2. **🖍️ Reading Highlights:** Powered by the dedicated highlights endpoints below:
 
 ### `GET /api/v1/notes/highlights`
 - **Auth:** Required (`Bearer`)
@@ -375,3 +394,4 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 ### `DELETE /api/v1/notes/highlights/{id}`
 - **Auth:** Required (`Bearer`)
 - **Response (204 No Content):** Deletes specified user highlight.
+
