@@ -28,7 +28,11 @@ export function useApiClient() {
   const baseUrl = getBaseUrl()
 
   function getAuthToken(): string | null {
-    if (import.meta.client) {
+    const tokenCookie = useCookie<string | null>('techdaily_token')
+    if (tokenCookie.value) {
+      return tokenCookie.value
+    }
+    if (import.meta.client && typeof window !== 'undefined') {
       return localStorage.getItem('techdaily_token')
     }
     return null

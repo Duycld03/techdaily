@@ -52,6 +52,12 @@ const categories = [
 ]
 
 onMounted(async () => {
+  if (!authStore.isLoggedIn) {
+    return navigateTo({
+      path: '/login',
+      query: { redirect: '/insights' }
+    })
+  }
   await insightsStore.fetchFeed()
   window.addEventListener('keydown', handleKeyDown)
 })

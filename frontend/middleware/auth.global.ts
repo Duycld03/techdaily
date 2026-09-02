@@ -1,11 +1,12 @@
 export default defineNuxtRouteMiddleware((to) => {
-  // Defer auth routing checks to client where localStorage / session state lives
-  if (import.meta.server) return
-
+  const tokenCookie = useCookie<string | null>('techdaily_token')
   const authStore = useAuthStore()
+
   if (!authStore.isLoggedIn) {
     authStore.init()
   }
+
+  const hasToken = !!authStore.isLoggedIn || !!tokenCookie.value
 
   const isGuestOnly = to.path === '/login'
   const isAuthRequired =
@@ -14,15 +15,16 @@ export default defineNuxtRouteMiddleware((to) => {
     to.path.startsWith('/review') ||
     to.path.startsWith('/notes') ||
     to.path.startsWith('/profile') ||
-    to.path.startsWith('/settings')
+    to.path.startsWith('/settings') ||
+    to.path.startsWith('/quiz')
 
   // Logged-in users cannot visit /login
-  if (isGuestOnly && authStore.isLoggedIn) {
+  if (isGuestOnly && hasToken) {
     return navigateTo('/today')
   }
 
-  // Unauthenticated visitors cannot access protected pages
-  if (isAuthRequired && !authStore.isLoggedIn) {
+  // Unauthenticated visitors cannot access protected pages (both on SSR and Client)
+  if (isAuthRequired && !hasToken) {
     return navigateTo({
       path: '/login',
       query: { redirect: to.fullPath }

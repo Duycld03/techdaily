@@ -30,3 +30,11 @@ import { vi } from 'vitest'
 })
 
 ;(globalThis as any).navigateTo = vi.fn()
+
+const mockCookies = new Map<string, any>()
+;(globalThis as any).useCookie = (name: string) => {
+  if (!mockCookies.has(name)) {
+    mockCookies.set(name, { value: null })
+  }
+  return mockCookies.get(name)
+}
