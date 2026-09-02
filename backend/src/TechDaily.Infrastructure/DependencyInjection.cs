@@ -28,8 +28,8 @@ public static class DependencyInjection
         services.AddScoped<ITechDailyDbContext>(sp => sp.GetRequiredService<TechDailyDbContext>());
 
         // HTTP Clients for External Services
-        services.AddHttpClient<GeminiAiService>();
-        services.AddHttpClient<TermExplanationService>();
+        services.AddHttpClient<GeminiAiService>(client => client.Timeout = TimeSpan.FromSeconds(60));
+        services.AddHttpClient<TermExplanationService>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<TelegramNotifier>();
         services.AddHttpClient<IWebArticleCrawler, WebArticleCrawler>();
 
