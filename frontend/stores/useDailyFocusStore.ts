@@ -44,15 +44,6 @@ export interface DocumentChunk {
   estimatedReadMinutes: number
 }
 
-export interface AiReview {
-  score: number
-  summaryFeedback: string
-  strengths: string[]
-  missingPoints: string[]
-  improvedAnswerMarkdown: string
-  aiModelUsed: string
-}
-
 export interface DailyDrill {
   id: string
   scheduledDate: string
@@ -60,11 +51,8 @@ export interface DailyDrill {
   selectedOptionIndex?: number
   isCorrect?: boolean
   score?: number
-  userAnswerText?: string
-  userAudioUrl?: string
   attemptCount: number
   submittedAt?: string
-  aiReview?: AiReview
 }
 
 export interface TodayFocusResponse {
@@ -103,49 +91,6 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
     }
   }
 
-  async function submitDrill(params: {
-    answerText?: string
-    audioBase64?: string
-    audioMimeType?: string
-    locale?: string
-  }) {
-    if (!data.value?.drill) return null
-
-    isSubmitting.value = true
-    error.value = null
-    try {
-      const api = useApiClient()
-      const res = await api.post<{
-        review: AiReview
-        currentStreak: number
-        longestStreak: number
-        totalDrillsCompleted: number
-        averageScore: number
-        audioUrl?: string
-      }>(`/api/v1/daily/drills/${data.value.drill.id}/submit`, {
-        answerText: params.answerText,
-        audioBase64: params.audioBase64,
-        audioMimeType: params.audioMimeType,
-        locale: params.locale || 'en'
-      })
-
-      if (data.value) {
-        data.value.drill.status = 2 // Reviewed
-        data.value.drill.userAnswerText = params.answerText
-        data.value.drill.aiReview = res.review
-        data.value.currentStreak = res.currentStreak
-        data.value.longestStreak = res.longestStreak
-      }
-
-      return res
-    } catch (err: any) {
-      error.value = err.message || 'Failed to submit drill.'
-      throw err
-    } finally {
-      isSubmitting.value = false
-    }
-  }
-
   async function submitOption(selectedOptionIndex: number, locale: string = 'en') {
     if (!data.value?.drill) return null
 
@@ -159,7 +104,6 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
         correctOptionIndex: number
         score: number
         explanationMarkdown: string
-        review?: AiReview
         currentStreak: number
         longestStreak: number
         totalDrillsCompleted: number
@@ -205,7 +149,6 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
     isSubmitting,
     error,
     fetchTodayFocus,
-    submitDrill,
     submitOption,
     explainTerm
   }

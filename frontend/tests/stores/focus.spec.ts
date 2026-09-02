@@ -127,18 +127,16 @@ describe('useDailyFocusStore', () => {
     expect(focus.data?.currentStreak).toBe(6)
   })
 
-  it('submits legacy drill answer and updates review score in state', async () => {
+  it('submits incorrect scenario option and records zero score with review scheduling', async () => {
     const focus = useDailyFocusStore()
     await focus.fetchTodayFocus()
 
-    const result = await focus.submitDrill({
-      answerText: 'Destructuring breaks the Proxy getter interception.',
-      locale: 'en'
-    })
+    const result = await focus.submitOption(0, 'en')
 
-    expect(result?.review.score).toBe(9)
+    expect(result.isCorrect).toBe(false)
+    expect(result.score).toBe(0)
     expect(focus.data?.drill.status).toBe(2)
-    expect(focus.data?.drill.aiReview?.score).toBe(9)
-    expect(focus.data?.currentStreak).toBe(6)
+    expect(focus.data?.drill.selectedOptionIndex).toBe(0)
+    expect(focus.data?.drill.isCorrect).toBe(false)
   })
 })

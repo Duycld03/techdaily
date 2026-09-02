@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Terminal, CheckCircle2, XCircle, Sparkles, Lock, ArrowRight, Check, AlertCircle, PenTool, Mic, Send } from 'lucide-vue-next'
+import { Terminal, CheckCircle2, XCircle, Sparkles, Lock, ArrowRight, Check, AlertCircle } from 'lucide-vue-next'
 import confetti from 'canvas-confetti'
 import type { InterviewQuestion, DailyDrill } from '~/stores/useDailyFocusStore'
 import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
-import CodeMirrorEditor from '~/components/today/CodeMirrorEditor.vue'
-import AudioRecorderModal from '~/components/today/AudioRecorderModal.vue'
-import ScorecardAiReview from '~/components/today/ScorecardAiReview.vue'
 
 const props = defineProps<{
   question: InterviewQuestion
@@ -34,7 +31,6 @@ watch(() => props.drill, (newDrill) => {
 }, { immediate: true })
 
 const isReviewed = computed(() => props.drill.status === 2)
-const isMultipleChoice = computed(() => props.question.options && props.question.options.length > 0)
 
 const isCorrect = computed(() => {
   if (props.drill.isCorrect !== undefined && props.drill.isCorrect !== null) {
@@ -53,19 +49,6 @@ const renderedExplanation = computed(() => {
   return ''
 })
 
-// Legacy write/voice fallback state
-const inputMode = ref<'write' | 'voice'>('write')
-const answerText = ref(props.drill.userAnswerText || '')
-const audioBase64 = ref<string | null>(null)
-const audioMimeType = ref<string>('audio/webm')
-
-function handleAudioUpdate(blob: Blob | null, b64: string | null) {
-  audioBase64.value = b64
-  if (blob) {
-    audioMimeType.value = blob.type
-  }
-}
-
 async function handleOptionSelect(index: number) {
   if (isReviewed.value) return
   selectedOption.value = index
@@ -82,32 +65,6 @@ async function handleOptionSubmit() {
   try {
     const res = await focusStore.submitOption(selectedOption.value, locale.value)
     if (res?.isCorrect) {
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { y: 0.6 }
-      })
-    }
-  } catch (err) {
-    // handled in store
-  }
-}
-
-async function handleLegacySubmit() {
-  if (!authStore.isLoggedIn) {
-    router.push({ path: '/login', query: { redirect: '/today' } })
-    return
-  }
-
-  try {
-    const res = await focusStore.submitDrill({
-      answerText: inputMode.value === 'write' ? answerText.value : undefined,
-      audioBase64: inputMode.value === 'voice' ? audioBase64.value! : undefined,
-      audioMimeType: audioMimeType.value,
-      locale: locale.value
-    })
-
-    if (res?.review && res.review.score >= 8) {
       confetti({
         particleCount: 80,
         spread: 60,
@@ -157,7 +114,7 @@ async function handleLegacySubmit() {
     </div>
 
     <!-- Scenario Multiple-Choice Interface -->
-    <div v-if="isMultipleChoice" class="space-y-5 sm:space-y-6 flex-1 flex flex-col justify-between">
+    <div class="space-y-5 sm:space-y-6 flex-1 flex flex-col justify-between">
       <!-- Options List -->
       <div class="space-y-3">
         <div class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -297,60 +254,6 @@ async function handleLegacySubmit() {
             v-html="renderedExplanation"
           ></div>
         </div>
-      </div>
-    </div>
-
-    <!-- Legacy Free-Text / Voice Mode Fallback (if no options provided) -->
-    <div v-else class="space-y-6 flex-1 flex flex-col justify-between">
-      <div v-if="!isReviewed" class="flex-1 flex flex-col justify-between space-y-4">
-        <div class="flex p-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-semibold w-fit">
-          <button
-            @click="inputMode = 'write'"
-            :class="[
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors outline-none',
-              inputMode === 'write' ? 'bg-white dark:bg-slate-800 text-brand-700 dark:text-brand-400 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
-            ]"
-          >
-            <PenTool class="w-3.5 h-3.5" />
-            <span>{{ $t('today.write_mode') }}</span>
-          </button>
-          <button
-            @click="inputMode = 'voice'"
-            :class="[
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors outline-none',
-              inputMode === 'voice' ? 'bg-white dark:bg-slate-800 text-brand-700 dark:text-brand-400 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
-            ]"
-          >
-            <Mic class="w-3.5 h-3.5" />
-            <span>{{ $t('today.voice_mode') }}</span>
-          </button>
-        </div>
-
-        <div v-if="inputMode === 'write'" class="flex-1 min-h-[300px]">
-          <CodeMirrorEditor
-            v-model="answerText"
-            :placeholder="$t('today.editor_placeholder')"
-          />
-        </div>
-
-        <div v-else class="flex-1 flex items-center justify-center min-h-[250px]">
-          <AudioRecorderModal @update:audio="handleAudioUpdate" />
-        </div>
-
-        <div class="flex justify-end pt-2">
-          <button
-            @click="handleLegacySubmit"
-            :disabled="focusStore.isSubmitting"
-            class="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 text-white font-semibold text-sm shadow-lg shadow-brand-500/20"
-          >
-            <Send class="w-4 h-4" />
-            <span>{{ focusStore.isSubmitting ? $t('today.submitting') : $t('today.submit_drill') }}</span>
-          </button>
-        </div>
-      </div>
-
-      <div v-else class="space-y-4">
-        <ScorecardAiReview v-if="drill.aiReview" :review="drill.aiReview" />
       </div>
     </div>
   </div>
