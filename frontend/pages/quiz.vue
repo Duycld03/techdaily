@@ -162,19 +162,14 @@ function getOptionClass(idx: number): string {
 <template>
   <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
     <!-- Header Section -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
-      <div>
-        <div class="flex items-center gap-2.5">
-          <div class="p-2 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
-            <HelpCircle class="w-6 h-6" />
-          </div>
-          <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-            {{ $t('quiz.title') }}
-          </h1>
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div class="flex items-center gap-2.5">
+        <div class="p-2 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
+          <HelpCircle class="w-6 h-6" />
         </div>
-        <p class="mt-1 text-sm sm:text-base text-slate-600 dark:text-slate-400">
-          {{ $t('quiz.subtitle') }}
-        </p>
+        <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+          {{ $t('quiz.title') }}
+        </h1>
       </div>
 
       <!-- Tab Buttons -->
