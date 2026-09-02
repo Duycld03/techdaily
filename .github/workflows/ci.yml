@@ -137,7 +137,7 @@ jobs:
             cd ~/techdaily || cd /home/${{ secrets.VPS_USERNAME }}/techdaily
             git pull origin main
             docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
             docker compose -f docker-compose.prod.yml restart nginx
             docker image prune -f
 
