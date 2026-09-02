@@ -665,16 +665,74 @@ No markdown backticks around JSON.";
         int count,
         bool isVi)
     {
-        var list = new List<QuizQuestion>();
-        for (var i = 1; i <= count; i++)
+        var viAspects = new[]
         {
-            var qText = isVi
-                ? $"[{level}] Câu hỏi phỏng vấn số {i} về chủ đề {topic}: Cơ chế hoạt động và tối ưu hóa nào sau đây là chính xác nhất?"
-                : $"[{level}] Technical interview question #{i} on {topic}: Which mechanism or optimization strategy is optimal in production?";
+            ("Cơ chế tối ưu hóa cấp phát bộ nhớ và quản lý vòng đời đối tượng", "Sử dụng bộ nhớ ngăn xếp (Stack) và Zero-allocation primitives", "Cấp phát liên tục trên Heap trong vòng lặp", "Tắt hoàn toàn trình thu gom rác GC", "Sử dụng Finalizer trên toàn bộ đối tượng"),
+            ("Chiến lược kiểm soát concurrency và giảm thiểu lock contention", "Áp dụng cấu trúc dữ liệu Lock-free hoặc ReaderWriterLockSlim", "Dùng exclusive lock toàn cục chặn mọi luồng", "Chạy Thread.Sleep trong vòng lặp chờ khóa", "Bỏ qua đồng bộ hóa trạng thái dùng chung"),
+            ("Xử lý lỗi ngoại lệ và đảm bảo tính kiên cường (Resilience) trong hệ thống phân tán", "Tích hợp Circuit Breaker và Retry có Exponential Backoff & Jitter", "Bắt tất cả Exception và nuốt âm thầm", "Thử lại vô hạn ngay lập tức khi xảy ra lỗi mạng", "Đóng băng tiến trình khi gặp timeout"),
+            ("Kiến trúc truy xuất dữ liệu và tối ưu hóa I/O throughput", "Sử dụng luồng bất đồng bộ Non-blocking I/O và batching", "Đọc toàn bộ bảng dữ liệu vào bộ nhớ RAM mỗi request", "Dùng Blocking I/O trên ThreadPool worker", "Mở kết nối cơ sở dữ liệu mới cho mỗi bản ghi"),
+            ("Thiết kế API và quản lý trạng thái tải cao", "Triển khai Rate Limiting theo token bucket và Caching phân tán", "Gửi toàn bộ dữ liệu thô không nén qua HTTP/1.0", "Lưu toàn bộ phiên làm việc người dùng trong bộ nhớ cục bộ đơn lẻ", "Bỏ qua xác thực JWT và kiểm tra quyền hạn"),
+            ("Tối ưu hóa Index và mô hình truy vấn cơ sở dữ liệu", "Thiết kế Covering Index hoặc Partial Index phù hợp mẫu truy vấn", "Tạo Index trên toàn bộ cột không phân biệt tần suất", "Quét toàn bộ bảng (Full Table Scan) thay vì dùng Index", "Xóa toàn bộ Foreign Key để tăng tốc độ ghi mà không có ràng buộc"),
+            ("Bảo vệ ứng dụng trước race conditions và deadlock", "Tuân thủ thứ tự khóa tài nguyên nghiêm ngặt và dùng Timeout khi chờ khóa", "Khóa các tài nguyên theo thứ tự ngẫu nhiên giữa các luồng", "Dùng nested lock không giới hạn độ sâu", "Tắt cờ an toàn đa luồng của trình biên dịch"),
+            ("Tối ưu hóa hiệu năng CPU và Cache Locality (L1/L2)", "Bố trí dữ liệu liền kề (Data-oriented Design / Struct of Arrays)", "Truy cập bộ nhớ ngẫu nhiên qua nhiều con trỏ phân tán", "Tạo hàng nghìn object nhỏ rải rác trên heap", "Liên tục boxing/unboxing giá trị nguyên thủy"),
+            ("Quản lý kết nối mạng và socket trong môi trường microservices", "Tái sử dụng Connection Pool (HttpClientFactory) và kiểm soát DNS TTL", "Khởi tạo HttpClient mới cho mỗi HTTP request đơn lẻ", "Để socket mở vô thời hạn không thiết lập keep-alive", "Tắt cơ chế TLS để giảm tải mã hóa trên môi trường public"),
+            ("Chiến lược CI/CD và kiến trúc zero-downtime deployment", "Triển khai Blue-Green hoặc Rolling Update với Health Checks tự động", "Ghi đè trực tiếp file nhị phân đang chạy trên server production", "Tắt toàn bộ hệ thống trong 2 giờ để cập nhật phiên bản", "Bỏ qua bước chạy Automated Integration Test trước khi release")
+        };
 
-            var exp = isVi
-                ? $"### Phân Tích Chuyên Sâu\n- **Đáp án A là tối ưu nhất** vì nó giảm thiểu tối đa chi phí cấp phát bộ nhớ và loại bỏ hoàn toàn GC Gen 2 latency.\n- **Các lựa chọn còn lại:** Dẫn đến race conditions, rò rỉ bộ nhớ hoặc lock contention trong môi trường đa luồng."
-                : $"### Deep Dive Technical Explanation\n- **Option A is optimal** because it prevents unnecessary allocations on the managed heap and eliminates Gen 2 GC pause spikes.\n- **Other options:** Result in avoidable memory fragmentation, race conditions, or unhandled lock contention under high concurrency.";
+        var enAspects = new[]
+        {
+            ("Memory allocation optimization and object lifecycle management", "Leverage stack-allocated primitives and zero-allocation spans", "Allocate short-lived objects continuously on the managed heap", "Disable the Garbage Collector entirely during high traffic", "Implement expensive finalizers on all domain classes"),
+            ("Concurrency control and lock contention mitigation strategies", "Employ lock-free data structures or fine-grained read-write locks", "Wrap all critical sections in a single global exclusive lock", "Spin-wait with Thread.Sleep inside tight acquisition loops", "Ignore synchronization primitives across worker threads"),
+            ("Fault tolerance and resilience in distributed topologies", "Implement Circuit Breaker with exponential backoff and jitter", "Catch generic exceptions and swallow them without logging", "Retry network requests indefinitely with zero delay", "Block calling threads until deadlocked dependencies respond"),
+            ("High-throughput non-blocking I/O and query architecture", "Utilize asynchronous non-blocking pipelines and batch processing", "Load entire unindexed dataset partitions into application memory", "Synchronously block ThreadPool workers waiting on socket I/O", "Instantiate a new persistent database connection per row"),
+            ("High-scale API design and state management", "Enforce Token Bucket rate limiting and distributed caching tiers", "Stream uncompressed raw payloads over unversioned endpoints", "Store stateful session data in isolated single-instance memory", "Bypass token verification and claim inspection under load"),
+            ("Database indexing strategies and query execution plans", "Construct covering indexes tailored to query filter criteria", "Create unclustered indexes on every column indiscriminately", "Force full table scans to avoid index maintenance overhead", "Drop all foreign key constraints without referential checks"),
+            ("Deadlock prevention and multi-threaded synchronization", "Enforce strict lock acquisition hierarchy with explicit timeouts", "Acquire multiple resource locks in arbitrary non-deterministic order", "Nest synchronization monitors indefinitely without timeouts", "Rely on thread priority manipulation instead of synchronization"),
+            ("CPU cache locality (L1/L2) and hardware efficiency", "Align data structures sequentially in memory (Data-Oriented Design)", "Traverse scattered linked-node pointer chains randomly", "Distribute millions of micro-objects across fragmented memory", "Perform repetitive boxing/unboxing conversions in hot paths"),
+            ("Microservice network socket management and connection pooling", "Reuse managed connection pools with HttpClientFactory and DNS TTL", "Instantiate a disposable HttpClient per outgoing HTTP request", "Leave idle TCP connections open indefinitely without heartbeats", "Disable TLS transport security to reduce cryptographic overhead"),
+            ("Zero-downtime deployment and modern release engineering", "Execute Blue-Green or Rolling deployments with automated probes", "Directly overwrite running production binaries on the host VM", "Schedule mandatory 2-hour offline windows for minor patches", "Skip continuous integration test validation before releasing")
+        };
+
+        var list = new List<QuizQuestion>();
+        for (var i = 0; i < count; i++)
+        {
+            var aspectIndex = i % 10;
+            var correctOptionIdx = i % 4;
+
+            string qText;
+            string correctOpt;
+            string distractor1;
+            string distractor2;
+            string distractor3;
+            string exp;
+
+            if (isVi)
+            {
+                var aspect = viAspects[aspectIndex];
+                qText = $"[{level}] Câu hỏi #{i + 1} về {topic}: Khi giải quyết vấn đề \"{aspect.Item1}\", phương án kiến trúc nào sau đây là tối ưu nhất?";
+                correctOpt = aspect.Item2;
+                distractor1 = aspect.Item3;
+                distractor2 = aspect.Item4;
+                distractor3 = aspect.Item5;
+                exp = $"### Phân Tích Kỹ Thuật Chuyên Sâu\n- **Phương án đúng:** \"{correctOpt}\" là giải pháp chuẩn công nghiệp giúp tối đa hóa throughput và độ ổn định của hệ thống.\n- **Nhận định phương án sai:** Các phương án còn lại dẫn đến race conditions, memory leak hoặc nghẽn cổ chai I/O nghiêm trọng.";
+            }
+            else
+            {
+                var aspect = enAspects[aspectIndex];
+                qText = $"[{level}] Question #{i + 1} on {topic}: When addressing \"{aspect.Item1}\", which architectural strategy is optimal?";
+                correctOpt = aspect.Item2;
+                distractor1 = aspect.Item3;
+                distractor2 = aspect.Item4;
+                distractor3 = aspect.Item5;
+                exp = $"### Technical Deep Dive\n- **Optimal Solution:** \"{correctOpt}\" maximizes throughput while preventing resource exhaustion under production workloads.\n- **Flawed Distractors:** The alternative choices introduce severe lock contention, memory fragmentation, or unhandled failures.";
+            }
+
+            var allOptions = new List<string> { correctOpt, distractor1, distractor2, distractor3 };
+            if (correctOptionIdx > 0)
+            {
+                // Swap correct answer to target index
+                (allOptions[0], allOptions[correctOptionIdx]) = (allOptions[correctOptionIdx], allOptions[0]);
+            }
 
             list.Add(new QuizQuestion
             {
@@ -683,10 +741,8 @@ No markdown backticks around JSON.";
                 Category = category,
                 Level = level,
                 QuestionText = qText,
-                Options = isVi
-                    ? new() { "A. Sử dụng cấu trúc dữ liệu tối ưu bộ nhớ và Zero-allocation", "B. Cấp phát đối tượng mới trên Heap trong vòng lặp liên tục", "C. Sử dụng Global Lock trên toàn bộ tiến trình", "D. Bỏ qua cơ chế kiểm tra ngoại lệ và timeout" }
-                    : new() { "A. Utilize stack-allocated spans and zero-allocation memory primitives", "B. Allocate new heap objects repeatedly within tight loops", "C. Enforce a global lock blocking all worker threads", "D. Ignore cancellation tokens and timeout boundaries" },
-                CorrectOptionIndex = 0,
+                Options = allOptions,
+                CorrectOptionIndex = correctOptionIdx,
                 ExplanationMarkdown = exp,
                 Tags = new() { topic.ToLowerInvariant().Replace(" ", "-"), level.ToString().ToLowerInvariant(), "interview" },
                 CreatedAt = DateTimeOffset.UtcNow,
