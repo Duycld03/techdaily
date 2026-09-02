@@ -14,8 +14,8 @@
 - [x] 2.5 Register use cases and services in DI container (`DependencyInjection.cs`)
 
 ## Phase 3: API Layer & Security
-- [ ] 3.1 Create `QuizEndpoints.cs` with `.RequireAuthorization()` mapped to `/api/v1/quiz`
-- [ ] 3.2 Wire endpoints in `Program.cs` and verify OpenAPI/Swagger documentation
+- [x] 3.1 Create `QuizEndpoints.cs` with `.RequireAuthorization()` mapped to `/api/v1/quiz`
+- [x] 3.2 Wire endpoints in `Program.cs` and verify OpenAPI/Swagger documentation
 
 ## Phase 4: Frontend UI & Store Implementation
 - [ ] 4.1 Create Pinia store `useInterviewQuizStore.ts` with generation, submission, review queue, and stats management

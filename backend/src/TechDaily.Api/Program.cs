@@ -172,6 +172,11 @@ app.MapGroup("/api/v1/insights")
     .RequireAuthorization()
     .MapInsightsEndpoints();
 
+app.MapGroup("/api/v1/quiz")
+    .WithTags("Interview Quiz & Mastery Arena")
+    .RequireAuthorization()
+    .MapQuizEndpoints();
+
 app.MapGroup("/api/v1/daily")
     .WithTags("Daily Focus Hub")
     .MapDailyFocusEndpoints();
