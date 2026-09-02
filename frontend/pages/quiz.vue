@@ -264,8 +264,13 @@ function getOptionClass(idx: number): string {
               <button
                 v-for="topic in quickTopics"
                 :key="topic"
-                @click="customTopicInput = topic; handleGenerateQuiz(topic)"
-                class="px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium bg-slate-100 dark:bg-slate-800/70 hover:bg-brand-50 dark:hover:bg-brand-950/40 text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 border border-slate-200 dark:border-slate-700/60 transition-colors whitespace-nowrap"
+                @click="customTopicInput = topic"
+                :class="[
+                  'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap',
+                  customTopicInput === topic
+                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-800/70 hover:bg-brand-50 dark:hover:bg-brand-950/40 text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 border-slate-200 dark:border-slate-700/60'
+                ]"
               >
                 {{ topic }}
               </button>
