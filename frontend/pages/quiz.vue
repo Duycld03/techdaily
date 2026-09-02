@@ -180,6 +180,7 @@ function getOptionClass(idx: number): string {
       <!-- Tab Buttons -->
       <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shrink-0 overflow-x-auto">
         <button
+          data-testid="generate-tab-btn"
           @click="quizStore.activeTab = 'generate'"
           :class="[
             'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
@@ -194,6 +195,7 @@ function getOptionClass(idx: number): string {
 
         <button
           v-if="quizStore.questions.length > 0"
+          data-testid="arena-tab-btn"
           @click="quizStore.activeTab = 'arena'"
           :class="[
             'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
@@ -207,6 +209,7 @@ function getOptionClass(idx: number): string {
         </button>
 
         <button
+          data-testid="review-tab-btn"
           @click="quizStore.activeTab = 'review'; quizStore.fetchReviewQueue()"
           :class="[
             'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
@@ -226,6 +229,7 @@ function getOptionClass(idx: number): string {
         </button>
 
         <button
+          data-testid="stats-tab-btn"
           @click="quizStore.activeTab = 'stats'; quizStore.fetchStats()"
           :class="[
             'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
@@ -339,6 +343,7 @@ function getOptionClass(idx: number): string {
         <!-- Generate Button -->
         <div class="pt-3">
           <button
+            data-testid="generate-quiz-btn"
             @click="handleGenerateQuiz()"
             :disabled="quizStore.isGenerating"
             class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-base shadow-md shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all"
@@ -405,6 +410,7 @@ function getOptionClass(idx: number): string {
           <button
             v-for="(opt, idx) in currentQ.options"
             :key="idx"
+            data-testid="quiz-option"
             @click="handleSelectOption(idx)"
             :disabled="quizStore.isCurrentAnswered"
             :class="[
@@ -432,6 +438,7 @@ function getOptionClass(idx: number): string {
         <!-- Action / Submit Button -->
         <div v-if="!quizStore.isCurrentAnswered" class="pt-2 flex justify-end">
           <button
+            data-testid="submit-answer-btn"
             @click="handleSubmitAnswer()"
             :disabled="selectedOptionIndex === null || quizStore.isSubmitting"
             class="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-md shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
