@@ -92,9 +92,16 @@ public class TechInsightsTests : IDisposable
     }
 
     [Fact]
-    public async Task BookmarkInsight_ShouldIncrementBookmarkCount()
+    public async Task BookmarkInsight_ShouldToggleBookmarkOnAndOff()
     {
         // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@techdaily.io",
+            Name = "Test Engineer",
+            CreatedAt = DateTime.UtcNow
+        };
         var insight = new TechInsight
         {
             Id = Guid.NewGuid(),
@@ -110,20 +117,99 @@ public class TechInsightsTests : IDisposable
             BookmarksCount = 0,
             IsPublished = true
         };
+        await _db.Users.AddAsync(user);
         await _db.TechInsights.AddAsync(insight);
         await _db.SaveChangesAsync();
 
         var handler = new BookmarkInsightHandler(_db);
 
-        // Act
-        var result = await handler.ExecuteAsync(new BookmarkInsightRequest(insight.Id, Guid.NewGuid()));
+        // Act 1: Toggle ON (Bookmark)
+        var result1 = await handler.ExecuteAsync(new BookmarkInsightRequest(insight.Id, user.Id));
 
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.IsBookmarked.Should().BeTrue();
-        result.Value.TotalBookmarks.Should().Be(1);
+        // Assert 1
+        result1.IsSuccess.Should().BeTrue();
+        result1.Value.IsBookmarked.Should().BeTrue();
+        result1.Value.TotalBookmarks.Should().Be(1);
 
-        var updated = await _db.TechInsights.FindAsync(insight.Id);
-        updated!.BookmarksCount.Should().Be(1);
+        var countInDb = await _db.UserInsightBookmarks.CountAsync(b => b.UserId == user.Id && b.InsightId == insight.Id);
+        countInDb.Should().Be(1);
+
+        // Act 2: Toggle OFF (Unbookmark)
+        var result2 = await handler.ExecuteAsync(new BookmarkInsightRequest(insight.Id, user.Id));
+
+        // Assert 2
+        result2.IsSuccess.Should().BeTrue();
+        result2.Value.IsBookmarked.Should().BeFalse();
+        result2.Value.TotalBookmarks.Should().Be(0);
+
+        var countAfterUnbookmark = await _db.UserInsightBookmarks.CountAsync(b => b.UserId == user.Id && b.InsightId == insight.Id);
+        countAfterUnbookmark.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetInsightsFeed_ShouldResolveIsBookmarkedByUserAndFilterByOnlyBookmarked()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "dev@techdaily.io",
+            Name = "Dev",
+            CreatedAt = DateTime.UtcNow
+        };
+        var ins1 = new TechInsight
+        {
+            Id = Guid.NewGuid(),
+            Slug = "card-1",
+            Title = "Card 1",
+            Category = Category.BackendDotNet,
+            Tags = new() { "csharp" },
+            SummaryMarkdown = "Summary",
+            ProblemSnippet = "Problem",
+            SolutionSnippet = "Solution",
+            UnderTheHoodMarkdown = "Internals",
+            IsPublished = true
+        };
+        var ins2 = new TechInsight
+        {
+            Id = Guid.NewGuid(),
+            Slug = "card-2",
+            Title = "Card 2",
+            Category = Category.DatabaseStorage,
+            Tags = new() { "sql" },
+            SummaryMarkdown = "Summary",
+            ProblemSnippet = "Problem",
+            SolutionSnippet = "Solution",
+            UnderTheHoodMarkdown = "Internals",
+            IsPublished = true
+        };
+        await _db.Users.AddAsync(user);
+        await _db.TechInsights.AddRangeAsync(ins1, ins2);
+        await _db.UserInsightBookmarks.AddAsync(new UserInsightBookmark
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            InsightId = ins1.Id,
+            CreatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        var feedHandler = new GetInsightsFeedHandler(_db);
+
+        // Act 1: Get feed for user
+        var feedResponse = await feedHandler.ExecuteAsync(new GetInsightsFeedRequest(UserId: user.Id));
+        feedResponse.IsSuccess.Should().BeTrue();
+        feedResponse.Value.Insights.Should().HaveCount(2);
+
+        var dto1 = feedResponse.Value.Insights.First(i => i.Id == ins1.Id);
+        var dto2 = feedResponse.Value.Insights.First(i => i.Id == ins2.Id);
+        dto1.IsBookmarkedByUser.Should().BeTrue();
+        dto2.IsBookmarkedByUser.Should().BeFalse();
+
+        // Act 2: Filter only bookmarked
+        var onlyBookmarkedResponse = await feedHandler.ExecuteAsync(new GetInsightsFeedRequest(UserId: user.Id, OnlyBookmarked: true));
+        onlyBookmarkedResponse.IsSuccess.Should().BeTrue();
+        onlyBookmarkedResponse.Value.Insights.Should().HaveCount(1);
+        onlyBookmarkedResponse.Value.Insights[0].Id.Should().Be(ins1.Id);
     }
 }

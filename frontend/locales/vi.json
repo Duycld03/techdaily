@@ -154,14 +154,19 @@
   },
   "notes": {
     "title": "Kho Highlight & Ghi Chú Kiến Trúc",
-    "subtitle": "Tổng hợp các đoạn trích dẫn quan trọng được lưu lại trong quá trình luyện tập",
+    "subtitle": "Tổng hợp các mẫu kiến thức chuyên sâu và đoạn trích dẫn quan trọng được lưu lại",
+    "tab_saved_insights": "🔖 Kiến Thức Đã Lưu ({count})",
+    "tab_highlights": "🖍️ Trích Dẫn Đọc Sách ({count})",
     "search_placeholder": "Lọc ghi chú theo thẻ tag hoặc từ khóa...",
     "delete_btn": "Xóa",
     "delete_confirm_title": "Xác Nhận Xóa Ghi Chú",
     "delete_confirm_desc": "Bạn có chắc chắn muốn xóa đoạn trích highlight này khỏi danh sách không? Thao tác này không thể hoàn tác.",
     "cancel_btn": "Hủy Bỏ",
     "confirm_delete_btn": "Xóa Ghi Chú",
-    "no_notes": "Chưa có đoạn highlight nào. Bạn có thể bôi đen văn bản khi đọc bài ở Trung tâm luyện tập để lưu lại."
+    "no_notes": "Chưa có đoạn highlight nào. Bạn có thể bôi đen văn bản khi đọc bài ở Trung tâm luyện tập để lưu lại.",
+    "no_saved_insights": "Chưa có bài viết kiến thức nào được lưu. Bạn có thể bấm biểu tượng Bookmark trên các thẻ Khám Phá để lưu lại.",
+    "view_insight_btn": "Xem Chi Tiết",
+    "unbookmark_btn": "Gỡ Lưu"
   },
   "profile": {
     "title": "Hồ Sơ & Thống Kê",
@@ -232,6 +237,7 @@
     "keyboard_hint": "Nhấn [Space] hoặc [→] để chuyển nhanh",
     "save_bookmark": "Lưu Dấu",
     "saved": "Đã Lưu",
+    "saved_tab": "🔖 Đã Lưu",
     "empty_title": "Chưa có kiến thức phù hợp",
     "empty_desc": "Hãy thử chọn chủ đề khác hoặc bấm Tạo Với AI để sinh mẫu kiến thức mới.",
     "card_counter": "Mẫu {current} / {total}"

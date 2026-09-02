@@ -80,7 +80,34 @@ function handleKeyDown(e: KeyboardEvent) {
 }
 
 async function handleCategorySelect(catId: number | null) {
-  await insightsStore.fetchFeed(catId)
+  await insightsStore.fetchFeed(catId, null, false)
+}
+
+const authStore = useAuthStore()
+
+async function handleSavedFilter() {
+  if (!authStore.isAuthenticated) {
+    toast.warning('Vui lòng đăng nhập để xem danh sách bài viết đã lưu.')
+    return
+  }
+  await insightsStore.fetchFeed(null, null, true)
+}
+
+async function handleToggleBookmark(id: string) {
+  try {
+    const res = await insightsStore.toggleBookmark(id)
+    if (res?.isBookmarked) {
+      toast.success('Đã lưu mẫu kiến thức vào bookmark!')
+    } else {
+      toast.info('Đã gỡ mẫu kiến thức khỏi bookmark.')
+    }
+  } catch (err: any) {
+    if (err?.message === 'UNAUTHENTICATED' || err?.response?.status === 401) {
+      toast.warning('Vui lòng đăng nhập để lưu bài viết vào bookmark.')
+    } else {
+      toast.error('Không thể cập nhật bookmark.')
+    }
+  }
 }
 
 const toast = useToast()
@@ -162,12 +189,26 @@ function getCategoryBadge(cat: number) {
         @click="handleCategorySelect(cat.id)"
         :class="[
           'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 border',
-          insightsStore.selectedCategory === cat.id
+          !insightsStore.onlyBookmarked && insightsStore.selectedCategory === cat.id
             ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 border-transparent shadow-sm'
             : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
         ]"
       >
         {{ $t(cat.label) }}
+      </button>
+
+      <!-- Bookmarked Filter Button -->
+      <button
+        @click="handleSavedFilter"
+        :class="[
+          'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 border inline-flex items-center gap-1.5',
+          insightsStore.onlyBookmarked
+            ? 'bg-indigo-600 text-white dark:bg-indigo-500 dark:text-white border-transparent shadow-sm'
+            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+        ]"
+      >
+        <Bookmark class="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+        <span>{{ $t('insights.saved_tab') }}</span>
       </button>
     </div>
 
@@ -226,12 +267,18 @@ function getCategoryBadge(cat: number) {
 
             <!-- Bookmark Button -->
             <button
-              @click="insightsStore.toggleBookmark(insightsStore.currentInsight.id)"
-              class="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
-              :title="$t('insights.save_bookmark')"
+              @click="handleToggleBookmark(insightsStore.currentInsight.id)"
+              :class="[
+                'p-1.5 sm:p-2 rounded-xl transition-all shrink-0 flex items-center gap-1.5 border active:scale-95',
+                insightsStore.currentInsight.isBookmarkedByUser
+                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/80 shadow-sm'
+                  : 'bg-white dark:bg-slate-800/80 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
+              ]"
+              :title="insightsStore.currentInsight.isBookmarkedByUser ? $t('insights.saved') : $t('insights.save_bookmark')"
             >
-              <BookmarkCheck v-if="insightsStore.currentInsight.isBookmarkedByUser" class="w-5 h-5 text-indigo-600 dark:text-indigo-400 fill-indigo-600/20" />
-              <Bookmark v-else class="w-5 h-5" />
+              <BookmarkCheck v-if="insightsStore.currentInsight.isBookmarkedByUser" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 fill-indigo-600/20" />
+              <Bookmark v-else class="w-4 h-4" />
+              <span class="text-xs font-bold font-mono">{{ insightsStore.currentInsight.bookmarksCount }}</span>
             </button>
           </div>
         </div>

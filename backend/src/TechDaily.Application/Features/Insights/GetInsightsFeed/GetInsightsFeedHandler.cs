@@ -36,9 +36,25 @@ public class GetInsightsFeedHandler : IUseCase<GetInsightsFeedRequest, GetInsigh
             insights = insights.Where(i => i.Tags.Any(t => t.ToLowerInvariant().Contains(normalizedTag))).ToList();
         }
 
+        // Fetch User's bookmarked insight IDs if authenticated
+        HashSet<Guid> bookmarkedSet = new();
+        if (request.UserId.HasValue)
+        {
+            var bookmarkedIds = await _dbContext.UserInsightBookmarks
+                .Where(b => b.UserId == request.UserId.Value)
+                .Select(b => b.InsightId)
+                .ToListAsync(cancellationToken);
+            bookmarkedSet = bookmarkedIds.ToHashSet();
+        }
+
+        if (request.OnlyBookmarked)
+        {
+            insights = insights.Where(i => bookmarkedSet.Contains(i.Id)).ToList();
+        }
+
         var totalCount = insights.Count;
 
-        if (request.Randomize)
+        if (request.Randomize && !request.OnlyBookmarked)
         {
             var rng = new Random();
             insights = insights.OrderBy(_ => rng.Next()).ToList();
@@ -63,7 +79,7 @@ public class GetInsightsFeedHandler : IUseCase<GetInsightsFeedRequest, GetInsigh
                 i.SourceUrl,
                 i.LikesCount,
                 i.BookmarksCount,
-                false
+                bookmarkedSet.Contains(i.Id)
             ))
             .ToList();
 

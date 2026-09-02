@@ -313,3 +313,23 @@ public class TechInsightConfiguration : IEntityTypeConfiguration<TechInsight>
         builder.HasIndex(t => new { t.Category, t.IsPublished });
     }
 }
+
+public class UserInsightBookmarkConfiguration : IEntityTypeConfiguration<UserInsightBookmark>
+{
+    public void Configure(EntityTypeBuilder<UserInsightBookmark> builder)
+    {
+        builder.ToTable("UserInsightBookmarks");
+        builder.HasKey(b => b.Id);
+        builder.HasIndex(b => new { b.UserId, b.InsightId }).IsUnique();
+
+        builder.HasOne(b => b.User)
+            .WithMany()
+            .HasForeignKey(b => b.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(b => b.Insight)
+            .WithMany()
+            .HasForeignKey(b => b.InsightId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}

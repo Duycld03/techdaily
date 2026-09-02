@@ -17,6 +17,7 @@ public static class InsightsEndpoints
             [FromQuery] int? page,
             [FromQuery] int? pageSize,
             [FromQuery] bool? randomize,
+            [FromQuery] bool? onlyBookmarked,
             ClaimsPrincipal userClaims,
             IUseCase<GetInsightsFeedRequest, GetInsightsFeedResponse> handler,
             CancellationToken ct) =>
@@ -30,7 +31,8 @@ public static class InsightsEndpoints
                 page ?? 1,
                 pageSize ?? 10,
                 randomize ?? false,
-                userId
+                userId,
+                onlyBookmarked ?? false
             );
 
             var result = await handler.ExecuteAsync(request, ct);
@@ -55,23 +57,29 @@ public static class InsightsEndpoints
         .WithName("GenerateInsight")
         .WithSummary("Generates an on-demand senior technical insight using Gemini 3.6 Flash.");
 
-        // Bookmark Insight
+        // Bookmark Insight (Toggle Save)
         group.MapPost("/{id:guid}/bookmark", async (
             Guid id,
             ClaimsPrincipal userClaims,
             IUseCase<BookmarkInsightRequest, BookmarkInsightResponse> handler,
             CancellationToken ct) =>
         {
-            var userId = GetUserIdFromClaims(userClaims) ?? Guid.Parse("00000000-0000-0000-0000-000000000001");
-            var request = new BookmarkInsightRequest(id, userId);
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var request = new BookmarkInsightRequest(id, userId.Value);
             var result = await handler.ExecuteAsync(request, ct);
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
                 : Results.BadRequest(new { error = result.Error.Message });
         })
+        .RequireAuthorization()
         .WithName("BookmarkInsight")
-        .WithSummary("Increments bookmark count and saves insight.");
+        .WithSummary("Toggles bookmark status and updates bookmark count for authenticated user.");
 
         return group;
     }

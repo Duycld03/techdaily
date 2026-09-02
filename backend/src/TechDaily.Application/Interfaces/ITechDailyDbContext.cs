@@ -17,6 +17,7 @@ public interface ITechDailyDbContext
     DbSet<UserHighlight> UserHighlights { get; }
     DbSet<TermExplanationCache> TermExplanationCaches { get; }
     DbSet<TechInsight> TechInsights { get; }
+    DbSet<UserInsightBookmark> UserInsightBookmarks { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

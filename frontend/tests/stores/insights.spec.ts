@@ -2,6 +2,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useInsightsStore } from '~/stores/useInsightsStore'
 
+vi.mock('~/stores/useAuthStore', () => ({
+  useAuthStore: () => ({
+    isAuthenticated: true,
+    user: { id: 'usr-1', email: 'test@techdaily.io' }
+  })
+}))
+
 vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     get: vi.fn(async (url: string) => {

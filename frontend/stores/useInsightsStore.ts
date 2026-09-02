@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
+import { useAuthStore } from '~/stores/useAuthStore'
 
 export interface TechInsight {
   id: string
@@ -29,11 +30,14 @@ export interface InsightsFeedResponse {
 
 export const useInsightsStore = defineStore('insights', () => {
   const insights = ref<TechInsight[]>([])
+  const bookmarkedInsights = ref<TechInsight[]>([])
   const currentIndex = ref(0)
   const selectedCategory = ref<number | null>(null)
   const selectedTag = ref<string | null>(null)
+  const onlyBookmarked = ref(false)
   const isLoading = ref(false)
   const isGenerating = ref(false)
+  const isLoadingBookmarks = ref(false)
   const totalCount = ref(0)
   const error = ref<string | null>(null)
 
@@ -45,9 +49,10 @@ export const useInsightsStore = defineStore('insights', () => {
   const hasNext = computed(() => currentIndex.value < insights.value.length - 1)
   const hasPrev = computed(() => currentIndex.value > 0)
 
-  async function fetchFeed(category?: number | null, tag?: string | null) {
+  async function fetchFeed(category?: number | null, tag?: string | null, bookmarked?: boolean) {
     if (category !== undefined) selectedCategory.value = category
     if (tag !== undefined) selectedTag.value = tag
+    if (bookmarked !== undefined) onlyBookmarked.value = bookmarked
 
     isLoading.value = true
     error.value = null
@@ -60,6 +65,9 @@ export const useInsightsStore = defineStore('insights', () => {
       }
       if (selectedTag.value) {
         params.append('tag', selectedTag.value)
+      }
+      if (onlyBookmarked.value) {
+        params.append('onlyBookmarked', 'true')
       }
       params.append('page', '1')
       params.append('pageSize', '50')
@@ -75,6 +83,21 @@ export const useInsightsStore = defineStore('insights', () => {
       insights.value = []
     } finally {
       isLoading.value = false
+    }
+  }
+
+  async function fetchBookmarkedInsights() {
+    isLoadingBookmarks.value = true
+    try {
+      const api = useApiClient()
+      const response = await api.get<InsightsFeedResponse>('/api/v1/insights/feed?onlyBookmarked=true&pageSize=50')
+      bookmarkedInsights.value = response.insights || []
+      return bookmarkedInsights.value
+    } catch (err) {
+      bookmarkedInsights.value = []
+      return []
+    } finally {
+      isLoadingBookmarks.value = false
     }
   }
 
@@ -128,35 +151,60 @@ export const useInsightsStore = defineStore('insights', () => {
   }
 
   async function toggleBookmark(insightId: string) {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) {
+      throw new Error('UNAUTHENTICATED')
+    }
+
     try {
       const api = useApiClient()
       const response = await api.post<{ isBookmarked: boolean; totalBookmarks: number }>(
         `/api/v1/insights/${insightId}/bookmark`
       )
 
-      const target = insights.value.find(i => i.id === insightId)
-      if (target && response) {
-        target.bookmarksCount = response.totalBookmarks
-        target.isBookmarkedByUser = response.isBookmarked
+      if (response) {
+        const target = insights.value.find(i => i.id === insightId)
+        if (target) {
+          target.bookmarksCount = response.totalBookmarks
+          target.isBookmarkedByUser = response.isBookmarked
+        }
+
+        // Also update bookmarked list
+        if (!response.isBookmarked) {
+          bookmarkedInsights.value = bookmarkedInsights.value.filter(i => i.id !== insightId)
+          if (onlyBookmarked.value) {
+            insights.value = insights.value.filter(i => i.id !== insightId)
+            if (currentIndex.value >= insights.value.length) {
+              currentIndex.value = Math.max(0, insights.value.length - 1)
+            }
+          }
+        } else if (target && !bookmarkedInsights.value.some(i => i.id === insightId)) {
+          bookmarkedInsights.value.unshift({ ...target, isBookmarkedByUser: true })
+        }
       }
-    } catch (err) {
-      // ignore
+      return response
+    } catch (err: any) {
+      throw err
     }
   }
 
   return {
     insights,
+    bookmarkedInsights,
     currentIndex,
     currentInsight,
     selectedCategory,
     selectedTag,
+    onlyBookmarked,
     isLoading,
     isGenerating,
+    isLoadingBookmarks,
     totalCount,
     error,
     hasNext,
     hasPrev,
     fetchFeed,
+    fetchBookmarkedInsights,
     nextInsight,
     prevInsight,
     shuffle,

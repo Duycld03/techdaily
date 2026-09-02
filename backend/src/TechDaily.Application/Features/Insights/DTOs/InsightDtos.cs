@@ -25,7 +25,8 @@ public record GetInsightsFeedRequest(
     int Page = 1,
     int PageSize = 10,
     bool Randomize = false,
-    Guid? UserId = null
+    Guid? UserId = null,
+    bool OnlyBookmarked = false
 );
 
 public record GetInsightsFeedResponse(
