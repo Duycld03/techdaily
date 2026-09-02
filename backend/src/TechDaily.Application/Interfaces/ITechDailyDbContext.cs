@@ -18,6 +18,8 @@ public interface ITechDailyDbContext
     DbSet<TermExplanationCache> TermExplanationCaches { get; }
     DbSet<TechInsight> TechInsights { get; }
     DbSet<UserInsightBookmark> UserInsightBookmarks { get; }
+    DbSet<QuizQuestion> QuizQuestions { get; }
+    DbSet<UserQuizProgress> UserQuizProgresses { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

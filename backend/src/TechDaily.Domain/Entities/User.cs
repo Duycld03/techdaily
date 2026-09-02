@@ -19,4 +19,5 @@ public class User : BaseEntity
     public ICollection<DailyDrill> DailyDrills { get; set; } = new List<DailyDrill>();
     public ICollection<SpacedRepetitionCard> SpacedRepetitionCards { get; set; } = new List<SpacedRepetitionCard>();
     public ICollection<UserHighlight> UserHighlights { get; set; } = new List<UserHighlight>();
+    public ICollection<UserQuizProgress> QuizProgresses { get; set; } = new List<UserQuizProgress>();
 }

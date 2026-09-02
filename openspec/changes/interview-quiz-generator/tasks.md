@@ -1,10 +1,10 @@
 # Tasks: AI-Powered Technical Interview Quiz & Mastery Arena
 
 ## Phase 1: Domain & Database Foundation
-- [ ] 1.1 Create `QuizLevel` enum and domain entities `QuizQuestion`, `UserQuizProgress` in `TechDaily.Domain/Entities/`
-- [ ] 1.2 Configure EF Core entity mapping and indexes in `TechDaily.Infrastructure/Persistence/Configurations/`
-- [ ] 1.3 Add `DbSet<QuizQuestion>` and `DbSet<UserQuizProgress>` to `TechDailyDbContext` and `ITechDailyDbContext`
-- [ ] 1.4 Create and apply EF Core database migration `AddInterviewQuizTables`
+- [x] 1.1 Create `QuizLevel` enum and domain entities `QuizQuestion`, `UserQuizProgress` in `TechDaily.Domain/Entities/`
+- [x] 1.2 Configure EF Core entity mapping and indexes in `TechDaily.Infrastructure/Persistence/Configurations/`
+- [x] 1.3 Add `DbSet<QuizQuestion>` and `DbSet<UserQuizProgress>` to `TechDailyDbContext` and `ITechDailyDbContext`
+- [x] 1.4 Create and apply EF Core database migration `AddInterviewQuizTables`
 
 ## Phase 2: AI Generation & Application Use Cases
 - [ ] 2.1 Define `IQuizGeneratorService` and implement Gemini 3.6 Flash structured quiz generation with JSON parsing and fallback in `TechDaily.Infrastructure/Services/`

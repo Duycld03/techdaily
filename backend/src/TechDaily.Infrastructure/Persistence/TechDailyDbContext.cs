@@ -26,6 +26,8 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
     public DbSet<TermExplanationCache> TermExplanationCaches => Set<TermExplanationCache>();
     public DbSet<TechInsight> TechInsights => Set<TechInsight>();
     public DbSet<UserInsightBookmark> UserInsightBookmarks => Set<UserInsightBookmark>();
+    public DbSet<QuizQuestion> QuizQuestions => Set<QuizQuestion>();
+    public DbSet<UserQuizProgress> UserQuizProgresses => Set<UserQuizProgress>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

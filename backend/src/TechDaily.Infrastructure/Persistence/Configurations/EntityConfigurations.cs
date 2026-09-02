@@ -333,3 +333,68 @@ public class UserInsightBookmarkConfiguration : IEntityTypeConfiguration<UserIns
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+public class QuizQuestionConfiguration : IEntityTypeConfiguration<QuizQuestion>
+{
+    public void Configure(EntityTypeBuilder<QuizQuestion> builder)
+    {
+        builder.ToTable("QuizQuestions");
+        builder.HasKey(q => q.Id);
+        builder.Property(q => q.Topic).HasMaxLength(255).IsRequired();
+        builder.Property(q => q.Category).IsRequired();
+        builder.Property(q => q.Level).IsRequired();
+        builder.Property(q => q.QuestionText).IsRequired();
+        builder.Property(q => q.CorrectOptionIndex).HasDefaultValue(0);
+        builder.Property(q => q.ExplanationMarkdown).IsRequired();
+
+        builder.Property(q => q.Options)
+            .HasConversion(
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
+
+        builder.Property(q => q.Tags)
+            .HasConversion(
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
+
+        builder.HasIndex(q => new { q.Topic, q.Level });
+        builder.HasIndex(q => new { q.Category, q.Level });
+
+        builder.HasOne(q => q.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(q => q.CreatedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasMany(q => q.UserProgresses)
+            .WithOne(p => p.Question)
+            .HasForeignKey(p => p.QuestionId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class UserQuizProgressConfiguration : IEntityTypeConfiguration<UserQuizProgress>
+{
+    public void Configure(EntityTypeBuilder<UserQuizProgress> builder)
+    {
+        builder.ToTable("UserQuizProgresses");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.IsMastered).HasDefaultValue(false);
+        builder.Property(p => p.CorrectCount).HasDefaultValue(0);
+        builder.Property(p => p.IncorrectCount).HasDefaultValue(0);
+
+        builder.HasIndex(p => new { p.UserId, p.QuestionId }).IsUnique();
+        builder.HasIndex(p => new { p.UserId, p.IsMastered });
+
+        builder.HasOne(p => p.User)
+            .WithMany(u => u.QuizProgresses)
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(p => p.Question)
+            .WithMany(q => q.UserProgresses)
+            .HasForeignKey(p => p.QuestionId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
