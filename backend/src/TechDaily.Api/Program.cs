@@ -169,6 +169,7 @@ app.MapGroup("/api/v1/curriculum")
 
 app.MapGroup("/api/v1/insights")
     .WithTags("Tech Insights Feed")
+    .RequireAuthorization()
     .MapInsightsEndpoints();
 
 app.MapGroup("/api/v1/daily")

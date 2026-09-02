@@ -9,6 +9,7 @@ export default defineNuxtRouteMiddleware((to) => {
 
   const isGuestOnly = to.path === '/login'
   const isAuthRequired =
+    to.path.startsWith('/insights') ||
     to.path.startsWith('/roadmap') ||
     to.path.startsWith('/review') ||
     to.path.startsWith('/notes') ||

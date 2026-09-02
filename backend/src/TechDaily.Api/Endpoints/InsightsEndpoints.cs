@@ -10,7 +10,9 @@ public static class InsightsEndpoints
 {
     public static RouteGroupBuilder MapInsightsEndpoints(this RouteGroupBuilder group)
     {
-        // Public/Authenticated Infinite Feed
+        group.RequireAuthorization();
+
+        // Authenticated Infinite Feed
         group.MapGet("/feed", async (
             [FromQuery] int? category,
             [FromQuery] string? tag,
@@ -23,6 +25,11 @@ public static class InsightsEndpoints
             CancellationToken ct) =>
         {
             var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
             Category? catEnum = category.HasValue ? (Category)category.Value : null;
 
             var request = new GetInsightsFeedRequest(
@@ -31,7 +38,7 @@ public static class InsightsEndpoints
                 page ?? 1,
                 pageSize ?? 10,
                 randomize ?? false,
-                userId,
+                userId.Value,
                 onlyBookmarked ?? false
             );
 
@@ -46,9 +53,16 @@ public static class InsightsEndpoints
         // Generate Insight with Gemini Flash
         group.MapPost("/generate", async (
             [FromBody] GenerateInsightRequest request,
+            ClaimsPrincipal userClaims,
             IUseCase<GenerateInsightRequest, TechInsightDto> handler,
             CancellationToken ct) =>
         {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
@@ -77,7 +91,6 @@ public static class InsightsEndpoints
                 ? Results.Ok(result.Value)
                 : Results.BadRequest(new { error = result.Error.Message });
         })
-        .RequireAuthorization()
         .WithName("BookmarkInsight")
         .WithSummary("Toggles bookmark status and updates bookmark count for authenticated user.");
 
