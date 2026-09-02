@@ -60,3 +60,15 @@ public interface ITechInsightGenerator
         string locale = "en",
         CancellationToken cancellationToken = default);
 }
+
+public interface IQuizGeneratorService
+{
+    Task<Result<List<TechDaily.Domain.Entities.QuizQuestion>>> GenerateQuestionsAsync(
+        string topic,
+        TechDaily.Domain.Enums.Category category,
+        TechDaily.Domain.Enums.QuizLevel level,
+        int count,
+        List<string> existingTitlesToAvoid,
+        string locale = "en",
+        CancellationToken cancellationToken = default);
+}

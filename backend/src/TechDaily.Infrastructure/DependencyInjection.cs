@@ -36,6 +36,7 @@ public static class DependencyInjection
         // Service Registrations
         services.AddScoped<IAiReviewService, GeminiAiService>();
         services.AddScoped<ITechInsightGenerator, GeminiAiService>();
+        services.AddScoped<IQuizGeneratorService, GeminiAiService>();
         services.AddScoped<ITermExplanationService, TermExplanationService>();
         services.AddScoped<ITelegramNotifier, TelegramNotifier>();
         services.AddScoped<IAudioStorageService, LocalAudioStorageService>();

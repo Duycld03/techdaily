@@ -11,7 +11,7 @@ using TechDaily.Domain.Enums;
 
 namespace TechDaily.Infrastructure.Services;
 
-public class GeminiAiService : IAiReviewService, ITechInsightGenerator
+public class GeminiAiService : IAiReviewService, ITechInsightGenerator, IQuizGeneratorService
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
@@ -439,6 +439,261 @@ No markdown backticks around JSON.";
         }
 
         return review;
+    }
+
+    public async Task<Result<List<QuizQuestion>>> GenerateQuestionsAsync(
+        string topic,
+        Category category,
+        QuizLevel level,
+        int count,
+        List<string> existingTitlesToAvoid,
+        string locale = "en",
+        CancellationToken cancellationToken = default)
+    {
+        var isVi = locale.Equals("vi", StringComparison.OrdinalIgnoreCase);
+        var levelName = level switch
+        {
+            QuizLevel.Fresher => "Fresher / Entry-Level (Fundamentals, Syntax, Core Concepts)",
+            QuizLevel.Junior => "Junior Engineer (Practical Usage, Standard Library, Basic Debugging)",
+            QuizLevel.Middle => "Mid-Level Engineer (Design Patterns, Concurrency, SQL Optimization, Clean Code)",
+            QuizLevel.Senior => "Senior / Staff Engineer (Under-the-hood Mechanics, Runtime/Engine Internals, Memory Overhead, High-Throughput Trade-offs)",
+            _ => "Senior Engineer"
+        };
+
+        if (string.IsNullOrWhiteSpace(_apiKey))
+        {
+            _logger.LogWarning("Gemini API key is not configured. Falling back to local mock quiz questions.");
+            return GenerateMockQuestions(topic, category, level, count, isVi);
+        }
+
+        try
+        {
+            var systemInstruction = $@"
+You are a Principal Software Architect and Lead Technical Interviewer.
+Your task is to generate exactly {count} realistic, challenging, high-quality multiple-choice technical interview questions for the level '{levelName}'.
+Rules:
+1. Each question MUST test practical engineering knowledge, conceptual depth, or architectural trade-offs.
+2. Each question MUST have EXACTLY 4 distinct option strings in the `options` array (no fewer, no more).
+3. `correctOptionIndex` MUST be an integer from 0 to 3 pointing to the single optimal/correct answer.
+4. `explanationMarkdown` MUST be detailed markdown (using bold, code backticks, bullet points) explaining:
+   - Why the correct choice is optimal.
+   - Why the other 3 choices are flawed, suboptimal, or misconceptions.
+5. If the topic specifies a language (e.g. C#, TypeScript, Python, Go, Rust, PostgreSQL), ensure code syntax in questions/options matches that language.
+6. Language of questions and explanations: {(isVi ? "Vietnamese (technical terms and code in English with clear Vietnamese explanations)" : "English")}.
+{(existingTitlesToAvoid.Any() ? $"7. Do NOT generate any questions similar to these existing ones:\n- {string.Join("\n- ", existingTitlesToAvoid.Take(20))}" : "")}
+
+Respond strictly in valid JSON adhering to this schema:
+[
+  {{
+    ""questionText"": ""Clear question text or code scenario"",
+    ""options"": [
+      ""Option A text"",
+      ""Option B text"",
+      ""Option C text"",
+      ""Option D text""
+    ],
+    ""correctOptionIndex"": 0,
+    ""explanationMarkdown"": ""### Deep Dive Explanation\n- **Why optimal:** ...\n- **Distractor Analysis:** ..."",
+    ""tags"": [""tag1"", ""tag2""]
+  }}
+]
+No markdown backticks around JSON.";
+
+            var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+            var promptText = $"Generate {count} multiple-choice interview questions on topic '{topic}' in category {category} for level {level}.";
+
+            var requestPayload = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        role = "user",
+                        parts = new object[]
+                        {
+                            new { text = promptText }
+                        }
+                    }
+                },
+                systemInstruction = new
+                {
+                    parts = new[]
+                    {
+                        new { text = systemInstruction }
+                    }
+                },
+                generationConfig = new
+                {
+                    temperature = 0.3,
+                    maxOutputTokens = 8192,
+                    responseMimeType = "application/json"
+                }
+            };
+
+            var jsonContent = JsonSerializer.Serialize(requestPayload);
+            using var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync(requestUri, httpContent, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError("Gemini API error ({StatusCode}): {Error}", response.StatusCode, errorBody);
+                return GenerateMockQuestions(topic, category, level, count, isVi);
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            return ParseQuizResponse(responseBody, topic, category, level, count, isVi);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception while generating quiz with Gemini API. Falling back to local template.");
+            return GenerateMockQuestions(topic, category, level, count, isVi);
+        }
+    }
+
+    private static Result<List<QuizQuestion>> ParseQuizResponse(
+        string responseBody,
+        string topic,
+        Category category,
+        QuizLevel level,
+        int count,
+        bool isVi)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(responseBody);
+            var candidates = doc.RootElement.GetProperty("candidates");
+            var content = candidates[0].GetProperty("content");
+            var text = content.GetProperty("parts")[0].GetProperty("text").GetString();
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return GenerateMockQuestions(topic, category, level, count, isVi);
+            }
+
+            var cleanJson = text.Trim();
+            if (cleanJson.StartsWith("```"))
+            {
+                cleanJson = cleanJson.Substring(cleanJson.IndexOf('\n') + 1);
+                cleanJson = cleanJson.Substring(0, cleanJson.LastIndexOf("```")).Trim();
+            }
+
+            using var quizDoc = JsonDocument.Parse(cleanJson);
+            var root = quizDoc.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Array)
+            {
+                return GenerateMockQuestions(topic, category, level, count, isVi);
+            }
+
+            var list = new List<QuizQuestion>();
+            foreach (var item in root.EnumerateArray())
+            {
+                var qText = item.TryGetProperty("questionText", out var qt) ? qt.GetString() ?? "" : "";
+                if (string.IsNullOrWhiteSpace(qText)) continue;
+
+                var options = new List<string>();
+                if (item.TryGetProperty("options", out var opts) && opts.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var opt in opts.EnumerateArray())
+                    {
+                        var str = opt.GetString();
+                        if (!string.IsNullOrWhiteSpace(str)) options.Add(str);
+                    }
+                }
+
+                // Enforce exactly 4 options
+                if (options.Count < 4)
+                {
+                    while (options.Count < 4) options.Add($"Option {options.Count + 1}");
+                }
+                else if (options.Count > 4)
+                {
+                    options = options.Take(4).ToList();
+                }
+
+                var correctIdx = 0;
+                if (item.TryGetProperty("correctOptionIndex", out var ci) && ci.TryGetInt32(out var parsedIdx))
+                {
+                    correctIdx = Math.Clamp(parsedIdx, 0, 3);
+                }
+
+                var explanation = item.TryGetProperty("explanationMarkdown", out var exp) ? exp.GetString() ?? "" : "";
+                var tags = new List<string>();
+                if (item.TryGetProperty("tags", out var tg) && tg.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var t in tg.EnumerateArray())
+                    {
+                        var s = t.GetString();
+                        if (!string.IsNullOrWhiteSpace(s)) tags.Add(s);
+                    }
+                }
+
+                list.Add(new QuizQuestion
+                {
+                    Id = Guid.NewGuid(),
+                    Topic = topic,
+                    Category = category,
+                    Level = level,
+                    QuestionText = qText,
+                    Options = options,
+                    CorrectOptionIndex = correctIdx,
+                    ExplanationMarkdown = explanation,
+                    Tags = tags,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    IsDeleted = false
+                });
+            }
+
+            if (list.Count == 0)
+            {
+                return GenerateMockQuestions(topic, category, level, count, isVi);
+            }
+
+            return list;
+        }
+        catch
+        {
+            return GenerateMockQuestions(topic, category, level, count, isVi);
+        }
+    }
+
+    private static List<QuizQuestion> GenerateMockQuestions(
+        string topic,
+        Category category,
+        QuizLevel level,
+        int count,
+        bool isVi)
+    {
+        var list = new List<QuizQuestion>();
+        for (var i = 1; i <= count; i++)
+        {
+            var qText = isVi
+                ? $"[{level}] Câu hỏi phỏng vấn số {i} về chủ đề {topic}: Cơ chế hoạt động và tối ưu hóa nào sau đây là chính xác nhất?"
+                : $"[{level}] Technical interview question #{i} on {topic}: Which mechanism or optimization strategy is optimal in production?";
+
+            var exp = isVi
+                ? $"### Phân Tích Chuyên Sâu\n- **Đáp án A là tối ưu nhất** vì nó giảm thiểu tối đa chi phí cấp phát bộ nhớ và loại bỏ hoàn toàn GC Gen 2 latency.\n- **Các lựa chọn còn lại:** Dẫn đến race conditions, rò rỉ bộ nhớ hoặc lock contention trong môi trường đa luồng."
+                : $"### Deep Dive Technical Explanation\n- **Option A is optimal** because it prevents unnecessary allocations on the managed heap and eliminates Gen 2 GC pause spikes.\n- **Other options:** Result in avoidable memory fragmentation, race conditions, or unhandled lock contention under high concurrency.";
+
+            list.Add(new QuizQuestion
+            {
+                Id = Guid.NewGuid(),
+                Topic = topic,
+                Category = category,
+                Level = level,
+                QuestionText = qText,
+                Options = isVi
+                    ? new() { "A. Sử dụng cấu trúc dữ liệu tối ưu bộ nhớ và Zero-allocation", "B. Cấp phát đối tượng mới trên Heap trong vòng lặp liên tục", "C. Sử dụng Global Lock trên toàn bộ tiến trình", "D. Bỏ qua cơ chế kiểm tra ngoại lệ và timeout" }
+                    : new() { "A. Utilize stack-allocated spans and zero-allocation memory primitives", "B. Allocate new heap objects repeatedly within tight loops", "C. Enforce a global lock blocking all worker threads", "D. Ignore cancellation tokens and timeout boundaries" },
+                CorrectOptionIndex = 0,
+                ExplanationMarkdown = exp,
+                Tags = new() { topic.ToLowerInvariant().Replace(" ", "-"), level.ToString().ToLowerInvariant(), "interview" },
+                CreatedAt = DateTimeOffset.UtcNow,
+                IsDeleted = false
+            });
+        }
+        return list;
     }
 
     private static AiReviewDto GenerateMockEvaluation(string? text, bool hasAudio, string locale)

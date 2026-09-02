@@ -56,6 +56,12 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<Features.Insights.DTOs.GenerateInsightRequest, Features.Insights.DTOs.TechInsightDto>, Features.Insights.GenerateInsight.GenerateInsightHandler>();
         services.AddScoped<IUseCase<Features.Insights.DTOs.BookmarkInsightRequest, Features.Insights.DTOs.BookmarkInsightResponse>, Features.Insights.BookmarkInsight.BookmarkInsightHandler>();
 
+        // Interview Quiz & Mastery Arena Handlers
+        services.AddScoped<IUseCase<Features.InterviewQuiz.DTOs.GenerateQuizRequest, Features.InterviewQuiz.DTOs.GenerateQuizResponse>, Features.InterviewQuiz.GenerateQuiz.GenerateQuizHandler>();
+        services.AddScoped<IUseCase<Features.InterviewQuiz.DTOs.SubmitQuizAnswerRequest, Features.InterviewQuiz.DTOs.SubmitQuizAnswerResponse>, Features.InterviewQuiz.SubmitQuizAnswer.SubmitQuizAnswerHandler>();
+        services.AddScoped<IUseCase<Features.InterviewQuiz.DTOs.GetQuizReviewQueueRequest, Features.InterviewQuiz.DTOs.GetQuizReviewQueueResponse>, Features.InterviewQuiz.GetQuizReviewQueue.GetQuizReviewQueueHandler>();
+        services.AddScoped<IUseCase<Features.InterviewQuiz.DTOs.GetQuizStatsRequest, Features.InterviewQuiz.DTOs.GetQuizStatsResponse>, Features.InterviewQuiz.GetQuizStats.GetQuizStatsHandler>();
+
         return services;
     }
 }
