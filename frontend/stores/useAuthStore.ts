@@ -14,8 +14,32 @@ export const useAuthStore = defineStore('auth', () => {
   const tokenCookie = useCookie<string | null>('techdaily_token', { maxAge: 60 * 60 * 24 * 30, path: '/' })
   const userCookie = useCookie<AuthUser | null>('techdaily_user', { maxAge: 60 * 60 * 24 * 30, path: '/' })
 
+  function parseUserFromJwt(jwt: string): AuthUser | null {
+    try {
+      const parts = jwt.split('.')
+      if (parts.length < 2) return null
+      const base64Url = parts[1]
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      )
+      const payload = JSON.parse(jsonPayload)
+      return {
+        id: payload.nameid || payload.sub || '',
+        email: payload.email || '',
+        name: payload.unique_name || payload.name || (payload.email ? payload.email.split('@')[0] : 'User'),
+        preferredLocale: 'en'
+      }
+    } catch {
+      return null
+    }
+  }
+
   const token = ref<string | null>(tokenCookie.value || null)
-  const user = ref<AuthUser | null>(userCookie.value || null)
+  const user = ref<AuthUser | null>(userCookie.value || (token.value ? parseUserFromJwt(token.value) : null))
   const isInitialized = ref(false)
 
   const isLoggedIn = computed(() => !!token.value)
@@ -27,6 +51,13 @@ export const useAuthStore = defineStore('auth', () => {
     }
     if (!user.value && userCookie.value) {
       user.value = userCookie.value
+    }
+    if (token.value && !user.value) {
+      const parsed = parseUserFromJwt(token.value)
+      if (parsed) {
+        user.value = parsed
+        userCookie.value = parsed
+      }
     }
 
     if (typeof window !== 'undefined' && !isInitialized.value) {
@@ -42,6 +73,9 @@ export const useAuthStore = defineStore('auth', () => {
             user.value = null
           }
         }
+      }
+      if (token.value && !user.value) {
+        user.value = parseUserFromJwt(token.value)
       }
       if (token.value && !tokenCookie.value) {
         tokenCookie.value = token.value

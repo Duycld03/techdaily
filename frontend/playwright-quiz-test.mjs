@@ -12,6 +12,7 @@ async function run() {
     body: JSON.stringify({ email: 'test@techdaily.io', password: 'Password123!' })
   });
   const { token, user } = await loginRes.json();
+  console.log('🔑 Logged in as:', user.name, `(${user.email})`);
 
   const browser = await chromium.launch({
     headless: true,
@@ -24,6 +25,7 @@ async function run() {
 
   await context.addCookies([
     { name: 'techdaily_token', value: token, domain: 'localhost', path: '/' },
+    { name: 'techdaily_user', value: encodeURIComponent(JSON.stringify(user)), domain: 'localhost', path: '/' },
     { name: 'i18n_redirected', value: 'en', domain: 'localhost', path: '/' }
   ]);
 
@@ -74,15 +76,18 @@ async function run() {
 
   // 5. Mobile Responsive (390x844) - Dark Mode
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    document.documentElement.classList.add('dark');
+  });
   await page.waitForTimeout(500);
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'quiz_answered_mobile_dark.png'), fullPage: true });
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'quiz_answered_mobile_dark.png') });
 
   // 6. Mobile Responsive (390x844) - Light Mode
   await page.evaluate(() => {
     document.documentElement.classList.remove('dark');
   });
   await page.waitForTimeout(500);
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'quiz_answered_mobile_light.png'), fullPage: true });
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, 'quiz_answered_mobile_light.png') });
 
   // 7. Stats Tab - Desktop Light Mode
   await page.setViewportSize({ width: 1280, height: 900 });
