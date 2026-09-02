@@ -18,10 +18,10 @@
 - [x] 3.2 Wire endpoints in `Program.cs` and verify OpenAPI/Swagger documentation
 
 ## Phase 4: Frontend UI & Store Implementation
-- [ ] 4.1 Create Pinia store `useInterviewQuizStore.ts` with generation, submission, review queue, and stats management
-- [ ] 4.2 Add navigation link `nav.quiz` (`/quiz`) to `components/layout/AppSidebar.vue`
-- [ ] 4.3 Create `pages/quiz.vue` with Topic Selector, Level Picker, Interactive Question Deck, Review Mode, and Stats Overview
-- [ ] 4.4 Add bilingual localization strings to `frontend/locales/en.json` and `frontend/locales/vi.json`
+- [x] 4.1 Create Pinia store `useInterviewQuizStore.ts` with generation, submission, review queue, and stats management
+- [x] 4.2 Add navigation link `nav.quiz` (`/quiz`) to `components/layout/AppSidebar.vue`
+- [x] 4.3 Create `pages/quiz.vue` with Topic Selector, Level Picker, Interactive Question Deck, Review Mode, and Stats Overview
+- [x] 4.4 Add bilingual localization strings to `frontend/locales/en.json` and `frontend/locales/vi.json`
 
 ## Phase 5: Verification & Automated Testing
 - [ ] 5.1 Write unit tests for `GenerateQuizHandler`, `SubmitQuizAnswerHandler`, `GetQuizReviewQueueHandler`

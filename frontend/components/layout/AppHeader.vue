@@ -9,6 +9,7 @@ import {
   Target,
   Map,
   Sparkles,
+  HelpCircle,
   Layers,
   Highlighter,
   Settings
@@ -29,6 +30,7 @@ const links = [
   { name: 'nav.today', path: '/today', icon: Target },
   { name: 'nav.roadmap', path: '/roadmap', icon: Map },
   { name: 'nav.insights', path: '/insights', icon: Sparkles },
+  { name: 'nav.quiz', path: '/quiz', icon: HelpCircle },
   { name: 'nav.review', path: '/review', icon: Layers },
   { name: 'nav.library', path: '/library', icon: BookOpen },
   { name: 'nav.notes', path: '/notes', icon: Highlighter },
