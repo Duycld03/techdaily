@@ -141,10 +141,33 @@ export function useMarkdownRenderer() {
     return md
   }
 
+  function cleanLatexSymbols(text: string): string {
+    if (!text) return ''
+    return text
+      .replace(/\$\\rightarrow\$/g, '→')
+      .replace(/\$\\leftarrow\$/g, '←')
+      .replace(/\$\\Rightarrow\$/g, '⇒')
+      .replace(/\$\\Leftarrow\$/g, '⇐')
+      .replace(/\$\\leftrightarrow\$/g, '↔')
+      .replace(/\$\\ge\$/g, '≥')
+      .replace(/\$\\le\$/g, '≤')
+      .replace(/\$\\geq\$/g, '≥')
+      .replace(/\$\\leq\$/g, '≤')
+      .replace(/\$\\neq\$/g, '≠')
+      .replace(/\$\\approx\$/g, '≈')
+      .replace(/\$\\times\$/g, '×')
+      .replace(/\$\\pm\$/g, '±')
+      .replace(/\$\\cdot\$/g, '·')
+      .replace(/\\rightarrow/g, '→')
+      .replace(/\\leftarrow/g, '←')
+      .replace(/\\Rightarrow/g, '⇒')
+  }
+
   function render(markdown: string): string {
     if (!markdown) return ''
+    const cleaned = cleanLatexSymbols(markdown)
     const md = createMarkdownInstance()
-    return md.render(markdown)
+    return md.render(cleaned)
   }
 
   return {
