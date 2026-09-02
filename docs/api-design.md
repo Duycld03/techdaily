@@ -141,22 +141,21 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
   ```json
   {
     "selectedOptionIndex": 1,
-    "answerText": "...",
     "locale": "en"
   }
   ```
 - **Response (200 OK):**
   ```json
   {
-    "drillId": "...",
-    "status": 2,
-    "score": 10,
     "isCorrect": true,
     "selectedOptionIndex": 1,
     "correctOptionIndex": 1,
+    "score": 10,
     "explanationMarkdown": "Deep architectural breakdown...",
-    "newStreak": 6,
-    "scheduledNextReview": null
+    "currentStreak": 6,
+    "longestStreak": 12,
+    "totalDrillsCompleted": 6,
+    "averageScore": 9.5
   }
   ```
 

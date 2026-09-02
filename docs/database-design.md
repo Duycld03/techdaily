@@ -105,6 +105,9 @@ erDiagram
 | `Id` | `uuid` | PK | Unique Identifier |
 | `TopicId` | `uuid` | FK $\rightarrow$ `Topics(Id)`, NOT NULL | Reference to parent topic |
 | `QuestionText` | `text` | NOT NULL | Senior-level scenario question |
+| `Options` | `jsonb` | NOT NULL, Default '[]' | Array of multiple-choice scenario options `string[]` |
+| `CorrectOptionIndex` | `int` | NOT NULL, Default 0 | Index of optimal senior solution |
+| `ExplanationMarkdown` | `text` | NOT NULL, Default '' | Deep-dive trade-off analysis and mechanics |
 | `ExpectedKeyPoints` | `jsonb` | NOT NULL | Array of required points `string[]` |
 | `ModelAnswerMarkdown` | `text` | NOT NULL | Benchmark answer written by Principal Architect |
 | `Difficulty` | `varchar(50)` | NOT NULL | Difficulty tier |
@@ -120,8 +123,9 @@ erDiagram
 | `DocumentChunkId` | `uuid` | FK $\rightarrow$ `DocumentChunks(Id)`, NULL | Document read for the day |
 | `ScheduledDate` | `date` | NOT NULL | Date assigned (YYYY-MM-DD) |
 | `Status` | `varchar(50)` | NOT NULL | Enum: `Pending`, `Submitted`, `Reviewed`, `Skipped` |
-| `UserAnswerText` | `text` | NULL | Written answer in Markdown |
-| `UserAudioUrl` | `varchar(500)` | NULL | Relative path to local volume audio (`/uploads/audios/{drillId}.webm`) |
+| `SelectedOptionIndex` | `int` | NULL | Option index selected by user |
+| `IsCorrect` | `boolean` | NULL | Whether user selected the optimal option |
+| `Score` | `int` | NULL | Score awarded (10 for optimal, 0 otherwise) |
 | `SubmittedAt` | `timestamptz` | NULL | Submission timestamp |
 
 ---

@@ -10,7 +10,7 @@ An AI-powered, daily bite-sized learning and technical interview preparation pla
 
 TechDaily solves the two most critical challenges for senior engineers preparing for architectural roles:
 1. **Daily Micro-Learning from Real Documentation:** Curated 3–5 minute reading slices extracted directly from authoritative sources (*Microsoft Learn, PostgreSQL 17 Internals, Vue 3 / Nuxt 4 Docs, Designing Data-Intensive Applications, CLR via C#*) with key takeaways, inline AI explanations, and IDE-grade Shiki syntax highlighting.
-2. **Active Recall & Mock Interview Drills:** Daily Senior-level engineering scenario challenges with dual-mode answer submissions (Markdown or Spoken Voice) and instant Principal Engineer AI reviews (scoring, rubric gap analysis, model answers) powered by **Google Gemini 3.5 Flash**.
+2. **Active Recall & Scenario Drills:** Daily Senior-level engineering architecture scenario challenges with multiple-choice trade-off decisions, instant verification, and Principal-level deep-dive explanations.
 
 ---
 
@@ -28,8 +28,8 @@ TechDaily (Clean Architecture)
 | Layer | Technology | Key Responsibilities |
 |---|---|---|
 | **Backend API** | **ASP.NET Core (.NET 10)** | Clean Architecture, C# 13, Plain Use-Case Handlers (Pure DI), Rich Domain Model, RFC 7807 problem details, 100% English codebase |
-| **Data Persistence** | **EF Core 10 + Npgsql** | PostgreSQL 17 (`pgvector`), JSONB (`ToJson()`) for takeaways/quizzes/reviews, Local Volume Audio Storage |
-| **AI Evaluation Engine** | **Gemini 3.5 Flash API** | 1-Pass Multimodal voice/text evaluation, Structured Output (JSON Schema), Semantic Term Cache, AI Slicing |
+| **Data Persistence** | **EF Core 10 + Npgsql** | PostgreSQL 17 (`pgvector`), JSONB (`ToJson()`) for takeaways/quizzes/options, User Bookmarks with Unique Indexes |
+| **AI Synthesis Engine** | **Gemini 3.5 Flash API** | Structured Output (JSON Schema), Semantic Term Cache, AI Slicing, On-Demand Insights Generator |
 | **Document Ingestion** | **PdfPig + ReverseMarkdown** | Zero-LOH streaming for PDFs up to 200MB (800 pages), Geometric Baseline line-grouping, HTML-to-Markdown Web Crawler |
 | **Frontend Web** | **Nuxt 4 + Vue 3** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
 | **Notifications** | **Telegram Bot API** | Lightweight morning alerts and streak retention reminders with direct deep links to Web |
@@ -41,8 +41,7 @@ TechDaily (Clean Architecture)
 ### 1. 🏠 Daily Focus Hub (`/today`)
 - **Daily Doc Slice:** Curated 3–5 minute excerpt from official docs preserving original source language with structured takeaways and quick check quiz.
 - **Inline AI Explainer:** Highlight any complex technical term to get instant popover explanation localized to your language (backed by `TermExplanationCaches`).
-- **Senior Interview Challenge:** Daily scenario question with dual-mode answer submission: **Markdown Editor** & **HTML5 Voice Recording Mode**.
-- **AI Reviewer:** Instant scoring (1–10), strengths, missed internal mechanisms, and model answer from a Principal Engineer persona in 2-4s.
+- **Senior Scenario Challenge:** Real-world architectural decision drill with instant option grading, trade-off analysis, and deep-dive explanations.
 - **Streak & Freeze Retention:** Automatic streak incrementing, longest streak tracking, and monthly streak freeze credits.
 
 ### 2. 🗺️ 30-Day Senior Fullstack Roadmap (`/roadmap`)
