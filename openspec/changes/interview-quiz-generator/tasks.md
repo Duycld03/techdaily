@@ -24,6 +24,6 @@
 - [x] 4.4 Add bilingual localization strings to `frontend/locales/en.json` and `frontend/locales/vi.json`
 
 ## Phase 5: Verification & Automated Testing
-- [ ] 5.1 Write unit tests for `GenerateQuizHandler`, `SubmitQuizAnswerHandler`, `GetQuizReviewQueueHandler`
-- [ ] 5.2 Write Vitest component & store tests in `frontend/tests/`
-- [ ] 5.3 Run full test suites (`dotnet test`, `npm test`) and verify production build (`npm run build`)
+- [x] 5.1 Write unit tests for `GenerateQuizHandler`, `SubmitQuizAnswerHandler`, `GetQuizReviewQueueHandler`
+- [x] 5.2 Write Vitest component & store tests in `frontend/tests/`
+- [x] 5.3 Run full test suites (`dotnet test`, `npm test`) and verify production build (`npm run build`)
