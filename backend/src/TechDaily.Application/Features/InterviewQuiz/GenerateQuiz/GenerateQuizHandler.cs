@@ -35,49 +35,50 @@ public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizRes
             return new Error("Error.Validation", errors);
         }
 
-        var category = request.Category ?? InferCategoryFromTopic(request.Topic);
+        var normalizedTopic = NormalizeTopic(request.Topic);
+        var category = request.Category ?? InferCategoryFromTopic(normalizedTopic);
 
-        // 1. Fetch IDs of questions already mastered by this user
-        var masteredQuestionIds = await _dbContext.UserQuizProgresses
+        // 1. Fetch IDs of questions already attempted by this user (to prevent repeating completed/attempted questions)
+        var attemptedQuestionIds = await _dbContext.UserQuizProgresses
             .AsNoTracking()
-            .Where(p => p.UserId == request.UserId && p.IsMastered)
+            .Where(p => p.UserId == request.UserId)
             .Select(p => p.QuestionId)
             .ToListAsync(cancellationToken);
 
-        // 2. Fetch unmastered existing questions in DB matching topic and level
-        var topicTrimmed = request.Topic.Trim().ToLower();
+        // 2. Fetch existing unattempted questions in DB matching topic and level
         var candidates = await _dbContext.QuizQuestions
             .AsNoTracking()
             .Where(q => !q.IsDeleted &&
                         q.Level == request.Level &&
-                        q.Topic.ToLower() == topicTrimmed &&
-                        !masteredQuestionIds.Contains(q.Id))
+                        (q.Topic.ToLower() == normalizedTopic || q.Topic.ToLower() == request.Topic.Trim().ToLower()) &&
+                        !attemptedQuestionIds.Contains(q.Id))
             .Take(request.Count * 2)
             .ToListAsync(cancellationToken);
 
-        var existingUnmastered = candidates;
+        var existingUnattempted = candidates;
         if (candidates.Count > request.Count)
         {
             var rng = new Random();
-            existingUnmastered = candidates.OrderBy(_ => rng.Next()).Take(request.Count).ToList();
+            existingUnattempted = candidates.OrderBy(_ => rng.Next()).Take(request.Count).ToList();
         }
 
-        var finalQuestions = new List<QuizQuestion>(existingUnmastered);
+        var finalQuestions = new List<QuizQuestion>(existingUnattempted);
 
-        // 3. If we don't have enough unmastered questions, generate the rest with Gemini
+        // 3. If we don't have enough unattempted questions, generate the rest with Gemini
         if (finalQuestions.Count < request.Count)
         {
             var needed = request.Count - finalQuestions.Count;
 
             var existingTitles = await _dbContext.QuizQuestions
                 .AsNoTracking()
-                .Where(q => q.Topic.ToLower() == topicTrimmed)
+                .Where(q => !q.IsDeleted && (q.Topic.ToLower() == normalizedTopic || q.Topic.ToLower() == request.Topic.Trim().ToLower() || q.Category == category))
+                .OrderByDescending(q => q.CreatedAt)
                 .Select(q => q.QuestionText)
-                .Take(40)
+                .Take(50)
                 .ToListAsync(cancellationToken);
 
             var genResult = await _quizGenerator.GenerateQuestionsAsync(
-                request.Topic.Trim(),
+                normalizedTopic,
                 category,
                 request.Level,
                 needed,
@@ -91,6 +92,7 @@ public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizRes
                 foreach (var q in newQuestions)
                 {
                     q.CreatedByUserId = request.UserId;
+                    q.Topic = normalizedTopic;
                 }
 
                 await _dbContext.QuizQuestions.AddRangeAsync(newQuestions, cancellationToken);
@@ -98,6 +100,22 @@ public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizRes
 
                 finalQuestions.AddRange(newQuestions);
             }
+        }
+
+        // Fallback: If still under requested count (e.g. generator returned fewer), fill from other topic questions
+        if (finalQuestions.Count < request.Count)
+        {
+            var currentIds = finalQuestions.Select(q => q.Id).ToList();
+            var fallbackFill = await _dbContext.QuizQuestions
+                .AsNoTracking()
+                .Where(q => !q.IsDeleted &&
+                            q.Level == request.Level &&
+                            (q.Topic.ToLower() == normalizedTopic || q.Topic.ToLower() == request.Topic.Trim().ToLower()) &&
+                            !currentIds.Contains(q.Id))
+                .Take(request.Count - finalQuestions.Count)
+                .ToListAsync(cancellationToken);
+
+            finalQuestions.AddRange(fallbackFill);
         }
 
         // 4. Load user progress for these questions
@@ -132,10 +150,23 @@ public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizRes
 
         return new GenerateQuizResponse(
             dtos,
-            request.Topic.Trim(),
+            normalizedTopic,
             request.Level,
             dtos.Count
         );
+    }
+
+    public static string NormalizeTopic(string rawTopic)
+    {
+        if (string.IsNullOrWhiteSpace(rawTopic)) return string.Empty;
+        var trimmed = rawTopic.Trim();
+        var cleaned = System.Text.RegularExpressions.Regex.Replace(
+            trimmed,
+            @"^(về|ve|about|chủ đề|chu de)\s+",
+            "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+
+        return string.IsNullOrWhiteSpace(cleaned) ? trimmed.ToLowerInvariant() : cleaned.ToLowerInvariant();
     }
 
     private static Category InferCategoryFromTopic(string topic)

@@ -344,7 +344,7 @@ No markdown backticks around JSON.";
         }
     }
 
-    private static Result<List<QuizQuestion>> ParseQuizResponse(
+    private Result<List<QuizQuestion>> ParseQuizResponse(
         string responseBody,
         string topic,
         Category category,
@@ -352,23 +352,64 @@ No markdown backticks around JSON.";
         int count,
         bool isVi)
     {
+        string? rawText = null;
         try
         {
             using var doc = JsonDocument.Parse(responseBody);
             var candidates = doc.RootElement.GetProperty("candidates");
-            var content = candidates[0].GetProperty("content");
-            var text = content.GetProperty("parts")[0].GetProperty("text").GetString();
-
-            if (string.IsNullOrWhiteSpace(text))
+            if (candidates.GetArrayLength() == 0)
             {
+                _logger.LogWarning("Gemini API returned 0 candidates for topic '{Topic}'. Falling back to mock generator.", topic);
                 return GenerateMockQuestions(topic, category, level, count, isVi);
             }
 
-            var cleanJson = text.Trim();
+            var content = candidates[0].GetProperty("content");
+            var parts = content.GetProperty("parts");
+
+            // Look through parts to find the one containing text (skipping any thought objects from reasoning models)
+            foreach (var part in parts.EnumerateArray())
+            {
+                if (part.TryGetProperty("text", out var textProp))
+                {
+                    var partText = textProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(partText))
+                    {
+                        rawText = partText;
+                        break;
+                    }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(rawText))
+            {
+                _logger.LogWarning("Gemini API returned empty text part for topic '{Topic}'. Falling back to mock generator.", topic);
+                return GenerateMockQuestions(topic, category, level, count, isVi);
+            }
+
+            var cleanJson = rawText.Trim();
+
+            // Strip markdown code fences if present
             if (cleanJson.StartsWith("```"))
             {
-                cleanJson = cleanJson.Substring(cleanJson.IndexOf('\n') + 1);
-                cleanJson = cleanJson.Substring(0, cleanJson.LastIndexOf("```")).Trim();
+                var firstLineBreak = cleanJson.IndexOf('\n');
+                if (firstLineBreak != -1)
+                {
+                    cleanJson = cleanJson.Substring(firstLineBreak + 1);
+                }
+                var lastBacktick = cleanJson.LastIndexOf("```");
+                if (lastBacktick != -1)
+                {
+                    cleanJson = cleanJson.Substring(0, lastBacktick);
+                }
+                cleanJson = cleanJson.Trim();
+            }
+
+            // Extract the outermost JSON array `[...]` to discard any leading/trailing commentary, backticks, or extra tokens
+            var firstBracket = cleanJson.IndexOf('[');
+            var lastBracket = cleanJson.LastIndexOf(']');
+            if (firstBracket >= 0 && lastBracket > firstBracket)
+            {
+                cleanJson = cleanJson.Substring(firstBracket, lastBracket - firstBracket + 1);
             }
 
             using var quizDoc = JsonDocument.Parse(cleanJson);
@@ -376,6 +417,7 @@ No markdown backticks around JSON.";
 
             if (root.ValueKind != JsonValueKind.Array)
             {
+                _logger.LogWarning("Gemini response is not a JSON array for topic '{Topic}'. Cleaned text: {CleanJson}", topic, cleanJson);
                 return GenerateMockQuestions(topic, category, level, count, isVi);
             }
 
@@ -440,13 +482,15 @@ No markdown backticks around JSON.";
 
             if (list.Count == 0)
             {
+                _logger.LogWarning("No valid questions parsed from Gemini response for topic '{Topic}'.", topic);
                 return GenerateMockQuestions(topic, category, level, count, isVi);
             }
 
             return list;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Exception while parsing Gemini quiz response for topic '{Topic}'. Raw response snippet: {Snippet}", topic, rawText ?? responseBody.Substring(0, Math.Min(responseBody.Length, 300)));
             return GenerateMockQuestions(topic, category, level, count, isVi);
         }
     }
@@ -458,72 +502,113 @@ No markdown backticks around JSON.";
         int count,
         bool isVi)
     {
-        var viAspects = new[]
-        {
-            ("Cơ chế tối ưu hóa cấp phát bộ nhớ và quản lý vòng đời đối tượng", "Sử dụng bộ nhớ ngăn xếp (Stack) và Zero-allocation primitives", "Cấp phát liên tục trên Heap trong vòng lặp", "Tắt hoàn toàn trình thu gom rác GC", "Sử dụng Finalizer trên toàn bộ đối tượng"),
-            ("Chiến lược kiểm soát concurrency và giảm thiểu lock contention", "Áp dụng cấu trúc dữ liệu Lock-free hoặc ReaderWriterLockSlim", "Dùng exclusive lock toàn cục chặn mọi luồng", "Chạy Thread.Sleep trong vòng lặp chờ khóa", "Bỏ qua đồng bộ hóa trạng thái dùng chung"),
-            ("Xử lý lỗi ngoại lệ và đảm bảo tính kiên cường (Resilience) trong hệ thống phân tán", "Tích hợp Circuit Breaker và Retry có Exponential Backoff & Jitter", "Bắt tất cả Exception và nuốt âm thầm", "Thử lại vô hạn ngay lập tức khi xảy ra lỗi mạng", "Đóng băng tiến trình khi gặp timeout"),
-            ("Kiến trúc truy xuất dữ liệu và tối ưu hóa I/O throughput", "Sử dụng luồng bất đồng bộ Non-blocking I/O và batching", "Đọc toàn bộ bảng dữ liệu vào bộ nhớ RAM mỗi request", "Dùng Blocking I/O trên ThreadPool worker", "Mở kết nối cơ sở dữ liệu mới cho mỗi bản ghi"),
-            ("Thiết kế API và quản lý trạng thái tải cao", "Triển khai Rate Limiting theo token bucket và Caching phân tán", "Gửi toàn bộ dữ liệu thô không nén qua HTTP/1.0", "Lưu toàn bộ phiên làm việc người dùng trong bộ nhớ cục bộ đơn lẻ", "Bỏ qua xác thực JWT và kiểm tra quyền hạn"),
-            ("Tối ưu hóa Index và mô hình truy vấn cơ sở dữ liệu", "Thiết kế Covering Index hoặc Partial Index phù hợp mẫu truy vấn", "Tạo Index trên toàn bộ cột không phân biệt tần suất", "Quét toàn bộ bảng (Full Table Scan) thay vì dùng Index", "Xóa toàn bộ Foreign Key để tăng tốc độ ghi mà không có ràng buộc"),
-            ("Bảo vệ ứng dụng trước race conditions và deadlock", "Tuân thủ thứ tự khóa tài nguyên nghiêm ngặt và dùng Timeout khi chờ khóa", "Khóa các tài nguyên theo thứ tự ngẫu nhiên giữa các luồng", "Dùng nested lock không giới hạn độ sâu", "Tắt cờ an toàn đa luồng của trình biên dịch"),
-            ("Tối ưu hóa hiệu năng CPU và Cache Locality (L1/L2)", "Bố trí dữ liệu liền kề (Data-oriented Design / Struct of Arrays)", "Truy cập bộ nhớ ngẫu nhiên qua nhiều con trỏ phân tán", "Tạo hàng nghìn object nhỏ rải rác trên heap", "Liên tục boxing/unboxing giá trị nguyên thủy"),
-            ("Quản lý kết nối mạng và socket trong môi trường microservices", "Tái sử dụng Connection Pool (HttpClientFactory) và kiểm soát DNS TTL", "Khởi tạo HttpClient mới cho mỗi HTTP request đơn lẻ", "Để socket mở vô thời hạn không thiết lập keep-alive", "Tắt cơ chế TLS để giảm tải mã hóa trên môi trường public"),
-            ("Chiến lược CI/CD và kiến trúc zero-downtime deployment", "Triển khai Blue-Green hoặc Rolling Update với Health Checks tự động", "Ghi đè trực tiếp file nhị phân đang chạy trên server production", "Tắt toàn bộ hệ thống trong 2 giờ để cập nhật phiên bản", "Bỏ qua bước chạy Automated Integration Test trước khi release")
-        };
+        var lowerTopic = topic.ToLowerInvariant();
 
-        var enAspects = new[]
+        (string, string, string, string, string)[] aspects;
+
+        if (lowerTopic.Contains("asp") || lowerTopic.Contains("web api") || lowerTopic.Contains("controller") || lowerTopic.Contains("endpoint"))
         {
-            ("Memory allocation optimization and object lifecycle management", "Leverage stack-allocated primitives and zero-allocation spans", "Allocate short-lived objects continuously on the managed heap", "Disable the Garbage Collector entirely during high traffic", "Implement expensive finalizers on all domain classes"),
-            ("Concurrency control and lock contention mitigation strategies", "Employ lock-free data structures or fine-grained read-write locks", "Wrap all critical sections in a single global exclusive lock", "Spin-wait with Thread.Sleep inside tight acquisition loops", "Ignore synchronization primitives across worker threads"),
-            ("Fault tolerance and resilience in distributed topologies", "Implement Circuit Breaker with exponential backoff and jitter", "Catch generic exceptions and swallow them without logging", "Retry network requests indefinitely with zero delay", "Block calling threads until deadlocked dependencies respond"),
-            ("High-throughput non-blocking I/O and query architecture", "Utilize asynchronous non-blocking pipelines and batch processing", "Load entire unindexed dataset partitions into application memory", "Synchronously block ThreadPool workers waiting on socket I/O", "Instantiate a new persistent database connection per row"),
-            ("High-scale API design and state management", "Enforce Token Bucket rate limiting and distributed caching tiers", "Stream uncompressed raw payloads over unversioned endpoints", "Store stateful session data in isolated single-instance memory", "Bypass token verification and claim inspection under load"),
-            ("Database indexing strategies and query execution plans", "Construct covering indexes tailored to query filter criteria", "Create unclustered indexes on every column indiscriminately", "Force full table scans to avoid index maintenance overhead", "Drop all foreign key constraints without referential checks"),
-            ("Deadlock prevention and multi-threaded synchronization", "Enforce strict lock acquisition hierarchy with explicit timeouts", "Acquire multiple resource locks in arbitrary non-deterministic order", "Nest synchronization monitors indefinitely without timeouts", "Rely on thread priority manipulation instead of synchronization"),
-            ("CPU cache locality (L1/L2) and hardware efficiency", "Align data structures sequentially in memory (Data-Oriented Design)", "Traverse scattered linked-node pointer chains randomly", "Distribute millions of micro-objects across fragmented memory", "Perform repetitive boxing/unboxing conversions in hot paths"),
-            ("Microservice network socket management and connection pooling", "Reuse managed connection pools with HttpClientFactory and DNS TTL", "Instantiate a disposable HttpClient per outgoing HTTP request", "Leave idle TCP connections open indefinitely without heartbeats", "Disable TLS transport security to reduce cryptographic overhead"),
-            ("Zero-downtime deployment and modern release engineering", "Execute Blue-Green or Rolling deployments with automated probes", "Directly overwrite running production binaries on the host VM", "Schedule mandatory 2-hour offline windows for minor patches", "Skip continuous integration test validation before releasing")
-        };
+            // ASP.NET Core specific aspects
+            aspects = isVi ? new[]
+            {
+                ("Vòng đời Service DI (Scoped vs Transient vs Singleton)", "Sử dụng AddScoped cho DbContext và Repository theo từng HTTP Request", "Đăng ký DbContext là Singleton để chia sẻ trên toàn ứng dụng", "Dùng AddTransient cho DbContext trong concurrent operations", "Không cần đăng ký Service Provider"),
+                ("Thứ tự thực thi Middleware trong HTTP Request Pipeline", "UseRouting -> UseAuthentication -> UseAuthorization -> UseEndpoints", "UseAuthorization đặt trước UseAuthentication", "UseExceptionHandler đặt ở cuối pipeline", "UseStaticFiles đặt sau UseEndpoints"),
+                ("Tối ưu hóa Response Caching và Output Caching trong ASP.NET Core", "Áp dụng OutputCache với Cache Key theo Header/Query Param và ETag", "Tắt toàn bộ bộ nhớ đệm HTTP để đảm bảo dữ liệu luôn mới nhất", "Lưu toàn bộ HTML response vào HttpContext.Items", "Sử dụng In-Memory Session cho static assets"),
+                ("Cấu hình Rate Limiting và chống DDoS cho Web API", "Triển khai Token Bucket hoặc Sliding Window Partitioned Rate Limiter tích hợp sẵn", "Tạo Thread.Sleep chặn toàn bộ worker thread khi quá tải", "Bỏ qua Rate Limiting để tăng throughput tối đa", "Dùng Session State lưu trữ số lượng request của client"),
+                ("Xử lý ngoại lệ toàn cục (Global Exception Handling)", "Sử dụng IExceptionHandler (ASP.NET Core 8+) kết hợp RFC 7807 Problem Details", "Bọc try-catch thủ công trong từng controller action và trả về 200 OK rỗng", "Để ứng dụng crash và Nginx tự trả về 502", "Dùng Middleware ném lại exception ra Console mà không response")
+            } : new[]
+            {
+                ("Service Lifetimes in Dependency Injection (Scoped vs Transient vs Singleton)", "Register DbContext and repositories as Scoped per HTTP request scope", "Register DbContext as a Singleton shared across all application threads", "Use Transient for DbContext during concurrent multi-threaded requests", "Bypass DI container and use raw static instances"),
+                ("Middleware Pipeline Execution Order", "Order: UseRouting -> UseAuthentication -> UseAuthorization -> MapEndpoints", "Place UseAuthorization before UseAuthentication", "Place UseExceptionHandler at the very end of the pipeline", "Execute static file middleware after endpoint mapping"),
+                ("Response and Output Caching in ASP.NET Core", "Leverage OutputCache policy with ETag and query parameter vary rules", "Disable all HTTP caching headers to guarantee strict freshness", "Store entire dynamic HTML responses into HttpContext.Items", "Use in-memory session dictionaries for static assets"),
+                ("API Rate Limiting Architecture", "Employ built-in sliding window or token bucket partitioned rate limiters", "Block worker threads with Thread.Sleep when request quotas exceed", "Disable rate limiting entirely to optimize synthetic throughput", "Store client request counters inside distributed user sessions"),
+                ("Global Exception Handling Strategy", "Implement IExceptionHandler with standardized RFC 7807 Problem Details", "Wrap every controller action with manual empty try-catch blocks returning 200", "Allow uncaught exceptions to crash the Kestrel worker process", "Log errors to console only without returning structured JSON")
+            };
+        }
+        else if (lowerTopic.Contains("c#") || lowerTopic.Contains(".net") || lowerTopic.Contains("dotnet"))
+        {
+            // C# / .NET specific aspects
+            aspects = isVi ? new[]
+            {
+                ("Tối ưu hóa cấp phát bộ nhớ với Span<T> và Memory<T>", "Sử dụng ReadOnlySpan<char> để cắt chuỗi (slicing) không tạo thêm object trên Heap", "Dùng string.Substring() liên tục trong vòng lặp lớn", "Chuyển toàn bộ string sang char[] bằng ToCharArray()", "Ép kiểu string sang StringBuilder trong mọi hàm"),
+                ("Cơ chế Garbage Collection và Large Object Heap (LOH)", "Tái sử dụng mảng lớn thông qua ArrayPool<T>.Shared để tránh phân mảnh LOH", "Liên tục `new byte[100_000]` trong các luồng xử lý I/O", "Gọi `GC.Collect()` thủ công sau mỗi HTTP request", "Chuyển toàn bộ dữ liệu LOH sang POH (Pinned Object Heap) vô thời hạn"),
+                ("Quản lý luồng bất đồng bộ với async/await và ValueTask<T>", "Sử dụng ValueTask<T> cho các phương thức thường hoàn thành đồng bộ (cached)", "Dùng Task.Run() bọc các hàm I/O bất đồng bộ có sẵn", "Gọi `.Result` hoặc `.Wait()` gây nguy cơ ThreadPool starvation và Deadlock", "Dùng `async void` trên các service method nghiệp vụ"),
+                ("Sự khác biệt giữa Record, Class và Struct trong C#", "Record struct cho dữ liệu nhỏ bất biến (value semantics, zero-allocation)", "Dùng Class cho mọi đối tượng DTO 2 trường để tránh copy", "Dùng mutable struct lớn trên 64 bytes truyền qua nhiều layer", "Lạm dụng struct chứa nhiều reference types gây áp lực GC"),
+                ("Thực thi truy vấn LINQ: Deferred Execution vs Immediate Execution", "Dùng IQueryable<T> để database thực thi lọc dữ liệu trước khi nạp vào memory", "Gọi `.ToList()` trước các lệnh `.Where()` khi truy vấn hàng triệu bản ghi", "Lặp `foreach` trên IEnumerable gọi lại DbContext nhiều lần", "Dùng `.AsEnumerable()` thay vì `.AsNoTracking()` trong read-only queries")
+            } : new[]
+            {
+                ("Memory Allocation Optimization with Span<T> and Memory<T>", "Use ReadOnlySpan<char> for zero-allocation string slicing without heap overhead", "Call string.Substring() repeatedly inside high-throughput loops", "Convert strings to char[] arrays using ToCharArray() for parsing", "Instantiate StringBuilder instances per character inspection"),
+                ("Garbage Collection and Large Object Heap (LOH) Fragmentation", "Rent large buffers from ArrayPool<T>.Shared to prevent LOH fragmentation", "Allocate new byte[100_000] buffers on the heap for every I/O stream", "Force manual GC.Collect() invocations after every HTTP transaction", "Pin all large allocations permanently on the Pinned Object Heap"),
+                ("Asynchronous Threading with async/await and ValueTask<T>", "Return ValueTask<T> for high-frequency operations that complete synchronously", "Wrap native async I/O calls inside Task.Run() indiscriminately", "Block asynchronous calls synchronously using .Result or .Wait()", "Declare business logic service methods as async void"),
+                ("Memory Layout & Semantics: Record vs Class vs Struct", "Utilize readonly record structs for small immutable values with value semantics", "Default to reference classes for tiny 2-field data transfer payloads", "Pass large mutable structs exceeding 64 bytes across deep call stacks", "Embed multiple reference types inside structs causing pointer tracking overhead"),
+                ("LINQ Query Execution: Deferred vs Immediate Evaluation", "Leverage IQueryable<T> expressions to compose SQL queries at database tier", "Materialize entire tables with .ToList() before applying .Where() filters", "Iterate un-buffered IEnumerable queries triggering N+1 database roundtrips", "Use .AsEnumerable() instead of .AsNoTracking() on read-only projection pipelines")
+            };
+        }
+        else if (lowerTopic.Contains("postgres") || lowerTopic.Contains("sql") || lowerTopic.Contains("database") || lowerTopic.Contains("db"))
+        {
+            // Database & PostgreSQL aspects
+            aspects = isVi ? new[]
+            {
+                ("Chiến lược thiết kế Index (B-Tree, GIN, BRIN)", "Dùng GIN Index cho JSONB/Full-text search và BRIN Index cho bảng time-series lớn", "Tạo B-Tree Index trên toàn bộ các cột mà không phân tích tần suất truy vấn", "Tắt hoàn toàn Index để tăng tốc độ ghi", "Sử dụng Hash Index cho các truy vấn tìm kiếm theo khoảng (Range Query)"),
+                ("Cơ chế MVCC và Vacuuming trong PostgreSQL", "Cấu hình Autovacuum tích cực để dọn dẹp Dead Tuples và ngăn chặn Table Bloat", "Chạy VACUUM FULL thủ công khóa toàn bộ bảng trong giờ cao điểm", "Tắt tiến trình autovacuum để giải phóng CPU", "Dùng lệnh DELETE thay cho TRUNCATE khi dọn sạch bảng tạm"),
+                ("Quản lý Transaction Isolation Level", "Dùng Read Committed kết hợp Optimistic Locking để đạt throughput cao và an toàn", "Dùng Serializable cho mọi transaction bất kể latency", "Bỏ qua Transaction khi cập nhật số dư tài khoản người dùng", "Dùng Read Uncommitted để chấp nhận đọc dữ liệu bẩn (Dirty Read)"),
+                ("Tối ưu hóa N+1 Query và Eager Loading", "Sử dụng JOIN / Include có chọn lọc hoặc batch query thay vì truy vấn từng row", "Lặp foreach nạp từng child entity bằng query độc lập", "Luôn dùng Lazy Loading trên tất cả quan hệ dữ liệu", "Bỏ qua Foreign Key để tăng tốc độ query"),
+                ("Kiểm soát Connection Pool", "Sử dụng PgBouncer / Connection Pooler để giới hạn số kết nối trực tiếp vào Postgres", "Mở một kết nối mới trực tiếp cho mỗi HTTP request và không đóng", "Tăng max_connections lên 10,000 trên server 4GB RAM", "Giữ kết nối transaction mở trong khi chờ external API response")
+            } : new[]
+            {
+                ("Database Indexing Architecture (B-Tree, GIN, BRIN)", "Employ GIN indexes for JSONB/array filters and BRIN for sequential time-series tables", "Create B-Tree indexes on every column without query pattern profiling", "Drop all indexes permanently to accelerate bulk write ingestion", "Use Hash indexes for range queries and sorting clauses"),
+                ("PostgreSQL MVCC Mechanics and Autovacuum Tuning", "Tune autovacuum thresholds aggressively to reclaim dead tuples and prevent bloat", "Execute manual VACUUM FULL during peak traffic locking tables completely", "Disable the autovacuum daemon entirely to save CPU cycles", "Rely on raw DELETE queries instead of TRUNCATE for ephemeral staging data"),
+                ("Transaction Isolation Level Management", "Apply Read Committed with optimistic concurrency tokens for high throughput", "Enforce Serializable isolation across all read-only query workflows", "Bypass database transactions when mutating financial account balances", "Configure Read Uncommitted to permit dirty reads in audit logs"),
+                ("Mitigating N+1 Query Antipatterns", "Use explicit projections and batch includes instead of repetitive row queries", "Iterate child entities sequentially issuing individual SELECT queries", "Enable unrestricted transparent lazy loading across API response mappers", "Eliminate relational foreign keys to reduce constraint evaluation overhead"),
+                ("Database Connection Pooling Architecture", "Deploy PgBouncer in transaction mode to multiplex connections efficiently", "Instantiate a dedicated raw database connection per incoming web request", "Scale max_connections to 10,000 on low-memory database instances", "Retain active open transactions while awaiting slow third-party webhooks")
+            };
+        }
+        else
+        {
+            // General / System Design fallback
+            aspects = isVi ? new[]
+            {
+                ("Cơ chế tối ưu hóa cấp phát bộ nhớ và quản lý vòng đời đối tượng", "Sử dụng bộ nhớ ngăn xếp (Stack) và Zero-allocation primitives", "Cấp phát liên tục trên Heap trong vòng lặp", "Tắt hoàn toàn trình thu gom rác GC", "Sử dụng Finalizer trên toàn bộ đối tượng"),
+                ("Chiến lược kiểm soát concurrency và giảm thiểu lock contention", "Áp dụng cấu trúc dữ liệu Lock-free hoặc ReaderWriterLockSlim", "Dùng exclusive lock toàn cục chặn mọi luồng", "Chạy Thread.Sleep trong vòng lặp chờ khóa", "Bỏ qua đồng bộ hóa trạng thái dùng chung"),
+                ("Xử lý lỗi ngoại lệ và đảm bảo tính kiên cường (Resilience) trong hệ thống phân tán", "Tích hợp Circuit Breaker và Retry có Exponential Backoff & Jitter", "Bắt tất cả Exception và nuốt âm thầm", "Thử lại vô hạn ngay lập tức khi xảy ra lỗi mạng", "Đóng băng tiến trình khi gặp timeout"),
+                ("Kiến trúc truy xuất dữ liệu và tối ưu hóa I/O throughput", "Sử dụng luồng bất đồng bộ Non-blocking I/O và batching", "Đọc toàn bộ bảng dữ liệu vào bộ nhớ RAM mỗi request", "Dùng Blocking I/O trên ThreadPool worker", "Mở kết nối cơ sở dữ liệu mới cho mỗi bản ghi"),
+                ("Thiết kế API và quản lý trạng thái tải cao", "Triển khai Rate Limiting theo token bucket và Caching phân tán", "Gửi toàn bộ dữ liệu thô không nén qua HTTP/1.0", "Lưu toàn bộ phiên làm việc người dùng trong bộ nhớ cục bộ đơn lẻ", "Bỏ qua xác thực JWT và kiểm tra quyền hạn")
+            } : new[]
+            {
+                ("Memory allocation optimization and object lifecycle management", "Leverage stack-allocated primitives and zero-allocation spans", "Allocate short-lived objects continuously on the managed heap", "Disable the Garbage Collector entirely during high traffic", "Implement expensive finalizers on all domain classes"),
+                ("Concurrency control and lock contention mitigation strategies", "Employ lock-free data structures or fine-grained read-write locks", "Wrap all critical sections in a single global exclusive lock", "Spin-wait with Thread.Sleep inside tight acquisition loops", "Ignore synchronization primitives across worker threads"),
+                ("Fault tolerance and resilience in distributed topologies", "Implement Circuit Breaker with exponential backoff and jitter", "Catch generic exceptions and swallow them without logging", "Retry network requests indefinitely with zero delay", "Block calling threads until deadlocked dependencies respond"),
+                ("High-throughput non-blocking I/O and query architecture", "Utilize asynchronous non-blocking pipelines and batch processing", "Load entire unindexed dataset partitions into application memory", "Synchronously block ThreadPool workers waiting on socket I/O", "Instantiate a new persistent database connection per row"),
+                ("High-scale API design and state management", "Enforce Token Bucket rate limiting and distributed caching tiers", "Stream uncompressed raw payloads over unversioned endpoints", "Store stateful session data in isolated single-instance memory", "Bypass token verification and claim inspection under load")
+            };
+        }
+
+        // Vary base offset by hash of topic and level to prevent identical sequencing
+        var baseOffset = Math.Abs((lowerTopic + (int)level).GetHashCode()) % aspects.Length;
 
         var list = new List<QuizQuestion>();
         for (var i = 0; i < count; i++)
         {
-            var aspectIndex = i % 10;
-            var correctOptionIdx = i % 4;
+            var aspectIndex = (baseOffset + i) % aspects.Length;
+            var correctOptionIdx = (aspectIndex + i) % 4;
 
-            string qText;
-            string correctOpt;
-            string distractor1;
-            string distractor2;
-            string distractor3;
-            string exp;
+            var aspect = aspects[aspectIndex];
+            string qText = isVi
+                ? $"[{level}] Câu hỏi #{i + 1} về {topic}: Khi giải quyết vấn đề \"{aspect.Item1}\", phương án kiến trúc nào sau đây là tối ưu nhất?"
+                : $"[{level}] Question #{i + 1} on {topic}: When addressing \"{aspect.Item1}\", which architectural strategy is optimal?";
 
-            if (isVi)
-            {
-                var aspect = viAspects[aspectIndex];
-                qText = $"[{level}] Câu hỏi #{i + 1} về {topic}: Khi giải quyết vấn đề \"{aspect.Item1}\", phương án kiến trúc nào sau đây là tối ưu nhất?";
-                correctOpt = aspect.Item2;
-                distractor1 = aspect.Item3;
-                distractor2 = aspect.Item4;
-                distractor3 = aspect.Item5;
-                exp = $"### Phân Tích Kỹ Thuật Chuyên Sâu\n- **Phương án đúng:** \"{correctOpt}\" là giải pháp chuẩn công nghiệp giúp tối đa hóa throughput và độ ổn định của hệ thống.\n- **Nhận định phương án sai:** Các phương án còn lại dẫn đến race conditions, memory leak hoặc nghẽn cổ chai I/O nghiêm trọng.";
-            }
-            else
-            {
-                var aspect = enAspects[aspectIndex];
-                qText = $"[{level}] Question #{i + 1} on {topic}: When addressing \"{aspect.Item1}\", which architectural strategy is optimal?";
-                correctOpt = aspect.Item2;
-                distractor1 = aspect.Item3;
-                distractor2 = aspect.Item4;
-                distractor3 = aspect.Item5;
-                exp = $"### Technical Deep Dive\n- **Optimal Solution:** \"{correctOpt}\" maximizes throughput while preventing resource exhaustion under production workloads.\n- **Flawed Distractors:** The alternative choices introduce severe lock contention, memory fragmentation, or unhandled failures.";
-            }
+            var correctOpt = aspect.Item2;
+            var distractor1 = aspect.Item3;
+            var distractor2 = aspect.Item4;
+            var distractor3 = aspect.Item5;
+
+            string exp = isVi
+                ? $"### Phân Tích Kỹ Thuật Chuyên Sâu\n- **Phương án đúng:** \"{correctOpt}\" là giải pháp chuẩn công nghiệp giúp tối đa hóa throughput và độ ổn định của hệ thống.\n- **Nhận định phương án sai:** Các phương án còn lại dẫn đến race conditions, memory leak hoặc nghẽn cổ chai I/O nghiêm trọng."
+                : $"### Technical Deep Dive\n- **Optimal Solution:** \"{correctOpt}\" maximizes throughput while preventing resource exhaustion under production workloads.\n- **Flawed Distractors:** The alternative choices introduce severe lock contention, memory fragmentation, or unhandled failures.";
 
             var allOptions = new List<string> { correctOpt, distractor1, distractor2, distractor3 };
             if (correctOptionIdx > 0)
             {
-                // Swap correct answer to target index
                 (allOptions[0], allOptions[correctOptionIdx]) = (allOptions[correctOptionIdx], allOptions[0]);
             }
 
