@@ -103,6 +103,7 @@ function handleSelectOption(index: number) {
 }
 
 async function handleGenerateQuiz(topic?: string) {
+  if (quizStore.isGenerating) return
   const chosenTopic = topic || customTopicInput.value || quickTopics[0]
   if (!chosenTopic.trim()) return
 
@@ -536,16 +537,19 @@ function getOptionClass(idx: number): string {
         <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
           <button
             @click="handleGenerateQuiz(quizStore.currentTopic)"
-            class="px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
+            :disabled="quizStore.isGenerating"
+            class="px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
           >
-            <Sparkles class="w-4 h-4" />
-            {{ $t('quiz.btn_generate_more') }}
+            <Loader2 v-if="quizStore.isGenerating" class="w-4 h-4 animate-spin" />
+            <Sparkles v-else class="w-4 h-4" />
+            <span>{{ quizStore.isGenerating ? $t('quiz.generating_loader') : $t('quiz.btn_generate_more') }}</span>
           </button>
 
           <button
             v-if="quizStore.sessionScore.correct < quizStore.sessionScore.total"
             @click="handleRetryMistakes()"
-            class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
+            :disabled="quizStore.isGenerating"
+            class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
           >
             <RotateCcw class="w-4 h-4" />
             {{ $t('quiz.btn_retry_mistakes', { count: quizStore.sessionScore.total - quizStore.sessionScore.correct }) }}
@@ -553,7 +557,8 @@ function getOptionClass(idx: number): string {
 
           <button
             @click="quizStore.resetSession()"
-            class="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm transition-all whitespace-nowrap shrink-0"
+            :disabled="quizStore.isGenerating"
+            class="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap shrink-0"
           >
             {{ $t('quiz.btn_choose_new') }}
           </button>
