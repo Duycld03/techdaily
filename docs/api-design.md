@@ -402,7 +402,7 @@ The `/quiz` route powers high-intensity interview scenario drills generated with
 
 ### `POST /api/v1/quiz/generate`
 - **Auth:** Required (`Bearer`)
-- **Description:** Fetches unmastered questions from the database first, and synthesizes missing questions on-demand via Gemini 3.1 Flash Lite.
+- **Description:** Normalizes the topic string (stripping conversational prefixes such as `"về "`, `"about "`), queries PostgreSQL for unattempted questions for the requesting user, and synthesizes missing questions on-demand via Gemini 3.1 Flash Lite.
 - **Request Body:**
   ```json
   {

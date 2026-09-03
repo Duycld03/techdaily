@@ -142,10 +142,17 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 3. **Explicit Action Triggering for Quiz Generation:**
    - Quick Topic chips MUST only populate the topic input box and apply active visual highlights. Clicking a topic chip MUST NOT auto-trigger the generation API.
    - Generation is strictly triggered by clicking the primary **"Tạo Bộ Đề AI" / "Generate Quiz"** button or pressing Enter within the topic input field.
-4. **Resilient Fallback Scenario Diversity:**
-   - The fallback generator in `GeminiAiService` MUST maintain at least 10 distinct architectural topics (Concurrency, Lock-Free, Memory Allocation, Circuit Breakers, Non-blocking I/O, Rate Limiting, Indexing, Deadlock prevention, Connection Pooling, Zero-Downtime deployments) with rotating correct answer indices (0 to 3) so mock questions are never repetitive or identical.
-5. **Database-First Unmastered Question Reuse:**
-   - Before requesting new AI questions, `GenerateQuizHandler` MUST query PostgreSQL for unmastered existing questions matching `(lower(Topic), Level)` to conserve API tokens and maximize question bank reuse.
+4. **Resilient Fallback Scenario Diversity & Domain Pools:**
+   - The fallback generator in `GeminiAiService` MUST maintain domain-specific question pools (ASP.NET Core, C# / .NET, PostgreSQL / Database, System Design) with dynamic offsets hashed by `(lower(Topic) + Level)` and rotating correct answer indices (0 to 3) so mock questions are never repetitive or identical across topics.
+5. **Database-First Unattempted Question Reuse:**
+   - Before requesting new AI questions, `GenerateQuizHandler` MUST query PostgreSQL for existing questions matching `(lower(Topic), Level)` that the user has **NEVER attempted** (`!attemptedQuestionIds.Contains(q.Id)`). This guarantees instant (~50ms) responses while preventing any question from being re-served to the user in a new session.
+   - If the database has fewer unattempted questions than requested, `GeminiAiService` is called on-demand to synthesize the remainder.
+6. **Conversational Topic Normalization:**
+   - All input topics MUST be cleaned through `NormalizeTopic` before query and prompt composition, stripping prefixes such as `"về "`, `"ve "`, `"about "`, `"chủ đề "` (e.g., `"về c#"` $\rightarrow$ `"c#"`), ensuring consistent database indexing and prompt quality.
+7. **Robust Outermost JSON Array Extraction:**
+   - Responses from Gemini API MUST extract the outermost JSON array `[...]` (`IndexOf('[')` and `LastIndexOf(']')`) to insulate parsing against markdown code fences, trailing comments, thoughts, or extra data tokens.
+8. **UI Action State Guarding & Disabled Loaders:**
+   - All quiz generation triggers (primary button, `@keyup.enter`, and summary screen *"Luyện Tiếp Cùng Chủ Đề"*) MUST be protected with `if (quizStore.isGenerating) return;`, bind `:disabled="quizStore.isGenerating"` with `disabled:opacity-50 disabled:cursor-not-allowed`, and display a spinning `<Loader2>` icon with loading text.
 
 ---
 
