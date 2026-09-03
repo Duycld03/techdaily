@@ -7,6 +7,20 @@ services:
       POSTGRES_DB: techdaily_db
       POSTGRES_USER: techdaily_user
       POSTGRES_PASSWORD: techdaily_password_secret
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=1024MB"
+      - "-c"
+      - "work_mem=32MB"
+      - "-c"
+      - "maintenance_work_mem=256MB"
+      - "-c"
+      - "effective_cache_size=4096MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
     volumes:
       - techdaily_pgdata_prod:/var/lib/postgresql/data
     healthcheck:

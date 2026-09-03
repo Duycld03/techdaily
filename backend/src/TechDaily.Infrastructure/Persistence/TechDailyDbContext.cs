@@ -43,6 +43,17 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
             modelBuilder.HasPostgresExtension("vector");
             modelBuilder.Entity<DocumentChunk>().Property(c => c.Embedding).HasColumnType("vector(768)");
             modelBuilder.Entity<TermExplanationCache>().Property(t => t.Embedding).HasColumnType("vector(768)");
+
+            // Configure HNSW approximate nearest neighbor (ANN) indexes for sub-millisecond semantic search
+            modelBuilder.Entity<DocumentChunk>()
+                .HasIndex(c => c.Embedding)
+                .HasMethod("hnsw")
+                .HasOperators("vector_cosine_ops");
+
+            modelBuilder.Entity<TermExplanationCache>()
+                .HasIndex(t => t.Embedding)
+                .HasMethod("hnsw")
+                .HasOperators("vector_cosine_ops");
         }
         else
         {

@@ -88,6 +88,10 @@ erDiagram
 | `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
 | `UpdatedAt` | `timestamptz` | NULL | Last updated timestamp |
 
+> **Indexes:**
+> - `IX_DocumentChunks_DocumentBookId` ON `(DocumentBookId)`
+> - `IX_DocumentChunks_Embedding` ON `(Embedding)` USING `hnsw (vector_cosine_ops)` for sub-millisecond semantic search
+
 ---
 
 ### `Topics`
@@ -207,6 +211,10 @@ erDiagram
 | `Embedding` | `vector(768)` | NULL | Vector embedding for semantic match |
 | `HitCount` | `int` | NOT NULL, Default 1 | Frequency of lookups |
 | `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
+
+> **Indexes:**
+> - `IX_TermExplanationCaches_Term_Locale` ON `(Term, Locale)`
+> - `IX_TermExplanationCaches_Embedding` ON `(Embedding)` USING `hnsw (vector_cosine_ops)` for sub-millisecond semantic search
 
 ---
 
