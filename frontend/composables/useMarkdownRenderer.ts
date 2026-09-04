@@ -1,66 +1,60 @@
+import { ref } from 'vue'
 import MarkdownIt from 'markdown-it'
-import { createHighlighter, type Highlighter } from 'shiki'
-
-let highlighterInstance: Highlighter | null = null
-let highlighterInitPromise: Promise<Highlighter> | null = null
-
-const SUPPORTED_LANGS = [
-  'csharp',
-  'typescript',
-  'javascript',
-  'json',
-  'html',
-  'css',
-  'sql',
-  'bash',
-  'sh',
-  'python',
-  'go',
-  'markdown',
-  'yaml',
-  'dockerfile'
-]
-
-async function initHighlighter(): Promise<Highlighter> {
-  if (highlighterInstance) return highlighterInstance
-  if (highlighterInitPromise) return highlighterInitPromise
-
-  highlighterInitPromise = createHighlighter({
-    themes: ['github-dark-dimmed', 'github-light'],
-    langs: SUPPORTED_LANGS
-  }).then((hl) => {
-    highlighterInstance = hl
-    return hl
-  })
-
-  return highlighterInitPromise
+import {
+  getShikiHighlighter,
+  getHighlighterSync,
+  detectCodeLanguage,
+  formatLanguageLabel,
+  normalizeLanguage,
+  SUPPORTED_LANGS,
+  CODE_THEME
+} from '~/utils/shikiHighlighter'
+declare global {
+  interface Window {
+    __copyCode?: (btn: HTMLElement) => void
+  }
 }
 
+
 export function useMarkdownRenderer() {
-  const isHighlighterReady = ref(false)
+  const isHighlighterReady = ref(getHighlighterSync() !== null)
 
   // Initialize highlighter in browser & register copy helper
   if (import.meta.client) {
-    if (typeof window !== 'undefined' && !(window as any).__copyCode) {
-      (window as any).__copyCode = (btn: HTMLElement) => {
-        const code = decodeURIComponent(btn.getAttribute('data-code') || '')
+    if (typeof window !== 'undefined' && !window.__copyCode) {
+      window.__copyCode = (btn: HTMLElement) => {
         if (code) {
           navigator.clipboard.writeText(code)
           const span = btn.querySelector('span')
+          const svg = btn.querySelector('svg')
           if (span) {
             const old = span.textContent
             span.textContent = 'Copied!'
-            setTimeout(() => { span.textContent = old }, 2000)
+            if (svg) {
+              svg.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>'
+              svg.classList.remove('text-slate-400')
+              svg.classList.add('text-emerald-400')
+            }
+            setTimeout(() => {
+              span.textContent = old
+              if (svg) {
+                svg.innerHTML = '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>'
+                svg.classList.remove('text-emerald-400')
+                svg.classList.add('text-slate-400')
+              }
+            }, 2000)
           }
         }
       }
     }
 
-    initHighlighter().then(() => {
-      isHighlighterReady.value = true
-    }).catch((err) => {
-      console.warn('Failed to initialize Shiki highlighter:', err)
-    })
+    if (!isHighlighterReady.value) {
+      getShikiHighlighter().then(() => {
+        isHighlighterReady.value = true
+      }).catch((err) => {
+        console.warn('Failed to initialize Shiki highlighter:', err)
+      })
+    }
   }
 
   function createMarkdownInstance(): MarkdownIt {
@@ -82,15 +76,17 @@ export function useMarkdownRenderer() {
       const rawLang = info.split(/\s+/)[0].toLowerCase() || ''
       const code = token.content
 
-      const effectiveLang = detectLanguage(code, rawLang)
-      const langDisplay = formatLangName(effectiveLang)
+      const effectiveLang = detectCodeLanguage(code, rawLang)
+      const targetLang = normalizeLanguage(effectiveLang)
+      const langDisplay = formatLanguageLabel(targetLang)
 
+      const highlighter = getHighlighterSync()
       let highlightedHtml = ''
-      if (highlighterInstance && SUPPORTED_LANGS.includes(effectiveLang)) {
+      if (highlighter && SUPPORTED_LANGS.includes(targetLang)) {
         try {
-          highlightedHtml = highlighterInstance.codeToHtml(code.trimEnd(), {
-            lang: effectiveLang,
-            theme: 'github-dark-dimmed'
+          highlightedHtml = highlighter.codeToHtml(code.trimEnd(), {
+            lang: targetLang,
+            theme: CODE_THEME
           })
         } catch {
           highlightedHtml = ''
@@ -99,28 +95,32 @@ export function useMarkdownRenderer() {
 
       if (!highlightedHtml) {
         const escaped = md.utils.escapeHtml(code.trimEnd())
-        highlightedHtml = `<pre class="shiki github-dark-dimmed font-mono text-xs sm:text-sm p-4 sm:p-5 overflow-x-auto max-w-full text-slate-200"><code>${escaped}</code></pre>`
+        highlightedHtml = `<pre class="shiki one-dark-pro font-mono text-xs sm:text-sm p-4 sm:p-5 overflow-x-auto max-w-full text-slate-200"><code>${escaped}</code></pre>`
       }
 
       const encodedCode = encodeURIComponent(code.trimEnd())
 
       return `
-        <div class="code-block-wrapper relative group my-5 rounded-2xl overflow-hidden border border-slate-700/60 bg-[#22272e] shadow-lg max-w-full w-full min-w-0">
-          <div class="flex items-center justify-between px-4 py-2 bg-slate-800/80 border-b border-slate-700/50 text-xs font-mono text-slate-300 select-none">
-            <span class="flex items-center gap-1.5 font-semibold text-emerald-400">
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block"></span>
-              ${langDisplay}
-            </span>
+        <div class="code-block-wrapper relative group my-5 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg max-w-full w-full min-w-0 font-mono text-xs sm:text-sm">
+          <div class="flex items-center justify-between px-4 py-2 bg-slate-950/80 border-b border-slate-800/80 text-xs text-slate-400 select-none">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
+              <span class="ml-2 font-mono uppercase tracking-wider text-xs text-slate-400 font-semibold">${langDisplay}</span>
+            </div>
             <button
               type="button"
-              class="copy-code-btn px-2.5 py-1 rounded-md bg-slate-700/70 hover:bg-emerald-600 hover:text-white text-slate-300 transition-all flex items-center gap-1 cursor-pointer"
+              class="copy-code-btn flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-all active:scale-95 cursor-pointer"
               data-code="${encodedCode}"
               onclick="window.__copyCode && window.__copyCode(this)"
+              title="Copy Code"
             >
-              <span>Copy</span>
+              <svg class="copy-icon w-3.5 h-3.5 text-slate-400 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              <span class="text-xs font-medium">Copy</span>
             </button>
           </div>
-          <div class="code-content text-xs sm:text-sm leading-relaxed overflow-x-auto max-w-full w-full">
+          <div class="code-content shiki-container text-xs sm:text-sm leading-relaxed overflow-x-auto max-w-full w-full">
             ${highlightedHtml}
           </div>
         </div>
@@ -188,54 +188,7 @@ export function useMarkdownRenderer() {
   return {
     render,
     isHighlighterReady,
-    initHighlighter
+    initHighlighter: getShikiHighlighter
   }
 }
 
-function detectLanguage(code: string, fallbackLang: string): string {
-  if (fallbackLang && fallbackLang !== 'text' && fallbackLang !== 'plaintext') {
-    return fallbackLang === 'cs' ? 'csharp' : fallbackLang
-  }
-  const sample = code.trim()
-  if (/\b(public\s+(interface|class|record|struct|enum|static|async|void)|using\s+System|builder\.Services|AddKeyed|IActionResult)\b/.test(sample) || /^\s*(public|private|protected|internal)\s+/m.test(sample)) {
-    return 'csharp'
-  }
-  if (/\b(import\s+React|export\s+default|interface\s+Props|const\s+|let\s+|async\s+function|type\s+[A-Z])\b/.test(sample)) {
-    return 'typescript'
-  }
-  if (/\b(SELECT\s+|FROM\s+|WHERE\s+|INSERT\s+INTO|CREATE\s+TABLE|ALTER\s+TABLE)\b/i.test(sample)) {
-    return 'sql'
-  }
-  if (/\b(def\s+|import\s+numpy|import\s+pandas|print\(|__init__)\b/.test(sample)) {
-    return 'python'
-  }
-  if (/\b(docker|FROM\s+[a-z0-9]|RUN\s+|ENTRYPOINT|COPY\s+)\b/i.test(sample)) {
-    return 'dockerfile'
-  }
-  if (sample.startsWith('{') || sample.startsWith('[')) {
-    try { JSON.parse(sample); return 'json' } catch {}
-  }
-  return 'csharp'
-}
-
-function formatLangName(lang: string): string {
-  const map: Record<string, string> = {
-    csharp: 'C#',
-    cs: 'C#',
-    ts: 'TypeScript',
-    typescript: 'TypeScript',
-    js: 'JavaScript',
-    javascript: 'JavaScript',
-    py: 'Python',
-    python: 'Python',
-    sql: 'SQL',
-    json: 'JSON',
-    bash: 'Bash',
-    sh: 'Shell',
-    html: 'HTML',
-    css: 'CSS',
-    yaml: 'YAML',
-    dockerfile: 'Dockerfile'
-  }
-  return map[lang] || lang.toUpperCase()
-}

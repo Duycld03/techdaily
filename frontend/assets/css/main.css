@@ -79,7 +79,7 @@
 /* Universal Code Block & Pre styling: guarantees horizontal scroll and prevents line clipping */
 .markdown-body pre,
 .prose pre {
-  @apply font-mono text-xs sm:text-sm p-4 sm:p-5 bg-[#22272e] text-slate-200 overflow-x-auto max-w-full my-4 rounded-2xl border border-slate-700/60 shadow-md !important;
+  @apply font-mono text-xs sm:text-sm p-4 sm:p-5 bg-slate-900 text-slate-200 overflow-x-auto max-w-full my-4 rounded-2xl border border-slate-800 shadow-md !important;
   white-space: pre !important;
   word-break: normal !important;
   word-wrap: normal !important;
@@ -95,18 +95,19 @@
 }
 
 .markdown-body pre.shiki {
-  @apply font-mono text-xs sm:text-sm p-4 sm:p-5 bg-[#22272e] text-slate-200 overflow-x-auto max-w-full m-0 !important;
+  @apply font-mono text-xs sm:text-sm p-4 sm:p-5 bg-transparent text-slate-200 overflow-x-auto max-w-full m-0 !important;
   -webkit-overflow-scrolling: touch;
 }
 
 .markdown-body .code-block-wrapper {
-  @apply max-w-full w-full overflow-hidden my-4 rounded-2xl border border-slate-700/60 bg-[#22272e] shadow-lg;
+  @apply max-w-full w-full overflow-hidden my-4 rounded-2xl border border-slate-800 bg-slate-900 shadow-lg text-slate-100 font-mono text-xs sm:text-sm;
 }
 
 .markdown-body .code-block-wrapper pre {
   margin: 0 !important;
   border-radius: 0 0 1rem 1rem !important;
   border: none !important;
+  background-color: transparent !important;
   @apply overflow-x-auto max-w-full w-full p-4 sm:p-5 !important;
   -webkit-overflow-scrolling: touch;
 }
@@ -114,6 +115,23 @@
 .markdown-body .code-content {
   @apply overflow-x-auto max-w-full w-full;
   -webkit-overflow-scrolling: touch;
+}
+
+.shiki-container pre.shiki,
+.code-content pre.shiki {
+  background-color: transparent !important;
+  margin: 0 !important;
+  padding: 1rem 1.25rem !important;
+  overflow-x: visible !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+.shiki-container code,
+.code-content code {
+  font-family: inherit !important;
+  background-color: transparent !important;
 }
 
 .markdown-body blockquote {
