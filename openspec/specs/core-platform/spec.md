@@ -1,6 +1,9 @@
-# Delta Spec: Core Platform Capability
+# Core Platform Specification
 
-## ADDED Requirements
+## Purpose
+Provides the foundational user authentication, user profile management, daily curriculum doc reading slices, scenario challenges, SM-2 spaced repetition engine, document library, and background notification dispatches for the TechDaily platform.
+
+## Requirements
 
 ### Requirement: Standard Email & Password Authentication
 The system SHALL allow users to register an account with email, password (min 6 characters), full name, and preferred locale (`POST /api/v1/auth/register`), securely hash passwords using PBKDF2 with SHA-256 (16-byte random salt, 100,000 iterations), and authenticate users via email and password (`POST /api/v1/auth/login`), issuing a 256-bit JWT bearer token upon successful verification.

@@ -1,6 +1,9 @@
-# Delta Spec: Feature Cleanup, Grouped Navigation & Clean ERD
+# Cleanup Specification
 
-## ADDED Requirements
+## Purpose
+Establishes clean architectural boundaries, 3-tier grouped navigation standards, seamless reader-to-quiz practice bridges, and database schema pruning of legacy unused features.
+
+## Requirements
 
 ### Requirement: Grouped Navigation Standard
 Both desktop sidebar (`components/layout/AppSidebar.vue`) and mobile drawer (`components/layout/AppHeader.vue`) MUST adhere to the standardized 3-tier grouped layout: Practice (`/today`, `/roadmap`, `/quiz`, `/review`), Knowledge (`/insights`, `/library`, `/notes`), and System (`/profile`, `/settings`).

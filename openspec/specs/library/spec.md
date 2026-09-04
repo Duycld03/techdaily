@@ -1,6 +1,9 @@
-# Delta Spec: PDF Upload & Web Document Crawler Capability
+# Library Specification
 
-## ADDED Requirements
+## Purpose
+Provides technical document ingestion capabilities including markdown series creation, memory-efficient PDF streaming extraction up to 200MB/800 pages, and web documentation URL crawling with clean markdown conversion.
+
+## Requirements
 
 ### Requirement: PDF File Ingestion
 The system SHALL provide an authenticated API endpoint `POST /api/v1/library/upload-pdf` accepting `multipart/form-data` with maximum file size up to 200 MB and up to 800 pages. The system SHALL extract text page-by-page using streaming extraction (`IFormFile.OpenReadStream()`), group pages into reading slices of 400–800 words without buffering the entire file into contiguous RAM, and create `DocumentBook` and `DocumentChunk` records.

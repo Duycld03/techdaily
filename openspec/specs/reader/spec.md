@@ -1,6 +1,9 @@
-# Delta Spec: Immersive Book & Document Reader Capability
+# Reader Specification
 
-## ADDED Requirements
+## Purpose
+Provides an immersive technical reading experience with chapter table of contents, progress indicators, keyboard shortcuts, local bookmarking, active recall quizzes, and scoped text highlight tools.
+
+## Requirements
 
 ### Requirement: Dedicated Reading Route
 The system SHALL provide a dedicated reader page at `/read/[bookId]` with query parameter `?slice={chunkOrder}`, navigating from book cards in `/library`.
