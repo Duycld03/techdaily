@@ -122,18 +122,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 
-// Serve Static Audio Files (/uploads/audios/...)
-var audioStoragePath = Path.Combine(app.Environment.ContentRootPath, "..", "..", "storage", "audios");
-if (!Directory.Exists(audioStoragePath))
-{
-    Directory.CreateDirectory(audioStoragePath);
-}
-
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new PhysicalFileProvider(audioStoragePath),
-    RequestPath = "/uploads/audios"
-});
 
 app.UseAuthentication();
 app.UseAuthorization();

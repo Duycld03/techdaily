@@ -49,9 +49,6 @@ appsettings.Local.json
 # Local Media / Storage / Uploads
 # --------------------------------------------------------------------
 uploads/
-storage/
-storage/audios/*
-!storage/audios/.gitkeep
 temp/
 tmp/
 
