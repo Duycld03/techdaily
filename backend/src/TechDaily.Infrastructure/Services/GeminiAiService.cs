@@ -31,6 +31,7 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService
     public async Task<Result<TechInsight>> GenerateInsightAsync(
         Category? preferredCategory,
         string? preferredTopic,
+        List<string>? existingTitlesToAvoid = null,
         string locale = "en",
         CancellationToken cancellationToken = default)
     {
@@ -49,12 +50,35 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService
 
         try
         {
+            var exploratoryLenses = new[]
+            {
+                "Memory Allocations, GC Generations & Zero-Copy Buffers (ArrayPool, Span/Memory, Sockets)",
+                "High-Throughput Concurrency, Lock-Free Internals & ThreadPool Scheduling",
+                "Pipeline Architecture, Middleware Ordering, Short-Circuiting & Interceptors",
+                "Under-the-Hood Compiler Optimizations, JIT Tiering & Runtime Mechanics",
+                "Database Query Compilation, Index Execution Plans & Low-Allocation Data Access",
+                "High-Volume Streaming I/O, Channels & Backpressure Management",
+                "Distributed Caching, Tag Eviction & Cache Stampede Mitigations",
+                "Resilience, Circuit Breakers, Partitioned Rate Limiting & Resource Throttling"
+            };
+            var randomLens = exploratoryLenses[Random.Shared.Next(exploratoryLenses.Length)];
+
+            var antiDuplicationClause = existingTitlesToAvoid != null && existingTitlesToAvoid.Any()
+                ? $@"
+CRITICAL ANTI-DUPLICATION RULE:
+Do NOT generate insights covering the same topic, mechanism, or code pattern as any of these existing insights:
+- {string.Join("\n- ", existingTitlesToAvoid.Take(25))}
+You MUST choose a completely distinct under-the-hood mechanism, sub-system, or architectural angle."
+                : string.Empty;
+
             var systemInstruction = $@"
 You are a Principal Software Architect and Staff Engineer.
 Generate an authoritative, bite-sized Senior Technical Insight on the requested topic or language.
 IMPORTANT: If the user's prompt mentions or implies a specific language or technology (such as Rust, Go, Python, C#, TypeScript, Vue, React, PostgreSQL, Docker, Kafka, etc.), you MUST write the code snippets (`problemSnippet`, `solutionSnippet`) strictly in that requested language! Never default to C# unless C# or .NET was requested.
+When the user provides a broad or general topic (such as 'asp.net', 'c#', 'postgres', 'react', 'system design', etc.), you MUST pick a distinct, non-trivial, surprising under-the-hood angle or sub-system that has NOT been covered yet.
 Focus on under-the-hood runtime mechanisms, memory allocation savings, zero-cost abstractions, or latency optimizations.
 Provide realistic, concrete code snippets (bad/naive pattern vs senior optimal pattern) and benchmark statistics.
+{antiDuplicationClause}
 Language of explanations: {(isVi ? "Vietnamese (Technical terminology in English with Vietnamese explanations)" : "English")}.
 Respond strictly in valid JSON adhering to this schema:
 {{
@@ -72,7 +96,7 @@ Category mapping: 0=FrontendWeb, 1=BackendDotNet, 2=DatabaseStorage, 3=SystemDes
 No markdown backticks around JSON.";
 
             var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
-            var promptText = $"User requested topic: '{topicPrompt}'. Preferred category: {categoryName}. Generate a comprehensive, accurate Senior Technical Insight.";
+            var promptText = $"User requested topic: '{topicPrompt}'. Preferred category: {categoryName}. Exploratory focus angle: '{randomLens}'. Generate a unique, authoritative, non-repetitive Senior Technical Insight.";
 
             var requestPayload = new
             {
@@ -96,7 +120,7 @@ No markdown backticks around JSON.";
                 },
                 generationConfig = new
                 {
-                    temperature = 0.3,
+                    temperature = 0.7,
                     maxOutputTokens = 8192,
                     responseMimeType = "application/json"
                 }
@@ -114,7 +138,7 @@ No markdown backticks around JSON.";
             }
 
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            return ParseInsightResponse(responseBody, preferredCategory);
+            return ParseInsightResponse(responseBody, preferredCategory, topicPrompt, isVi);
         }
         catch (Exception ex)
         {
@@ -123,25 +147,67 @@ No markdown backticks around JSON.";
         }
     }
 
-    private static Result<TechInsight> ParseInsightResponse(string responseBody, Category? preferredCategory)
+    private Result<TechInsight> ParseInsightResponse(
+        string responseBody,
+        Category? preferredCategory,
+        string topic,
+        bool isVi)
     {
+        string? rawText = null;
         try
         {
             using var doc = JsonDocument.Parse(responseBody);
             var candidates = doc.RootElement.GetProperty("candidates");
-            var content = candidates[0].GetProperty("content");
-            var text = content.GetProperty("parts")[0].GetProperty("text").GetString();
-
-            if (string.IsNullOrWhiteSpace(text))
+            if (candidates.GetArrayLength() == 0)
             {
-                return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, "Architecture", false);
+                _logger.LogWarning("Gemini API returned 0 candidates for insight topic '{Topic}'. Falling back to mock generator.", topic);
+                return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topic, isVi);
             }
 
-            var cleanJson = text.Trim();
+            var content = candidates[0].GetProperty("content");
+            var parts = content.GetProperty("parts");
+
+            // Look through parts to find the one containing text (skipping thought/reasoning objects)
+            foreach (var part in parts.EnumerateArray())
+            {
+                if (part.TryGetProperty("text", out var textProp))
+                {
+                    var partText = textProp.GetString();
+                    if (!string.IsNullOrWhiteSpace(partText))
+                    {
+                        rawText = partText;
+                        break;
+                    }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(rawText))
+            {
+                _logger.LogWarning("Gemini API returned empty text part for insight topic '{Topic}'. Falling back to mock generator.", topic);
+                return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topic, isVi);
+            }
+
+            var cleanJson = rawText.Trim();
             if (cleanJson.StartsWith("```"))
             {
-                cleanJson = cleanJson.Substring(cleanJson.IndexOf('\n') + 1);
-                cleanJson = cleanJson.Substring(0, cleanJson.LastIndexOf("```")).Trim();
+                var firstLineBreak = cleanJson.IndexOf('\n');
+                if (firstLineBreak != -1)
+                {
+                    cleanJson = cleanJson.Substring(firstLineBreak + 1);
+                }
+                var lastBacktick = cleanJson.LastIndexOf("```");
+                if (lastBacktick != -1)
+                {
+                    cleanJson = cleanJson.Substring(0, lastBacktick);
+                }
+                cleanJson = cleanJson.Trim();
+            }
+
+            var firstBrace = cleanJson.IndexOf('{');
+            var lastBrace = cleanJson.LastIndexOf('}');
+            if (firstBrace >= 0 && lastBrace > firstBrace)
+            {
+                cleanJson = cleanJson.Substring(firstBrace, lastBrace - firstBrace + 1);
             }
 
             using var insightDoc = JsonDocument.Parse(cleanJson);
@@ -190,9 +256,10 @@ No markdown backticks around JSON.";
                 UpdatedAt = DateTime.UtcNow
             };
         }
-        catch
+        catch (Exception ex)
         {
-            return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, "Architecture", false);
+            _logger.LogError(ex, "Exception while parsing Gemini insight response for topic '{Topic}'. Raw snippet: {Snippet}", topic, rawText ?? responseBody.Substring(0, Math.Min(responseBody.Length, 300)));
+            return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topic, isVi);
         }
     }
 
@@ -212,21 +279,208 @@ No markdown backticks around JSON.";
 
     private static TechInsight GenerateMockInsight(Category category, string topic, bool isVi)
     {
+        var lowerTopic = topic.ToLowerInvariant();
+
+        (string title, string[] tags, string summary, string prob, string sol, string uth, string bench, string url)[] pool;
+
+        if (lowerTopic.Contains("asp") || lowerTopic.Contains("kestrel") || lowerTopic.Contains("middleware") || lowerTopic.Contains("web api"))
+        {
+            pool = isVi ? new[]
+            {
+                (
+                    "Tối ưu hóa Memory Allocation trong ASP.NET Core với ArrayPool<T>.Shared",
+                    new[] { "aspnetcore", "memory-allocation", "arraypool", "gc-tuning" },
+                    "Trong các pipeline xử lý request tần suất cao, việc khởi tạo `byte[]` liên tục gây áp lực phân mảnh lên Large Object Heap (LOH). Sử dụng `ArrayPool<T>.Shared.Rent()` giúp tái sử dụng buffer và loại bỏ 100% chi phí GC Gen 2.",
+                    "// ❌ BAD: Cấp phát mảng mới mỗi HTTP request\npublic byte[] ReadBody(Stream stream, int size) {\n    var buffer = new byte[size];\n    stream.Read(buffer, 0, size);\n    return buffer;\n}",
+                    "// ✅ SENIOR PATTERN: Mượn và hoàn trả buffer từ ArrayPool\npublic void ReadBody(Stream stream, int size) {\n    byte[] buffer = ArrayPool<byte>.Shared.Rent(size);\n    try {\n        stream.Read(buffer, 0, size);\n        ProcessBuffer(buffer, size);\n    } finally {\n        ArrayPool<byte>.Shared.Return(buffer);\n    }\n}",
+                    "### Under The Hood Mechanics\n- `ArrayPool<T>` quản lý các bucket mảng theo lũy thừa của 2, giữ các buffer đã cấp phát trong bộ nhớ mà không giải phóng cho GC.\n- Giảm thiểu hoàn toàn GC pauses (Stop-the-world) trên các web API xử lý hơn 50,000 RPS.",
+                    "⚡ Giảm 95% LOH Allocations | 0 B GC Gen 2",
+                    "https://learn.microsoft.com/en-us/dotnet/api/system.buffers.arraypool-1"
+                ),
+                (
+                    "Kiến trúc Non-blocking Request Processing với System.Threading.Channels trong ASP.NET Core",
+                    new[] { "aspnetcore", "channels", "concurrency", "background-worker" },
+                    "Thay vì xử lý các tác vụ nền nặng bên trong HTTP Request thread, hãy đẩy payload vào `Channel<T>` có giới hạn kích thước (Bounded Channel) với chiến lược Backpressure chống tràn bộ nhớ.",
+                    "// ❌ BAD: Dùng Task.Run không kiểm soát số lượng luồng\n[HttpPost(\"telemetry\")]\npublic IActionResult Ingest([FromBody] MetricData data) {\n    Task.Run(() => _heavyService.Process(data));\n    return Accepted();\n}",
+                    "// ✅ SENIOR PATTERN: Bounded Channel làm producer-consumer pipeline\n[HttpPost(\"telemetry\")]\npublic async ValueTask<IActionResult> Ingest([FromBody] MetricData data, [FromServices] ChannelWriter<MetricData> writer) {\n    await writer.WriteAsync(data);\n    return Accepted();\n}",
+                    "### Under The Hood Mechanics\n- `Channel<T>` sử dụng cấu trúc ring-buffer không khóa (lock-free) kết hợp ValueTask awaiters để loại bỏ hoàn toàn chi phí context switch và thread starvation.\n- Bảo vệ HTTP worker pool của Kestrel không bị sụp đổ khi lượng traffic tăng đột biến.",
+                    "⚡ 10x Throughput | Giữ vững 99.9th percentile SLA",
+                    "https://learn.microsoft.com/en-us/dotnet/core/extensions/channels"
+                ),
+                (
+                    "Tối ưu hóa Latency với OutputCache và Tag-Based Eviction trong ASP.NET Core",
+                    new[] { "aspnetcore", "caching", "outputcache", "redis" },
+                    "Sử dụng middleware `OutputCache` (tích hợp từ ASP.NET Core 7+) kết hợp cache tagging cho phép short-circuit pipeline ngay tại mức HTTP socket, bỏ qua hoàn toàn Routing, Model Binding và Controller Action.",
+                    "// ❌ BAD: Tự kiểm tra IMemoryCache thủ công trong từng Action\n[HttpGet(\"catalog\")]\npublic async Task<IActionResult> Get() {\n    if (!_cache.TryGetValue(\"catalog\", out var data)) {\n        data = await _repo.GetAllAsync();\n        _cache.Set(\"catalog\", data);\n    }\n    return Ok(data);\n}",
+                    "// ✅ SENIOR PATTERN: Declarative OutputCache với Cache Tags\napp.MapGet(\"/catalog\", async (ICatalogRepo repo) => await repo.GetAllAsync())\n   .CacheOutput(p => p.Expire(TimeSpan.FromMinutes(10)).Tag(\"catalog-tag\"));",
+                    "### Under The Hood Mechanics\n- `OutputCache` ghi thẳng response bytes đã được nén (Gzip/Brotli) vào Network Stream mà không qua chu trình serialization JSON lặp lại.\n- Khi dữ liệu thay đổi, lệnh `EvictByTagAsync(\"catalog-tag\")` dọn cache lập tức trên toàn cụm server.",
+                    "⚡ 0 ms C# Execution | 120,000 RPS trên single node",
+                    "https://learn.microsoft.com/en-us/aspnet/core/performance/caching/output"
+                ),
+                (
+                    "Phòng chống ThreadPool Starvation bằng cách loại bỏ Sync-over-Async trong ASP.NET Core",
+                    new[] { "aspnetcore", "async-await", "threadpool-starvation", "kestrel" },
+                    "Gọi `.Result` hoặc `.GetAwaiter().GetResult()` trên bất kỳ `Task` nào trong luồng xử lý của Kestrel sẽ khóa chặt worker thread và có thể gây tê liệt (Deadlock/Starvation) toàn bộ hệ thống chỉ với vài chục request đồng thời.",
+                    "// ❌ BAD: Sync-over-Async khóa ThreadPool worker\n[HttpGet(\"config\")]\npublic IActionResult GetConfig() {\n    var config = _configService.GetRemoteConfigAsync().Result;\n    return Ok(config);\n}",
+                    "// ✅ SENIOR PATTERN: Full async chain tới tận Socket IO\n[HttpGet(\"config\")]\npublic async Task<IActionResult> GetConfig(CancellationToken ct) {\n    var config = await _configService.GetRemoteConfigAsync(ct);\n    return Ok(config);\n}",
+                    "### Under The Hood Mechanics\n- Kestrel sử dụng cơ chế Socket IO Completion Ports (IOCP) không tiêu tốn thread khi chờ I/O. Lệnh `.Result` ép ThreadPool phải mượn một thread mới để chạy tiếp, dẫn đến hiện tượng 'ThreadPool ramp-up delay' (500ms/thread).",
+                    "⚡ Loại bỏ 100% ThreadPool Queuing Delay | CPU ổn định",
+                    "https://learn.microsoft.com/en-us/dotnet/standard/async-in-depth"
+                )
+            } : new[]
+            {
+                (
+                    "High-Throughput Buffer Pooling with ArrayPool<T>.Shared in ASP.NET Core",
+                    new[] { "aspnetcore", "memory-allocation", "arraypool", "gc-tuning" },
+                    "Allocating raw byte arrays per incoming request triggers severe Large Object Heap (LOH) fragmentation. Leveraging `ArrayPool<T>.Shared.Rent()` enables zero-allocation buffer reuse and eliminates Gen 2 GC pauses.",
+                    "// ❌ BAD: New heap allocation per HTTP request\npublic byte[] ReadBody(Stream stream, int size) {\n    var buffer = new byte[size];\n    stream.Read(buffer, 0, size);\n    return buffer;\n}",
+                    "// ✅ SENIOR PATTERN: Rent and return pooled buffers\npublic void ReadBody(Stream stream, int size) {\n    byte[] buffer = ArrayPool<byte>.Shared.Rent(size);\n    try {\n        stream.Read(buffer, 0, size);\n        ProcessBuffer(buffer, size);\n    } finally {\n        ArrayPool<byte>.Shared.Return(buffer);\n    }\n}",
+                    "### Under The Hood Mechanics\n- `ArrayPool<T>` partitions pre-allocated buffers across power-of-two size buckets, shielding the GC from rapid allocation cycles.\n- Guarantees sub-millisecond response latency under 50,000+ concurrent requests.",
+                    "⚡ 95% Reduced LOH Allocations | 0 B Gen 2 GC Overhead",
+                    "https://learn.microsoft.com/en-us/dotnet/api/system.buffers.arraypool-1"
+                ),
+                (
+                    "Architecting Non-Blocking Request Ingestion with System.Threading.Channels",
+                    new[] { "aspnetcore", "channels", "concurrency", "background-worker" },
+                    "Offload heavy telemetry and event persistence out of the Kestrel HTTP pipeline into a bounded lock-free `Channel<T>` with backpressure semantics.",
+                    "// ❌ BAD: Unbounded Task.Run depleting worker threads\n[HttpPost(\"telemetry\")]\npublic IActionResult Ingest([FromBody] MetricData data) {\n    Task.Run(() => _heavyService.Process(data));\n    return Accepted();\n}",
+                    "// ✅ SENIOR PATTERN: Bounded Channel producer-consumer pipeline\n[HttpPost(\"telemetry\")]\npublic async ValueTask<IActionResult> Ingest([FromBody] MetricData data, [FromServices] ChannelWriter<MetricData> writer) {\n    await writer.WriteAsync(data);\n    return Accepted();\n}",
+                    "### Under The Hood Mechanics\n- Channels utilize lock-free ring buffers and ValueTask-based awaiters to eliminate thread synchronization context switches and thread pool starvation under spikes.",
+                    "⚡ 10x Throughput Surge Capacity | 99.9th percentile SLA guaranteed",
+                    "https://learn.microsoft.com/en-us/dotnet/core/extensions/channels"
+                ),
+                (
+                    "Sub-Millisecond Pipeline Bypass with OutputCache & Tag Eviction",
+                    new[] { "aspnetcore", "caching", "outputcache", "redis" },
+                    "ASP.NET Core `OutputCache` short-circuits execution at the socket layer, bypassing Routing, Model Binding, and Controller instantiation completely.",
+                    "// ❌ BAD: Manual IMemoryCache lookups per controller action\n[HttpGet(\"catalog\")]\npublic async Task<IActionResult> Get() {\n    if (!_cache.TryGetValue(\"catalog\", out var data)) {\n        data = await _repo.GetAllAsync();\n        _cache.Set(\"catalog\", data);\n    }\n    return Ok(data);\n}",
+                    "// ✅ SENIOR PATTERN: Declarative OutputCache with cache tags\napp.MapGet(\"/catalog\", async (ICatalogRepo repo) => await repo.GetAllAsync())\n   .CacheOutput(p => p.Expire(TimeSpan.FromMinutes(10)).Tag(\"catalog-tag\"));",
+                    "### Under The Hood Mechanics\n- `OutputCache` writes pre-compressed bytes (Brotli/Gzip) straight to the TCP output buffer without CPU-intensive JSON re-serialization.\n- `EvictByTagAsync` broadcasts instant invalidations across distributed clusters.",
+                    "⚡ 0 ms Managed Execution | 120,000 RPS on single node",
+                    "https://learn.microsoft.com/en-us/aspnet/core/performance/caching/output"
+                )
+            };
+        }
+        else if (lowerTopic.Contains("postgres") || lowerTopic.Contains("sql") || lowerTopic.Contains("database") || lowerTopic.Contains("db"))
+        {
+            pool = isVi ? new[]
+            {
+                (
+                    "Tối ưu hóa B-Tree Index với Covering Index (INCLUDE Clause) trong PostgreSQL",
+                    new[] { "postgresql", "indexing", "performance", "database-tuning" },
+                    "Khi một truy vấn SELECT cần thêm một vài cột không dùng để lọc, thay vì thêm cột vào Composite Index gây phình to B-Tree, hãy sử dụng mệnh đề `INCLUDE` để đạt được Index-Only Scan.",
+                    "// ❌ BAD: Composite Index quá khổ gây tốn bộ nhớ đệm shared_buffers\nCREATE INDEX idx_orders_user_created_total ON orders (user_id, created_at, total_amount, status);",
+                    "// ✅ SENIOR PATTERN: B-Tree Index lọc chính xác kèm payload INCLUDE\nCREATE INDEX idx_orders_user_created ON orders (user_id, created_at) INCLUDE (total_amount, status);",
+                    "### Under The Hood Mechanics\n- Các cột trong `INCLUDE` được lưu trữ trực tiếp tại Leaf Nodes của B-Tree mà không tham gia vào cấu trúc cây tìm kiếm (Root/Branch Nodes).\n- Công cụ tối ưu hóa truy vấn PostgreSQL thực hiện Index-Only Scan và không cần truy cập Heap Table (Zero Table I/O).",
+                    "⚡ Giảm 4x I/O Reads | Tăng tốc độ truy vấn 8x",
+                    "https://www.postgresql.org/docs/current/indexes-index-only-scans.html"
+                ),
+                (
+                    "Cơ chế Heap-Only Tuples (HOT) & FILLFACTOR: Loại bỏ Table Bloat trong PostgreSQL",
+                    new[] { "postgresql", "mvcc", "table-bloat", "hot-updates" },
+                    "Trong PostgreSQL, mỗi câu lệnh UPDATE mặc định sẽ tạo tuple mới trên Heap và ghi nhận vào tất cả các Index. Giảm `FILLFACTOR` xuống 85-90% giúp kích hoạt cơ chế HOT, cập nhật in-place mà không làm bẩn Index.",
+                    "// ❌ BAD: Bảng nhận nhiều UPDATE liên tục với FILLFACTOR 100 mặc định\nCREATE TABLE user_telemetry (\n    id uuid PRIMARY KEY,\n    last_seen timestamptz,\n    payload jsonb\n);",
+                    "// ✅ SENIOR PATTERN: Dự trữ không gian trống trên mỗi 8KB Page để kích hoạt HOT\nCREATE TABLE user_telemetry (\n    id uuid PRIMARY KEY,\n    last_seen timestamptz,\n    payload jsonb\n) WITH (fillfactor = 85);",
+                    "### Under The Hood Mechanics\n- Khi có chỗ trống trên cùng Page, PostgreSQL tạo tuple mới và liên kết chuỗi con trỏ (HOT chain) ngay tại Page đó.\n- Tránh được hoàn toàn chi phí cập nhật hàng loạt Index Trees và giảm thiểu tần suất cần chạy VACUUM.",
+                    "⚡ 0 Index Write Amplification | Giảm 70% Table Bloat",
+                    "https://www.postgresql.org/docs/current/storage-hot.html"
+                )
+            } : new[]
+            {
+                (
+                    "Covering Indexes via INCLUDE Clause for Zero-Heap-I/O in PostgreSQL",
+                    new[] { "postgresql", "indexing", "performance", "database-tuning" },
+                    "Over-indexing query payload columns in composite keys balloons B-Tree size. The `INCLUDE` clause appends payload columns strictly to leaf nodes for pure Index-Only Scans.",
+                    "// ❌ BAD: Fat composite index bloating tree branches\nCREATE INDEX idx_orders ON orders (user_id, created_at, total_amount, status);",
+                    "// ✅ SENIOR PATTERN: Lean B-Tree traversal key with leaf payload\nCREATE INDEX idx_orders ON orders (user_id, created_at) INCLUDE (total_amount, status);",
+                    "### Under The Hood Mechanics\n- Included attributes reside solely in the leaf pages without contributing to tree traversal depth.\n- The planner executes pure Index-Only Scans without reading the physical heap.",
+                    "⚡ 4x Lower I/O | 8x Query Speedup",
+                    "https://www.postgresql.org/docs/current/indexes-index-only-scans.html"
+                )
+            };
+        }
+        else if (lowerTopic.Contains("vue") || lowerTopic.Contains("react") || lowerTopic.Contains("frontend") || lowerTopic.Contains("js") || lowerTopic.Contains("ts"))
+        {
+            pool = isVi ? new[]
+            {
+                (
+                    "Tối ưu hóa Reactive Memory Footprint với shallowRef() trong Vue 3",
+                    new[] { "vue3", "reactivity", "performance", "shallowref" },
+                    "Khi làm việc với danh sách lớn (hàng chục nghìn đối tượng telemetry hoặc bảng dữ liệu), `reactive()` hoặc `ref()` sẽ đệ quy bọc Proxy lên từng thuộc tính con, gây tốn hàng chục MB RAM và lag trình duyệt.",
+                    "// ❌ BAD: Deep proxy đệ quy trên 50,000 items\nconst dataset = ref<DataPoint[]>([]);\n// Mỗi object bên trong đều bị bọc bởi Proxy",
+                    "// ✅ SENIOR PATTERN: shallowRef chỉ theo dõi thay đổi tham chiếu mảng\nconst dataset = shallowRef<DataPoint[]>([]);\n// Khi cập nhật dữ liệu mới: dataset.value = [...newData];",
+                    "### Under The Hood Mechanics\n- `shallowRef()` bỏ qua hoàn toàn cơ chế phản ứng sâu (deep reactive conversion). Khi cập nhật cả mảng, Vue chỉ kích hoạt trigger effect một lần duy nhất thay vì duyệt qua toàn bộ cây đối tượng.",
+                    "⚡ Giảm 80% RAM Consumption | 60 FPS mượt mà",
+                    "https://vuejs.org/api/reactivity-advanced.html#shallowref"
+                )
+            } : new[]
+            {
+                (
+                    "Mastering shallowRef() vs reactive() for 10,000+ Items in Vue 3",
+                    new[] { "vue3", "reactivity", "performance", "shallowref" },
+                    "Deep reactivity proxies thousands of sub-properties recursively, causing severe heap pressure. `shallowRef()` restricts reactive tracking to root reference assignments.",
+                    "// ❌ BAD: Deep reactive tree over huge telemetry stream\nconst dataset = ref<DataPoint[]>([]);",
+                    "// ✅ SENIOR PATTERN: Shallow reactive tracking\nconst dataset = shallowRef<DataPoint[]>([]);\ndataset.value = [...newData];",
+                    "### Under The Hood Mechanics\n- `shallowRef()` skips recursive getter/setter interception entirely, preventing garbage collector spikes and frame drops during batch streaming updates.",
+                    "⚡ 80% Less Heap Overhead | Locked 60 FPS",
+                    "https://vuejs.org/api/reactivity-advanced.html#shallowref"
+                )
+            };
+        }
+        else
+        {
+            pool = isVi ? new[]
+            {
+                (
+                    $"Tối ưu hóa cấp phát bộ nhớ Stack & Zero-Allocation: {topic}",
+                    new[] { "performance", "architecture", "zero-allocation", "senior" },
+                    "Sử dụng cấu trúc bộ nhớ dạng Stack và tránh cấp phát đối tượng trên Managed Heap giúp loại bỏ 100% chi phí Garbage Collection.",
+                    "// ❌ BAD: Cấp phát chuỗi mới liên tục trên Heap trong vòng lặp\nforeach (var item in data) {\n    var str = item.ToString();\n}",
+                    "// ✅ SENIOR PATTERN: Zero-allocation stack formatting\nSpan<char> buffer = stackalloc char[64];\nitem.TryFormat(buffer, out int charsWritten);",
+                    "### Under The Hood Mechanics\n- Bộ nhớ Stack được tự động thu hồi khi thoát khỏi stack frame mà không cần qua các giai đoạn Mark & Sweep của Garbage Collector.\n- Giúp duy trì độ trễ P99 ổn định ngay cả khi hệ thống chịu tải đột biến.",
+                    "⚡ 12.5x faster | 0 B allocated",
+                    "https://learn.microsoft.com/en-us/dotnet/csharp/"
+                ),
+                (
+                    $"Kiến trúc Transactional Outbox Pattern & CDC: {topic}",
+                    new[] { "system-design", "microservices", "outbox-pattern", "event-driven" },
+                    "Ghi đồng thời vào Database và Message Broker (Dual-write) luôn tiềm ẩn rủi ro mất mát dữ liệu hoặc phân mảnh trạng thái khi có lỗi mạng. Transactional Outbox đảm bảo tính nhất quán cuối cùng (Eventual Consistency).",
+                    "// ❌ BAD: Dual-write trực tiếp vào DB và Kafka\nawait _db.Orders.AddAsync(order);\nawait _kafka.ProduceAsync(\"order-created\", order); // Nguy cơ crash tại đây!",
+                    "// ✅ SENIOR PATTERN: Lưu Order & Outbox Message trong cùng một Database Transaction\nusing var tx = await _db.Database.BeginTransactionAsync();\nawait _db.Orders.AddAsync(order);\nawait _db.OutboxMessages.AddAsync(new OutboxMessage(order));\nawait tx.CommitAsync();",
+                    "### Under The Hood Mechanics\n- Transaction đảm bảo tính ACID (cả hai cùng thành công hoặc cùng thất bại).\n- Tiến trình nền (Debezium hoặc polling worker) đọc Outbox table và phát event sang Kafka với ngữ nghĩa At-Least-Once Delivery.",
+                    "⚡ Loại bỏ 100% rủi ro Dual-Write Inconsistency",
+                    "https://microservices.io/patterns/data/transactional-outbox.html"
+                )
+            } : new[]
+            {
+                (
+                    $"Stack Allocation & Zero-Allocation Primitives: {topic}",
+                    new[] { "performance", "architecture", "zero-allocation", "senior" },
+                    "Utilizing stack-allocated primitives avoids heap allocation overhead and completely eliminates GC pause latency under heavy load.",
+                    "// ❌ BAD: Heap allocations in tight loops\nforeach (var item in data) {\n    var str = item.ToString();\n}",
+                    "// ✅ SENIOR PATTERN: Zero-allocation stack formatting\nSpan<char> buffer = stackalloc char[64];\nitem.TryFormat(buffer, out int charsWritten);",
+                    "### Under The Hood Mechanics\n- Stack frames are automatically unwound with zero GC tracking or collection pause cycles.",
+                    "⚡ 12.5x faster | 0 B allocated",
+                    "https://learn.microsoft.com/en-us/dotnet/csharp/"
+                )
+            };
+        }
+
+        var chosen = pool[Random.Shared.Next(pool.Length)];
+
         return new TechInsight
         {
             Id = Guid.NewGuid(),
-            Slug = $"insight-{Guid.NewGuid():N}"[..18],
-            Title = isVi ? $"Tối ưu hóa chuyên sâu: {topic}" : $"Under The Hood Optimization: {topic}",
+            Slug = GenerateSlug(chosen.title),
+            Title = chosen.title,
             Category = category,
-            Tags = new() { "performance", "architecture", "senior" },
-            SummaryMarkdown = isVi
-                ? "Sử dụng cấu trúc bộ nhớ dạng Stack và tránh cấp phát đối tượng trên Managed Heap giúp loại bỏ 100% chi phí Garbage Collection."
-                : "Utilizing stack-allocated primitives avoids heap allocation overhead and completely eliminates GC pause latency under heavy load.",
-            ProblemSnippet = "// ❌ BAD: Heap allocations in tight loops\nforeach (var item in data) {\n    var str = item.ToString();\n}",
-            SolutionSnippet = "// ✅ SENIOR PATTERN: Zero-allocation stack formatting\nSpan<char> buffer = stackalloc char[64];\nitem.TryFormat(buffer, out int charsWritten);",
-            UnderTheHoodMarkdown = "### Under The Hood Mechanics\n- Stack allocations are wiped out immediately upon return from the current stack frame.\n- Managed Heap allocations require GC mark-and-sweep phases across Gen 0/1/2.",
-            BenchmarkStats = "⚡ 12.5x faster | 0 B allocated",
-            SourceUrl = "https://learn.microsoft.com/en-us/dotnet/csharp/",
+            Tags = chosen.tags.ToList(),
+            SummaryMarkdown = chosen.summary,
+            ProblemSnippet = chosen.prob,
+            SolutionSnippet = chosen.sol,
+            UnderTheHoodMarkdown = chosen.uth,
+            BenchmarkStats = chosen.bench,
+            SourceUrl = chosen.url,
             IsPublished = true,
             IsDeleted = false,
             CreatedAt = DateTime.UtcNow,

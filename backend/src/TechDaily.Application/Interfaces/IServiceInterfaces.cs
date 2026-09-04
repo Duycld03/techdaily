@@ -32,6 +32,7 @@ public interface ITechInsightGenerator
     Task<Result<TechDaily.Domain.Entities.TechInsight>> GenerateInsightAsync(
         TechDaily.Domain.Enums.Category? preferredCategory,
         string? preferredTopic,
+        List<string>? existingTitlesToAvoid = null,
         string locale = "en",
         CancellationToken cancellationToken = default);
 }

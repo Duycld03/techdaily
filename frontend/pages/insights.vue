@@ -43,6 +43,35 @@ const isGenerateModalOpen = ref(false)
 const customTopicInput = ref('')
 const activeCodeTab = ref<'solution' | 'problem'>('solution')
 
+const suggestedTopicPool: Record<number, string[]> = {
+  0: ['Vue 3 shallowRef vs reactive', 'Component Composition vs Re-renders', 'Web Workers Offloading', 'Event Loop & Microtasks'],
+  1: ['Kestrel Socket Pipeline & HTTP/3', 'ArrayPool<T> Memory Pooling', 'System.Threading.Channels', 'OutputCache Tag Eviction', 'EF Core Compiled Queries', 'Sync-over-Async Mitigation'],
+  2: ['Index-Only Scan & INCLUDE', 'Heap-Only Tuples (HOT)', 'GIN Index for JSONB', 'BRIN Index Time-series', 'PgBouncer Connection Pooling'],
+  3: ['Transactional Outbox & CDC', 'Cache Stampede & XFetch', 'Token Bucket Rate Limiting', 'Circuit Breaker with Jitter']
+}
+
+const defaultTopics = [
+  'Kestrel Socket Pipeline',
+  'ArrayPool<T> Zero-Allocation',
+  'PostgreSQL Index-Only Scans',
+  'System.Threading.Channels',
+  'Transactional Outbox Pattern'
+]
+
+const currentSuggestedTopics = computed(() => {
+  const cat = insightsStore.selectedCategory
+  if (cat !== null && suggestedTopicPool[cat]) {
+    return suggestedTopicPool[cat]
+  }
+  return defaultTopics
+})
+
+function pickRandomTopic() {
+  const topics = currentSuggestedTopics.value
+  const randomChoice = topics[Math.floor(Math.random() * topics.length)]
+  customTopicInput.value = randomChoice
+}
+
 const categories = [
   { id: null, label: 'insights.all_categories' },
   { id: 0, label: 'insights.cat_frontend' },
@@ -438,7 +467,7 @@ function getCategoryBadge(cat: number) {
             {{ $t('insights.generate_modal_desc') }}
           </p>
 
-          <div class="space-y-2">
+          <div class="space-y-3">
             <input
               v-model="customTopicInput"
               @keyup.enter="handleGenerateSubmit"
@@ -447,6 +476,37 @@ function getCategoryBadge(cat: number) {
               class="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               autofocus
             />
+
+            <!-- Topic Inspiration Chips (Only populates input per Rule 11) -->
+            <div class="space-y-1.5 pt-1">
+              <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span class="font-medium">{{ $t('insights.suggested_topics') }}</span>
+                <button
+                  type="button"
+                  @click="pickRandomTopic"
+                  class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+                >
+                  <Shuffle class="w-3 h-3" />
+                  <span>{{ $t('insights.surprise_me') }}</span>
+                </button>
+              </div>
+              <div class="flex flex-wrap gap-1.5 pt-0.5">
+                <button
+                  v-for="chip in currentSuggestedTopics"
+                  :key="chip"
+                  type="button"
+                  @click="customTopicInput = chip"
+                  :class="[
+                    'px-2.5 py-1 rounded-lg text-xs font-medium transition-all border text-left',
+                    customTopicInput === chip
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 font-bold'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'
+                  ]"
+                >
+                  {{ chip }}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="flex items-center justify-end gap-3 pt-2">

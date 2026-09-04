@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Insights.DTOs;
 using TechDaily.Application.Interfaces;
@@ -21,9 +22,19 @@ public class GenerateInsightHandler : IUseCase<GenerateInsightRequest, TechInsig
         GenerateInsightRequest request,
         CancellationToken cancellationToken = default)
     {
+        // Fetch recent existing titles to prevent repetitive generation
+        var existingTitles = await _dbContext.TechInsights
+            .AsNoTracking()
+            .Where(i => !i.IsDeleted && (request.PreferredCategory == null || i.Category == request.PreferredCategory))
+            .OrderByDescending(i => i.CreatedAt)
+            .Select(i => i.Title)
+            .Take(30)
+            .ToListAsync(cancellationToken);
+
         var result = await _generator.GenerateInsightAsync(
             request.PreferredCategory,
             request.PreferredTopic,
+            existingTitles,
             request.Locale,
             cancellationToken);
 

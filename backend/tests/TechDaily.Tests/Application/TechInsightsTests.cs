@@ -212,4 +212,160 @@ public class TechInsightsTests : IDisposable
         onlyBookmarkedResponse.Value.Insights.Should().HaveCount(1);
         onlyBookmarkedResponse.Value.Insights[0].Id.Should().Be(ins1.Id);
     }
+
+    [Fact]
+    public async Task GenerateInsightHandler_ShouldQueryExistingTitlesAndPassToGenerator()
+    {
+        // Arrange
+        var existing1 = new TechInsight
+        {
+            Id = Guid.NewGuid(),
+            Slug = "existing-1",
+            Title = "Existing Insight One",
+            Category = Category.BackendDotNet,
+            IsPublished = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        var existing2 = new TechInsight
+        {
+            Id = Guid.NewGuid(),
+            Slug = "existing-2",
+            Title = "Existing Insight Two",
+            Category = Category.BackendDotNet,
+            IsPublished = true,
+            CreatedAt = DateTime.UtcNow.AddMinutes(-5)
+        };
+        await _db.TechInsights.AddRangeAsync(existing1, existing2);
+        await _db.SaveChangesAsync();
+
+        List<string>? capturedAvoidTitles = null;
+        var fakeGenerator = new FakeInsightGenerator((cat, topic, avoid, loc) =>
+        {
+            capturedAvoidTitles = avoid;
+            return new TechInsight
+            {
+                Id = Guid.NewGuid(),
+                Slug = "new-generated-slug",
+                Title = "Fresh Unique Insight",
+                Category = Category.BackendDotNet,
+                SummaryMarkdown = "Summary",
+                ProblemSnippet = "Problem",
+                SolutionSnippet = "Solution",
+                UnderTheHoodMarkdown = "UnderTheHood",
+                BenchmarkStats = "⚡ 10x",
+                IsPublished = true,
+                CreatedAt = DateTime.UtcNow
+            };
+        });
+
+        var handler = new TechDaily.Application.Features.Insights.GenerateInsight.GenerateInsightHandler(_db, fakeGenerator);
+
+        // Act
+        var request = new GenerateInsightRequest(PreferredCategory: Category.BackendDotNet, PreferredTopic: "về asp.net");
+        var result = await handler.ExecuteAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        capturedAvoidTitles.Should().NotBeNull();
+        capturedAvoidTitles.Should().Contain("Existing Insight One");
+        capturedAvoidTitles.Should().Contain("Existing Insight Two");
+    }
+
+    [Fact]
+    public async Task GeminiAiService_MockGenerator_ShouldSupportAspnetAspects()
+    {
+        // Arrange
+        var config = new FakeConfiguration(new Dictionary<string, string?>
+        {
+            ["Gemini:ApiKey"] = "",
+            ["Gemini:Model"] = "gemini-3.1-flash-lite"
+        });
+
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<TechDaily.Infrastructure.Services.GeminiAiService>.Instance;
+        var service = new TechDaily.Infrastructure.Services.GeminiAiService(new System.Net.Http.HttpClient(), config, logger);
+
+        // Act - Call multiple times with "asp.net"
+        var result1 = await service.GenerateInsightAsync(Category.BackendDotNet, "về asp.net", locale: "vi");
+        var result2 = await service.GenerateInsightAsync(Category.BackendDotNet, "về asp.net", locale: "vi");
+
+        // Assert
+        result1.IsSuccess.Should().BeTrue();
+        result2.IsSuccess.Should().BeTrue();
+        result1.Value.Category.Should().Be(Category.BackendDotNet);
+        result2.Value.Category.Should().Be(Category.BackendDotNet);
+        result1.Value.Title.Should().NotBeNullOrWhiteSpace();
+        result2.Value.Title.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task GeminiAiService_WithRealApiKeyIfAvailable_ShouldGenerateDiverseInsights()
+    {
+        var localConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "../../../../src/TechDaily.Api/appsettings.Local.json");
+        if (!File.Exists(localConfigPath)) return;
+
+        var json = await File.ReadAllTextAsync(localConfigPath);
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("Gemini", out var geminiProp) ||
+            !geminiProp.TryGetProperty("ApiKey", out var keyProp) ||
+            string.IsNullOrWhiteSpace(keyProp.GetString()))
+        {
+            return;
+        }
+
+        var apiKey = keyProp.GetString()!;
+        var config = new FakeConfiguration(new Dictionary<string, string?>
+        {
+            ["Gemini:ApiKey"] = apiKey,
+            ["Gemini:Model"] = "gemini-3.1-flash-lite"
+        });
+
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<TechDaily.Infrastructure.Services.GeminiAiService>.Instance;
+        var service = new TechDaily.Infrastructure.Services.GeminiAiService(new HttpClient(), config, logger);
+
+        // Generate #1
+        var result1 = await service.GenerateInsightAsync(Category.BackendDotNet, "về asp.net", locale: "vi");
+        result1.IsSuccess.Should().BeTrue();
+        result1.Value.Title.Should().NotBeNullOrWhiteSpace();
+
+        // Generate #2 avoiding #1
+        var result2 = await service.GenerateInsightAsync(
+            Category.BackendDotNet,
+            "về asp.net",
+            existingTitlesToAvoid: new List<string> { result1.Value.Title },
+            locale: "vi");
+
+        result2.IsSuccess.Should().BeTrue();
+        result2.Value.Title.Should().NotBeNullOrWhiteSpace();
+        result2.Value.Title.Should().NotBe(result1.Value.Title);
+    }
+}
+
+internal class FakeConfiguration : Microsoft.Extensions.Configuration.IConfiguration
+{
+    private readonly Dictionary<string, string?> _data;
+    public FakeConfiguration(Dictionary<string, string?> data) => _data = data;
+    public string? this[string key] { get => _data.TryGetValue(key, out var v) ? v : null; set => _data[key] = value; }
+    public IEnumerable<Microsoft.Extensions.Configuration.IConfigurationSection> GetChildren() => Enumerable.Empty<Microsoft.Extensions.Configuration.IConfigurationSection>();
+    public Microsoft.Extensions.Primitives.IChangeToken GetReloadToken() => throw new NotImplementedException();
+    public Microsoft.Extensions.Configuration.IConfigurationSection GetSection(string key) => throw new NotImplementedException();
+}
+
+internal class FakeInsightGenerator : TechDaily.Application.Interfaces.ITechInsightGenerator
+{
+    private readonly Func<Category?, string?, List<string>?, string, TechInsight> _func;
+
+    public FakeInsightGenerator(Func<Category?, string?, List<string>?, string, TechInsight> func)
+    {
+        _func = func;
+    }
+
+    public Task<TechDaily.Application.Common.Result<TechInsight>> GenerateInsightAsync(
+        Category? preferredCategory,
+        string? preferredTopic,
+        List<string>? existingTitlesToAvoid = null,
+        string locale = "en",
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<TechDaily.Application.Common.Result<TechInsight>>(_func(preferredCategory, preferredTopic, existingTitlesToAvoid, locale));
+    }
 }
