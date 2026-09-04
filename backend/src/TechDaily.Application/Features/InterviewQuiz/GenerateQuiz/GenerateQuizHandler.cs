@@ -88,17 +88,30 @@ public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizRes
 
             if (genResult.IsSuccess && genResult.Value != null && genResult.Value.Count > 0)
             {
-                var newQuestions = genResult.Value;
-                foreach (var q in newQuestions)
+                var candidateTexts = genResult.Value.Select(q => q.QuestionText.Trim()).ToList();
+                var existingTexts = await _dbContext.QuizQuestions
+                    .AsNoTracking()
+                    .Where(q => candidateTexts.Contains(q.QuestionText.Trim()))
+                    .Select(q => q.QuestionText.Trim())
+                    .ToListAsync(cancellationToken);
+
+                var toPersist = genResult.Value
+                    .Where(q => !existingTexts.Contains(q.QuestionText.Trim()))
+                    .ToList();
+
+                foreach (var q in toPersist)
                 {
                     q.CreatedByUserId = request.UserId;
                     q.Topic = normalizedTopic;
                 }
 
-                await _dbContext.QuizQuestions.AddRangeAsync(newQuestions, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                if (toPersist.Count > 0)
+                {
+                    await _dbContext.QuizQuestions.AddRangeAsync(toPersist, cancellationToken);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
 
-                finalQuestions.AddRange(newQuestions);
+                finalQuestions.AddRange(genResult.Value);
             }
         }
 

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -139,13 +140,15 @@ No markdown backticks around JSON.";
             };
 
             var jsonContent = JsonSerializer.Serialize(requestPayload);
-            using var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.PostAsync(requestUri, httpContent, cancellationToken);
+            var response = await PostGeminiWithRetryAsync(requestUri, jsonContent, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError("Gemini API error ({StatusCode}): {Error}", response.StatusCode, errorBody);
+                if (!string.IsNullOrWhiteSpace(_apiKey))
+                {
+                    return new Error("Error.GeminiApi", $"AI service is temporarily busy (status {(int)response.StatusCode}). Please try again in a few moments.");
+                }
                 return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topicPrompt, isVi);
             }
 
@@ -154,7 +157,11 @@ No markdown backticks around JSON.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Exception while generating insight with Gemini API. Falling back to local template.");
+            _logger.LogError(ex, "Exception while generating insight with Gemini API.");
+            if (!string.IsNullOrWhiteSpace(_apiKey))
+            {
+                return new Error("Error.GeminiException", "An error occurred while communicating with the AI service. Please try again.");
+            }
             return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topicPrompt, isVi);
         }
     }
@@ -172,7 +179,11 @@ No markdown backticks around JSON.";
             var candidates = doc.RootElement.GetProperty("candidates");
             if (candidates.GetArrayLength() == 0)
             {
-                _logger.LogWarning("Gemini API returned 0 candidates for insight topic '{Topic}'. Falling back to mock generator.", topic);
+                _logger.LogWarning("Gemini API returned 0 candidates for insight topic '{Topic}'.", topic);
+                if (!string.IsNullOrWhiteSpace(_apiKey))
+                {
+                    return new Error("Error.GeminiEmptyCandidates", "AI model returned no candidates. Please try again.");
+                }
                 return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topic, isVi);
             }
 
@@ -195,7 +206,11 @@ No markdown backticks around JSON.";
 
             if (string.IsNullOrWhiteSpace(rawText))
             {
-                _logger.LogWarning("Gemini API returned empty text part for insight topic '{Topic}'. Falling back to mock generator.", topic);
+                _logger.LogWarning("Gemini API returned empty text part for insight topic '{Topic}'.", topic);
+                if (!string.IsNullOrWhiteSpace(_apiKey))
+                {
+                    return new Error("Error.GeminiEmptyText", "AI model returned empty text. Please try again.");
+                }
                 return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topic, isVi);
             }
 
@@ -271,8 +286,42 @@ No markdown backticks around JSON.";
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception while parsing Gemini insight response for topic '{Topic}'. Raw snippet: {Snippet}", topic, rawText ?? responseBody.Substring(0, Math.Min(responseBody.Length, 300)));
+            if (!string.IsNullOrWhiteSpace(_apiKey))
+            {
+                return new Error("Error.GeminiParse", "Failed to parse insight response from AI model. Please try again.");
+            }
             return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topic, isVi);
         }
+    }
+
+    private async Task<HttpResponseMessage> PostGeminiWithRetryAsync(
+        string requestUri,
+        string jsonPayload,
+        CancellationToken cancellationToken)
+    {
+        HttpResponseMessage? response = null;
+        for (var attempt = 1; attempt <= 2; attempt++)
+        {
+            using var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            response = await _httpClient.PostAsync(requestUri, httpContent, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                return response;
+            }
+
+            // Retry once if transient 503 (ServiceUnavailable) or 429 (TooManyRequests)
+            if ((response.StatusCode == HttpStatusCode.ServiceUnavailable || (int)response.StatusCode == 429) && attempt == 1)
+            {
+                _logger.LogWarning("Gemini API transient error ({StatusCode}) on attempt {Attempt}. Retrying after 1500ms delay...", response.StatusCode, attempt);
+                response.Dispose();
+                await Task.Delay(1500, cancellationToken);
+                continue;
+            }
+
+            break;
+        }
+
+        return response!;
     }
 
     private static string GenerateSlug(string title)
@@ -590,13 +639,15 @@ No markdown backticks around JSON.";
             };
 
             var jsonContent = JsonSerializer.Serialize(requestPayload);
-            using var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.PostAsync(requestUri, httpContent, cancellationToken);
+            var response = await PostGeminiWithRetryAsync(requestUri, jsonContent, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError("Gemini API error ({StatusCode}): {Error}", response.StatusCode, errorBody);
+                if (!string.IsNullOrWhiteSpace(_apiKey))
+                {
+                    return new Error("Error.GeminiApi", $"AI question generation is temporarily busy (status {(int)response.StatusCode}). Please try again in a few moments.");
+                }
                 return GenerateMockQuestions(topic, category, level, count, isVi);
             }
 
@@ -605,7 +656,11 @@ No markdown backticks around JSON.";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Exception while generating quiz with Gemini API. Falling back to local template.");
+            _logger.LogError(ex, "Exception while generating quiz with Gemini API.");
+            if (!string.IsNullOrWhiteSpace(_apiKey))
+            {
+                return new Error("Error.GeminiException", "An error occurred while communicating with the AI service. Please try again.");
+            }
             return GenerateMockQuestions(topic, category, level, count, isVi);
         }
     }
@@ -625,7 +680,11 @@ No markdown backticks around JSON.";
             var candidates = doc.RootElement.GetProperty("candidates");
             if (candidates.GetArrayLength() == 0)
             {
-                _logger.LogWarning("Gemini API returned 0 candidates for topic '{Topic}'. Falling back to mock generator.", topic);
+                _logger.LogWarning("Gemini API returned 0 candidates for topic '{Topic}'.", topic);
+                if (!string.IsNullOrWhiteSpace(_apiKey))
+                {
+                    return new Error("Error.GeminiEmptyCandidates", "AI model returned no candidates. Please try again.");
+                }
                 return GenerateMockQuestions(topic, category, level, count, isVi);
             }
 
@@ -648,7 +707,11 @@ No markdown backticks around JSON.";
 
             if (string.IsNullOrWhiteSpace(rawText))
             {
-                _logger.LogWarning("Gemini API returned empty text part for topic '{Topic}'. Falling back to mock generator.", topic);
+                _logger.LogWarning("Gemini API returned empty text part for topic '{Topic}'.", topic);
+                if (!string.IsNullOrWhiteSpace(_apiKey))
+                {
+                    return new Error("Error.GeminiEmptyText", "AI model returned empty text. Please try again.");
+                }
                 return GenerateMockQuestions(topic, category, level, count, isVi);
             }
 
@@ -684,6 +747,10 @@ No markdown backticks around JSON.";
             if (root.ValueKind != JsonValueKind.Array)
             {
                 _logger.LogWarning("Gemini response is not a JSON array for topic '{Topic}'. Cleaned text: {CleanJson}", topic, cleanJson);
+                if (!string.IsNullOrWhiteSpace(_apiKey))
+                {
+                    return new Error("Error.GeminiNotArray", "AI model response was not in expected array format. Please try again.");
+                }
                 return GenerateMockQuestions(topic, category, level, count, isVi);
             }
 
@@ -749,6 +816,10 @@ No markdown backticks around JSON.";
             if (list.Count == 0)
             {
                 _logger.LogWarning("No valid questions parsed from Gemini response for topic '{Topic}'.", topic);
+                if (!string.IsNullOrWhiteSpace(_apiKey))
+                {
+                    return new Error("Error.GeminiEmptyParsed", "No valid questions could be extracted from AI response. Please try again.");
+                }
                 return GenerateMockQuestions(topic, category, level, count, isVi);
             }
 
@@ -757,6 +828,10 @@ No markdown backticks around JSON.";
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception while parsing Gemini quiz response for topic '{Topic}'. Raw response snippet: {Snippet}", topic, rawText ?? responseBody.Substring(0, Math.Min(responseBody.Length, 300)));
+            if (!string.IsNullOrWhiteSpace(_apiKey))
+            {
+                return new Error("Error.GeminiParse", "Failed to parse quiz response from AI model. Please try again.");
+            }
             return GenerateMockQuestions(topic, category, level, count, isVi);
         }
     }

@@ -44,8 +44,15 @@ public class GenerateInsightHandler : IUseCase<GenerateInsightRequest, TechInsig
         }
 
         var insight = result.Value;
-        await _dbContext.TechInsights.AddAsync(insight, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var exists = await _dbContext.TechInsights
+            .AsNoTracking()
+            .AnyAsync(i => !i.IsDeleted && (i.Title.ToLower() == insight.Title.ToLower() || i.Slug == insight.Slug), cancellationToken);
+
+        if (!exists)
+        {
+            await _dbContext.TechInsights.AddAsync(insight, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
 
         var dto = new TechInsightDto(
             insight.Id,
