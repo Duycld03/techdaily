@@ -50,6 +50,12 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService
 
         try
         {
+            var cleanTopic = topicPrompt.Trim();
+            var broadKeywords = new[] { "asp.net", "c#", ".net", "dotnet", "postgres", "postgresql", "sql", "database", "react", "vue", "frontend", "system design", "architecture", "docker", "kafka", "redis", "go", "golang", "rust", "python" };
+            var isBroad = string.IsNullOrWhiteSpace(preferredTopic) ||
+                          cleanTopic.Length <= 25 ||
+                          broadKeywords.Any(k => cleanTopic.Equals(k, StringComparison.OrdinalIgnoreCase) || cleanTopic.Equals($"về {k}", StringComparison.OrdinalIgnoreCase));
+
             var exploratoryLenses = new[]
             {
                 "Memory Allocations, GC Generations & Zero-Copy Buffers (ArrayPool, Span/Memory, Sockets)",
@@ -66,16 +72,20 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService
             var antiDuplicationClause = existingTitlesToAvoid != null && existingTitlesToAvoid.Any()
                 ? $@"
 CRITICAL ANTI-DUPLICATION RULE:
-Do NOT generate insights covering the same topic, mechanism, or code pattern as any of these existing insights:
+Do NOT generate insights covering the exact same title, code pattern, or redundant explanation as any of these existing insights:
 - {string.Join("\n- ", existingTitlesToAvoid.Take(25))}
-You MUST choose a completely distinct under-the-hood mechanism, sub-system, or architectural angle."
+If the user's topic relates to an existing insight, you MUST explore a fresh sub-system, complementary edge-case, architectural pitfall, or advanced runtime detail."
                 : string.Empty;
+
+            var topicInstruction = isBroad
+                ? $"The user provided a broad topic ('{topicPrompt}'). You MUST explore it through the lens of '{randomLens}' or pick an unexpected deep under-the-hood sub-system."
+                : $"The user provided a specific topic ('{topicPrompt}'). Focus directly, deeply, and strictly on this requested topic and its under-the-hood implementation mechanics.";
 
             var systemInstruction = $@"
 You are a Principal Software Architect and Staff Engineer.
 Generate an authoritative, bite-sized Senior Technical Insight on the requested topic or language.
 IMPORTANT: If the user's prompt mentions or implies a specific language or technology (such as Rust, Go, Python, C#, TypeScript, Vue, React, PostgreSQL, Docker, Kafka, etc.), you MUST write the code snippets (`problemSnippet`, `solutionSnippet`) strictly in that requested language! Never default to C# unless C# or .NET was requested.
-When the user provides a broad or general topic (such as 'asp.net', 'c#', 'postgres', 'react', 'system design', etc.), you MUST pick a distinct, non-trivial, surprising under-the-hood angle or sub-system that has NOT been covered yet.
+{topicInstruction}
 Focus on under-the-hood runtime mechanisms, memory allocation savings, zero-cost abstractions, or latency optimizations.
 Provide realistic, concrete code snippets (bad/naive pattern vs senior optimal pattern) and benchmark statistics.
 {antiDuplicationClause}
@@ -96,7 +106,9 @@ Category mapping: 0=FrontendWeb, 1=BackendDotNet, 2=DatabaseStorage, 3=SystemDes
 No markdown backticks around JSON.";
 
             var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
-            var promptText = $"User requested topic: '{topicPrompt}'. Preferred category: {categoryName}. Exploratory focus angle: '{randomLens}'. Generate a unique, authoritative, non-repetitive Senior Technical Insight.";
+            var promptText = isBroad
+                ? $"User requested topic: '{topicPrompt}'. Preferred category: {categoryName}. Exploratory focus angle: '{randomLens}'. Generate a unique, authoritative, non-repetitive Senior Technical Insight."
+                : $"User requested specific topic: '{topicPrompt}'. Preferred category: {categoryName}. Deep-dive into this specific topic with concrete architectural patterns and benchmarks.";
 
             var requestPayload = new
             {
