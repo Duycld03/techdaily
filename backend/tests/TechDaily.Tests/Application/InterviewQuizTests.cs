@@ -228,6 +228,53 @@ public class InterviewQuizTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateQuiz_ShouldResetSelectionState_EvenIfQuestionHasPriorAttempt()
+    {
+        // Arrange: A question exists that user has answered previously (Option B, index 1)
+        var user = await CreateTestUserAsync();
+        var q = new QuizQuestion
+        {
+            Id = Guid.NewGuid(),
+            Topic = "c#",
+            Category = Category.BackendDotNet,
+            Level = QuizLevel.Junior,
+            QuestionText = "Prior Attempted Question",
+            Options = new() { "Option A", "Option B", "Option C", "Option D" },
+            CorrectOptionIndex = 1,
+            ExplanationMarkdown = "Option B is correct."
+        };
+
+        await _db.QuizQuestions.AddAsync(q);
+        await _db.UserQuizProgresses.AddAsync(new UserQuizProgress
+        {
+            UserId = user.Id,
+            QuestionId = q.Id,
+            IsMastered = false,
+            LastSelectedOptionIndex = 1,
+            IsLastAnswerCorrect = true,
+            CorrectCount = 1,
+            IncorrectCount = 0
+        });
+        await _db.SaveChangesAsync();
+
+        // Simulate fallback fill returning the existing question
+        var emptyGenerator = new FakeQuizGeneratorService(new List<QuizQuestion>());
+        var handler = new GenerateQuizHandler(_db, emptyGenerator, new GenerateQuizValidator());
+        var request = new GenerateQuizRequest(user.Id, "c#", Category.BackendDotNet, QuizLevel.Junior, 1);
+
+        // Act
+        var result = await handler.ExecuteAsync(request);
+
+        // Assert: The returned DTO in a newly generated quiz session must start fresh with no pre-selected option
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Questions.Should().HaveCount(1);
+        var dto = result.Value.Questions[0];
+        dto.Id.Should().Be(q.Id);
+        dto.LastSelectedOptionIndex.Should().BeNull();
+        dto.IsLastAnswerCorrect.Should().BeNull();
+    }
+
+    [Fact]
     public async Task SubmitQuizAnswer_ShouldMarkMastered_WhenAnswerIsCorrect()
     {
         // Arrange
@@ -477,6 +524,13 @@ public class InterviewQuizTests : IDisposable
 
     private class FakeQuizGeneratorService : IQuizGeneratorService
     {
+        private readonly List<QuizQuestion>? _presetQuestions;
+
+        public FakeQuizGeneratorService(List<QuizQuestion>? presetQuestions = null)
+        {
+            _presetQuestions = presetQuestions;
+        }
+
         public Task<Result<List<QuizQuestion>>> GenerateQuestionsAsync(
             string topic,
             Category category,
@@ -486,6 +540,11 @@ public class InterviewQuizTests : IDisposable
             string locale = "en",
             CancellationToken cancellationToken = default)
         {
+            if (_presetQuestions != null)
+            {
+                return Task.FromResult(Result<List<QuizQuestion>>.Success(_presetQuestions));
+            }
+
             var list = new List<QuizQuestion>();
             for (var i = 1; i <= count; i++)
             {

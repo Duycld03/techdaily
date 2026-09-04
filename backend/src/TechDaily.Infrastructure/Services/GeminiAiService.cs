@@ -230,12 +230,7 @@ No markdown backticks around JSON.";
                 cleanJson = cleanJson.Trim();
             }
 
-            var firstBrace = cleanJson.IndexOf('{');
-            var lastBrace = cleanJson.LastIndexOf('}');
-            if (firstBrace >= 0 && lastBrace > firstBrace)
-            {
-                cleanJson = cleanJson.Substring(firstBrace, lastBrace - firstBrace + 1);
-            }
+            cleanJson = ExtractJsonObject(cleanJson);
 
             using var insightDoc = JsonDocument.Parse(cleanJson);
             var root = insightDoc.RootElement;
@@ -322,6 +317,110 @@ No markdown backticks around JSON.";
         }
 
         return response!;
+    }
+
+    public static string ExtractJsonArray(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        var startIdx = text.IndexOf('[');
+        if (startIdx < 0) return text;
+
+        var depth = 0;
+        var inString = false;
+        var isEscaped = false;
+
+        for (var i = startIdx; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (inString)
+            {
+                if (isEscaped)
+                {
+                    isEscaped = false;
+                }
+                else if (c == '\\')
+                {
+                    isEscaped = true;
+                }
+                else if (c == '"')
+                {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (c == '"')
+            {
+                inString = true;
+            }
+            else if (c == '[')
+            {
+                depth++;
+            }
+            else if (c == ']')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    return text.Substring(startIdx, i - startIdx + 1);
+                }
+            }
+        }
+
+        var lastBracket = text.LastIndexOf(']');
+        return (lastBracket > startIdx) ? text.Substring(startIdx, lastBracket - startIdx + 1) : text;
+    }
+
+    public static string ExtractJsonObject(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        var startIdx = text.IndexOf('{');
+        if (startIdx < 0) return text;
+
+        var depth = 0;
+        var inString = false;
+        var isEscaped = false;
+
+        for (var i = startIdx; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (inString)
+            {
+                if (isEscaped)
+                {
+                    isEscaped = false;
+                }
+                else if (c == '\\')
+                {
+                    isEscaped = true;
+                }
+                else if (c == '"')
+                {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (c == '"')
+            {
+                inString = true;
+            }
+            else if (c == '{')
+            {
+                depth++;
+            }
+            else if (c == '}')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    return text.Substring(startIdx, i - startIdx + 1);
+                }
+            }
+        }
+
+        var lastBrace = text.LastIndexOf('}');
+        return (lastBrace > startIdx) ? text.Substring(startIdx, lastBrace - startIdx + 1) : text;
     }
 
     private static string GenerateSlug(string title)
@@ -733,13 +832,8 @@ No markdown backticks around JSON.";
                 cleanJson = cleanJson.Trim();
             }
 
-            // Extract the outermost JSON array `[...]` to discard any leading/trailing commentary, backticks, or extra tokens
-            var firstBracket = cleanJson.IndexOf('[');
-            var lastBracket = cleanJson.LastIndexOf(']');
-            if (firstBracket >= 0 && lastBracket > firstBracket)
-            {
-                cleanJson = cleanJson.Substring(firstBracket, lastBracket - firstBracket + 1);
-            }
+            // Extract the outermost JSON array `[...]` using balanced bracket matching to discard any leading/trailing commentary, backticks, or extra tokens
+            cleanJson = ExtractJsonArray(cleanJson);
 
             using var quizDoc = JsonDocument.Parse(cleanJson);
             var root = quizDoc.RootElement;

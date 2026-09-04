@@ -154,8 +154,8 @@ public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizRes
                 ExplanationMarkdown = q.ExplanationMarkdown,
                 Tags = q.Tags,
                 IsMastered = prog?.IsMastered ?? false,
-                LastSelectedOptionIndex = prog?.LastSelectedOptionIndex,
-                IsLastAnswerCorrect = prog?.IsLastAnswerCorrect,
+                LastSelectedOptionIndex = null,
+                IsLastAnswerCorrect = null,
                 CorrectCount = prog?.CorrectCount ?? 0,
                 IncorrectCount = prog?.IncorrectCount ?? 0
             };

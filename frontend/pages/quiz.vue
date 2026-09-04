@@ -154,7 +154,7 @@ function getOptionClass(idx: number): string {
 
   // Answered state
   const isCorrectOption = idx === currentSub.value?.correctOptionIndex
-  const isSelectedByMe = idx === (currentQ.value?.lastSelectedOptionIndex ?? selectedOptionIndex.value)
+  const isSelectedByMe = idx === (selectedOptionIndex.value ?? currentQ.value?.lastSelectedOptionIndex)
 
   if (isCorrectOption) {
     return 'border-emerald-500 dark:border-emerald-400 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 ring-2 ring-emerald-500/40'
@@ -429,9 +429,15 @@ function getOptionClass(idx: number): string {
             <span
               class="w-7 h-7 rounded-xl font-black text-xs sm:text-sm shrink-0 flex items-center justify-center transition-colors shadow-sm"
               :class="[
-                selectedOptionIndex === idx || currentQ.lastSelectedOptionIndex === idx
-                  ? 'bg-brand-600 text-white'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                quizStore.isCurrentAnswered
+                  ? (idx === currentSub?.correctOptionIndex
+                      ? 'bg-emerald-600 text-white'
+                      : (idx === (selectedOptionIndex ?? currentQ.lastSelectedOptionIndex) && !currentSub?.isCorrect
+                          ? 'bg-rose-600 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'))
+                  : (selectedOptionIndex === idx
+                      ? 'bg-brand-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300')
               ]"
             >
               {{ getOptionLetter(idx) }}
