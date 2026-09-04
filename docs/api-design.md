@@ -403,6 +403,7 @@ The `/quiz` route powers high-intensity interview scenario drills generated with
 ### `POST /api/v1/quiz/generate`
 - **Auth:** Required (`Bearer`)
 - **Description:** Normalizes the topic string (stripping conversational prefixes such as `"về "`, `"about "`), queries PostgreSQL for unattempted questions for the requesting user, and synthesizes missing questions on-demand via Gemini 3.1 Flash Lite.
+- **Session State Guarantee:** In a newly generated quiz batch, `lastSelectedOptionIndex` and `isLastAnswerCorrect` are guaranteed to be returned as `null` to ensure client sessions always start with an unselected state. Cumulative statistics (`isMastered`, `correctCount`, `incorrectCount`) reflect user history.
 - **Request Body:**
   ```json
   {
@@ -471,6 +472,8 @@ The `/quiz` route powers high-intensity interview scenario drills generated with
 
 ### `GET /api/v1/quiz/review-queue`
 - **Auth:** Required (`Bearer`)
+- **Description:** Returns pending unmastered questions for targeted review.
+- **Review State Guarantee:** Unlike `/generate`, the review queue retains the user's historical `lastSelectedOptionIndex` and `isLastAnswerCorrect` to assist post-mortem inspection of previous mistakes.
 - **Query Params:** `page` (default 1), `pageSize` (default 20)
 - **Response (200 OK):**
   ```json

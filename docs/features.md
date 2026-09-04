@@ -88,6 +88,8 @@ This document serves as the single source of truth for all implemented, active, 
 | Feature | Description | Status | Reference / Spec |
 |---|---|---|---|
 | **High-Speed AI Quiz Synthesis** | Structured JSON generation of 5-10 questions in <5s (Gemini 3.1 Flash Lite)| 🟢 DONE | `openspec/changes/interview-quiz-generator/` |
+| **Resilient Balanced JSON Parser** | Depth-balanced bracket parser (`ExtractJsonArray`) immune to trailing syntax hallucinations | 🟢 DONE | `Infrastructure/Services/GeminiAiService.cs` |
+| **Clean Drill Session Isolation** | Pristine unselected state (`LastSelectedOptionIndex = null`) on every newly generated session | 🟢 DONE | `GenerateQuizHandler.cs` & `quiz.vue` |
 | **Timed Arena & Mistake Review** | Real-time timer, instant grading, architectural rationale, retry mistakes | 🟢 DONE | `frontend/pages/quiz.vue` |
 | **Spaced Mastery Engine** | Question mastery tracking (2 consecutive correct attempts = Mastered) | 🟢 DONE | `InterviewQuizQuestions` |
 | **Topic Strengths & Weaknesses** | Aggregated accuracy analysis ranking weakest to strongest skills | 🟢 DONE | `frontend/stores/useInterviewQuizStore.ts` |

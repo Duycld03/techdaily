@@ -149,10 +149,18 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
    - If the database has fewer unattempted questions than requested, `GeminiAiService` is called on-demand to synthesize the remainder.
 6. **Conversational Topic Normalization:**
    - All input topics MUST be cleaned through `NormalizeTopic` before query and prompt composition, stripping prefixes such as `"về "`, `"ve "`, `"about "`, `"chủ đề "` (e.g., `"về c#"` $\rightarrow$ `"c#"`), ensuring consistent database indexing and prompt quality.
-7. **Robust Outermost JSON Array Extraction:**
-   - Responses from Gemini API MUST extract the outermost JSON array `[...]` (`IndexOf('[')` and `LastIndexOf(']')`) to insulate parsing against markdown code fences, trailing comments, thoughts, or extra data tokens.
+7. **Balanced Bracket Depth Counting JSON Parser (Zero Hallucinated Trailing Syntax Crash):**
+   - Responses from Gemini API MUST be extracted using depth-balanced bracket scanning (`ExtractJsonArray` for `[...]` and `ExtractJsonObject` for `{...}`) rather than naive string slicing like `LastIndexOf(']')`.
+   - The scanner MUST track string literals and escape sequences (`\"`) so brackets inside strings are not counted, and terminate extraction as soon as root depth returns to 0.
+   - Any hallucinated trailing characters, closing brackets (`] } ] ] } ]`), markdown fences, or commentary following the JSON body are cleanly discarded, completely eliminating `System.Text.Json.JsonReaderException` syntax errors.
 8. **UI Action State Guarding & Disabled Loaders:**
    - All quiz generation triggers (primary button, `@keyup.enter`, and summary screen *"Luyện Tiếp Cùng Chủ Đề"*) MUST be protected with `if (quizStore.isGenerating) return;`, bind `:disabled="quizStore.isGenerating"` with `disabled:opacity-50 disabled:cursor-not-allowed`, and display a spinning `<Loader2>` icon with loading text.
+9. **Clean Session State for Newly Generated Quizzes:**
+   - When `GenerateQuizHandler` maps `QuizQuestion` entities into `QuizQuestionDto`s for a newly created quiz session, it MUST explicitly set `LastSelectedOptionIndex = null` and `IsLastAnswerCorrect = null`.
+   - Even if the query re-serves previously encountered questions via fallback fill, a newly generated quiz session MUST always start with a completely clean, unselected state.
+10. **Frontend Quiz Option Badge State Isolation:**
+   - In `frontend/pages/quiz.vue`, while answering (`!quizStore.isCurrentAnswered`), option letter badges (A, B, C, D) MUST ONLY reflect user selection in the active session (`selectedOptionIndex === idx`).
+   - Historical attempt state (`lastSelectedOptionIndex`) is strictly ignored until after submission, preventing prior choices from pre-marking badges on unsubmitted questions.
 
 ---
 
@@ -173,4 +181,8 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 | **Raw Text Interpolation for AI Tooltips** | Shows raw `**bold**` asterisks and backticks in UI popups | Parse AI markdown through `useMarkdownRenderer()` in a `prose` container |
 | **Auto-Triggering Heavy AI Requests on Chip Selection** | Causes accidental expensive AI generations when user is merely selecting topics | Require explicit button click or Enter key to trigger AI generation |
 | **Unbenchmarked Heavy AI Models in Sync Web Requests** | Heavy models take >60s leading to Nginx 504 Gateway Time-out | Benchmark model response time and standardize on `gemini-3.1-flash-lite` (<5s) with 120s Nginx proxy timeout |
+| **Naive String Slicing with `LastIndexOf` on AI JSON** | LLM hallucinated trailing brackets (`] } ]`) break parsing with `JsonReaderException` | Use balanced bracket depth parsing (`ExtractJsonArray`, `ExtractJsonObject`) |
+| **Leaking Past User Answers into New Quiz Sessions** | Returning non-null `lastSelectedOptionIndex` in new quiz DTOs causes answers to be pre-marked | Always initialize session DTOs with `LastSelectedOptionIndex = null` |
+| **Coupling Inactive Historical Selection to Pre-Submit Option Badges** | Checking `lastSelectedOptionIndex` before user submission lights up badges prematurely while submit buttons remain disabled | Evaluate only active session state (`selectedOptionIndex === idx`) while answering |
+
 
