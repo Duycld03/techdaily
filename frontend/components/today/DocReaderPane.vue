@@ -1,25 +1,27 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { BookOpen, Clock, Tag, Sparkles, Copy, Check, Highlighter } from 'lucide-vue-next'
-import MarkdownIt from 'markdown-it'
 import type { Topic, DocumentChunk } from '~/stores/useDailyFocusStore'
+import { useNotesStore } from '~/stores/useNotesStore'
+import { useToast } from '~/composables/useToast'
 import MicroQuizCard from '~/components/today/MicroQuizCard.vue'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
+import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 
 const { t, locale } = useI18n()
 const notesStore = useNotesStore()
 const toast = useToast()
+const { render: renderMarkdown, isHighlighterReady } = useMarkdownRenderer()
 
 const props = defineProps<{
   topic: Topic
   documentChunk?: DocumentChunk
 }>()
 
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
-
 const renderedDeepDiveHtml = computed(() => {
   const content = props.topic.deepDiveMarkdown || props.documentChunk?.originalTextMarkdown || props.topic.summary || ''
-  return md.render(content)
+  const _ = isHighlighterReady.value
+  return renderMarkdown(content)
 })
 
 const renderedChunkHtml = computed(() => {
@@ -28,7 +30,8 @@ const renderedChunkHtml = computed(() => {
     props.topic.deepDiveMarkdown &&
     props.documentChunk.originalTextMarkdown !== props.topic.deepDiveMarkdown
   ) {
-    return md.render(props.documentChunk.originalTextMarkdown)
+    const _ = isHighlighterReady.value
+    return renderMarkdown(props.documentChunk.originalTextMarkdown)
   }
   return ''
 })
@@ -142,7 +145,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-full bg-white/60 dark:bg-slate-950/40 overflow-y-auto p-4 sm:p-6 md:p-9 transition-colors duration-200" @mouseup="handleMouseUp">
+  <div class="h-full bg-white/60 dark:bg-slate-950/40 overflow-y-auto p-4 sm:p-6 md:p-9 transition-colors duration-200 min-w-0 max-w-full" @mouseup="handleMouseUp">
     <!-- Header info -->
     <div class="mb-5 sm:mb-6">
       <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-2">
@@ -179,7 +182,7 @@ onUnmounted(() => {
     <div class="w-full h-px bg-slate-200 dark:bg-slate-800/80 mb-5 sm:mb-6"></div>
 
     <!-- Reading Content (Rendered Architectural Deep Dive) -->
-    <div ref="readerContentRef" class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200 max-w-full overflow-x-hidden break-words space-y-4 text-sm md:text-lg leading-relaxed" v-html="renderedDeepDiveHtml"></div>
+    <div ref="readerContentRef" class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200 min-w-0 max-w-full break-words space-y-4 text-sm md:text-lg leading-relaxed" v-html="renderedDeepDiveHtml"></div>
 
     <!-- Authoritative Source Excerpt (if distinct) -->
     <div v-if="renderedChunkHtml" class="mt-6 p-4 sm:p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-2">
@@ -187,7 +190,7 @@ onUnmounted(() => {
         <BookOpen class="w-3.5 h-3.5" />
         <span>{{ t('today.source_context') || (locale === 'vi' ? 'Ngữ Cảnh Trích Xuất Gốc' : 'Authoritative Source Context') }}</span>
       </div>
-      <div class="markdown-body text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed" v-html="renderedChunkHtml"></div>
+      <div class="markdown-body text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed min-w-0 max-w-full" v-html="renderedChunkHtml"></div>
     </div>
 
     <!-- Benchmark Snippet (if available) -->

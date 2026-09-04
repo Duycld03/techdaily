@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Layers, Eye, Sparkles } from 'lucide-vue-next'
-import MarkdownIt from 'markdown-it'
 import type { ReviewCard } from '~/stores/useReviewStore'
 import Sm2GradingButtons from '~/components/review/Sm2GradingButtons.vue'
+import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 
 const props = defineProps<{
   card: ReviewCard
@@ -15,10 +15,11 @@ const emit = defineEmits<{
 }>()
 
 const isFlipped = ref(false)
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+const { render: renderMarkdown, isHighlighterReady } = useMarkdownRenderer()
 
 const renderedDeepDive = computed(() => {
-  return md.render(props.card.topicDeepDiveMarkdown || props.card.topicSummary)
+  const _ = isHighlighterReady.value
+  return renderMarkdown(props.card.topicDeepDiveMarkdown || props.card.topicSummary)
 })
 
 function handleGrade(score: number) {
@@ -65,7 +66,7 @@ function handleGrade(score: number) {
             <Sparkles class="w-4 h-4" />
             <span>Deep Dive Explanation:</span>
           </div>
-          <div class="markdown-body text-sm md:text-lg text-slate-800 dark:text-slate-200 leading-relaxed" v-html="renderedDeepDive"></div>
+          <div class="markdown-body text-sm md:text-lg text-slate-800 dark:text-slate-200 leading-relaxed min-w-0 max-w-full" v-html="renderedDeepDive"></div>
         </div>
       </div>
 

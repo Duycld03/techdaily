@@ -160,7 +160,7 @@ function resetToScheduledDay() {
       <!-- Left Pane: Doc Reader & Source Context (50% on Desktop) -->
       <div
         :class="[
-          'md:w-1/2 md:border-r border-slate-200 dark:border-slate-800/80 h-full overflow-hidden',
+          'md:w-1/2 md:border-r border-slate-200 dark:border-slate-800/80 h-full overflow-hidden min-w-0',
           activeMobileTab === 'reader' ? 'flex-1 flex flex-col' : 'hidden md:flex md:flex-col'
         ]"
       >
@@ -173,7 +173,7 @@ function resetToScheduledDay() {
       <!-- Right Pane: Interview Scenario Challenge & AI Evaluator (50% on Desktop) -->
       <div
         :class="[
-          'md:w-1/2 h-full overflow-hidden',
+          'md:w-1/2 h-full overflow-hidden min-w-0',
           activeMobileTab === 'challenge' ? 'flex-1 flex flex-col' : 'hidden md:flex md:flex-col'
         ]"
       >

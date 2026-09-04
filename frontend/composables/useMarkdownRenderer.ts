@@ -39,8 +39,23 @@ async function initHighlighter(): Promise<Highlighter> {
 export function useMarkdownRenderer() {
   const isHighlighterReady = ref(false)
 
-  // Initialize highlighter in browser
+  // Initialize highlighter in browser & register copy helper
   if (import.meta.client) {
+    if (typeof window !== 'undefined' && !(window as any).__copyCode) {
+      (window as any).__copyCode = (btn: HTMLElement) => {
+        const code = decodeURIComponent(btn.getAttribute('data-code') || '')
+        if (code) {
+          navigator.clipboard.writeText(code)
+          const span = btn.querySelector('span')
+          if (span) {
+            const old = span.textContent
+            span.textContent = 'Copied!'
+            setTimeout(() => { span.textContent = old }, 2000)
+          }
+        }
+      }
+    }
+
     initHighlighter().then(() => {
       isHighlighterReady.value = true
     }).catch((err) => {
@@ -84,13 +99,13 @@ export function useMarkdownRenderer() {
 
       if (!highlightedHtml) {
         const escaped = md.utils.escapeHtml(code.trimEnd())
-        highlightedHtml = `<pre class="shiki github-dark-dimmed font-mono text-sm p-4 overflow-x-auto text-slate-200"><code>${escaped}</code></pre>`
+        highlightedHtml = `<pre class="shiki github-dark-dimmed font-mono text-xs sm:text-sm p-4 sm:p-5 overflow-x-auto max-w-full text-slate-200"><code>${escaped}</code></pre>`
       }
 
       const encodedCode = encodeURIComponent(code.trimEnd())
 
       return `
-        <div class="code-block-wrapper relative group my-5 rounded-2xl overflow-hidden border border-slate-700/60 bg-[#22272e] shadow-lg">
+        <div class="code-block-wrapper relative group my-5 rounded-2xl overflow-hidden border border-slate-700/60 bg-[#22272e] shadow-lg max-w-full w-full min-w-0">
           <div class="flex items-center justify-between px-4 py-2 bg-slate-800/80 border-b border-slate-700/50 text-xs font-mono text-slate-300 select-none">
             <span class="flex items-center gap-1.5 font-semibold text-emerald-400">
               <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block"></span>
@@ -105,7 +120,7 @@ export function useMarkdownRenderer() {
               <span>Copy</span>
             </button>
           </div>
-          <div class="code-content text-sm leading-relaxed overflow-x-auto">
+          <div class="code-content text-xs sm:text-sm leading-relaxed overflow-x-auto max-w-full w-full">
             ${highlightedHtml}
           </div>
         </div>

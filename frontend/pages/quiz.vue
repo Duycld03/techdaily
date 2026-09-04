@@ -22,19 +22,20 @@ import {
 import { useInterviewQuizStore, type QuizQuestion } from '~/stores/useInterviewQuizStore'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useProfileStore } from '~/stores/useProfileStore'
-import MarkdownIt from 'markdown-it'
+import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 
 const route = useRoute()
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
 const profileStore = useProfileStore()
 const quizStore = useInterviewQuizStore()
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+const { render: renderMarkdownRaw, isHighlighterReady } = useMarkdownRenderer()
 
 function renderMarkdown(raw: string | undefined | null): string {
   if (!raw) return ''
   const clean = raw.replace(/\\n/g, '\n')
-  return md.render(clean)
+  const _ = isHighlighterReady.value
+  return renderMarkdownRaw(clean)
 }
 
 const selectedOptionIndex = ref<number | null>(null)
@@ -485,7 +486,7 @@ function getOptionClass(idx: number): string {
               {{ $t('quiz.explanation_header') }}
             </h3>
             <div
-              class="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed"
+              class="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed min-w-0 max-w-full"
               v-html="renderedExplanationHtml"
             ></div>
           </div>

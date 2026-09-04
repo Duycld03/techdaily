@@ -76,14 +76,44 @@
   @apply font-mono text-sm px-2 py-0.5 rounded bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-medium;
 }
 
+/* Universal Code Block & Pre styling: guarantees horizontal scroll and prevents line clipping */
+.markdown-body pre,
+.prose pre {
+  @apply font-mono text-xs sm:text-sm p-4 sm:p-5 bg-[#22272e] text-slate-200 overflow-x-auto max-w-full my-4 rounded-2xl border border-slate-700/60 shadow-md !important;
+  white-space: pre !important;
+  word-break: normal !important;
+  word-wrap: normal !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.markdown-body pre code,
+.prose pre code {
+  @apply bg-transparent p-0 m-0 border-0 text-inherit font-mono text-xs sm:text-sm !important;
+  white-space: pre !important;
+  word-break: normal !important;
+  word-wrap: normal !important;
+}
+
 .markdown-body pre.shiki {
-  @apply font-mono text-sm p-4 bg-[#22272e] text-slate-200 overflow-x-auto m-0 !important;
+  @apply font-mono text-xs sm:text-sm p-4 sm:p-5 bg-[#22272e] text-slate-200 overflow-x-auto max-w-full m-0 !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.markdown-body .code-block-wrapper {
+  @apply max-w-full w-full overflow-hidden my-4 rounded-2xl border border-slate-700/60 bg-[#22272e] shadow-lg;
 }
 
 .markdown-body .code-block-wrapper pre {
   margin: 0 !important;
   border-radius: 0 0 1rem 1rem !important;
   border: none !important;
+  @apply overflow-x-auto max-w-full w-full p-4 sm:p-5 !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.markdown-body .code-content {
+  @apply overflow-x-auto max-w-full w-full;
+  -webkit-overflow-scrolling: touch;
 }
 
 .markdown-body blockquote {
