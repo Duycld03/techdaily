@@ -315,5 +315,14 @@
     "stats_accuracy": "Chính Xác",
     "stats_level_breakdown": "Theo Cấp Bậc",
     "stats_topic_breakdown": "Theo Chủ Đề"
+  },
+  "error": {
+    "not_found_title": "Không Tìm Thấy Trang",
+    "not_found_desc": "Trang bạn đang tìm kiếm có thể đã bị di chuyển hoặc không tồn tại.",
+    "server_error_title": "Sự Cố Không Mong Muốn",
+    "server_error_desc": "Hệ thống gặp sự cố trong quá trình xử lý yêu cầu. Vui lòng thử lại sau.",
+    "status_code": "Mã lỗi",
+    "btn_home": "Về Trang Luyện Tập",
+    "btn_retry": "Thử Lại"
   }
 }

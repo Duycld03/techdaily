@@ -30,6 +30,8 @@ import { vi } from 'vitest'
 })
 
 ;(globalThis as any).navigateTo = vi.fn()
+Reflect.set(globalThis, 'clearError', vi.fn())
+
 
 const mockCookies = new Map<string, any>()
 ;(globalThis as any).useCookie = (name: string) => {
