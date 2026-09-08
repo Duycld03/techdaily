@@ -106,7 +106,7 @@ Respond strictly in valid JSON adhering to this schema:
 Category mapping: 0=FrontendWeb, 1=BackendDotNet, 2=DatabaseStorage, 3=SystemDesign (use 3 for general systems languages like Rust/Go/C++ or distributed systems).
 No markdown backticks around JSON.";
 
-            var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+            var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
             var promptText = isBroad
                 ? $"User requested topic: '{topicPrompt}'. Preferred category: {categoryName}. Exploratory focus angle: '{randomLens}'. Generate a unique, authoritative, non-repetitive Senior Technical Insight."
                 : $"User requested specific topic: '{topicPrompt}'. Preferred category: {categoryName}. Deep-dive into this specific topic with concrete architectural patterns and benchmarks.";
@@ -297,8 +297,16 @@ No markdown backticks around JSON.";
         HttpResponseMessage? response = null;
         for (var attempt = 1; attempt <= 2; attempt++)
         {
-            using var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-            response = await _httpClient.PostAsync(requestUri, httpContent, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
+            {
+                Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
+            };
+            if (!string.IsNullOrWhiteSpace(_apiKey))
+            {
+                request.Headers.Add("x-goog-api-key", _apiKey);
+            }
+
+            response = await _httpClient.SendAsync(request, cancellationToken);
             if (response.IsSuccessStatusCode)
             {
                 return response;
@@ -706,7 +714,7 @@ Respond strictly in valid JSON adhering to this schema:
 ]
 No markdown backticks around JSON.";
 
-            var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+            var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
             var promptText = $"Generate {count} multiple-choice interview questions on topic '{topic}' in category {category} for level {level}.";
 
             var requestPayload = new

@@ -72,12 +72,16 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
                     }
                 };
 
-                var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+                var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
                 var jsonPayload = JsonSerializer.Serialize(requestBody);
                 using var request = new HttpRequestMessage(HttpMethod.Post, url)
                 {
                     Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
                 };
+                if (!string.IsNullOrWhiteSpace(_apiKey))
+                {
+                    request.Headers.Add("x-goog-api-key", _apiKey);
+                }
 
                 var response = await _httpClient.SendAsync(request, cancellationToken);
                 if (response.IsSuccessStatusCode)

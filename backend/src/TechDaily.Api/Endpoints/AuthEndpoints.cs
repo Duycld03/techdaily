@@ -15,7 +15,7 @@ public static class AuthEndpoints
 {
     public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder group, IConfiguration configuration)
     {
-        var jwtSecret = configuration["Jwt:Secret"] ?? "techdaily_development_secret_key_32_characters_minimum_12345";
+        var jwtSecret = configuration["Jwt:Secret"] ?? "TechDaily_Senior_Super_Secret_Key_2026_Min_32_Chars!";
         var jwtIssuer = configuration["Jwt:Issuer"] ?? "TechDaily";
         var jwtAudience = configuration["Jwt:Audience"] ?? "TechDailyUsers";
 

@@ -59,7 +59,7 @@ export function useMarkdownRenderer() {
 
   function createMarkdownInstance(): MarkdownIt {
     const md = new MarkdownIt({
-      html: true,
+      html: false,
       linkify: true,
       typographer: true,
       breaks: false

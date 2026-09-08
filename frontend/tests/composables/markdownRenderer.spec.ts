@@ -105,4 +105,13 @@ async function toggleFavorite(itemId: string) {
     const detected = detectCodeLanguage(code)
     expect(detected).toBe('typescript')
   })
+
+  it('escapes raw HTML and script tags to prevent XSS execution', () => {
+    const { render } = useMarkdownRenderer()
+    const maliciousInput = '# Hello <script>alert("xss")</script><img src="x" onerror="steal()">'
+    const output = render(maliciousInput)
+    expect(output).not.toContain('<script>')
+    expect(output).not.toContain('<img src="x"')
+    expect(output).toContain('&lt;script&gt;')
+  })
 })
