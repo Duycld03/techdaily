@@ -47,11 +47,11 @@ describe('useApiClient 401 Interceptor', () => {
     expect(auth.user).toBeNull()
     expect(localStorage.getItem('techdaily_token')).toBeNull()
 
-    // 2. Toast warning must be emitted
+    // 2. Toast warning must be emitted with i18n key
     const toast = useToast()
     expect(toast.toasts.value.length).toBeGreaterThan(0)
     expect(toast.toasts.value[0].type).toBe('warning')
-    expect(toast.toasts.value[0].message).toContain('hết hạn')
+    expect(toast.toasts.value[0].message).toBe('auth.session_expired')
 
     // 3. navigateTo must be called with redirect to login
     expect(globalThis.navigateTo).toHaveBeenCalledWith(

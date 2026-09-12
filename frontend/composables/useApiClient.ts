@@ -71,7 +71,17 @@ export function useApiClient() {
 
         try {
           const toast = useToast()
-          toast.warning('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+          let message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+          try {
+            const { t } = useI18n()
+            const localized = t('auth.session_expired')
+            if (localized) {
+              message = localized
+            }
+          } catch {
+            // fallback if i18n composable is not available
+          }
+          toast.warning(message)
         } catch {
           // ignore
         }
