@@ -14,7 +14,7 @@ export const useAuthStore = defineStore('auth', () => {
   const tokenCookie = useCookie<string | null>('techdaily_token', { maxAge: 60 * 60 * 24 * 30, path: '/' })
   const userCookie = useCookie<AuthUser | null>('techdaily_user', { maxAge: 60 * 60 * 24 * 30, path: '/' })
 
-  function parseUserFromJwt(jwt: string): AuthUser | null {
+  function parseJwtPayload(jwt: string): any | null {
     try {
       const parts = jwt.split('.')
       if (parts.length < 2) return null
@@ -26,15 +26,40 @@ export const useAuthStore = defineStore('auth', () => {
           .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
           .join('')
       )
-      const payload = JSON.parse(jsonPayload)
-      return {
-        id: payload.nameid || payload.sub || '',
-        email: payload.email || '',
-        name: payload.unique_name || payload.name || (payload.email ? payload.email.split('@')[0] : 'User'),
-        preferredLocale: 'en'
-      }
+      return JSON.parse(jsonPayload)
     } catch {
       return null
+    }
+  }
+
+  function isTokenExpired(jwt: string | null): boolean {
+    if (!jwt) return true
+    const payload = parseJwtPayload(jwt)
+    if (payload && typeof payload.exp === 'number') {
+      return payload.exp * 1000 <= Date.now()
+    }
+    return false
+  }
+
+  function parseUserFromJwt(jwt: string): AuthUser | null {
+    const payload = parseJwtPayload(jwt)
+    if (!payload) return null
+    return {
+      id: payload.nameid || payload.sub || '',
+      email: payload.email || '',
+      name: payload.unique_name || payload.name || (payload.email ? payload.email.split('@')[0] : 'User'),
+      preferredLocale: 'en'
+    }
+  }
+
+  function clearSession() {
+    token.value = null
+    user.value = null
+    tokenCookie.value = null
+    userCookie.value = null
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('techdaily_token')
+      localStorage.removeItem('techdaily_user')
     }
   }
 
@@ -42,8 +67,8 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(userCookie.value || (token.value ? parseUserFromJwt(token.value) : null))
   const isInitialized = ref(false)
 
-  const isLoggedIn = computed(() => !!token.value)
-  const isAuthenticated = computed(() => !!token.value)
+  const isLoggedIn = computed(() => !!token.value && !isTokenExpired(token.value))
+  const isAuthenticated = computed(() => !!token.value && !isTokenExpired(token.value))
 
   function init() {
     if (!token.value && tokenCookie.value) {
@@ -52,15 +77,8 @@ export const useAuthStore = defineStore('auth', () => {
     if (!user.value && userCookie.value) {
       user.value = userCookie.value
     }
-    if (token.value && !user.value) {
-      const parsed = parseUserFromJwt(token.value)
-      if (parsed) {
-        user.value = parsed
-        userCookie.value = parsed
-      }
-    }
 
-    if (typeof window !== 'undefined' && !isInitialized.value) {
+    if (typeof window !== 'undefined') {
       if (!token.value) {
         token.value = localStorage.getItem('techdaily_token')
       }
@@ -74,9 +92,24 @@ export const useAuthStore = defineStore('auth', () => {
           }
         }
       }
-      if (token.value && !user.value) {
-        user.value = parseUserFromJwt(token.value)
+    }
+
+    // Proactively purge expired tokens
+    if (token.value && isTokenExpired(token.value)) {
+      clearSession()
+      isInitialized.value = true
+      return
+    }
+
+    if (token.value && !user.value) {
+      const parsed = parseUserFromJwt(token.value)
+      if (parsed) {
+        user.value = parsed
+        userCookie.value = parsed
       }
+    }
+
+    if (typeof window !== 'undefined' && !isInitialized.value) {
       if (token.value && !tokenCookie.value) {
         tokenCookie.value = token.value
       }
@@ -127,17 +160,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function logout() {
-    token.value = null
-    user.value = null
-    tokenCookie.value = null
-    userCookie.value = null
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('techdaily_token')
-      localStorage.removeItem('techdaily_user')
-    }
+  function logout(redirectPath: string = '/login') {
+    clearSession()
     if (typeof navigateTo === 'function') {
-      navigateTo('/login')
+      navigateTo(redirectPath)
     }
   }
 
@@ -156,6 +182,8 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isLoggedIn,
     isAuthenticated,
+    isTokenExpired,
+    clearSession,
     init,
     login,
     register,

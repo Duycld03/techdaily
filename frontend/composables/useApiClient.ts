@@ -1,3 +1,6 @@
+import { useAuthStore } from '~/stores/useAuthStore'
+import { useToast } from '~/composables/useToast'
+
 export function useApiClient() {
   const config = useRuntimeConfig()
 
@@ -58,6 +61,32 @@ export function useApiClient() {
     })
 
     if (!response.ok) {
+      if (response.status === 401 && !endpoint.includes('/api/v1/auth/login') && !endpoint.includes('/api/v1/auth/register')) {
+        try {
+          const authStore = useAuthStore()
+          authStore.clearSession()
+        } catch {
+          // ignore if pinia is not active
+        }
+
+        try {
+          const toast = useToast()
+          toast.warning('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+        } catch {
+          // ignore
+        }
+
+        if (typeof window !== 'undefined') {
+          const currentPath = window.location.pathname + window.location.search
+          if (!window.location.pathname.startsWith('/login') && typeof navigateTo === 'function') {
+            navigateTo({
+              path: '/login',
+              query: { redirect: currentPath }
+            })
+          }
+        }
+      }
+
       let errorMessage = `HTTP Error ${response.status}`
       try {
         const errorJson = await response.json()

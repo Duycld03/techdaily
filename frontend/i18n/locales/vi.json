@@ -44,7 +44,8 @@
     "today_focus": "Bài Hôm Nay",
     "source_context": "Trích Đoạn Tài Liệu Gốc",
     "prev": "Trước",
-    "next": "Tiếp"
+    "next": "Tiếp",
+    "submit_failed": "Nộp đáp án thất bại. Vui lòng thử lại."
   },
   "roadmap": {
     "badge": "Lộ Trình Học",
@@ -267,7 +268,8 @@
     "already_have_account": "Đã có tài khoản?",
     "dont_have_account": "Chưa có tài khoản?",
     "or_continue_with": "Hoặc tiếp tục bằng",
-    "terms_agreement": "Bằng việc tiếp tục, bạn đồng ý với Điều khoản và Chính sách của TechDaily."
+    "terms_agreement": "Bằng việc tiếp tục, bạn đồng ý với Điều khoản và Chính sách của TechDaily.",
+    "session_expired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
   },
   "quiz": {
     "title": "Trắc Nghiệm Phỏng Vấn",
