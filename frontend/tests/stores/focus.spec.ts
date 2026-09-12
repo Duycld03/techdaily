@@ -61,6 +61,9 @@ vi.mock('~/composables/useApiClient', () => ({
     }),
     post: vi.fn(async (url: string, body: any) => {
       if (url.includes('/submit')) {
+        if (url.includes('invalid-drill-id')) {
+          throw new Error('HTTP Error 401')
+        }
         if (body.selectedOptionIndex !== undefined) {
           return {
             isCorrect: body.selectedOptionIndex === 1,
@@ -138,5 +141,20 @@ describe('useDailyFocusStore', () => {
     expect(focus.data?.drill.status).toBe(2)
     expect(focus.data?.drill.selectedOptionIndex).toBe(0)
     expect(focus.data?.drill.isCorrect).toBe(false)
+  })
+
+  it('preserves question data and does not pollute focusStore.error on submission failure', async () => {
+    const focus = useDailyFocusStore()
+    await focus.fetchTodayFocus()
+
+    // Corrupt drill id to cause submission failure in mock
+    focus.data!.drill.id = 'invalid-drill-id'
+
+    await expect(focus.submitOption(1, 'en')).rejects.toThrow()
+
+    // Critical assertion: focus.error must remain null so today.vue does not unmount
+    expect(focus.error).toBeNull()
+    expect(focus.data).not.toBeNull()
+    expect(focus.data?.question.options).toHaveLength(4)
   })
 })

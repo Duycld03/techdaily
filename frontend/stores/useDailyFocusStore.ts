@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
+import { useToast } from '~/composables/useToast'
 
 export interface Topic {
   id: string
@@ -95,7 +96,6 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
     if (!data.value?.drill) return null
 
     isSubmitting.value = true
-    error.value = null
     try {
       const api = useApiClient()
       const res = await api.post<{
@@ -126,7 +126,12 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
 
       return res
     } catch (err: any) {
-      error.value = err.message || 'Failed to submit scenario option.'
+      try {
+        const toast = useToast()
+        toast.error(err.message || 'Failed to submit scenario option.')
+      } catch {
+        // ignore
+      }
       throw err
     } finally {
       isSubmitting.value = false

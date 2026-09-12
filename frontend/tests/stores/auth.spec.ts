@@ -66,4 +66,75 @@ describe('useAuthStore', () => {
     expect(auth.user).toBeNull()
     expect(localStorage.getItem('techdaily_token')).toBeNull()
   })
+
+  describe('JWT Expiration and Proactive Cleanup', () => {
+    function createMockJwt(expOffsetSeconds: number): string {
+      const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+      const payload = btoa(JSON.stringify({
+        nameid: 'u-100',
+        email: 'test@techdaily.io',
+        unique_name: 'Test Engineer',
+        exp: Math.floor(Date.now() / 1000) + expOffsetSeconds
+      }))
+      return `${header}.${payload}.mockSignature`
+    }
+
+    it('correctly identifies expired vs active tokens', () => {
+      const auth = useAuthStore()
+      const expiredToken = createMockJwt(-3600) // 1 hour ago
+      const activeToken = createMockJwt(3600) // 1 hour in future
+
+      expect(auth.isTokenExpired(expiredToken)).toBe(true)
+      expect(auth.isTokenExpired(activeToken)).toBe(false)
+      expect(auth.isTokenExpired(null)).toBe(true)
+    })
+
+    it('reports isLoggedIn as false when token is expired', () => {
+      const auth = useAuthStore()
+      const expiredToken = createMockJwt(-60)
+      auth.token = expiredToken
+
+      expect(auth.isLoggedIn).toBe(false)
+      expect(auth.isAuthenticated).toBe(false)
+    })
+
+    it('reports isLoggedIn as true when token is valid', () => {
+      const auth = useAuthStore()
+      const activeToken = createMockJwt(3600)
+      auth.token = activeToken
+
+      expect(auth.isLoggedIn).toBe(true)
+      expect(auth.isAuthenticated).toBe(true)
+    })
+
+    it('proactively purges expired token on init()', () => {
+      const auth = useAuthStore()
+      const expiredToken = createMockJwt(-120)
+
+      localStorage.setItem('techdaily_token', expiredToken)
+      localStorage.setItem('techdaily_user', JSON.stringify({ id: 'u-100', email: 'test@techdaily.io', name: 'Test' }))
+
+      auth.init()
+
+      expect(auth.isLoggedIn).toBe(false)
+      expect(auth.token).toBeNull()
+      expect(auth.user).toBeNull()
+      expect(localStorage.getItem('techdaily_token')).toBeNull()
+      expect(localStorage.getItem('techdaily_user')).toBeNull()
+    })
+
+    it('preserves valid token on init()', () => {
+      const auth = useAuthStore()
+      const activeToken = createMockJwt(7200)
+
+      localStorage.setItem('techdaily_token', activeToken)
+      localStorage.setItem('techdaily_user', JSON.stringify({ id: 'u-100', email: 'test@techdaily.io', name: 'Test' }))
+
+      auth.init()
+
+      expect(auth.isLoggedIn).toBe(true)
+      expect(auth.token).toBe(activeToken)
+      expect(auth.user?.email).toBe('test@techdaily.io')
+    })
+  })
 })
