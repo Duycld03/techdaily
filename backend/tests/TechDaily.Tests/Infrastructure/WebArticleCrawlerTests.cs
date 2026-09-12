@@ -97,4 +97,43 @@ public class WebArticleCrawlerTests
         result.MarkdownContent.Should().Contain("1. Endpoint: (null)");
         result.MarkdownContent.Should().Contain("2. Endpoint: Hello");
     }
+
+    [Fact]
+    public async Task CrawlUrlAsync_ShouldResolveRelativeUrls_AgainstDocumentSourceUrl()
+    {
+        // Arrange
+        var html = @"
+<!DOCTYPE html>
+<html>
+<head><title>ASP.NET Core Routing</title></head>
+<body>
+<article>
+    <h1>Routing</h1>
+    <p>See <a href=""dependency-injection?view=aspnetcore-10.0"">DI</a> for services.</p>
+    <p>Read the <a href=""/en-us/dotnet/api/endpoint"">Endpoint API</a> reference.</p>
+    <p>Check out <a href=""../mvc/controllers/routing"">MVC Controllers</a> guide.</p>
+    <p>Jump to <a href=""#routing-basics"">Routing Basics Section</a>.</p>
+    <img src=""../images/arch.png"" alt=""Architecture Diagram"" />
+</article>
+</body>
+</html>";
+
+        using var httpClient = new HttpClient(new FakeHttpMessageHandler(html));
+        var crawler = new WebArticleCrawler(httpClient);
+
+        // Act
+        var result = await crawler.CrawlUrlAsync("https://learn.microsoft.com/en-us/aspnet/core/fundamentals/routing?view=aspnetcore-10.0");
+
+        // Assert
+        // Relative peer doc
+        result.MarkdownContent.Should().Contain("[DI](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection?view=aspnetcore-10.0)");
+        // Root-relative link
+        result.MarkdownContent.Should().Contain("[Endpoint API](https://learn.microsoft.com/en-us/dotnet/api/endpoint)");
+        // Parent-directory relative link
+        result.MarkdownContent.Should().Contain("[MVC Controllers](https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/routing)");
+        // In-page section fragment bookmark resolved with canonical source URL
+        result.MarkdownContent.Should().Contain("[Routing Basics Section](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/routing?view=aspnetcore-10.0#routing-basics)");
+        // Image source resolved
+        result.MarkdownContent.Should().Contain("![Architecture Diagram](https://learn.microsoft.com/en-us/aspnet/core/images/arch.png)");
+    }
 }

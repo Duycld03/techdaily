@@ -103,7 +103,7 @@ const renderedMarkdown = computed(() => {
     }
   }
 
-  return renderMarkdown(text)
+  return renderMarkdown(text, book.value?.authorOrSourceUrl)
 })
 
 onMounted(async () => {

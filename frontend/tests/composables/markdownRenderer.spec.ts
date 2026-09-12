@@ -215,4 +215,49 @@ async function toggleFavorite(itemId: string) {
     expect(output).toContain('This is a normal quote from Martin Fowler.')
     expect(output).not.toContain('callout-box')
   })
+
+  it('renders external links with target="_blank" and rel="noopener noreferrer"', () => {
+    const { render } = useMarkdownRenderer()
+    const input = 'Read the [ASP.NET Core Docs](https://learn.microsoft.com/en-us/aspnet/core/) for details.'
+    const output = render(input)
+
+    expect(output).toContain('href="https://learn.microsoft.com/en-us/aspnet/core/"')
+    expect(output).toContain('target="_blank"')
+    expect(output).toContain('rel="noopener noreferrer"')
+    expect(output).toContain('external-link')
+  })
+
+  it('preserves in-page fragment anchors without target="_blank"', () => {
+    const { render } = useMarkdownRenderer()
+    const input = 'Jump to [Routing Basics](#routing-basics) section.'
+    const output = render(input)
+
+    expect(output).toContain('href="#routing-basics"')
+    expect(output).not.toContain('target="_blank"')
+    expect(output).not.toContain('rel="noopener noreferrer"')
+    expect(output).not.toContain('external-link')
+  })
+
+  it('resolves relative URLs against baseUrl and attaches target="_blank" when baseUrl is provided', () => {
+    const { render } = useMarkdownRenderer()
+    const input = 'See [Dependency Injection](dependency-injection?view=aspnetcore-10.0) topic.'
+    const baseUrl = 'https://learn.microsoft.com/en-us/aspnet/core/fundamentals/routing?view=aspnetcore-10.0'
+    const output = render(input, baseUrl)
+
+    expect(output).toContain('href="https://learn.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection?view=aspnetcore-10.0"')
+    expect(output).toContain('target="_blank"')
+    expect(output).toContain('rel="noopener noreferrer"')
+  })
+
+  it('preserves relative URLs without target="_blank" when baseUrl is not a URL or missing', () => {
+    const { render } = useMarkdownRenderer()
+    const input = 'See [Chapter 2](ch02.html).'
+    const outputWithoutBase = render(input)
+    expect(outputWithoutBase).toContain('href="ch02.html"')
+    expect(outputWithoutBase).not.toContain('target="_blank"')
+
+    const outputWithAuthor = render(input, 'Martin Fowler')
+    expect(outputWithAuthor).toContain('href="ch02.html"')
+    expect(outputWithAuthor).not.toContain('target="_blank"')
+  })
 })

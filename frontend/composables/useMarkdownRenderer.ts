@@ -121,6 +121,47 @@ export function useMarkdownRenderer() {
     // Disable legacy 4-space indented code blocks so accidental whitespace doesn't create spurious code fences
     md.disable('code')
 
+    // Custom Link Renderer: Open external links in new tab with rel="noopener noreferrer",
+    // resolve relative links against baseUrl if provided, and preserve in-page anchors within page.
+    const defaultLinkOpen = md.renderer.rules.link_open || function (tokens, idx, options, env, self) {
+      return self.renderToken(tokens, idx, options)
+    }
+
+    md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+      const token = tokens[idx]
+      const hrefIndex = token.attrIndex('href')
+
+      if (hrefIndex >= 0) {
+        const href = token.attrs ? token.attrs[hrefIndex][1] : ''
+
+        if (/^https?:\/\//i.test(href) || href.startsWith('//')) {
+          token.attrSet('target', '_blank')
+          token.attrSet('rel', 'noopener noreferrer')
+          token.attrJoin('class', 'external-link hover:underline text-emerald-600 dark:text-emerald-400')
+        } else if (href.startsWith('#')) {
+          // In-page anchor fragment - preserve in current tab
+        } else if (
+          env?.baseUrl &&
+          /^https?:\/\//i.test(env.baseUrl) &&
+          !href.startsWith('javascript:') &&
+          !href.startsWith('mailto:') &&
+          !href.startsWith('tel:')
+        ) {
+          try {
+            const resolved = new URL(href, env.baseUrl).href
+            token.attrSet('href', resolved)
+            token.attrSet('target', '_blank')
+            token.attrSet('rel', 'noopener noreferrer')
+            token.attrJoin('class', 'external-link hover:underline text-emerald-600 dark:text-emerald-400')
+          } catch {
+            // Malformed URL, leave unchanged
+          }
+        }
+      }
+
+      return defaultLinkOpen(tokens, idx, options, env, self)
+    }
+
     // Custom Code Block (Fence) Renderer with Copy Button & Language Badge
     const defaultFence = md.renderer.rules.fence || function (tokens, idx, options, env, self) {
       return self.renderToken(tokens, idx, options)
@@ -313,12 +354,12 @@ export function useMarkdownRenderer() {
       .replace(/^>\s*["“']\s*(\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]|\*{0,2}\[(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]\*{0,2})/gim, '> $1')
   }
 
-  function render(markdown: string): string {
+  function render(markdown: string, baseUrl?: string): string {
     if (!markdown) return ''
     const sanitized = sanitizeScraperArtifacts(markdown)
     const cleaned = cleanLatexSymbols(sanitized)
     const md = createMarkdownInstance()
-    return md.render(cleaned)
+    return md.render(cleaned, { baseUrl })
   }
 
   return {

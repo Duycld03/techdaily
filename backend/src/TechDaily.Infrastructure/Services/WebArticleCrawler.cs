@@ -89,6 +89,9 @@ public class WebArticleCrawler : IWebArticleCrawler
         // Filter multi-version moniker sections (e.g. Microsoft Learn ASP.NET Core documentation)
         FilterMonikers(contentNode, targetUrl);
 
+        // Resolve relative links and images against source document URL
+        ResolveRelativeUrls(contentNode, targetUrl);
+
         // Preprocess Code Blocks to ensure syntax highlighting preservation
         PreprocessCodeBlocks(contentNode);
 
@@ -101,7 +104,7 @@ public class WebArticleCrawler : IWebArticleCrawler
             UnknownTags = Config.UnknownTagsOption.Bypass,
             GithubFlavored = true,
             RemoveComments = true,
-            SmartHrefHandling = true
+            SmartHrefHandling = false
         });
 
         var markdown = converter.Convert(contentNode.InnerHtml);
@@ -165,6 +168,56 @@ public class WebArticleCrawler : IWebArticleCrawler
             foreach (var node in nodesToRemove)
             {
                 node.Remove();
+            }
+        }
+    }
+
+    private static void ResolveRelativeUrls(HtmlNode root, string sourceUrl)
+    {
+        if (!Uri.TryCreate(sourceUrl, UriKind.Absolute, out var baseUri))
+        {
+            return;
+        }
+
+        // 1. Resolve anchor links (<a href="...">)
+        var anchorNodes = root.SelectNodes(".//a[@href]");
+        if (anchorNodes != null)
+        {
+            foreach (var a in anchorNodes)
+            {
+                var href = a.GetAttributeValue("href", "").Trim();
+                if (string.IsNullOrEmpty(href) ||
+                    href.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase) ||
+                    href.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
+                    href.StartsWith("tel:", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (Uri.TryCreate(baseUri, href, out var resolvedUri))
+                {
+                    a.SetAttributeValue("href", resolvedUri.AbsoluteUri);
+                }
+            }
+        }
+
+        // 2. Resolve image sources (<img src="...">)
+        var imgNodes = root.SelectNodes(".//img[@src]");
+        if (imgNodes != null)
+        {
+            foreach (var img in imgNodes)
+            {
+                var src = img.GetAttributeValue("src", "").Trim();
+                if (string.IsNullOrEmpty(src) ||
+                    src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (Uri.TryCreate(baseUri, src, out var resolvedUri))
+                {
+                    img.SetAttributeValue("src", resolvedUri.AbsoluteUri);
+                }
             }
         }
     }
