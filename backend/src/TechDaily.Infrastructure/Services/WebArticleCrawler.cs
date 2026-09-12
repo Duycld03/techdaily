@@ -76,8 +76,8 @@ public class WebArticleCrawler : IWebArticleCrawler
             throw new InvalidOperationException("Could not extract readable article content from the web page.");
         }
 
-        // Remove junk elements: script, style, nav, footer, aside, noscript, svg, form, buttons
-        var junkNodes = contentNode.SelectNodes(".//script|.//style|.//nav|.//footer|.//aside|.//header|.//noscript|.//svg|.//form|.//button|.//iframe|.//feedback|.//div[contains(@class, 'feedback')]");
+        // Remove junk elements: script, style, nav, footer, aside, noscript, svg, form, buttons, hidden templates, tab switchers, edit buttons, and feedback widgets
+        var junkNodes = contentNode.SelectNodes(".//script|.//style|.//nav|.//footer|.//aside|.//header|.//noscript|.//svg|.//form|.//button|.//iframe|.//feedback|.//div[contains(@class, 'feedback')]|.//*[@hidden]|.//*[@aria-hidden='true' and (self::section or self::div or self::p)]|.//ul[@role='tablist']|.//a[@data-contenteditbtn]|.//*[@data-bi-name='edit']|.//*[contains(@data-bi-name, 'feedback')]|.//*[contains(@id, 'feedback')]");
         if (junkNodes != null)
         {
             foreach (var junk in junkNodes)

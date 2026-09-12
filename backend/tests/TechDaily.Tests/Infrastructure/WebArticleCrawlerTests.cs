@@ -136,4 +136,50 @@ public class WebArticleCrawlerTests
         // Image source resolved
         result.MarkdownContent.Should().Contain("![Architecture Diagram](https://learn.microsoft.com/en-us/aspnet/core/images/arch.png)");
     }
+
+    [Fact]
+    public async Task CrawlUrlAsync_ShouldFilterHiddenTabsAndUnauthorizedTemplates()
+    {
+        // Arrange
+        var html = @"
+<!DOCTYPE html>
+<html>
+<head><title>Minimal API</title></head>
+<body>
+<article>
+    <div unauthorized-private-section hidden>
+        <p>Access to this page requires authorization.</p>
+    </div>
+    <a href=""#"" hidden>Read in English</a>
+    <h1>Tutorial: Create a Minimal API with ASP.NET Core</h1>
+    <div class=""tabGroup"" id=""tabgroup_1"">
+        <ul role=""tablist"">
+            <li role=""presentation""><a href=""#tabpanel_1_visual-studio"" role=""tab"">Visual Studio</a></li>
+            <li role=""presentation""><a href=""#tabpanel_1_visual-studio-code"" role=""tab"">Visual Studio Code</a></li>
+        </ul>
+        <section id=""tabpanel_1_visual-studio"" role=""tabpanel"" data-tab=""visual-studio"">
+            <p>Visual Studio instructions: Open Visual Studio and create project.</p>
+        </section>
+        <section id=""tabpanel_1_visual-studio-code"" role=""tabpanel"" data-tab=""visual-studio-code"" aria-hidden=""true"" hidden=""hidden"">
+            <p>Visual Studio Code instructions: Run dotnet new webapi.</p>
+        </section>
+    </div>
+</article>
+</body>
+</html>";
+
+        using var httpClient = new HttpClient(new FakeHttpMessageHandler(html));
+        var crawler = new WebArticleCrawler(httpClient);
+
+        // Act
+        var result = await crawler.CrawlUrlAsync("https://learn.microsoft.com/en-us/aspnet/core/tutorials/min-web-api?view=aspnetcore-10.0&tabs=visual-studio");
+
+        // Assert
+        result.MarkdownContent.Should().Contain("Visual Studio instructions");
+        result.MarkdownContent.Should().NotContain("Visual Studio Code instructions");
+        result.MarkdownContent.Should().NotContain("Access to this page requires authorization");
+        result.MarkdownContent.Should().NotContain("Read in English");
+        result.MarkdownContent.Should().NotContain("[Visual Studio]");
+        result.MarkdownContent.Should().NotContain("[Visual Studio Code]");
+    }
 }
