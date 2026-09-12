@@ -36,6 +36,11 @@ describe('useMarkdownRenderer & shikiHighlighter', () => {
     expect(normalizeLanguage('rs')).toBe('rust')
     expect(normalizeLanguage('golang')).toBe('go')
     expect(normalizeLanguage('docker')).toBe('dockerfile')
+    expect(normalizeLanguage('txt')).toBe('text')
+    expect(normalizeLanguage('text')).toBe('text')
+    expect(normalizeLanguage('plaintext')).toBe('text')
+    expect(normalizeLanguage('output')).toBe('text')
+    expect(normalizeLanguage('console')).toBe('text')
   })
 
   it('formats display labels consistently with insights page', () => {
@@ -44,6 +49,9 @@ describe('useMarkdownRenderer & shikiHighlighter', () => {
     expect(formatLanguageLabel('sql')).toBe('PostgreSQL / SQL')
     expect(formatLanguageLabel('javascript')).toBe('JavaScript')
     expect(formatLanguageLabel('vue')).toBe('Vue 3 / SFC')
+    expect(formatLanguageLabel('text')).toBe('Output')
+    expect(formatLanguageLabel('txt')).toBe('Output')
+    expect(formatLanguageLabel('plaintext')).toBe('Output')
   })
 
   it('highlights TypeScript code fence with one-dark-pro and macOS 3-dot window header', () => {
@@ -95,6 +103,33 @@ public ValueTask<string> GetCachedDataAsync(string key) {
     expect(html).toContain('shiki one-dark-pro')
     expect(html).toContain('bg-rose-500/80')
     expect(html).toContain('GetCachedDataAsync')
+  })
+
+  it('highlights txt / output code fence with Output label and spacious margins', () => {
+    const { render } = useMarkdownRenderer()
+    const txtMarkdown = `
+\`\`\`txt
+1. Endpoint: (null)
+2. Endpoint: Hello
+3. Endpoint: Hello
+\`\`\`
+`
+    const html = render(txtMarkdown)
+
+    expect(html).toContain('Output')
+    expect(html).not.toContain('C# / .NET 10')
+    expect(html).toContain('code-block-wrapper')
+    expect(html).toContain('my-6 sm:my-8')
+    expect(html).toContain('text-sm sm:text-[14.5px]')
+    expect(html).toContain('1. Endpoint: (null)')
+  })
+
+  it('auto-detects text/output for console logs without programming keywords', () => {
+    const consoleOutput = `1. Endpoint: (null)
+2. Endpoint: Hello
+3. Endpoint: Hello`
+    const detected = detectCodeLanguage(consoleOutput)
+    expect(detected).toBe('text')
   })
 
   it('auto-detects TypeScript for unlabelled code blocks with frontend state signatures', () => {

@@ -120,13 +120,46 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
 
     private static List<string> SplitIntoChunks(string text)
     {
-        var headingRegex = new Regex(@"(?=^#{1,3}\s+)", RegexOptions.Multiline);
-        var sections = headingRegex.Split(text)
-            .Select(s => s.Trim())
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .ToList();
+        if (string.IsNullOrWhiteSpace(text)) return new List<string>();
 
-        return sections.Any() ? sections : new List<string> { text };
+        var lines = text.Split('\n');
+        var chunks = new List<string>();
+        var currentChunk = new System.Text.StringBuilder();
+        bool inCodeBlock = false;
+        var headingRegex = new Regex(@"^#{1,3}\s+", RegexOptions.Compiled);
+
+        foreach (var rawLine in lines)
+        {
+            var trimmed = rawLine.TrimStart();
+            if (trimmed.StartsWith("```"))
+            {
+                inCodeBlock = !inCodeBlock;
+            }
+
+            // Only split on headings when NOT inside an active code block
+            if (!inCodeBlock && headingRegex.IsMatch(trimmed) && currentChunk.Length > 0)
+            {
+                var chunkStr = currentChunk.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(chunkStr))
+                {
+                    chunks.Add(chunkStr);
+                }
+                currentChunk.Clear();
+            }
+
+            currentChunk.AppendLine(rawLine);
+        }
+
+        if (currentChunk.Length > 0)
+        {
+            var chunkStr = currentChunk.ToString().Trim();
+            if (!string.IsNullOrWhiteSpace(chunkStr))
+            {
+                chunks.Add(chunkStr);
+            }
+        }
+
+        return chunks.Any() ? chunks : new List<string> { text.Trim() };
     }
 
     private static string ExtractTitle(string chunk, int order)

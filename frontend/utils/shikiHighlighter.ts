@@ -17,7 +17,8 @@ export const SUPPORTED_LANGS = [
   'go',
   'python',
   'markdown',
-  'dockerfile'
+  'dockerfile',
+  'text'
 ]
 
 let highlighterInstance: Highlighter | null = null
@@ -89,7 +90,17 @@ export function normalizeLanguage(lang?: string): string {
     docker: 'dockerfile',
     dockerfile: 'dockerfile',
     md: 'markdown',
-    markdown: 'markdown'
+    markdown: 'markdown',
+    txt: 'text',
+    text: 'text',
+    plaintext: 'text',
+    plain: 'text',
+    output: 'text',
+    console: 'text',
+    terminal: 'text',
+    log: 'text',
+    logs: 'text',
+    none: 'text'
   }
   return aliases[l] || l
 }
@@ -97,6 +108,9 @@ export function normalizeLanguage(lang?: string): string {
 export function formatLanguageLabel(lang: string): string {
   const normalized = normalizeLanguage(lang)
   switch (normalized) {
+    case 'text':
+    case 'plaintext':
+      return 'Output'
     case 'sql':
       return 'PostgreSQL / SQL'
     case 'csharp':
@@ -142,8 +156,6 @@ export function detectCodeLanguage(
   const normalizedFallback = normalizeLanguage(fallbackLang)
   if (
     normalizedFallback &&
-    normalizedFallback !== 'text' &&
-    normalizedFallback !== 'plaintext' &&
     normalizedFallback !== 'auto' &&
     SUPPORTED_LANGS.includes(normalizedFallback)
   ) {
@@ -160,6 +172,14 @@ export function detectCodeLanguage(
         return normalizedTag
       }
     }
+  }
+
+  // 1.5. Console Output / Terminal Log Signatures
+  if (
+    /^(\d+\.\s+Endpoint:|\$?\s*(?:curl|dotnet|npm|node)\s+.*?\n|\[(?:info|warn|error|debug|trace)\]|(?:\binfo|\bwarn|\bfail|\bdbug|\btrace|\bcrit):)/im.test(trimmed) &&
+    !/\b(class|record|struct|interface|namespace|public|private|protected|async|Task|void|function|const|let|var)\b/.test(trimmed)
+  ) {
+    return 'text'
   }
 
   // 2. Strong C# / .NET Syntax Signatures

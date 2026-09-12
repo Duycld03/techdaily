@@ -151,13 +151,13 @@ export function useMarkdownRenderer() {
 
       if (!highlightedHtml) {
         const escaped = md.utils.escapeHtml(code.trimEnd())
-        highlightedHtml = `<pre class="shiki one-dark-pro font-mono text-xs sm:text-sm p-4 sm:p-5 overflow-x-auto max-w-full text-slate-200"><code>${escaped}</code></pre>`
+        highlightedHtml = `<pre class="shiki one-dark-pro font-mono text-sm sm:text-[14.5px] p-4 sm:p-5 overflow-x-auto max-w-full text-slate-200"><code>${escaped}</code></pre>`
       }
 
       const encodedCode = encodeURIComponent(code.trimEnd())
 
       return `
-        <div class="code-block-wrapper relative group my-5 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg max-w-full w-full min-w-0 font-mono text-xs sm:text-sm">
+        <div class="code-block-wrapper relative group my-6 sm:my-8 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg max-w-full w-full min-w-0 font-mono text-sm sm:text-[14.5px]">
           <div class="flex items-center justify-between px-4 py-2 bg-slate-950/80 border-b border-slate-800/80 text-xs text-slate-400 select-none">
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
@@ -176,7 +176,7 @@ export function useMarkdownRenderer() {
               <span class="text-xs font-medium">Copy</span>
             </button>
           </div>
-          <div class="code-content shiki-container text-xs sm:text-sm leading-relaxed overflow-x-auto max-w-full w-full">
+          <div class="code-content shiki-container text-sm sm:text-[14.5px] leading-relaxed overflow-x-auto max-w-full w-full">
             ${highlightedHtml}
           </div>
         </div>

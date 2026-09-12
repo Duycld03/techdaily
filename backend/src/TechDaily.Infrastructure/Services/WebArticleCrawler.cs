@@ -86,6 +86,9 @@ public class WebArticleCrawler : IWebArticleCrawler
             }
         }
 
+        // Filter multi-version moniker sections (e.g. Microsoft Learn ASP.NET Core documentation)
+        FilterMonikers(contentNode, targetUrl);
+
         // Preprocess Code Blocks to ensure syntax highlighting preservation
         PreprocessCodeBlocks(contentNode);
 
@@ -119,6 +122,53 @@ public class WebArticleCrawler : IWebArticleCrawler
         );
     }
 
+    private static void FilterMonikers(HtmlNode root, string url)
+    {
+        var monikerNodes = root.SelectNodes(".//*[@data-moniker]");
+        if (monikerNodes == null || monikerNodes.Count == 0) return;
+
+        string? targetView = null;
+        if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+        {
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            targetView = query["view"]?.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(targetView))
+        {
+            var allMonikers = monikerNodes
+                .Select(n => n.GetAttributeValue("data-moniker", ""))
+                .SelectMany(m => m.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                .Distinct()
+                .OrderByDescending(m => m)
+                .ToList();
+
+            targetView = allMonikers.FirstOrDefault();
+        }
+
+        if (!string.IsNullOrWhiteSpace(targetView))
+        {
+            var nodesToRemove = new List<HtmlNode>();
+            foreach (var node in monikerNodes)
+            {
+                var attr = node.GetAttributeValue("data-moniker", "");
+                var monikers = attr.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                bool matches = monikers.Any(m => m.Equals(targetView, StringComparison.OrdinalIgnoreCase) ||
+                                                 m.Contains(targetView, StringComparison.OrdinalIgnoreCase) ||
+                                                 targetView.Contains(m, StringComparison.OrdinalIgnoreCase));
+                if (!matches)
+                {
+                    nodesToRemove.Add(node);
+                }
+            }
+
+            foreach (var node in nodesToRemove)
+            {
+                node.Remove();
+            }
+        }
+    }
+
     private static void PreprocessCodeBlocks(HtmlNode root)
     {
         var preNodes = root.SelectNodes(".//pre");
@@ -139,6 +189,7 @@ public class WebArticleCrawler : IWebArticleCrawler
             else if (lang == "python" || lang == "py") lang = "python";
             else if (lang == "shell" || lang == "sh" || lang == "terminal") lang = "bash";
             else if (lang == "yml") lang = "yaml";
+            else if (lang == "txt" || lang == "text" || lang == "plaintext" || lang == "output" || lang == "console") lang = "txt";
 
             if (!string.IsNullOrEmpty(lang))
             {
