@@ -45,7 +45,7 @@ public static class InsightsEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GetInsightsFeed")
         .WithSummary("Retrieves bite-sized senior technical insights with category and tag filtering.");
@@ -66,7 +66,7 @@ public static class InsightsEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GenerateInsight")
         .WithSummary("Generates an on-demand senior technical insight using Gemini 3.6 Flash.");
@@ -89,7 +89,7 @@ public static class InsightsEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("BookmarkInsight")
         .WithSummary("Toggles bookmark status and updates bookmark count for authenticated user.");

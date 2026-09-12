@@ -15,8 +15,13 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
+import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
+import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
+import { useApiError } from '~/composables/useApiError'
+
 const focusStore = useDailyFocusStore()
 const { locale } = useI18n()
+const { formatError } = useApiError()
 const { render: renderMarkdown } = useMarkdownRenderer()
 
 const explanation = ref<string | null>(null)
@@ -39,9 +44,7 @@ async function loadExplanation() {
     )
     explanation.value = res.explanation
   } catch (err: any) {
-    explanation.value = locale.value === 'vi'
-      ? 'Không thể tải giải thích vào lúc này. Vui lòng thử lại sau.'
-      : (err.message || 'Could not load explanation at this moment.')
+    explanation.value = formatError(err, 'today.explain_error')
   } finally {
     isLoading.value = false
   }

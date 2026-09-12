@@ -1,6 +1,21 @@
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useToast } from '~/composables/useToast'
 
+export class ApiError extends Error {
+  code?: string
+  status: number
+  details?: any
+
+  constructor(message: string, status: number, code?: string, details?: any) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.code = code
+    this.details = details
+    Object.setPrototypeOf(this, ApiError.prototype)
+  }
+}
+
 export function useApiClient() {
   const config = useRuntimeConfig()
 
@@ -71,7 +86,7 @@ export function useApiClient() {
 
         try {
           const toast = useToast()
-          let message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+          let message = 'Session expired. Please log in again.'
           try {
             const { t } = useI18n()
             const localized = t('auth.session_expired')
@@ -98,13 +113,26 @@ export function useApiClient() {
       }
 
       let errorMessage = `HTTP Error ${response.status}`
+      let errorCode: string | undefined = undefined
+      let errorDetails: any = undefined
+
       try {
         const errorJson = await response.json()
-        errorMessage = errorJson.error || errorJson.title || errorMessage
+        errorMessage = errorJson.error || errorJson.message || errorJson.title || errorMessage
+        errorCode = errorJson.code
+        errorDetails = errorJson.details || errorJson.errors
       } catch {
         // fallback
       }
-      throw new Error(errorMessage)
+
+      if (!errorCode) {
+        if (response.status === 401) errorCode = 'UNAUTHORIZED'
+        else if (response.status === 403) errorCode = 'FORBIDDEN'
+        else if (response.status === 404) errorCode = 'RESOURCE_NOT_FOUND'
+        else if (response.status >= 500) errorCode = 'SERVER_ERROR'
+      }
+
+      throw new ApiError(errorMessage, response.status, errorCode, errorDetails)
     }
 
     if (response.status === 204 || response.headers.get('content-length') === '0') {

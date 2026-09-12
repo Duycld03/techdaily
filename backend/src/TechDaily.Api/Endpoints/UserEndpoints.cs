@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TechDaily.Application.Common;
 using TechDaily.Infrastructure.Persistence;
 using TechDaily.Infrastructure.Security;
 
@@ -144,7 +145,7 @@ public static class UserEndpoints
 
             if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
             {
-                return Results.BadRequest(new { error = "New password must be at least 6 characters." });
+                return Results.BadRequest(new { code = Error.NewPasswordTooShort.Code, error = Error.NewPasswordTooShort.Message });
             }
 
             var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId.Value);
@@ -158,7 +159,7 @@ public static class UserEndpoints
             {
                 if (string.IsNullOrEmpty(request.CurrentPassword) || !PasswordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
                 {
-                    return Results.BadRequest(new { error = "Current password is incorrect." });
+                    return Results.BadRequest(new { code = Error.CurrentPasswordIncorrect.Code, error = Error.CurrentPasswordIncorrect.Message });
                 }
             }
 

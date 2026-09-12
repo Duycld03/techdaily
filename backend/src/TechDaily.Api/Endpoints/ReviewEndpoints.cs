@@ -33,7 +33,7 @@ public static class ReviewEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .RequireAuthorization()
         .WithName("GetReviewDeck")
@@ -57,7 +57,7 @@ public static class ReviewEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .RequireAuthorization()
         .WithName("GradeReviewCard")

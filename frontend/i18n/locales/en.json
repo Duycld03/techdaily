@@ -45,7 +45,20 @@
     "source_context": "Authoritative Source Context",
     "prev": "Prev",
     "next": "Next",
-    "submit_failed": "Failed to submit answer. Please try again."
+    "submit_failed": "Failed to submit answer. Please try again.",
+    "toast_copied_text": "Text copied to clipboard!",
+    "toast_no_document_chunk": "No linked document found to save highlight.",
+    "toast_highlight_saved": "Highlight saved to Notes & Highlights!",
+    "toast_highlight_failed": "Failed to save highlight.",
+    "signin_banner_title": "Sign in to verify your architectural answer, build your daily streak, and schedule SM-2 reviews.",
+    "signin_banner_button": "Sign In Now",
+    "correct_solution_desc": "Your senior engineering analysis matches optimal production best practices.",
+    "loading_curriculum": "Loading Curriculum Day {day}...",
+    "retry_day": "Retry Day {day}",
+    "error_load_failed": "Failed to load daily focus.",
+    "error_submit_failed": "Failed to submit scenario option.",
+    "explain_error": "Could not load explanation at this moment. Please try again later.",
+    "highlight_save_tooltip": "Highlight & Save Note"
   },
   "roadmap": {
     "badge": "Roadmap",
@@ -126,7 +139,17 @@
     "url_input_placeholder": "https://github.com/.../README.md or tech blog URL",
     "fetch_url_btn": "Fetch Content",
     "fetching_url": "Crawling & Converting...",
-    "fetch_success": "Article content fetched successfully! Review below before importing."
+    "fetch_success": "Article content fetched successfully! Review below before importing.",
+    "toast_import_success": "Document imported into library successfully!",
+    "toast_import_failed": "Failed to import document.",
+    "toast_pdf_only": "Only .pdf format files are supported.",
+    "toast_pdf_size_limit": "File size exceeds the 200 MB limit.",
+    "toast_upload_success": "PDF uploaded and processed successfully!",
+    "toast_upload_failed": "Failed to upload and process PDF file.",
+    "toast_crawl_success": "Article content extracted from URL successfully!",
+    "toast_crawl_failed": "Failed to extract article content from URL.",
+    "toast_delete_success": "Document removed from library.",
+    "toast_delete_failed": "Failed to remove document."
   },
   "reader": {
     "library": "Library",
@@ -146,7 +169,8 @@
     "quiz_chapter_btn": "Quiz This Chapter",
     "toast_copy": "Excerpt copied to clipboard!",
     "toast_highlight_success": "Saved to Highlights & Notes!",
-    "toast_highlight_error": "Failed to save highlight."
+    "toast_highlight_error": "Failed to save highlight.",
+    "highlight_save_tooltip": "Highlight & Save Note"
   },
   "notes": {
     "title": "Highlights & Notes",
@@ -171,7 +195,9 @@
     "unbookmark_desc": "Are you sure you want to remove this insight from your saved list?",
     "confirm_unbookmark_btn": "Remove Bookmark",
     "unbookmarking": "Removing...",
-    "explore_insights_btn": "Explore Insights Now"
+    "explore_insights_btn": "Explore Insights Now",
+    "deleting": "Deleting...",
+    "loading_insights": "Loading saved insights..."
   },
   "profile": {
     "title": "User Profile",
@@ -203,7 +229,9 @@
     "password_strength_weak": "Weak password",
     "password_strength_good": "Good password",
     "password_strength_strong": "Strong password",
-    "passwords_must_match": "Passwords do not match."
+    "passwords_must_match": "Passwords do not match.",
+    "save_failed": "Failed to save profile.",
+    "password_change_failed": "Failed to change password."
   },
   "settings": {
     "title": "Settings",
@@ -246,7 +274,14 @@
     "saved_tab": "🔖 Saved",
     "empty_title": "No insights found",
     "empty_desc": "Try selecting another category or click Generate with AI to create a new one.",
-    "card_counter": "Insight {current} of {total}"
+    "card_counter": "Insight {current} of {total}",
+    "toast_login_required_saved": "Please sign in to view your saved insights.",
+    "toast_bookmark_added": "Insight added to bookmarks!",
+    "toast_bookmark_removed": "Insight removed from bookmarks.",
+    "toast_login_required_bookmark": "Please sign in to bookmark insights.",
+    "toast_bookmark_failed": "Failed to update bookmark status.",
+    "toast_generate_success": "New technical insight generated successfully with AI!",
+    "toast_generate_failed": "Failed to generate insight with AI."
   },
   "streak": {
     "current": "Day Streak",
@@ -269,7 +304,14 @@
     "dont_have_account": "Don't have an account?",
     "or_continue_with": "Or continue with",
     "terms_agreement": "By continuing, you agree to TechDaily terms and privacy policy.",
-    "session_expired": "Your session has expired. Please sign in again."
+    "session_expired": "Your session has expired. Please sign in again.",
+    "register_title": "Create Your Account",
+    "toast_google_success": "Signed in with Google successfully!",
+    "toast_google_failed": "Google authentication failed.",
+    "toast_enter_credentials": "Please enter your email and password.",
+    "toast_login_success": "Signed in successfully!",
+    "toast_register_success": "Account created successfully!",
+    "toast_auth_failed": "Authentication failed. Please try again."
   },
   "quiz": {
     "title": "Interview Quiz",
@@ -316,7 +358,13 @@
     "stats_review_queue": "In Review",
     "stats_accuracy": "Accuracy",
     "stats_level_breakdown": "Accuracy by Level",
-    "stats_topic_breakdown": "By Topic"
+    "stats_topic_breakdown": "By Topic",
+    "no_questions_generated": "No questions generated. Please try a different topic.",
+    "generate_failed": "Failed to generate quiz questions.",
+    "submit_failed": "Failed to submit answer.",
+    "review_queue_failed": "Failed to load review queue.",
+    "no_review_questions": "No unmastered questions in the review queue.",
+    "stats_failed": "Failed to load quiz statistics."
   },
   "error": {
     "not_found_title": "Page Not Found",
@@ -326,5 +374,24 @@
     "status_code": "Error Code",
     "btn_home": "Back to Daily Practice",
     "btn_retry": "Try Again"
+  },
+  "api_errors": {
+    "AUTH_EMAIL_PASSWORD_REQUIRED": "Email and password are required.",
+    "AUTH_PASSWORD_TOO_SHORT": "Password must be at least 6 characters.",
+    "AUTH_EMAIL_EXISTS": "An account with this email already exists.",
+    "AUTH_INVALID_CREDENTIALS": "Invalid email or password.",
+    "AUTH_GOOGLE_TOKEN_INVALID": "Invalid Google authentication token.",
+    "AUTH_GOOGLE_NOT_CONFIGURED": "Google Client ID is not configured.",
+    "USER_CURRENT_PASSWORD_INCORRECT": "Current password is incorrect.",
+    "USER_NEW_PASSWORD_TOO_SHORT": "New password must be at least 6 characters.",
+    "LIBRARY_PDF_REQUIRED": "A valid PDF file is required.",
+    "LIBRARY_MULTIPART_REQUIRED": "Multipart form data is required.",
+    "RESOURCE_NOT_FOUND": "The requested resource was not found.",
+    "UNAUTHORIZED": "Authentication required. Please sign in.",
+    "FORBIDDEN": "You do not have permission to access this resource.",
+    "VALIDATION_FAILED": "Validation failed for the request.",
+    "CONFLICT": "A conflict occurred with existing state.",
+    "SERVER_ERROR": "An unexpected server error occurred. Please try again.",
+    "NETWORK_ERROR": "Network error. Please check your internet connection."
   }
 }

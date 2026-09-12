@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
 import { useToast } from '~/composables/useToast'
+import { useApiError } from '~/composables/useApiError'
 
 export interface Topic {
   id: string
@@ -71,6 +72,7 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
   const isLoading = ref(false)
   const isSubmitting = ref(false)
   const error = ref<string | null>(null)
+  const { formatError } = useApiError()
 
   async function fetchTodayFocus(dayOrder?: number, date?: string, locale: string = 'en') {
     isLoading.value = true
@@ -86,7 +88,7 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
       data.value = res
       return res
     } catch (err: any) {
-      error.value = err.message || 'Failed to load daily focus.'
+      error.value = formatError(err, 'today.error_load_failed')
     } finally {
       isLoading.value = false
     }
@@ -128,7 +130,7 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
     } catch (err: any) {
       try {
         const toast = useToast()
-        toast.error(err.message || 'Failed to submit scenario option.')
+        toast.error(formatError(err, 'today.error_submit_failed'))
       } catch {
         // ignore
       }

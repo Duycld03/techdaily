@@ -19,9 +19,11 @@ import {
   Lightbulb
 } from 'lucide-vue-next'
 import { useInsightsStore } from '~/stores/useInsightsStore'
+import { useApiError } from '~/composables/useApiError'
 import MarkdownIt from 'markdown-it'
 
-const { locale } = useI18n()
+const { t, locale } = useI18n()
+const { formatError } = useApiError()
 const insightsStore = useInsightsStore()
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
 
@@ -122,7 +124,7 @@ const authStore = useAuthStore()
 
 async function handleSavedFilter() {
   if (!authStore.isAuthenticated) {
-    toast.warning('Vui lòng đăng nhập để xem danh sách bài viết đã lưu.')
+    toast.warning(t('insights.toast_login_required_saved'))
     return
   }
   await insightsStore.fetchFeed(null, null, true)
@@ -132,15 +134,15 @@ async function handleToggleBookmark(id: string) {
   try {
     const res = await insightsStore.toggleBookmark(id)
     if (res?.isBookmarked) {
-      toast.success('Đã lưu mẫu kiến thức vào bookmark!')
+      toast.success(t('insights.toast_bookmark_added'))
     } else {
-      toast.info('Đã gỡ mẫu kiến thức khỏi bookmark.')
+      toast.info(t('insights.toast_bookmark_removed'))
     }
   } catch (err: any) {
-    if (err?.message === 'UNAUTHENTICATED' || err?.response?.status === 401) {
-      toast.warning('Vui lòng đăng nhập để lưu bài viết vào bookmark.')
+    if (err?.message === 'UNAUTHENTICATED' || err?.response?.status === 401 || err?.status === 401) {
+      toast.warning(t('insights.toast_login_required_bookmark'))
     } else {
-      toast.error('Không thể cập nhật bookmark.')
+      toast.error(formatError(err, 'insights.toast_bookmark_failed'))
     }
   }
 }
@@ -151,11 +153,11 @@ async function handleGenerateSubmit() {
   if (insightsStore.isGenerating) return
   try {
     await insightsStore.generateWithAi(customTopicInput.value, locale.value)
-    toast.success('Đã tạo thẻ kiến thức mới với AI thành công!')
+    toast.success(t('insights.toast_generate_success'))
     isGenerateModalOpen.value = false
     customTopicInput.value = ''
   } catch (err: any) {
-    toast.error(err?.message || 'Tạo thẻ với AI thất bại.')
+    toast.error(formatError(err, 'insights.toast_generate_failed'))
   }
 }
 

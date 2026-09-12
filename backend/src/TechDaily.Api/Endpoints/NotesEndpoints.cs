@@ -30,7 +30,7 @@ public static class NotesEndpoints
             var result = await handler.ExecuteAsync(new GetHighlightsRequest(userId.Value, tag), ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => Results.BadRequest(new { error = error.Message })
+                error => Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
         .WithName("GetHighlights");
@@ -57,7 +57,7 @@ public static class NotesEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Created($"/api/v1/notes/highlights/{success.Highlight.Id}", success),
-                error => Results.BadRequest(new { error = error.Message })
+                error => Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
         .WithName("CreateHighlight");
@@ -77,7 +77,9 @@ public static class NotesEndpoints
             var result = await handler.ExecuteAsync(new DeleteHighlightRequest(id, userId.Value), ct);
             return result.Match(
                 success => Results.NoContent(),
-                error => error == Error.NotFound ? Results.NotFound() : Results.BadRequest(new { error = error.Message })
+                error => error == Error.NotFound 
+                    ? Results.NotFound(new { code = error.Code, error = error.Message }) 
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
         .WithName("DeleteHighlight");

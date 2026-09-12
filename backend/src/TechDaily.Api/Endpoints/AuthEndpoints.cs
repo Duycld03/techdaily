@@ -5,6 +5,7 @@ using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using TechDaily.Application.Common;
 using TechDaily.Domain.Entities;
 using TechDaily.Infrastructure.Persistence;
 using TechDaily.Infrastructure.Security;
@@ -26,19 +27,19 @@ public static class AuthEndpoints
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return Results.BadRequest(new { error = "Email and password are required." });
+                return Results.BadRequest(new { code = Error.EmailPasswordRequired.Code, error = Error.EmailPasswordRequired.Message });
             }
 
             if (request.Password.Length < 6)
             {
-                return Results.BadRequest(new { error = "Password must be at least 6 characters." });
+                return Results.BadRequest(new { code = Error.PasswordTooShort.Code, error = Error.PasswordTooShort.Message });
             }
 
             var normalizedEmail = request.Email.Trim().ToLowerInvariant();
             var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
             if (existingUser != null)
             {
-                return Results.BadRequest(new { error = "An account with this email already exists." });
+                return Results.BadRequest(new { code = Error.EmailExists.Code, error = Error.EmailExists.Message });
             }
 
             var user = new User
@@ -83,7 +84,7 @@ public static class AuthEndpoints
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return Results.BadRequest(new { error = "Email and password are required." });
+                return Results.BadRequest(new { code = Error.EmailPasswordRequired.Code, error = Error.EmailPasswordRequired.Message });
             }
 
             var normalizedEmail = request.Email.Trim().ToLowerInvariant();
@@ -91,12 +92,12 @@ public static class AuthEndpoints
 
             if (user == null || string.IsNullOrWhiteSpace(user.PasswordHash))
             {
-                return Results.BadRequest(new { error = "Invalid email or password." });
+                return Results.BadRequest(new { code = Error.InvalidCredentials.Code, error = Error.InvalidCredentials.Message });
             }
 
             if (!PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
             {
-                return Results.BadRequest(new { error = "Invalid email or password." });
+                return Results.BadRequest(new { code = Error.InvalidCredentials.Code, error = Error.InvalidCredentials.Message });
             }
 
             var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
@@ -127,7 +128,7 @@ public static class AuthEndpoints
             var clientId = config["Authentication:Google:ClientId"];
             if (string.IsNullOrWhiteSpace(clientId))
             {
-                return Results.BadRequest(new { error = "Google Client ID is not configured." });
+                return Results.BadRequest(new { code = Error.GoogleNotConfigured.Code, error = Error.GoogleNotConfigured.Message });
             }
 
             try
@@ -211,7 +212,7 @@ public static class AuthEndpoints
             }
             catch (Exception ex)
             {
-                return Results.BadRequest(new { error = "Invalid Google token: " + ex.Message });
+                return Results.BadRequest(new { code = Error.GoogleTokenInvalid.Code, error = "Invalid Google token: " + ex.Message });
             }
         })
         .WithName("GoogleLogin")

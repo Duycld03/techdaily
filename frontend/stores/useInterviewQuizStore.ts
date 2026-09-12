@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
 import { useToast } from '~/composables/useToast'
+import { useApiError } from '~/composables/useApiError'
 
 export interface QuizQuestion {
   id: string
@@ -55,6 +56,7 @@ export interface QuizStats {
 export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
   const api = useApiClient()
   const toast = useToast()
+  const { formatError, t } = useApiError()
 
   const questions = ref<QuizQuestion[]>([])
   const currentIndex = ref(0)
@@ -139,12 +141,13 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
       activeTab.value = 'arena'
 
       if (questions.value.length === 0) {
-        toast.info('No questions generated. Please try a different topic.')
+        toast.info(t('quiz.no_questions_generated'))
       }
       return response
     } catch (err: any) {
-      error.value = err.message || 'Failed to generate quiz questions.'
-      toast.error(error.value || 'Error generating quiz')
+      const formatted = formatError(err, 'quiz.generate_failed')
+      error.value = formatted
+      toast.error(formatted)
       throw err
     } finally {
       isGenerating.value = false
@@ -183,7 +186,7 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
 
       return result
     } catch (err: any) {
-      toast.error(err.message || 'Failed to submit answer.')
+      toast.error(formatError(err, 'quiz.submit_failed'))
       throw err
     } finally {
       isSubmitting.value = false
@@ -237,7 +240,7 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
       reviewQueueTotal.value = response.totalCount || 0
       return response
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load review queue.')
+      toast.error(formatError(err, 'quiz.review_queue_failed'))
     } finally {
       isLoading.value = false
     }
@@ -246,7 +249,7 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
   function startReviewSession(customQuestions?: QuizQuestion[]) {
     const listToReview = customQuestions || reviewQueue.value
     if (listToReview.length === 0) {
-      toast.info('No unmastered questions in the review queue.')
+      toast.info(t('quiz.no_review_questions'))
       return
     }
     questions.value = [...listToReview]
@@ -263,7 +266,7 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
       stats.value = response
       return response
     } catch (err: any) {
-      toast.error(err.message || 'Failed to load quiz statistics.')
+      toast.error(formatError(err, 'quiz.stats_failed'))
     } finally {
       isLoading.value = false
     }

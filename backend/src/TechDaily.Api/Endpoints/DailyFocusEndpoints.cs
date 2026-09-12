@@ -61,7 +61,7 @@ public static class DailyFocusEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .RequireAuthorization()
         .WithName("SubmitDailyDrill")
@@ -77,7 +77,7 @@ public static class DailyFocusEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("ExplainTerm")
         .WithSummary("Provides instant AI terminology explanation tooltip.");

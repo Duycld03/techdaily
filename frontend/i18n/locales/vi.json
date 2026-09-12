@@ -45,7 +45,20 @@
     "source_context": "Trích Đoạn Tài Liệu Gốc",
     "prev": "Trước",
     "next": "Tiếp",
-    "submit_failed": "Nộp đáp án thất bại. Vui lòng thử lại."
+    "submit_failed": "Nộp đáp án thất bại. Vui lòng thử lại.",
+    "toast_copied_text": "Đã sao chép đoạn văn bản!",
+    "toast_no_document_chunk": "Không tìm thấy tài liệu liên kết để lưu highlight.",
+    "toast_highlight_saved": "Đã lưu đoạn văn vào Ghi chú & Highlight!",
+    "toast_highlight_failed": "Không thể lưu highlight.",
+    "signin_banner_title": "Đăng nhập để kiểm tra câu trả lời kiến trúc, tích lũy streak hàng ngày và lên lịch ôn tập SM-2.",
+    "signin_banner_button": "Đăng nhập ngay",
+    "correct_solution_desc": "Phân tích kỹ thuật của bạn hoàn toàn phù hợp với thực tiễn sản xuất tối ưu.",
+    "loading_curriculum": "Đang tải bài học Ngày {day}...",
+    "retry_day": "Thử lại Ngày {day}",
+    "error_load_failed": "Không thể tải nội dung bài học hàng ngày.",
+    "error_submit_failed": "Không thể gửi câu trả lời kịch bản.",
+    "explain_error": "Không thể tải giải thích vào lúc này. Vui lòng thử lại sau.",
+    "highlight_save_tooltip": "Highlight & Lưu Ghi Chú"
   },
   "roadmap": {
     "badge": "Lộ Trình Học",
@@ -126,7 +139,17 @@
     "url_input_placeholder": "https://github.com/.../README.md hoặc link bài viết kỹ thuật",
     "fetch_url_btn": "Cào Dữ Liệu",
     "fetching_url": "Đang cào & chuyển đổi Markdown...",
-    "fetch_success": "Đã cào nội dung thành công! Kiểm tra lại bên dưới trước khi lưu."
+    "fetch_success": "Đã cào nội dung thành công! Kiểm tra lại bên dưới trước khi lưu.",
+    "toast_import_success": "Nhập tài liệu vào thư viện thành công!",
+    "toast_import_failed": "Lỗi khi nhập tài liệu.",
+    "toast_pdf_only": "Chỉ hỗ trợ tệp định dạng .pdf",
+    "toast_pdf_size_limit": "Kích thước tệp vượt quá giới hạn 200 MB.",
+    "toast_upload_success": "Tải lên và xử lý PDF thành công!",
+    "toast_upload_failed": "Không thể xử lý tệp PDF.",
+    "toast_crawl_success": "Đã trích xuất nội dung bài viết từ URL!",
+    "toast_crawl_failed": "Không thể trích xuất bài viết từ URL.",
+    "toast_delete_success": "Đã xóa tài liệu khỏi thư viện.",
+    "toast_delete_failed": "Không thể xóa tài liệu."
   },
   "reader": {
     "library": "Thư Viện",
@@ -146,7 +169,8 @@
     "quiz_chapter_btn": "Luyện Quiz Chương Này",
     "toast_copy": "Đã sao chép đoạn trích!",
     "toast_highlight_success": "Đã lưu vào Ghi chú & Highlights!",
-    "toast_highlight_error": "Không thể lưu highlight."
+    "toast_highlight_error": "Không thể lưu highlight.",
+    "highlight_save_tooltip": "Highlight & Lưu Ghi Chú"
   },
   "notes": {
     "title": "Ghi Chú & Highlights",
@@ -171,7 +195,9 @@
     "unbookmark_desc": "Bạn có chắc chắn muốn gỡ bài viết này khỏi danh sách đã lưu không?",
     "confirm_unbookmark_btn": "Gỡ Bookmark",
     "unbookmarking": "Đang gỡ...",
-    "explore_insights_btn": "Khám Phá Insights Ngay"
+    "explore_insights_btn": "Khám Phá Insights Ngay",
+    "deleting": "Đang xóa...",
+    "loading_insights": "Đang tải bài viết đã lưu..."
   },
   "profile": {
     "title": "Hồ Sơ Cá Nhân",
@@ -203,7 +229,9 @@
     "password_strength_weak": "Mật khẩu yếu",
     "password_strength_good": "Mật khẩu tốt",
     "password_strength_strong": "Mật khẩu mạnh",
-    "passwords_must_match": "Mật khẩu xác nhận không khớp."
+    "passwords_must_match": "Mật khẩu xác nhận không khớp.",
+    "save_failed": "Không thể lưu thông tin hồ sơ.",
+    "password_change_failed": "Không thể đổi mật khẩu."
   },
   "settings": {
     "title": "Cài Đặt",
@@ -246,7 +274,14 @@
     "saved_tab": "🔖 Đã Lưu",
     "empty_title": "Chưa có kiến thức phù hợp",
     "empty_desc": "Hãy thử chọn chủ đề khác hoặc bấm Tạo Với AI để sinh mẫu kiến thức mới.",
-    "card_counter": "Mẫu {current} / {total}"
+    "card_counter": "Mẫu {current} / {total}",
+    "toast_login_required_saved": "Vui lòng đăng nhập để xem danh sách bài viết đã lưu.",
+    "toast_bookmark_added": "Đã lưu mẫu kiến thức vào bookmark!",
+    "toast_bookmark_removed": "Đã gỡ mẫu kiến thức khỏi bookmark.",
+    "toast_login_required_bookmark": "Vui lòng đăng nhập để lưu bài viết vào bookmark.",
+    "toast_bookmark_failed": "Không thể cập nhật bookmark.",
+    "toast_generate_success": "Đã tạo thẻ kiến thức mới với AI thành công!",
+    "toast_generate_failed": "Tạo thẻ với AI thất bại."
   },
   "streak": {
     "current": "Chuỗi Ngày Liên Tiếp",
@@ -269,7 +304,14 @@
     "dont_have_account": "Chưa có tài khoản?",
     "or_continue_with": "Hoặc tiếp tục bằng",
     "terms_agreement": "Bằng việc tiếp tục, bạn đồng ý với Điều khoản và Chính sách của TechDaily.",
-    "session_expired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+    "session_expired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+    "register_title": "Tạo tài khoản mới",
+    "toast_google_success": "Đăng nhập Google thành công!",
+    "toast_google_failed": "Xác thực Google thất bại.",
+    "toast_enter_credentials": "Vui lòng nhập đầy đủ email và mật khẩu.",
+    "toast_login_success": "Đăng nhập thành công!",
+    "toast_register_success": "Đăng ký tài khoản thành công!",
+    "toast_auth_failed": "Xác thực thất bại. Vui lòng thử lại."
   },
   "quiz": {
     "title": "Trắc Nghiệm Phỏng Vấn",
@@ -316,7 +358,13 @@
     "stats_review_queue": "Cần Ôn Tập",
     "stats_accuracy": "Chính Xác",
     "stats_level_breakdown": "Theo Cấp Bậc",
-    "stats_topic_breakdown": "Theo Chủ Đề"
+    "stats_topic_breakdown": "Theo Chủ Đề",
+    "no_questions_generated": "Không tạo được câu hỏi nào. Vui lòng thử chủ đề khác.",
+    "generate_failed": "Không thể tạo bộ câu hỏi phỏng vấn.",
+    "submit_failed": "Không thể gửi câu trả lời.",
+    "review_queue_failed": "Không thể tải danh sách câu hỏi ôn tập.",
+    "no_review_questions": "Không có câu hỏi nào cần ôn tập trong hàng đợi.",
+    "stats_failed": "Không thể tải thống kê trắc nghiệm."
   },
   "error": {
     "not_found_title": "Không Tìm Thấy Trang",
@@ -326,5 +374,24 @@
     "status_code": "Mã lỗi",
     "btn_home": "Về Trang Luyện Tập",
     "btn_retry": "Thử Lại"
+  },
+  "api_errors": {
+    "AUTH_EMAIL_PASSWORD_REQUIRED": "Vui lòng nhập đầy đủ email và mật khẩu.",
+    "AUTH_PASSWORD_TOO_SHORT": "Mật khẩu phải có ít nhất 6 ký tự.",
+    "AUTH_EMAIL_EXISTS": "Tài khoản với email này đã tồn tại.",
+    "AUTH_INVALID_CREDENTIALS": "Email hoặc mật khẩu không chính xác.",
+    "AUTH_GOOGLE_TOKEN_INVALID": "Mã xác thực Google không hợp lệ.",
+    "AUTH_GOOGLE_NOT_CONFIGURED": "Google Client ID chưa được cấu hình.",
+    "USER_CURRENT_PASSWORD_INCORRECT": "Mật khẩu hiện tại không chính xác.",
+    "USER_NEW_PASSWORD_TOO_SHORT": "Mật khẩu mới phải có ít nhất 6 ký tự.",
+    "LIBRARY_PDF_REQUIRED": "Vui lòng chọn một tệp PDF hợp lệ.",
+    "LIBRARY_MULTIPART_REQUIRED": "Yêu cầu dữ liệu định dạng multipart form.",
+    "RESOURCE_NOT_FOUND": "Không tìm thấy tài nguyên yêu cầu.",
+    "UNAUTHORIZED": "Vui lòng đăng nhập để tiếp tục.",
+    "FORBIDDEN": "Bạn không có quyền truy cập tài nguyên này.",
+    "VALIDATION_FAILED": "Dữ liệu yêu cầu không hợp lệ.",
+    "CONFLICT": "Đã xảy ra xung đột với trạng thái hiện tại.",
+    "SERVER_ERROR": "Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau.",
+    "NETWORK_ERROR": "Lỗi kết nối mạng. Vui lòng kiểm tra đường truyền."
   }
 }

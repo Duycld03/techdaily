@@ -1,6 +1,8 @@
 import { vi } from 'vitest'
+import { useApiError } from '~/composables/useApiError'
 
 // Global Nuxt mock composables for Vitest
+;(globalThis as any).useApiError = useApiError
 ;(globalThis as any).useRuntimeConfig = () => ({
   public: {
     apiBaseUrl: 'http://localhost:5000',
@@ -21,7 +23,17 @@ import { vi } from 'vitest'
 
 ;(globalThis as any).useI18n = () => ({
   locale: { value: 'en' },
-  t: (key: string) => key
+  t: (key: string, params?: Record<string, any>) => {
+    if (params) {
+      let result = key
+      for (const [k, v] of Object.entries(params)) {
+        result = result.replace(new RegExp(`{${k}}`, 'g'), String(v))
+      }
+      return result
+    }
+    return key
+  },
+  te: (key: string) => true
 })
 
 ;(globalThis as any).useColorMode = () => ({

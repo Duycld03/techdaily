@@ -7,8 +7,10 @@ import { useToast } from '~/composables/useToast'
 import MicroQuizCard from '~/components/today/MicroQuizCard.vue'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
+import { useApiError } from '~/composables/useApiError'
 
 const { t, locale } = useI18n()
+const { formatError } = useApiError()
 const notesStore = useNotesStore()
 const toast = useToast()
 const { render: renderMarkdown, isHighlighterReady } = useMarkdownRenderer()
@@ -109,7 +111,7 @@ function copySelectedText() {
   if (!floatingMenu.value.text) return
   navigator.clipboard.writeText(floatingMenu.value.text)
   copied.value = true
-  toast.info('Đã sao chép đoạn văn bản!')
+  toast.info(t('today.toast_copied_text'))
   setTimeout(() => {
     copied.value = false
     floatingMenu.value.visible = false
@@ -119,7 +121,7 @@ function copySelectedText() {
 async function handleHighlightSelection() {
   const chunkId = props.documentChunk?.id
   if (!floatingMenu.value.text || !chunkId) {
-    toast.error('Không tìm thấy tài liệu liên kết để lưu highlight.')
+    toast.error(t('today.toast_no_document_chunk'))
     return
   }
   try {
@@ -127,9 +129,9 @@ async function handleHighlightSelection() {
       documentChunkId: chunkId,
       selectedText: floatingMenu.value.text
     })
-    toast.success('Đã lưu đoạn văn vào Ghi chú & Highlight!')
+    toast.success(t('today.toast_highlight_saved'))
   } catch (err: any) {
-    toast.error(err.message || 'Không thể lưu highlight.')
+    toast.error(formatError(err, 'today.toast_highlight_failed'))
   } finally {
     floatingMenu.value.visible = false
   }
@@ -188,7 +190,7 @@ onUnmounted(() => {
     <div v-if="renderedChunkHtml" class="mt-6 p-4 sm:p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-2">
       <div class="flex items-center gap-2 text-xs font-bold tracking-wider text-emerald-700 dark:text-emerald-400">
         <BookOpen class="w-3.5 h-3.5" />
-        <span>{{ t('today.source_context') || (locale === 'vi' ? 'Ngữ Cảnh Trích Xuất Gốc' : 'Authoritative Source Context') }}</span>
+        <span>{{ $t('today.source_context') }}</span>
       </div>
       <div class="markdown-body text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed min-w-0 max-w-full" v-html="renderedChunkHtml"></div>
     </div>
@@ -225,7 +227,7 @@ onUnmounted(() => {
         <button
           @click.stop="handleHighlightSelection"
           class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
-          title="Highlight & Lưu Ghi Chú"
+          :title="$t('today.highlight_save_tooltip')"
         >
           <Highlighter class="w-3.5 h-3.5" />
           <span>Highlight</span>

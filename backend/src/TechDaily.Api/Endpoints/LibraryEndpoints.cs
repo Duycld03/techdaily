@@ -27,7 +27,7 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(new GetBooksRequest(category, search), ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => Results.BadRequest(new { error = error.Message })
+                error => Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
         .WithName("GetBooks");
@@ -41,7 +41,9 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(new GetBookByIdRequest(id), ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => error == Error.NotFound ? Results.NotFound() : Results.BadRequest(new { error = error.Message })
+                error => error == Error.NotFound 
+                    ? Results.NotFound(new { code = error.Code, error = error.Message }) 
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
         .WithName("GetBookById");
@@ -55,7 +57,7 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Created($"/api/v1/library/books/{success.Book.Id}", success),
-                error => Results.BadRequest(new { error = error.Message })
+                error => Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
         .RequireAuthorization()
@@ -70,7 +72,9 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(new DeleteBookRequest(id), ct);
             return result.Match(
                 success => Results.NoContent(),
-                error => error == Error.NotFound ? Results.NotFound() : Results.BadRequest(new { error = error.Message })
+                error => error == Error.NotFound 
+                    ? Results.NotFound(new { code = error.Code, error = error.Message }) 
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
         .RequireAuthorization()
@@ -84,14 +88,14 @@ public static class LibraryEndpoints
         {
             if (!httpRequest.HasFormContentType)
             {
-                return Results.BadRequest(new { error = "Multipart form data is required." });
+                return Results.BadRequest(new { code = Error.MultipartRequired.Code, error = Error.MultipartRequired.Message });
             }
 
             var form = await httpRequest.ReadFormAsync(ct);
             var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
             if (file == null || file.Length == 0)
             {
-                return Results.BadRequest(new { error = "A valid PDF file is required." });
+                return Results.BadRequest(new { code = Error.PdfRequired.Code, error = Error.PdfRequired.Message });
             }
 
             var title = form["title"].ToString();
@@ -112,7 +116,7 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Created($"/api/v1/library/books/{success.Book.Id}", success),
-                error => Results.BadRequest(new { error = error.Message })
+                error => Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
         .DisableAntiforgery()
@@ -128,7 +132,7 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => Results.BadRequest(new { error = error.Message })
+                error => Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
         .RequireAuthorization()

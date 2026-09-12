@@ -545,7 +545,7 @@ async function handleHighlightSelection() {
         <button
           @click="handleHighlightSelection"
           class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
-          title="Highlight & Lưu Ghi Chú"
+          :title="$t('reader.highlight_save_tooltip')"
         >
           <Highlighter class="w-3.5 h-3.5" />
           <span>Highlight</span>

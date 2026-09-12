@@ -14,12 +14,14 @@ import {
   EyeOff,
   Target
 } from 'lucide-vue-next'
+import { useApiError } from '~/composables/useApiError'
 
 const profileStore = useProfileStore()
 const quizStore = useInterviewQuizStore()
 const authStore = useAuthStore()
 const toast = useToast()
 const { t } = useI18n()
+const { formatError } = useApiError()
 
 const activeTab = ref<'personal' | 'security'>('personal')
 const hasAvatarError = ref(false)
@@ -106,7 +108,7 @@ async function handleProfileSave() {
 
     toast.success(t('profile.save_success'))
   } catch (err: any) {
-    toast.error(err.message || 'Failed to save profile.')
+    toast.error(formatError(err, 'profile.save_failed'))
   }
 }
 
@@ -128,7 +130,7 @@ async function handlePasswordChange() {
     newPassword.value = ''
     confirmPassword.value = ''
   } catch (err: any) {
-    toast.error(err.message || 'Failed to change password.')
+    toast.error(formatError(err, 'profile.password_change_failed'))
   }
 }
 </script>

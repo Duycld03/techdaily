@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud } from 'lucide-vue-next'
+import { useApiError } from '~/composables/useApiError'
 
 const { t, locale } = useI18n()
+const { formatError } = useApiError()
 const libraryStore = useLibraryStore()
 const toast = useToast()
 
@@ -89,13 +91,13 @@ async function handleImportSubmit() {
       sourceUrl: importSourceUrl.value || undefined
     })
 
-    toast.success('Nhập tài liệu vào thư viện thành công!')
+    toast.success(t('library.toast_import_success'))
     importTitle.value = ''
     importContent.value = ''
     importSourceUrl.value = ''
     isImportModalOpen.value = false
   } catch (err: any) {
-    toast.error(err.message || 'Lỗi khi nhập tài liệu.')
+    toast.error(formatError(err, 'library.toast_import_failed'))
   }
 }
 
@@ -115,11 +117,11 @@ function onPdfDrop(event: DragEvent) {
 
 function selectPdf(file: File) {
   if (!file.name.toLowerCase().endsWith('.pdf')) {
-    toast.error('Chỉ hỗ trợ tệp định dạng .pdf')
+    toast.error(t('library.toast_pdf_only'))
     return
   }
   if (file.size > 209_715_200) {
-    toast.error('Kích thước tệp vượt quá giới hạn 200 MB.')
+    toast.error(t('library.toast_pdf_size_limit'))
     return
   }
   pdfFile.value = file
@@ -140,14 +142,14 @@ async function handlePdfUpload() {
     formData.append('language', locale.value || 'vi')
 
     await libraryStore.uploadPdf(formData)
-    toast.success('Tải lên và xử lý PDF thành công!')
+    toast.success(t('library.toast_upload_success'))
 
     // Reset & close
     pdfFile.value = null
     pdfTitle.value = ''
     isImportModalOpen.value = false
   } catch (err: any) {
-    toast.error(err.message || 'Không thể xử lý tệp PDF.')
+    toast.error(formatError(err, 'library.toast_upload_failed'))
   } finally {
     isUploadingPdf.value = false
   }
@@ -164,11 +166,11 @@ async function handleCrawlUrl() {
     importSourceUrl.value = result.sourceUrl
     importContent.value = result.markdownContent
     crawlSuccess.value = true
-    toast.success('Đã trích xuất nội dung bài viết từ URL!')
+    toast.success(t('library.toast_crawl_success'))
     // Switch to markdown tab for preview & confirmation
     activeTab.value = 'markdown'
   } catch (err: any) {
-    toast.error(err.message || 'Không thể trích xuất bài viết từ URL.')
+    toast.error(formatError(err, 'library.toast_crawl_failed'))
   } finally {
     isCrawling.value = false
   }
@@ -184,11 +186,11 @@ async function confirmDeleteBook() {
   isDeleting.value = true
   try {
     await libraryStore.deleteBook(bookToDelete.value.id)
-    toast.success('Đã xóa tài liệu khỏi thư viện.')
+    toast.success(t('library.toast_delete_success'))
     isDeleteModalOpen.value = false
     bookToDelete.value = null
   } catch (err: any) {
-    toast.error(err.message || 'Không thể xóa tài liệu.')
+    toast.error(formatError(err, 'library.toast_delete_failed'))
   } finally {
     isDeleting.value = false
   }

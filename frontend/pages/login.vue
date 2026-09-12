@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { BookOpen, Lock, Mail, User, ArrowRight } from 'lucide-vue-next'
+import { useApiError } from '~/composables/useApiError'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const config = useRuntimeConfig()
-const { locale } = useI18n()
+const { t, locale } = useI18n()
+const { formatError } = useApiError()
 const colorMode = useColorMode()
 
 const authMode = ref<'login' | 'register'>('login')
@@ -70,10 +72,10 @@ async function handleGoogleCredentialResponse(response: any) {
   isLoading.value = true
   try {
     await authStore.googleLogin(response.credential)
-    toast.success('Đăng nhập Google thành công!')
+    toast.success(t('auth.toast_google_success'))
     await navigateTo('/today')
   } catch (err: any) {
-    toast.error(err.message || 'Google authentication failed')
+    toast.error(formatError(err, 'auth.toast_google_failed'))
   } finally {
     isLoading.value = false
   }
@@ -81,7 +83,7 @@ async function handleGoogleCredentialResponse(response: any) {
 
 async function handleSubmit() {
   if (!email.value || !password.value) {
-    toast.error('Please enter your email and password.')
+    toast.error(t('auth.toast_enter_credentials'))
     return
   }
 
@@ -90,14 +92,14 @@ async function handleSubmit() {
   try {
     if (authMode.value === 'login') {
       await authStore.login(email.value, password.value)
-      toast.success('Đăng nhập thành công!')
+      toast.success(t('auth.toast_login_success'))
     } else {
       await authStore.register(email.value, password.value, name.value, locale.value)
-      toast.success('Đăng ký tài khoản thành công!')
+      toast.success(t('auth.toast_register_success'))
     }
     await navigateTo('/today')
   } catch (err: any) {
-    toast.error(err.message || 'Authentication failed')
+    toast.error(formatError(err, 'auth.toast_auth_failed'))
   } finally {
     isLoading.value = false
   }
@@ -113,10 +115,10 @@ async function handleSubmit() {
           <BookOpen class="w-6 h-6 sm:w-7 sm:h-7 text-slate-950 font-bold" />
         </div>
         <h1 class="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          {{ authMode === 'login' ? 'Sign In to TechDaily' : 'Create Your Account' }}
+          {{ authMode === 'login' ? $t('auth.welcome_title') : $t('auth.register_title') }}
         </h1>
         <p class="text-sm md:text-base text-slate-500 dark:text-slate-400 mt-1.5 font-medium">
-          Master Senior Software Engineering Daily
+          {{ $t('auth.welcome_subtitle') }}
         </p>
       </div>
 

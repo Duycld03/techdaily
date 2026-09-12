@@ -3,9 +3,11 @@ import { ref, onMounted } from 'vue'
 import { Highlighter, Bookmark, Trash2, BookOpen, AlertTriangle, Zap, ExternalLink, ArrowRight } from 'lucide-vue-next'
 import { useNotesStore } from '~/stores/useNotesStore'
 import { useInsightsStore } from '~/stores/useInsightsStore'
+import { useApiError } from '~/composables/useApiError'
 import MarkdownIt from 'markdown-it'
 
 const { t } = useI18n()
+const { formatError } = useApiError()
 const notesStore = useNotesStore()
 const insightsStore = useInsightsStore()
 const toast = useToast()
@@ -65,7 +67,7 @@ async function confirmDeleteHighlight() {
     isDeleteModalOpen.value = false
     highlightToDelete.value = null
   } catch (err: any) {
-    toast.error(err.message || t('notes.toast_delete_error'))
+    toast.error(formatError(err, 'notes.toast_delete_error'))
   } finally {
     isDeleting.value = false
   }
@@ -85,7 +87,7 @@ async function confirmUnbookmark() {
     isUnbookmarkModalOpen.value = false
     insightToUnbookmark.value = null
   } catch (err: any) {
-    toast.error(err.message || t('notes.toast_unbookmark_error'))
+    toast.error(formatError(err, 'notes.toast_unbookmark_error'))
   } finally {
     isUnbookmarking.value = false
   }
@@ -136,7 +138,7 @@ async function confirmUnbookmark() {
     <div v-if="activeTab === 'insights'">
       <div v-if="insightsStore.isLoadingBookmarks" class="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 text-sm">
         <div class="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin mb-3"></div>
-        <span>Loading saved insights...</span>
+        <span>{{ $t('notes.loading_insights') }}</span>
       </div>
 
       <div v-else-if="insightsStore.bookmarkedInsights.length > 0" class="space-y-4">
@@ -321,7 +323,7 @@ async function confirmUnbookmark() {
               class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-600/20 active:scale-95 transition-all disabled:opacity-50"
             >
               <span v-if="isDeleting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              <span>{{ isDeleting ? 'Đang xóa...' : $t('notes.confirm_delete_btn') }}</span>
+              <span>{{ isDeleting ? $t('notes.deleting') : $t('notes.confirm_delete_btn') }}</span>
             </button>
           </div>
         </div>

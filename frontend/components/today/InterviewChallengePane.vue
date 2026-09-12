@@ -192,13 +192,13 @@ async function handleOptionSubmit() {
       >
         <div class="flex items-center gap-2.5 text-amber-900 dark:text-amber-200 font-semibold">
           <Lock class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-          <span>Sign in to verify your architectural answer, build your daily streak, and schedule SM-2 reviews.</span>
+          <span>{{ $t('today.signin_banner_title') }}</span>
         </div>
         <NuxtLink
           to="/login"
           class="w-full sm:w-auto text-center px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 shadow transition-transform active:scale-95"
         >
-          Sign In Now
+          {{ $t('today.signin_banner_button') }}
         </NuxtLink>
       </div>
 
@@ -237,7 +237,7 @@ async function handleOptionSubmit() {
               {{ isCorrect ? $t('today.correct_solution') : $t('today.incorrect_solution') }}
             </h3>
             <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed">
-              {{ isCorrect ? 'Your senior engineering analysis matches optimal production best practices.' : $t('today.scheduled_sm2') }}
+              {{ isCorrect ? $t('today.correct_solution_desc') : $t('today.scheduled_sm2') }}
             </p>
           </div>
         </div>

@@ -41,7 +41,7 @@ public static class QuizEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GenerateQuiz")
         .WithSummary("Generates an interactive interview quiz batch tailored to seniority level using Gemini 3.6 Flash and unmastered DB questions.");
@@ -68,7 +68,7 @@ public static class QuizEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("SubmitQuizAnswer")
         .WithSummary("Submits an option choice, returns correctness and deep explanation, and updates user mastery status.");
@@ -105,7 +105,7 @@ public static class QuizEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GetQuizReviewQueue")
         .WithSummary("Retrieves all unmastered/failed quiz questions in the user's review queue for iterative practice.");
@@ -127,7 +127,7 @@ public static class QuizEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { error = result.Error.Message });
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GetQuizStats")
         .WithSummary("Calculates overall interview quiz statistics, mastery counts, accuracy rate, and level breakdown.");

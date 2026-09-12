@@ -109,7 +109,7 @@ function resetToScheduledDay() {
     <div v-if="focusStore.isLoading" class="flex-1 flex items-center justify-center">
       <div class="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
         <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"></div>
-        <span>Loading Curriculum Day {{ currentDayOrder }}...</span>
+        <span>{{ $t('today.loading_curriculum', { day: currentDayOrder }) }}</span>
       </div>
     </div>
 
@@ -121,7 +121,7 @@ function resetToScheduledDay() {
           @click="navigateDay(currentDayOrder)"
           class="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
         >
-          Retry Day {{ currentDayOrder }}
+          {{ $t('today.retry_day', { day: currentDayOrder }) }}
         </button>
       </div>
     </div>
