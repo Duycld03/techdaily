@@ -18,6 +18,7 @@ import {
 } from 'lucide-vue-next'
 import type { BookDetail, ChunkSummary } from '~/stores/useLibraryStore'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
+import ThemeToggle from '~/components/common/ThemeToggle.vue'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -54,6 +55,31 @@ const currentChunk = computed<ChunkSummary | null>(() => {
   return book.value.chunks[activeChunkIndex.value] || null
 })
 
+const nextChunk = computed<ChunkSummary | null>(() => {
+  if (!book.value?.chunks?.length) return null
+  if (activeChunkIndex.value < book.value.chunks.length - 1) {
+    return book.value.chunks[activeChunkIndex.value + 1]
+  }
+  return null
+})
+
+const prevChunk = computed<ChunkSummary | null>(() => {
+  if (!book.value?.chunks?.length) return null
+  if (activeChunkIndex.value > 0) {
+    return book.value.chunks[activeChunkIndex.value - 1]
+  }
+  return null
+})
+
+const hasValidTakeaways = computed(() => {
+  if (!currentChunk.value?.keyTakeaways?.length) return false
+  const isDefaultPlaceholder =
+    currentChunk.value.keyTakeaways.length === 2 &&
+    currentChunk.value.keyTakeaways[0] === 'Core Architecture Principle' &&
+    currentChunk.value.keyTakeaways[1] === 'System Invariant'
+  return !isDefaultPlaceholder
+})
+
 const totalChunks = computed(() => book.value?.chunks?.length || 0)
 const progressPercentage = computed(() => {
   if (!totalChunks.value) return 0
@@ -62,9 +88,22 @@ const progressPercentage = computed(() => {
 
 const renderedMarkdown = computed(() => {
   if (!currentChunk.value?.originalTextMarkdown) return ''
-  // Watch highlighter readiness to re-render with syntax highlighting once loaded
   const _ = isHighlighterReady.value
-  return renderMarkdown(currentChunk.value.originalTextMarkdown)
+  let text = currentChunk.value.originalTextMarkdown
+
+  // Heading deduplication: suppress redundant initial heading if it matches the current chapterTitle
+  if (currentChunk.value.chapterTitle) {
+    const titleNorm = currentChunk.value.chapterTitle.trim().toLowerCase()
+    const match = text.match(/^\s*#{1,6}\s+([^\n\r]+)/)
+    if (match) {
+      const headingText = match[1].trim().toLowerCase()
+      if (headingText === titleNorm || titleNorm.includes(headingText) || headingText.includes(titleNorm)) {
+        text = text.replace(/^\s*#{1,6}\s+[^\n\r]+(\r?\n)+/, '')
+      }
+    }
+  }
+
+  return renderMarkdown(text)
 })
 
 onMounted(async () => {
@@ -227,16 +266,17 @@ async function handleHighlightSelection() {
 </script>
 
 <template>
-  <div class="h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden bg-white dark:bg-slate-950 transition-colors duration-200">
+  <div class="h-screen flex flex-col overflow-hidden bg-white dark:bg-slate-950 transition-colors duration-200">
     <!-- Top Sticky Reader Navigation Bar -->
-    <header class="h-14 px-3 sm:px-6 md:px-7 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 backdrop-blur flex items-center justify-between shrink-0 gap-2 sm:gap-4 z-20">
+    <header class="h-14 sm:h-15 px-3 sm:px-6 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 backdrop-blur flex items-center justify-between shrink-0 gap-2 sm:gap-4 z-20">
       <!-- Left: Back to Library & TOC Toggle -->
-      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         <NuxtLink
           to="/library"
           class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+          :title="$t('reader.return_library')"
         >
-          <ArrowLeft class="w-4 h-4" />
+          <ArrowLeft class="w-4 h-4 shrink-0" />
           <span class="hidden sm:inline">{{ $t('reader.library') }}</span>
         </NuxtLink>
 
@@ -244,52 +284,58 @@ async function handleHighlightSelection() {
         <button
           @click="isTocOpen = !isTocOpen"
           :class="[
-            'hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-semibold transition-colors',
+            'hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-semibold transition-colors shrink-0',
             isTocOpen
-              ? 'border-brand-300 dark:border-brand-800 bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-400'
+              ? 'border-brand-300 dark:border-brand-800 bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-400 font-bold'
               : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
           ]"
+          :title="isTocOpen ? $t('reader.close_toc') : $t('reader.open_toc')"
         >
-          <List class="w-4 h-4" />
+          <List class="w-4 h-4 shrink-0" />
           <span>{{ $t('reader.contents') }}</span>
         </button>
 
         <!-- Mobile TOC Drawer Button -->
         <button
           @click="isMobileTocOpen = true"
-          class="md:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0"
+          class="md:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+          :title="$t('reader.open_toc')"
         >
-          <List class="w-3.5 h-3.5" />
-          <span>{{ $t('reader.chapters') }}</span>
+          <List class="w-3.5 h-3.5 shrink-0" />
+          <span>{{ $t('reader.contents') }}</span>
         </button>
       </div>
 
       <!-- Center: Book Title & Active Chapter Indicator -->
-      <div class="flex-1 min-w-0 text-center px-1 sm:px-2">
-        <h1 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+      <div class="flex-1 min-w-0 text-center px-1 sm:px-3">
+        <h1 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate max-w-[140px] sm:max-w-xs md:max-w-md mx-auto">
           {{ book?.title || 'Technical Document' }}
         </h1>
-        <p v-if="currentChunk" class="text-xs text-slate-500 dark:text-slate-400 truncate">
-          {{ $t('reader.slice_of', { current: currentChunk.chunkOrder, total: totalChunks, chapter: currentChunk.chapterTitle }) }}
+        <p v-if="currentChunk" class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate max-w-[180px] sm:max-w-sm mx-auto">
+          <span class="hidden sm:inline">{{ $t('reader.slice_of', { current: currentChunk.chunkOrder, total: totalChunks, chapter: currentChunk.chapterTitle }) }}</span>
+          <span class="sm:hidden font-semibold text-brand-600 dark:text-brand-400">{{ $t('reader.slice_badge', { current: currentChunk.chunkOrder, total: totalChunks }) }}</span>
         </p>
       </div>
 
-      <!-- Right: Quiz Chapter, Reading Progress Bar & Next/Prev Quick Buttons -->
-      <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+      <!-- Right: Quiz Chapter, ThemeToggle, Progress & Quick Nav -->
+      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         <!-- 1-Click Quiz Chapter Action -->
         <NuxtLink
           v-if="currentChunk"
           :to="{ path: '/quiz', query: { topic: currentChunk.chapterTitle || book?.title } }"
-          class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-xs font-bold transition-colors shrink-0"
+          class="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-xs font-bold transition-colors shrink-0"
           :title="$t('reader.quiz_chapter_btn')"
         >
-          <HelpCircle class="w-3.5 h-3.5" />
-          <span>{{ $t('reader.quiz_chapter_btn') }}</span>
+          <HelpCircle class="w-3.5 h-3.5 shrink-0" />
+          <span class="hidden md:inline">{{ $t('reader.quiz_chapter_btn') }}</span>
         </NuxtLink>
 
+        <!-- Theme Toggle -->
+        <ThemeToggle />
+
         <!-- Progress Bar (Desktop) -->
-        <div class="hidden lg:flex items-center gap-2.5">
-          <div class="w-28 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+        <div class="hidden lg:flex items-center gap-2">
+          <div class="w-20 xl:w-28 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
             <div
               class="h-full bg-brand-500 rounded-full transition-all duration-300"
               :style="{ width: `${progressPercentage}%` }"
@@ -301,7 +347,7 @@ async function handleHighlightSelection() {
         </div>
 
         <!-- Quick Slice Prev/Next -->
-        <div class="flex items-center gap-1">
+        <div class="flex items-center gap-0.5 sm:gap-1">
           <button
             @click="goToPrevSlice"
             :disabled="activeChunkIndex <= 0"
@@ -399,22 +445,32 @@ async function handleHighlightSelection() {
               <button
                 v-for="(chunk, idx) in book?.chunks"
                 :key="chunk.id"
-                @click="selectChunk(idx)"
+                @click="selectChunk(idx); isMobileTocOpen = false"
                 :class="[
-                  'w-full text-left p-3 rounded-xl text-sm font-semibold transition-all flex items-start gap-2.5',
+                  'w-full text-left p-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-start gap-2.5',
                   activeChunkIndex === idx
-                    ? 'bg-brand-500/10 dark:bg-brand-500/20 text-brand-900 dark:text-brand-300 font-bold border-l-4 border-brand-500'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-brand-500/10 dark:bg-brand-500/20 text-brand-900 dark:text-brand-300 font-bold border-l-4 border-brand-500 shadow-sm'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 border-l-4 border-transparent'
                 ]"
               >
                 <CheckCircle2
                   v-if="completedSlices.has(chunk.chunkOrder)"
                   class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"
                 />
-                <span v-else class="text-xs text-slate-400 shrink-0 mt-0.5">
-                  #{{ chunk.chunkOrder }}
+                <span
+                  v-else
+                  class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-700 flex items-center justify-center text-xs text-slate-500 shrink-0 mt-0.5"
+                >
+                  {{ chunk.chunkOrder }}
                 </span>
-                <div class="flex-1 truncate">{{ chunk.chapterTitle }}</div>
+
+                <div class="flex-1 min-w-0">
+                  <div class="truncate">{{ chunk.chapterTitle }}</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1 font-normal">
+                    <Clock class="w-3 h-3" />
+                    <span>{{ $t('reader.read_min', { minutes: chunk.estimatedReadMinutes || 3 }) }}</span>
+                  </div>
+                </div>
               </button>
             </div>
           </div>
@@ -439,11 +495,11 @@ async function handleHighlightSelection() {
           <div class="space-y-3 sm:space-y-4 pb-5 sm:pb-6 border-b border-slate-200 dark:border-slate-800/80">
             <div class="flex items-center gap-2 sm:gap-3 text-xs font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider">
               <span class="px-2.5 py-1 rounded-lg bg-brand-100 dark:bg-brand-950/70 border border-brand-200 dark:border-brand-800">
-                {{ $t('today.day') }} {{ currentChunk.chunkOrder }} {{ $t('today.of') }} {{ totalChunks }}
+                {{ $t('reader.slice_badge', { current: currentChunk.chunkOrder, total: totalChunks }) }}
               </span>
               <span class="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-normal">
                 <Clock class="w-3.5 h-3.5" />
-                {{ currentChunk.estimatedReadMinutes || 3 }} {{ $t('today.estimated_read') }}
+                {{ $t('reader.reading_time', { minutes: currentChunk.estimatedReadMinutes || 3 }) }}
               </span>
             </div>
 
@@ -454,13 +510,13 @@ async function handleHighlightSelection() {
 
           <!-- Markdown Body -->
           <article
-            class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm leading-relaxed text-sm md:text-lg"
+            class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:before:content-none prose-code:after:content-none leading-relaxed text-sm md:text-lg"
             v-html="renderedMarkdown"
           ></article>
 
           <!-- Key Takeaways Callout -->
           <div
-            v-if="currentChunk.keyTakeaways?.length"
+            v-if="hasValidTakeaways"
             class="p-4 sm:p-6 rounded-3xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 space-y-3"
           >
             <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider">
@@ -480,47 +536,88 @@ async function handleHighlightSelection() {
           </div>
 
           <!-- Bottom Compact Navigation Footer -->
-          <div class="pt-6 mt-8 sm:mt-12 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <!-- Left: Prev Button -->
-            <div class="w-full sm:w-auto">
-              <button
-                v-if="activeChunkIndex > 0"
-                @click="goToPrevSlice"
-                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 font-semibold text-xs sm:text-sm transition-all shadow-sm active:scale-95 group"
-              >
-                <ChevronLeft class="w-4 h-4 transition-transform group-hover:-translate-x-0.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200" />
-                <span>{{ $t('reader.prev_slice') }}</span>
-              </button>
-            </div>
-
-            <!-- Center: Status / Completion Badge -->
-            <div v-if="activeChunkIndex === totalChunks - 1" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
-              <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
-              <span>{{ $t('reader.completed_doc') }}</span>
-            </div>
-            <div v-else class="text-xs text-slate-400 font-medium">
-              {{ $t('reader.done', { count: activeChunkIndex + 1, total: totalChunks }) }}
-            </div>
-
-            <!-- Right: Next Button or Return to Library -->
-            <div class="w-full sm:w-auto flex justify-end">
+          <div class="pt-6 mt-8 sm:mt-12 border-t border-slate-200 dark:border-slate-800/80 space-y-4">
+            <!-- Mobile Thumb-friendly Next Slice Card -->
+            <div class="sm:hidden space-y-3">
               <button
                 v-if="activeChunkIndex < totalChunks - 1"
                 @click="goToNextSlice"
-                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-600/20 active:scale-95 transition-all group"
+                class="w-full flex items-center justify-between p-4 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md shadow-brand-600/20 active:scale-[0.98] transition-all"
               >
-                <span>{{ $t('reader.next_slice') }}</span>
-                <ChevronRight class="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                <div class="text-left min-w-0 pr-2">
+                  <div class="text-xs uppercase tracking-wider text-brand-200 font-semibold">{{ $t('reader.next_slice') }}</div>
+                  <div class="truncate text-sm font-bold mt-0.5">{{ nextChunk?.chapterTitle || $t('reader.next_slice') }}</div>
+                </div>
+                <ChevronRight class="w-5 h-5 shrink-0" />
               </button>
 
               <NuxtLink
                 v-else
                 to="/library"
-                class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
+                class="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all"
               >
-                <ArrowLeft class="w-4 h-4" />
+                <ArrowLeft class="w-5 h-5 shrink-0" />
                 <span>{{ $t('reader.return_library') }}</span>
               </NuxtLink>
+
+              <div class="flex items-center justify-between pt-1 text-xs">
+                <button
+                  v-if="activeChunkIndex > 0"
+                  @click="goToPrevSlice"
+                  class="flex items-center gap-1 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 py-1"
+                >
+                  <ChevronLeft class="w-3.5 h-3.5" />
+                  <span>{{ $t('reader.prev_slice') }}</span>
+                </button>
+                <span class="text-slate-400 font-medium">
+                  {{ $t('reader.done', { count: activeChunkIndex + 1, total: totalChunks }) }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Desktop Navigation Row -->
+            <div class="hidden sm:flex items-center justify-between gap-4">
+              <!-- Left: Prev Button -->
+              <div class="w-full sm:w-auto">
+                <button
+                  v-if="activeChunkIndex > 0"
+                  @click="goToPrevSlice"
+                  class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-300 font-semibold text-xs sm:text-sm transition-all shadow-sm active:scale-95 group"
+                >
+                  <ChevronLeft class="w-4 h-4 transition-transform group-hover:-translate-x-0.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200" />
+                  <span>{{ $t('reader.prev_slice') }}</span>
+                </button>
+              </div>
+
+              <!-- Center: Status / Completion Badge -->
+              <div v-if="activeChunkIndex === totalChunks - 1" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+                <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
+                <span>{{ $t('reader.completed_doc') }}</span>
+              </div>
+              <div v-else class="text-xs text-slate-400 font-medium">
+                {{ $t('reader.done', { count: activeChunkIndex + 1, total: totalChunks }) }}
+              </div>
+
+              <!-- Right: Next Button or Return to Library -->
+              <div class="w-full sm:w-auto flex justify-end">
+                <button
+                  v-if="activeChunkIndex < totalChunks - 1"
+                  @click="goToNextSlice"
+                  class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-600/20 active:scale-95 transition-all group"
+                >
+                  <span>{{ nextChunk ? $t('reader.next_slice_with_title', { title: nextChunk.chapterTitle }) : $t('reader.next_slice') }}</span>
+                  <ChevronRight class="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                </button>
+
+                <NuxtLink
+                  v-else
+                  to="/library"
+                  class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
+                >
+                  <ArrowLeft class="w-4 h-4" />
+                  <span>{{ $t('reader.return_library') }}</span>
+                </NuxtLink>
+              </div>
             </div>
           </div>
         </div>

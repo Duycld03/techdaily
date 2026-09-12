@@ -23,6 +23,8 @@ export function useMarkdownRenderer() {
   if (import.meta.client) {
     if (typeof window !== 'undefined' && !window.__copyCode) {
       window.__copyCode = (btn: HTMLElement) => {
+        const rawCode = btn.getAttribute('data-code')
+        const code = rawCode ? decodeURIComponent(rawCode) : ''
         if (code) {
           navigator.clipboard.writeText(code)
           const span = btn.querySelector('span')
@@ -64,6 +66,9 @@ export function useMarkdownRenderer() {
       typographer: true,
       breaks: false
     })
+
+    // Disable legacy 4-space indented code blocks so accidental whitespace doesn't create spurious code fences
+    md.disable('code')
 
     // Custom Code Block (Fence) Renderer with Copy Button & Language Badge
     const defaultFence = md.renderer.rules.fence || function (tokens, idx, options, env, self) {
@@ -178,9 +183,18 @@ export function useMarkdownRenderer() {
       .replace(/\\Rightarrow/g, '⇒')
   }
 
+  function sanitizeScraperArtifacts(text: string): string {
+    if (!text) return ''
+    return text
+      .replace(/^Read in English\s+\[Edit\]\(.*?\)\s*$/gim, '')
+      .replace(/(\n\s*\* \* \*\s*){2,}/g, '\n\n* * *\n\n')
+      .replace(/(\n\s*---\s*){2,}/g, '\n\n---\n\n')
+  }
+
   function render(markdown: string): string {
     if (!markdown) return ''
-    const cleaned = cleanLatexSymbols(markdown)
+    const sanitized = sanitizeScraperArtifacts(markdown)
+    const cleaned = cleanLatexSymbols(sanitized)
     const md = createMarkdownInstance()
     return md.render(cleaned)
   }

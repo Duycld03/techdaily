@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import AppHeader from '~/components/layout/AppHeader.vue'
 import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppToastContainer from '~/components/common/AppToastContainer.vue'
 
+const route = useRoute()
 const authStore = useAuthStore()
+
+const isReaderMode = computed(() => route.path.startsWith('/read'))
 
 onMounted(() => {
   authStore.init()
@@ -13,10 +16,10 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
-    <AppHeader />
+    <AppHeader v-if="!isReaderMode" />
     <AppToastContainer />
     <div class="flex-1 flex overflow-hidden">
-      <AppSidebar />
+      <AppSidebar v-if="!isReaderMode" />
       <main class="flex-1 overflow-y-auto">
         <NuxtPage />
       </main>
