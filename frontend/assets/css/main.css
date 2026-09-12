@@ -121,25 +121,18 @@
 .code-content pre.shiki {
   background-color: transparent !important;
   margin: 0 !important;
-  padding: 1.25rem 1.5rem !important;
+  padding: 1rem 1.5rem !important;
   overflow-x: visible !important;
   font-family: inherit !important;
   font-size: inherit !important;
-  line-height: 1.75 !important;
+  line-height: inherit !important;
 }
 
 .shiki-container code,
 .code-content code {
   font-family: inherit !important;
   background-color: transparent !important;
-  line-height: 1.75 !important;
-}
-
-.shiki-container .line,
-.code-content .line {
-  display: block;
-  min-height: 1.6rem;
-  line-height: 1.75 !important;
+  line-height: inherit !important;
 }
 
 .markdown-body blockquote {

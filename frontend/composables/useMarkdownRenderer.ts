@@ -158,7 +158,7 @@ export function useMarkdownRenderer() {
 
       return `
         <div class="code-block-wrapper relative group my-6 sm:my-8 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg max-w-full w-full min-w-0 font-mono text-sm sm:text-[14.5px]">
-          <div class="flex items-center justify-between px-4 py-2 bg-slate-950/80 border-b border-slate-800/80 text-xs text-slate-400 select-none">
+          <div class="flex items-center justify-between px-4 sm:px-5 py-2.5 bg-slate-950/80 border-b border-slate-800/80 text-xs text-slate-400 select-none">
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
               <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
