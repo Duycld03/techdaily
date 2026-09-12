@@ -16,6 +16,57 @@ declare global {
 }
 
 
+interface AlertCalloutConfig {
+  label: string
+  borderClass: string
+  bgClass: string
+  titleClass: string
+  iconSvg: string
+}
+
+const ALERT_CONFIGS: Record<string, AlertCalloutConfig> = {
+  NOTE: {
+    label: 'Note',
+    borderClass: 'border-sky-500',
+    bgClass: 'bg-sky-50/70 dark:bg-sky-950/20',
+    titleClass: 'text-sky-700 dark:text-sky-400',
+    iconSvg:
+      '<svg class="w-4 h-4 shrink-0 text-sky-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>'
+  },
+  TIP: {
+    label: 'Tip',
+    borderClass: 'border-emerald-500',
+    bgClass: 'bg-emerald-50/70 dark:bg-emerald-950/20',
+    titleClass: 'text-emerald-700 dark:text-emerald-400',
+    iconSvg:
+      '<svg class="w-4 h-4 shrink-0 text-emerald-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>'
+  },
+  IMPORTANT: {
+    label: 'Important',
+    borderClass: 'border-indigo-500',
+    bgClass: 'bg-indigo-50/70 dark:bg-indigo-950/20',
+    titleClass: 'text-indigo-700 dark:text-indigo-400',
+    iconSvg:
+      '<svg class="w-4 h-4 shrink-0 text-indigo-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>'
+  },
+  WARNING: {
+    label: 'Warning',
+    borderClass: 'border-amber-500',
+    bgClass: 'bg-amber-50/70 dark:bg-amber-950/20',
+    titleClass: 'text-amber-700 dark:text-amber-400',
+    iconSvg:
+      '<svg class="w-4 h-4 shrink-0 text-amber-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>'
+  },
+  CAUTION: {
+    label: 'Caution',
+    borderClass: 'border-rose-500',
+    bgClass: 'bg-rose-50/70 dark:bg-rose-950/20',
+    titleClass: 'text-rose-700 dark:text-rose-400',
+    iconSvg:
+      '<svg class="w-4 h-4 shrink-0 text-rose-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>'
+  }
+}
+
 export function useMarkdownRenderer() {
   const isHighlighterReady = ref(getHighlighterSync() !== null)
 
@@ -132,13 +183,83 @@ export function useMarkdownRenderer() {
       `
     }
 
-    // Custom Blockquote Renderer for GitHub-style callouts
-    const defaultBlockquoteOpen = md.renderer.rules.blockquote_open || function (tokens, idx, options, env, self) {
-      return self.renderToken(tokens, idx, options)
+    // MarkdownIt Core Rule for Alert Callout Extraction
+    md.core.ruler.after('block', 'callouts', (state) => {
+      const tokens = state.tokens
+      for (let i = 0; i < tokens.length; i++) {
+        if (tokens[i].type !== 'blockquote_open') continue
+
+        // Find matching blockquote_close
+        let level = 1
+        let closeIdx = -1
+        for (let j = i + 1; j < tokens.length; j++) {
+          if (tokens[j].type === 'blockquote_open') level++
+          else if (tokens[j].type === 'blockquote_close') {
+            level--
+            if (level === 0) {
+              closeIdx = j
+              break
+            }
+          }
+        }
+        if (closeIdx === -1) continue
+
+        if (tokens[i + 1]?.type === 'paragraph_open' && tokens[i + 2]?.type === 'inline') {
+          const inlineToken = tokens[i + 2]
+          const markerMatch = inlineToken.content.match(
+            /^\s*(?:\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]|\*{0,2}\[(NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]\*{0,2})(?:\s*|\n|$)/i
+          )
+
+          if (markerMatch) {
+            const rawType = (markerMatch[1] || markerMatch[2]).toUpperCase()
+            const alertType = rawType === 'DANGER' ? 'CAUTION' : rawType
+            tokens[i].meta = { alertType }
+            tokens[closeIdx].meta = { alertType }
+
+            // Remaining content in the first inline token
+            let remaining = inlineToken.content.slice(markerMatch[0].length).trim()
+            if (remaining.toLowerCase() === alertType.toLowerCase()) {
+              remaining = ''
+            } else if (remaining.toLowerCase().startsWith(alertType.toLowerCase() + '\n')) {
+              remaining = remaining.slice(alertType.length).trim()
+            }
+
+            if (!remaining) {
+              // The first paragraph only contained the marker and/or duplicate title
+              tokens.splice(i + 1, 3)
+              closeIdx -= 3
+
+              // Check if the next paragraph is purely the duplicate title
+              if (tokens[i + 1]?.type === 'paragraph_open' && tokens[i + 2]?.type === 'inline') {
+                if (tokens[i + 2].content.trim().toLowerCase() === alertType.toLowerCase()) {
+                  tokens.splice(i + 1, 3)
+                  closeIdx -= 3
+                }
+              }
+            } else {
+              inlineToken.content = remaining
+              inlineToken.children = []
+            }
+          }
+        }
+      }
+    })
+
+    // Custom Blockquote Renderer for Alerts & Callouts
+    md.renderer.rules.blockquote_open = (tokens, idx) => {
+      const alertType = tokens[idx].meta?.alertType as string | undefined
+      if (!alertType || !ALERT_CONFIGS[alertType]) {
+        return '<blockquote class="my-4 pl-4 border-l-4 border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40 py-2.5 px-4 rounded-r-xl text-slate-700 dark:text-slate-300 not-italic">'
+      }
+      const cfg = ALERT_CONFIGS[alertType]
+      return `<div class="callout-box callout-${alertType.toLowerCase()} my-5 p-4 sm:p-5 rounded-2xl border-l-4 ${cfg.borderClass} ${cfg.bgClass} shadow-sm not-italic"><div class="flex items-center gap-2 font-bold ${cfg.titleClass} text-xs sm:text-sm uppercase tracking-wider mb-2 select-none">${cfg.iconSvg}<span>${cfg.label}</span></div><div class="callout-content text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-relaxed prose-p:my-1.5 prose-p:leading-relaxed">`
     }
 
-    md.renderer.rules.blockquote_open = (tokens, idx, options, env, self) => {
-      return '<blockquote class="my-4 pl-4 border-l-4 border-emerald-500 bg-emerald-500/5 dark:bg-emerald-950/20 py-2.5 px-4 rounded-r-xl text-slate-700 dark:text-slate-300">'
+    md.renderer.rules.blockquote_close = (tokens, idx) => {
+      if (tokens[idx].meta?.alertType) {
+        return '</div></div>'
+      }
+      return '</blockquote>'
     }
 
     // Custom Table Renderer
@@ -189,6 +310,7 @@ export function useMarkdownRenderer() {
       .replace(/^Read in English\s+\[Edit\]\(.*?\)\s*$/gim, '')
       .replace(/(\n\s*\* \* \*\s*){2,}/g, '\n\n* * *\n\n')
       .replace(/(\n\s*---\s*){2,}/g, '\n\n---\n\n')
+      .replace(/^>\s*["“']\s*(\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]|\*{0,2}\[(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]\*{0,2})/gim, '> $1')
   }
 
   function render(markdown: string): string {

@@ -114,4 +114,70 @@ async function toggleFavorite(itemId: string) {
     expect(output).not.toContain('<img src="x"')
     expect(output).toContain('&lt;script&gt;')
   })
+
+  it('renders GitHub alert callouts with distinct semantic colors and titles', () => {
+    const { render } = useMarkdownRenderer()
+    const input = `
+> [!WARNING]
+> When using System.Text.RegularExpressions, pass a timeout.
+`
+    const output = render(input)
+    expect(output).toContain('callout-warning')
+    expect(output).toContain('border-amber-500')
+    expect(output).toContain('bg-amber-50/70')
+    expect(output).toContain('Warning')
+    expect(output).toContain('When using System.Text.RegularExpressions, pass a timeout.')
+  })
+
+  it('deduplicates repetitive alert headers from scraped documentation', () => {
+    const { render } = useMarkdownRenderer()
+    const input = `
+> **[WARNING]**
+>
+> Warning
+>
+> When using System.Text.RegularExpressions, pass a timeout.
+`
+    const output = render(input)
+    expect(output).toContain('callout-warning')
+    expect(output).toContain('Warning</span>')
+    // Ensure the word "Warning" is not rendered multiple times in the body
+    const matches = output.match(/Warning/g)
+    expect(matches?.length).toBe(1)
+    expect(output).not.toContain('**[WARNING]**')
+    expect(output).toContain('When using System.Text.RegularExpressions, pass a timeout.')
+  })
+
+  it('renders Note, Tip, Important, and Caution callouts correctly', () => {
+    const { render } = useMarkdownRenderer()
+    const noteOutput = render('> [!NOTE]\n> Note content')
+    expect(noteOutput).toContain('callout-note')
+    expect(noteOutput).toContain('border-sky-500')
+    expect(noteOutput).toContain('Note content')
+
+    const tipOutput = render('> [!TIP]\n> Tip content')
+    expect(tipOutput).toContain('callout-tip')
+    expect(tipOutput).toContain('border-emerald-500')
+    expect(tipOutput).toContain('Tip content')
+
+    const impOutput = render('> [!IMPORTANT]\n> Important content')
+    expect(impOutput).toContain('callout-important')
+    expect(impOutput).toContain('border-indigo-500')
+
+    const cautionOutput = render('> [!CAUTION]\n> Caution content')
+    expect(cautionOutput).toContain('callout-caution')
+    expect(cautionOutput).toContain('border-rose-500')
+  })
+
+  it('renders standard blockquotes with neutral styling when no alert marker is present', () => {
+    const { render } = useMarkdownRenderer()
+    const input = `
+> This is a normal quote from Martin Fowler.
+`
+    const output = render(input)
+    expect(output).toContain('<blockquote')
+    expect(output).toContain('border-slate-300')
+    expect(output).toContain('This is a normal quote from Martin Fowler.')
+    expect(output).not.toContain('callout-box')
+  })
 })

@@ -161,7 +161,35 @@ public class WebArticleCrawler : IWebArticleCrawler
             else if (alertClass.Contains("CAUTION") || alertClass.Contains("DANGER")) alertType = "CAUTION";
             else if (alertClass.Contains("IMPORTANT")) alertType = "IMPORTANT";
 
-            var blockquote = HtmlNode.CreateNode($"<blockquote><p><strong>[{alertType}]</strong> {alert.InnerHtml}</p></blockquote>");
+            // Strip redundant duplicate title elements (e.g. <p class="alert-title">Warning</p> or <p>Warning</p>)
+            var titleNode = alert.SelectSingleNode(".//p[contains(@class, 'title') or contains(@class, 'alert')]")
+                ?? alert.SelectSingleNode(".//span[contains(@class, 'title')]")
+                ?? alert.SelectSingleNode(".//div[contains(@class, 'title')]");
+
+            if (titleNode != null && (titleNode.InnerText.Trim().Equals(alertType, StringComparison.OrdinalIgnoreCase) ||
+                                      titleNode.InnerText.Trim().Equals("Caution", StringComparison.OrdinalIgnoreCase) ||
+                                      titleNode.InnerText.Trim().Equals("Warning", StringComparison.OrdinalIgnoreCase) ||
+                                      titleNode.InnerText.Trim().Equals("Note", StringComparison.OrdinalIgnoreCase) ||
+                                      titleNode.InnerText.Trim().Equals("Tip", StringComparison.OrdinalIgnoreCase) ||
+                                      titleNode.InnerText.Trim().Equals("Important", StringComparison.OrdinalIgnoreCase)))
+            {
+                titleNode.Remove();
+            }
+            else
+            {
+                var firstP = alert.SelectSingleNode(".//p");
+                if (firstP != null && (firstP.InnerText.Trim().Equals(alertType, StringComparison.OrdinalIgnoreCase) ||
+                                       firstP.InnerText.Trim().Equals("Caution", StringComparison.OrdinalIgnoreCase) ||
+                                       firstP.InnerText.Trim().Equals("Warning", StringComparison.OrdinalIgnoreCase) ||
+                                       firstP.InnerText.Trim().Equals("Note", StringComparison.OrdinalIgnoreCase) ||
+                                       firstP.InnerText.Trim().Equals("Tip", StringComparison.OrdinalIgnoreCase) ||
+                                       firstP.InnerText.Trim().Equals("Important", StringComparison.OrdinalIgnoreCase)))
+                {
+                    firstP.Remove();
+                }
+            }
+
+            var blockquote = HtmlNode.CreateNode($"<blockquote><p>[!{alertType}]</p>{alert.InnerHtml}</blockquote>");
             alert.ParentNode.ReplaceChild(blockquote, alert);
         }
     }
