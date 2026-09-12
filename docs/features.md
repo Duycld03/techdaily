@@ -50,7 +50,7 @@ This document serves as the single source of truth for all implemented, active, 
 |---|---|---|---|
 | **Markdown Note Ingestion** | Raw markdown parsing and auto-slicing by headings (`#`, `##`) | 🟢 DONE | `Application/UseCases/Library/CreateBook` |
 | **Large PDF Stream Ingestion** | Zero-LOH streaming for PDFs up to 200MB (800 pages) via PdfPig | 🟢 DONE | `openspec/changes/pdf-upload-and-web-crawler/` |
-| **Web Article Crawler** | Crawl documentation URLs (Microsoft Learn, Dev.to, Medium) to Markdown | 🟢 DONE | `openspec/changes/pdf-upload-and-web-crawler/` |
+| **Web Article Crawler** | Crawl documentation URLs (Microsoft Learn, Dev.to, Medium) to clean Markdown with moniker deduplication, tab filtering & relative link resolution | 🟢 DONE | `Infrastructure/Services/WebArticleCrawler.cs` |
 | **Cascading Document Soft Delete** | Safe removal of books with automatic chunk cleanup | 🟢 DONE | `Application/UseCases/Library/DeleteBook` |
 
 ---
@@ -60,7 +60,10 @@ This document serves as the single source of truth for all implemented, active, 
 |---|---|---|---|
 | **Chapter Table of Contents** | Real-time chapter tree navigation and active reading slice indicator | 🟢 DONE | `openspec/changes/immersive-book-reader/` |
 | **1-Click AI Quiz Practice** | 1-Click "Luyện Quiz Chương Này" jump prefilling `/quiz?topic=...` | 🟢 DONE | `frontend/pages/read/[bookId].vue` |
-| **IDE-Grade Syntax Highlighting**| Shiki TextMate highlighting for C#, TS, JS, SQL, Python, Go, Dockerfile | 🟢 DONE | `frontend/plugins/shiki.client.ts` |
+| **IDE-Grade Syntax Highlighting**| Shiki TextMate highlighting for C#, TS, JS, SQL, Python, Go, Dockerfile, and Output logs | 🟢 DONE | `frontend/utils/shikiHighlighter.ts` |
+| **Spacious Code Typography** | Generous line margins (`my-6 sm:my-8`), 1.75 line height, and non-collapsing empty lines | 🟢 DONE | `frontend/assets/css/main.css` |
+| **External Link Tab Isolation** | External docs open in new tab (`target="_blank" rel="noopener noreferrer"`) while preserving in-page fragment bookmarks | 🟢 DONE | `frontend/composables/useMarkdownRenderer.ts` |
+| **Backward-Compatible Link Resolution**| Automatically resolves relative links in older books against `authorOrSourceUrl` | 🟢 DONE | `frontend/pages/read/[bookId].vue` |
 | **Reading Progress Persistence** | Live scroll percentage counter and local slice progress bookmarking | 🟢 DONE | `frontend/pages/read/[bookId].vue` |
 | **Floating Action Toolbar** | Scoped text selection toolbar for AI Explainer, highlight, copy | 🟢 DONE | `AGENTS.md` Rule 3 & 10 |
 

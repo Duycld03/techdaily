@@ -49,6 +49,14 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
    - Documentation callouts (`<div class="NOTE">`, `<div class="TIP">`, `<div class="WARNING">`) MUST be converted to Markdown blockquotes.
 3. **GitHub Raw Link Auto-Resolution:**
    - GitHub web URLs (`github.com/.../blob/...`) MUST be auto-resolved to `raw.githubusercontent.com` before fetching.
+4. **Canonical Relative URL Resolution:**
+   - All relative hyperlinks (`<a href="...">`) and images (`<img src="...">`) MUST be resolved against `sourceUrl` into absolute URLs so Markdown content stores canonical web destinations.
+5. **Multi-Version Moniker Filtering:**
+   - Multi-version articles (e.g. Microsoft Learn ASP.NET Core documentation with `?view=aspnetcore-10.0`) MUST filter out non-matching `<div data-moniker="...">` blocks, preventing the article from duplicating across .NET 8, .NET 6, etc.
+6. **Hidden Element & Tab Panel Isolation:**
+   - Inactive tab panels (`<section role="tabpanel" hidden>`), accessibility-hidden blocks (`aria-hidden="true"` on sections/divs), and UI tab lists (`<ul role="tablist">`) MUST be stripped to prevent duplicate instructions across tool environments (e.g. Visual Studio vs Visual Studio Code).
+7. **Junk Widgets & Unauthorized Template Removal:**
+   - Elements with `data-contenteditbtn` (GitHub Edit buttons), `unauthorized-private-section`, and site feedback rating widgets MUST be stripped to ensure pristine reading content.
 
 ---
 
@@ -80,6 +88,14 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 7. **Prohibition of Browser Native Dialogs (`alert`, `confirm`, `prompt`):**
    - Native popups block execution threads, are impossible to theme, and degrade the user experience.
    - All interactive confirmations (e.g. deleting highlights, removing library documents) MUST use custom Vue modals rendered via `<Teleport to="body">` with standard dark/light theme tokens and bilingual localization.
+8. **External Documentation Link Tab Isolation & Security:**
+   - All external `http://`, `https://`, and `//` links rendered in Markdown MUST automatically include `target="_blank"` and `rel="noopener noreferrer"` to prevent tab-napping and referrer leaks.
+   - Clicking documentation links MUST open a separate browser tab, keeping the user's active TechDaily reading session intact.
+   - In-page anchor fragments (`#...`) MUST remain within the current tab to preserve local section jumping.
+   - Reader views MUST pass `book.authorOrSourceUrl` to `renderMarkdown(text, baseUrl)` to dynamically resolve legacy relative links for backward compatibility.
+9. **Spacious Code Typography & Terminal Output Detection:**
+   - Code block wrappers MUST use spacious vertical margins (`my-6 sm:my-8`), standardized responsive font sizes (`text-sm sm:text-[14.5px]`), and comfortable padding (`padding: 1rem 1.5rem !important`).
+   - Plaintext / terminal console output code blocks (` ```txt `, ` ```output `, CLI logs) MUST be auto-detected and rendered with an `Output` badge rather than falling back to programming languages.
 
 ---
 
@@ -184,5 +200,7 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 | **Naive String Slicing with `LastIndexOf` on AI JSON** | LLM hallucinated trailing brackets (`] } ]`) break parsing with `JsonReaderException` | Use balanced bracket depth parsing (`ExtractJsonArray`, `ExtractJsonObject`) |
 | **Leaking Past User Answers into New Quiz Sessions** | Returning non-null `lastSelectedOptionIndex` in new quiz DTOs causes answers to be pre-marked | Always initialize session DTOs with `LastSelectedOptionIndex = null` |
 | **Coupling Inactive Historical Selection to Pre-Submit Option Badges** | Checking `lastSelectedOptionIndex` before user submission lights up badges prematurely while submit buttons remain disabled | Evaluate only active session state (`selectedOptionIndex === idx`) while answering |
+| **Navigating Internal Routes on Relative Crawled Hyperlinks** | Unresolved relative links (`href="subtopic"`) navigate internally to non-existent `/read/subtopic` book routes | Resolve relative `href` and `src` against sourceUrl at crawl time and attach `target="_blank" rel="noopener noreferrer"` at render time |
+| **Ignoring [hidden] and Inactive Tab Panels in Document Crawlers** | Inactive tool tabs (e.g. VS Code when VS is selected) and hidden templates duplicate instructions and leak false authorization warnings | Strip elements with `[hidden]`, `[aria-hidden='true']`, and `ul[role='tablist']` in `WebArticleCrawler` |
 
 
