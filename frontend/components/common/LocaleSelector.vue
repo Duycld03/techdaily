@@ -1,8 +1,8 @@
 <script setup lang="ts">
 const { locale, setLocale } = useI18n()
 
-function changeLocale(newLocale: string) {
-  setLocale(newLocale as any)
+async function changeLocale(newLocale: string) {
+  await setLocale(newLocale as any)
 }
 </script>
 
