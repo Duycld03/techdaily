@@ -15,7 +15,7 @@
 ## 3. Look-Ahead Buffer & AI Trade-off Synthesis
 - [ ] Implement `LookAheadBufferService` to pre-generate drills for the first 3 chunks and maintain a 3-chunk sliding buffer <!-- id: 3.1 -->
 - [ ] Implement Priority Promotion Channel for JIT generation when users rapidly navigate forward <!-- id: 3.2 -->
-- [ ] Configure Gemini 3.1 Flash Lite Trade-off Scenario generator with balanced bracket depth parsing <!-- id: 3.3 -->
+- [ ] Configure Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`) Trade-off Scenario generator with balanced bracket depth parsing <!-- id: 3.3 -->
 - [ ] Add fallback scenario generation on timeout (>6s) or rate limit <!-- id: 3.4 -->
 
 ## 4. Frontend: Doc Pacer & Roadmap Synchronization

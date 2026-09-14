@@ -25,7 +25,7 @@
 │              │                              │                    └──────────┬───────────┘ │
 │              ▼                              ▼                               ▼             │
 │   ┌────────────────────────┐     ┌───────────────────────┐       ┌──────────────────────┐ │
-│   │ Disk Spooling Stream   │     │ PostgreSQL 17         │◄──────┤ Gemini 3.1 Flash Lite│ │
+│   │ Disk Spooling Stream   │     │ PostgreSQL 17         │◄──────┤Gemini 3.5 Flash-Lite │ │
 │   │ (80KB buffer, Zero-LOH)│     │ (Books, Chunks, Pacer)│       │ (Look-Ahead Buffer)  │ │
 │   └────────────────────────┘     └───────────────────────┘       └──────────────────────┘ │
 └───────────────────────────────────────────────────────────────────────────────────────────┘
@@ -51,7 +51,7 @@
      - The reader loads Chunk $K$ immediately from PostgreSQL (<10ms).
      - The challenge pane displays the `AISynthesisSkeletonCard` component.
      - The backend promotes Chunk $K$ to the head of `PriorityChannel<ScenarioGenTask>`.
-     - Gemini 3.1 Flash Lite completes synthesis in ~1.5s, sending the result to the client via polling/SSE to smoothly fade into the interactive scenario.
+     - Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`) completes synthesis in ~1.5s, sending the result to the client via polling/SSE to smoothly fade into the interactive scenario.
 
 ## 4. Database Schema Modifications
 
