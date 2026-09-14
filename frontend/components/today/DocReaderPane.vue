@@ -23,7 +23,9 @@ const cleanSummary = computed(() => {
   if (!props.topic.summary) return ''
   let s = props.topic.summary
   // Strip leading '#+ Heading' if present
-  s = s.replace(/^\s*#{1,6}\s+[^\n\r]+(?:\r?\n)*/, '').trim()
+  s = s.replace(/^\s*#{1,6}\s+[^\n\r]+(?:\r?\n)*/gm, '').trim()
+  // Strip pre-release notices if present
+  s = s.replace(/(?:Important\s+)?This information relates to a pre-release product[^\n.]*\.[^\n.]*\./gi, '').trim()
   return s || props.topic.title
 })
 

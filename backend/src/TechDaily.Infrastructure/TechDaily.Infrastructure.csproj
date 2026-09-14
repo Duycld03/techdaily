@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TechDaily.Application\TechDaily.Application.csproj" />
+    <InternalsVisibleTo Include="TechDaily.Tests" />
   </ItemGroup>
 
   <ItemGroup>

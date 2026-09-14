@@ -69,6 +69,8 @@ watch(() => focusStore.data?.pacer?.bookId, async (newBookId) => {
 interface ChapterSlice {
   id: string
   chunkOrder: number
+  sliceTitle: string
+  chapterTitle: string
   summaryMarkdown: string
   estimatedReadMinutes: number
   isCompleted: boolean
@@ -86,32 +88,95 @@ interface ChapterMilestone {
   totalSlicesCount: number
 }
 
+function sanitizeSummary(text?: string): string {
+  if (!text) return ''
+
+  // 1. Strip markdown headings (# Title, ## Subtitle, ### 07/30/2025)
+  let clean = text.replace(/^[ \t]*#{1,6}\s+[^\r\n]*/gm, '')
+
+  // 2. Strip code blocks
+  clean = clean.replace(/```[\s\S]*?```/g, '')
+
+  // 3. Strip dates like 07/30/2025 or 2025-07-30
+  clean = clean.replace(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/g, '')
+
+  // 4. Strip pre-release notices
+  clean = clean.replace(/(?:Important\s+)?This information relates to a pre-release product[^\n.]*\.[^\n.]*\./gi, '')
+
+  // 5. Collapse multiple whitespace and newlines
+  clean = clean.replace(/\s+/g, ' ').trim()
+
+  if (!clean || clean.length < 10) {
+    return ''
+  }
+
+  return clean.length > 200 ? clean.substring(0, 197) + '...' : clean
+}
+
+function parseSliceTitle(rawTitle?: string) {
+  const title = (rawTitle || 'Chapter Overview').trim()
+
+  // 1. Check for colon: "Fundamentals: Overview"
+  if (title.includes(':')) {
+    const parts = title.split(':')
+    const prefix = parts[0].trim()
+    const rest = parts.slice(1).join(':').trim()
+    if (prefix.length > 0 && prefix.length <= 45) {
+      return {
+        moduleName: prefix,
+        sliceTitle: rest || prefix
+      }
+    }
+  }
+
+  // 2. Check for dash: "Module 1 - Overview"
+  if (title.includes(' - ')) {
+    const parts = title.split(' - ')
+    const prefix = parts[0].trim()
+    const rest = parts.slice(1).join(' - ').trim()
+    if (prefix.length > 0 && prefix.length <= 45) {
+      return {
+        moduleName: prefix,
+        sliceTitle: rest || prefix
+      }
+    }
+  }
+
+  // 3. Strip section/part suffixes for base title grouping
+  const baseTitle = title.replace(/\s*\((?:Section|Part)\s+\d+\)/gi, '').trim()
+  return {
+    moduleName: baseTitle || title,
+    sliceTitle: title
+  }
+}
+
 const chapterMilestones = computed<ChapterMilestone[]>(() => {
   if (!libraryStore.selectedBook?.chunks || !focusStore.data?.pacer) return []
   const pacer = focusStore.data.pacer
-  const chunks = libraryStore.selectedBook.chunks
+  const rawChunks = libraryStore.selectedBook.chunks
 
-  const map = new Map<string, typeof chunks>()
-  for (const chunk of chunks) {
-    const title = chunk.chapterTitle || 'Chapter Overview'
-    if (!map.has(title)) {
-      map.set(title, [])
-    }
-    map.get(title)!.push(chunk)
-  }
+  // 1. Sort strictly by chunkOrder
+  const chunks = [...rawChunks].sort((a, b) => a.chunkOrder - b.chunkOrder)
 
-  let chapterIdx = 1
   const list: ChapterMilestone[] = []
+  let currentGroupName = ''
+  let currentGroupChunks: typeof chunks = []
 
-  for (const [title, chapterChunks] of map.entries()) {
-    const slices: ChapterSlice[] = chapterChunks.map(c => {
+  function flushGroup() {
+    if (currentGroupChunks.length === 0) return
+
+    const slices: ChapterSlice[] = currentGroupChunks.map(c => {
       const isCompleted = c.chunkOrder < pacer.currentChunkOrder
       const isActiveToday = c.chunkOrder === pacer.currentChunkOrder
       const isUpcoming = c.chunkOrder > pacer.currentChunkOrder
+      const parsed = parseSliceTitle(c.chapterTitle)
+
       return {
         id: c.id,
         chunkOrder: c.chunkOrder,
-        summaryMarkdown: c.summaryMarkdown,
+        sliceTitle: parsed.sliceTitle,
+        chapterTitle: c.chapterTitle || 'Chapter Overview',
+        summaryMarkdown: sanitizeSummary(c.summaryMarkdown) || 'Architectural reading slice and trade-off scenario.',
         estimatedReadMinutes: c.estimatedReadMinutes,
         isCompleted,
         isActiveToday,
@@ -125,16 +190,30 @@ const chapterMilestones = computed<ChapterMilestone[]>(() => {
     const isActive = slices.some(s => s.isActiveToday)
 
     list.push({
-      chapterTitle: title,
-      chapterIndex: chapterIdx++,
+      chapterTitle: currentGroupName,
+      chapterIndex: list.length + 1,
       slices,
       isCompleted,
       isActive,
       completedSlicesCount,
       totalSlicesCount
     })
+
+    currentGroupChunks = []
   }
 
+  for (const chunk of chunks) {
+    const parsed = parseSliceTitle(chunk.chapterTitle)
+    if (parsed.moduleName === currentGroupName && currentGroupChunks.length > 0) {
+      currentGroupChunks.push(chunk)
+    } else {
+      flushGroup()
+      currentGroupName = parsed.moduleName
+      currentGroupChunks = [chunk]
+    }
+  }
+
+  flushGroup()
   return list
 })
 
@@ -156,7 +235,10 @@ watch(chapterMilestones, (milestones) => {
 const filteredChapters = computed(() => {
   if (!chapterSearch.value.trim()) return chapterMilestones.value
   const query = chapterSearch.value.toLowerCase().trim()
-  return chapterMilestones.value.filter(c => c.chapterTitle.toLowerCase().includes(query))
+  return chapterMilestones.value.filter(c => 
+    c.chapterTitle.toLowerCase().includes(query) ||
+    c.slices.some(s => s.sliceTitle.toLowerCase().includes(query) || s.summaryMarkdown.toLowerCase().includes(query))
+  )
 })
 
 const displayedChapters = computed(() => {
@@ -494,8 +576,11 @@ function getDifficultyColor(diff: number) {
 
               <!-- Summary Preview -->
               <div class="space-y-1.5 mb-4">
-                <p class="text-sm text-slate-700 dark:text-slate-300 line-clamp-3 leading-relaxed">
-                  {{ slice.summaryMarkdown || 'Architectural reading slice and trade-off scenario.' }}
+                <h4 v-if="slice.sliceTitle" class="text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                  {{ slice.sliceTitle }}
+                </h4>
+                <p class="text-sm text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed">
+                  {{ slice.summaryMarkdown }}
                 </p>
               </div>
 

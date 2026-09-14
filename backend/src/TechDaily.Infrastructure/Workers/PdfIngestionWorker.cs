@@ -93,8 +93,7 @@ public class PdfIngestionWorker : BackgroundService
                 var chunks = new List<DocumentChunk>();
                 foreach (var slice in result.Slices)
                 {
-                    var contentWithoutHeading = Regex.Replace(slice.ContentMarkdown, @"^\s*#+\s+[^\n\r]+(\r?\n)*", "").Trim();
-                    var summaryText = string.IsNullOrWhiteSpace(contentWithoutHeading) ? slice.ChapterTitle : contentWithoutHeading;
+                    var summaryText = SanitizeSummary(slice.ContentMarkdown, slice.ChapterTitle);
 
                     var chunk = new DocumentChunk
                     {
@@ -102,7 +101,7 @@ public class PdfIngestionWorker : BackgroundService
                         ChunkOrder = slice.Order,
                         ChapterTitle = slice.ChapterTitle,
                         OriginalTextMarkdown = slice.ContentMarkdown,
-                        SummaryMarkdown = summaryText.Length > 300 ? summaryText[..300] + "..." : summaryText,
+                        SummaryMarkdown = summaryText,
                         KeyTakeaways = slice.KeyTakeaways,
                         Language = job.Language,
                         EstimatedReadMinutes = slice.EstimatedReadMinutes
@@ -190,5 +189,29 @@ public class PdfIngestionWorker : BackgroundService
         {
             _logger.LogDebug(ex, "Minor error updating progress for book {BookId}", bookId);
         }
+    }
+
+    private static string SanitizeSummary(string contentMarkdown, string chapterTitle)
+    {
+        if (string.IsNullOrWhiteSpace(contentMarkdown)) return chapterTitle;
+
+        // 1. Strip leading and inline markdown headings (# Heading, ## Subheading, ### 07/30/2025)
+        var cleaned = Regex.Replace(contentMarkdown, @"(?m)^\s*#+\s+[^\n\r]*$", "").Trim();
+
+        // 2. Strip code blocks from summary
+        cleaned = Regex.Replace(cleaned, @"(?s)```.*?```", "").Trim();
+
+        // 3. Strip pre-release disclaimer boilerplate
+        cleaned = Regex.Replace(cleaned, @"(?i)(?:Important\s+)?This information relates to a pre-release product[^.\n]*\.[^.\n]*\.(?:\s*For the current release[^.\n]*\.)?", "").Trim();
+
+        // 4. Collapse multiple whitespace and newlines
+        cleaned = Regex.Replace(cleaned, @"\s+", " ").Trim();
+
+        if (string.IsNullOrWhiteSpace(cleaned) || cleaned.Length < 15)
+        {
+            return chapterTitle;
+        }
+
+        return cleaned.Length > 280 ? cleaned.Substring(0, 277) + "..." : cleaned;
     }
 }

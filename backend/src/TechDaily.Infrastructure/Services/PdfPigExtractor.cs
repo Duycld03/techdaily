@@ -11,7 +11,7 @@ public class PdfPigExtractor : IPdfExtractor
         @"^(Chương\s+\d+|Chapter\s+\d+|Chuyên\s+đề\s+\d+|Part\s+\d+|Section\s+\d+|Bài\s+\d+|Topic\s+\d+|[A-Z0-9\.\s]{4,60}$)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
-    private record RawBookmark(string Title, int PageNumber, int Level);
+    internal record RawBookmark(string Title, int PageNumber, int Level, string? ParentTitle = null);
 
     public async Task<PdfExtractionResult> ExtractSlicesAsync(
         Stream pdfStream,
@@ -107,29 +107,80 @@ public class PdfPigExtractor : IPdfExtractor
         CancellationToken cancellationToken)
     {
         var slices = new List<ExtractedPdfSlice>();
-        // Deduplicate bookmarks with same page and clean titles
-        var distinctBookmarks = bookmarks
+        var validBookmarks = bookmarks
             .Where(b => !IsIgnoredBookmark(b.Title) && b.PageNumber <= pagesToProcess)
-            .OrderBy(b => b.PageNumber)
-            .GroupBy(b => b.PageNumber)
-            .Select(g => g.OrderBy(b => b.Level).First())
             .ToList();
 
-        if (distinctBookmarks.Count == 0) return slices;
+        if (validBookmarks.Count == 0) return slices;
+
+        // Determine optimal curation depth threshold:
+        // Level 0: Volume / Book Title
+        // Level 1: Modules / Major Sections
+        // Level 2: Standalone Topics / Articles
+        // Level 3+: Minor subheadings inside articles (to be aggregated)
+        int targetMaxDepth = 1;
+        var level0Count = validBookmarks.Count(b => b.Level == 0);
+        var level1Count = validBookmarks.Count(b => b.Level == 1);
+        var level2Count = validBookmarks.Count(b => b.Level == 2);
+
+        if (level0Count <= 3 && level1Count <= 25 && level2Count >= 10)
+        {
+            // Root is document title, Level 1 has a few modules, Level 2 contains the articles
+            targetMaxDepth = 2;
+        }
+        else if (level0Count <= 3 && level1Count > 25)
+        {
+            // Level 1 itself contains plenty of chapters/articles
+            targetMaxDepth = 1;
+        }
+        else if (level0Count > 10)
+        {
+            // Level 0 contains the chapters
+            targetMaxDepth = 0;
+        }
+        else
+        {
+            targetMaxDepth = Math.Min(validBookmarks.Max(b => b.Level), 2);
+        }
+
+        // Filter bookmarks by targetMaxDepth
+        var curatedBookmarks = validBookmarks
+            .Where(b => b.Level <= targetMaxDepth)
+            .OrderBy(b => b.PageNumber)
+            .ThenBy(b => b.Level)
+            .GroupBy(b => b.PageNumber)
+            .Select(g => g.First()) // Keep top-level bookmark when multiple share a page
+            .OrderBy(b => b.PageNumber)
+            .ToList();
+
+        // Fallback: If filtering resulted in too few (< 2) but validBookmarks had more, include all valid
+        if (curatedBookmarks.Count < 2 && validBookmarks.Count >= 2)
+        {
+            curatedBookmarks = validBookmarks
+                .OrderBy(b => b.PageNumber)
+                .ThenBy(b => b.Level)
+                .GroupBy(b => b.PageNumber)
+                .Select(g => g.First())
+                .OrderBy(b => b.PageNumber)
+                .ToList();
+        }
+
+        if (curatedBookmarks.Count == 0) return slices;
 
         int sliceOrder = 1;
 
-        for (int i = 0; i < distinctBookmarks.Count; i++)
+        for (int i = 0; i < curatedBookmarks.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var current = distinctBookmarks[i];
+            var current = curatedBookmarks[i];
             int startPage = Math.Clamp(current.PageNumber, 1, pagesToProcess);
-            int endPage = (i + 1 < distinctBookmarks.Count)
-                ? Math.Clamp(distinctBookmarks[i + 1].PageNumber - 1, startPage, pagesToProcess)
+            int endPage = (i + 1 < curatedBookmarks.Count)
+                ? Math.Clamp(curatedBookmarks[i + 1].PageNumber - 1, startPage, pagesToProcess)
                 : pagesToProcess;
 
-            progress?.Report(new PdfExtractionProgress(startPage, totalPages, $"Extracting chapter: {current.Title}"));
+            var sliceTitle = FormatCuratedTitle(current, sliceOrder);
+            progress?.Report(new PdfExtractionProgress(startPage, totalPages, $"Extracting topic: {sliceTitle}"));
 
             var chapterSb = new StringBuilder();
             for (int p = startPage; p <= endPage; p++)
@@ -154,43 +205,78 @@ public class PdfPigExtractor : IPdfExtractor
             var chapterText = chapterSb.ToString().Trim();
             if (string.IsNullOrWhiteSpace(chapterText)) continue;
 
-            // Split chapters longer than 900 words into readable slices
+            // Semantic chapter splitting: keep complete topics intact (up to 5,000 words).
+            // Only split at natural ## headings if topic is exceptionally monolithic.
             var wordCount = chapterText.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-            if (wordCount <= 900)
+            if (wordCount <= 5000)
             {
-                slices.Add(CreateSlice(sliceOrder++, current.Title, chapterText));
+                slices.Add(CreateSlice(sliceOrder++, sliceTitle, chapterText));
             }
             else
             {
-                var paragraphs = chapterText.Split(new[] { "\r\n\r\n", "\n\n" }, StringSplitOptions.RemoveEmptyEntries);
+                // Split only at major section headings ##
+                var sections = Regex.Split(chapterText, @"(?m)(?=^#{2,3}\s+)");
                 var partSb = new StringBuilder();
                 int partWordCount = 0;
                 int partIndex = 1;
 
-                foreach (var para in paragraphs)
+                foreach (var sec in sections)
                 {
-                    var pWords = para.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-                    if (partWordCount + pWords > 700 && partSb.Length > 0)
+                    if (string.IsNullOrWhiteSpace(sec)) continue;
+                    var secWords = sec.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+                    if (partWordCount + secWords > 3500 && partSb.Length > 0)
                     {
-                        var partTitle = $"{current.Title} (Part {partIndex++})";
+                        var partTitle = $"{sliceTitle} (Section {partIndex++})";
                         slices.Add(CreateSlice(sliceOrder++, partTitle, partSb.ToString().Trim()));
                         partSb.Clear();
                         partWordCount = 0;
                     }
-                    partSb.AppendLine(para);
+                    partSb.AppendLine(sec);
                     partSb.AppendLine();
-                    partWordCount += pWords;
+                    partWordCount += secWords;
                 }
 
                 if (partSb.Length > 0)
                 {
-                    var partTitle = partIndex > 1 ? $"{current.Title} (Part {partIndex})" : current.Title;
+                    var partTitle = partIndex > 1 ? $"{sliceTitle} (Section {partIndex})" : sliceTitle;
                     slices.Add(CreateSlice(sliceOrder++, partTitle, partSb.ToString().Trim()));
                 }
             }
         }
 
         return slices;
+    }
+
+    internal static string FormatCuratedTitle(RawBookmark bookmark, int order)
+    {
+        var rawTitle = CleanTitle(bookmark.Title, order);
+        if (!string.IsNullOrWhiteSpace(bookmark.ParentTitle))
+        {
+            var cleanParent = CleanTitle(bookmark.ParentTitle, 0);
+            if (!string.IsNullOrWhiteSpace(cleanParent) &&
+                !cleanParent.Contains("documentation", StringComparison.OrdinalIgnoreCase) &&
+                !cleanParent.Contains("contents", StringComparison.OrdinalIgnoreCase))
+            {
+                // Level 2+ articles inherit parent module context
+                if (bookmark.Level >= 2 && !rawTitle.Contains(cleanParent, StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"{cleanParent}: {rawTitle}";
+                }
+
+                // Generic titles at any depth inherit parent
+                var isGeneric = rawTitle.Equals("Overview", StringComparison.OrdinalIgnoreCase) ||
+                                rawTitle.Equals("Introduction", StringComparison.OrdinalIgnoreCase) ||
+                                rawTitle.Equals("Getting Started", StringComparison.OrdinalIgnoreCase) ||
+                                rawTitle.Equals("Get Started", StringComparison.OrdinalIgnoreCase) ||
+                                rawTitle.Equals("Summary", StringComparison.OrdinalIgnoreCase);
+
+                if (isGeneric && !rawTitle.Contains(cleanParent, StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"{cleanParent}: {rawTitle}";
+                }
+            }
+        }
+        return rawTitle;
     }
 
     private static List<ExtractedPdfSlice> ExtractSlicesFromHeuristics(
@@ -340,7 +426,7 @@ public class PdfPigExtractor : IPdfExtractor
                 return null;
             }
 
-            void Walk(UglyToad.PdfPig.Tokens.IndirectReferenceToken itemRef, int depth)
+            void Walk(UglyToad.PdfPig.Tokens.IndirectReferenceToken itemRef, int depth, string? parentTitle)
             {
                 var cur = itemRef;
                 while (cur != null)
@@ -369,14 +455,15 @@ public class PdfPigExtractor : IPdfExtractor
                         }
                     }
 
-                    if (!string.IsNullOrWhiteSpace(title) && page.HasValue && page.Value >= 1 && page.Value <= document.NumberOfPages)
+                    var cleanTitle = title?.Trim() ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(cleanTitle) && page.HasValue && page.Value >= 1 && page.Value <= document.NumberOfPages)
                     {
-                        bookmarks.Add(new RawBookmark(title.Trim(), page.Value, depth));
+                        bookmarks.Add(new RawBookmark(cleanTitle, page.Value, depth, parentTitle));
                     }
 
                     if (dict.TryGet(UglyToad.PdfPig.Tokens.NameToken.First, out var cFirst) && cFirst is UglyToad.PdfPig.Tokens.IndirectReferenceToken cRef)
                     {
-                        Walk(cRef, depth + 1);
+                        Walk(cRef, depth + 1, cleanTitle);
                     }
 
                     if (dict.TryGet(UglyToad.PdfPig.Tokens.NameToken.Next, out var nTok) && nTok is UglyToad.PdfPig.Tokens.IndirectReferenceToken nRef)
@@ -390,7 +477,7 @@ public class PdfPigExtractor : IPdfExtractor
                 }
             }
 
-            Walk(rootFirstRef, 0);
+            Walk(rootFirstRef, 0, null);
         }
         catch
         {
@@ -527,8 +614,31 @@ public class PdfPigExtractor : IPdfExtractor
         return cleaned.Length > 80 ? cleaned.Substring(0, 77) + "..." : cleaned;
     }
 
-    private static string FormatAsMarkdown(string text, string heading)
+    internal static string StripBoilerplate(string text)
     {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        // Strip Microsoft pre-release disclaimer banners
+        var cleaned = Regex.Replace(
+            text,
+            @"(?i)(?:###\s*\d{1,2}/\d{1,2}/\d{4}|\b\d{2}/\d{2}/\d{4}\b)?\s*\)?\s*Important\s+This information relates to a pre-release product[^.\n]*\.[^.\n]*\.(?:\s*For the current release[^.\n]*\.)?",
+            "",
+            RegexOptions.Multiline);
+
+        // Strip standalone publication date lines
+        cleaned = Regex.Replace(cleaned, @"(?m)^\s*###?\s*\d{1,2}/\d{1,2}/\d{4}\s*$", "");
+        cleaned = Regex.Replace(cleaned, @"(?m)^\s*\d{2}/\d{2}/\d{4}\s*$", "");
+
+        // Strip web landing grid artifacts
+        cleaned = Regex.Replace(cleaned, @"(?i)G\s*E\s*T\s*S\s*T\s*A\s*R\s*T\s*E\s*D\s*O\s*V\s*E\s*R\s*V\s*I\s*E\s*W\s*D\s*O\s*W\s*N\s*L\s*O\s*A\s*D", "");
+        cleaned = Regex.Replace(cleaned, @"(?i)GETSTARTEDGETSTARTED", "");
+
+        return cleaned.Trim();
+    }
+
+    internal static string FormatAsMarkdown(string text, string heading)
+    {
+        var cleanedText = StripBoilerplate(text);
         var sb = new StringBuilder();
         if (!string.IsNullOrWhiteSpace(heading))
         {
@@ -536,8 +646,9 @@ public class PdfPigExtractor : IPdfExtractor
             sb.AppendLine();
         }
 
-        var lines = text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        var lines = cleanedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         bool inCodeBlock = false;
+        int emptyLineStreak = 0;
 
         foreach (var rawLine in lines)
         {
@@ -546,9 +657,19 @@ public class PdfPigExtractor : IPdfExtractor
 
             if (string.IsNullOrWhiteSpace(trimmed))
             {
+                emptyLineStreak++;
                 if (inCodeBlock)
                 {
-                    sb.AppendLine();
+                    // 2 or more consecutive blank lines closes code block
+                    if (emptyLineStreak >= 2)
+                    {
+                        sb.AppendLine("```");
+                        inCodeBlock = false;
+                    }
+                    else
+                    {
+                        sb.AppendLine();
+                    }
                 }
                 else
                 {
@@ -556,6 +677,8 @@ public class PdfPigExtractor : IPdfExtractor
                 }
                 continue;
             }
+
+            emptyLineStreak = 0;
 
             // Bullet points detection: •, ▪, ⁃, ‣, -, *
             if (Regex.IsMatch(trimmed, @"^[\u2022\u25AA\u2043\u2023\-\*]\s*"))
@@ -570,7 +693,7 @@ public class PdfPigExtractor : IPdfExtractor
                 continue;
             }
 
-            // Subheading detection: ALL CAPS lines (e.g. WORK EXPERIENCE, EDUCATION, SKILLS)
+            // Subheading detection: ALL CAPS lines (e.g. WORK EXPERIENCE, PREREQUISITES)
             if (Regex.IsMatch(trimmed, @"^[A-Z0-9\s/&-]{4,40}$") && trimmed.Length >= 4 && !trimmed.Contains('.') && !trimmed.Contains(':'))
             {
                 if (inCodeBlock)
@@ -584,47 +707,43 @@ public class PdfPigExtractor : IPdfExtractor
                 continue;
             }
 
-            // Code line heuristic detection
-            bool isCodeLine = false;
-
-            if (inCodeBlock)
+            // Explicit markdown heading
+            if (trimmed.StartsWith('#'))
             {
-                // When already inside a code block, stay inside code block unless line is clearly prose or section header
-                bool isProseSentence = (trimmed.EndsWith('.') && char.IsUpper(trimmed[0]) && !trimmed.Contains(';') && !trimmed.Contains('{') && !trimmed.Contains('}') && !trimmed.StartsWith("//") && !trimmed.Contains("()"));
-                bool isExplicitHeading = trimmed.StartsWith('#');
-                isCodeLine = !isProseSentence && !isExplicitHeading;
-            }
-            else
-            {
-                // Start a code block on programming keywords with word boundary, comments, method calls or braces
-                bool startsWithCodeKeyword = Regex.IsMatch(trimmed, @"^(public|private|protected|internal|class|interface|record|struct|enum|import|export|function|const|let|var|def|return|namespace|static|void|async)\b\s+", RegexOptions.IgnoreCase) ||
-                                             Regex.IsMatch(trimmed, @"^(using\s+[A-Za-z0-9_.]+\s*;|using\s*\()", RegexOptions.IgnoreCase) ||
-                                             Regex.IsMatch(trimmed, @"^(Task<|Console\.|Registry\.|RegistryKey|for\s*\(|while\s*\(|foreach\s*\(|if\s*\()", RegexOptions.IgnoreCase);
-
-                bool isProseSentence = trimmed.EndsWith('.') && !trimmed.Contains(';') && !trimmed.Contains('{') && !trimmed.Contains('}') && !trimmed.Contains("=>");
-
-                isCodeLine = (!isProseSentence && startsWithCodeKeyword) ||
-                             trimmed.StartsWith("//") || trimmed.StartsWith("/*") ||
-                             trimmed.EndsWith(';') || trimmed.EndsWith('{') || trimmed.EndsWith('}') || trimmed.Contains("=>");
-            }
-
-            if (isCodeLine && !trimmed.StartsWith('#') && !trimmed.StartsWith('-'))
-            {
-                if (!inCodeBlock)
+                if (inCodeBlock)
                 {
-                    sb.AppendLine("```csharp");
-                    inCodeBlock = true;
+                    sb.AppendLine("```");
+                    inCodeBlock = false;
                 }
-                sb.AppendLine(line);
+                sb.AppendLine(trimmed);
                 continue;
             }
 
             if (inCodeBlock)
             {
-                sb.AppendLine("```");
-                inCodeBlock = false;
+                // Escape code block if line is clearly prose
+                if (IsObviousProse(trimmed))
+                {
+                    sb.AppendLine("```");
+                    inCodeBlock = false;
+                    sb.AppendLine(trimmed);
+                    continue;
+                }
+
+                sb.AppendLine(line);
+                continue;
             }
 
+            // Outside code block: Open code block if strong code signals detected
+            if (IsStrongCodeStart(trimmed))
+            {
+                sb.AppendLine("```csharp");
+                inCodeBlock = true;
+                sb.AppendLine(line);
+                continue;
+            }
+
+            // Regular prose line
             sb.AppendLine(trimmed);
         }
 
@@ -636,11 +755,101 @@ public class PdfPigExtractor : IPdfExtractor
         return sb.ToString();
     }
 
+    private static bool IsObviousProse(string trimmed)
+    {
+        // 1. Markdown indicators
+        if (trimmed.StartsWith('#') || trimmed.StartsWith('-') || trimmed.StartsWith('*')) return true;
+
+        // 2. Prose label ending with colon (e.g. "Components/Pages/Counter.razor :", "Change the app:")
+        if (trimmed.EndsWith(':') && !trimmed.Contains('{') && !trimmed.Contains(';') && !trimmed.Contains("=>")) return true;
+
+        // 3. Known documentation section titles without punctuation
+        if (Regex.IsMatch(trimmed, @"^(Change the app|Prerequisites|Next steps|See also|Important|Note|Overview|Summary|For more information)\b", RegexOptions.IgnoreCase))
+        {
+            return true;
+        }
+
+        // 4. Common English sentence structure
+        if (char.IsUpper(trimmed[0]))
+        {
+            var words = trimmed.Split(new[] { ' ', '\t', ',', '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
+            int proseWordHits = 0;
+            foreach (var w in words)
+            {
+                var lower = w.ToLowerInvariant();
+                if (lower is "the" or "is" or "in" or "to" or "a" or "an" or "of" or "and" or "with" or "you" or "your" or "can" or "for" or "from" or "that" or "will" or "this" or "using" or "by" or "run" or "click" or "select" or "open" or "create" or "leave")
+                {
+                    proseWordHits++;
+                }
+            }
+
+            // If line has 2+ prose words and does NOT contain strong code tokens
+            if (proseWordHits >= 2 && !trimmed.Contains(';') && !trimmed.Contains('{') && !trimmed.Contains('}') && !trimmed.Contains("=>"))
+            {
+                return true;
+            }
+
+            // Standard sentence ending in period with multiple words
+            if (trimmed.EndsWith('.') && words.Length >= 4 && !trimmed.Contains(';') && !trimmed.Contains('{') && !trimmed.Contains('}'))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsStrongCodeStart(string trimmed)
+    {
+        // Never start code block on obvious prose phrases
+        if (IsObviousProse(trimmed)) return false;
+
+        // C# / .NET declarations
+        if (Regex.IsMatch(trimmed, @"^(public|private|protected|internal)\s+(static\s+|async\s+)?(class|interface|struct|record|enum|void|Task|string|int|bool|var|IActionResult|EventCallback)\b", RegexOptions.IgnoreCase))
+            return true;
+
+        // using System...; (Strict: PascalCase identifier + semicolon)
+        if (Regex.IsMatch(trimmed, @"^using\s+[A-Z][A-Za-z0-9_.]*\s*;"))
+            return true;
+
+        // namespace MyNamespace...
+        if (Regex.IsMatch(trimmed, @"^namespace\s+[A-Z][A-Za-z0-9_.]*"))
+            return true;
+
+        // Razor directives
+        if (Regex.IsMatch(trimmed, @"^@(page|code|inject|typeparam|bind|layout)\b"))
+            return true;
+
+        // Shell CLI commands
+        if (Regex.IsMatch(trimmed, @"^(dotnet\s+(new|watch|run|build|add|restore|test)|npm\s+(install|run|start|test)|git\s+(clone|checkout|commit|push|pull)|docker\s+(build|run|compose))", RegexOptions.IgnoreCase))
+            return true;
+
+        // Standalone braces
+        if (trimmed == "{" || trimmed == "}" || trimmed == "});" || trimmed == "};")
+            return true;
+
+        // XML / HTML tags (single tag or self-closing)
+        if (Regex.IsMatch(trimmed, @"^<[A-Za-z][A-Za-z0-9_-]*(\s+[^>]*)?>.*(</[A-Za-z0-9_-]+>)?$") && !trimmed.Contains(" the ") && !trimmed.Contains(" is "))
+            return true;
+
+        // Comments
+        if (trimmed.StartsWith("//") || trimmed.StartsWith("/*"))
+            return true;
+
+        // Assignment with semicolon: e.g. "var builder = WebApplication.CreateBuilder(args);"
+        if (Regex.IsMatch(trimmed, @"^(var|[A-Z][A-Za-z0-9_<>]+)\s+[A-Za-z0-9_]+\s*=\s*.*[;{]$") && !trimmed.Contains(" the ") && !trimmed.Contains(" is "))
+            return true;
+
+        return false;
+    }
+
     private static List<string> ExtractKeyTakeaways(string text)
     {
-        var sentences = text.Split(new[] { '.', '!', '?', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        var cleaned = StripBoilerplate(text);
+        var sentences = cleaned.Split(new[] { '.', '!', '?', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(SanitizeText)
             .Where(s => s.Length >= 25 && s.Length <= 140)
+            .Where(s => !IsDisclaimerOrJunk(s))
             .Take(3)
             .ToList();
 
@@ -650,6 +859,19 @@ public class PdfPigExtractor : IPdfExtractor
         }
 
         return sentences;
+    }
+
+    private static bool IsDisclaimerOrJunk(string s)
+    {
+        var lower = s.ToLowerInvariant();
+        return lower.Contains("pre-release product") ||
+               lower.Contains("commercially released") ||
+               lower.Contains("makes no warranties") ||
+               lower.Contains("express or implied") ||
+               lower.Contains("copyright") ||
+               lower.Contains("all rights reserved") ||
+               lower.Contains("get started overview") ||
+               lower.Contains("table of contents");
     }
 
     private static string SanitizeText(string? text)
