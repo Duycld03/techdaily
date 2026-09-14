@@ -131,7 +131,7 @@ function selectPdf(file: File) {
     toast.error(t('library.toast_pdf_only'))
     return
   }
-  if (file.size > 314_572_800) {
+  if (file.size > 367_001_600) {
     toast.error(t('library.toast_pdf_size_limit'))
     return
   }

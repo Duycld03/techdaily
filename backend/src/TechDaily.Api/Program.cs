@@ -23,14 +23,14 @@ builder.Configuration
 // Configure 300MB Upload Body Limit (Zero-LOH Disk Spooling)
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 314_572_800; // 300 MB
+    options.MultipartBodyLengthLimit = 367_001_600; // 350 MB
     options.ValueLengthLimit = int.MaxValue;
     options.MultipartHeadersLengthLimit = int.MaxValue;
 });
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    serverOptions.Limits.MaxRequestBodySize = 314_572_800; // 300 MB
+    serverOptions.Limits.MaxRequestBodySize = 367_001_600; // 350 MB
 });
 
 // Add Services

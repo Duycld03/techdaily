@@ -24,7 +24,7 @@ public class UploadPdfResponse
 
 public class UploadPdfValidator : AbstractValidator<UploadPdfRequest>
 {
-    private const long MaxFileSize = 314_572_800; // 300 MB
+    private const long MaxFileSize = 367_001_600; // 350 MB
 
     public UploadPdfValidator()
     {
@@ -32,7 +32,7 @@ public class UploadPdfValidator : AbstractValidator<UploadPdfRequest>
         RuleFor(x => x.FileLength)
             .GreaterThan(0)
             .LessThanOrEqualTo(MaxFileSize)
-            .WithMessage("File size must not exceed 300 MB.");
+            .WithMessage("File size must not exceed 350 MB.");
         RuleFor(x => x.FileName)
             .NotEmpty()
             .Must(f => f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
