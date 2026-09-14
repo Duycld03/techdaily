@@ -1,6 +1,6 @@
 # Reader Specification Delta: Debounced Lookahead Prefetching
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Debounced Lookahead Prefetching
 

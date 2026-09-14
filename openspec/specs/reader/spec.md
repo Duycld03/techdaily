@@ -164,3 +164,84 @@ The `/roadmap` page SHALL dynamically reflect the chapter milestone progress of 
 - **THEN** roadmap displays the active book title, total progress percentage, estimated days remaining at current pace, and sequential chapter milestone cards.
 - **WHEN** user clicks the active chapter milestone
 - **THEN** application navigates to `/today` positioned at the current reading slice.
+
+### Requirement: Debounced Lookahead Prefetching
+
+The reader view (`/read/[bookId]`) and the daily focus view (`/today`) SHALL apply a 2.5-second debounce delay to lookahead prefetch triggers (`triggerLookaheadPrefetch` / `triggerNextDayPrefetch`). If the user changes slices or navigates away before the 2.5-second timer elapses, the pending prefetch timer SHALL be immediately canceled.
+
+#### Scenario: User pauses on a slice to read
+
+- **GIVEN** user is viewing slice 4
+- **WHEN** user remains on slice 4 for at least 2.5 seconds
+- **THEN** system triggers lookahead prefetch for slice 5 in the background.
+
+#### Scenario: User rapidly clicks through table of contents
+
+- **GIVEN** user is browsing the chapter list
+- **WHEN** user clicks slice 1, then slice 2, then slice 3 within 1.5 seconds
+- **THEN** intermediate prefetch timers for slice 2 and slice 3 are canceled before any HTTP request is dispatched
+- **AND** only slice 3 schedules a prefetch timer once the user pauses.
+
+#### Scenario: Component unmount cancels pending prefetch
+
+- **WHEN** user leaves the reader route or closes the page while a prefetch timer is pending
+- **THEN** the timer is cleared and no background request is dispatched after navigation.
+
+### Requirement: 1-Step Lookahead Prefetching
+When a user views Slice $N$ in `/read/[bookId]`, the client SHALL automatically initiate a background curation request for Slice $N+1$ if it is not yet curated.
+
+#### Scenario: Background prefetch during reading
+- **GIVEN** a user is reading Slice 3
+- **AND** Slice 4 has `IsAiFormatted == false`
+- **WHEN** the reader view is active on Slice 3
+- **THEN** a background request curates Slice 4
+- **AND** when the user clicks "Next Slice", Slice 4 renders immediately.
+
+### Requirement: Ephemeral Raw Text Fallback
+When AI curation fails in the reader view, the system SHALL display a retry interface with an option to view raw text temporarily without altering persistent database state.
+
+#### Scenario: Temporary view of raw text
+- **GIVEN** AI curation fails for an uncurated slice
+- **WHEN** the user clicks "View raw text temporarily"
+- **THEN** the raw markdown text renders with an amber notice banner
+- **AND** `DocumentChunk.IsAiFormatted` remains `false` in the database
+- **AND** reloading the page (F5) re-initiates the AI curation workflow.
+
+### Requirement: Standardized TechInsight Markdown Schema
+The AI markdown formatting pipeline SHALL transform raw technical document text into a standardized TechInsight reading structure conforming to the following layout:
+1. **Document Heading:** Level-1 `# Title` matching the slice chapter name.
+2. **Context Callout:** Immediate `> [!NOTE]` blockquote containing a 2–3 sentence executive summary of the architectural context.
+3. **Clean Narrative Prose:** Flowing paragraphs with merged sentence fragments and zero unformatted line-breaks. Explanatory sentences MUST never be trapped inside monospace code fences.
+4. **Universal Syntax-Tagged Code Blocks:** Every code snippet MUST be enclosed in fenced blocks with its correct language identifier (e.g. `csharp`, `python`, `typescript`, `sql`, `go`, `rust`, `bash`, `yaml`, `dockerfile`).
+5. **Architectural Callouts:** Dedicated `> [!TIP]` or `> [!IMPORTANT]` alert boxes for caveats and best practices.
+6. **Key Takeaways:** Exactly three bullet points summarizing actionable takeaways at the end of the slice.
+
+#### Scenario: Raw slice converted by AI formatter
+- **WHEN** raw extracted text contains code snippets mixed with explanatory prose instructions
+- **THEN** AI formatter emits standard markdown with code cleanly segregated into language-tagged fences, prose formatted as body text, and extraneous publication boilerplate removed.
+
+---
+
+### Requirement: On-Demand Just-In-Time (JIT) Slice Formatting
+When a user navigates to a slice in `/read/[bookId]` or `/today` that has not yet been processed by the Tier 2 background queue, the reading service SHALL perform on-demand JIT AI formatting in real time, persist the formatted Markdown to the database, and return the curated content seamlessly.
+
+#### Scenario: User navigates ahead to an unformatted slice
+- **WHEN** user opens a slice whose `IsAiFormatted` flag is `false`
+- **THEN** reader endpoint transparently invokes `IAiMarkdownFormatter.FormatSliceAsync`, saves the resulting Markdown to `DocumentChunk.OriginalTextMarkdown` and sets `IsAiFormatted = true`, and returns the formatted content to the client within ~1.5s.
+
+#### Scenario: User revisits an already formatted slice
+- **WHEN** user opens a slice whose `IsAiFormatted` flag is `true`
+- **THEN** reader endpoint immediately serves the persisted Markdown from the database without invoking the AI model.
+
+### Requirement: Distraction-Free Daily Reader Pane
+The daily reader pane on `/today` (`DocReaderPane.vue`) SHALL present authoritative technical content, summary, key takeaways, and source context without inline micro-quizzes or superficial interruption components. Reading flow ends cleanly after the content or source context, leaving the right pane as the sole evaluation venue.
+
+#### Scenario: User views the daily reader pane on /today
+- **WHEN** user navigates to `/today` or selects a curriculum day
+- **THEN** `DocReaderPane` renders the document header (title, summary, estimated read time, key takeaway pills), the deep-dive architectural markdown, optional authoritative source context, and optional benchmark snippets.
+- **THEN** no inline micro-quiz card or redundant quick-check questions appear at the bottom of the reading column.
+
+#### Scenario: Text selection floating toolbar remains fully functional
+- **WHEN** user selects text (2 to 500 characters) inside `.doc-reader-content`
+- **THEN** the floating selection toolbar appears above the selection offering "Explain with Gemini", "Highlight", and "Copy".
+- **THEN** mouse selection is not blocked or corrupted by deleted quiz selectors.

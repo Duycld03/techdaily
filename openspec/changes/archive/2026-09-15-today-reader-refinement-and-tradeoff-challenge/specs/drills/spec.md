@@ -1,6 +1,6 @@
 # Delta Spec: Drills — Architectural Trade-off Challenge
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Architectural Trade-off Challenge Representation
 The Senior Scenario challenge on `/today` (`InterviewChallengePane.vue`) SHALL present architectural problem statements with explicit production constraints (e.g. throughput requirements, latency SLA, consistency level, disaster recovery tolerances). Answer choices SHALL represent distinct architectural designs or engineering strategies rather than trivia facts.

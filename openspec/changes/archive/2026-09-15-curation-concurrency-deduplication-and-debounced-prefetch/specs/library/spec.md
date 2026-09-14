@@ -1,6 +1,6 @@
 # Library Specification Delta: Curation Concurrency & Deduplication
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: In-Flight Slice Curation Deduplication
 

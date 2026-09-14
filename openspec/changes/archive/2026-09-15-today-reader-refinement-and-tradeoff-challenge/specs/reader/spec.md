@@ -1,6 +1,6 @@
 # Delta Spec: Reader — Distraction-Free Daily Reading Experience
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Distraction-Free Daily Reader Pane
 The daily reader pane on `/today` (`DocReaderPane.vue`) SHALL present authoritative technical content, summary, key takeaways, and source context without inline micro-quizzes or superficial interruption components. Reading flow ends cleanly after the content or source context, leaving the right pane as the sole evaluation venue.

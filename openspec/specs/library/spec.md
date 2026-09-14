@@ -7,6 +7,9 @@ Provides technical document ingestion capabilities including markdown series cre
 
 ### Requirement: PDF File Ingestion
 The library system SHALL support PDF uploads up to 350 MB and multi-thousand page documents without blocking HTTP request execution or loading entire files into the Large Object Heap (LOH). The system SHALL stream uploaded files directly to temporary disk storage (`bufferSize = 80KB`), persist a `DocumentBook` record with status `Processing`, and enqueue processing into an in-memory background worker queue via `System.Threading.Channels`.
+The background ingestion pipeline SHALL execute a two-tier curation strategy using Gemini Flash Lite:
+1. **Tier 1 (Instant Availability):** Extract bookmarks, generate chunk shells, and immediately invoke AI formatting for the initial 3 slices. Mark `DocumentBook.Status = Ready` within 15 seconds so users can immediately start Day 1 study.
+2. **Tier 2 (Paced Background Queue):** Progressively format remaining slices (Slices 4..N) with rate-limit pacing (1.2s delay between AI calls), updating `ProgressPercentage` ($10\% \to 100\%$) and `StatusMessage` (e.g. `AI is curating slice 45/230 (20%)...`) after each slice.
 
 #### Scenario: User uploads a valid PDF document
 - **WHEN** authenticated user submits `POST /api/v1/library/upload-pdf` with a valid PDF file <= 350 MB
@@ -23,6 +26,14 @@ The library system SHALL support PDF uploads up to 350 MB and multi-thousand pag
 #### Scenario: Uploaded PDF is corrupted or encrypted
 - **WHEN** user uploads a corrupted or password-protected PDF
 - **THEN** system returns `400 Bad Request` or background worker records `ProcessingStatus = Failed` with descriptive `ErrorMessage`, and cleans up temporary disk files safely.
+
+#### Scenario: Book uploaded and initial slices curated
+- **WHEN** user uploads a technical PDF book
+- **THEN** Tier 1 extracts outline and formats Slices 1–3 with AI, transitions book status to `Ready`, and immediately enables reading for early chapters.
+
+#### Scenario: Background worker formats subsequent slices
+- **WHEN** book enters Tier 2 background curation
+- **THEN** the worker iterates through remaining slices, calling the AI markdown formatter with rate limiting, saving formatted Markdown to `DocumentChunk.OriginalTextMarkdown` and `SummaryMarkdown`, and updating `DocumentBook.ProgressPercentage`.
 
 ---
 
@@ -60,15 +71,27 @@ All new modal tabs, dropzones, upload limits, crawl buttons, loading states, and
 - **THEN** all tab labels, upload instructions, and button labels render in Vietnamese.
 
 ### Requirement: Native PDF Bookmarks & Chapter-Aware Structuring
-The PDF extractor SHALL parse native document bookmarks (Outline Tree) to determine authoritative chapter boundaries, section names, and page ranges. The extractor SHALL automatically detect and exclude front-matter (prefaces, dedications, title pages) and back-matter (indexes, bibliographies).
+The PDF extractor SHALL preserve all outline bookmarks with distinct destination pages rather than truncating bookmarks at an arbitrary hierarchy depth level. Topics and sections with unique target pages MUST each form an independent, consumable reading slice (~5–10 pages). The extractor SHALL automatically detect and exclude front-matter (e.g. Table of Contents, Cover, Copyright, Preface) and back-matter (e.g. Index, Bibliography, References, Colophon, Contributors).
 
 #### Scenario: Book with native PDF Bookmarks
 - **WHEN** PDF contains a valid Bookmarks / Outline tree
-- **THEN** extractor segments slices aligned to top-level and second-level chapter bookmarks, naming each slice after the author's official chapter/section title.
+- **THEN** extractor segments slices aligned to all bookmarks pointing to unique destination pages, naming each slice after the author's official chapter/section title.
 
 #### Scenario: Fallback for books without native Bookmarks
 - **WHEN** PDF lacks an embedded Bookmarks tree
 - **THEN** extractor falls back gracefully to visual heading heuristics (font size grouping, chapter regex) capped by sensible page and word thresholds.
+
+#### Scenario: PDF with nested outline bookmarks across multiple levels
+- **WHEN** a PDF contains outline bookmarks distributed across Level 1, Level 2, and Level 3
+- **THEN** the extractor preserves every bookmark that points to a unique destination page, preventing multi-thousand page sections from collapsing into single monster slices.
+
+#### Scenario: Slices exceeding maximum word thresholds
+- **WHEN** an individual bookmark section contains more than 4,000 words
+- **THEN** the extractor applies a safety split only at natural `##` or `###` headings outside code fences, preserving complete code blocks and prose continuity.
+
+#### Scenario: PDF contains introductory TOC and closing index bookmarks
+- **WHEN** the PDF contains bookmarks matching blacklisted front-matter or back-matter terms
+- **THEN** the extractor discards these items from slice generation, ensuring Slice 1 begins immediately with substantive chapter content.
 
 ---
 
@@ -78,3 +101,63 @@ The library system SHALL provide a lightweight endpoint `GET /api/v1/library/boo
 #### Scenario: Client monitors ingestion progress
 - **WHEN** client polls `GET /api/v1/library/books/{id}/status` while book is processing
 - **THEN** server returns status code, percentage, and current step message without querying heavy chunk text.
+
+### Requirement: In-Flight Slice Curation Deduplication
+
+The library store SHALL maintain an active in-flight request map for slice curation calls indexed by `${bookId}:${chunkOrder}`. When `curateSlice(bookId, order)` is invoked while an identical request is already pending, the store SHALL return the existing active `Promise<ChunkSummary | null>` rather than dispatching a duplicate HTTP request to the backend.
+
+#### Scenario: User navigates to a slice that is already undergoing background prefetch
+
+- **GIVEN** slice 9 of a book is actively being prefetched by the reader lookahead service
+- **WHEN** user clicks directly on slice 9 in the table of contents
+- **THEN** `libraryStore.curateSlice` returns the in-flight prefetch promise
+- **AND** zero additional HTTP POST requests are dispatched for slice 9.
+
+#### Scenario: In-flight promise completes or fails
+
+- **WHEN** an in-flight slice curation promise resolves or rejects
+- **THEN** the store removes the `${bookId}:${chunkOrder}` key from its active map so subsequent calls can fetch fresh state if needed.
+
+---
+
+### Requirement: Keyed Concurrency Locking in Slice Curation API
+
+The backend `CurateSliceHandler` SHALL serialize concurrent execution for the same `(BookId, ChunkOrder)` using a keyed lock. Upon acquiring the lock, the handler SHALL re-evaluate `chunk.IsAiFormatted` (double-checked locking). If another concurrent request has already completed curation and saved the result, the handler SHALL immediately return the formatted slice without invoking the external AI formatting service.
+
+#### Scenario: Concurrent curation requests arrive at the backend
+
+- **GIVEN** two concurrent requests arrive for `POST /api/v1/library/books/{bookId}/slices/{order}/curate`
+- **WHEN** the first request acquires the lock and calls Gemini AI formatting
+- **THEN** the second request waits on the lock
+- **AND** once the first request commits the formatted slice to the database, the second request acquires the lock, detects `chunk.IsAiFormatted == true`, and returns the existing entity without calling Gemini AI.
+
+#### Scenario: CancellationToken cancellation during lock wait
+
+- **WHEN** a client disconnects while waiting for the slice lock
+- **THEN** the handler releases any acquired resources and propagates `OperationCanceledException` cleanly without corrupting the lock dictionary.
+
+### Requirement: Lean 3-Slice Initial Ingestion
+The system SHALL only format the first 3 slices of an uploaded document during initial background ingestion. Slices 4..N SHALL remain stored with raw markdown until accessed by a reader.
+
+#### Scenario: Initial document upload completes in under 10 seconds
+- **GIVEN** a user uploads a PDF book with 20 chapters
+- **WHEN** `PdfIngestionWorker` processes the ingestion job
+- **THEN** it formats Slices 1, 2, and 3 using the all-in-one AI prompt
+- **AND** it marks `DocumentBook.Status = Ready`, `ProgressPercentage = 100`, and `StatusMessage = "Ready for reading"`
+- **AND** it stops processing without running an eager background loop on Slices 4..20.
+
+### Requirement: Clean Library Card Presentation
+The `/library` page SHALL display book status as `Ready` without rendering an ongoing background curation progress bar.
+
+#### Scenario: User views library card
+- **GIVEN** a book that has completed Tier 1 initial ingestion
+- **WHEN** the user views the book card on `/library`
+- **THEN** the card displays a `Ready` badge and the user's reading milestone (e.g. `Resumes at Slice X` or slice count)
+- **AND** no pulsing background progress bar is shown.
+
+### Requirement: Ingestion Progress Reporting & UI Status Indication
+The library system SHALL expose real-time curation progress through `GET /api/v1/library/books/{id}/status`, and the Library UI (`library.vue`) SHALL render a dynamic progress bar and active step message while Tier 2 AI curation is ongoing.
+
+#### Scenario: User views library while book is being curated by AI
+- **WHEN** user views `/library` and a book is undergoing Tier 2 background formatting (`ProgressPercentage < 100`)
+- **THEN** the book card displays an active progress bar with percentage indicator and descriptive status message (`AI is curating slice X/Y...`).
