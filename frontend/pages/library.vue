@@ -52,8 +52,33 @@ const categories = computed(() => [
   { id: 4, label: t('library.categories.system_design') }
 ])
 
-onMounted(() => {
-  libraryStore.fetchBooks()
+let backgroundPollTimer: ReturnType<typeof setInterval> | null = null
+
+function checkBackgroundPolling() {
+  if (backgroundPollTimer) {
+    clearInterval(backgroundPollTimer)
+    backgroundPollTimer = null
+  }
+  const hasInProgressBook = libraryStore.books.some(
+    b => b.progressPercentage !== undefined && b.progressPercentage < 100
+  )
+  if (hasInProgressBook) {
+    backgroundPollTimer = setInterval(async () => {
+      await libraryStore.fetchBooks(selectedCategory.value, searchQuery.value)
+      const stillActive = libraryStore.books.some(
+        b => b.progressPercentage !== undefined && b.progressPercentage < 100
+      )
+      if (!stillActive && backgroundPollTimer) {
+        clearInterval(backgroundPollTimer)
+        backgroundPollTimer = null
+      }
+    }, 2500)
+  }
+}
+
+onMounted(async () => {
+  await libraryStore.fetchBooks()
+  checkBackgroundPolling()
   loadBookmarks()
 })
 
@@ -61,6 +86,10 @@ onUnmounted(() => {
   if (pollInterval) {
     clearInterval(pollInterval)
     pollInterval = null
+  }
+  if (backgroundPollTimer) {
+    clearInterval(backgroundPollTimer)
+    backgroundPollTimer = null
   }
 })
 
@@ -334,6 +363,23 @@ async function confirmDeleteBook() {
           <div v-if="bookmarks[book.id]" class="mt-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900 text-brand-700 dark:text-brand-300 text-xs sm:text-sm font-semibold">
             <Bookmark class="w-3.5 h-3.5 text-brand-500 fill-brand-500" />
             <span>{{ $t('library.resumes_at', { slice: bookmarks[book.id] }) }}</span>
+          </div>
+
+          <!-- Real-Time AI Curation Progress Bar -->
+          <div v-if="book.progressPercentage !== undefined && book.progressPercentage < 100" class="mt-3.5 p-3 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20">
+            <div class="flex items-center justify-between text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1.5">
+              <span class="flex items-center gap-1.5 truncate">
+                <Sparkles class="w-3.5 h-3.5 text-amber-500 animate-pulse shrink-0" />
+                <span class="truncate">{{ book.statusMessage || $t('library.ai_curating') }}</span>
+              </span>
+              <span class="font-mono font-bold shrink-0 ml-2">{{ book.progressPercentage }}%</span>
+            </div>
+            <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div
+                class="bg-gradient-to-r from-amber-500 to-brand-500 h-full transition-all duration-300 rounded-full"
+                :style="{ width: `${Math.max(5, book.progressPercentage)}%` }"
+              ></div>
+            </div>
           </div>
         </div>
 

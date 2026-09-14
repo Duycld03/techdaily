@@ -1,5 +1,7 @@
 using System.IO;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using TechDaily.Application.Interfaces;
 using TechDaily.Infrastructure.Services;
 using Xunit;
@@ -143,5 +145,178 @@ This tutorial shows how to create, run, and modify an ASP.NET Core Blazor Web Ap
 
         var act = () => extractor.ExtractSlicesAsync(emptyStream);
         await act.Should().ThrowAsync<Exception>();
+    }
+
+    [Fact]
+    public void StripBoilerplate_ShouldRemoveMultiLineDisclaimer_WithLeadingParenthesis()
+    {
+        var input = @"
+) Important This information relates to a pre-release product that may be substantially modified before it’s commercially released. Microsoft makes no warranties, express or implied, with respect to the information provided here.
+Leave the browser open with the Counter page loaded.
+";
+        var cleaned = PdfPigExtractor.StripBoilerplate(input);
+        cleaned.Should().NotContain("Important This information relates to a pre-release product");
+        cleaned.Should().Contain("Leave the browser open with the Counter page loaded.");
+    }
+
+    [Theory]
+    [InlineData("Table of Contents")]
+    [InlineData("table of contents")]
+    [InlineData("Mục lục")]
+    [InlineData("Contents")]
+    [InlineData("Copyright")]
+    [InlineData("Cover")]
+    [InlineData("Preface")]
+    [InlineData("About the Author")]
+    [InlineData("About the Authors")]
+    [InlineData("Index")]
+    [InlineData("Index A-Z")]
+    [InlineData("Contributors")]
+    [InlineData("Credits")]
+    [InlineData("Bibliography")]
+    [InlineData("References")]
+    [InlineData("Colophon")]
+    public void IsIgnoredBookmark_ShouldFilterFrontMatterAndBackMatter(string title)
+    {
+        var isIgnored = typeof(PdfPigExtractor)
+            .GetMethod("IsIgnoredBookmark", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .Invoke(null, new object[] { title });
+
+        isIgnored.Should().Be(true);
+    }
+
+    [Fact]
+    public void ExtractSlicesFromBookmarks_PreservesUniqueBookmarkPages_AcrossLevels()
+    {
+        const string samplePath = "/home/duycld03/Downloads/aspnet-core-aspnetcore-10.0.pdf";
+        if (!File.Exists(samplePath)) return;
+
+        using var doc = UglyToad.PdfPig.PdfDocument.Open(samplePath);
+        var bookmarks = typeof(PdfPigExtractor)
+            .GetMethod("ExtractNativeBookmarks", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+            .Invoke(null, new object[] { doc }) as List<PdfPigExtractor.RawBookmark>;
+
+        bookmarks.Should().NotBeNull();
+        var validWithPage = bookmarks!.Where(b => b.PageNumber > 0).ToList();
+        validWithPage.Should().HaveCountGreaterThan(500);
+
+        var uniquePages = validWithPage.GroupBy(b => b.PageNumber).ToList();
+        uniquePages.Count.Should().BeGreaterThan(500);
+    }
+
+    [Fact]
+    public async Task IngestAndVerify_RealPdf_WithGeminiAi()
+    {
+        const string samplePath = "/home/duycld03/Downloads/aspnet-core-aspnetcore-10.0.pdf";
+        if (!File.Exists(samplePath)) return;
+
+        var extractor = new PdfPigExtractor();
+        await using var stream = File.OpenRead(samplePath);
+
+        // Extract first 100 pages
+        var result = await extractor.ExtractSlicesAsync(
+            stream,
+            customTitle: "ASP.NET Core 10 Architecture Guide",
+            maxPages: 100);
+
+        result.Slices.Should().NotBeEmpty();
+        _output.WriteLine($"Extracted {result.Slices.Count} slices from 100 pages.");
+
+        // Check Slice 3
+        var slice3 = result.Slices.FirstOrDefault(s => s.Order == 3 || s.ChapterTitle.Contains("Get started"));
+        slice3.Should().NotBeNull();
+        _output.WriteLine($"Slice 3: '{slice3!.ChapterTitle}' ({slice3.ContentMarkdown.Length} chars, est {slice3.EstimatedReadMinutes} min)");
+        slice3.EstimatedReadMinutes.Should().BeLessThan(30);
+
+        // Build Gemini service with local settings if available
+        var localSettings = "/home/duycld03/workspace/techdaily/backend/src/TechDaily.Api/appsettings.Local.json";
+        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddJsonFile(localSettings, optional: true)
+            .Build();
+
+        var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(90) };
+        var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<GeminiAiService>();
+        var aiService = new GeminiAiService(httpClient, config, logger);
+
+        _output.WriteLine($"Formatting Slice 3 with Gemini...");
+        var aiResult = await aiService.FormatSliceAsync(slice3.ContentMarkdown, slice3.ChapterTitle, "en");
+        aiResult.IsSuccess.Should().BeTrue();
+        _output.WriteLine($"AI Formatted Length: {aiResult.Value.FormattedMarkdown.Length} chars");
+        _output.WriteLine($"Key Takeaways ({aiResult.Value.KeyTakeaways.Count}):");
+        foreach (var t in aiResult.Value.KeyTakeaways)
+        {
+            _output.WriteLine($"- {t}");
+        }
+
+        // Verify that prose is NOT trapped inside code blocks in AI formatted result
+        aiResult.Value.FormattedMarkdown.Should().Contain("# ");
+        aiResult.Value.FormattedMarkdown.Should().Contain("> [!NOTE]");
+
+        // Save to real database so we can test UI live in browser!
+        var connStr = "Host=localhost;Port=5432;Database=techdaily_db;Username=techdaily_user;Password=techdaily_password_secret";
+        var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TechDaily.Infrastructure.Persistence.TechDailyDbContext>()
+            .UseNpgsql(connStr, o => o.UseVector())
+            .Options;
+
+        using var dbContext = new TechDaily.Infrastructure.Persistence.TechDailyDbContext(options);
+
+        // Delete existing test book with this title if exists
+        var existing = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
+            dbContext.DocumentBooks, b => b.Title == "ASP.NET Core 10 Architecture Guide");
+        if (existing != null)
+        {
+            var oldChunks = dbContext.DocumentChunks.Where(c => c.DocumentBookId == existing.Id);
+            dbContext.DocumentChunks.RemoveRange(oldChunks);
+            dbContext.DocumentBooks.Remove(existing);
+            await dbContext.SaveChangesAsync();
+        }
+
+        var book = new TechDaily.Domain.Entities.DocumentBook
+        {
+            Title = "ASP.NET Core 10 Architecture Guide",
+            Slug = "aspnet-core-10-architecture-guide",
+            SourceType = TechDaily.Domain.Enums.SourceType.PdfBook,
+            Category = TechDaily.Domain.Enums.Category.BackendDotNet,
+            AuthorOrSourceUrl = "Microsoft Learn ASP.NET Core 10",
+            TotalChunks = result.Slices.Count,
+            IsPublished = true,
+            IsFeatured = true,
+            Status = TechDaily.Domain.Enums.ProcessingStatus.Ready,
+            ProgressPercentage = 25,
+            StatusMessage = "Ready for reading (3 initial slices AI-curated)"
+        };
+        await dbContext.DocumentBooks.AddAsync(book);
+        await dbContext.SaveChangesAsync();
+
+        var chunks = new List<TechDaily.Domain.Entities.DocumentChunk>();
+        for (int i = 0; i < result.Slices.Count; i++)
+        {
+            var s = result.Slices[i];
+            var c = new TechDaily.Domain.Entities.DocumentChunk
+            {
+                DocumentBookId = book.Id,
+                ChunkOrder = s.Order,
+                ChapterTitle = s.ChapterTitle,
+                OriginalTextMarkdown = s.ContentMarkdown,
+                SummaryMarkdown = s.ChapterTitle,
+                KeyTakeaways = s.KeyTakeaways,
+                EstimatedReadMinutes = s.EstimatedReadMinutes,
+                IsAiFormatted = false
+            };
+            if (s.Order == slice3.Order)
+            {
+                c.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
+                c.SummaryMarkdown = aiResult.Value.SummaryMarkdown;
+                c.KeyTakeaways = aiResult.Value.KeyTakeaways;
+                c.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
+                c.IsAiFormatted = true;
+            }
+            chunks.Add(c);
+        }
+
+        await dbContext.DocumentChunks.AddRangeAsync(chunks);
+        await dbContext.SaveChangesAsync();
+
+        _output.WriteLine($"Saved book to database! BookId: {book.Id}");
     }
 }

@@ -11,6 +11,11 @@ export interface Book {
   authorOrSourceUrl?: string
   totalChunks: number
   isPublished: boolean
+  isFeatured?: boolean
+  status?: 'Pending' | 'Processing' | 'Ready' | 'Failed' | number
+  progressPercentage?: number
+  statusMessage?: string
+  errorMessage?: string
   createdAt: string
 }
 
@@ -22,6 +27,7 @@ export interface ChunkSummary {
   originalTextMarkdown: string
   keyTakeaways: string[]
   estimatedReadMinutes: number
+  isAiFormatted?: boolean
 }
 
 export interface BookDetail extends Book {
@@ -29,9 +35,10 @@ export interface BookDetail extends Book {
 }
 
 export interface BookIngestionStatus {
-  bookId: string
-  title: string
-  status: 'Pending' | 'Processing' | 'Ready' | 'Failed'
+  id?: string
+  bookId?: string
+  title?: string
+  status: 'Pending' | 'Processing' | 'Ready' | 'Failed' | number
   progressPercentage: number
   statusMessage?: string
   errorMessage?: string
@@ -169,6 +176,16 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
+  async function curateSlice(bookId: string, order: number): Promise<ChunkSummary | null> {
+    try {
+      const api = useApiClient()
+      const res = await api.post<{ chunk: ChunkSummary }>(`/api/v1/library/books/${bookId}/slices/${order}/curate`, {})
+      return res.chunk
+    } catch {
+      return null
+    }
+  }
+
   return {
     books,
     selectedBook,
@@ -181,6 +198,7 @@ export const useLibraryStore = defineStore('library', () => {
     uploadPdf,
     getBookStatus,
     crawlUrl,
-    deleteBook
+    deleteBook,
+    curateSlice
   }
 })

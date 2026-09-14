@@ -41,6 +41,7 @@ public class PdfIngestionWorker : BackgroundService
                 var dbContext = scope.ServiceProvider.GetRequiredService<ITechDailyDbContext>();
                 var pdfExtractor = scope.ServiceProvider.GetRequiredService<IPdfExtractor>();
                 var lookAheadService = scope.ServiceProvider.GetService<ILookAheadBufferService>();
+                var aiFormatter = scope.ServiceProvider.GetService<IAiMarkdownFormatter>();
 
                 var book = await dbContext.DocumentBooks.FirstOrDefaultAsync(b => b.Id == job.BookId, stoppingToken);
                 if (book == null)
@@ -87,7 +88,7 @@ public class PdfIngestionWorker : BackgroundService
                 }
 
                 book.StatusMessage = "Persisting chapters and slices...";
-                book.ProgressPercentage = 90;
+                book.ProgressPercentage = 8;
                 await dbContext.SaveChangesAsync(stoppingToken);
 
                 var chunks = new List<DocumentChunk>();
@@ -104,20 +105,59 @@ public class PdfIngestionWorker : BackgroundService
                         SummaryMarkdown = summaryText,
                         KeyTakeaways = slice.KeyTakeaways,
                         Language = job.Language,
-                        EstimatedReadMinutes = slice.EstimatedReadMinutes
+                        EstimatedReadMinutes = slice.EstimatedReadMinutes,
+                        IsAiFormatted = false
                     };
                     chunks.Add(chunk);
                 }
 
                 await dbContext.DocumentChunks.AddRangeAsync(chunks, stoppingToken);
-
                 book.TotalChunks = chunks.Count;
-                book.ProgressPercentage = 100;
-                book.Status = ProcessingStatus.Ready;
-                book.StatusMessage = "Ready";
                 await dbContext.SaveChangesAsync(stoppingToken);
 
-                _logger.LogInformation("Successfully processed book {BookId}: {TotalChunks} slices extracted.", book.Id, chunks.Count);
+                // Phase 1: Rapid Availability - AI format initial slices 1..3
+                int initialCount = Math.Min(3, chunks.Count);
+                if (aiFormatter != null)
+                {
+                    for (int i = 0; i < initialCount; i++)
+                    {
+                        var chunk = chunks[i];
+                        try
+                        {
+                            book.StatusMessage = $"AI is curating initial slice {i + 1}/{chunks.Count}...";
+                            await dbContext.SaveChangesAsync(stoppingToken);
+
+                            var aiResult = await aiFormatter.FormatSliceAsync(
+                                chunk.OriginalTextMarkdown,
+                                chunk.ChapterTitle,
+                                chunk.Language,
+                                stoppingToken);
+
+                            if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
+                            {
+                                chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
+                                chunk.SummaryMarkdown = aiResult.Value.SummaryMarkdown;
+                                chunk.KeyTakeaways = aiResult.Value.KeyTakeaways;
+                                chunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
+                                chunk.IsAiFormatted = true;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to format initial slice {Order} with AI for book {BookId}", chunk.ChunkOrder, book.Id);
+                        }
+                    }
+                }
+
+                int initialPct = chunks.Count <= 3 ? 100 : Math.Max(10, (int)(3.0 / chunks.Count * 100));
+                book.ProgressPercentage = initialPct;
+                book.Status = ProcessingStatus.Ready;
+                book.StatusMessage = chunks.Count <= 3
+                    ? "Ready"
+                    : $"Ready for reading ({initialCount} initial slices AI-curated)";
+                await dbContext.SaveChangesAsync(stoppingToken);
+
+                _logger.LogInformation("Successfully persisted book {BookId}: {TotalChunks} slices extracted. Initial slices ready.", book.Id, chunks.Count);
 
                 if (lookAheadService != null)
                 {
@@ -130,6 +170,53 @@ public class PdfIngestionWorker : BackgroundService
                     {
                         _logger.LogWarning(ex, "Failed to pre-generate initial buffer for book {BookId}", book.Id);
                     }
+                }
+
+                // Phase 2: Asynchronous Background Queue for slices 4..N
+                if (chunks.Count > 3 && aiFormatter != null)
+                {
+                    _logger.LogInformation("Starting Tier 2 background AI curation for book {BookId} (slices 4 to {Total})", book.Id, chunks.Count);
+
+                    for (int i = 3; i < chunks.Count; i++)
+                    {
+                        if (stoppingToken.IsCancellationRequested) break;
+
+                        // 1.2s delay pacing for rate-limit protection
+                        await Task.Delay(1200, stoppingToken);
+
+                        var chunk = chunks[i];
+                        try
+                        {
+                            var aiResult = await aiFormatter.FormatSliceAsync(
+                                chunk.OriginalTextMarkdown,
+                                chunk.ChapterTitle,
+                                chunk.Language,
+                                stoppingToken);
+
+                            if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
+                            {
+                                chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
+                                chunk.SummaryMarkdown = aiResult.Value.SummaryMarkdown;
+                                chunk.KeyTakeaways = aiResult.Value.KeyTakeaways;
+                                chunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
+                                chunk.IsAiFormatted = true;
+                            }
+
+                            int progressPct = (int)((double)(i + 1) / chunks.Count * 100);
+                            book.ProgressPercentage = progressPct;
+                            book.StatusMessage = $"AI is curating slice {i + 1}/{chunks.Count} ({progressPct}%)...";
+                            await dbContext.SaveChangesAsync(stoppingToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to format slice {Order} with AI for book {BookId}", chunk.ChunkOrder, book.Id);
+                        }
+                    }
+
+                    book.ProgressPercentage = 100;
+                    book.StatusMessage = "Ready";
+                    await dbContext.SaveChangesAsync(stoppingToken);
+                    _logger.LogInformation("Completed Tier 2 background AI curation for book {BookId}", book.Id);
                 }
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)

@@ -39,6 +39,7 @@ public class DocumentChunkDto
     public MicroQuizVo MicroQuiz { get; set; } = new();
     public string Language { get; set; } = "en";
     public int EstimatedReadMinutes { get; set; }
+    public bool IsAiFormatted { get; set; }
 }
 
 public class DailyDrillDto

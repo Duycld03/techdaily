@@ -53,7 +53,8 @@ public class GetBookByIdHandler : IUseCase<GetBookByIdRequest, GetBookByIdRespon
                 OriginalTextMarkdown = c.OriginalTextMarkdown,
                 KeyTakeaways = c.KeyTakeaways,
                 MicroQuiz = c.MicroQuiz,
-                EstimatedReadMinutes = c.EstimatedReadMinutes
+                EstimatedReadMinutes = c.EstimatedReadMinutes,
+                IsAiFormatted = c.IsAiFormatted
             }).ToList()
         };
 

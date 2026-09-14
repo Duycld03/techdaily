@@ -167,6 +167,7 @@
     "processing_pdf": "Processing PDF Document...",
     "processing_desc": "Spooling bookmarks, extracting slices, and preparing look-ahead buffer.",
     "upload_success_async": "PDF uploaded successfully! Ingestion is running in the background.",
+    "ai_curating": "AI is curating slices...",
     "processing_failed": "PDF processing failed",
     "url_crawler_title": "Crawl & Convert Article from Web",
     "url_input_placeholder": "https://github.com/.../README.md or tech blog URL",

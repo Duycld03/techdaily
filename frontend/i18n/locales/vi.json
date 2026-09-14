@@ -167,6 +167,7 @@
     "processing_pdf": "Đang Xử Lý Tài Liệu PDF...",
     "processing_desc": "Đang trích xuất bookmark, phân đoạn và chuẩn bị bộ đệm câu hỏi.",
     "upload_success_async": "Tải lên PDF thành công! Quá trình xử lý đang chạy ngầm.",
+    "ai_curating": "AI đang tối ưu các lát cắt...",
     "processing_failed": "Xử lý PDF thất bại",
     "url_crawler_title": "Cào & Chuyển Đổi Bài Viết Từ Web",
     "url_input_placeholder": "https://github.com/.../README.md hoặc link bài viết kỹ thuật",

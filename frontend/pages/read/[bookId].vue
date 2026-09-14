@@ -137,12 +137,37 @@ onMounted(async () => {
     }
 
     markCurrentSliceCompleted()
+    checkAndCurateSlice()
   } catch (err) {
     // handled by store
   }
 
   // Attach global keyboard listener for Shift + Left/Right and Escape
   window.addEventListener('keydown', handleKeyDown)
+})
+
+const isCuratingCurrentSlice = ref(false)
+
+async function checkAndCurateSlice() {
+  const chunk = currentChunk.value
+  if (!chunk || chunk.isAiFormatted || isCuratingCurrentSlice.value) return
+
+  isCuratingCurrentSlice.value = true
+  try {
+    const updated = await libraryStore.curateSlice(bookId.value, chunk.chunkOrder)
+    if (updated && book.value?.chunks) {
+      const idx = book.value.chunks.findIndex(c => c.chunkOrder === updated.chunkOrder)
+      if (idx !== -1) {
+        book.value.chunks[idx] = updated
+      }
+    }
+  } finally {
+    isCuratingCurrentSlice.value = false
+  }
+}
+
+watch(activeChunkIndex, () => {
+  checkAndCurateSlice()
 })
 
 onUnmounted(() => {
@@ -500,6 +525,10 @@ async function handleHighlightSelection() {
               <span class="flex items-center gap-1 text-slate-500 dark:text-slate-400 font-normal">
                 <Clock class="w-3.5 h-3.5" />
                 {{ $t('reader.reading_time', { minutes: currentChunk.estimatedReadMinutes || 3 }) }}
+              </span>
+              <span v-if="isCuratingCurrentSlice" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 font-medium normal-case text-xs animate-pulse">
+                <Sparkles class="w-3 h-3 text-amber-500" />
+                <span>AI is refining...</span>
               </span>
             </div>
 

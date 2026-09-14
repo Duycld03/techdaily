@@ -33,13 +33,16 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
 {
     private readonly ITechDailyDbContext _dbContext;
     private readonly ILookAheadBufferService? _lookAheadService;
+    private readonly IAiMarkdownFormatter? _aiFormatter;
 
     public GetTodayFocusHandler(
         ITechDailyDbContext dbContext,
-        ILookAheadBufferService? lookAheadService = null)
+        ILookAheadBufferService? lookAheadService = null,
+        IAiMarkdownFormatter? aiFormatter = null)
     {
         _dbContext = dbContext;
         _lookAheadService = lookAheadService;
+        _aiFormatter = aiFormatter;
     }
 
     public async Task<Result<GetTodayFocusResponse>> ExecuteAsync(
@@ -167,6 +170,33 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         var documentChunk = await _dbContext.DocumentChunks
             .Include(c => c.InterviewQuestions)
             .FirstOrDefaultAsync(c => c.DocumentBookId == targetBook.Id && c.ChunkOrder == targetChunkOrder, cancellationToken);
+
+        // On-demand JIT AI formatting if this chunk was not yet curated by background worker
+        if (documentChunk != null && !documentChunk.IsAiFormatted && _aiFormatter != null)
+        {
+            try
+            {
+                var aiResult = await _aiFormatter.FormatSliceAsync(
+                    documentChunk.OriginalTextMarkdown,
+                    documentChunk.ChapterTitle,
+                    documentChunk.Language,
+                    cancellationToken);
+
+                if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
+                {
+                    documentChunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
+                    documentChunk.SummaryMarkdown = aiResult.Value.SummaryMarkdown;
+                    documentChunk.KeyTakeaways = aiResult.Value.KeyTakeaways;
+                    documentChunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
+                    documentChunk.IsAiFormatted = true;
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+            }
+            catch
+            {
+                // Non-blocking fallback to existing text
+            }
+        }
 
         InterviewQuestion? question = documentChunk?.InterviewQuestions.FirstOrDefault();
         bool isGenerating = false;
@@ -451,7 +481,8 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                 KeyTakeaways = chunk.KeyTakeaways,
                 MicroQuiz = chunk.MicroQuiz,
                 Language = chunk.Language,
-                EstimatedReadMinutes = chunk.EstimatedReadMinutes
+                EstimatedReadMinutes = chunk.EstimatedReadMinutes,
+                IsAiFormatted = chunk.IsAiFormatted
             },
             Drill = new DailyDrillDto
             {
