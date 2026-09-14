@@ -14,7 +14,10 @@ import {
   Share2,
   HelpCircle,
   Highlighter,
-  X
+  X,
+  AlertTriangle,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-vue-next'
 import type { BookDetail, ChunkSummary } from '~/stores/useLibraryStore'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
@@ -137,12 +140,95 @@ onMounted(async () => {
     }
 
     markCurrentSliceCompleted()
+    checkAndCurateSlice()
   } catch (err) {
     // handled by store
   }
 
   // Attach global keyboard listener for Shift + Left/Right and Escape
   window.addEventListener('keydown', handleKeyDown)
+})
+
+const isCuratingCurrentSlice = ref(false)
+const curationError = ref<string | null>(null)
+const isViewingRawTemporarily = ref(false)
+const prefetchedChunkOrders = ref<Set<number>>(new Set())
+
+async function checkAndCurateSlice() {
+  const chunk = currentChunk.value
+  if (!chunk) return
+
+  // If already formatted, trigger lookahead prefetch for next slice and exit
+  if (chunk.isAiFormatted) {
+    curationError.value = null
+    triggerLookaheadPrefetch()
+    return
+  }
+
+  // If viewing raw temporarily or already curating, skip
+  if (isViewingRawTemporarily.value || isCuratingCurrentSlice.value) return
+
+  isCuratingCurrentSlice.value = true
+  curationError.value = null
+
+  try {
+    const updated = await libraryStore.curateSlice(bookId.value, chunk.chunkOrder)
+    if (updated && book.value?.chunks) {
+      const idx = book.value.chunks.findIndex(c => c.chunkOrder === updated.chunkOrder)
+      if (idx !== -1) {
+        book.value.chunks[idx] = updated
+      }
+      curationError.value = null
+      triggerLookaheadPrefetch()
+    } else {
+      curationError.value = 'Failed to curate slice'
+    }
+  } catch (err: any) {
+    curationError.value = err.message || 'Failed to curate slice'
+  } finally {
+    isCuratingCurrentSlice.value = false
+  }
+}
+
+async function retryCurateCurrentSlice() {
+  isViewingRawTemporarily.value = false
+  curationError.value = null
+  await checkAndCurateSlice()
+}
+
+function handleViewRawTemporarily() {
+  isViewingRawTemporarily.value = true
+  curationError.value = null
+}
+
+async function triggerLookaheadPrefetch() {
+  if (!book.value?.chunks?.length) return
+  const nextIndex = activeChunkIndex.value + 1
+  if (nextIndex >= book.value.chunks.length) return
+
+  const nextSlice = book.value.chunks[nextIndex]
+  if (!nextSlice || nextSlice.isAiFormatted || prefetchedChunkOrders.value.has(nextSlice.chunkOrder)) {
+    return
+  }
+
+  prefetchedChunkOrders.value.add(nextSlice.chunkOrder)
+  try {
+    const updated = await libraryStore.curateSlice(bookId.value, nextSlice.chunkOrder)
+    if (updated && book.value?.chunks) {
+      const idx = book.value.chunks.findIndex(c => c.chunkOrder === updated.chunkOrder)
+      if (idx !== -1) {
+        book.value.chunks[idx] = updated
+      }
+    }
+  } catch {
+    prefetchedChunkOrders.value.delete(nextSlice.chunkOrder)
+  }
+}
+
+watch(activeChunkIndex, () => {
+  isViewingRawTemporarily.value = false
+  curationError.value = null
+  checkAndCurateSlice()
 })
 
 onUnmounted(() => {
@@ -176,6 +262,8 @@ function markCurrentSliceCompleted() {
 
 function selectChunk(index: number) {
   if (index < 0 || !book.value?.chunks?.length || index >= book.value.chunks.length) return
+  isViewingRawTemporarily.value = false
+  curationError.value = null
   activeChunkIndex.value = index
   isMobileTocOpen.value = false
 
@@ -489,8 +577,75 @@ async function handleHighlightSelection() {
           <span class="text-sm">Loading document chapter...</span>
         </div>
 
+        <!-- JIT Curating State (Current Slice is uncurated & actively being formatted by AI) -->
+        <div
+          v-else-if="currentChunk && !currentChunk.isAiFormatted && !isViewingRawTemporarily && isCuratingCurrentSlice"
+          class="py-24 flex flex-col items-center justify-center text-center space-y-4 max-w-md mx-auto my-auto"
+        >
+          <div class="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/60 flex items-center justify-center shadow-sm">
+            <Sparkles class="w-7 h-7 text-brand-600 dark:text-brand-400 animate-spin" />
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              {{ $t('reader.curating_title') }}
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              {{ $t('reader.curating_desc') }}
+            </p>
+          </div>
+        </div>
+
+        <!-- AI Curation Error State (Retry or View Raw Temporarily) -->
+        <div
+          v-else-if="currentChunk && !currentChunk.isAiFormatted && !isViewingRawTemporarily && curationError"
+          class="py-20 flex flex-col items-center justify-center text-center space-y-5 max-w-md mx-auto my-auto"
+        >
+          <div class="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center shadow-sm">
+            <AlertCircle class="w-7 h-7 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+              {{ $t('reader.curate_error_title') }}
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              {{ $t('reader.curate_error_desc') }}
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button
+              @click="retryCurateCurrentSlice"
+              class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-semibold transition-all shadow-sm active:scale-95 flex items-center gap-1.5 whitespace-nowrap shrink-0"
+            >
+              <RefreshCw class="w-4 h-4" />
+              <span>{{ $t('reader.retry_ai') }}</span>
+            </button>
+            <button
+              @click="handleViewRawTemporarily"
+              class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold transition-all active:scale-95 whitespace-nowrap shrink-0"
+            >
+              <span>{{ $t('reader.view_raw_temporary') }}</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Article Content Card -->
         <div v-else-if="currentChunk" class="w-full max-w-3xl space-y-8 sm:space-y-10">
+          <!-- Ephemeral Raw Text Fallback Amber Banner -->
+          <div
+            v-if="isViewingRawTemporarily"
+            class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 flex items-center justify-between gap-3 text-xs sm:text-sm text-amber-800 dark:text-amber-300 shadow-sm"
+          >
+            <div class="flex items-center gap-2.5 min-w-0">
+              <AlertTriangle class="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span class="leading-snug">{{ $t('reader.viewing_raw_notice') }}</span>
+            </div>
+            <button
+              @click="retryCurateCurrentSlice"
+              class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors shrink-0 whitespace-nowrap shadow-sm"
+            >
+              {{ $t('reader.retry_ai') }}
+            </button>
+          </div>
           <!-- Chapter Meta Header -->
           <div class="space-y-3 sm:space-y-4 pb-5 sm:pb-6 border-b border-slate-200 dark:border-slate-800/80">
             <div class="flex items-center gap-2 sm:gap-3 text-xs font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider">

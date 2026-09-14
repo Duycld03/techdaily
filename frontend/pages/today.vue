@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
-import { BookOpen, Terminal, ChevronLeft, ChevronRight, CheckCircle2, RotateCcw, ChevronDown, ArrowUpRight, BookMarked } from 'lucide-vue-next'
+import { BookOpen, Terminal, ChevronLeft, ChevronRight, CheckCircle2, RotateCcw, ChevronDown, ArrowUpRight, BookMarked, Sparkles } from 'lucide-vue-next'
 import DocReaderPane from '~/components/today/DocReaderPane.vue'
 import InterviewChallengePane from '~/components/today/InterviewChallengePane.vue'
 
 const route = useRoute()
 const router = useRouter()
 const focusStore = useDailyFocusStore()
+const libraryStore = useLibraryStore()
 const { locale } = useI18n()
 
 const activeMobileTab = ref<'reader' | 'challenge'>('reader')
@@ -17,6 +18,15 @@ const bookMenuRef = ref<HTMLElement | null>(null)
 function handleClickOutside(event: MouseEvent) {
   if (bookMenuRef.value && !bookMenuRef.value.contains(event.target as Node)) {
     isBookMenuOpen.value = false
+  }
+}
+
+function triggerNextDayPrefetch() {
+  if (!focusStore.data?.pacer) return
+  const pacer = focusStore.data.pacer
+  const nextChunkOrder = pacer.currentChunkOrder + 1
+  if (nextChunkOrder <= pacer.totalChunks) {
+    libraryStore.curateSlice(pacer.bookId, nextChunkOrder).catch(() => {})
   }
 }
 
@@ -35,6 +45,7 @@ onMounted(async () => {
   if (res?.topic) {
     currentDayOrder.value = res.topic.dayOrder
   }
+  triggerNextDayPrefetch()
 })
 
 onUnmounted(() => {
@@ -72,6 +83,7 @@ async function navigatePacerSlice(direction: -1 | 1) {
     chunkOrder: nextOrder,
     locale: locale.value
   })
+  triggerNextDayPrefetch()
 }
 
 async function handleSwitchBook(bookId: string) {
@@ -85,6 +97,7 @@ async function handleSwitchBook(bookId: string) {
     }
   })
   await focusStore.switchBook(bookId, locale.value)
+  triggerNextDayPrefetch()
 }
 
 const isTodayScheduledDay = computed(() => {
@@ -111,7 +124,7 @@ function resetToScheduledDay() {
 </script>
 
 <template>
-  <div class="h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-3.75rem)] flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+  <div class="h-full flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
     <!-- Top Pacer Navigation Bar -->
     <div class="h-13 px-3 sm:px-6 md:px-8 border-b border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/60 backdrop-blur flex items-center justify-between shrink-0 gap-2 sm:gap-3 relative z-30">
       <!-- PACER MODE: Active Document Book -->
@@ -286,11 +299,13 @@ function resetToScheduledDay() {
     </div>
 
     <!-- Loading State -->
-    <div v-if="focusStore.isLoading" class="flex-1 flex items-center justify-center">
-      <div class="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
-        <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"></div>
-        <span>{{ $t('today.loading_curriculum', { day: currentDayOrder }) }}</span>
+    <div v-if="focusStore.isLoading" class="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 text-center my-auto">
+      <div class="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/60 flex items-center justify-center shadow-sm mb-4">
+        <Sparkles class="w-6 h-6 text-brand-600 dark:text-brand-400 animate-spin" />
       </div>
+      <p class="text-sm sm:text-base font-semibold text-slate-700 dark:text-slate-300 max-w-sm sm:max-w-md mx-auto leading-relaxed">
+        {{ focusStore.data?.pacer ? $t('pacer.ai_synthesis_desc') : $t('today.loading_curriculum', { day: currentDayOrder }) }}
+      </p>
     </div>
 
     <!-- Error State -->

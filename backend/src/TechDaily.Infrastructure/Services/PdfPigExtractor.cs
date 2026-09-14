@@ -108,62 +108,20 @@ public class PdfPigExtractor : IPdfExtractor
     {
         var slices = new List<ExtractedPdfSlice>();
         var validBookmarks = bookmarks
-            .Where(b => !IsIgnoredBookmark(b.Title) && b.PageNumber <= pagesToProcess)
+            .Where(b => !IsIgnoredBookmark(b.Title) && b.PageNumber > 0 && b.PageNumber <= pagesToProcess)
             .ToList();
 
         if (validBookmarks.Count == 0) return slices;
 
-        // Determine optimal curation depth threshold:
-        // Level 0: Volume / Book Title
-        // Level 1: Modules / Major Sections
-        // Level 2: Standalone Topics / Articles
-        // Level 3+: Minor subheadings inside articles (to be aggregated)
-        int targetMaxDepth = 1;
-        var level0Count = validBookmarks.Count(b => b.Level == 0);
-        var level1Count = validBookmarks.Count(b => b.Level == 1);
-        var level2Count = validBookmarks.Count(b => b.Level == 2);
-
-        if (level0Count <= 3 && level1Count <= 25 && level2Count >= 10)
-        {
-            // Root is document title, Level 1 has a few modules, Level 2 contains the articles
-            targetMaxDepth = 2;
-        }
-        else if (level0Count <= 3 && level1Count > 25)
-        {
-            // Level 1 itself contains plenty of chapters/articles
-            targetMaxDepth = 1;
-        }
-        else if (level0Count > 10)
-        {
-            // Level 0 contains the chapters
-            targetMaxDepth = 0;
-        }
-        else
-        {
-            targetMaxDepth = Math.Min(validBookmarks.Max(b => b.Level), 2);
-        }
-
-        // Filter bookmarks by targetMaxDepth
+        // Retain all outline bookmarks pointing to distinct destination pages (~5-10 pages per slice).
+        // If multiple bookmarks point to the exact same page, prefer the deeper child to preserve parent module context.
         var curatedBookmarks = validBookmarks
-            .Where(b => b.Level <= targetMaxDepth)
             .OrderBy(b => b.PageNumber)
-            .ThenBy(b => b.Level)
+            .ThenByDescending(b => b.Level)
             .GroupBy(b => b.PageNumber)
-            .Select(g => g.First()) // Keep top-level bookmark when multiple share a page
+            .Select(g => g.First())
             .OrderBy(b => b.PageNumber)
             .ToList();
-
-        // Fallback: If filtering resulted in too few (< 2) but validBookmarks had more, include all valid
-        if (curatedBookmarks.Count < 2 && validBookmarks.Count >= 2)
-        {
-            curatedBookmarks = validBookmarks
-                .OrderBy(b => b.PageNumber)
-                .ThenBy(b => b.Level)
-                .GroupBy(b => b.PageNumber)
-                .Select(g => g.First())
-                .OrderBy(b => b.PageNumber)
-                .ToList();
-        }
 
         if (curatedBookmarks.Count == 0) return slices;
 
@@ -182,7 +140,7 @@ public class PdfPigExtractor : IPdfExtractor
             var sliceTitle = FormatCuratedTitle(current, sliceOrder);
             progress?.Report(new PdfExtractionProgress(startPage, totalPages, $"Extracting topic: {sliceTitle}"));
 
-            var chapterSb = new StringBuilder();
+            var chapterPages = new List<(int PageNumber, string Text)>();
             for (int p = startPage; p <= endPage; p++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -192,8 +150,7 @@ public class PdfPigExtractor : IPdfExtractor
                     var text = ExtractPageLines(page);
                     if (!string.IsNullOrWhiteSpace(text))
                     {
-                        chapterSb.AppendLine(text);
-                        chapterSb.AppendLine();
+                        chapterPages.Add((p, text));
                     }
                 }
                 catch
@@ -202,49 +159,108 @@ public class PdfPigExtractor : IPdfExtractor
                 }
             }
 
-            var chapterText = chapterSb.ToString().Trim();
-            if (string.IsNullOrWhiteSpace(chapterText)) continue;
+            if (chapterPages.Count == 0) continue;
 
-            // Semantic chapter splitting: keep complete topics intact (up to 5,000 words).
-            // Only split at natural ## headings if topic is exceptionally monolithic.
-            var wordCount = chapterText.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-            if (wordCount <= 5000)
-            {
-                slices.Add(CreateSlice(sliceOrder++, sliceTitle, chapterText));
-            }
-            else
-            {
-                // Split only at major section headings ##
-                var sections = Regex.Split(chapterText, @"(?m)(?=^#{2,3}\s+)");
-                var partSb = new StringBuilder();
-                int partWordCount = 0;
-                int partIndex = 1;
-
-                foreach (var sec in sections)
-                {
-                    if (string.IsNullOrWhiteSpace(sec)) continue;
-                    var secWords = sec.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-                    if (partWordCount + secWords > 3500 && partSb.Length > 0)
-                    {
-                        var partTitle = $"{sliceTitle} (Section {partIndex++})";
-                        slices.Add(CreateSlice(sliceOrder++, partTitle, partSb.ToString().Trim()));
-                        partSb.Clear();
-                        partWordCount = 0;
-                    }
-                    partSb.AppendLine(sec);
-                    partSb.AppendLine();
-                    partWordCount += secWords;
-                }
-
-                if (partSb.Length > 0)
-                {
-                    var partTitle = partIndex > 1 ? $"{sliceTitle} (Section {partIndex})" : sliceTitle;
-                    slices.Add(CreateSlice(sliceOrder++, partTitle, partSb.ToString().Trim()));
-                }
-            }
+            AddChapterSlices(slices, ref sliceOrder, sliceTitle, chapterPages);
         }
 
         return slices;
+    }
+
+    private static void AddChapterSlices(
+        List<ExtractedPdfSlice> slices,
+        ref int sliceOrder,
+        string sliceTitle,
+        List<(int PageNumber, string Text)> pages)
+    {
+        if (pages.Count == 0) return;
+
+        var pendingSections = new List<string>();
+        var currentSectionPages = new List<string>();
+        int currentWordCount = 0;
+
+        foreach (var page in pages)
+        {
+            var pageWords = page.Text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+            if (pageWords == 0) continue;
+
+            // If a single page is massive (> 2,000 words), split it by paragraphs
+            if (pageWords > 2000)
+            {
+                if (currentSectionPages.Count > 0)
+                {
+                    var secText = string.Join("\n\n", currentSectionPages).Trim();
+                    if (!string.IsNullOrWhiteSpace(secText)) pendingSections.Add(secText);
+                    currentSectionPages.Clear();
+                    currentWordCount = 0;
+                }
+
+                var paragraphs = page.Text.Split(new[] { "\r\n\r\n", "\n\n" }, StringSplitOptions.RemoveEmptyEntries);
+                var paraSb = new StringBuilder();
+                int paraWords = 0;
+
+                foreach (var para in paragraphs)
+                {
+                    var pCount = para.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+                    if (paraWords + pCount > 1800 && paraWords >= 700)
+                    {
+                        var text = paraSb.ToString().Trim();
+                        if (!string.IsNullOrWhiteSpace(text)) pendingSections.Add(text);
+                        paraSb.Clear();
+                        paraWords = 0;
+                    }
+                    paraSb.AppendLine(para);
+                    paraSb.AppendLine();
+                    paraWords += pCount;
+                }
+
+                if (paraSb.Length > 0)
+                {
+                    var text = paraSb.ToString().Trim();
+                    if (!string.IsNullOrWhiteSpace(text)) pendingSections.Add(text);
+                }
+                continue;
+            }
+
+            // If adding this page exceeds 2,000 words and we already have substantial text (>= 700 words), flush
+            if (currentWordCount + pageWords > 2000 && currentWordCount >= 700)
+            {
+                var sectionText = string.Join("\n\n", currentSectionPages).Trim();
+                if (!string.IsNullOrWhiteSpace(sectionText))
+                {
+                    pendingSections.Add(sectionText);
+                }
+                currentSectionPages.Clear();
+                currentWordCount = 0;
+            }
+
+            currentSectionPages.Add(page.Text);
+            currentWordCount += pageWords;
+        }
+
+        if (currentSectionPages.Count > 0)
+        {
+            var sectionText = string.Join("\n\n", currentSectionPages).Trim();
+            if (!string.IsNullOrWhiteSpace(sectionText))
+            {
+                pendingSections.Add(sectionText);
+            }
+        }
+
+        if (pendingSections.Count == 0) return;
+
+        if (pendingSections.Count == 1)
+        {
+            slices.Add(CreateSlice(sliceOrder++, sliceTitle, pendingSections[0]));
+        }
+        else
+        {
+            for (int s = 0; s < pendingSections.Count; s++)
+            {
+                var partTitle = $"{sliceTitle} (Section {s + 1})";
+                slices.Add(CreateSlice(sliceOrder++, partTitle, pendingSections[s]));
+            }
+        }
     }
 
     internal static string FormatCuratedTitle(RawBookmark bookmark, int order)
@@ -539,14 +555,35 @@ public class PdfPigExtractor : IPdfExtractor
         return null;
     }
 
+    private static readonly HashSet<string> BlacklistedTitles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "table of contents", "contents", "mục lục", "cover", "copyright", "bản quyền",
+        "preface", "about the author", "about the authors", "about the reviewer", "about the reviewers",
+        "index", "chỉ mục", "contributors", "contribute", "credits", "bibliography", "references", "colophon",
+        "api reference"
+    };
+
     private static bool IsIgnoredBookmark(string title)
     {
-        var lower = title.ToLowerInvariant().Trim();
-        return lower == "api reference" ||
-               lower == "contribute" ||
-               lower == "table of contents" ||
-               lower == "index" ||
-               lower == "credits";
+        if (string.IsNullOrWhiteSpace(title)) return true;
+        var lower = title.Trim().ToLowerInvariant();
+        if (BlacklistedTitles.Contains(lower)) return true;
+
+        if (lower.StartsWith("table of contents") ||
+            lower.StartsWith("about the author") ||
+            lower.StartsWith("about the reviewer") ||
+            lower == "index" ||
+            lower.StartsWith("index ") ||
+            lower.StartsWith("copyright ") ||
+            lower.StartsWith("contributors") ||
+            lower.StartsWith("credits") ||
+            lower.StartsWith("references") ||
+            lower.StartsWith("bibliography"))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private static string ExtractPageLines(UglyToad.PdfPig.Content.Page page)
@@ -618,10 +655,10 @@ public class PdfPigExtractor : IPdfExtractor
     {
         if (string.IsNullOrWhiteSpace(text)) return string.Empty;
 
-        // Strip Microsoft pre-release disclaimer banners
+        // Strip Microsoft pre-release disclaimer banners (multi-line and with leading punctuation)
         var cleaned = Regex.Replace(
             text,
-            @"(?i)(?:###\s*\d{1,2}/\d{1,2}/\d{4}|\b\d{2}/\d{2}/\d{4}\b)?\s*\)?\s*Important\s+This information relates to a pre-release product[^.\n]*\.[^.\n]*\.(?:\s*For the current release[^.\n]*\.)?",
+            @"(?is)(?:###\s*\d{1,2}/\d{1,2}/\d{4}|\b\d{2}/\d{2}/\d{4}\b)?\s*[\)\(\]\s]*Important\s+This information relates to a pre-release product.*?(?:Microsoft makes no warranties[^.\n]*\.|For the current release[^.\n]*\.|\.\s*\n)",
             "",
             RegexOptions.Multiline);
 

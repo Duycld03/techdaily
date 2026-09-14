@@ -16,6 +16,7 @@ public class DocumentChunk : BaseEntity
     public string Language { get; set; } = "en";
     public Vector? Embedding { get; set; }
     public int EstimatedReadMinutes { get; set; } = 3;
+    public bool IsAiFormatted { get; set; } = false;
 
     // Navigation properties
     public DocumentBook DocumentBook { get; set; } = null!;

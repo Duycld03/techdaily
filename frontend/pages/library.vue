@@ -52,8 +52,33 @@ const categories = computed(() => [
   { id: 4, label: t('library.categories.system_design') }
 ])
 
-onMounted(() => {
-  libraryStore.fetchBooks()
+let backgroundPollTimer: ReturnType<typeof setInterval> | null = null
+
+function checkBackgroundPolling() {
+  if (backgroundPollTimer) {
+    clearInterval(backgroundPollTimer)
+    backgroundPollTimer = null
+  }
+  const hasInProgressBook = libraryStore.books.some(
+    b => b.status === 'Processing' || (b.status as any) === 1
+  )
+  if (hasInProgressBook) {
+    backgroundPollTimer = setInterval(async () => {
+      await libraryStore.fetchBooks(selectedCategory.value, searchQuery.value)
+      const stillActive = libraryStore.books.some(
+        b => b.status === 'Processing' || (b.status as any) === 1
+      )
+      if (!stillActive && backgroundPollTimer) {
+        clearInterval(backgroundPollTimer)
+        backgroundPollTimer = null
+      }
+    }, 2500)
+  }
+}
+
+onMounted(async () => {
+  await libraryStore.fetchBooks()
+  checkBackgroundPolling()
   loadBookmarks()
 })
 
@@ -61,6 +86,10 @@ onUnmounted(() => {
   if (pollInterval) {
     clearInterval(pollInterval)
     pollInterval = null
+  }
+  if (backgroundPollTimer) {
+    clearInterval(backgroundPollTimer)
+    backgroundPollTimer = null
   }
 })
 
@@ -334,6 +363,19 @@ async function confirmDeleteBook() {
           <div v-if="bookmarks[book.id]" class="mt-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900 text-brand-700 dark:text-brand-300 text-xs sm:text-sm font-semibold">
             <Bookmark class="w-3.5 h-3.5 text-brand-500 fill-brand-500" />
             <span>{{ $t('library.resumes_at', { slice: bookmarks[book.id] }) }}</span>
+          </div>
+          <!-- Ready Badge if no bookmark -->
+          <div v-else-if="book.status === 'Ready' || (book.status as any) === 2" class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm font-semibold">
+            <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
+            <span>{{ $t('library.ready_to_read') }}</span>
+          </div>
+
+          <!-- In-Progress Ingestion Indicator (Tier 1 Uploading) -->
+          <div v-if="book.status === 'Processing' || (book.status as any) === 1" class="mt-3.5 p-3 rounded-2xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20">
+            <div class="flex items-center gap-2 text-xs font-semibold text-brand-700 dark:text-brand-300">
+              <Loader2 class="w-3.5 h-3.5 text-brand-500 animate-spin shrink-0" />
+              <span class="truncate">{{ book.statusMessage || $t('library.processing_pdf') }}</span>
+            </div>
           </div>
         </div>
 

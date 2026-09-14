@@ -51,6 +51,11 @@ public class GetBooksHandler : IUseCase<GetBooksRequest, GetBooksResponse>
                 AuthorOrSourceUrl = b.AuthorOrSourceUrl,
                 TotalChunks = b.TotalChunks,
                 IsPublished = b.IsPublished,
+                IsFeatured = b.IsFeatured,
+                Status = b.Status,
+                ProgressPercentage = b.ProgressPercentage,
+                StatusMessage = b.StatusMessage,
+                ErrorMessage = b.ErrorMessage,
                 CreatedAt = b.CreatedAt
             })
             .ToListAsync(cancellationToken);

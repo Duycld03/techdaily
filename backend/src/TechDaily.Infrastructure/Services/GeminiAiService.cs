@@ -11,7 +11,7 @@ using TechDaily.Domain.Enums;
 
 namespace TechDaily.Infrastructure.Services;
 
-public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService
+public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAiMarkdownFormatter
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
@@ -1071,5 +1071,244 @@ No markdown backticks around JSON.";
             });
         }
         return list;
+    }
+
+    public async Task<Result<AiFormattedSliceResult>> FormatSliceAsync(
+        string rawText,
+        string chapterTitle,
+        string language = "en",
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(rawText))
+        {
+            return new AiFormattedSliceResult(
+                FormattedMarkdown: $"# {chapterTitle}\n\nNo content available for this section.",
+                SummaryMarkdown: "Empty section.",
+                KeyTakeaways: new List<string> { "Empty chapter section" },
+                EstimatedReadMinutes: 1);
+        }
+
+        // Check if Gemini is configured
+        if (string.IsNullOrWhiteSpace(_apiKey))
+        {
+            _logger.LogWarning("Gemini API key is not configured for '{Title}'.", chapterTitle);
+            return new Error("Gemini.MissingApiKey", "Gemini API key is not configured.");
+        }
+
+        try
+        {
+            // Truncate rawText if excessively long to prevent token overflow (~25,000 chars is ~6,000 tokens)
+            var inputSample = rawText.Length > 25000 ? rawText.Substring(0, 25000) : rawText;
+
+            var systemInstruction = $@"
+You are a Principal Software Architect and Technical Editor.
+Your task is to convert raw extracted text from a technical book or documentation chapter into a standardized TechInsight-style Markdown reading article.
+
+MANDATORY RULES:
+1. Document Heading: Start immediately with '# {chapterTitle}' as the top-level H1 header.
+2. Context Note: Follow directly with a brief executive context callout:
+> [!NOTE]
+> 2-3 sentences explaining the core architectural concept, purpose, and significance.
+3. Clean Narrative Prose: Merge fragmented sentences and repair awkward line breaks caused by PDF extraction into natural, flowing body paragraphs.
+4. Universal Syntax-Tagged Code Blocks:
+   - Identify every code snippet, terminal command, configuration, or markup and enclose it in triple backticks with its lowercase language identifier (e.g. ```csharp, ```python, ```typescript, ```javascript, ```sql, ```go, ```rust, ```bash, ```yaml, ```dockerfile, ```html, ```razor, ```json).
+   - CRITICAL PROSE PROTECTION: NEVER trap explanatory sentences, user instructions, or descriptions inside code blocks. Code blocks MUST contain ONLY code or commands.
+5. Architectural Callouts: Highlight critical caveats, performance tips, or security notices with GitHub alerts (`> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`).
+6. Remove Junk Boilerplate: Completely strip print headers, publication dates (e.g. '07/30/2025'), copyright notices, and pre-release disclaimers (e.g. 'Important This information relates to a pre-release product...').
+7. Key Takeaways: Conclude with '### Key Takeaways' containing exactly 3 bullet points of high-impact architectural insights.
+8. Senior Scenario Drill: Create exactly 1 high-impact Senior-level Architectural Trade-off Multiple-Choice Challenge directly evaluating the core principles and key takeaways of this chapter.
+   - questionText: A realistic production scenario describing an engineering challenge and asking for the optimal architectural decision.
+   - options: Exactly 4 distinct, plausible choices (Option A, B, C, D).
+   - correctOptionIndex: 0-indexed integer (0 to 3) pointing to the optimal senior choice.
+   - explanationMarkdown: Comprehensive markdown explaining why the chosen option succeeds and why alternatives fail or incur technical debt.
+   - expectedKeyPoints: Array of 2-3 key evaluation trade-off criteria.
+9. Language: Preserve the author's original language ({language}) for explanations, code, and quiz challenge.
+
+Respond strictly in valid JSON without markdown wrapping:
+{{
+  ""formattedMarkdown"": ""# {chapterTitle}\\n\\n> [!NOTE]\\n> Context summary...\\n\\nBody paragraphs...\\n\\n```csharp\\ncode\\n```\\n\\n### Key Takeaways\\n- Point 1\\n- Point 2\\n- Point 3"",
+  ""summaryMarkdown"": ""A concise 2-3 sentence overview of this chapter."",
+  ""keyTakeaways"": [
+    ""First key architectural point"",
+    ""Second key architectural point"",
+    ""Third key architectural point""
+  ],
+  ""estimatedReadMinutes"": 5,
+  ""scenarioDrill"": {{
+    ""questionText"": ""Realistic production scenario stating an architectural trade-off problem..."",
+    ""options"": [
+      ""Option A description..."",
+      ""Option B description (optimal choice)..."",
+      ""Option C description..."",
+      ""Option D description...""
+    ],
+    ""correctOptionIndex"": 1,
+    ""explanationMarkdown"": ""Detailed explanation analyzing why the chosen option succeeds and alternatives fail..."",
+    ""expectedKeyPoints"": [
+      ""Trade-off factor 1"",
+      ""Trade-off factor 2""
+    ]
+  }}
+}}";
+
+            var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
+            var requestPayload = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        role = "user",
+                        parts = new object[]
+                        {
+                            new { text = $"Chapter Title: '{chapterTitle}'\n\nRaw Text to Format:\n{inputSample}" }
+                        }
+                    }
+                },
+                systemInstruction = new
+                {
+                    parts = new[]
+                    {
+                        new { text = systemInstruction }
+                    }
+                },
+                generationConfig = new
+                {
+                    temperature = 0.2,
+                    maxOutputTokens = 8192,
+                    responseMimeType = "application/json"
+                }
+            };
+
+            var jsonContent = JsonSerializer.Serialize(requestPayload);
+            var response = await PostGeminiWithRetryAsync(requestUri, jsonContent, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogWarning("Gemini API error ({StatusCode}) during slice formatting: {Error}.", response.StatusCode, errorBody);
+                return new Error("Gemini.ApiError", $"Gemini API returned {response.StatusCode}: {errorBody}");
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            return ParseSliceResponse(responseBody, rawText, chapterTitle);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception during AI slice formatting for '{Title}'.", chapterTitle);
+            return new Error("Gemini.Exception", ex.Message);
+        }
+    }
+
+    private Result<AiFormattedSliceResult> ParseSliceResponse(string responseBody, string rawText, string chapterTitle)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(responseBody);
+            var candidates = doc.RootElement.GetProperty("candidates");
+            if (candidates.GetArrayLength() == 0)
+            {
+                return new Error("Gemini.NoCandidates", "Gemini returned no candidates.");
+            }
+
+            var content = candidates[0].GetProperty("content");
+            var parts = content.GetProperty("parts");
+            string? rawJson = null;
+            foreach (var part in parts.EnumerateArray())
+            {
+                if (part.TryGetProperty("text", out var textProp))
+                {
+                    rawJson = textProp.GetString();
+                    break;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(rawJson))
+            {
+                return new Error("Gemini.EmptyResponse", "Gemini returned empty text.");
+            }
+
+            var cleanJson = ExtractJsonObject(rawJson.Trim());
+            using var sliceDoc = JsonDocument.Parse(cleanJson);
+            var root = sliceDoc.RootElement;
+
+            var formattedMarkdown = root.TryGetProperty("formattedMarkdown", out var fm) ? fm.GetString() : null;
+            var summaryMarkdown = root.TryGetProperty("summaryMarkdown", out var sm) ? sm.GetString() : null;
+            var takeaways = new List<string>();
+            if (root.TryGetProperty("keyTakeaways", out var kt) && kt.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var el in kt.EnumerateArray())
+                {
+                    var item = el.GetString();
+                    if (!string.IsNullOrWhiteSpace(item)) takeaways.Add(item.Trim());
+                }
+            }
+
+            int estimatedReadMinutes = root.TryGetProperty("estimatedReadMinutes", out var em) && em.TryGetInt32(out var min)
+                ? min
+                : Math.Max(1, (formattedMarkdown ?? rawText).Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length / 200);
+
+            if (string.IsNullOrWhiteSpace(formattedMarkdown))
+            {
+                return new Error("Gemini.MissingFormattedMarkdown", "AI response did not include formattedMarkdown.");
+            }
+
+            if (takeaways.Count == 0)
+            {
+                takeaways = new List<string>
+                {
+                    $"Key implementation principles of {chapterTitle}",
+                    "Architectural considerations and operational constraints",
+                    "Best practices for production deployments"
+                };
+            }
+
+            AiScenarioDrillVo? scenarioDrill = null;
+            if (root.TryGetProperty("scenarioDrill", out var sd) && sd.ValueKind == JsonValueKind.Object)
+            {
+                var qText = sd.TryGetProperty("questionText", out var qp) ? qp.GetString() : null;
+                var optList = new List<string>();
+                if (sd.TryGetProperty("options", out var opts) && opts.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var op in opts.EnumerateArray())
+                    {
+                        var optStr = op.GetString();
+                        if (!string.IsNullOrWhiteSpace(optStr)) optList.Add(optStr.Trim());
+                    }
+                }
+                var cIdx = sd.TryGetProperty("correctOptionIndex", out var cp) && cp.TryGetInt32(out var ci) ? ci : 0;
+                var expl = sd.TryGetProperty("explanationMarkdown", out var ep) ? ep.GetString() : "";
+                var kpList = new List<string>();
+                if (sd.TryGetProperty("expectedKeyPoints", out var kps) && kps.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var kp in kps.EnumerateArray())
+                    {
+                        var kpStr = kp.GetString();
+                        if (!string.IsNullOrWhiteSpace(kpStr)) kpList.Add(kpStr.Trim());
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(qText) && optList.Count >= 2)
+                {
+                    scenarioDrill = new AiScenarioDrillVo(
+                        QuestionText: qText,
+                        Options: optList,
+                        CorrectOptionIndex: Math.Clamp(cIdx, 0, optList.Count - 1),
+                        ExplanationMarkdown: expl ?? "",
+                        ExpectedKeyPoints: kpList);
+                }
+            }
+
+            return new AiFormattedSliceResult(
+                FormattedMarkdown: formattedMarkdown,
+                SummaryMarkdown: string.IsNullOrWhiteSpace(summaryMarkdown) ? $"Executive summary for {chapterTitle}." : summaryMarkdown,
+                KeyTakeaways: takeaways,
+                EstimatedReadMinutes: Math.Max(1, estimatedReadMinutes),
+                ScenarioDrill: scenarioDrill);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse AI slice response for '{Title}'.", chapterTitle);
+            return new Error("Gemini.JsonParseError", ex.Message);
+        }
     }
 }
