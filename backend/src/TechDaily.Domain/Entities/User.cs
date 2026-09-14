@@ -20,4 +20,5 @@ public class User : BaseEntity
     public ICollection<SpacedRepetitionCard> SpacedRepetitionCards { get; set; } = new List<SpacedRepetitionCard>();
     public ICollection<UserHighlight> UserHighlights { get; set; } = new List<UserHighlight>();
     public ICollection<UserQuizProgress> QuizProgresses { get; set; } = new List<UserQuizProgress>();
+    public ICollection<UserBookPacer> BookPacers { get; set; } = new List<UserBookPacer>();
 }

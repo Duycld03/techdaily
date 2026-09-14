@@ -7,6 +7,11 @@ public record ExtractedPdfSlice(
     int EstimatedReadMinutes,
     List<string> KeyTakeaways);
 
+public record PdfExtractionProgress(
+    int ProcessedPages,
+    int TotalPages,
+    string CurrentStep);
+
 public record PdfExtractionResult(
     string DocumentTitle,
     int TotalPages,
@@ -17,6 +22,7 @@ public interface IPdfExtractor
     Task<PdfExtractionResult> ExtractSlicesAsync(
         Stream pdfStream,
         string? customTitle = null,
-        int maxPages = 800,
+        int maxPages = int.MaxValue,
+        IProgress<PdfExtractionProgress>? progress = null,
         CancellationToken cancellationToken = default);
 }

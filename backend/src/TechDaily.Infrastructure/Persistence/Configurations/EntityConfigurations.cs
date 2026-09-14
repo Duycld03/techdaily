@@ -68,6 +68,7 @@ public class TopicConfiguration : IEntityTypeConfiguration<Topic>
         builder.HasMany(t => t.InterviewQuestions)
             .WithOne(q => q.Topic)
             .HasForeignKey(q => q.TopicId)
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
@@ -77,6 +78,17 @@ public class InterviewQuestionConfiguration : IEntityTypeConfiguration<Interview
     public void Configure(EntityTypeBuilder<InterviewQuestion> builder)
     {
         builder.HasKey(q => q.Id);
+        builder.Property(q => q.TopicId).IsRequired(false);
+        builder.Property(q => q.DocumentChunkId).IsRequired(false);
+        builder.HasIndex(q => q.TopicId);
+        builder.HasIndex(q => q.DocumentChunkId);
+
+        builder.HasOne(q => q.DocumentChunk)
+            .WithMany(c => c.InterviewQuestions)
+            .HasForeignKey(q => q.DocumentChunkId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.Property(q => q.QuestionText).IsRequired();
         builder.Property(q => q.ModelAnswerMarkdown).IsRequired();
         builder.Property(q => q.Difficulty).HasConversion<string>().HasMaxLength(50).IsRequired();
@@ -108,9 +120,43 @@ public class DocumentBookConfiguration : IEntityTypeConfiguration<DocumentBook>
         builder.Property(b => b.SourceType).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(b => b.Category).HasConversion<string>().HasMaxLength(50).IsRequired();
 
+        builder.Property(b => b.IsFeatured).HasDefaultValue(false);
+        builder.HasIndex(b => b.IsFeatured);
+        builder.Property(b => b.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
+        builder.Property(b => b.ProgressPercentage).HasDefaultValue(0);
+        builder.Property(b => b.StatusMessage).HasMaxLength(500);
+        builder.Property(b => b.ErrorMessage);
+        builder.HasIndex(b => b.Status);
+
         builder.HasMany(b => b.Chunks)
             .WithOne(c => c.DocumentBook)
             .HasForeignKey(c => c.DocumentBookId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class UserBookPacerConfiguration : IEntityTypeConfiguration<UserBookPacer>
+{
+    public void Configure(EntityTypeBuilder<UserBookPacer> builder)
+    {
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.CurrentChunkOrder).HasDefaultValue(1);
+        builder.Property(p => p.DailyPaceChunks).HasDefaultValue(1);
+        builder.Property(p => p.IsActive).HasDefaultValue(true);
+        builder.Property(p => p.LastReadDate);
+        builder.Property(p => p.CompletedAt);
+
+        builder.HasIndex(p => new { p.UserId, p.DocumentBookId }).IsUnique();
+        builder.HasIndex(p => new { p.UserId, p.IsActive });
+
+        builder.HasOne(p => p.User)
+            .WithMany(u => u.BookPacers)
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(p => p.DocumentBook)
+            .WithMany()
+            .HasForeignKey(p => p.DocumentBookId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

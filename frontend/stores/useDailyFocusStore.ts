@@ -57,40 +57,124 @@ export interface DailyDrill {
   submittedAt?: string
 }
 
+export interface PacerBookSummary {
+  id: string
+  title: string
+  progressPercentage: number
+  totalChunks: number
+  currentChunkOrder: number
+  isActive: boolean
+}
+
+export interface PacerInfo {
+  bookId: string
+  bookTitle: string
+  chapterTitle: string
+  currentChunkOrder: number
+  totalChunks: number
+  progressPercentage: number
+  hasPrevious: boolean
+  hasNext: boolean
+  availableBooks: PacerBookSummary[]
+}
+
 export interface TodayFocusResponse {
-  topic: Topic
+  topic?: Topic
   question: InterviewQuestion
   documentChunk?: DocumentChunk
   drill: DailyDrill
   currentStreak: number
   longestStreak: number
   freezeCreditsRemaining: number
+  pacer?: PacerInfo
+  isGeneratingQuestion?: boolean
 }
 
 export const useDailyFocusStore = defineStore('dailyFocus', () => {
   const data = ref<TodayFocusResponse | null>(null)
   const isLoading = ref(false)
   const isSubmitting = ref(false)
+  const isSwitchingBook = ref(false)
+  const isGeneratingQuestion = ref(false)
   const error = ref<string | null>(null)
   const { formatError } = useApiError()
 
-  async function fetchTodayFocus(dayOrder?: number, date?: string, locale: string = 'en') {
+  async function fetchTodayFocus(
+    params?: { bookId?: string; chunkOrder?: number; dayOrder?: number; date?: string; locale?: string } | number,
+    legacyDate?: string,
+    legacyLocale: string = 'en'
+  ) {
+    let bookId: string | undefined
+    let chunkOrder: number | undefined
+    let dayOrder: number | undefined
+    let date: string | undefined = legacyDate
+    let locale: string = legacyLocale
+
+    if (typeof params === 'number') {
+      dayOrder = params
+    } else if (params) {
+      bookId = params.bookId
+      chunkOrder = params.chunkOrder
+      dayOrder = params.dayOrder
+      date = params.date
+      locale = params.locale ?? 'en'
+    }
+
     isLoading.value = true
     error.value = null
     try {
       const api = useApiClient()
       const query = new URLSearchParams()
+      if (bookId) query.append('bookId', bookId)
+      if (chunkOrder !== undefined && chunkOrder !== null) query.append('chunkOrder', chunkOrder.toString())
       if (dayOrder !== undefined && dayOrder !== null) query.append('dayOrder', dayOrder.toString())
       if (date) query.append('date', date)
       if (locale) query.append('locale', locale)
 
       const res = await api.get<TodayFocusResponse>(`/api/v1/daily/today?${query.toString()}`)
       data.value = res
+      isGeneratingQuestion.value = res.isGeneratingQuestion ?? false
+
+      if (res.isGeneratingQuestion && res.documentChunk?.id) {
+        fetchChunkChallenge(res.documentChunk.id)
+      }
+
       return res
     } catch (err: any) {
       error.value = formatError(err, 'today.error_load_failed')
     } finally {
       isLoading.value = false
+    }
+  }
+
+  async function switchBook(bookId: string, locale: string = 'en') {
+    isSwitchingBook.value = true
+    try {
+      const api = useApiClient()
+      const pacer = await api.post<PacerInfo>('/api/v1/daily/switch-book', { bookId })
+      await fetchTodayFocus({ bookId, chunkOrder: pacer.currentChunkOrder, locale })
+      return pacer
+    } catch (err: any) {
+      const toast = useToast()
+      toast.error(formatError(err, 'pacer.error_switch_failed'))
+      throw err
+    } finally {
+      isSwitchingBook.value = false
+    }
+  }
+
+  async function fetchChunkChallenge(chunkId: string) {
+    try {
+      const api = useApiClient()
+      const question = await api.get<InterviewQuestion>(`/api/v1/daily/chunk-challenge/${chunkId}`)
+      if (data.value && question && data.value.documentChunk?.id === chunkId) {
+        data.value.question = question
+        data.value.isGeneratingQuestion = false
+        isGeneratingQuestion.value = false
+      }
+      return question
+    } catch (err) {
+      isGeneratingQuestion.value = false
     }
   }
 
@@ -154,8 +238,12 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
     data,
     isLoading,
     isSubmitting,
+    isSwitchingBook,
+    isGeneratingQuestion,
     error,
     fetchTodayFocus,
+    switchBook,
+    fetchChunkChallenge,
     submitOption,
     explainTerm
   }

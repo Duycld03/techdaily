@@ -44,3 +44,11 @@ public enum QuizLevel
     Middle = 2,
     Senior = 3
 }
+
+public enum ProcessingStatus
+{
+    Pending,
+    Processing,
+    Ready,
+    Failed
+}

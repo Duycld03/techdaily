@@ -13,7 +13,22 @@ public class BookDto
     public string? AuthorOrSourceUrl { get; set; }
     public int TotalChunks { get; set; }
     public bool IsPublished { get; set; }
+    public bool IsFeatured { get; set; }
+    public ProcessingStatus Status { get; set; } = ProcessingStatus.Pending;
+    public int ProgressPercentage { get; set; }
+    public string? StatusMessage { get; set; }
+    public string? ErrorMessage { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+}
+
+public class BookIngestionStatusDto
+{
+    public Guid Id { get; set; }
+    public ProcessingStatus Status { get; set; }
+    public int ProgressPercentage { get; set; }
+    public string? StatusMessage { get; set; }
+    public string? ErrorMessage { get; set; }
+    public int TotalChunks { get; set; }
 }
 
 public class BookDetailDto
@@ -25,6 +40,10 @@ public class BookDetailDto
     public Category Category { get; set; }
     public string? AuthorOrSourceUrl { get; set; }
     public int TotalChunks { get; set; }
+    public bool IsFeatured { get; set; }
+    public ProcessingStatus Status { get; set; }
+    public int ProgressPercentage { get; set; }
+    public string? StatusMessage { get; set; }
     public List<ChunkSummaryDto> Chunks { get; set; } = new();
 }
 

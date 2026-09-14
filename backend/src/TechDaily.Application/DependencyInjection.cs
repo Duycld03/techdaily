@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<GetTodayFocusRequest, GetTodayFocusResponse>, GetTodayFocusHandler>();
         services.AddScoped<IUseCase<SubmitDailyDrillRequest, SubmitDailyDrillResponse>, SubmitDailyDrillHandler>();
         services.AddScoped<IUseCase<ExplainTermRequest, ExplainTermResponse>, ExplainTermHandler>();
+        services.AddScoped<IUseCase<Features.DailyFocus.SwitchBook.SwitchBookRequest, Features.DailyFocus.DTOs.PacerDto>, Features.DailyFocus.SwitchBook.SwitchBookHandler>();
 
         // Review Handlers
         services.AddScoped<IUseCase<GetReviewDeckRequest, GetReviewDeckResponse>, GetReviewDeckHandler>();
@@ -41,6 +42,7 @@ public static class DependencyInjection
         // Library Handlers
         services.AddScoped<IUseCase<GetBooksRequest, GetBooksResponse>, GetBooksHandler>();
         services.AddScoped<IUseCase<GetBookByIdRequest, GetBookByIdResponse>, GetBookByIdHandler>();
+        services.AddScoped<IUseCase<Features.Library.GetBookStatus.GetBookStatusRequest, Features.Library.DTOs.BookIngestionStatusDto>, Features.Library.GetBookStatus.GetBookStatusHandler>();
         services.AddScoped<IUseCase<ImportDocumentRequest, ImportDocumentResponse>, ImportDocumentHandler>();
         services.AddScoped<IUseCase<DeleteBookRequest, DeleteBookResponse>, DeleteBookHandler>();
         services.AddScoped<IUseCase<UploadPdfRequest, UploadPdfResponse>, UploadPdfHandler>();

@@ -2,14 +2,16 @@
 import { ref, computed, watch } from 'vue'
 import { Terminal, CheckCircle2, XCircle, Sparkles, Lock, ArrowRight, Check, AlertCircle } from 'lucide-vue-next'
 import confetti from 'canvas-confetti'
+import AISynthesisCard from '~/components/today/AISynthesisCard.vue'
 import type { InterviewQuestion, DailyDrill } from '~/stores/useDailyFocusStore'
 import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 
 const props = defineProps<{
-  question: InterviewQuestion
-  drill: DailyDrill
+  question?: InterviewQuestion | null
+  drill?: DailyDrill | null
+  chapterTitle?: string
 }>()
 
 const authStore = useAuthStore()
@@ -21,7 +23,7 @@ const { render: renderMarkdown } = useMarkdownRenderer()
 const optionLetters = ['A', 'B', 'C', 'D', 'E', 'F']
 
 // Selected option state (initialized from drill if already submitted)
-const selectedOption = ref<number | null>(props.drill.selectedOptionIndex ?? null)
+const selectedOption = ref<number | null>(props.drill?.selectedOptionIndex ?? null)
 
 // Watch for drill changes
 watch(() => props.drill, (newDrill) => {
@@ -30,20 +32,20 @@ watch(() => props.drill, (newDrill) => {
   }
 }, { immediate: true })
 
-const isReviewed = computed(() => props.drill.status === 2)
+const isReviewed = computed(() => props.drill?.status === 2)
 
 const isCorrect = computed(() => {
-  if (props.drill.isCorrect !== undefined && props.drill.isCorrect !== null) {
+  if (props.drill?.isCorrect !== undefined && props.drill?.isCorrect !== null) {
     return props.drill.isCorrect
   }
-  if (props.question.correctOptionIndex !== undefined && props.question.correctOptionIndex !== null && selectedOption.value !== null) {
+  if (props.question?.correctOptionIndex !== undefined && props.question?.correctOptionIndex !== null && selectedOption.value !== null) {
     return selectedOption.value === props.question.correctOptionIndex
   }
   return false
 })
 
 const renderedExplanation = computed(() => {
-  if (props.question.explanationMarkdown) {
+  if (props.question?.explanationMarkdown) {
     return renderMarkdown(props.question.explanationMarkdown)
   }
   return ''
@@ -52,6 +54,12 @@ const renderedExplanation = computed(() => {
 async function handleOptionSelect(index: number) {
   if (isReviewed.value) return
   selectedOption.value = index
+}
+
+async function handleRetryChallenge() {
+  if (focusStore.data?.documentChunk?.id) {
+    await focusStore.fetchChunkChallenge(focusStore.data.documentChunk.id)
+  }
 }
 
 async function handleOptionSubmit() {
@@ -78,7 +86,14 @@ async function handleOptionSubmit() {
 </script>
 
 <template>
-  <div class="h-full flex flex-col bg-white dark:bg-slate-900/60 p-4 sm:p-6 md:p-9 overflow-y-auto space-y-5 sm:space-y-6 transition-colors duration-200">
+  <div v-if="!question || focusStore.isGeneratingQuestion" class="h-full p-4 sm:p-6 md:p-9">
+    <AISynthesisCard
+      :chapter-title="chapterTitle || focusStore.data?.documentChunk?.chapterTitle"
+      @retry="handleRetryChallenge"
+    />
+  </div>
+
+  <div v-else class="h-full flex flex-col bg-white dark:bg-slate-900/60 p-4 sm:p-6 md:p-9 overflow-y-auto space-y-5 sm:space-y-6 transition-colors duration-200">
     <!-- Header -->
     <div class="space-y-2.5 sm:space-y-3">
       <div class="flex items-center justify-between gap-2">

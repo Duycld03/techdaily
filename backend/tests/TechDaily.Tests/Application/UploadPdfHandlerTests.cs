@@ -34,21 +34,12 @@ public class UploadPdfHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task UploadPdf_ShouldCreateBookAndChunks_WhenValidPdfProvided()
+    public async Task UploadPdf_ShouldCreateBookAndEnqueue_WhenValidPdfProvided()
     {
         // Arrange
-        var mockExtractor = new MockPdfExtractor(new PdfExtractionResult(
-            DocumentTitle: "Test Architecture PDF",
-            TotalPages: 5,
-            Slices: new()
-            {
-                new(1, "Chapter 1: Intro", "# Chapter 1\nIntroductory content.", 2, new() { "Key point 1" }),
-                new(2, "Chapter 2: Scaling", "# Chapter 2\nScaling mechanics.", 3, new() { "Key point 2" })
-            }
-        ));
-
+        var mockQueue = new MockPdfIngestionQueue();
         var validator = new UploadPdfValidator();
-        var handler = new UploadPdfHandler(_db, mockExtractor, validator);
+        var handler = new UploadPdfHandler(_db, mockQueue, validator);
 
         using var memoryStream = new MemoryStream(new byte[] { 1, 2, 3, 4 });
         var request = new UploadPdfRequest(
@@ -66,30 +57,32 @@ public class UploadPdfHandlerTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Book.Title.Should().Be("Custom Architecture Title");
-        result.Value.Book.TotalChunks.Should().Be(2);
+        result.Value.Book.Status.Should().Be(ProcessingStatus.Processing);
 
-        var savedBook = await _db.DocumentBooks.Include(b => b.Chunks).FirstOrDefaultAsync(b => b.Id == result.Value.Book.Id);
+        mockQueue.EnqueuedJobs.Should().HaveCount(1);
+        mockQueue.EnqueuedJobs.First().BookId.Should().Be(result.Value.Book.Id);
+
+        var savedBook = await _db.DocumentBooks.FirstOrDefaultAsync(b => b.Id == result.Value.Book.Id);
         savedBook.Should().NotBeNull();
-        savedBook!.Chunks.Should().HaveCount(2);
-        savedBook.Chunks.First().ChapterTitle.Should().Be("Chapter 1: Intro");
-        savedBook.Chunks.First().MicroQuiz.Should().NotBeNull();
+        savedBook!.Status.Should().Be(ProcessingStatus.Processing);
     }
 
     [Fact]
     public async Task UploadPdf_ShouldFailValidation_WhenFileIsNotPdf()
     {
         // Arrange
-        var mockExtractor = new MockPdfExtractor(new PdfExtractionResult("Test", 1, new()));
+        var mockQueue = new MockPdfIngestionQueue();
         var validator = new UploadPdfValidator();
-        var handler = new UploadPdfHandler(_db, mockExtractor, validator);
+        var handler = new UploadPdfHandler(_db, mockQueue, validator);
 
         using var memoryStream = new MemoryStream(new byte[] { 1, 2, 3 });
         var request = new UploadPdfRequest(
             FileStream: memoryStream,
             FileName: "document.docx",
             FileLength: 1024,
-            Title: "Invalid Doc",
-            Category: Category.BackendDotNet
+            Title: "Test",
+            Category: Category.SystemDesign,
+            Language: "en"
         );
 
         // Act
@@ -100,22 +93,23 @@ public class UploadPdfHandlerTests : IDisposable
         result.Error.Code.Should().Be("Validation.Failed");
     }
 
-    private class MockPdfExtractor : IPdfExtractor
+    private class MockPdfIngestionQueue : IPdfIngestionQueue
     {
-        private readonly PdfExtractionResult _result;
+        public List<PdfIngestJob> EnqueuedJobs { get; } = new();
 
-        public MockPdfExtractor(PdfExtractionResult result)
+        public ValueTask EnqueueAsync(PdfIngestJob job, CancellationToken cancellationToken = default)
         {
-            _result = result;
+            EnqueuedJobs.Add(job);
+            return ValueTask.CompletedTask;
         }
 
-        public Task<PdfExtractionResult> ExtractSlicesAsync(
-            Stream pdfStream,
-            string? customTitle = null,
-            int maxPages = 800,
-            CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<PdfIngestJob> ReadAllAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(_result);
+            await Task.CompletedTask;
+            foreach (var job in EnqueuedJobs)
+            {
+                yield return job;
+            }
         }
     }
 }

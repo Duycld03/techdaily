@@ -27,6 +27,7 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
     public DbSet<UserInsightBookmark> UserInsightBookmarks => Set<UserInsightBookmark>();
     public DbSet<QuizQuestion> QuizQuestions => Set<QuizQuestion>();
     public DbSet<UserQuizProgress> UserQuizProgresses => Set<UserQuizProgress>();
+    public DbSet<UserBookPacer> UserBookPacers => Set<UserBookPacer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

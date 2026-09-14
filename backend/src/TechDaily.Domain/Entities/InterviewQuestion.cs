@@ -5,7 +5,8 @@ namespace TechDaily.Domain.Entities;
 
 public class InterviewQuestion : BaseEntity
 {
-    public Guid TopicId { get; set; }
+    public Guid? TopicId { get; set; }
+    public Guid? DocumentChunkId { get; set; }
     public string QuestionText { get; set; } = string.Empty;
     public List<string> Options { get; set; } = new();
     public int CorrectOptionIndex { get; set; } = 0;
@@ -15,6 +16,7 @@ public class InterviewQuestion : BaseEntity
     public Difficulty Difficulty { get; set; }
 
     // Navigation properties
-    public Topic Topic { get; set; } = null!;
+    public Topic? Topic { get; set; }
+    public DocumentChunk? DocumentChunk { get; set; }
     public ICollection<DailyDrill> DailyDrills { get; set; } = new List<DailyDrill>();
 }

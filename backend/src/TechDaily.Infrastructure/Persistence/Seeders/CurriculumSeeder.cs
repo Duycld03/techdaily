@@ -28,6 +28,9 @@ public static class CurriculumSeeder
                 TotalChunks = 30,
                 AuthorOrSourceUrl = "https://techdaily.dev/curriculum",
                 IsPublished = true,
+                IsFeatured = true,
+                Status = ProcessingStatus.Ready,
+                ProgressPercentage = 100,
                 IsDeleted = false
             };
             await context.DocumentBooks.AddAsync(masterBook);
@@ -36,6 +39,9 @@ public static class CurriculumSeeder
         {
             masterBook.IsDeleted = false;
             masterBook.IsPublished = true;
+            masterBook.IsFeatured = true;
+            masterBook.Status = ProcessingStatus.Ready;
+            masterBook.ProgressPercentage = 100;
             masterBook.TotalChunks = 30;
         }
         await context.SaveChangesAsync();

@@ -96,14 +96,15 @@ public class SubmitDailyDrillHandler : IUseCase<SubmitDailyDrillRequest, SubmitD
         drill.SubmitOption(selectedIndex, isCorrect, score);
         streak.RecordCompletion(today, score);
 
-        if (!isCorrect)
+        if (!isCorrect && question.TopicId.HasValue)
         {
+            var topicId = question.TopicId.Value;
             var card = await _dbContext.SpacedRepetitionCards
-                .FirstOrDefaultAsync(c => c.UserId == request.UserId && c.TopicId == question.TopicId, cancellationToken);
+                .FirstOrDefaultAsync(c => c.UserId == request.UserId && c.TopicId == topicId, cancellationToken);
 
             if (card == null)
             {
-                card = SpacedRepetitionCard.Create(request.UserId, question.TopicId, today.AddDays(1));
+                card = SpacedRepetitionCard.Create(request.UserId, topicId, today.AddDays(1));
                 await _dbContext.SpacedRepetitionCards.AddAsync(card, cancellationToken);
             }
         }

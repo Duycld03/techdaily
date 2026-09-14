@@ -12,6 +12,13 @@ public class DocumentBook : BaseEntity
     public int TotalChunks { get; set; }
     public string? AuthorOrSourceUrl { get; set; }
     public bool IsPublished { get; set; } = true;
+    public bool IsFeatured { get; set; } = false;
+
+    // Ingestion status
+    public ProcessingStatus Status { get; set; } = ProcessingStatus.Pending;
+    public int ProgressPercentage { get; set; } = 0;
+    public string? StatusMessage { get; set; }
+    public string? ErrorMessage { get; set; }
 
     // Navigation properties
     public ICollection<DocumentChunk> Chunks { get; set; } = new List<DocumentChunk>();

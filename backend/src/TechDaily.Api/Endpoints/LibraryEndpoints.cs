@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Library.CrawlUrl;
 using TechDaily.Application.Features.Library.DeleteBook;
+using TechDaily.Application.Features.Library.DTOs;
 using TechDaily.Application.Features.Library.GetBookById;
+using TechDaily.Application.Features.Library.GetBookStatus;
 using TechDaily.Application.Features.Library.GetBooks;
 using TechDaily.Application.Features.Library.ImportDocument;
 using TechDaily.Application.Features.Library.UploadPdf;
@@ -48,6 +50,22 @@ public static class LibraryEndpoints
         })
         .WithName("GetBookById");
 
+        // Public Book Ingestion Status Polling
+        group.MapGet("/books/{id:guid}/status", async (
+            Guid id,
+            [FromServices] IUseCase<GetBookStatusRequest, BookIngestionStatusDto> handler,
+            CancellationToken ct) =>
+        {
+            var result = await handler.ExecuteAsync(new GetBookStatusRequest(id), ct);
+            return result.Match(
+                success => Results.Ok(success),
+                error => error == Error.NotFound
+                    ? Results.NotFound(new { code = error.Code, error = error.Message })
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+            );
+        })
+        .WithName("GetBookStatus");
+
         // Protected Document Import (Requires Authentication)
         group.MapPost("/import", async (
             [FromBody] ImportDocumentRequest request,
@@ -80,7 +98,7 @@ public static class LibraryEndpoints
         .RequireAuthorization()
         .WithName("DeleteBook");
 
-        // Protected PDF Upload (Requires Authentication, supports up to 200MB)
+        // Protected PDF Upload (Requires Authentication, supports up to 300MB, Zero-LOH streaming)
         group.MapPost("/upload-pdf", async (
             HttpRequest httpRequest,
             [FromServices] IUseCase<UploadPdfRequest, UploadPdfResponse> handler,
@@ -115,7 +133,7 @@ public static class LibraryEndpoints
 
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
-                success => Results.Created($"/api/v1/library/books/{success.Book.Id}", success),
+                success => Results.Accepted($"/api/v1/library/books/{success.Book.Id}/status", success),
                 error => Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })

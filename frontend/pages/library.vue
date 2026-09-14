@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud } from 'lucide-vue-next'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles } from 'lucide-vue-next'
 import { useApiError } from '~/composables/useApiError'
 
 const { t, locale } = useI18n()
@@ -28,6 +28,10 @@ const pdfTitle = ref('')
 const pdfCategory = ref(0)
 const isDraggingPdf = ref(false)
 const isUploadingPdf = ref(false)
+const isProcessingPdf = ref(false)
+const pdfProgress = ref(0)
+const pdfStatusMessage = ref('')
+let pollInterval: ReturnType<typeof setInterval> | null = null
 
 // Tab 3: URL Crawler state
 const crawlUrlInput = ref('')
@@ -51,6 +55,13 @@ const categories = computed(() => [
 onMounted(() => {
   libraryStore.fetchBooks()
   loadBookmarks()
+})
+
+onUnmounted(() => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
 })
 
 function loadBookmarks() {
@@ -120,7 +131,7 @@ function selectPdf(file: File) {
     toast.error(t('library.toast_pdf_only'))
     return
   }
-  if (file.size > 209_715_200) {
+  if (file.size > 314_572_800) {
     toast.error(t('library.toast_pdf_size_limit'))
     return
   }
@@ -133,6 +144,9 @@ function selectPdf(file: File) {
 async function handlePdfUpload() {
   if (!pdfFile.value) return
   isUploadingPdf.value = true
+  isProcessingPdf.value = true
+  pdfProgress.value = 5
+  pdfStatusMessage.value = t('library.parsing_pdf')
 
   try {
     const formData = new FormData()
@@ -141,14 +155,49 @@ async function handlePdfUpload() {
     formData.append('category', pdfCategory.value.toString())
     formData.append('language', locale.value || 'vi')
 
-    await libraryStore.uploadPdf(formData)
-    toast.success(t('library.toast_upload_success'))
+    const book = await libraryStore.uploadPdf(formData)
+    isUploadingPdf.value = false
 
-    // Reset & close
-    pdfFile.value = null
-    pdfTitle.value = ''
-    isImportModalOpen.value = false
+    if (book?.id) {
+      pollInterval = setInterval(async () => {
+        try {
+          const status = await libraryStore.getBookStatus(book.id)
+          pdfProgress.value = Math.max(5, status.progressPercentage)
+          if (status.statusMessage) {
+            pdfStatusMessage.value = status.statusMessage
+          }
+
+          if (status.status === 'Ready') {
+            if (pollInterval) clearInterval(pollInterval)
+            pollInterval = null
+            isProcessingPdf.value = false
+            pdfProgress.value = 100
+            toast.success(t('library.toast_upload_success'))
+            isImportModalOpen.value = false
+            pdfFile.value = null
+            pdfTitle.value = ''
+            await libraryStore.fetchBooks(selectedCategory.value ?? undefined, searchQuery.value)
+          } else if (status.status === 'Failed') {
+            if (pollInterval) clearInterval(pollInterval)
+            pollInterval = null
+            isProcessingPdf.value = false
+            toast.error(status.errorMessage || t('library.processing_failed'))
+          }
+        } catch {
+          // keep polling
+        }
+      }, 1500)
+    } else {
+      toast.success(t('library.toast_upload_success'))
+      pdfFile.value = null
+      pdfTitle.value = ''
+      isImportModalOpen.value = false
+      isProcessingPdf.value = false
+    }
   } catch (err: any) {
+    if (pollInterval) clearInterval(pollInterval)
+    pollInterval = null
+    isProcessingPdf.value = false
     toast.error(formatError(err, 'library.toast_upload_failed'))
   } finally {
     isUploadingPdf.value = false
@@ -449,8 +498,37 @@ async function confirmDeleteBook() {
 
           <!-- TAB 2: PDF Drag & Drop Upload Form -->
           <form v-else-if="activeTab === 'pdf'" @submit.prevent="handlePdfUpload" class="space-y-4">
+            <!-- Asynchronous Ingestion Progress Card -->
+            <div v-if="isProcessingPdf" class="p-5 sm:p-6 rounded-2xl bg-brand-50/70 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 space-y-4 animate-in fade-in duration-200">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-brand-700 dark:text-brand-300 font-bold text-xs sm:text-sm">
+                  <Loader2 class="w-4 h-4 animate-spin text-brand-600 dark:text-brand-400 shrink-0" />
+                  <span>{{ $t('library.processing_pdf') }}</span>
+                </div>
+                <span class="font-mono font-bold text-xs sm:text-sm text-brand-600 dark:text-brand-400">{{ pdfProgress }}%</span>
+              </div>
+
+              <!-- Realtime Progress Bar -->
+              <div class="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
+                <div
+                  class="h-full bg-gradient-to-r from-brand-500 to-emerald-400 rounded-full transition-all duration-300 shadow-sm"
+                  :style="{ width: `${pdfProgress}%` }"
+                ></div>
+              </div>
+
+              <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                {{ pdfStatusMessage || $t('library.processing_desc') }}
+              </p>
+
+              <div class="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 pt-2 border-t border-brand-200/50 dark:border-brand-800/50">
+                <span>300 MB Streaming • Background Service</span>
+                <span>Look-Ahead Buffer Synthesis</span>
+              </div>
+            </div>
+
             <!-- Dropzone -->
             <div
+              v-show="!isProcessingPdf"
               @dragover.prevent="isDraggingPdf = true"
               @dragleave.prevent="isDraggingPdf = false"
               @drop.prevent="onPdfDrop"
@@ -497,7 +575,7 @@ async function confirmDeleteBook() {
               </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div v-show="!isProcessingPdf" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.title_label') }}</label>
                 <input
@@ -526,18 +604,18 @@ async function confirmDeleteBook() {
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3 pt-3 sm:pt-4">
               <button
                 type="button"
-                @click="isImportModalOpen = false"
+                @click="isImportModalOpen = false; if (pollInterval) { clearInterval(pollInterval); pollInterval = null; isProcessingPdf = false; }"
                 class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 sm:border-transparent transition-colors text-center"
               >
                 {{ $t('library.cancel') }}
               </button>
               <button
                 type="submit"
-                :disabled="!pdfFile || isUploadingPdf"
+                :disabled="!pdfFile || isUploadingPdf || isProcessingPdf"
                 class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
               >
-                <span v-if="isUploadingPdf" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                <span>{{ isUploadingPdf ? $t('library.parsing_pdf') : $t('library.upload_pdf_action') }}</span>
+                <span v-if="isUploadingPdf || isProcessingPdf" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <span>{{ isProcessingPdf ? `${$t('library.processing_pdf')} (${pdfProgress}%)` : (isUploadingPdf ? $t('library.parsing_pdf') : $t('library.upload_pdf_action')) }}</span>
               </button>
             </div>
           </form>

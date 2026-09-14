@@ -20,5 +20,6 @@ public class DocumentChunk : BaseEntity
     // Navigation properties
     public DocumentBook DocumentBook { get; set; } = null!;
     public ICollection<DailyDrill> DailyDrills { get; set; } = new List<DailyDrill>();
+    public ICollection<InterviewQuestion> InterviewQuestions { get; set; } = new List<InterviewQuestion>();
     public ICollection<UserHighlight> Highlights { get; set; } = new List<UserHighlight>();
 }

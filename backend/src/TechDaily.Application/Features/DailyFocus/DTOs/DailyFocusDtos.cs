@@ -52,3 +52,26 @@ public class DailyDrillDto
     public int AttemptCount { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }
 }
+
+public class PacerDto
+{
+    public Guid BookId { get; set; }
+    public string BookTitle { get; set; } = string.Empty;
+    public string ChapterTitle { get; set; } = string.Empty;
+    public int CurrentChunkOrder { get; set; }
+    public int TotalChunks { get; set; }
+    public int ProgressPercentage { get; set; }
+    public bool HasPrevious { get; set; }
+    public bool HasNext { get; set; }
+    public List<PacerBookSummaryDto> AvailableBooks { get; set; } = new();
+}
+
+public class PacerBookSummaryDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public int ProgressPercentage { get; set; }
+    public int TotalChunks { get; set; }
+    public int CurrentChunkOrder { get; set; }
+    public bool IsActive { get; set; }
+}

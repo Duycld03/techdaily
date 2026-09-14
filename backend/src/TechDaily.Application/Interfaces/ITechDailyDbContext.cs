@@ -19,6 +19,7 @@ public interface ITechDailyDbContext
     DbSet<UserInsightBookmark> UserInsightBookmarks { get; }
     DbSet<QuizQuestion> QuizQuestions { get; }
     DbSet<UserQuizProgress> UserQuizProgresses { get; }
+    DbSet<UserBookPacer> UserBookPacers { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

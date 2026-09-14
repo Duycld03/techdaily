@@ -49,8 +49,11 @@ public class GetCurriculumRoadmapHandler : IUseCase<GetCurriculumRoadmapRequest,
 
         foreach (var drill in reviewedDrills)
         {
-            var score = drill.Score ?? (drill.IsCorrect == true ? 10 : 0);
-            completedTopicIds[drill.Question.TopicId] = score;
+            if (drill.Question.TopicId.HasValue)
+            {
+                var score = drill.Score ?? (drill.IsCorrect == true ? 10 : 0);
+                completedTopicIds[drill.Question.TopicId.Value] = score;
+            }
         }
 
         var moduleDefinitions = new List<(Category Category, string Title, string Description, int StartDay, int EndDay)>

@@ -28,6 +28,16 @@ export interface BookDetail extends Book {
   chunks: ChunkSummary[]
 }
 
+export interface BookIngestionStatus {
+  bookId: string
+  title: string
+  status: 'Pending' | 'Processing' | 'Ready' | 'Failed'
+  progressPercentage: number
+  statusMessage?: string
+  errorMessage?: string
+  totalChunks: number
+}
+
 export const useLibraryStore = defineStore('library', () => {
   const books = ref<Book[]>([])
   const selectedBook = ref<BookDetail | null>(null)
@@ -103,15 +113,21 @@ export const useLibraryStore = defineStore('library', () => {
     error.value = null
     try {
       const api = useApiClient()
-      const res = await api.postRaw<{ book: Book }>('/api/v1/library/upload-pdf', formData)
-      books.value.unshift(res.book)
-      return res.book
+      const res = await api.postRaw<any>('/api/v1/library/upload-pdf', formData)
+      const book: Book = res.book || res
+      books.value.unshift(book)
+      return book
     } catch (err: any) {
       error.value = err.message || 'Failed to upload and process PDF.'
       throw err
     } finally {
       isImporting.value = false
     }
+  }
+
+  async function getBookStatus(id: string) {
+    const api = useApiClient()
+    return await api.get<BookIngestionStatus>(`/api/v1/library/books/${id}/status`)
   }
 
   async function crawlUrl(url: string) {
@@ -163,6 +179,7 @@ export const useLibraryStore = defineStore('library', () => {
     fetchBookById,
     importDocument,
     uploadPdf,
+    getBookStatus,
     crawlUrl,
     deleteBook
   }

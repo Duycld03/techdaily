@@ -24,7 +24,7 @@ public class UploadPdfResponse
 
 public class UploadPdfValidator : AbstractValidator<UploadPdfRequest>
 {
-    private const long MaxFileSize = 209_715_200; // 200 MB (50-60% of Gemini capacity)
+    private const long MaxFileSize = 314_572_800; // 300 MB
 
     public UploadPdfValidator()
     {
@@ -32,7 +32,7 @@ public class UploadPdfValidator : AbstractValidator<UploadPdfRequest>
         RuleFor(x => x.FileLength)
             .GreaterThan(0)
             .LessThanOrEqualTo(MaxFileSize)
-            .WithMessage("File size must not exceed 200 MB.");
+            .WithMessage("File size must not exceed 300 MB.");
         RuleFor(x => x.FileName)
             .NotEmpty()
             .Must(f => f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
@@ -43,16 +43,16 @@ public class UploadPdfValidator : AbstractValidator<UploadPdfRequest>
 public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
 {
     private readonly ITechDailyDbContext _dbContext;
-    private readonly IPdfExtractor _pdfExtractor;
+    private readonly IPdfIngestionQueue _ingestionQueue;
     private readonly IValidator<UploadPdfRequest> _validator;
 
     public UploadPdfHandler(
         ITechDailyDbContext dbContext,
-        IPdfExtractor pdfExtractor,
+        IPdfIngestionQueue ingestionQueue,
         IValidator<UploadPdfRequest> validator)
     {
         _dbContext = dbContext;
-        _pdfExtractor = pdfExtractor;
+        _ingestionQueue = ingestionQueue;
         _validator = validator;
     }
 
@@ -66,76 +66,59 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
             return Error.Custom("Validation.Failed", validation.Errors.First().ErrorMessage);
         }
 
-        PdfExtractionResult extraction;
+        var rawTitle = !string.IsNullOrWhiteSpace(request.Title)
+            ? request.Title
+            : Path.GetFileNameWithoutExtension(request.FileName);
+
+        var bookTitle = SanitizeText(rawTitle);
+        if (string.IsNullOrWhiteSpace(bookTitle))
+        {
+            bookTitle = "Uploaded Technical Document";
+        }
+        var slug = GenerateSlug(bookTitle);
+        var bookId = Guid.NewGuid();
+
+        // Zero-LOH Disk Spooling (80KB buffer)
+        var tempDirectory = Path.Combine(Path.GetTempPath(), "techdaily-uploads");
+        Directory.CreateDirectory(tempDirectory);
+        var tempFilePath = Path.Combine(tempDirectory, $"{bookId}.pdf");
+
         try
         {
-            extraction = await _pdfExtractor.ExtractSlicesAsync(
-                request.FileStream,
-                request.Title,
-                maxPages: 800,
-                cancellationToken);
+            await using (var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 81920, useAsync: true))
+            {
+                await request.FileStream.CopyToAsync(fileStream, bufferSize: 81920, cancellationToken);
+            }
         }
         catch (Exception ex)
         {
-            return Error.Custom("PdfExtraction.Failed", $"Could not process PDF: {ex.Message}");
+            return Error.Custom("PdfUpload.Failed", $"Failed to save uploaded file: {ex.Message}");
         }
-
-        var rawTitle = !string.IsNullOrWhiteSpace(request.Title)
-            ? request.Title
-            : extraction.DocumentTitle;
-
-        var bookTitle = SanitizeText(rawTitle);
-        var slug = GenerateSlug(bookTitle);
 
         var book = new DocumentBook
         {
+            Id = bookId,
             Title = bookTitle,
             Slug = slug,
             Category = request.Category,
             SourceType = SourceType.PdfBook,
             AuthorOrSourceUrl = SanitizeText(request.FileName),
             IsPublished = true,
-            TotalChunks = extraction.Slices.Count
+            Status = ProcessingStatus.Processing,
+            ProgressPercentage = 0,
+            StatusMessage = "File uploaded, queued for processing...",
+            TotalChunks = 0
         };
-
-        foreach (var slice in extraction.Slices)
-        {
-            var content = SanitizeText(slice.ContentMarkdown);
-            var chapter = SanitizeText(slice.ChapterTitle);
-            var summary = content.Length > 300
-                ? content.Substring(0, 300) + "..."
-                : content;
-
-            var chunk = new DocumentChunk
-            {
-                DocumentBookId = book.Id,
-                ChunkOrder = slice.Order,
-                ChapterTitle = chapter,
-                OriginalTextMarkdown = content,
-                SummaryMarkdown = summary,
-                Language = request.Language,
-                EstimatedReadMinutes = slice.EstimatedReadMinutes,
-                KeyTakeaways = slice.KeyTakeaways.Select(SanitizeText).ToList(),
-                MicroQuiz = new MicroQuizVo
-                {
-                    Question = $"What is the primary technical concept discussed in {chapter}?",
-                    Options = new()
-                    {
-                        "Core Architecture Invariant & Implementation",
-                        "Deprecated Legacy Behavior",
-                        "Third-party Library Bug",
-                        "Unused Abstract Syntax"
-                    },
-                    AnswerIndex = 0,
-                    Explanation = $"Understanding {chapter} reinforces core technical architecture principles."
-                }
-            };
-
-            book.Chunks.Add(chunk);
-        }
 
         await _dbContext.DocumentBooks.AddAsync(book, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _ingestionQueue.EnqueueAsync(new PdfIngestJob(
+            book.Id,
+            tempFilePath,
+            bookTitle,
+            request.Category,
+            request.Language), cancellationToken);
 
         return new UploadPdfResponse
         {
@@ -149,6 +132,11 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
                 AuthorOrSourceUrl = book.AuthorOrSourceUrl,
                 TotalChunks = book.TotalChunks,
                 IsPublished = book.IsPublished,
+                IsFeatured = book.IsFeatured,
+                Status = book.Status,
+                ProgressPercentage = book.ProgressPercentage,
+                StatusMessage = book.StatusMessage,
+                ErrorMessage = book.ErrorMessage,
                 CreatedAt = book.CreatedAt
             }
         };

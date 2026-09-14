@@ -20,17 +20,17 @@ builder.Configuration
     .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
-// Configure 200MB Upload Body Limit (50-60% of Gemini Context Window)
+// Configure 300MB Upload Body Limit (Zero-LOH Disk Spooling)
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 209_715_200; // 200 MB
+    options.MultipartBodyLengthLimit = 314_572_800; // 300 MB
     options.ValueLengthLimit = int.MaxValue;
     options.MultipartHeadersLengthLimit = int.MaxValue;
 });
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    serverOptions.Limits.MaxRequestBodySize = 209_715_200; // 200 MB
+    serverOptions.Limits.MaxRequestBodySize = 314_572_800; // 300 MB
 });
 
 // Add Services
