@@ -28,6 +28,7 @@ export interface ChunkSummary {
   keyTakeaways: string[]
   estimatedReadMinutes: number
   isAiFormatted?: boolean
+  microQuiz?: any
 }
 
 export interface BookDetail extends Book {

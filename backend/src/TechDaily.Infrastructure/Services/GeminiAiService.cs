@@ -1116,7 +1116,13 @@ MANDATORY RULES:
 5. Architectural Callouts: Highlight critical caveats, performance tips, or security notices with GitHub alerts (`> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`).
 6. Remove Junk Boilerplate: Completely strip print headers, publication dates (e.g. '07/30/2025'), copyright notices, and pre-release disclaimers (e.g. 'Important This information relates to a pre-release product...').
 7. Key Takeaways: Conclude with '### Key Takeaways' containing exactly 3 bullet points of high-impact architectural insights.
-8. Language: Preserve the author's original language ({language}) for explanations and code.
+8. Senior Scenario Drill: Create exactly 1 high-impact Senior-level Architectural Trade-off Multiple-Choice Challenge directly evaluating the core principles and key takeaways of this chapter.
+   - questionText: A realistic production scenario describing an engineering challenge and asking for the optimal architectural decision.
+   - options: Exactly 4 distinct, plausible choices (Option A, B, C, D).
+   - correctOptionIndex: 0-indexed integer (0 to 3) pointing to the optimal senior choice.
+   - explanationMarkdown: Comprehensive markdown explaining why the chosen option succeeds and why alternatives fail or incur technical debt.
+   - expectedKeyPoints: Array of 2-3 key evaluation trade-off criteria.
+9. Language: Preserve the author's original language ({language}) for explanations, code, and quiz challenge.
 
 Respond strictly in valid JSON without markdown wrapping:
 {{
@@ -1127,7 +1133,22 @@ Respond strictly in valid JSON without markdown wrapping:
     ""Second key architectural point"",
     ""Third key architectural point""
   ],
-  ""estimatedReadMinutes"": 5
+  ""estimatedReadMinutes"": 5,
+  ""scenarioDrill"": {{
+    ""questionText"": ""Realistic production scenario stating an architectural trade-off problem..."",
+    ""options"": [
+      ""Option A description..."",
+      ""Option B description (optimal choice)..."",
+      ""Option C description..."",
+      ""Option D description...""
+    ],
+    ""correctOptionIndex"": 1,
+    ""explanationMarkdown"": ""Detailed explanation analyzing why the chosen option succeeds and alternatives fail..."",
+    ""expectedKeyPoints"": [
+      ""Trade-off factor 1"",
+      ""Trade-off factor 2""
+    ]
+  }}
 }}";
 
             var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
@@ -1241,11 +1262,48 @@ Respond strictly in valid JSON without markdown wrapping:
                 };
             }
 
+            AiScenarioDrillVo? scenarioDrill = null;
+            if (root.TryGetProperty("scenarioDrill", out var sd) && sd.ValueKind == JsonValueKind.Object)
+            {
+                var qText = sd.TryGetProperty("questionText", out var qp) ? qp.GetString() : null;
+                var optList = new List<string>();
+                if (sd.TryGetProperty("options", out var opts) && opts.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var op in opts.EnumerateArray())
+                    {
+                        var optStr = op.GetString();
+                        if (!string.IsNullOrWhiteSpace(optStr)) optList.Add(optStr.Trim());
+                    }
+                }
+                var cIdx = sd.TryGetProperty("correctOptionIndex", out var cp) && cp.TryGetInt32(out var ci) ? ci : 0;
+                var expl = sd.TryGetProperty("explanationMarkdown", out var ep) ? ep.GetString() : "";
+                var kpList = new List<string>();
+                if (sd.TryGetProperty("expectedKeyPoints", out var kps) && kps.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var kp in kps.EnumerateArray())
+                    {
+                        var kpStr = kp.GetString();
+                        if (!string.IsNullOrWhiteSpace(kpStr)) kpList.Add(kpStr.Trim());
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(qText) && optList.Count >= 2)
+                {
+                    scenarioDrill = new AiScenarioDrillVo(
+                        QuestionText: qText,
+                        Options: optList,
+                        CorrectOptionIndex: Math.Clamp(cIdx, 0, optList.Count - 1),
+                        ExplanationMarkdown: expl ?? "",
+                        ExpectedKeyPoints: kpList);
+                }
+            }
+
             return new AiFormattedSliceResult(
                 FormattedMarkdown: formattedMarkdown,
                 SummaryMarkdown: string.IsNullOrWhiteSpace(summaryMarkdown) ? $"Executive summary for {chapterTitle}." : summaryMarkdown,
                 KeyTakeaways: takeaways,
-                EstimatedReadMinutes: Math.Max(1, estimatedReadMinutes));
+                EstimatedReadMinutes: Math.Max(1, estimatedReadMinutes),
+                ScenarioDrill: scenarioDrill);
         }
         catch (Exception ex)
         {
@@ -1264,6 +1322,20 @@ Respond strictly in valid JSON without markdown wrapping:
         var summary = firstLines.FirstOrDefault(l => l.Length > 30 && !l.StartsWith('#')) ?? $"Curated guide for {chapterTitle}.";
         if (summary.Length > 200) summary = summary.Substring(0, 197) + "...";
 
+        var fallbackDrill = new AiScenarioDrillVo(
+            QuestionText: $"When implementing the core concepts of '{chapterTitle}', which architectural approach best balances performance, maintainability, and operational stability?",
+            Options: new List<string>
+            {
+                $"Apply standard modular design patterns recommended for {chapterTitle}, decoupling components via abstractions.",
+                $"Bypass modular abstractions and implement direct procedural access to minimize function call overhead.",
+                $"Introduce distributed caching for all state queries without eviction policies.",
+                $"Rely exclusively on client-side state management without backend validation."
+            },
+            CorrectOptionIndex: 0,
+            ExplanationMarkdown: $"Decoupling components via well-defined abstractions adhering to {chapterTitle} best practices ensures maintainability, testability, and resilient scaling.",
+            ExpectedKeyPoints: new List<string> { "Separation of concerns", "Architectural maintainability" }
+        );
+
         return new AiFormattedSliceResult(
             FormattedMarkdown: formatted,
             SummaryMarkdown: summary,
@@ -1273,6 +1345,7 @@ Respond strictly in valid JSON without markdown wrapping:
                 "Architectural considerations and operational constraints",
                 "Best practices for production deployments"
             },
-            EstimatedReadMinutes: readMinutes);
+            EstimatedReadMinutes: readMinutes,
+            ScenarioDrill: fallbackDrill);
     }
 }

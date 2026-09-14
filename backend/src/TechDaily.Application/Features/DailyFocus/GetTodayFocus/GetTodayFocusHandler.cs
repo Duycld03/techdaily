@@ -189,6 +189,48 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                     documentChunk.KeyTakeaways = aiResult.Value.KeyTakeaways;
                     documentChunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
                     documentChunk.IsAiFormatted = true;
+
+                    if (aiResult.Value.ScenarioDrill != null)
+                    {
+                        var scenarioDrill = aiResult.Value.ScenarioDrill;
+                        documentChunk.MicroQuiz = new Domain.ValueObjects.MicroQuizVo
+                        {
+                            Question = scenarioDrill.QuestionText,
+                            Options = scenarioDrill.Options,
+                            AnswerIndex = scenarioDrill.CorrectOptionIndex,
+                            Explanation = scenarioDrill.ExplanationMarkdown
+                        };
+
+                        var existingQ = await _dbContext.InterviewQuestions
+                            .FirstOrDefaultAsync(q => q.DocumentChunkId == documentChunk.Id, cancellationToken);
+
+                        if (existingQ != null)
+                        {
+                            existingQ.QuestionText = scenarioDrill.QuestionText;
+                            existingQ.Options = scenarioDrill.Options;
+                            existingQ.CorrectOptionIndex = scenarioDrill.CorrectOptionIndex;
+                            existingQ.ExplanationMarkdown = scenarioDrill.ExplanationMarkdown;
+                            existingQ.ExpectedKeyPoints = scenarioDrill.ExpectedKeyPoints;
+                            existingQ.ModelAnswerMarkdown = scenarioDrill.ExplanationMarkdown;
+                            existingQ.Difficulty = Difficulty.Senior;
+                        }
+                        else
+                        {
+                            var newQ = new InterviewQuestion
+                            {
+                                DocumentChunkId = documentChunk.Id,
+                                QuestionText = scenarioDrill.QuestionText,
+                                Options = scenarioDrill.Options,
+                                CorrectOptionIndex = scenarioDrill.CorrectOptionIndex,
+                                ExplanationMarkdown = scenarioDrill.ExplanationMarkdown,
+                                ExpectedKeyPoints = scenarioDrill.ExpectedKeyPoints,
+                                ModelAnswerMarkdown = scenarioDrill.ExplanationMarkdown,
+                                Difficulty = Difficulty.Senior
+                            };
+                            await _dbContext.InterviewQuestions.AddAsync(newQ, cancellationToken);
+                        }
+                    }
+
                     await _dbContext.SaveChangesAsync(cancellationToken);
                 }
             }

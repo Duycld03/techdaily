@@ -60,13 +60,13 @@ function checkBackgroundPolling() {
     backgroundPollTimer = null
   }
   const hasInProgressBook = libraryStore.books.some(
-    b => b.progressPercentage !== undefined && b.progressPercentage < 100
+    b => b.status === 'Processing' || (b.status as any) === 1
   )
   if (hasInProgressBook) {
     backgroundPollTimer = setInterval(async () => {
       await libraryStore.fetchBooks(selectedCategory.value, searchQuery.value)
       const stillActive = libraryStore.books.some(
-        b => b.progressPercentage !== undefined && b.progressPercentage < 100
+        b => b.status === 'Processing' || (b.status as any) === 1
       )
       if (!stillActive && backgroundPollTimer) {
         clearInterval(backgroundPollTimer)
@@ -364,21 +364,17 @@ async function confirmDeleteBook() {
             <Bookmark class="w-3.5 h-3.5 text-brand-500 fill-brand-500" />
             <span>{{ $t('library.resumes_at', { slice: bookmarks[book.id] }) }}</span>
           </div>
+          <!-- Ready Badge if no bookmark -->
+          <div v-else-if="book.status === 'Ready' || (book.status as any) === 2" class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm font-semibold">
+            <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
+            <span>{{ $t('library.ready_to_read') }}</span>
+          </div>
 
-          <!-- Real-Time AI Curation Progress Bar -->
-          <div v-if="book.progressPercentage !== undefined && book.progressPercentage < 100" class="mt-3.5 p-3 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20">
-            <div class="flex items-center justify-between text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1.5">
-              <span class="flex items-center gap-1.5 truncate">
-                <Sparkles class="w-3.5 h-3.5 text-amber-500 animate-pulse shrink-0" />
-                <span class="truncate">{{ book.statusMessage || $t('library.ai_curating') }}</span>
-              </span>
-              <span class="font-mono font-bold shrink-0 ml-2">{{ book.progressPercentage }}%</span>
-            </div>
-            <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-              <div
-                class="bg-gradient-to-r from-amber-500 to-brand-500 h-full transition-all duration-300 rounded-full"
-                :style="{ width: `${Math.max(5, book.progressPercentage)}%` }"
-              ></div>
+          <!-- In-Progress Ingestion Indicator (Tier 1 Uploading) -->
+          <div v-if="book.status === 'Processing' || (book.status as any) === 1" class="mt-3.5 p-3 rounded-2xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20">
+            <div class="flex items-center gap-2 text-xs font-semibold text-brand-700 dark:text-brand-300">
+              <Loader2 class="w-3.5 h-3.5 text-brand-500 animate-spin shrink-0" />
+              <span class="truncate">{{ book.statusMessage || $t('library.processing_pdf') }}</span>
             </div>
           </div>
         </div>

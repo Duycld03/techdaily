@@ -140,6 +140,31 @@ public class PdfIngestionWorker : BackgroundService
                                 chunk.KeyTakeaways = aiResult.Value.KeyTakeaways;
                                 chunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
                                 chunk.IsAiFormatted = true;
+
+                                if (aiResult.Value.ScenarioDrill != null)
+                                {
+                                    var drill = aiResult.Value.ScenarioDrill;
+                                    chunk.MicroQuiz = new Domain.ValueObjects.MicroQuizVo
+                                    {
+                                        Question = drill.QuestionText,
+                                        Options = drill.Options,
+                                        AnswerIndex = drill.CorrectOptionIndex,
+                                        Explanation = drill.ExplanationMarkdown
+                                    };
+
+                                    var question = new Domain.Entities.InterviewQuestion
+                                    {
+                                        DocumentChunkId = chunk.Id,
+                                        QuestionText = drill.QuestionText,
+                                        Options = drill.Options,
+                                        CorrectOptionIndex = drill.CorrectOptionIndex,
+                                        ExplanationMarkdown = drill.ExplanationMarkdown,
+                                        ExpectedKeyPoints = drill.ExpectedKeyPoints,
+                                        ModelAnswerMarkdown = drill.ExplanationMarkdown,
+                                        Difficulty = Domain.Enums.Difficulty.Senior
+                                    };
+                                    await dbContext.InterviewQuestions.AddAsync(question, stoppingToken);
+                                }
                             }
                         }
                         catch (Exception ex)
@@ -149,75 +174,12 @@ public class PdfIngestionWorker : BackgroundService
                     }
                 }
 
-                int initialPct = chunks.Count <= 3 ? 100 : Math.Max(10, (int)(3.0 / chunks.Count * 100));
-                book.ProgressPercentage = initialPct;
+                book.ProgressPercentage = 100;
                 book.Status = ProcessingStatus.Ready;
-                book.StatusMessage = chunks.Count <= 3
-                    ? "Ready"
-                    : $"Ready for reading ({initialCount} initial slices AI-curated)";
+                book.StatusMessage = "Ready for reading";
                 await dbContext.SaveChangesAsync(stoppingToken);
 
-                _logger.LogInformation("Successfully persisted book {BookId}: {TotalChunks} slices extracted. Initial slices ready.", book.Id, chunks.Count);
-
-                if (lookAheadService != null)
-                {
-                    try
-                    {
-                        _logger.LogInformation("Triggering initial look-ahead challenge buffer for book {BookId}", book.Id);
-                        await lookAheadService.PreGenerateInitialBufferAsync(book.Id, stoppingToken);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to pre-generate initial buffer for book {BookId}", book.Id);
-                    }
-                }
-
-                // Phase 2: Asynchronous Background Queue for slices 4..N
-                if (chunks.Count > 3 && aiFormatter != null)
-                {
-                    _logger.LogInformation("Starting Tier 2 background AI curation for book {BookId} (slices 4 to {Total})", book.Id, chunks.Count);
-
-                    for (int i = 3; i < chunks.Count; i++)
-                    {
-                        if (stoppingToken.IsCancellationRequested) break;
-
-                        // 1.2s delay pacing for rate-limit protection
-                        await Task.Delay(1200, stoppingToken);
-
-                        var chunk = chunks[i];
-                        try
-                        {
-                            var aiResult = await aiFormatter.FormatSliceAsync(
-                                chunk.OriginalTextMarkdown,
-                                chunk.ChapterTitle,
-                                chunk.Language,
-                                stoppingToken);
-
-                            if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
-                            {
-                                chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
-                                chunk.SummaryMarkdown = aiResult.Value.SummaryMarkdown;
-                                chunk.KeyTakeaways = aiResult.Value.KeyTakeaways;
-                                chunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
-                                chunk.IsAiFormatted = true;
-                            }
-
-                            int progressPct = (int)((double)(i + 1) / chunks.Count * 100);
-                            book.ProgressPercentage = progressPct;
-                            book.StatusMessage = $"AI is curating slice {i + 1}/{chunks.Count} ({progressPct}%)...";
-                            await dbContext.SaveChangesAsync(stoppingToken);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex, "Failed to format slice {Order} with AI for book {BookId}", chunk.ChunkOrder, book.Id);
-                        }
-                    }
-
-                    book.ProgressPercentage = 100;
-                    book.StatusMessage = "Ready";
-                    await dbContext.SaveChangesAsync(stoppingToken);
-                    _logger.LogInformation("Completed Tier 2 background AI curation for book {BookId}", book.Id);
-                }
+                _logger.LogInformation("Successfully ingested book {BookId}: {TotalChunks} slices extracted, initial {InitialCount} slices AI-curated. Book is Ready.", book.Id, chunks.Count, initialCount);
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {

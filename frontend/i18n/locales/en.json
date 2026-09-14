@@ -138,6 +138,7 @@
     "read_book": "Read Slices",
     "continue_reading": "Continue Reading",
     "resumes_at": "Resumes at Slice {slice}",
+    "ready_to_read": "Ready to Read",
     "no_books": "No documents found.",
     "empty_desc": "Import your first Markdown document or article to get started.",
     "loading": "Loading Technical Library...",
@@ -214,8 +215,14 @@
     "quiz_chapter_btn": "Quiz This Chapter",
     "toast_copy": "Excerpt copied to clipboard!",
     "toast_highlight_success": "Saved to Highlights & Notes!",
-    "toast_highlight_error": "Failed to save highlight.",
-    "highlight_save_tooltip": "Highlight & Save Note"
+    "highlight_save_tooltip": "Highlight & Save Note",
+    "curating_title": "AI is curating this chapter...",
+    "curating_desc": "Standardizing markdown formatting, code syntax, and generating scenario challenges.",
+    "curate_error_title": "Unable to format with AI right now",
+    "curate_error_desc": "The AI service temporarily encountered an issue. You can retry or view raw text.",
+    "retry_ai": "Retry with AI",
+    "view_raw_temporary": "View Raw Text",
+    "viewing_raw_notice": "Viewing unformatted raw text. Refreshing will re-attempt AI formatting."
   },
   "notes": {
     "title": "Highlights & Notes",

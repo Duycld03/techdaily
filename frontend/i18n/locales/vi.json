@@ -138,6 +138,7 @@
     "read_book": "Đọc Tài Liệu",
     "continue_reading": "Đọc Tiếp",
     "resumes_at": "Đang đọc dở tại Lát cắt {slice}",
+    "ready_to_read": "Sẵn sàng đọc",
     "no_books": "Không tìm thấy tài liệu phù hợp.",
     "empty_desc": "Nhập tài liệu Markdown hoặc bài viết đầu tiên để bắt đầu.",
     "loading": "Đang tải Thư viện Tài liệu...",
@@ -215,7 +216,14 @@
     "toast_copy": "Đã sao chép đoạn trích!",
     "toast_highlight_success": "Đã lưu vào Ghi chú & Highlights!",
     "toast_highlight_error": "Không thể lưu highlight.",
-    "highlight_save_tooltip": "Highlight & Lưu Ghi Chú"
+    "highlight_save_tooltip": "Highlight & Lưu Ghi Chú",
+    "curating_title": "AI đang biên tập chương này...",
+    "curating_desc": "Chuẩn hóa định dạng markdown, cú pháp code và tạo tình huống luyện tập scenario.",
+    "curate_error_title": "Tạm thời không thể biên tập bằng AI",
+    "curate_error_desc": "Dịch vụ AI đang gặp sự cố gián đoạn. Bạn có thể thử lại hoặc xem tạm bản thô.",
+    "retry_ai": "Thử lại với AI",
+    "view_raw_temporary": "Xem Bản Thô Tạm Thời",
+    "viewing_raw_notice": "Đang xem văn bản thô chưa biên tập. Tải lại trang sẽ kích hoạt AI biên tập lại."
   },
   "notes": {
     "title": "Ghi Chú & Highlights",

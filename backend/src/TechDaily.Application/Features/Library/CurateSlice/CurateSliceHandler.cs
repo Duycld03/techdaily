@@ -59,12 +59,59 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
                     chunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
                     chunk.IsAiFormatted = true;
 
+                    if (aiResult.Value.ScenarioDrill != null)
+                    {
+                        var drill = aiResult.Value.ScenarioDrill;
+                        chunk.MicroQuiz = new TechDaily.Domain.ValueObjects.MicroQuizVo
+                        {
+                            Question = drill.QuestionText,
+                            Options = drill.Options,
+                            AnswerIndex = drill.CorrectOptionIndex,
+                            Explanation = drill.ExplanationMarkdown
+                        };
+
+                        var existingQuestion = await _dbContext.InterviewQuestions
+                            .FirstOrDefaultAsync(q => q.DocumentChunkId == chunk.Id, cancellationToken);
+
+                        if (existingQuestion != null)
+                        {
+                            existingQuestion.QuestionText = drill.QuestionText;
+                            existingQuestion.Options = drill.Options;
+                            existingQuestion.CorrectOptionIndex = drill.CorrectOptionIndex;
+                            existingQuestion.ExplanationMarkdown = drill.ExplanationMarkdown;
+                            existingQuestion.ExpectedKeyPoints = drill.ExpectedKeyPoints;
+                            existingQuestion.ModelAnswerMarkdown = drill.ExplanationMarkdown;
+                            existingQuestion.Difficulty = TechDaily.Domain.Enums.Difficulty.Senior;
+                        }
+                        else
+                        {
+                            var newQuestion = new TechDaily.Domain.Entities.InterviewQuestion
+                            {
+                                DocumentChunkId = chunk.Id,
+                                QuestionText = drill.QuestionText,
+                                Options = drill.Options,
+                                CorrectOptionIndex = drill.CorrectOptionIndex,
+                                ExplanationMarkdown = drill.ExplanationMarkdown,
+                                ExpectedKeyPoints = drill.ExpectedKeyPoints,
+                                ModelAnswerMarkdown = drill.ExplanationMarkdown,
+                                Difficulty = TechDaily.Domain.Enums.Difficulty.Senior
+                            };
+                            await _dbContext.InterviewQuestions.AddAsync(newQuestion, cancellationToken);
+                        }
+                    }
+
                     await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    _logger.LogWarning("AI curation returned failure for book {BookId}, order {Order}", request.BookId, request.ChunkOrder);
+                    return new Error("CurateSlice.Failed", "AI formatting service failed to curate this chapter.");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to curate slice on-demand for book {BookId}, order {Order}", request.BookId, request.ChunkOrder);
+                return new Error("CurateSlice.Exception", ex.Message);
             }
         }
 

@@ -7,6 +7,7 @@ import InterviewChallengePane from '~/components/today/InterviewChallengePane.vu
 const route = useRoute()
 const router = useRouter()
 const focusStore = useDailyFocusStore()
+const libraryStore = useLibraryStore()
 const { locale } = useI18n()
 
 const activeMobileTab = ref<'reader' | 'challenge'>('reader')
@@ -17,6 +18,15 @@ const bookMenuRef = ref<HTMLElement | null>(null)
 function handleClickOutside(event: MouseEvent) {
   if (bookMenuRef.value && !bookMenuRef.value.contains(event.target as Node)) {
     isBookMenuOpen.value = false
+  }
+}
+
+function triggerNextDayPrefetch() {
+  if (!focusStore.data?.pacer) return
+  const pacer = focusStore.data.pacer
+  const nextChunkOrder = pacer.currentChunkOrder + 1
+  if (nextChunkOrder <= pacer.totalChunks) {
+    libraryStore.curateSlice(pacer.bookId, nextChunkOrder).catch(() => {})
   }
 }
 
@@ -35,6 +45,7 @@ onMounted(async () => {
   if (res?.topic) {
     currentDayOrder.value = res.topic.dayOrder
   }
+  triggerNextDayPrefetch()
 })
 
 onUnmounted(() => {
@@ -72,6 +83,7 @@ async function navigatePacerSlice(direction: -1 | 1) {
     chunkOrder: nextOrder,
     locale: locale.value
   })
+  triggerNextDayPrefetch()
 }
 
 async function handleSwitchBook(bookId: string) {
@@ -85,6 +97,7 @@ async function handleSwitchBook(bookId: string) {
     }
   })
   await focusStore.switchBook(bookId, locale.value)
+  triggerNextDayPrefetch()
 }
 
 const isTodayScheduledDay = computed(() => {
@@ -289,7 +302,7 @@ function resetToScheduledDay() {
     <div v-if="focusStore.isLoading" class="flex-1 flex items-center justify-center">
       <div class="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
         <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"></div>
-        <span>{{ $t('today.loading_curriculum', { day: currentDayOrder }) }}</span>
+        <span>{{ focusStore.data?.pacer ? $t('pacer.ai_synthesis_desc') : $t('today.loading_curriculum', { day: currentDayOrder }) }}</span>
       </div>
     </div>
 

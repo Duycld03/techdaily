@@ -265,6 +265,28 @@ Leave the browser open with the Counter page loaded.
             dbContext.DocumentBooks, b => b.Title == "ASP.NET Core 10 Architecture Guide");
         if (existing != null)
         {
+            var oldChunkIds = dbContext.DocumentChunks
+                .Where(c => c.DocumentBookId == existing.Id)
+                .Select(c => c.Id)
+                .ToList();
+
+            var oldQuestionIds = dbContext.InterviewQuestions
+                .Where(q => q.DocumentChunkId != null && oldChunkIds.Contains(q.DocumentChunkId.Value))
+                .Select(q => q.Id)
+                .ToList();
+
+            var oldDrills = dbContext.DailyDrills
+                .Where(d => oldQuestionIds.Contains(d.QuestionId) || (d.DocumentChunkId != null && oldChunkIds.Contains(d.DocumentChunkId.Value)));
+            dbContext.DailyDrills.RemoveRange(oldDrills);
+
+            var oldQuestions = dbContext.InterviewQuestions
+                .Where(q => q.DocumentChunkId != null && oldChunkIds.Contains(q.DocumentChunkId.Value));
+            dbContext.InterviewQuestions.RemoveRange(oldQuestions);
+
+            var oldPacers = dbContext.UserBookPacers
+                .Where(p => p.DocumentBookId == existing.Id);
+            dbContext.UserBookPacers.RemoveRange(oldPacers);
+
             var oldChunks = dbContext.DocumentChunks.Where(c => c.DocumentBookId == existing.Id);
             dbContext.DocumentChunks.RemoveRange(oldChunks);
             dbContext.DocumentBooks.Remove(existing);
@@ -282,8 +304,8 @@ Leave the browser open with the Counter page loaded.
             IsPublished = true,
             IsFeatured = true,
             Status = TechDaily.Domain.Enums.ProcessingStatus.Ready,
-            ProgressPercentage = 25,
-            StatusMessage = "Ready for reading (3 initial slices AI-curated)"
+            ProgressPercentage = 100,
+            StatusMessage = "Ready for reading"
         };
         await dbContext.DocumentBooks.AddAsync(book);
         await dbContext.SaveChangesAsync();
@@ -310,12 +332,43 @@ Leave the browser open with the Counter page loaded.
                 c.KeyTakeaways = aiResult.Value.KeyTakeaways;
                 c.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
                 c.IsAiFormatted = true;
+
+                if (aiResult.Value.ScenarioDrill != null)
+                {
+                    var drill = aiResult.Value.ScenarioDrill;
+                    c.MicroQuiz = new TechDaily.Domain.ValueObjects.MicroQuizVo
+                    {
+                        Question = drill.QuestionText,
+                        Options = drill.Options,
+                        AnswerIndex = drill.CorrectOptionIndex,
+                        Explanation = drill.ExplanationMarkdown
+                    };
+                }
             }
             chunks.Add(c);
         }
 
         await dbContext.DocumentChunks.AddRangeAsync(chunks);
         await dbContext.SaveChangesAsync();
+
+        var savedSlice3 = chunks.FirstOrDefault(c => c.ChunkOrder == slice3.Order);
+        if (savedSlice3 != null && aiResult.Value.ScenarioDrill != null)
+        {
+            var drill = aiResult.Value.ScenarioDrill;
+            var q = new TechDaily.Domain.Entities.InterviewQuestion
+            {
+                DocumentChunkId = savedSlice3.Id,
+                QuestionText = drill.QuestionText,
+                Options = drill.Options,
+                CorrectOptionIndex = drill.CorrectOptionIndex,
+                ExplanationMarkdown = drill.ExplanationMarkdown,
+                ExpectedKeyPoints = drill.ExpectedKeyPoints,
+                ModelAnswerMarkdown = drill.ExplanationMarkdown,
+                Difficulty = TechDaily.Domain.Enums.Difficulty.Senior
+            };
+            await dbContext.InterviewQuestions.AddAsync(q);
+            await dbContext.SaveChangesAsync();
+        }
 
         _output.WriteLine($"Saved book to database! BookId: {book.Id}");
     }
