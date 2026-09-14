@@ -21,6 +21,23 @@ function handleClickOutside(event: MouseEvent) {
   }
 }
 
+let nextDayPrefetchTimer: ReturnType<typeof setTimeout> | null = null
+
+function cancelPendingNextDayPrefetch() {
+  if (nextDayPrefetchTimer) {
+    clearTimeout(nextDayPrefetchTimer)
+    nextDayPrefetchTimer = null
+  }
+}
+
+function scheduleNextDayPrefetch(delayMs = 2500) {
+  cancelPendingNextDayPrefetch()
+  nextDayPrefetchTimer = setTimeout(() => {
+    nextDayPrefetchTimer = null
+    triggerNextDayPrefetch()
+  }, delayMs)
+}
+
 function triggerNextDayPrefetch() {
   if (!focusStore.data?.pacer) return
   const pacer = focusStore.data.pacer
@@ -45,14 +62,16 @@ onMounted(async () => {
   if (res?.topic) {
     currentDayOrder.value = res.topic.dayOrder
   }
-  triggerNextDayPrefetch()
+  scheduleNextDayPrefetch()
 })
 
 onUnmounted(() => {
+  cancelPendingNextDayPrefetch()
   document.removeEventListener('click', handleClickOutside)
 })
 
 watch(locale, (newLocale) => {
+  cancelPendingNextDayPrefetch()
   if (focusStore.data?.pacer) {
     focusStore.fetchTodayFocus({
       bookId: focusStore.data.pacer.bookId,
@@ -66,6 +85,7 @@ watch(locale, (newLocale) => {
 
 async function navigatePacerSlice(direction: -1 | 1) {
   if (!focusStore.data?.pacer) return
+  cancelPendingNextDayPrefetch()
   const nextOrder = focusStore.data.pacer.currentChunkOrder + direction
   if (nextOrder < 1 || nextOrder > focusStore.data.pacer.totalChunks) return
 
@@ -83,11 +103,12 @@ async function navigatePacerSlice(direction: -1 | 1) {
     chunkOrder: nextOrder,
     locale: locale.value
   })
-  triggerNextDayPrefetch()
+  scheduleNextDayPrefetch()
 }
 
 async function handleSwitchBook(bookId: string) {
   isBookMenuOpen.value = false
+  cancelPendingNextDayPrefetch()
   router.replace({
     query: {
       ...route.query,
@@ -97,7 +118,7 @@ async function handleSwitchBook(bookId: string) {
     }
   })
   await focusStore.switchBook(bookId, locale.value)
-  triggerNextDayPrefetch()
+  scheduleNextDayPrefetch()
 }
 
 const isTodayScheduledDay = computed(() => {
@@ -108,6 +129,7 @@ const isTodayScheduledDay = computed(() => {
 
 async function navigateDay(newDay: number) {
   if (newDay < 1 || newDay > 30) return
+  cancelPendingNextDayPrefetch()
   currentDayOrder.value = newDay
   router.replace({ query: { ...route.query, day: newDay } })
   const res = await focusStore.fetchTodayFocus(newDay, undefined, locale.value)

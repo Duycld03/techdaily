@@ -153,15 +153,31 @@ const isCuratingCurrentSlice = ref(false)
 const curationError = ref<string | null>(null)
 const isViewingRawTemporarily = ref(false)
 const prefetchedChunkOrders = ref<Set<number>>(new Set())
+let prefetchTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+function cancelPendingPrefetch() {
+  if (prefetchTimeoutId) {
+    clearTimeout(prefetchTimeoutId)
+    prefetchTimeoutId = null
+  }
+}
+
+function scheduleLookaheadPrefetch(delayMs = 2500) {
+  cancelPendingPrefetch()
+  prefetchTimeoutId = setTimeout(() => {
+    prefetchTimeoutId = null
+    triggerLookaheadPrefetch()
+  }, delayMs)
+}
 
 async function checkAndCurateSlice() {
   const chunk = currentChunk.value
   if (!chunk) return
 
-  // If already formatted, trigger lookahead prefetch for next slice and exit
+  // If already formatted, schedule lookahead prefetch for next slice and exit
   if (chunk.isAiFormatted) {
     curationError.value = null
-    triggerLookaheadPrefetch()
+    scheduleLookaheadPrefetch()
     return
   }
 
@@ -179,7 +195,7 @@ async function checkAndCurateSlice() {
         book.value.chunks[idx] = updated
       }
       curationError.value = null
-      triggerLookaheadPrefetch()
+      scheduleLookaheadPrefetch()
     } else {
       curationError.value = 'Failed to curate slice'
     }
@@ -226,12 +242,14 @@ async function triggerLookaheadPrefetch() {
 }
 
 watch(activeChunkIndex, () => {
+  cancelPendingPrefetch()
   isViewingRawTemporarily.value = false
   curationError.value = null
   checkAndCurateSlice()
 })
 
 onUnmounted(() => {
+  cancelPendingPrefetch()
   window.removeEventListener('keydown', handleKeyDown)
 })
 

@@ -177,14 +177,28 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
-  async function curateSlice(bookId: string, order: number): Promise<ChunkSummary | null> {
-    try {
-      const api = useApiClient()
-      const res = await api.post<{ chunk: ChunkSummary }>(`/api/v1/library/books/${bookId}/slices/${order}/curate`, {})
-      return res.chunk
-    } catch {
-      return null
+  const inFlightCurations = new Map<string, Promise<ChunkSummary | null>>()
+
+  function curateSlice(bookId: string, order: number): Promise<ChunkSummary | null> {
+    const key = `${bookId}:${order}`
+    if (inFlightCurations.has(key)) {
+      return inFlightCurations.get(key)!
     }
+
+    const promise = (async () => {
+      try {
+        const api = useApiClient()
+        const res = await api.post<{ chunk: ChunkSummary }>(`/api/v1/library/books/${bookId}/slices/${order}/curate`, {})
+        return res.chunk
+      } catch {
+        return null
+      } finally {
+        inFlightCurations.delete(key)
+      }
+    })()
+
+    inFlightCurations.set(key, promise)
+    return promise
   }
 
   return {

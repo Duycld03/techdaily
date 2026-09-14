@@ -27,6 +27,38 @@ const mockBooks = [
   }
 ]
 
+const mockPost = vi.fn(async (url: string, body: any) => {
+  if (url.includes('/import')) {
+    return {
+      book: {
+        id: 'b-3',
+        title: body.title,
+        slug: 'sre-book',
+        sourceType: 1,
+        category: body.category,
+        totalChunks: 5,
+        isPublished: true,
+        createdAt: '2026-08-31T00:00:00Z'
+      }
+    }
+  }
+  if (url.includes('/curate')) {
+    return {
+      chunk: {
+        id: 'chk-1',
+        chunkOrder: 1,
+        chapterTitle: 'Reliability, Scalability, and Maintainability',
+        summaryMarkdown: 'Curated summary',
+        originalTextMarkdown: '# Curated markdown',
+        keyTakeaways: ['Takeaway 1', 'Takeaway 2'],
+        estimatedReadMinutes: 5,
+        isAiFormatted: true
+      }
+    }
+  }
+  throw new Error('Not found')
+})
+
 vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     get: vi.fn(async (url: string) => {
@@ -53,29 +85,14 @@ vi.mock('~/composables/useApiClient', () => ({
       }
       throw new Error('Not found')
     }),
-    post: vi.fn(async (url: string, body: any) => {
-      if (url.includes('/import')) {
-        return {
-          book: {
-            id: 'b-3',
-            title: body.title,
-            slug: 'sre-book',
-            sourceType: 1,
-            category: body.category,
-            totalChunks: 5,
-            isPublished: true,
-            createdAt: '2026-08-31T00:00:00Z'
-          }
-        }
-      }
-      throw new Error('Not found')
-    })
+    post: mockPost
   })
 }))
 
 describe('useLibraryStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.clearAllMocks()
   })
 
   it('fetches books list with categories and search filtering', async () => {
@@ -108,5 +125,19 @@ describe('useLibraryStore', () => {
     expect(result.title).toBe('Site Reliability Engineering')
     expect(result.totalChunks).toBe(5)
     expect(library.books).toHaveLength(1)
+  })
+
+  it('deduplicates concurrent curateSlice calls for the same slice', async () => {
+    const library = useLibraryStore()
+
+    const p1 = library.curateSlice('b-1', 1)
+    const p2 = library.curateSlice('b-1', 1)
+
+    const [res1, res2] = await Promise.all([p1, p2])
+    expect(res1).toEqual(res2)
+    expect(res1?.isAiFormatted).toBe(true)
+
+    // Verify mockPost was called only once despite two concurrent invocations
+    expect(mockPost).toHaveBeenCalledTimes(1)
   })
 })
