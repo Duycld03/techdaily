@@ -295,7 +295,7 @@ No markdown backticks around JSON.";
         CancellationToken cancellationToken)
     {
         HttpResponseMessage? response = null;
-        for (var attempt = 1; attempt <= 2; attempt++)
+        for (var attempt = 1; attempt <= 3; attempt++)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
             {
@@ -312,12 +312,13 @@ No markdown backticks around JSON.";
                 return response;
             }
 
-            // Retry once if transient 503 (ServiceUnavailable) or 429 (TooManyRequests)
-            if ((response.StatusCode == HttpStatusCode.ServiceUnavailable || (int)response.StatusCode == 429) && attempt == 1)
+            // Retry if transient 503 (ServiceUnavailable) or 429 (TooManyRequests)
+            if ((response.StatusCode == HttpStatusCode.ServiceUnavailable || (int)response.StatusCode == 429) && attempt < 3)
             {
-                _logger.LogWarning("Gemini API transient error ({StatusCode}) on attempt {Attempt}. Retrying after 1500ms delay...", response.StatusCode, attempt);
+                var delayMs = attempt * 1500;
+                _logger.LogWarning("Gemini API transient error ({StatusCode}) on attempt {Attempt}/3. Retrying after {Delay}ms...", response.StatusCode, attempt, delayMs);
                 response.Dispose();
-                await Task.Delay(1500, cancellationToken);
+                await Task.Delay(delayMs, cancellationToken);
                 continue;
             }
 
@@ -1126,7 +1127,7 @@ MANDATORY RULES:
 
 Respond strictly in valid JSON without markdown wrapping:
 {{
-  ""formattedMarkdown"": ""# {chapterTitle}\\n\\n> [!NOTE]\\n> Context summary...\\n\\nBody paragraphs...\\n\\n```csharp\\ncode\\n```\\n\\n### Key Takeaways\\n- Point 1\\n- Point 2\\n- Point 3"",
+  ""formattedMarkdown"": ""# {chapterTitle}\n\n> [!NOTE]\n> Executive context summary...\n\nBody paragraphs...\n\n```csharp\ncode\n```\n\n### Key Takeaways\n- Point 1\n- Point 2\n- Point 3"",
   ""summaryMarkdown"": ""A concise 2-3 sentence overview of this chapter."",
   ""keyTakeaways"": [
     ""First key architectural point"",
@@ -1231,15 +1232,16 @@ Respond strictly in valid JSON without markdown wrapping:
             using var sliceDoc = JsonDocument.Parse(cleanJson);
             var root = sliceDoc.RootElement;
 
-            var formattedMarkdown = root.TryGetProperty("formattedMarkdown", out var fm) ? fm.GetString() : null;
-            var summaryMarkdown = root.TryGetProperty("summaryMarkdown", out var sm) ? sm.GetString() : null;
+            var rawFormatted = root.TryGetProperty("formattedMarkdown", out var fm) ? fm.GetString() : null;
+            var formattedMarkdown = NormalizeEscapedNewlines(rawFormatted);
+            var summaryMarkdown = NormalizeEscapedNewlines(root.TryGetProperty("summaryMarkdown", out var sm) ? sm.GetString() : null);
             var takeaways = new List<string>();
             if (root.TryGetProperty("keyTakeaways", out var kt) && kt.ValueKind == JsonValueKind.Array)
             {
                 foreach (var el in kt.EnumerateArray())
                 {
                     var item = el.GetString();
-                    if (!string.IsNullOrWhiteSpace(item)) takeaways.Add(item.Trim());
+                    if (!string.IsNullOrWhiteSpace(item)) takeaways.Add(NormalizeEscapedNewlines(item.Trim()));
                 }
             }
 
@@ -1272,7 +1274,7 @@ Respond strictly in valid JSON without markdown wrapping:
                     foreach (var op in opts.EnumerateArray())
                     {
                         var optStr = op.GetString();
-                        if (!string.IsNullOrWhiteSpace(optStr)) optList.Add(optStr.Trim());
+                        if (!string.IsNullOrWhiteSpace(optStr)) optList.Add(NormalizeEscapedNewlines(optStr.Trim()));
                     }
                 }
                 var cIdx = sd.TryGetProperty("correctOptionIndex", out var cp) && cp.TryGetInt32(out var ci) ? ci : 0;
@@ -1283,17 +1285,17 @@ Respond strictly in valid JSON without markdown wrapping:
                     foreach (var kp in kps.EnumerateArray())
                     {
                         var kpStr = kp.GetString();
-                        if (!string.IsNullOrWhiteSpace(kpStr)) kpList.Add(kpStr.Trim());
+                        if (!string.IsNullOrWhiteSpace(kpStr)) kpList.Add(NormalizeEscapedNewlines(kpStr.Trim()));
                     }
                 }
 
                 if (!string.IsNullOrWhiteSpace(qText) && optList.Count >= 2)
                 {
                     scenarioDrill = new AiScenarioDrillVo(
-                        QuestionText: qText,
+                        QuestionText: NormalizeEscapedNewlines(qText.Trim()),
                         Options: optList,
                         CorrectOptionIndex: Math.Clamp(cIdx, 0, optList.Count - 1),
-                        ExplanationMarkdown: expl ?? "",
+                        ExplanationMarkdown: NormalizeEscapedNewlines(expl ?? ""),
                         ExpectedKeyPoints: kpList);
                 }
             }
@@ -1310,5 +1312,15 @@ Respond strictly in valid JSON without markdown wrapping:
             _logger.LogWarning(ex, "Failed to parse AI slice response for '{Title}'.", chapterTitle);
             return new Error("Gemini.JsonParseError", ex.Message);
         }
+    }
+
+    private static string NormalizeEscapedNewlines(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+        if (text.Contains(@"\n"))
+        {
+            return text.Replace(@"\r\n", "\n").Replace(@"\n", "\n").Replace(@"\t", "\t");
+        }
+        return text;
     }
 }

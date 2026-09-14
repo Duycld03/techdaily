@@ -130,6 +130,43 @@ The Counter component renders the Counter web page. An H1 heading is displayed.
     }
 
     [Fact]
+    public void FormatAsMarkdown_ShouldNeverTrapBreakingChangeProseHeaders_InsideCodeBlocks()
+    {
+        var input = @"
+Blazor.registerCustomEventType now throws an error when the custom event name matches its browserEventName option.
+// This used to silently double-fire the event.
+Blazor.registerCustomEventType('scrolltop', {
+browserEventName: 'scrolltop'
+});
+
+New behavior
+Starting in ASP.NET Core 11, Blazor.registerCustomEventType throws when eventName equals
+
+options.browserEventName : JavaScript
+
+// This now throws synchronously.
+Blazor.registerCustomEventType('scrolltop', {
+browserEventName: 'scrolltop'
+});
+
+Type of breaking change
+This change is a behavioral change.
+";
+
+        var markdown = PdfPigExtractor.FormatAsMarkdown(input, "Breaking changes");
+
+        markdown.Should().Contain("New behavior");
+        markdown.Should().Contain("Type of breaking change");
+
+        var segments = markdown.Split("```");
+        for (int i = 1; i < segments.Length; i += 2)
+        {
+            segments[i].Should().NotContain("New behavior", "New behavior should never be trapped in a code fence");
+            segments[i].Should().NotContain("Type of breaking change", "Type of breaking change should never be trapped in a code fence");
+        }
+    }
+
+    [Fact]
     public void StripBoilerplate_ShouldRemovePreReleaseDisclaimer_AndDates()
     {
         var input = @"
@@ -268,7 +305,11 @@ Leave the browser open with the Counter page loaded.
 
         _output.WriteLine($"Formatting Slice 3 with Gemini...");
         var aiResult = await aiService.FormatSliceAsync(slice3.ContentMarkdown, slice3.ChapterTitle, "en");
-        aiResult.IsSuccess.Should().BeTrue();
+        if (!aiResult.IsSuccess)
+        {
+            _output.WriteLine($"Gemini failed with Error: {aiResult.Error.Code} - {aiResult.Error.Message}");
+        }
+        aiResult.IsSuccess.Should().BeTrue(aiResult.Error?.Message);
         _output.WriteLine($"AI Formatted Length: {aiResult.Value.FormattedMarkdown.Length} chars");
         _output.WriteLine($"Key Takeaways ({aiResult.Value.KeyTakeaways.Count}):");
         foreach (var t in aiResult.Value.KeyTakeaways)

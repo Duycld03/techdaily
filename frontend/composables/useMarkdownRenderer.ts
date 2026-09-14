@@ -350,7 +350,11 @@ export function useMarkdownRenderer() {
 
   function sanitizeScraperArtifacts(text: string): string {
     if (!text) return ''
-    return text
+    let cleaned = text
+    if (cleaned.includes('\\n')) {
+      cleaned = cleaned.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\t/g, '\t')
+    }
+    return cleaned
       .replace(/^Read in English\s+\[Edit\]\(.*?\)\s*$/gim, '')
       .replace(/(\n\s*\* \* \*\s*){2,}/g, '\n\n* * *\n\n')
       .replace(/(\n\s*---\s*){2,}/g, '\n\n---\n\n')

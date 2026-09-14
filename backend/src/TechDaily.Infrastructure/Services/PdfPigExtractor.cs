@@ -685,6 +685,7 @@ public class PdfPigExtractor : IPdfExtractor
 
         var lines = cleanedText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         bool inCodeBlock = false;
+        bool lastCodeLineWasClosingDelimiter = false;
         int emptyLineStreak = 0;
 
         foreach (var rawLine in lines)
@@ -697,11 +698,12 @@ public class PdfPigExtractor : IPdfExtractor
                 emptyLineStreak++;
                 if (inCodeBlock)
                 {
-                    // 2 or more consecutive blank lines closes code block
-                    if (emptyLineStreak >= 2)
+                    // 1 blank line after closing brace or 2 or more consecutive blank lines closes code block
+                    if (lastCodeLineWasClosingDelimiter || emptyLineStreak >= 2)
                     {
                         sb.AppendLine("```");
                         inCodeBlock = false;
+                        lastCodeLineWasClosingDelimiter = false;
                     }
                     else
                     {
@@ -763,11 +765,13 @@ public class PdfPigExtractor : IPdfExtractor
                 {
                     sb.AppendLine("```");
                     inCodeBlock = false;
+                    lastCodeLineWasClosingDelimiter = false;
                     sb.AppendLine(trimmed);
                     continue;
                 }
 
                 sb.AppendLine(line);
+                lastCodeLineWasClosingDelimiter = (trimmed is "}" or "};" or "});");
                 continue;
             }
 
@@ -776,6 +780,7 @@ public class PdfPigExtractor : IPdfExtractor
             {
                 sb.AppendLine("```csharp");
                 inCodeBlock = true;
+                lastCodeLineWasClosingDelimiter = false;
                 sb.AppendLine(line);
                 continue;
             }
@@ -801,7 +806,7 @@ public class PdfPigExtractor : IPdfExtractor
         if (trimmed.EndsWith(':') && !trimmed.Contains('{') && !trimmed.Contains(';') && !trimmed.Contains("=>")) return true;
 
         // 3. Known documentation section titles without punctuation
-        if (Regex.IsMatch(trimmed, @"^(Change the app|Prerequisites|Next steps|See also|Important|Note|Overview|Summary|For more information)\b", RegexOptions.IgnoreCase))
+        if (Regex.IsMatch(trimmed, @"^(New behavior|Previous behavior|Type of breaking change|Reason for change|Recommended action|Affected APIs|Change the app|Prerequisites|Next steps|See also|Important|Note|Overview|Summary|For more information|Version introduced|Category)\b", RegexOptions.IgnoreCase))
         {
             return true;
         }
@@ -861,8 +866,8 @@ public class PdfPigExtractor : IPdfExtractor
         if (Regex.IsMatch(trimmed, @"^(dotnet\s+(new|watch|run|build|add|restore|test)|npm\s+(install|run|start|test)|git\s+(clone|checkout|commit|push|pull)|docker\s+(build|run|compose))", RegexOptions.IgnoreCase))
             return true;
 
-        // Standalone braces
-        if (trimmed == "{" || trimmed == "}" || trimmed == "});" || trimmed == "};")
+        // Standalone opening brace
+        if (trimmed == "{")
             return true;
 
         // XML / HTML tags (single tag or self-closing)
