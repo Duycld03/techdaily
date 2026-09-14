@@ -1,6 +1,6 @@
 # Delta Spec: Drills — Look-Ahead JIT Buffer & AI Synthesis State
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Look-Ahead JIT Pre-Generation Buffer
 The system SHALL maintain a sliding look-ahead buffer of 3 pre-generated Senior Trade-off Challenges ahead of the user's active reading position (`CurrentChunkOrder + 1`, `+ 2`, `+ 3`). Upon initial book ingestion, the background worker SHALL generate challenges strictly for the first 3 chunks, achieving instant book readiness without upfront batch saturation.

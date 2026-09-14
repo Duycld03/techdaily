@@ -1,6 +1,6 @@
 # Delta Spec: Reader — Doc Pacer Navigation & Roadmap Synchronization
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Active Book Pacer Navigation Bar on /today
 The `/today` top navigation bar SHALL display the user's active document book pacer status, replacing the fixed 30-day selector. The pacer bar SHALL display the active book title, current chapter title, slice order, total slices, completion percentage, and previous/next navigation buttons.

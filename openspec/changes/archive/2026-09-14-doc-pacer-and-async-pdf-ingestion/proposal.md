@@ -9,13 +9,13 @@ This change delivers three foundational architectural capabilities:
 3. **Look-Ahead JIT Pre-Generation Buffer:** Eliminates the trade-off between upfront batch generation overload and read-time latency. Slices maintain a sliding buffer of 3 pre-generated Senior Trade-off Challenges. If a user rapidly navigates forward, an intelligent non-blocking AI Synthesis card appears with immediate priority queue promotion, ensuring 0ms typical latency and zero user-facing AI failures.
 4. **Doc Pacer Navigation & Roadmap Synchronization:** Replaces the static `Day 1..30` selector on `/today` and `/roadmap` with a dynamic **Active Book Pacer**. Features seamless 1-click book switching, auto-selection of a pre-seeded featured book for zero-state visitors, and chapter-based milestone tracking.
 
-## Problem Statement & Motivation
+## Why
 - **The Large Document Ingestion Wall:** Real-world technical books are massive (often 40MB–250MB, containing thousands of pages). Synchronous HTTP ingestion triggers Nginx 504 timeouts, browser disconnects, and Large Object Heap (LOH) memory spikes that crash low-resource cloud servers.
 - **TOC Noise & Naive Chunking:** Naive word-count segmentation cuts across sentences and pollutes the curriculum with prefaces, publisher dedications, and indexes. True technical depth requires preserving the author's intentional chapter structure.
 - **The AI Generation Dilemma:** Generating AI scenario drills for an entire 8,000-page document upfront requires hundreds of API calls (exhausting daily rate limits and wasting 90% of tokens on unread chapters), while generating drills strictly on-demand introduces disruptive 3–5s latency and exposes users to runtime AI failures.
 - **Static Curriculum Rigidity:** The existing 30-day fixed curriculum cannot adapt to what an engineer is actively studying in their professional work (e.g. preparing for a distributed systems interview vs mastering database internals).
 
-## Scope of Change
+## What Changes
 - **Backend (.NET 10 / ASP.NET Core):**
   - Increase upload size limit to 300 MB.
   - Implement `FileStream` disk-spooling temporary ingestion service (Zero-LOH).

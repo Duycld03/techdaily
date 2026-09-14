@@ -2,22 +2,28 @@
 
 ## MODIFIED Requirements
 
-### Requirement: Large PDF Streaming & Background Ingestion Pipeline
-The library system SHALL support PDF uploads up to 300 MB and multi-thousand page documents without blocking HTTP request execution or loading entire files into the Large Object Heap (LOH). The system SHALL stream uploaded files directly to temporary disk storage (`bufferSize = 80KB`), persist a `DocumentBook` record with status `Processing`, and enqueue processing into an in-memory background worker queue via `System.Threading.Channels`.
+### Requirement: PDF File Ingestion
+The library system SHALL support PDF uploads up to 350 MB and multi-thousand page documents without blocking HTTP request execution or loading entire files into the Large Object Heap (LOH). The system SHALL stream uploaded files directly to temporary disk storage (`bufferSize = 80KB`), persist a `DocumentBook` record with status `Processing`, and enqueue processing into an in-memory background worker queue via `System.Threading.Channels`.
 
-#### Scenario: User uploads large technical document (e.g. 240MB, 8,351 pages)
-- **WHEN** user uploads a valid `.pdf` file up to 300 MB via `POST /api/v1/library/upload-pdf`
+#### Scenario: User uploads a valid PDF document
+- **WHEN** authenticated user submits `POST /api/v1/library/upload-pdf` with a valid PDF file <= 350 MB
 - **THEN** server streams file to temporary storage without contiguous in-memory allocation, creates `DocumentBook` with `ProcessingStatus = Processing` and `ProgressPercentage = 0`, and returns `HTTP 202 Accepted` within 2 seconds.
 
 #### Scenario: Background Worker processes PDF book
 - **WHEN** background ingestion worker dequeues a PDF ingestion task
 - **THEN** worker extracts text and chapter structure, stores sequential `DocumentChunk` entities, updates `ProgressPercentage` and `StatusMessage` periodically in the database, and transitions status to `Ready` upon completion.
 
-#### Scenario: Document processing error handling
-- **WHEN** PDF is corrupted or exceeds unrecoverable memory thresholds
-- **THEN** worker records `ProcessingStatus = Failed` with descriptive `ErrorMessage`, and cleans up temporary disk files safely.
+#### Scenario: Uploaded PDF exceeds page limit or file size limit
+- **WHEN** user uploads a PDF file exceeding 10,000 pages or 350 MB
+- **THEN** system returns `400 Bad Request` with an error message detailing the safety boundary.
+
+#### Scenario: Uploaded PDF is corrupted or encrypted
+- **WHEN** user uploads a corrupted or password-protected PDF
+- **THEN** system returns `400 Bad Request` or background worker records `ProcessingStatus = Failed` with descriptive `ErrorMessage`, and cleans up temporary disk files safely.
 
 ---
+
+## ADDED Requirements
 
 ### Requirement: Native PDF Bookmarks & Chapter-Aware Structuring
 The PDF extractor SHALL parse native document bookmarks (Outline Tree) to determine authoritative chapter boundaries, section names, and page ranges. The extractor SHALL automatically detect and exclude front-matter (prefaces, dedications, title pages) and back-matter (indexes, bibliographies).
