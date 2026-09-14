@@ -8,6 +8,7 @@ const router = useRouter()
 const config = useRuntimeConfig()
 const { t, locale } = useI18n()
 const { formatError } = useApiError()
+const toast = useToast()
 const colorMode = useColorMode()
 
 const authMode = ref<'login' | 'register'>('login')
