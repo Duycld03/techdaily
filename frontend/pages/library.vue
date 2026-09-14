@@ -167,7 +167,7 @@ async function handlePdfUpload() {
             pdfStatusMessage.value = status.statusMessage
           }
 
-          if (status.status === 'Ready') {
+          if (status.status === 'Ready' || (status.status as any) === 2 || status.statusMessage === 'Ready' || status.progressPercentage === 100) {
             if (pollInterval) clearInterval(pollInterval)
             pollInterval = null
             isProcessingPdf.value = false
@@ -177,7 +177,7 @@ async function handlePdfUpload() {
             pdfFile.value = null
             pdfTitle.value = ''
             await libraryStore.fetchBooks(selectedCategory.value ?? undefined, searchQuery.value)
-          } else if (status.status === 'Failed') {
+          } else if (status.status === 'Failed' || (status.status as any) === 3) {
             if (pollInterval) clearInterval(pollInterval)
             pollInterval = null
             isProcessingPdf.value = false

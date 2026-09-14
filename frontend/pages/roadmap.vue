@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { 
-  Map, 
+  Map as MapIcon, 
   CheckCircle2, 
   Flame, 
   Lock, 
@@ -16,7 +16,10 @@ import {
   Award,
   BookOpen,
   Clock,
-  Compass
+  Compass,
+  ChevronDown,
+  ChevronRight,
+  Search
 } from 'lucide-vue-next'
 import { useRoadmapStore } from '~/stores/useRoadmapStore'
 import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
@@ -134,6 +137,53 @@ const chapterMilestones = computed<ChapterMilestone[]>(() => {
 
   return list
 })
+
+const chapterSearch = ref('')
+const visibleChaptersCount = ref(30)
+const expandedChapters = ref<Set<number>>(new Set())
+
+watch(chapterMilestones, (milestones) => {
+  if (expandedChapters.value.size === 0) {
+    const active = milestones.find(m => m.isActive)
+    if (active) {
+      expandedChapters.value.add(active.chapterIndex)
+    } else if (milestones.length > 0) {
+      expandedChapters.value.add(milestones[0].chapterIndex)
+    }
+  }
+}, { immediate: true })
+
+const filteredChapters = computed(() => {
+  if (!chapterSearch.value.trim()) return chapterMilestones.value
+  const query = chapterSearch.value.toLowerCase().trim()
+  return chapterMilestones.value.filter(c => c.chapterTitle.toLowerCase().includes(query))
+})
+
+const displayedChapters = computed(() => {
+  return filteredChapters.value.slice(0, visibleChaptersCount.value)
+})
+
+function toggleChapter(chapterIndex: number) {
+  if (expandedChapters.value.has(chapterIndex)) {
+    expandedChapters.value.delete(chapterIndex)
+  } else {
+    expandedChapters.value.add(chapterIndex)
+  }
+}
+
+function expandAll() {
+  for (const c of displayedChapters.value) {
+    expandedChapters.value.add(c.chapterIndex)
+  }
+}
+
+function collapseAll() {
+  expandedChapters.value.clear()
+}
+
+function loadMoreChapters() {
+  visibleChaptersCount.value += 30
+}
 
 const estDaysRemaining = computed(() => {
   if (!focusStore.data?.pacer) return 0
@@ -281,13 +331,45 @@ function getDifficultyColor(diff: number) {
 
       <!-- Chapter Milestone Cards List -->
       <div v-else class="space-y-6 sm:space-y-8">
+        <!-- Search & Controls Bar -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200 dark:border-slate-800">
+          <div class="relative flex-1 max-w-md">
+            <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              v-model="chapterSearch"
+              type="text"
+              :placeholder="$t('roadmap.search_chapters')"
+              class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-brand-500 focus:outline-none transition-colors"
+            />
+          </div>
+          <div class="flex items-center gap-2 self-end sm:self-auto">
+            <button
+              @click="expandAll"
+              type="button"
+              class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 transition-colors"
+            >
+              {{ $t('roadmap.expand_all') }}
+            </button>
+            <button
+              @click="collapseAll"
+              type="button"
+              class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 transition-colors"
+            >
+              {{ $t('roadmap.collapse_all') }}
+            </button>
+          </div>
+        </div>
+
         <section
-          v-for="chapter in chapterMilestones"
+          v-for="chapter in displayedChapters"
           :key="chapter.chapterTitle"
           class="space-y-4 sm:space-y-5"
         >
-          <!-- Chapter Milestone Header Card -->
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm gap-3 sm:gap-4">
+          <!-- Chapter Milestone Header Card (Clickable Accordion) -->
+          <div 
+            @click="toggleChapter(chapter.chapterIndex)"
+            class="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm gap-3 sm:gap-4 cursor-pointer hover:border-brand-400 dark:hover:border-slate-700 transition-all select-none"
+          >
             <div class="flex items-center gap-3 sm:gap-3.5">
               <div
                 :class="[
@@ -322,7 +404,7 @@ function getDifficultyColor(diff: number) {
             </div>
 
             <!-- Chapter Progress & Jump Action -->
-            <div class="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+            <div class="flex items-center gap-3 shrink-0 self-end sm:self-auto" @click.stop>
               <div class="w-20 sm:w-28 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div
                   class="h-full bg-brand-500 rounded-full transition-all duration-300"
@@ -337,11 +419,19 @@ function getDifficultyColor(diff: number) {
               >
                 {{ $t('roadmap.start_today') }}
               </button>
+
+              <button
+                @click="toggleChapter(chapter.chapterIndex)"
+                type="button"
+                class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <component :is="expandedChapters.has(chapter.chapterIndex) ? ChevronDown : ChevronRight" class="w-5 h-5 transition-transform" />
+              </button>
             </div>
           </div>
 
-          <!-- Slices Grid -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Slices Grid (Collapsible) -->
+          <div v-show="expandedChapters.has(chapter.chapterIndex)" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in duration-200">
             <div
               v-for="slice in chapter.slices"
               :key="slice.id"
@@ -427,6 +517,18 @@ function getDifficultyColor(diff: number) {
             </div>
           </div>
         </section>
+
+        <!-- Load More Chapters Button -->
+        <div v-if="filteredChapters.length > visibleChaptersCount" class="flex justify-center pt-4 pb-6">
+          <button
+            @click="loadMoreChapters"
+            type="button"
+            class="flex items-center gap-2 px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-bold shadow-md shadow-brand-500/20 transition-all active:scale-95"
+          >
+            <span>{{ $t('roadmap.load_more_chapters', { count: Math.min(30, filteredChapters.length - visibleChaptersCount), remaining: filteredChapters.length - visibleChaptersCount }) }}</span>
+            <ChevronDown class="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </div>
 
@@ -441,7 +543,7 @@ function getDifficultyColor(diff: number) {
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6">
           <div class="space-y-2 max-w-2xl">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-500/20 border border-brand-200 dark:border-brand-500/30 text-brand-700 dark:text-brand-300 text-xs font-bold tracking-wide uppercase">
-              <Map class="w-3.5 h-3.5" />
+              <MapIcon class="w-3.5 h-3.5" />
               <span>{{ $t('roadmap.badge') }}</span>
             </div>
             <h1 class="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">

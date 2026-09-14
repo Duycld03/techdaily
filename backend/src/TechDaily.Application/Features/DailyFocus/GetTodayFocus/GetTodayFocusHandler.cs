@@ -232,12 +232,13 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                     QuestionId = question.Id,
                     DocumentChunkId = documentChunk?.Id,
                     ScheduledDate = today,
-                    Status = DrillStatus.Pending,
-                    Question = question,
-                    DocumentChunk = documentChunk
+                    Status = DrillStatus.Pending
                 };
                 await _dbContext.DailyDrills.AddAsync(drill, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
+
+                drill.Question = question;
+                drill.DocumentChunk = documentChunk;
             }
         }
         else

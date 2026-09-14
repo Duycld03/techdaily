@@ -82,7 +82,11 @@
     "slices": "slices",
     "daily_pace": "Daily Pace",
     "est_days": "Est. {days} days remaining",
-    "all_slices_completed": "All slices completed!"
+    "all_slices_completed": "All slices completed!",
+    "search_chapters": "Search chapters...",
+    "expand_all": "Expand All",
+    "collapse_all": "Collapse All",
+    "load_more_chapters": "Show {count} More Chapters ({remaining} remaining)"
   },
   "pacer": {
     "slice": "Slice",

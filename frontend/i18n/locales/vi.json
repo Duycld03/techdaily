@@ -82,7 +82,11 @@
     "slices": "lát cắt",
     "daily_pace": "Tốc Độ Đọc Hàng Ngày",
     "est_days": "Dự kiến còn {days} ngày",
-    "all_slices_completed": "Đã hoàn thành toàn bộ lát cắt!"
+    "all_slices_completed": "Đã hoàn thành toàn bộ lát cắt!",
+    "search_chapters": "Tìm kiếm chương...",
+    "expand_all": "Mở tất cả",
+    "collapse_all": "Thu gọn",
+    "load_more_chapters": "Xem thêm {count} chương ({remaining} còn lại)"
   },
   "pacer": {
     "slice": "Lát cắt",
