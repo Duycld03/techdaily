@@ -4,7 +4,6 @@ import { BookOpen, Clock, Tag, Sparkles, Copy, Check, Highlighter } from 'lucide
 import type { Topic, DocumentChunk } from '~/stores/useDailyFocusStore'
 import { useNotesStore } from '~/stores/useNotesStore'
 import { useToast } from '~/composables/useToast'
-import MicroQuizCard from '~/components/today/MicroQuizCard.vue'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 import { useApiError } from '~/composables/useApiError'
@@ -57,9 +56,9 @@ const selectedContext = ref<string>('')
 const isExplainerOpen = ref(false)
 
 function handleMouseUp(e: MouseEvent) {
-  // Ignore clicks inside interactive elements or quiz
+  // Ignore clicks inside interactive elements
   const target = e.target as HTMLElement
-  if (target.closest('.micro-quiz-container') || target.closest('button') || target.closest('input')) {
+  if (target.closest('button') || target.closest('input')) {
     floatingMenu.value.visible = false
     return
   }
@@ -202,11 +201,6 @@ onUnmounted(() => {
         <span>Performance Benchmark Context:</span>
       </div>
       <pre class="overflow-x-auto p-0 m-0 bg-transparent border-0">{{ topic.benchmarkSnippet }}</pre>
-    </div>
-
-    <!-- Interactive Micro Quiz Check -->
-    <div class="micro-quiz-container mt-8">
-      <MicroQuizCard v-if="documentChunk?.microQuiz" :quiz="documentChunk.microQuiz" />
     </div>
 
     <!-- Discreet Floating Action Bar on Selection -->

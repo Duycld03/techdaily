@@ -93,4 +93,30 @@ describe('DocReaderPane.vue', () => {
     expect(wrapper.text()).toContain("queryClient.setQueryData(['items'], (old) => updateLocal(old, itemId));")
     expect(wrapper.html()).toContain('overflow-x-auto')
   })
+
+  it('does not render micro quiz container, providing distraction-free reading', () => {
+    const wrapper = mount(DocReaderPane, {
+      props: {
+        topic: mockTopic,
+        documentChunk: {
+          ...mockDocumentChunk,
+          microQuiz: {
+            question: 'Sample quiz question?',
+            options: ['A', 'B'],
+            answerIndex: 0,
+            explanation: 'Sample explanation'
+          }
+        } as any
+      },
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+          t: (key: string) => key,
+          locale: 'en'
+        }
+      }
+    })
+
+    expect(wrapper.find('.micro-quiz-container').exists()).toBe(false)
+  })
 })

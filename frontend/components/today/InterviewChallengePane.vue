@@ -168,14 +168,14 @@ async function handleOptionSubmit() {
             <div v-if="isReviewed" class="shrink-0 flex items-center gap-1 sm:gap-1.5 pt-0.5">
               <span
                 v-if="index === question.correctOptionIndex"
-                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-sm"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-sm whitespace-nowrap shrink-0"
               >
                 <Check class="w-3.5 h-3.5" />
                 <span>{{ $t('today.optimal_choice') }}</span>
               </span>
               <span
                 v-else-if="selectedOption === index && index !== question.correctOptionIndex"
-                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-sm"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-sm whitespace-nowrap shrink-0"
               >
                 <XCircle class="w-3.5 h-3.5" />
                 <span>{{ $t('today.your_choice') }}</span>
