@@ -15,10 +15,13 @@ erDiagram
     USERS ||--o{ USER_HIGHLIGHTS : "creates"
     USERS ||--o{ USER_INSIGHT_BOOKMARKS : "bookmarks"
     USERS ||--o{ USER_QUIZ_PROGRESS : "records"
+    USERS ||--o{ USER_BOOK_PACERS : "tracks"
 
     DOCUMENT_BOOKS ||--o{ DOCUMENT_CHUNKS : "contains (1-N)"
+    DOCUMENT_BOOKS ||--o{ USER_BOOK_PACERS : "paced_by"
     DOCUMENT_CHUNKS ||--o{ USER_HIGHLIGHTS : "highlighted_in"
     DOCUMENT_CHUNKS ||--o{ DAILY_DRILLS : "scheduled_as"
+    DOCUMENT_CHUNKS ||--o{ INTERVIEW_QUESTIONS : "generates_challenge_for"
 
     TOPICS ||--o{ INTERVIEW_QUESTIONS : "contains (1-N)"
     TOPICS ||--o{ SPACED_REPETITION_CARDS : "tracked_in"
@@ -62,6 +65,10 @@ erDiagram
 | `SourceType` | `varchar(50)` | NOT NULL | Enum: `PdfBook`, `MarkdownSeries`, `WebDocUrl` |
 | `Category` | `varchar(50)` | NOT NULL | Enum: `Frontend`, `Backend`, `Database`, `Architecture` |
 | `TotalChunks` | `int` | NOT NULL, Default 0 | Total number of daily reading slices |
+| `TotalPages` | `int` | NULL | Total physical pages for PDF books |
+| `ProcessedPages` | `int` | NULL | Processed physical pages count during async ingestion |
+| `IngestionStatus` | `varchar(50)` | NOT NULL, Default 'Completed' | Enum: `Completed`, `Processing`, `Failed` |
+| `IngestionError` | `text` | NULL | Error diagnostics message if ingestion failed |
 | `AuthorOrSourceUrl` | `varchar(500)` | NULL | Original author, source file, or documentation link |
 | `IsPublished` | `boolean` | NOT NULL, Default true | Publishing status |
 | `IsDeleted` | `boolean` | NOT NULL, Default false | Soft delete flag |
@@ -81,6 +88,8 @@ erDiagram
 | `SummaryMarkdown` | `text` | NOT NULL | 3-5 core takeaways |
 | `KeyTakeaways` | `jsonb` | NOT NULL | Array of bullet point strings `string[]` |
 | `MicroQuiz` | `jsonb` | NOT NULL | `{ question: string, options: string[], answerIndex: int, explanation: string }` |
+| `StartPage` | `int` | NULL | Starting physical page in source PDF |
+| `EndPage` | `int` | NULL | Ending physical page in source PDF |
 | `Language` | `varchar(10)` | NOT NULL, Default 'en' | ISO language code (`en`, `vi`, etc.) |
 | `Embedding` | `vector(768)` | NULL | Vector embedding for semantic search (pgvector) |
 | `EstimatedReadMinutes` | `int` | NOT NULL, Default 3 | Estimated reading time |
@@ -115,6 +124,7 @@ erDiagram
 |---|---|---|---|
 | `Id` | `uuid` | PK | Unique Identifier |
 | `TopicId` | `uuid` | FK $\rightarrow$ `Topics(Id)`, NOT NULL | Reference to parent topic |
+| `DocumentChunkId` | `uuid` | FK $\rightarrow$ `DocumentChunks(Id)`, NULL | Associated document slice for scenario challenge |
 | `QuestionText` | `text` | NOT NULL | Senior-level scenario question |
 | `Options` | `jsonb` | NOT NULL, Default '[]' | Array of multiple-choice scenario options `string[]` |
 | `CorrectOptionIndex` | `int` | NOT NULL, Default 0 | Index of optimal senior solution |
@@ -122,6 +132,24 @@ erDiagram
 | `ExpectedKeyPoints` | `jsonb` | NOT NULL | Array of required points `string[]` |
 | `ModelAnswerMarkdown` | `text` | NOT NULL | Benchmark answer written by Principal Architect |
 | `Difficulty` | `varchar(50)` | NOT NULL | Difficulty tier |
+
+---
+
+### `UserBookPacers`
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `Id` | `uuid` | PK | Unique Identifier |
+| `UserId` | `uuid` | FK $\rightarrow$ `Users(Id)`, NOT NULL | Reference to user |
+| `DocumentBookId` | `uuid` | FK $\rightarrow$ `DocumentBooks(Id)`, NOT NULL | Reference to document book |
+| `CurrentChunkOrder` | `int` | NOT NULL, Default 1 | Current slice order being read |
+| `IsActive` | `boolean` | NOT NULL, Default true | Active reading book flag for `/today` |
+| `LastReadAt` | `timestamptz` | NULL | Timestamp of last read activity |
+| `CreatedAt` | `timestamptz` | NOT NULL | Creation timestamp |
+| `UpdatedAt` | `timestamptz` | NULL | Last updated timestamp |
+
+> **Indexes:**
+> - `IX_UserBookPacers_UserId_DocumentBookId` UNIQUE ON `(UserId, DocumentBookId)`
+> - `IX_UserBookPacers_DocumentBookId` ON `(DocumentBookId)`
 
 ---
 

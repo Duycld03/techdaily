@@ -21,16 +21,16 @@ TechDaily (Clean Architecture)
 ├── Api            → ASP.NET Core Minimal APIs (.NET 10, C# 13), JWT Bearer Auth, RFC 7807 Problem Details
 ├── Application    → Pure DI Use-Case Handlers, FluentValidation, Result Pattern, DTOs
 ├── Domain         → Rich Domain Entities, SM-2 Spaced Repetition Invariants, PBKDF2 Password Security
-├── Infrastructure → PostgreSQL 17 (pgvector, EF Core 10), Gemini 3.5 Flash Client, PdfPig, ReverseMarkdown
+├── Infrastructure → PostgreSQL 17 (pgvector, EF Core 10), Gemini 3.5 Flash Lite Client, PdfPig, ReverseMarkdown
 └── Frontend       → Nuxt 4, Vue 3, Pinia, Tailwind CSS, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode, Shiki
 ```
 
 | Layer | Technology | Key Responsibilities |
 |---|---|---|
 | **Backend API** | **ASP.NET Core (.NET 10)** | Clean Architecture, C# 13, Plain Use-Case Handlers (Pure DI), Rich Domain Model, RFC 7807 problem details, 100% English codebase |
-| **Data Persistence** | **EF Core 10 + Npgsql** | PostgreSQL 17 (`pgvector`), JSONB (`ToJson()`) for takeaways/quizzes/options, User Bookmarks with Unique Indexes |
-| **AI Synthesis Engine** | **Gemini 3.1 Flash Lite API** | Structured Output (JSON Schema), High-Speed Quiz Synthesis (<5s), Semantic Term Cache, AI Slicing, On-Demand Insights Generator |
-| **Document Ingestion** | **PdfPig + ReverseMarkdown** | Zero-LOH streaming for PDFs up to 200MB (800 pages), Geometric Baseline line-grouping, HTML-to-Markdown Web Crawler |
+| **Data Persistence** | **EF Core 10 + Npgsql** | PostgreSQL 17 (`pgvector`), JSONB (`ToJson()`) for takeaways/quizzes/options, User Bookmarks with Unique Indexes, UserBookPacer |
+| **AI Synthesis Engine** | **Gemini 3.5 Flash Lite API** | Structured Output (JSON Schema), High-Speed Quiz & Challenge Synthesis (<5s), Semantic Term Cache, JIT Look-Ahead Buffer Pre-generation |
+| **Document Ingestion** | **PdfPig + ReverseMarkdown** | Asynchronous Channel-based queue with zero-LOH disk spooling for PDFs up to 300MB (8,000+ pages), native PDF Bookmarks/Outline segmentation, HTML-to-Markdown Web Crawler |
 | **Frontend Web** | **Nuxt 4 + Vue 3** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
 | **Notifications** | **Telegram Bot API** | Lightweight morning alerts and streak retention reminders with direct deep links to Web |
 
@@ -41,15 +41,16 @@ TechDaily (Clean Architecture)
 > 📖 **Feature Matrix & Specifications:** See [docs/features.md](docs/features.md)
 
 ### 1. 🏠 Daily Focus Hub (`/today`)
-- **Daily Doc Slice:** Curated 3–5 minute excerpt from official docs preserving original source language with structured takeaways and quick check quiz.
+- **Daily Doc Slice & Pacer Bar:** Curated 3–5 minute excerpt from official docs preserving original source language with structured takeaways, reading progress metrics, and 1-click active book switching dropdown.
 - **Inline AI Explainer:** Highlight any complex technical term to get instant popover explanation localized to your language (backed by `TermExplanationCaches`).
 - **Senior Scenario Challenge:** Real-world architectural decision drill with instant option grading, trade-off analysis, and deep-dive explanations.
+- **JIT Look-Ahead Buffer:** Background pre-generation service keeping 3 scenario challenges ahead using Gemini 3.5 Flash Lite with resilient 6-second timeout fallback.
 - **Streak & Freeze Retention:** Automatic streak incrementing, longest streak tracking, and monthly streak freeze credits.
 
 ### 2. 🗺️ 30-Day Senior Fullstack Roadmap (`/roadmap`)
-- **Core Pillars:** Frontend & Browser Internals, .NET 10 & C# 13 Runtime Internals, PostgreSQL 17 Storage Engine, and Distributed Systems Architecture.
-- **Skill Tree & Milestone Progression:** Daily unlockable modules with instant drill scores, completed days counter, and sprint progress tracking.
-- **Direct Navigation:** Jump directly into any unlocked day's focus topic and challenge.
+- **Core Pillars & Custom Track:** Frontend & Browser Internals, .NET 10 & C# 13 Runtime Internals, PostgreSQL 17 Storage Engine, Distributed Systems Architecture, or your active custom technical book.
+- **Skill Tree & Milestone Progression:** Chapter-level milestone progression with live slice indicators, completed slice counters, and sprint progress tracking.
+- **Direct Navigation:** Jump directly into any unlocked slice or milestone focus topic and challenge.
 
 ### 3. 🧠 Spaced Repetition Flashcards (`/review`)
 - **SuperMemo SM-2 Engine:** Strict mathematical intervals ($EF \in [1.30, 2.50]$, progression intervals $I_1=1, I_2=6, I_n = I_{n-1} \times EF$).
@@ -59,7 +60,7 @@ TechDaily (Clean Architecture)
 ### 4. 📚 Technical Library & Document Ingestion (`/library`)
 - **3-Tab Modern Ingestion Modal:**
   - **Markdown Tab:** Paste raw technical notes and auto-slice by markdown headings (`#`, `##`).
-  - **PDF Drag & Drop Tab:** Upload large technical books, cheatsheets, and slides up to **200 MB (800 pages)** with zero-LOH streaming, automatic code detection, and baseline line-grouping.
+  - **Async PDF Ingestion Tab:** Upload large technical books, cheatsheets, and slides up to **300 MB (8,000+ pages)** with zero-LOH disk spooling, asynchronous Channels queue, native PDF Bookmarks/Outline tree chapter extraction, and real-time polling progress.
   - **URL Article Crawler Tab:** Crawl any Microsoft Learn, Dev.to, Medium, or GitHub raw documentation link with live markdown preview and syntax tag preservation.
 - **Document Management:** Safe soft-deletion with cascading chunk cleanup.
 
@@ -123,10 +124,10 @@ Run the fullstack development environment with all services wired:
 Run the entire automated test suite:
 
 ```bash
-# Run Backend Unit & Integration Tests (42 Tests)
+# Run Backend Unit & Integration Tests (74 Tests)
 dotnet test backend/TechDaily.sln
 
-# Run Frontend Component & Store Tests (49 Tests)
+# Run Frontend Component & Store Tests (88 Tests)
 npm --prefix frontend test
 ```
 

@@ -121,21 +121,50 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ---
 
-## 3. Daily Focus Hub (`/api/v1/daily`)
+## 3. Daily Focus Hub (`/api/v1/daily` & `/api/daily-focus`)
 
-### `GET /api/v1/daily/today`
+### `GET /api/daily-focus/today`
 - **Auth:** Optional / Recommended (`Bearer`)
-- **Query Params:** `dayOrder` (optional int: 1–30), `date` (optional string), `locale` (en/vi)
+- **Query Params:** `bookId` (optional Guid), `chunkOrder` (optional int), `dayOrder` (optional int: 1–30), `date` (optional string), `locale` (en/vi)
 - **Response (200 OK):**
   - `topic`: `TopicDto` (id, slug, title, category, difficulty, dayOrder, summary, deepDiveMarkdown)
-  - `question`: `InterviewQuestionDto` (id, questionText, options: `string[]`, difficulty, expectedKeyPoints; `correctOptionIndex` and `explanationMarkdown` masked until reviewed)
-  - `documentChunk`: `DocumentChunkDto` (id, chunkOrder, chapterTitle, originalTextMarkdown, summaryMarkdown, keyTakeaways, microQuiz)
+  - `question`: `InterviewQuestionDto` (id, questionText, options: `string[]`, difficulty, expectedKeyPoints; `correctOptionIndex` and `explanationMarkdown` masked until answered)
+  - `documentChunk`: `DocumentChunkDto` (id, chunkOrder, chapterTitle, originalTextMarkdown, summaryMarkdown, keyTakeaways, microQuiz, startPage, endPage)
+  - `pacer`: `PacerDto` (`bookId`, `bookTitle`, `currentChunkOrder`, `totalChunks`, `progressPercent`, `totalPages`, `startPage`, `endPage`, `availableBooks: AvailableBookDto[]`)
   - `drill`: `DailyDrillDto` (id, status, selectedOptionIndex, isCorrect, score)
   - `currentStreak`: int
   - `longestStreak`: int
   - `freezeCreditsRemaining`: int
 
-### `POST /api/v1/daily/drills/{id}/submit`
+### `POST /api/daily-focus/switch-book`
+- **Auth:** Required (`Bearer`)
+- **Request Body (JSON):**
+  ```json
+  {
+    "bookId": "bf7c9a22-c619-4bbf-81ac-b97ed3c482e9"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "bookId": "bf7c9a22-c619-4bbf-81ac-b97ed3c482e9",
+    "bookTitle": "Designing Data-Intensive Applications",
+    "currentChunkOrder": 1,
+    "totalChunks": 36,
+    "progressPercent": 2,
+    "totalPages": 612,
+    "startPage": 1,
+    "endPage": 18,
+    "availableBooks": [...]
+  }
+  ```
+
+### `GET /api/daily-focus/chunk-challenge/{chunkId}`
+- **Auth:** Public
+- **Description:** High-priority scenario challenge lookup or JIT on-demand synthesis for a specific slice.
+- **Response (200 OK):** `InterviewQuestionDto` (with options, difficulty, expected key points).
+
+### `POST /api/daily-focus/drills/{id}/submit`
 - **Auth:** Required (`Bearer`)
 - **Request Body (JSON):**
   ```json
@@ -326,15 +355,31 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
   ```
 - **Response (201 Created):** Created `BookDto`.
 
+### `GET /api/v1/library/books/{id}/status`
+- **Auth:** Public
+- **Description:** Real-time ingestion progress polling for background PDF processing.
+- **Response (200 OK):**
+  ```json
+  {
+    "bookId": "bf7c9a22-c619-4bbf-81ac-b97ed3c482e9",
+    "title": "Clean Architecture in .NET 10",
+    "status": "Processing",
+    "totalPages": 350,
+    "processedPages": 120,
+    "progressPercent": 34,
+    "errorMessage": null
+  }
+  ```
+
 ### `POST /api/v1/library/upload-pdf`
 - **Auth:** Required (`Bearer`)
-- **Content-Type:** `multipart/form-data` (Supports up to 200 MB, max 800 pages)
+- **Content-Type:** `multipart/form-data` (Supports up to **300 MB**, 8,000+ pages via disk spooling & Channels queue)
 - **Form Fields:**
   - `file`: Binary PDF file stream (`.pdf`)
   - `title` *(optional)*: Custom book title
   - `category` *(optional int)*: Category enum value
   - `language` *(optional string)*: `en` or `vi`
-- **Response (201 Created):**
+- **Response (202 Accepted):**
   ```json
   {
     "book": {
@@ -344,10 +389,11 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
       "sourceType": 0,
       "category": 0,
       "authorOrSourceUrl": "microsoft.win32-net-10.0.pdf",
-      "totalChunks": 67,
-      "isPublished": true,
+      "totalChunks": 0,
+      "isPublished": false,
       "createdAt": "2026-08-31T17:44:31.0257833+00:00"
-    }
+    },
+    "message": "PDF queued for background ingestion. Processing up to 300MB asynchronously."
   }
   ```
 

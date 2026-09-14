@@ -26,18 +26,27 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 
 ## 2. Document Processing & Ingestion Invariants
 
-### A. PDF Ingestion & Extraction (`PdfPigExtractor`)
-1. **Zero Large-Object-Heap (LOH) Streaming:**
+### A. PDF Ingestion & Extraction (`PdfPigExtractor`, `PdfIngestionWorker`)
+1. **Zero Large-Object-Heap (LOH) Streaming & Disk Spooling:**
    - PDF files MUST be processed via non-buffering streams (`IFormFile.OpenReadStream()`).
-   - If the incoming stream is non-seekable, it must be safely buffered into a temporary seekable stream without leaking unmanaged memory.
-2. **Safety Boundaries (50-60% Gemini Free Tier Capacity):**
-   - Maximum file size: **200 MB**.
-   - Maximum page count: **800 pages** (~500,000 tokens). Exceeding this throws `InvalidOperationException`.
-3. **Geometric Baseline Line Grouping:**
+   - Incoming upload streams are spooled directly to temporary disk files (`Path.GetTempFileName()`) before queuing, ensuring zero LOH allocations and preventing memory exhaustion during 300MB concurrent uploads.
+   - Spooled files MUST be guaranteed deletion in `finally` blocks upon completion or failure.
+2. **Asynchronous Background Queue (`PdfIngestionQueue`):**
+   - Ingestion is decoupled from the web request pipeline via an in-memory `System.Threading.Channels.Channel`.
+   - `UploadPdfHandler` immediately returns `202 Accepted` with initial status `Processing`.
+   - Background worker updates `ProcessedPages`, `TotalPages`, `IngestionStatus` (`Completed` / `Failed`), and `IngestionError` for live client polling.
+3. **Capacity & Safety Boundaries:**
+   - Maximum file size: **300 MB**.
+   - Maximum page count: **10,000 pages** (stress tested up to 8,351 pages in 5.4 seconds).
+4. **Native PDF Bookmarks / Outline Tree Chapter Segmentation:**
+   - The extractor MUST first inspect native document outlines/bookmarks (`document.TryGetBookmarks(out var bookmarks)`).
+   - If present, outline nodes with valid page destinations are flattened and sorted to demarcate chapters and slice ranges (`StartPage`, `EndPage`).
+   - If bookmarks are absent, fallback to geometric heading font-size heuristic extraction.
+5. **Geometric Baseline Line Grouping:**
    - Words extracted via `page.GetWords()` MUST be grouped geometrically by their baseline Y-coordinate (`BoundingBox.Bottom`) with a tolerance factor (~3.5 points) to preserve natural paragraph line breaks and code indentations.
-4. **PostgreSQL UTF-8 Null-Byte (`\0`) Sanitization:**
+6. **PostgreSQL UTF-8 Null-Byte (`\0`) Sanitization:**
    - Raw PDF text extractions containing null bytes (`\0`, `0x00`) or control characters MUST be sanitized via `Regex.Replace(text, @"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "")` before writing to PostgreSQL text columns.
-5. **Continuous Code Block Unification:**
+7. **Continuous Code Block Unification:**
    - Heuristics MUST detect continuous code lines, comments (`//`, `/*`), keywords, and block braces to prevent fragmented, multi-box code rendering.
 
 ### B. Web Article Crawling (`WebArticleCrawler`)
@@ -180,7 +189,21 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 
 ---
 
-## 9. Anti-Patterns to NEVER Repeat
+## 9. Doc Pacer & JIT Look-Ahead Buffer Invariants
+1. **Sliding Window Buffer Size:**
+   - The `ILookAheadBufferService` background pipeline MUST continuously maintain senior scenario challenge questions for exactly **3 slices ahead** of the reader's current slice (`[current + 1, current + 2, current + 3]`).
+2. **AI Model Standardization:**
+   - Background look-ahead generation and priority on-demand challenge synthesis MUST standardize on `gemini-3.5-flash-lite` (<5s latency) with structured JSON schema.
+3. **Priority Jump Promotion & 6-Second Timeout Fallback:**
+   - If a user rapidly navigates (`Next Slice`) to a slice whose scenario challenge is still in the generation queue, the request triggers a high-priority promotion task with a maximum 6-second timeout.
+   - If the generation takes longer than 6 seconds, the system seamlessly returns a gracefully structured domain fallback challenge rather than hanging or failing the request.
+4. **Multi-Book Pacer Isolation & Active Switcher:**
+   - A user's reading position in each document book is preserved independently in `UserBookPacers` (`CurrentChunkOrder`).
+   - Switching active books via `POST /api/daily-focus/switch-book` updates `IsActive = true` on the selected book and marks previous pacers as inactive, allowing the user to switch between books on `/today` and `/roadmap` without losing progress.
+
+---
+
+## 10. Anti-Patterns to NEVER Repeat
 
 | Anti-Pattern | Why it is Forbidden | Correct Approach |
 | :--- | :--- | :--- |
@@ -196,11 +219,12 @@ This document defines the strict non-negotiable rules, invariants, and anti-patt
 | **RSA Key Exclusivity on Modern Linux** | Debian 13/OpenSSH 9.8+ deprecates legacy RSA and causes publickey auth failures | Standardize on modern `ED25519` keys across local config and CI/CD secrets |
 | **Raw Text Interpolation for AI Tooltips** | Shows raw `**bold**` asterisks and backticks in UI popups | Parse AI markdown through `useMarkdownRenderer()` in a `prose` container |
 | **Auto-Triggering Heavy AI Requests on Chip Selection** | Causes accidental expensive AI generations when user is merely selecting topics | Require explicit button click or Enter key to trigger AI generation |
-| **Unbenchmarked Heavy AI Models in Sync Web Requests** | Heavy models take >60s leading to Nginx 504 Gateway Time-out | Benchmark model response time and standardize on `gemini-3.1-flash-lite` (<5s) with 120s Nginx proxy timeout |
+| **Unbenchmarked Heavy AI Models in Sync Web Requests** | Heavy models take >60s leading to Nginx 504 Gateway Time-out | Benchmark model response time and standardize on `gemini-3.5-flash-lite` (<5s) with 120s Nginx proxy timeout |
 | **Naive String Slicing with `LastIndexOf` on AI JSON** | LLM hallucinated trailing brackets (`] } ]`) break parsing with `JsonReaderException` | Use balanced bracket depth parsing (`ExtractJsonArray`, `ExtractJsonObject`) |
 | **Leaking Past User Answers into New Quiz Sessions** | Returning non-null `lastSelectedOptionIndex` in new quiz DTOs causes answers to be pre-marked | Always initialize session DTOs with `LastSelectedOptionIndex = null` |
 | **Coupling Inactive Historical Selection to Pre-Submit Option Badges** | Checking `lastSelectedOptionIndex` before user submission lights up badges prematurely while submit buttons remain disabled | Evaluate only active session state (`selectedOptionIndex === idx`) while answering |
 | **Navigating Internal Routes on Relative Crawled Hyperlinks** | Unresolved relative links (`href="subtopic"`) navigate internally to non-existent `/read/subtopic` book routes | Resolve relative `href` and `src` against sourceUrl at crawl time and attach `target="_blank" rel="noopener noreferrer"` at render time |
 | **Ignoring [hidden] and Inactive Tab Panels in Document Crawlers** | Inactive tool tabs (e.g. VS Code when VS is selected) and hidden templates duplicate instructions and leak false authorization warnings | Strip elements with `[hidden]`, `[aria-hidden='true']`, and `ul[role='tablist']` in `WebArticleCrawler` |
+| **Synchronous In-Memory Large PDF Processing** | Uploading 200MB-300MB PDFs in a single HTTP request exhausts server RAM and triggers client timeouts | Spool streams to disk, queue tasks via `System.Threading.Channels`, and process asynchronously |
 
 

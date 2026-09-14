@@ -28,10 +28,12 @@ This document serves as the single source of truth for all implemented, active, 
 | Feature | Description | Status | Reference / Spec |
 |---|---|---|---|
 | **Curated Daily Doc Slices** | 3–5 min authoritative excerpts with takeaways and quick-check quizzes | 🟢 DONE | `docs/curriculum-30-days.md` |
+| **Doc Pacer Bar & Book Switcher** | Dynamic reading progress bar on `/today` with 1-click active book switching dropdown | 🟢 DONE | `openspec/changes/doc-pacer-and-async-pdf-ingestion/` |
+| **JIT Look-Ahead Buffer Service** | Background pre-generation pipeline maintaining 3 senior trade-off scenario questions ahead via Gemini 3.5 Flash Lite with 6s timeout fallback | 🟢 DONE | `Application/Interfaces/ILookAheadBufferService.cs` |
 | **Floating AI Term Explainer** | Highlight terms up to 500 chars to get instant Gemini markdown explainer | 🟢 DONE | `TermExplanationCaches` |
 | **Daily Senior Scenario Challenge**| Architecture trade-off drills with instant grading & Principal-level review | 🟢 DONE | `openspec/changes/archive/2026-09-01-multiple-choice-interview-drills/` |
 | **Streak Engine & Freeze Retention**| Automated streak incrementing, longest streak, and monthly freeze credits | 🟢 DONE | `UserLearningStats` |
-| **30-Day Senior Roadmap Tree** | Visual progression across .NET 10, PostgreSQL 17, Nuxt 4, Distributed Systems | 🟢 DONE | `frontend/pages/roadmap.vue` |
+| **Dynamic Chapter Roadmap Tree** | Visual chapter milestones and slice progression across 30-Day curriculum or custom active book | 🟢 DONE | `frontend/pages/roadmap.vue` |
 
 ---
 
@@ -49,7 +51,9 @@ This document serves as the single source of truth for all implemented, active, 
 | Feature | Description | Status | Reference / Spec |
 |---|---|---|---|
 | **Markdown Note Ingestion** | Raw markdown parsing and auto-slicing by headings (`#`, `##`) | 🟢 DONE | `Application/UseCases/Library/CreateBook` |
-| **Large PDF Stream Ingestion** | Zero-LOH streaming for PDFs up to 200MB (800 pages) via PdfPig | 🟢 DONE | `openspec/changes/pdf-upload-and-web-crawler/` |
+| **Async Large PDF Ingestion** | Zero-LOH disk-spooled ingestion for PDFs up to 300MB (8,000+ pages) via Channels queue & `PdfIngestionWorker` | 🟢 DONE | `openspec/changes/doc-pacer-and-async-pdf-ingestion/` |
+| **Native PDF Bookmarks/Outline Extraction** | Structured chapter segmentation via PDF native outline tree in `PdfPigExtractor` with geometric heading fallback | 🟢 DONE | `Infrastructure/Services/PdfPigExtractor.cs` |
+| **Real-Time Ingestion Polling** | Real-time status polling (`/status`) with page counters, percentage, and error reporting | 🟢 DONE | `Application/Features/Library/GetBookStatus/` |
 | **Web Article Crawler** | Crawl documentation URLs (Microsoft Learn, Dev.to, Medium) to clean Markdown with moniker deduplication, tab filtering & relative link resolution | 🟢 DONE | `Infrastructure/Services/WebArticleCrawler.cs` |
 | **Cascading Document Soft Delete** | Safe removal of books with automatic chunk cleanup | 🟢 DONE | `Application/UseCases/Library/DeleteBook` |
 
@@ -74,7 +78,7 @@ This document serves as the single source of truth for all implemented, active, 
 |---|---|---|---|
 | **Bite-Sized Architectural Cards** | Anti-Patterns vs Idiomatic Solutions across .NET, PostgreSQL, Vue 3, Go | 🟢 DONE | `openspec/changes/insights-feed-and-roadmap/` |
 | **Database Bookmark Sync** | Real-time bookmarking and filter tab ("🔖 Đã Lưu") | 🟢 DONE | `Application/UseCases/Insights/BookmarkInsight` |
-| **On-Demand AI Insights Synthesis**| Generate custom deep-dive technical insights via Gemini 3.1 Flash Lite | 🟢 DONE | `Application/UseCases/Insights/GenerateInsight` |
+| **On-Demand AI Insights Synthesis**| Generate custom deep-dive technical insights via Gemini 3.5 Flash Lite | 🟢 DONE | `Application/UseCases/Insights/GenerateInsight` |
 | **Keyboard Navigation** | Quick review controls via `[Space]`, `[→]`, `[←]` | 🟢 DONE | `frontend/pages/insights.vue` |
 
 ---
@@ -90,7 +94,7 @@ This document serves as the single source of truth for all implemented, active, 
 ## 🎯 8. Senior Interview Quiz Arena (`/quiz`)
 | Feature | Description | Status | Reference / Spec |
 |---|---|---|---|
-| **High-Speed AI Quiz Synthesis** | Structured JSON generation of 5-10 questions in <5s (Gemini 3.1 Flash Lite)| 🟢 DONE | `openspec/changes/interview-quiz-generator/` |
+| **High-Speed AI Quiz Synthesis** | Structured JSON generation of 5-10 questions in <5s (Gemini 3.5 Flash Lite)| 🟢 DONE | `openspec/changes/interview-quiz-generator/` |
 | **Resilient Balanced JSON Parser** | Depth-balanced bracket parser (`ExtractJsonArray`) immune to trailing syntax hallucinations | 🟢 DONE | `Infrastructure/Services/GeminiAiService.cs` |
 | **Clean Drill Session Isolation** | Pristine unselected state (`LastSelectedOptionIndex = null`) on every newly generated session | 🟢 DONE | `GenerateQuizHandler.cs` & `quiz.vue` |
 | **Timed Arena & Mistake Review** | Real-time timer, instant grading, architectural rationale, retry mistakes | 🟢 DONE | `frontend/pages/quiz.vue` |
