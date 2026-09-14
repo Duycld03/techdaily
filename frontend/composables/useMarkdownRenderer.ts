@@ -118,6 +118,9 @@ export function useMarkdownRenderer() {
       breaks: false
     })
 
+    // Disable fuzzy linking so technology names like ASP.NET, System.Net, Vue.js are not mistakenly autolinked into web domains
+    md.linkify.set({ fuzzyLink: false })
+
     // Disable legacy 4-space indented code blocks so accidental whitespace doesn't create spurious code fences
     md.disable('code')
 

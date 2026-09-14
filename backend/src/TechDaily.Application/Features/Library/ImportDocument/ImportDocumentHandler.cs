@@ -74,13 +74,16 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
             var title = ExtractTitle(chunkContent, order);
             var estimatedMinutes = Math.Max(1, chunkContent.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length / 200);
 
+            var contentWithoutHeading = Regex.Replace(chunkContent, @"^\s*#+\s+[^\n\r]+(\r?\n)*", "").Trim();
+            var summaryText = string.IsNullOrWhiteSpace(contentWithoutHeading) ? title : contentWithoutHeading;
+
             var chunk = new DocumentChunk
             {
                 DocumentBookId = book.Id,
                 ChunkOrder = order++,
                 ChapterTitle = title,
                 OriginalTextMarkdown = chunkContent,
-                SummaryMarkdown = chunkContent.Length > 300 ? chunkContent.Substring(0, 300) + "..." : chunkContent,
+                SummaryMarkdown = summaryText.Length > 300 ? summaryText.Substring(0, 300) + "..." : summaryText,
                 Language = request.Language,
                 EstimatedReadMinutes = estimatedMinutes,
                 KeyTakeaways = new() { "Core Architecture Principle", "System Invariant" },

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -92,13 +93,16 @@ public class PdfIngestionWorker : BackgroundService
                 var chunks = new List<DocumentChunk>();
                 foreach (var slice in result.Slices)
                 {
+                    var contentWithoutHeading = Regex.Replace(slice.ContentMarkdown, @"^\s*#+\s+[^\n\r]+(\r?\n)*", "").Trim();
+                    var summaryText = string.IsNullOrWhiteSpace(contentWithoutHeading) ? slice.ChapterTitle : contentWithoutHeading;
+
                     var chunk = new DocumentChunk
                     {
                         DocumentBookId = book.Id,
                         ChunkOrder = slice.Order,
                         ChapterTitle = slice.ChapterTitle,
                         OriginalTextMarkdown = slice.ContentMarkdown,
-                        SummaryMarkdown = slice.ContentMarkdown.Length > 300 ? slice.ContentMarkdown[..300] + "..." : slice.ContentMarkdown,
+                        SummaryMarkdown = summaryText.Length > 300 ? summaryText[..300] + "..." : summaryText,
                         KeyTakeaways = slice.KeyTakeaways,
                         Language = job.Language,
                         EstimatedReadMinutes = slice.EstimatedReadMinutes

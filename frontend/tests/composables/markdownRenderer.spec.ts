@@ -260,4 +260,18 @@ async function toggleFavorite(itemId: string) {
     expect(outputWithAuthor).toContain('href="ch02.html"')
     expect(outputWithAuthor).not.toContain('target="_blank"')
   })
+
+  it('does not mistakenly autolink programming terms like ASP.NET, System.Net or Vue.js', () => {
+    const { render } = useMarkdownRenderer()
+    const input = 'Learn ASP.NET Core, System.Net.Sockets, and Vue.js reactivity without external links. But visit https://learn.microsoft.com for docs.'
+    const output = render(input)
+
+    expect(output).not.toContain('href="http://ASP.NET"')
+    expect(output).not.toContain('href="http://System.Net"')
+    expect(output).not.toContain('href="http://Vue.js"')
+    expect(output).toContain('ASP.NET Core')
+    expect(output).toContain('System.Net.Sockets')
+    expect(output).toContain('Vue.js')
+    expect(output).toContain('href="https://learn.microsoft.com"')
+  })
 })

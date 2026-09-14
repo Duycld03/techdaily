@@ -596,8 +596,14 @@ public class PdfPigExtractor : IPdfExtractor
             }
             else
             {
-                // Start a code block on programming keywords, comments, method calls or braces
-                isCodeLine = Regex.IsMatch(trimmed, @"^(public|private|protected|internal|class|interface|record|struct|enum|using|import|export|function|const|let|var|def|return|namespace|static|void|async|Task<|Console\.|Registry\.|RegistryKey|for\(|while\(|foreach\(|if\()", RegexOptions.IgnoreCase) ||
+                // Start a code block on programming keywords with word boundary, comments, method calls or braces
+                bool startsWithCodeKeyword = Regex.IsMatch(trimmed, @"^(public|private|protected|internal|class|interface|record|struct|enum|import|export|function|const|let|var|def|return|namespace|static|void|async)\b\s+", RegexOptions.IgnoreCase) ||
+                                             Regex.IsMatch(trimmed, @"^(using\s+[A-Za-z0-9_.]+\s*;|using\s*\()", RegexOptions.IgnoreCase) ||
+                                             Regex.IsMatch(trimmed, @"^(Task<|Console\.|Registry\.|RegistryKey|for\s*\(|while\s*\(|foreach\s*\(|if\s*\()", RegexOptions.IgnoreCase);
+
+                bool isProseSentence = trimmed.EndsWith('.') && !trimmed.Contains(';') && !trimmed.Contains('{') && !trimmed.Contains('}') && !trimmed.Contains("=>");
+
+                isCodeLine = (!isProseSentence && startsWithCodeKeyword) ||
                              trimmed.StartsWith("//") || trimmed.StartsWith("/*") ||
                              trimmed.EndsWith(';') || trimmed.EndsWith('{') || trimmed.EndsWith('}') || trimmed.Contains("=>");
             }

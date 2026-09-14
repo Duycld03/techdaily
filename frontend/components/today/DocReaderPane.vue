@@ -19,8 +19,31 @@ const props = defineProps<{
   documentChunk?: DocumentChunk
 }>()
 
+const cleanSummary = computed(() => {
+  if (!props.topic.summary) return ''
+  let s = props.topic.summary
+  // Strip leading '#+ Heading' if present
+  s = s.replace(/^\s*#{1,6}\s+[^\n\r]+(?:\r?\n)*/, '').trim()
+  return s || props.topic.title
+})
+
+function suppressDuplicateHeading(text: string, title?: string): string {
+  if (!text || !title) return text
+  const titleNorm = title.trim().toLowerCase()
+  const match = text.match(/^\s*#{1,6}\s+([^\n\r]+)/)
+  if (match) {
+    const headingText = match[1].trim().toLowerCase()
+    if (headingText === titleNorm || titleNorm.includes(headingText) || headingText.includes(titleNorm)) {
+      return text.replace(/^\s*#{1,6}\s+[^\n\r]+(\r?\n)+/, '')
+    }
+  }
+  return text
+}
+
 const renderedDeepDiveHtml = computed(() => {
-  const content = props.topic.deepDiveMarkdown || props.documentChunk?.originalTextMarkdown || props.topic.summary || ''
+  const rawContent = props.topic.deepDiveMarkdown || props.documentChunk?.originalTextMarkdown || props.topic.summary || ''
+  const title = props.topic.title || props.documentChunk?.chapterTitle
+  const content = suppressDuplicateHeading(rawContent, title)
   const _ = isHighlighterReady.value
   return renderMarkdown(content)
 })
@@ -32,7 +55,9 @@ const renderedChunkHtml = computed(() => {
     props.documentChunk.originalTextMarkdown !== props.topic.deepDiveMarkdown
   ) {
     const _ = isHighlighterReady.value
-    return renderMarkdown(props.documentChunk.originalTextMarkdown)
+    const title = props.documentChunk.chapterTitle || props.topic.title
+    const content = suppressDuplicateHeading(props.documentChunk.originalTextMarkdown, title)
+    return renderMarkdown(content)
   }
   return ''
 })
@@ -164,7 +189,7 @@ onUnmounted(() => {
       </h1>
 
       <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80 font-normal">
-        {{ topic.summary }}
+        {{ cleanSummary }}
       </p>
 
       <!-- Key Takeaways -->
