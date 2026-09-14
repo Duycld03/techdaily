@@ -58,6 +58,34 @@ public class PdfPigExtractorTests
     }
 
     [Fact]
+    public async Task ExtractSlicesAsync_WithMonolithicChapters_ShouldNeverExceedWordCeiling()
+    {
+        const string samplePath = "/home/duycld03/Downloads/aspnet-core-aspnetcore-10.0.pdf";
+        if (!File.Exists(samplePath))
+        {
+            _output.WriteLine("Sample PDF not found, skipping integration test.");
+            return;
+        }
+
+        var extractor = new PdfPigExtractor();
+        await using var stream = File.OpenRead(samplePath);
+
+        // Extract first 100 pages to cover monolithic chapters such as 'What's new in 10'
+        var result = await extractor.ExtractSlicesAsync(
+            stream,
+            customTitle: "ASP.NET Core 10 Architecture Guide",
+            maxPages: 100);
+
+        result.Slices.Should().NotBeEmpty();
+        foreach (var slice in result.Slices)
+        {
+            var words = slice.ContentMarkdown.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+            words.Should().BeLessOrEqualTo(2500, $"Slice {slice.Order} '{slice.ChapterTitle}' exceeds 2,500 words with {words} words");
+            slice.EstimatedReadMinutes.Should().BeLessOrEqualTo(15, $"Slice {slice.Order} has excessive estimated read minutes: {slice.EstimatedReadMinutes}");
+        }
+    }
+
+    [Fact]
     public void FormatAsMarkdown_ShouldIsolateCodeBlocks_AndNeverTrapProseExplanations()
     {
         var input = @"

@@ -1088,11 +1088,11 @@ No markdown backticks around JSON.";
                 EstimatedReadMinutes: 1);
         }
 
-        // Fallback if Gemini is not configured
+        // Check if Gemini is configured
         if (string.IsNullOrWhiteSpace(_apiKey))
         {
-            _logger.LogWarning("Gemini API key is not configured. Falling back to local heuristic formatting for '{Title}'.", chapterTitle);
-            return FallbackFormatSlice(rawText, chapterTitle);
+            _logger.LogWarning("Gemini API key is not configured for '{Title}'.", chapterTitle);
+            return new Error("Gemini.MissingApiKey", "Gemini API key is not configured.");
         }
 
         try
@@ -1185,8 +1185,8 @@ Respond strictly in valid JSON without markdown wrapping:
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogWarning("Gemini API error ({StatusCode}) during slice formatting: {Error}. Using fallback.", response.StatusCode, errorBody);
-                return FallbackFormatSlice(rawText, chapterTitle);
+                _logger.LogWarning("Gemini API error ({StatusCode}) during slice formatting: {Error}.", response.StatusCode, errorBody);
+                return new Error("Gemini.ApiError", $"Gemini API returned {response.StatusCode}: {errorBody}");
             }
 
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -1194,12 +1194,12 @@ Respond strictly in valid JSON without markdown wrapping:
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Exception during AI slice formatting for '{Title}'. Using fallback.", chapterTitle);
-            return FallbackFormatSlice(rawText, chapterTitle);
+            _logger.LogError(ex, "Exception during AI slice formatting for '{Title}'.", chapterTitle);
+            return new Error("Gemini.Exception", ex.Message);
         }
     }
 
-    private AiFormattedSliceResult ParseSliceResponse(string responseBody, string rawText, string chapterTitle)
+    private Result<AiFormattedSliceResult> ParseSliceResponse(string responseBody, string rawText, string chapterTitle)
     {
         try
         {
@@ -1207,7 +1207,7 @@ Respond strictly in valid JSON without markdown wrapping:
             var candidates = doc.RootElement.GetProperty("candidates");
             if (candidates.GetArrayLength() == 0)
             {
-                return FallbackFormatSlice(rawText, chapterTitle);
+                return new Error("Gemini.NoCandidates", "Gemini returned no candidates.");
             }
 
             var content = candidates[0].GetProperty("content");
@@ -1224,7 +1224,7 @@ Respond strictly in valid JSON without markdown wrapping:
 
             if (string.IsNullOrWhiteSpace(rawJson))
             {
-                return FallbackFormatSlice(rawText, chapterTitle);
+                return new Error("Gemini.EmptyResponse", "Gemini returned empty text.");
             }
 
             var cleanJson = ExtractJsonObject(rawJson.Trim());
@@ -1249,7 +1249,7 @@ Respond strictly in valid JSON without markdown wrapping:
 
             if (string.IsNullOrWhiteSpace(formattedMarkdown))
             {
-                return FallbackFormatSlice(rawText, chapterTitle);
+                return new Error("Gemini.MissingFormattedMarkdown", "AI response did not include formattedMarkdown.");
             }
 
             if (takeaways.Count == 0)
@@ -1307,45 +1307,8 @@ Respond strictly in valid JSON without markdown wrapping:
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to parse AI slice response for '{Title}'. Using fallback.", chapterTitle);
-            return FallbackFormatSlice(rawText, chapterTitle);
+            _logger.LogWarning(ex, "Failed to parse AI slice response for '{Title}'.", chapterTitle);
+            return new Error("Gemini.JsonParseError", ex.Message);
         }
-    }
-
-    private static AiFormattedSliceResult FallbackFormatSlice(string rawText, string chapterTitle)
-    {
-        var formatted = PdfPigExtractor.FormatAsMarkdown(rawText, chapterTitle);
-        var words = rawText.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-        var readMinutes = Math.Max(1, words.Length / 200);
-
-        var firstLines = rawText.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var summary = firstLines.FirstOrDefault(l => l.Length > 30 && !l.StartsWith('#')) ?? $"Curated guide for {chapterTitle}.";
-        if (summary.Length > 200) summary = summary.Substring(0, 197) + "...";
-
-        var fallbackDrill = new AiScenarioDrillVo(
-            QuestionText: $"When implementing the core concepts of '{chapterTitle}', which architectural approach best balances performance, maintainability, and operational stability?",
-            Options: new List<string>
-            {
-                $"Apply standard modular design patterns recommended for {chapterTitle}, decoupling components via abstractions.",
-                $"Bypass modular abstractions and implement direct procedural access to minimize function call overhead.",
-                $"Introduce distributed caching for all state queries without eviction policies.",
-                $"Rely exclusively on client-side state management without backend validation."
-            },
-            CorrectOptionIndex: 0,
-            ExplanationMarkdown: $"Decoupling components via well-defined abstractions adhering to {chapterTitle} best practices ensures maintainability, testability, and resilient scaling.",
-            ExpectedKeyPoints: new List<string> { "Separation of concerns", "Architectural maintainability" }
-        );
-
-        return new AiFormattedSliceResult(
-            FormattedMarkdown: formatted,
-            SummaryMarkdown: summary,
-            KeyTakeaways: new List<string>
-            {
-                $"Key implementation principles of {chapterTitle}",
-                "Architectural considerations and operational constraints",
-                "Best practices for production deployments"
-            },
-            EstimatedReadMinutes: readMinutes,
-            ScenarioDrill: fallbackDrill);
     }
 }

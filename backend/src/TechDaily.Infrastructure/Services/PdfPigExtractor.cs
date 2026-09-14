@@ -140,7 +140,7 @@ public class PdfPigExtractor : IPdfExtractor
             var sliceTitle = FormatCuratedTitle(current, sliceOrder);
             progress?.Report(new PdfExtractionProgress(startPage, totalPages, $"Extracting topic: {sliceTitle}"));
 
-            var chapterSb = new StringBuilder();
+            var chapterPages = new List<(int PageNumber, string Text)>();
             for (int p = startPage; p <= endPage; p++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -150,8 +150,7 @@ public class PdfPigExtractor : IPdfExtractor
                     var text = ExtractPageLines(page);
                     if (!string.IsNullOrWhiteSpace(text))
                     {
-                        chapterSb.AppendLine(text);
-                        chapterSb.AppendLine();
+                        chapterPages.Add((p, text));
                     }
                 }
                 catch
@@ -160,49 +159,108 @@ public class PdfPigExtractor : IPdfExtractor
                 }
             }
 
-            var chapterText = chapterSb.ToString().Trim();
-            if (string.IsNullOrWhiteSpace(chapterText)) continue;
+            if (chapterPages.Count == 0) continue;
 
-            // Semantic chapter splitting: keep complete topics intact (up to 5,000 words).
-            // Only split at natural ## headings if topic is exceptionally monolithic.
-            var wordCount = chapterText.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-            if (wordCount <= 5000)
-            {
-                slices.Add(CreateSlice(sliceOrder++, sliceTitle, chapterText));
-            }
-            else
-            {
-                // Split only at major section headings ##
-                var sections = Regex.Split(chapterText, @"(?m)(?=^#{2,3}\s+)");
-                var partSb = new StringBuilder();
-                int partWordCount = 0;
-                int partIndex = 1;
-
-                foreach (var sec in sections)
-                {
-                    if (string.IsNullOrWhiteSpace(sec)) continue;
-                    var secWords = sec.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
-                    if (partWordCount + secWords > 3500 && partSb.Length > 0)
-                    {
-                        var partTitle = $"{sliceTitle} (Section {partIndex++})";
-                        slices.Add(CreateSlice(sliceOrder++, partTitle, partSb.ToString().Trim()));
-                        partSb.Clear();
-                        partWordCount = 0;
-                    }
-                    partSb.AppendLine(sec);
-                    partSb.AppendLine();
-                    partWordCount += secWords;
-                }
-
-                if (partSb.Length > 0)
-                {
-                    var partTitle = partIndex > 1 ? $"{sliceTitle} (Section {partIndex})" : sliceTitle;
-                    slices.Add(CreateSlice(sliceOrder++, partTitle, partSb.ToString().Trim()));
-                }
-            }
+            AddChapterSlices(slices, ref sliceOrder, sliceTitle, chapterPages);
         }
 
         return slices;
+    }
+
+    private static void AddChapterSlices(
+        List<ExtractedPdfSlice> slices,
+        ref int sliceOrder,
+        string sliceTitle,
+        List<(int PageNumber, string Text)> pages)
+    {
+        if (pages.Count == 0) return;
+
+        var pendingSections = new List<string>();
+        var currentSectionPages = new List<string>();
+        int currentWordCount = 0;
+
+        foreach (var page in pages)
+        {
+            var pageWords = page.Text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+            if (pageWords == 0) continue;
+
+            // If a single page is massive (> 2,000 words), split it by paragraphs
+            if (pageWords > 2000)
+            {
+                if (currentSectionPages.Count > 0)
+                {
+                    var secText = string.Join("\n\n", currentSectionPages).Trim();
+                    if (!string.IsNullOrWhiteSpace(secText)) pendingSections.Add(secText);
+                    currentSectionPages.Clear();
+                    currentWordCount = 0;
+                }
+
+                var paragraphs = page.Text.Split(new[] { "\r\n\r\n", "\n\n" }, StringSplitOptions.RemoveEmptyEntries);
+                var paraSb = new StringBuilder();
+                int paraWords = 0;
+
+                foreach (var para in paragraphs)
+                {
+                    var pCount = para.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+                    if (paraWords + pCount > 1800 && paraWords >= 700)
+                    {
+                        var text = paraSb.ToString().Trim();
+                        if (!string.IsNullOrWhiteSpace(text)) pendingSections.Add(text);
+                        paraSb.Clear();
+                        paraWords = 0;
+                    }
+                    paraSb.AppendLine(para);
+                    paraSb.AppendLine();
+                    paraWords += pCount;
+                }
+
+                if (paraSb.Length > 0)
+                {
+                    var text = paraSb.ToString().Trim();
+                    if (!string.IsNullOrWhiteSpace(text)) pendingSections.Add(text);
+                }
+                continue;
+            }
+
+            // If adding this page exceeds 2,000 words and we already have substantial text (>= 700 words), flush
+            if (currentWordCount + pageWords > 2000 && currentWordCount >= 700)
+            {
+                var sectionText = string.Join("\n\n", currentSectionPages).Trim();
+                if (!string.IsNullOrWhiteSpace(sectionText))
+                {
+                    pendingSections.Add(sectionText);
+                }
+                currentSectionPages.Clear();
+                currentWordCount = 0;
+            }
+
+            currentSectionPages.Add(page.Text);
+            currentWordCount += pageWords;
+        }
+
+        if (currentSectionPages.Count > 0)
+        {
+            var sectionText = string.Join("\n\n", currentSectionPages).Trim();
+            if (!string.IsNullOrWhiteSpace(sectionText))
+            {
+                pendingSections.Add(sectionText);
+            }
+        }
+
+        if (pendingSections.Count == 0) return;
+
+        if (pendingSections.Count == 1)
+        {
+            slices.Add(CreateSlice(sliceOrder++, sliceTitle, pendingSections[0]));
+        }
+        else
+        {
+            for (int s = 0; s < pendingSections.Count; s++)
+            {
+                var partTitle = $"{sliceTitle} (Section {s + 1})";
+                slices.Add(CreateSlice(sliceOrder++, partTitle, pendingSections[s]));
+            }
+        }
     }
 
     internal static string FormatCuratedTitle(RawBookmark bookmark, int order)
