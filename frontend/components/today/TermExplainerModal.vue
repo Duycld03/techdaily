@@ -1,80 +1,100 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { Sparkles, X, Check, Copy } from 'lucide-vue-next'
+import { ref, computed, onMounted } from "vue";
+import { Sparkles, X, Check, Copy } from "lucide-vue-next";
 
-const props = withDefaults(defineProps<{
-  term: string
-  category?: string
-  context?: string
-}>(), {
-  category: 'Software Architecture',
-  context: ''
-})
+const props = withDefaults(
+  defineProps<{
+    term: string;
+    category?: string;
+    context?: string;
+  }>(),
+  {
+    category: "Software Architecture",
+    context: "",
+  },
+);
 
 const emit = defineEmits<{
-  (e: 'close'): void
-}>()
+  (e: "close"): void;
+}>();
 
-import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
-import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
-import { useApiError } from '~/composables/useApiError'
+import { useDailyFocusStore } from "~/stores/useDailyFocusStore";
+import { useMarkdownRenderer } from "~/composables/useMarkdownRenderer";
+import { useApiError } from "~/composables/useApiError";
 
-const focusStore = useDailyFocusStore()
-const { locale } = useI18n()
-const { formatError } = useApiError()
-const { render: renderMarkdown } = useMarkdownRenderer()
+const focusStore = useDailyFocusStore();
+const { locale } = useI18n();
+const { formatError } = useApiError();
+const { render: renderMarkdown, isHighlighterReady } = useMarkdownRenderer();
 
-const explanation = ref<string | null>(null)
-const isLoading = ref(false)
-const copied = ref(false)
+const explanation = ref<string | null>(null);
+const isLoading = ref(false);
+const copied = ref(false);
 
 const renderedExplanation = computed(() => {
-  if (!explanation.value) return ''
-  return renderMarkdown(explanation.value)
-})
+  const _ = isHighlighterReady.value;
+  if (!explanation.value) return "";
+  return renderMarkdown(explanation.value);
+});
 
 async function loadExplanation() {
-  isLoading.value = true
+  isLoading.value = true;
   try {
     const res = await focusStore.explainTerm(
       props.term,
-      props.category || 'Software Architecture',
-      props.context || '',
-      locale.value
-    )
-    explanation.value = res.explanation
+      props.category || "Software Architecture",
+      props.context || "",
+      locale.value,
+    );
+    explanation.value = res.explanation;
   } catch (err: any) {
-    explanation.value = formatError(err, 'today.explain_error')
+    explanation.value = formatError(err, "today.explain_error");
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
 onMounted(() => {
-  loadExplanation()
-})
+  loadExplanation();
+});
 
 function copyText() {
   if (explanation.value) {
-    navigator.clipboard.writeText(explanation.value)
-    copied.value = true
-    setTimeout(() => (copied.value = false), 2000)
+    navigator.clipboard.writeText(explanation.value);
+    copied.value = true;
+    setTimeout(() => (copied.value = false), 2000);
   }
 }
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" @click.self="emit('close')">
-    <div class="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-7 overflow-hidden animate-in fade-in zoom-in-95 duration-200 space-y-4 transition-colors">
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+    @click.self="emit('close')"
+  >
+    <div
+      class="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-7 overflow-hidden animate-in fade-in zoom-in-95 duration-200 space-y-4 transition-colors"
+    >
       <!-- Header -->
-      <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+      <div
+        class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800"
+      >
         <div class="flex items-center gap-3">
-          <div class="p-2 rounded-xl bg-brand-100 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 border border-brand-200 dark:border-brand-500/20">
+          <div
+            class="p-2 rounded-xl bg-brand-100 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 border border-brand-200 dark:border-brand-500/20"
+          >
             <Sparkles class="w-5 h-5" />
           </div>
           <div>
-            <span class="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400">{{ category }}</span>
-            <h3 class="text-lg font-bold text-slate-900 dark:text-white leading-tight font-mono">{{ term }}</h3>
+            <span
+              class="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400"
+              >{{ category }}</span
+            >
+            <h3
+              class="text-lg font-bold text-slate-900 dark:text-white leading-tight font-mono"
+            >
+              {{ term }}
+            </h3>
           </div>
         </div>
         <button
@@ -87,7 +107,10 @@ function copyText() {
 
       <!-- Body -->
       <div class="py-2">
-        <div v-if="isLoading" class="flex items-center gap-3 py-8 justify-center text-slate-500 dark:text-slate-400 text-sm">
+        <div
+          v-if="isLoading"
+          class="flex items-center gap-3 py-8 justify-center text-slate-500 dark:text-slate-400 text-sm"
+        >
           <span class="w-3 h-3 rounded-full bg-brand-500 animate-ping"></span>
           <span>Analyzing term with Gemini 3.6 Flash...</span>
         </div>
@@ -101,7 +124,9 @@ function copyText() {
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500">
+      <div
+        class="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500"
+      >
         <span class="font-medium">Powered by Gemini 3.6 Flash</span>
         <button
           @click="copyText"
@@ -109,7 +134,7 @@ function copyText() {
         >
           <Check v-if="copied" class="w-3.5 h-3.5 text-emerald-500" />
           <Copy v-else class="w-3.5 h-3.5" />
-          <span>{{ copied ? 'Copied' : 'Copy Explanation' }}</span>
+          <span>{{ copied ? "Copied" : "Copy Explanation" }}</span>
         </button>
       </div>
     </div>

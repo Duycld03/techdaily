@@ -1,64 +1,69 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { Copy, Check } from 'lucide-vue-next'
+import { ref, computed, watch, onMounted } from "vue";
+import { Copy, Check } from "lucide-vue-next";
 import {
   highlightCode,
   detectCodeLanguage,
-  formatLanguageLabel
-} from '~/utils/shikiHighlighter'
+  formatLanguageLabel,
+} from "~/utils/shikiHighlighter";
 
 const props = withDefaults(
   defineProps<{
-    code: string
-    language?: string
-    category?: number
-    tags?: string[]
+    code: string;
+    language?: string;
+    category?: number;
+    tags?: string[];
   }>(),
   {
-    language: 'auto'
-  }
-)
+    language: "auto",
+  },
+);
 
 const detectedLanguage = computed(() => {
-  return detectCodeLanguage(props.code, props.language, props.tags, props.category)
-})
+  return detectCodeLanguage(
+    props.code,
+    props.language,
+    props.tags,
+    props.category,
+  );
+});
 
 const displayLabel = computed(() => {
-  return formatLanguageLabel(detectedLanguage.value)
-})
+  return formatLanguageLabel(detectedLanguage.value);
+});
 
-const highlightedHtml = ref('')
+const highlightedHtml = ref("");
 
 async function updateHighlighting() {
   if (!props.code) {
-    highlightedHtml.value = ''
-    return
+    highlightedHtml.value = "";
+    return;
   }
-  const html = await highlightCode(props.code, detectedLanguage.value)
-  highlightedHtml.value = html
+  const html = await highlightCode(props.code, detectedLanguage.value);
+  highlightedHtml.value = html;
 }
 
 onMounted(() => {
-  updateHighlighting()
-})
+  updateHighlighting();
+});
 
 watch(
   () => [props.code, detectedLanguage.value],
   () => {
-    updateHighlighting()
-  }
-)
+    updateHighlighting();
+  },
+);
 
-const copied = ref(false)
+const copied = ref(false);
 
 async function copyCode() {
-  if (!props.code) return
+  if (!props.code) return;
   try {
-    await navigator.clipboard.writeText(props.code)
-    copied.value = true
+    await navigator.clipboard.writeText(props.code);
+    copied.value = true;
     setTimeout(() => {
-      copied.value = false
-    }, 2000)
+      copied.value = false;
+    }, 2000);
   } catch {
     // Fallback
   }
@@ -66,14 +71,21 @@ async function copyCode() {
 </script>
 
 <template>
-  <div class="relative group rounded-2xl bg-slate-900 text-slate-100 overflow-hidden font-mono text-xs sm:text-sm border border-slate-800">
+  <div
+    class="relative group rounded-2xl bg-slate-900 text-slate-100 overflow-hidden font-mono text-xs sm:text-sm border border-slate-800"
+  >
     <!-- Code Header -->
-    <div class="flex items-center justify-between px-4 py-2 bg-slate-950/80 border-b border-slate-800/80 text-xs text-slate-400 select-none">
+    <div
+      class="flex items-center justify-between px-4 py-2 bg-slate-950/80 border-b border-slate-800/80 text-xs text-slate-400 select-none"
+    >
       <div class="flex items-center gap-2">
         <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
         <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
-        <span class="ml-2 font-mono uppercase tracking-wider text-xs text-slate-400 font-semibold">{{ displayLabel }}</span>
+        <span
+          class="ml-2 font-mono uppercase tracking-wider text-xs text-slate-400 font-semibold"
+          >{{ displayLabel }}</span
+        >
       </div>
 
       <button
@@ -83,7 +95,9 @@ async function copyCode() {
       >
         <Check v-if="copied" class="w-3.5 h-3.5 text-emerald-400" />
         <Copy v-else class="w-3.5 h-3.5 text-slate-400" />
-        <span class="text-xs font-medium">{{ copied ? 'Copied!' : 'Copy' }}</span>
+        <span class="text-xs font-medium">{{
+          copied ? "Copied!" : "Copy"
+        }}</span>
       </button>
     </div>
 
@@ -100,8 +114,9 @@ async function copyCode() {
   </div>
 </template>
 
-<style>
-.shiki-container pre.shiki {
+<style scoped>
+:deep(.shiki-container pre.shiki),
+:deep(pre.shiki) {
   background-color: transparent !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -110,7 +125,8 @@ async function copyCode() {
   font-size: inherit !important;
   line-height: inherit !important;
 }
-.shiki-container code {
+:deep(.shiki-container code),
+:deep(code) {
   font-family: inherit !important;
   background-color: transparent !important;
 }
