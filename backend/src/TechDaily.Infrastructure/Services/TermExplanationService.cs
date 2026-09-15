@@ -93,6 +93,8 @@ public class TermExplanationService : ITermExplanationService
 
         // 3. Tier 3: Full Cache Miss - Generate via Gemini Flash
         string explanation = string.Empty;
+        bool isLlmGenerated = false;
+
         if (!string.IsNullOrWhiteSpace(_apiKey))
         {
             try
@@ -136,6 +138,7 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
                                 if (!string.IsNullOrWhiteSpace(t))
                                 {
                                     explanation = t.Trim();
+                                    isLlmGenerated = true;
                                     break;
                                 }
                             }
@@ -154,12 +157,23 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
             }
         }
 
-        if (string.IsNullOrWhiteSpace(explanation))
+        if (!isLlmGenerated || string.IsNullOrWhiteSpace(explanation))
         {
-            explanation = GetFallbackExplanation(term, category, locale);
+            var fallback = GetFallbackExplanation(term, safeCategory, locale);
+            _logger.LogWarning("Gemini API call was unavailable or failed for term '{Term}'. Returning transient fallback without caching.", term);
+            return new TermExplanationResult(fallback, false);
         }
 
-        // 4. Save to DB Cache with Vector Embedding
+        // 4. Save to DB Cache with Vector Embedding (only for LLM-generated explanations)
+        if (termVector == null)
+        {
+            var embRes = await _embeddingService.GenerateEmbeddingAsync($"[{safeCategory}] {normalizedTerm}", cancellationToken);
+            if (embRes.IsSuccess)
+            {
+                termVector = embRes.Value;
+            }
+        }
+
         var newCache = new TermExplanationCache
         {
             Term = normalizedTerm,

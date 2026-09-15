@@ -22,6 +22,7 @@ import {
 import type { BookDetail, ChunkSummary } from "~/stores/useLibraryStore";
 import TermExplainerModal from "~/components/today/TermExplainerModal.vue";
 import ThemeToggle from "~/components/common/ThemeToggle.vue";
+import { extractSurroundingContext } from "~/utils/contextExtractor";
 
 const { t } = useI18n();
 const toast = useToast();
@@ -48,6 +49,7 @@ const floatingToolbar = ref({
   x: 0,
   y: 0,
   selectedText: "",
+  surroundingContext: "",
 });
 
 // Term Explainer Modal State
@@ -436,12 +438,14 @@ function handleTextSelection(event: MouseEvent) {
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
+    const surrounding = extractSurroundingContext(selection);
 
     floatingToolbar.value = {
       visible: true,
       x: Math.max(16, rect.left + rect.width / 2),
       y: Math.max(70, rect.top - 46),
       selectedText: selectedStr,
+      surroundingContext: surrounding,
     };
   }, 400);
 }
@@ -455,7 +459,11 @@ function handleCopySelection() {
 
 function handleExplainSelection() {
   currentTerm.value = floatingToolbar.value.selectedText;
-  currentContext.value = currentChunk.value?.chapterTitle || "";
+  const surrounding =
+    extractSurroundingContext(window.getSelection()) ||
+    floatingToolbar.value.surroundingContext ||
+    "";
+  currentContext.value = surrounding || currentChunk.value?.chapterTitle || "";
   floatingToolbar.value.visible = false;
   isExplainerOpen.value = true;
 }
@@ -1050,6 +1058,7 @@ async function handleHighlightSelection() {
     <Teleport to="body">
       <div
         v-if="floatingToolbar.visible"
+        @mousedown.prevent
         class="fixed z-50 -translate-x-1/2 flex items-center gap-1 p-1 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white shadow-2xl border border-slate-700 animate-in fade-in zoom-in-95 duration-150"
         :style="{
           left: `${floatingToolbar.x}px`,

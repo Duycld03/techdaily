@@ -194,6 +194,22 @@ using (var scope = app.Services.CreateScope())
                 await CurriculumSeeder.BackfillEmbeddingsAsync(context, embeddingService);
                 logger.LogInformation("Curriculum vector embeddings verified and backfilled.");
             }
+
+            try
+            {
+                var poisonedEntries = await context.TermExplanationCaches
+                    .Where(t => t.ExplanationText.Contains("Khái niệm kỹ thuật quan trọng mô tả cơ chế hoạt động nội tại")
+                             || t.ExplanationText.Contains("represents a core runtime or architectural mechanism"))
+                    .ExecuteDeleteAsync();
+                if (poisonedEntries > 0)
+                {
+                    logger.LogInformation("Purged {Count} poisoned legacy fallback entries from TermExplanationCaches.", poisonedEntries);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Could not purge poisoned cache entries.");
+            }
         }
     }
     catch (Exception ex)

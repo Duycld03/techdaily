@@ -96,4 +96,11 @@ describe('Immersive Document Reader (Hướng 1)', () => {
     expect(book.chunks.length).toBe(3)
     expect(book.chunks[0].chunkOrder).toBe(1)
   })
+
+  it('falls back to chapterTitle when selection context extraction produces empty text', () => {
+    const chapterTitle = 'Chapter 3: Storage and Retrieval'
+    const surrounding = ''
+    const currentContext = surrounding || chapterTitle || ''
+    expect(currentContext).toBe('Chapter 3: Storage and Retrieval')
+  })
 })

@@ -224,8 +224,12 @@
     "retry_ai": "Thử lại với AI",
     "view_raw_temporary": "Xem Bản Thô Tạm Thời",
     "viewing_raw_notice": "Đang xem văn bản thô chưa biên tập. Tải lại trang sẽ kích hoạt AI biên tập lại.",
-    "instant_cache": "Bộ Nhớ Tức Thì",
-    "instant_cache_desc": "Phục vụ từ bộ nhớ đệm ngữ nghĩa (<150ms)"
+    "instant_cache": "Bộ nhớ tức thì",
+    "instant_cache_desc": "Phục vụ từ bộ nhớ đệm ngữ nghĩa (<150ms)",
+    "term_explainer_loading": "Đang phân tích thuật ngữ với Google Gemini...",
+    "term_explainer_powered_by": "Được hỗ trợ bởi Google Gemini",
+    "term_explainer_copy": "Sao chép giải thích",
+    "term_explainer_copied": "Đã sao chép"
   },
   "notes": {
     "title": "Ghi Chú & Highlights",

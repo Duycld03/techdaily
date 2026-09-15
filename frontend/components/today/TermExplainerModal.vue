@@ -79,29 +79,32 @@ function copyText() {
     >
       <!-- Header -->
       <div
-        class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800"
+        class="flex items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800"
       >
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 min-w-0 flex-1">
           <div
-            class="p-2 rounded-xl bg-brand-100 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 border border-brand-200 dark:border-brand-500/20"
+            class="p-2 rounded-xl bg-brand-100 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 border border-brand-200 dark:border-brand-500/20 shrink-0"
           >
             <Sparkles class="w-5 h-5" />
           </div>
-          <div>
-            <div class="flex items-center gap-2">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <span
-                class="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400"
-                >{{ category }}</span
+                class="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400 truncate max-w-[180px] sm:max-w-xs"
+                :title="category"
               >
+                {{ category }}
+              </span>
               <span
                 v-if="isFromCache"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs whitespace-nowrap shrink-0"
               >
-                ⚡ Instant Cache
+                ⚡ {{ $t('reader.instant_cache') }}
               </span>
             </div>
             <h3
-              class="text-lg font-bold text-slate-900 dark:text-white leading-tight font-mono mt-0.5"
+              class="text-lg font-bold text-slate-900 dark:text-white leading-tight font-mono mt-0.5 truncate"
+              :title="term"
             >
               {{ term }}
             </h3>
@@ -109,7 +112,8 @@ function copyText() {
         </div>
         <button
           @click="emit('close')"
-          class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+          :aria-label="$t('common.close') || 'Close'"
         >
           <X class="w-5 h-5" />
         </button>
@@ -122,7 +126,7 @@ function copyText() {
           class="flex items-center gap-3 py-8 justify-center text-slate-500 dark:text-slate-400 text-sm"
         >
           <span class="w-3 h-3 rounded-full bg-brand-500 animate-ping"></span>
-          <span>Analyzing term with Google Gemini...</span>
+          <span>{{ $t('reader.term_explainer_loading') }}</span>
         </div>
 
         <div v-else class="space-y-3">
@@ -137,14 +141,14 @@ function copyText() {
       <div
         class="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500"
       >
-        <span class="font-medium">Powered by Google Gemini</span>
+        <span class="font-medium">{{ $t('reader.term_explainer_powered_by') }}</span>
         <button
           @click="copyText"
           class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors shadow-sm"
         >
           <Check v-if="copied" class="w-3.5 h-3.5 text-emerald-500" />
           <Copy v-else class="w-3.5 h-3.5" />
-          <span>{{ copied ? "Copied" : "Copy Explanation" }}</span>
+          <span>{{ copied ? $t('reader.term_explainer_copied') : $t('reader.term_explainer_copy') }}</span>
         </button>
       </div>
     </div>

@@ -224,7 +224,11 @@
     "view_raw_temporary": "View Raw Text",
     "viewing_raw_notice": "Viewing unformatted raw text. Refreshing will re-attempt AI formatting.",
     "instant_cache": "Instant Cache",
-    "instant_cache_desc": "Served from semantic cache (<150ms)"
+    "instant_cache_desc": "Served from semantic cache (<150ms)",
+    "term_explainer_loading": "Analyzing term with Google Gemini...",
+    "term_explainer_powered_by": "Powered by Google Gemini",
+    "term_explainer_copy": "Copy Explanation",
+    "term_explainer_copied": "Copied"
   },
   "notes": {
     "title": "Highlights & Notes",
