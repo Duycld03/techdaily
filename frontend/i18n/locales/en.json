@@ -222,7 +222,24 @@
     "curate_error_desc": "The AI service temporarily encountered an issue. You can retry or view raw text.",
     "retry_ai": "Retry with AI",
     "view_raw_temporary": "View Raw Text",
-    "viewing_raw_notice": "Viewing unformatted raw text. Refreshing will re-attempt AI formatting."
+    "viewing_raw_notice": "Viewing unformatted raw text. Refreshing will re-attempt AI formatting.",
+    "ask_book": "Ask Book",
+    "ask_book_title": "Ask AI About This Book",
+    "ask_book_subtitle": "Semantic RAG search grounded in book contents",
+    "ask_placeholder": "Ask a question about this book (e.g. How does GC work?)...",
+    "ask_btn": "Ask",
+    "asking": "Synthesizing answer from grounded slices...",
+    "ask_empty_prompt": "Ask questions grounded in the technical documentation of this book.",
+    "suggested_questions": "Suggested Questions:",
+    "citations": "Citations & Sources",
+    "clear_chat": "Clear Chat",
+    "close_drawer": "Close Drawer",
+    "rate_limited_title": "Rate Limit Exceeded",
+    "ask_rate_limit_warning": "Rate limit reached (max 10 req/min). Please wait a moment.",
+    "ask_error_generic": "Could not generate an answer at this time. Please try again.",
+    "instant_cache": "Instant Cache",
+    "instant_cache_desc": "Served from semantic cache (<150ms)",
+    "hotkey_hint": "Shift + ? to ask"
   },
   "notes": {
     "title": "Highlights & Notes",
@@ -416,7 +433,12 @@
     "submit_failed": "Failed to submit answer.",
     "review_queue_failed": "Failed to load review queue.",
     "no_review_questions": "No unmastered questions in the review queue.",
-    "stats_failed": "Failed to load quiz statistics."
+    "stats_failed": "Failed to load quiz statistics.",
+    "grounded_toggle": "Grounded in Book",
+    "grounded_desc": "Generate scenario questions strictly using the active book's concepts",
+    "select_book": "Select Book:",
+    "any_book_in_library": "Any Book in Library (Auto-match)",
+    "rate_limit_error": "Rate limit reached. Please wait before generating another quiz."
   },
   "error": {
     "not_found_title": "Page Not Found",

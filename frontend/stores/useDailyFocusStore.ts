@@ -226,7 +226,7 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
 
   async function explainTerm(term: string, category: string, context: string, locale: string = 'en') {
     const api = useApiClient()
-    return await api.post<{ term: string; explanation: string; locale: string }>('/api/v1/daily/explain-term', {
+    return await api.post<{ term: string; explanation: string; locale: string; isFromCache?: boolean }>('/api/v1/daily/explain-term', {
       term,
       category,
       context,

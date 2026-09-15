@@ -38,6 +38,21 @@ public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizRes
         var normalizedTopic = NormalizeTopic(request.Topic);
         var category = request.Category ?? InferCategoryFromTopic(normalizedTopic);
 
+        if (request.BookId.HasValue)
+        {
+            var book = await _dbContext.DocumentBooks
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Id == request.BookId.Value, cancellationToken);
+            if (book != null)
+            {
+                category = request.Category ?? book.Category;
+                if (request.IsGrounded && !normalizedTopic.Contains(book.Title, StringComparison.OrdinalIgnoreCase))
+                {
+                    normalizedTopic = $"{book.Title}: {normalizedTopic}";
+                }
+            }
+        }
+
         // 1. Fetch IDs of questions already attempted by this user (to prevent repeating completed/attempted questions)
         var attemptedQuestionIds = await _dbContext.UserQuizProgresses
             .AsNoTracking()

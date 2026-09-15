@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<CrawlUrlRequest, CrawlUrlResponse>, CrawlUrlHandler>();
         services.AddScoped<IUseCase<Features.Library.CurateSlice.CurateSliceRequest, Features.Library.CurateSlice.CurateSliceResponse>, Features.Library.CurateSlice.CurateSliceHandler>();
         services.AddScoped<IUseCase<Features.Library.GetBookSlice.GetBookSliceRequest, Features.Library.GetBookSlice.GetBookSliceResponse>, Features.Library.GetBookSlice.GetBookSliceHandler>();
+        services.AddScoped<IUseCase<Features.Library.AskBook.AskBookRequest, Features.Library.AskBook.AskBookResponse>, Features.Library.AskBook.AskBookHandler>();
 
         // Notes / Highlights Handlers
         services.AddScoped<IUseCase<GetHighlightsRequest, GetHighlightsResponse>, GetHighlightsHandler>();

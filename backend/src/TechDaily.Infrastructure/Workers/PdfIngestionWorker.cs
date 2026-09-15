@@ -174,6 +174,28 @@ public class PdfIngestionWorker : BackgroundService
                     }
                 }
 
+                var embeddingService = scope.ServiceProvider.GetService<IEmbeddingService>();
+                if (embeddingService != null && chunks.Count > 0)
+                {
+                    try
+                    {
+                        var initialToEmbed = chunks.Take(initialCount).ToList();
+                        var texts = initialToEmbed.Select(c => $"{c.ChapterTitle}: {c.SummaryMarkdown}").ToList();
+                        var embResult = await embeddingService.GenerateBatchEmbeddingsAsync(texts, stoppingToken);
+                        if (embResult.IsSuccess && embResult.Value.Count == initialToEmbed.Count)
+                        {
+                            for (int i = 0; i < initialToEmbed.Count; i++)
+                            {
+                                initialToEmbed[i].Embedding = embResult.Value[i];
+                            }
+                        }
+                    }
+                    catch (Exception embEx)
+                    {
+                        _logger.LogWarning(embEx, "Failed to generate embeddings for initial slices of book {BookId}", book.Id);
+                    }
+                }
+
                 book.ProgressPercentage = 100;
                 book.Status = ProcessingStatus.Ready;
                 book.StatusMessage = "Ready for reading";

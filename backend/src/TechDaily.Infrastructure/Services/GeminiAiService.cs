@@ -11,7 +11,7 @@ using TechDaily.Domain.Enums;
 
 namespace TechDaily.Infrastructure.Services;
 
-public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAiMarkdownFormatter
+public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAiMarkdownFormatter, IBookQAService
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
@@ -1323,4 +1323,110 @@ Respond strictly in valid JSON without markdown wrapping:
         }
         return text;
     }
+
+    public async Task<Result<string>> AnswerQuestionAsync(
+        string bookTitle,
+        string question,
+        List<(int ChunkOrder, string ChapterTitle, string Text)> contexts,
+        string locale = "en",
+        CancellationToken cancellationToken = default)
+    {
+        var isVi = locale.Equals("vi", StringComparison.OrdinalIgnoreCase);
+
+        if (string.IsNullOrWhiteSpace(_apiKey))
+        {
+            _logger.LogWarning("Gemini API key is not configured. Returning fallback grounded answer.");
+            return isVi
+                ? $"Dựa trên tài liệu '{bookTitle}': Khái niệm '{question}' được đề cập trong các chương có liên quan. Hệ thống khuyến nghị đối chiếu trực tiếp trích đoạn trong lát đọc tương ứng."
+                : $"Based on the document '{bookTitle}': The topic '{question}' is covered in the related chapters. Please refer to the cited slice excerpts for authoritative details.";
+        }
+
+        try
+        {
+            var contextBuilder = new StringBuilder();
+            foreach (var ctx in contexts)
+            {
+                var cleanContent = ctx.Text.Length > 2500 ? ctx.Text[..2500] : ctx.Text;
+                contextBuilder.AppendLine($"[Slice {ctx.ChunkOrder}: {ctx.ChapterTitle}]");
+                contextBuilder.AppendLine(cleanContent);
+                contextBuilder.AppendLine("---");
+            }
+
+            var prompt = isVi
+                ? $@"Bạn là một Senior Tech Mentor của TechDaily. Hãy trả lời câu hỏi sau của kỹ sư DỰA TRÊN các đoạn trích từ tài liệu '{bookTitle}'.
+
+CÁC ĐOẠN TRÍCH TÀI LIỆU LIÊN QUAN:
+{contextBuilder}
+
+CÂU HỎI CỦA KỸ SƯ:
+""{question}""
+
+YÊU CẦU:
+1. Trả lời súc tích, mạch lạc, trực diện bằng tiếng Việt theo định dạng Markdown.
+2. Dẫn chứng rõ ràng các ý dựa trên [Lát X: Tên chương] đã cung cấp.
+3. Nếu các đoạn trích không chứa đủ thông tin để trả lời, hãy nói rõ ràng rằng cuốn sách/tài liệu này không bao quát khía cạnh đó, tuyệt đối KHÔNG bịa đặt thông tin ngoài đời thực vào."
+                : $@"You are a Senior Technical Reading Mentor on TechDaily. Answer the engineer's question STRICTLY based on the provided document excerpts from '{bookTitle}'.
+
+RELEVANT DOCUMENT EXCERPTS:
+{contextBuilder}
+
+ENGINEER'S QUESTION:
+""{question}""
+
+REQUIREMENTS:
+1. Provide a concise, crystal-clear, senior-level explanation in English using Markdown formatting.
+2. Explicitly cite which [Slice X: Chapter Title] each key insight is derived from.
+3. If the provided excerpts do not contain the answer, state clearly that this specific document does not cover that tradeoff. Do not hallucinate outside facts.";
+
+            var requestBody = new
+            {
+                contents = new[]
+                {
+                    new { parts = new[] { new { text = prompt } } }
+                }
+            };
+
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
+            var jsonPayload = JsonSerializer.Serialize(requestBody);
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
+            };
+            request.Headers.Add("x-goog-api-key", _apiKey);
+
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var responseJson = await response.Content.ReadAsStringAsync(cancellationToken);
+                using var doc = JsonDocument.Parse(responseJson);
+                if (doc.RootElement.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
+                {
+                    var parts = candidates[0].GetProperty("content").GetProperty("parts");
+                    foreach (var part in parts.EnumerateArray())
+                    {
+                        if (part.TryGetProperty("text", out var textProp))
+                        {
+                            var t = textProp.GetString();
+                            if (!string.IsNullOrWhiteSpace(t))
+                            {
+                                return t.Trim();
+                            }
+                        }
+                    }
+                }
+            }
+
+            var err = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogWarning("Gemini Q&A call returned status {Status}: {Error}", response.StatusCode, err);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Gemini Q&A failed. Falling back to local summary.");
+        }
+
+        return isVi
+            ? $"Dựa trên tài liệu '{bookTitle}': Các lát đọc trích dẫn trên chứa thông tin liên quan đến câu hỏi của bạn. Vui lòng kiểm tra chi tiết các trích đoạn để đối chiếu."
+            : $"Based on '{bookTitle}': The cited slices above provide context regarding your question. Please review the specific slice passages.";
+    }
 }
+

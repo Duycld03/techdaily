@@ -82,39 +82,48 @@ const selectedCategory = ref<string>('Architecture')
 const selectedContext = ref<string>('')
 const isExplainerOpen = ref(false)
 
+let selectionDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
 function handleMouseUp(e: MouseEvent) {
-  // Ignore clicks inside interactive elements
-  const target = e.target as HTMLElement
-  if (target.closest('button') || target.closest('input')) {
-    floatingMenu.value.visible = false
-    return
+  if (selectionDebounceTimer) {
+    clearTimeout(selectionDebounceTimer)
+    selectionDebounceTimer = null
   }
 
-  const selection = window.getSelection()
-  if (!selection || selection.isCollapsed) {
-    floatingMenu.value.visible = false
-    return
-  }
-
-  const text = selection.toString().trim()
-  if (text.length >= 2 && text.length <= 500) {
-    const range = selection.getRangeAt(0)
-    const rect = range.getBoundingClientRect()
-
-    // Ensure selection is inside reader container
-    if (readerContentRef.value && readerContentRef.value.contains(range.commonAncestorContainer)) {
-      floatingMenu.value = {
-        visible: true,
-        x: Math.max(10, rect.left + rect.width / 2),
-        y: Math.max(10, rect.top - 46),
-        text,
-        context: selection.anchorNode?.textContent?.slice(0, 300) || text
-      }
+  selectionDebounceTimer = setTimeout(() => {
+    // Ignore clicks inside interactive elements
+    const target = e.target as HTMLElement
+    if (target.closest('button') || target.closest('input')) {
+      floatingMenu.value.visible = false
       return
     }
-  }
 
-  floatingMenu.value.visible = false
+    const selection = window.getSelection()
+    if (!selection || selection.isCollapsed) {
+      floatingMenu.value.visible = false
+      return
+    }
+
+    const text = selection.toString().trim()
+    if (text.length >= 2 && text.length <= 500) {
+      const range = selection.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
+
+      // Ensure selection is inside reader container
+      if (readerContentRef.value && readerContentRef.value.contains(range.commonAncestorContainer)) {
+        floatingMenu.value = {
+          visible: true,
+          x: Math.max(10, rect.left + rect.width / 2),
+          y: Math.max(10, rect.top - 46),
+          text,
+          context: selection.anchorNode?.textContent?.slice(0, 300) || text
+        }
+        return
+      }
+    }
+
+    floatingMenu.value.visible = false
+  }, 400)
 }
 
 function handleDocumentClick(e: MouseEvent) {
@@ -168,6 +177,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (selectionDebounceTimer) {
+    clearTimeout(selectionDebounceTimer)
+    selectionDebounceTimer = null
+  }
   document.removeEventListener('click', handleDocumentClick)
 })
 </script>

@@ -27,17 +27,19 @@ public static class DependencyInjection
 
         services.AddScoped<ITechDailyDbContext>(sp => sp.GetRequiredService<TechDailyDbContext>());
 
-        // HTTP Clients for External Services
         services.AddHttpClient<GeminiAiService>(client => client.Timeout = TimeSpan.FromSeconds(90));
+        services.AddHttpClient<GeminiEmbeddingService>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<TermExplanationService>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<TelegramNotifier>();
         services.AddHttpClient<IWebArticleCrawler, WebArticleCrawler>();
         services.AddHttpClient<LookAheadBufferService>(client => client.Timeout = TimeSpan.FromSeconds(15));
 
         // Service Registrations
+        services.AddScoped<IEmbeddingService, GeminiEmbeddingService>();
         services.AddScoped<ITechInsightGenerator, GeminiAiService>();
         services.AddScoped<IQuizGeneratorService, GeminiAiService>();
         services.AddScoped<IAiMarkdownFormatter, GeminiAiService>();
+        services.AddScoped<IBookQAService, GeminiAiService>();
         services.AddScoped<ITermExplanationService, TermExplanationService>();
         services.AddScoped<ITelegramNotifier, TelegramNotifier>();
         services.AddScoped<IPdfExtractor, PdfPigExtractor>();

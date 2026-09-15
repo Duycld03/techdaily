@@ -90,6 +90,7 @@ public static class DailyFocusEndpoints
                 ? Results.Ok(result.Value)
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
+        .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("ExplainTerm")
         .WithSummary("Provides instant AI terminology explanation tooltip.");
 

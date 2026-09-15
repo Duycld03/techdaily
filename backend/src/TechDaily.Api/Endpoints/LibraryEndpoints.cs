@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TechDaily.Application.Common;
+using TechDaily.Application.Features.Library.AskBook;
 using TechDaily.Application.Features.Library.CrawlUrl;
 using TechDaily.Application.Features.Library.DeleteBook;
 using TechDaily.Application.Features.Library.DTOs;
@@ -65,6 +66,27 @@ public static class LibraryEndpoints
             );
         })
         .WithName("GetBookStatus");
+
+        // Ask AI About This Book (In-Context RAG with Rate Limiting)
+        group.MapPost("/books/{id:guid}/ask", async (
+            Guid id,
+            [FromBody] AskBookJsonRequest body,
+            [FromServices] IUseCase<AskBookRequest, AskBookResponse> handler,
+            CancellationToken ct) =>
+        {
+            var request = new AskBookRequest(id, body.Question, body.CurrentChunkId, body.Locale ?? "en");
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.Match(
+                success => Results.Ok(success),
+                error => error == Error.NotFound
+                    ? Results.NotFound(new { code = error.Code, error = error.Message })
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+            );
+        })
+        .RequireAuthorization()
+        .RequireRateLimiting("AiEndpointsPolicy")
+        .WithName("AskBook")
+        .WithSummary("Asks a technical question grounded in the active book using pgvector and RAG.");
 
         // Public On-Demand Single Slice Retrieval
         group.MapGet("/books/{id:guid}/slices/{order:int}", async (
@@ -193,3 +215,6 @@ public static class LibraryEndpoints
         return app;
     }
 }
+
+public record AskBookJsonRequest(string Question, Guid? CurrentChunkId = null, string? Locale = null);
+

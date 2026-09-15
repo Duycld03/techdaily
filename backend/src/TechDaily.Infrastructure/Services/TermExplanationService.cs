@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Pgvector.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using TechDaily.Application.Common;
@@ -12,6 +13,7 @@ namespace TechDaily.Infrastructure.Services;
 public class TermExplanationService : ITermExplanationService
 {
     private readonly ITechDailyDbContext _dbContext;
+    private readonly IEmbeddingService _embeddingService;
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
     private readonly string _model;
@@ -19,18 +21,20 @@ public class TermExplanationService : ITermExplanationService
 
     public TermExplanationService(
         ITechDailyDbContext dbContext,
+        IEmbeddingService embeddingService,
         HttpClient httpClient,
         IConfiguration configuration,
         ILogger<TermExplanationService> logger)
     {
         _dbContext = dbContext;
+        _embeddingService = embeddingService;
         _httpClient = httpClient;
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
         _model = configuration["Gemini:Model"] ?? "gemini-3.6-flash";
     }
 
-    public async Task<Result<string>> ExplainTermAsync(
+    public async Task<Result<TermExplanationResult>> ExplainTermAsync(
         string term,
         string category,
         string context,
@@ -38,8 +42,9 @@ public class TermExplanationService : ITermExplanationService
         CancellationToken cancellationToken = default)
     {
         var normalizedTerm = term.Trim().ToLowerInvariant();
+        var safeCategory = category.Length > 200 ? category[..200] : category;
 
-        // 1. Check DB Cache
+        // 1. Tier 1: Check Exact DB Cache via B-Tree Index (<5ms)
         var cached = await _dbContext.TermExplanationCaches
             .FirstOrDefaultAsync(t => t.Term == normalizedTerm && t.Locale == locale, cancellationToken);
 
@@ -47,11 +52,46 @@ public class TermExplanationService : ITermExplanationService
         {
             cached.IncrementHit();
             await _dbContext.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Term '{Term}' returned from cache (hits: {Hits})", term, cached.HitCount);
-            return cached.ExplanationText;
+            _logger.LogInformation("Term '{Term}' returned from exact cache (hits: {Hits})", term, cached.HitCount);
+            return new TermExplanationResult(cached.ExplanationText, true);
         }
 
-        // 2. Generate via Gemini Flash
+        // 2. Tier 2: Check Semantic Vector Cache via pgvector HNSW Index (<150ms)
+        Pgvector.Vector? termVector = null;
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync($"[{safeCategory}] {normalizedTerm}", cancellationToken);
+        if (embeddingResult.IsSuccess)
+        {
+            try
+            {
+                termVector = embeddingResult.Value;
+                var semanticMatch = await _dbContext.TermExplanationCaches
+                    .Where(t => t.Locale == locale && t.Embedding != null)
+                    .OrderBy(t => t.Embedding!.CosineDistance(termVector))
+                    .Select(t => new
+                    {
+                        Entity = t,
+                        Distance = t.Embedding!.CosineDistance(termVector)
+                    })
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                // Cosine distance <= 0.08 represents >= 92% semantic similarity
+                if (semanticMatch != null && semanticMatch.Distance <= 0.08)
+                {
+                    semanticMatch.Entity.IncrementHit();
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                    _logger.LogInformation(
+                        "Term '{Term}' returned from semantic cache matching '{MatchedTerm}' (distance: {Distance:F4}, hits: {Hits})",
+                        term, semanticMatch.Entity.Term, semanticMatch.Distance, semanticMatch.Entity.HitCount);
+                    return new TermExplanationResult(semanticMatch.Entity.ExplanationText, true);
+                }
+            }
+            catch
+            {
+                // Fallback for providers that don't support pgvector (e.g. SQLite unit test provider)
+            }
+        }
+
+        // 3. Tier 3: Full Cache Miss - Generate via Gemini Flash
         string explanation = string.Empty;
         if (!string.IsNullOrWhiteSpace(_apiKey))
         {
@@ -78,10 +118,7 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
                 {
                     Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
                 };
-                if (!string.IsNullOrWhiteSpace(_apiKey))
-                {
-                    request.Headers.Add("x-goog-api-key", _apiKey);
-                }
+                request.Headers.Add("x-goog-api-key", _apiKey);
 
                 var response = await _httpClient.SendAsync(request, cancellationToken);
                 if (response.IsSuccessStatusCode)
@@ -111,7 +148,7 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
                     _logger.LogWarning("Gemini API call returned status {Status}: {Error}", response.StatusCode, errBody);
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogWarning(ex, "Gemini API error during term explanation. Using fallback.");
             }
@@ -122,21 +159,21 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
             explanation = GetFallbackExplanation(term, category, locale);
         }
 
-        // 3. Save to DB Cache
-        var safeCategory = category.Length > 200 ? category.Substring(0, 200) : category;
+        // 4. Save to DB Cache with Vector Embedding
         var newCache = new TermExplanationCache
         {
             Term = normalizedTerm,
             Category = safeCategory,
             Locale = locale,
             ExplanationText = explanation,
+            Embedding = termVector,
             HitCount = 1
         };
 
         await _dbContext.TermExplanationCaches.AddAsync(newCache, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return explanation;
+        return new TermExplanationResult(explanation, false);
     }
 
     private static string GetFallbackExplanation(string term, string category, string locale)

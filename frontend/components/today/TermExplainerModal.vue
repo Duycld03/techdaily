@@ -28,6 +28,7 @@ const { formatError } = useApiError();
 const { render: renderMarkdown, isHighlighterReady } = useMarkdownRenderer();
 
 const explanation = ref<string | null>(null);
+const isFromCache = ref(false);
 const isLoading = ref(false);
 const copied = ref(false);
 
@@ -47,6 +48,7 @@ async function loadExplanation() {
       locale.value,
     );
     explanation.value = res.explanation;
+    isFromCache.value = !!res.isFromCache;
   } catch (err: any) {
     explanation.value = formatError(err, "today.explain_error");
   } finally {
@@ -86,12 +88,20 @@ function copyText() {
             <Sparkles class="w-5 h-5" />
           </div>
           <div>
-            <span
-              class="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400"
-              >{{ category }}</span
-            >
+            <div class="flex items-center gap-2">
+              <span
+                class="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400"
+                >{{ category }}</span
+              >
+              <span
+                v-if="isFromCache"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shadow-xs"
+              >
+                ⚡ Instant Cache
+              </span>
+            </div>
             <h3
-              class="text-lg font-bold text-slate-900 dark:text-white leading-tight font-mono"
+              class="text-lg font-bold text-slate-900 dark:text-white leading-tight font-mono mt-0.5"
             >
               {{ term }}
             </h3>

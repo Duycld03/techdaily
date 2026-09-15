@@ -33,13 +33,16 @@ public class ImportDocumentValidator : AbstractValidator<ImportDocumentRequest>
 public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocumentResponse>
 {
     private readonly ITechDailyDbContext _dbContext;
+    private readonly IEmbeddingService _embeddingService;
     private readonly IValidator<ImportDocumentRequest> _validator;
 
     public ImportDocumentHandler(
         ITechDailyDbContext dbContext,
+        IEmbeddingService embeddingService,
         IValidator<ImportDocumentRequest> validator)
     {
         _dbContext = dbContext;
+        _embeddingService = embeddingService;
         _validator = validator;
     }
 
@@ -97,6 +100,20 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
             };
 
             book.Chunks.Add(chunk);
+        }
+
+        if (book.Chunks.Count > 0)
+        {
+            var chunkList = book.Chunks.ToList();
+            var texts = chunkList.Select(c => $"{c.ChapterTitle}: {c.SummaryMarkdown}").ToList();
+            var embResult = await _embeddingService.GenerateBatchEmbeddingsAsync(texts, cancellationToken);
+            if (embResult.IsSuccess && embResult.Value.Count == chunkList.Count)
+            {
+                for (int i = 0; i < chunkList.Count; i++)
+                {
+                    chunkList[i].Embedding = embResult.Value[i];
+                }
+            }
         }
 
         book.TotalChunks = book.Chunks.Count;

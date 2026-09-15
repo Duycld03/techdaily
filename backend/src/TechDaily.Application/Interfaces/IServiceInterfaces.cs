@@ -2,9 +2,11 @@ using TechDaily.Application.Common;
 
 namespace TechDaily.Application.Interfaces;
 
+public record TermExplanationResult(string Explanation, bool IsFromCache);
+
 public interface ITermExplanationService
 {
-    Task<Result<string>> ExplainTermAsync(
+    Task<Result<TermExplanationResult>> ExplainTermAsync(
         string term,
         string category,
         string context,
@@ -48,3 +50,14 @@ public interface IQuizGeneratorService
         string locale = "en",
         CancellationToken cancellationToken = default);
 }
+
+public interface IBookQAService
+{
+    Task<Result<string>> AnswerQuestionAsync(
+        string bookTitle,
+        string question,
+        List<(int ChunkOrder, string ChapterTitle, string Text)> contexts,
+        string locale = "en",
+        CancellationToken cancellationToken = default);
+}
+

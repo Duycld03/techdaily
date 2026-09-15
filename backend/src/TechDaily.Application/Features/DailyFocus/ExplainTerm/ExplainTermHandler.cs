@@ -15,6 +15,7 @@ public class ExplainTermResponse
     public string Term { get; set; } = string.Empty;
     public string Explanation { get; set; } = string.Empty;
     public string Locale { get; set; } = "en";
+    public bool IsFromCache { get; set; }
 }
 
 public class ExplainTermValidator : AbstractValidator<ExplainTermRequest>
@@ -67,8 +68,9 @@ public class ExplainTermHandler : IUseCase<ExplainTermRequest, ExplainTermRespon
         return new ExplainTermResponse
         {
             Term = request.Term,
-            Explanation = explanationResult.Value,
-            Locale = request.Locale
+            Explanation = explanationResult.Value.Explanation,
+            Locale = request.Locale,
+            IsFromCache = explanationResult.Value.IsFromCache
         };
     }
 }

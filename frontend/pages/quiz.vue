@@ -22,6 +22,7 @@ import {
 import { useInterviewQuizStore, type QuizQuestion } from '~/stores/useInterviewQuizStore'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useProfileStore } from '~/stores/useProfileStore'
+import { useLibraryStore } from '~/stores/useLibraryStore'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 
 const route = useRoute()
@@ -29,6 +30,7 @@ const { t, locale } = useI18n()
 const authStore = useAuthStore()
 const profileStore = useProfileStore()
 const quizStore = useInterviewQuizStore()
+const libraryStore = useLibraryStore()
 const { render: renderMarkdownRaw, isHighlighterReady } = useMarkdownRenderer()
 
 function renderMarkdown(raw: string | undefined | null): string {
@@ -42,6 +44,8 @@ const selectedOptionIndex = ref<number | null>(null)
 const customTopicInput = ref('')
 const selectedLevel = ref(3) // 3 = Senior
 const selectedCount = ref(5)
+const isGrounded = ref(false)
+const selectedBookId = ref<string | null>(null)
 
 const quickTopics = [
   '.NET 10 Internals & Memory',
@@ -72,6 +76,17 @@ onMounted(async () => {
   if (route.query.topic) {
     customTopicInput.value = (route.query.topic as string).trim()
   }
+
+  // Pre-fill grounded book mode if query params present
+  if (route.query.bookId) {
+    selectedBookId.value = route.query.bookId as string
+    isGrounded.value = true
+  } else if (route.query.grounded === 'true') {
+    isGrounded.value = true
+  }
+
+  // Load books for grounded selector dropdown
+  libraryStore.fetchBooks().catch(() => {})
 
   // Pre-fill level based on user profile if available
   if (profileStore.profile?.targetRole) {
@@ -109,7 +124,15 @@ async function handleGenerateQuiz(topic?: string) {
   if (!chosenTopic.trim()) return
 
   selectedOptionIndex.value = null
-  await quizStore.generateQuiz(chosenTopic.trim(), selectedLevel.value, selectedCount.value, null, locale.value)
+  await quizStore.generateQuiz(
+    chosenTopic.trim(),
+    selectedLevel.value,
+    selectedCount.value,
+    null,
+    locale.value,
+    isGrounded.value ? (selectedBookId.value || null) : null,
+    isGrounded.value
+  )
 }
 
 async function handleSubmitAnswer() {
@@ -283,6 +306,60 @@ function getOptionClass(idx: number): string {
                 {{ topic }}
               </button>
             </div>
+          </div>
+        </div>
+
+        <!-- Grounded in Book Toggle Card -->
+        <div class="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-xl bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
+                <BookOpen class="w-4 h-4" />
+              </div>
+              <div>
+                <span class="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
+                  {{ $t('quiz.grounded_toggle') }}
+                </span>
+                <span class="text-xs text-slate-500 dark:text-slate-400">
+                  {{ $t('quiz.grounded_desc') }}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              @click="isGrounded = !isGrounded"
+              :class="[
+                'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500',
+                isGrounded ? 'bg-brand-600' : 'bg-slate-300 dark:bg-slate-700'
+              ]"
+            >
+              <span
+                :class="[
+                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                  isGrounded ? 'translate-x-5' : 'translate-x-0'
+                ]"
+              />
+            </button>
+          </div>
+
+          <!-- Select Book dropdown when Grounded is active -->
+          <div v-if="isGrounded" class="pt-3 border-t border-slate-200/80 dark:border-slate-800/80 space-y-1.5">
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-400">
+              {{ $t('quiz.select_book') }}
+            </label>
+            <select
+              v-model="selectedBookId"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
+            >
+              <option :value="null">{{ $t('quiz.any_book_in_library') }}</option>
+              <option
+                v-for="b in libraryStore.books"
+                :key="b.id"
+                :value="b.id"
+              >
+                {{ b.title }}
+              </option>
+            </select>
           </div>
         </div>
 

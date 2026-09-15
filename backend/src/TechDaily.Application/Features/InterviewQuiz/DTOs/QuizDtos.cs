@@ -26,8 +26,11 @@ public record GenerateQuizRequest(
     Category? Category,
     QuizLevel Level,
     int Count = 5,
-    string Locale = "en"
+    string Locale = "en",
+    Guid? BookId = null,
+    bool IsGrounded = false
 );
+
 
 public record GenerateQuizResponse(
     List<QuizQuestionDto> Questions,

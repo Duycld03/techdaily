@@ -112,7 +112,9 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
     level: number = 3,
     count: number = 5,
     category?: number | null,
-    locale: string = 'en'
+    locale: string = 'en',
+    bookId?: string | null,
+    isGrounded?: boolean
   ) {
     isGenerating.value = true
     error.value = null
@@ -131,7 +133,9 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
         level,
         count,
         category: category ?? null,
-        locale
+        locale,
+        bookId: bookId || null,
+        isGrounded: !!isGrounded
       })
 
       questions.value = response.questions || []

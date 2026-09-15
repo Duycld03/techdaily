@@ -11,6 +11,9 @@ using Microsoft.AspNetCore.Http.Features;
 using TechDaily.Infrastructure;
 using TechDaily.Infrastructure.Persistence;
 using TechDaily.Infrastructure.Persistence.Seeders;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using TechDaily.Application.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -82,6 +85,39 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Configure Multi-Layer Anti-Spam Rate Limiting (Sliding Window: 10 req/min)
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.ContentType = "application/problem+json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            type = "https://tools.ietf.org/html/rfc6585#section-4",
+            title = "Too Many Requests",
+            status = 429,
+            detail = "You have exceeded the rate limit of 10 AI requests per minute. Please wait before retrying."
+        }, cancellationToken: token);
+    };
+
+    options.AddPolicy("AiEndpointsPolicy", httpContext =>
+    {
+        var partitionKey = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? httpContext.Connection.RemoteIpAddress?.ToString()
+            ?? "anonymous";
+
+        return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 6,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -133,6 +169,7 @@ app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // Auto-migrate and seed database on startup
 using (var scope = app.Services.CreateScope())
@@ -150,6 +187,13 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("Master 30-Day Curriculum seeded successfully.");
             await TechInsightsSeeder.SeedAsync(context);
             logger.LogInformation("Tech Insights Catalog seeded successfully.");
+
+            var embeddingService = services.GetService<IEmbeddingService>();
+            if (embeddingService != null)
+            {
+                await CurriculumSeeder.BackfillEmbeddingsAsync(context, embeddingService);
+                logger.LogInformation("Curriculum vector embeddings verified and backfilled.");
+            }
         }
     }
     catch (Exception ex)

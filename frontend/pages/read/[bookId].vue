@@ -21,6 +21,7 @@ import {
 } from "lucide-vue-next";
 import type { BookDetail, ChunkSummary } from "~/stores/useLibraryStore";
 import TermExplainerModal from "~/components/today/TermExplainerModal.vue";
+import AskBookDrawer from "~/components/reader/AskBookDrawer.vue";
 import ThemeToggle from "~/components/common/ThemeToggle.vue";
 
 const { t } = useI18n();
@@ -40,6 +41,7 @@ const book = ref<BookDetail | null>(null);
 const activeChunkIndex = ref(0);
 const isTocOpen = ref(true);
 const isMobileTocOpen = ref(false);
+const isAskDrawerOpen = ref(false);
 const completedSlices = ref<Set<number>>(new Set());
 
 // Floating Selection Toolbar State
@@ -330,11 +332,18 @@ watch(activeChunkIndex, async () => {
 
 onUnmounted(() => {
   cancelPendingPrefetch();
+  if (selectionDebounceTimer) {
+    clearTimeout(selectionDebounceTimer);
+    selectionDebounceTimer = null;
+  }
   window.removeEventListener("keydown", handleKeyDown);
 });
 
 function handleKeyDown(e: KeyboardEvent) {
-  if (e.shiftKey && e.key === "ArrowRight") {
+  if (e.shiftKey && (e.key === "?" || e.key === "/")) {
+    e.preventDefault();
+    isAskDrawerOpen.value = !isAskDrawerOpen.value;
+  } else if (e.shiftKey && e.key === "ArrowRight") {
     e.preventDefault();
     goToNextSlice();
   } else if (e.shiftKey && e.key === "ArrowLeft") {
@@ -343,9 +352,12 @@ function handleKeyDown(e: KeyboardEvent) {
   } else if (
     e.key === "Escape" &&
     !isExplainerOpen.value &&
-    !isMobileTocOpen.value
+    !isMobileTocOpen.value &&
+    !isAskDrawerOpen.value
   ) {
     router.push("/library");
+  } else if (e.key === "Escape" && isAskDrawerOpen.value) {
+    isAskDrawerOpen.value = false;
   }
 }
 
@@ -408,29 +420,38 @@ function goToPrevSlice() {
   }
 }
 
-// Scoped Text Selection Listener
+// Scoped Text Selection Listener with 400ms Debounce
+let selectionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
 function handleTextSelection(event: MouseEvent) {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed) {
-    floatingToolbar.value.visible = false;
-    return;
+  if (selectionDebounceTimer) {
+    clearTimeout(selectionDebounceTimer);
+    selectionDebounceTimer = null;
   }
 
-  const selectedStr = selection.toString().trim();
-  if (selectedStr.length < 2 || selectedStr.length > 500) {
-    floatingToolbar.value.visible = false;
-    return;
-  }
+  selectionDebounceTimer = setTimeout(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      floatingToolbar.value.visible = false;
+      return;
+    }
 
-  const range = selection.getRangeAt(0);
-  const rect = range.getBoundingClientRect();
+    const selectedStr = selection.toString().trim();
+    if (selectedStr.length < 2 || selectedStr.length > 500) {
+      floatingToolbar.value.visible = false;
+      return;
+    }
 
-  floatingToolbar.value = {
-    visible: true,
-    x: Math.max(16, rect.left + rect.width / 2),
-    y: Math.max(70, rect.top - 46),
-    selectedText: selectedStr,
-  };
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    floatingToolbar.value = {
+      visible: true,
+      x: Math.max(16, rect.left + rect.width / 2),
+      y: Math.max(70, rect.top - 46),
+      selectedText: selectedStr,
+    };
+  }, 400);
 }
 
 function handleCopySelection() {
@@ -538,14 +559,28 @@ async function handleHighlightSelection() {
         </p>
       </div>
 
-      <!-- Right: Quiz Chapter, ThemeToggle, Progress & Quick Nav -->
+      <!-- Right: Ask Book, Quiz Chapter, ThemeToggle, Progress & Quick Nav -->
       <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        <!-- Ask AI About Book Action -->
+        <button
+          @click="isAskDrawerOpen = true"
+          class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-950/50 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/50 text-xs font-bold transition-colors shrink-0"
+          :title="$t('reader.ask_book') + ' (Shift + ?)'"
+        >
+          <Sparkles class="w-3.5 h-3.5 shrink-0 text-brand-600 dark:text-brand-400" />
+          <span class="hidden md:inline">{{ $t("reader.ask_book") }}</span>
+        </button>
+
         <!-- 1-Click Quiz Chapter Action -->
         <NuxtLink
           v-if="currentChunk"
           :to="{
             path: '/quiz',
-            query: { topic: currentChunk.chapterTitle || book?.title },
+            query: {
+              topic: currentChunk.chapterTitle || book?.title,
+              bookId: book?.id,
+              grounded: 'true',
+            },
           }"
           class="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-xs font-bold transition-colors shrink-0"
           :title="$t('reader.quiz_chapter_btn')"
@@ -1073,6 +1108,17 @@ async function handleHighlightSelection() {
       :category="book?.title || 'System Architecture'"
       :context="currentContext"
       @close="isExplainerOpen = false"
+    />
+
+    <!-- Ask Book RAG Drawer -->
+    <AskBookDrawer
+      :is-open="isAskDrawerOpen"
+      :book-id="bookId"
+      :book-title="book?.title"
+      :current-chunk-id="currentChunk?.id"
+      :current-chunk-order="currentChunk?.chunkOrder"
+      @close="isAskDrawerOpen = false"
+      @jump-to-slice="(order) => selectChunk(order - 1)"
     />
   </div>
 </template>

@@ -35,7 +35,9 @@ public static class QuizEndpoints
                 catEnum,
                 levelEnum,
                 count,
-                apiRequest.Locale ?? "en"
+                apiRequest.Locale ?? "en",
+                apiRequest.BookId,
+                apiRequest.IsGrounded
             );
 
             var result = await handler.ExecuteAsync(request, ct);
@@ -43,6 +45,7 @@ public static class QuizEndpoints
                 ? Results.Ok(result.Value)
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
+        .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("GenerateQuiz")
         .WithSummary("Generates an interactive interview quiz batch tailored to seniority level using Gemini 3.6 Flash and unmastered DB questions.");
 
@@ -151,8 +154,11 @@ public record GenerateQuizApiRequest(
     int? Category,
     int Level,
     int Count = 5,
-    string? Locale = "en"
+    string? Locale = "en",
+    Guid? BookId = null,
+    bool IsGrounded = false
 );
+
 
 public record SubmitQuizAnswerApiRequest(
     Guid QuestionId,

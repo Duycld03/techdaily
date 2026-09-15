@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TechDaily.Domain.Entities;
 using TechDaily.Domain.Enums;
 using TechDaily.Domain.ValueObjects;
+using TechDaily.Application.Interfaces;
 
 namespace TechDaily.Infrastructure.Persistence.Seeders;
 
@@ -149,6 +150,31 @@ public static class CurriculumSeeder
         }
 
         await context.SaveChangesAsync();
+    }
+
+    public static async Task BackfillEmbeddingsAsync(TechDailyDbContext context, IEmbeddingService embeddingService, CancellationToken cancellationToken = default)
+    {
+        var unvectorizedChunks = await context.DocumentChunks
+            .Where(c => c.Embedding == null)
+            .OrderBy(c => c.ChunkOrder)
+            .Take(50)
+            .ToListAsync(cancellationToken);
+
+        if (unvectorizedChunks.Count == 0) return;
+
+        var texts = unvectorizedChunks
+            .Select(c => $"{c.ChapterTitle}: {c.SummaryMarkdown}")
+            .ToList();
+
+        var embResult = await embeddingService.GenerateBatchEmbeddingsAsync(texts, cancellationToken);
+        if (embResult.IsSuccess && embResult.Value.Count == unvectorizedChunks.Count)
+        {
+            for (int i = 0; i < unvectorizedChunks.Count; i++)
+            {
+                unvectorizedChunks[i].Embedding = embResult.Value[i];
+            }
+            await context.SaveChangesAsync(cancellationToken);
+        }
     }
 
     public static List<(Topic topic, InterviewQuestion question, DocumentChunk chunk)> GetCurriculumItems(Guid bookId)

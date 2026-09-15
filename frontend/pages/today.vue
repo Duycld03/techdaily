@@ -14,6 +14,7 @@ import {
 } from "lucide-vue-next";
 import DocReaderPane from "~/components/today/DocReaderPane.vue";
 import InterviewChallengePane from "~/components/today/InterviewChallengePane.vue";
+import AskBookDrawer from "~/components/reader/AskBookDrawer.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -24,6 +25,7 @@ const { locale } = useI18n();
 const activeMobileTab = ref<"reader" | "challenge">("reader");
 const currentDayOrder = ref<number>(1);
 const isBookMenuOpen = ref(false);
+const isAskDrawerOpen = ref(false);
 const bookMenuRef = ref<HTMLElement | null>(null);
 
 function handleClickOutside(event: MouseEvent) {
@@ -78,12 +80,44 @@ onMounted(async () => {
     currentDayOrder.value = res.topic.dayOrder;
   }
   scheduleNextDayPrefetch();
+  window.addEventListener("keydown", handleTodayKeyDown);
 });
 
 onUnmounted(() => {
   cancelPendingNextDayPrefetch();
   document.removeEventListener("click", handleClickOutside);
+  window.removeEventListener("keydown", handleTodayKeyDown);
 });
+
+function handleTodayKeyDown(e: KeyboardEvent) {
+  if (e.shiftKey && (e.key === "?" || e.key === "/")) {
+    if (focusStore.data?.pacer) {
+      e.preventDefault();
+      isAskDrawerOpen.value = !isAskDrawerOpen.value;
+    }
+  } else if (e.key === "Escape" && isAskDrawerOpen.value) {
+    isAskDrawerOpen.value = false;
+  }
+}
+
+async function handleJumpToSlice(order: number) {
+  if (!focusStore.data?.pacer) return;
+  cancelPendingNextDayPrefetch();
+  router.replace({
+    query: {
+      ...route.query,
+      bookId: focusStore.data.pacer.bookId,
+      chunkOrder: order,
+      day: undefined,
+    },
+  });
+  await focusStore.fetchTodayFocus({
+    bookId: focusStore.data.pacer.bookId,
+    chunkOrder: order,
+    locale: locale.value,
+  });
+  scheduleNextDayPrefetch();
+}
 
 watch(locale, (newLocale) => {
   cancelPendingNextDayPrefetch();
@@ -295,16 +329,27 @@ function resetToScheduledDay() {
           </div>
         </div>
 
-        <!-- Right: Next Slice button -->
-        <button
-          @click="navigatePacerSlice(1)"
-          :disabled="!focusStore.data.pacer.hasNext || focusStore.isLoading"
-          class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-brand-500/20 active:scale-95 whitespace-nowrap shrink-0"
-        >
-          <span class="hidden sm:inline">{{ $t("pacer.next_slice") }}</span>
-          <span class="sm:hidden">{{ $t("today.next") }}</span>
-          <ChevronRight class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </button>
+        <!-- Right: Ask Book & Next Slice button -->
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            @click="isAskDrawerOpen = true"
+            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-950/50 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/50 text-xs font-bold transition-colors shrink-0"
+            :title="$t('reader.ask_book') + ' (Shift + ?)'"
+          >
+            <Sparkles class="w-3.5 h-3.5 shrink-0 text-brand-600 dark:text-brand-400" />
+            <span class="hidden sm:inline">{{ $t("reader.ask_book") }}</span>
+          </button>
+
+          <button
+            @click="navigatePacerSlice(1)"
+            :disabled="!focusStore.data.pacer.hasNext || focusStore.isLoading"
+            class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-brand-500/20 active:scale-95 whitespace-nowrap shrink-0"
+          >
+            <span class="hidden sm:inline">{{ $t("pacer.next_slice") }}</span>
+            <span class="sm:hidden">{{ $t("today.next") }}</span>
+            <ChevronRight class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+        </div>
       </template>
 
       <!-- LEGACY TOPIC MODE: 30-Day Curriculum Fallback -->
@@ -490,5 +535,17 @@ function resetToScheduledDay() {
         />
       </div>
     </div>
+
+    <!-- Ask Book RAG Drawer -->
+    <AskBookDrawer
+      v-if="focusStore.data?.pacer"
+      :is-open="isAskDrawerOpen"
+      :book-id="focusStore.data.pacer.bookId"
+      :book-title="focusStore.data.pacer.bookTitle"
+      :current-chunk-id="focusStore.data.documentChunk?.id"
+      :current-chunk-order="focusStore.data.pacer.currentChunkOrder"
+      @close="isAskDrawerOpen = false"
+      @jump-to-slice="handleJumpToSlice"
+    />
   </div>
 </template>
