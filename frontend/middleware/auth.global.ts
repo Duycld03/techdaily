@@ -1,15 +1,15 @@
 export default defineNuxtRouteMiddleware((to) => {
-  const tokenCookie = useCookie<string | null>('techdaily_token')
   const authStore = useAuthStore()
 
-  if (!authStore.isLoggedIn) {
-    authStore.init()
-  }
+  // Always initialize and validate token expiration
+  authStore.init()
 
-  const hasToken = !!authStore.isLoggedIn || !!tokenCookie.value
+  const hasToken = !!authStore.isLoggedIn
 
   const isGuestOnly = to.path === '/login'
   const isAuthRequired =
+    to.path === '/' ||
+    to.path.startsWith('/today') ||
     to.path.startsWith('/insights') ||
     to.path.startsWith('/roadmap') ||
     to.path.startsWith('/review') ||
@@ -25,9 +25,10 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // Unauthenticated visitors cannot access protected pages (both on SSR and Client)
   if (isAuthRequired && !hasToken) {
+    const targetRedirect = to.fullPath === '/' ? '/today' : to.fullPath
     return navigateTo({
       path: '/login',
-      query: { redirect: to.fullPath }
+      query: { redirect: targetRedirect }
     })
   }
 })

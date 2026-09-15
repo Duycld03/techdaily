@@ -62,6 +62,20 @@ const mockPost = vi.fn(async (url: string, body: any) => {
 vi.mock("~/composables/useApiClient", () => ({
   useApiClient: () => ({
     get: vi.fn(async (url: string) => {
+      if (url.includes("/slices/")) {
+        return {
+          slice: {
+            id: "chk-1",
+            chunkOrder: 1,
+            chapterTitle: "Reliability, Scalability, and Maintainability",
+            summaryMarkdown: "Core qualities of data systems.",
+            originalTextMarkdown: "Systems must maintain performance...",
+            keyTakeaways: ["High availability", "Fault tolerance"],
+            estimatedReadMinutes: 4,
+            isAiFormatted: true,
+          },
+        };
+      }
       if (url.includes("/books/b-1")) {
         return {
           book: {
@@ -143,5 +157,17 @@ describe("useLibraryStore", () => {
 
     // Verify mockPost was called only once despite two concurrent invocations
     expect(mockPost).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetches single slice on demand and deduplicates in-flight requests", async () => {
+    const library = useLibraryStore();
+
+    const p1 = library.fetchSlice("b-1", 1);
+    const p2 = library.fetchSlice("b-1", 1);
+
+    const [res1, res2] = await Promise.all([p1, p2]);
+    expect(res1).toEqual(res2);
+    expect(res1?.chapterTitle).toBe("Reliability, Scalability, and Maintainability");
+    expect(res1?.originalTextMarkdown).toBe("Systems must maintain performance...");
   });
 });

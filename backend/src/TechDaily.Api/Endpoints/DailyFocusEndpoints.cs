@@ -14,7 +14,7 @@ public static class DailyFocusEndpoints
 {
     public static RouteGroupBuilder MapDailyFocusEndpoints(this RouteGroupBuilder group)
     {
-        // Public / Authenticated Today Curriculum & Active Book Pacer
+        // Protected Today Curriculum & Active Book Pacer (Requires Logged-In User)
         group.MapGet("/today", async (
             [FromQuery] Guid? bookId,
             [FromQuery] int? chunkOrder,
@@ -25,13 +25,18 @@ public static class DailyFocusEndpoints
             IUseCase<GetTodayFocusRequest, GetTodayFocusResponse> handler,
             CancellationToken ct) =>
         {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
             DateOnly? parsedDate = null;
             if (!string.IsNullOrWhiteSpace(date) && DateOnly.TryParse(date, out var d))
             {
                 parsedDate = d;
             }
 
-            var userId = GetUserIdFromClaims(userClaims);
             var request = new GetTodayFocusRequest(userId, bookId, chunkOrder, dayOrder, parsedDate, locale ?? "en");
             var result = await handler.ExecuteAsync(request, ct);
 
@@ -39,6 +44,7 @@ public static class DailyFocusEndpoints
                 ? Results.Ok(result.Value)
                 : Results.NotFound(new { error = result.Error.Message });
         })
+        .RequireAuthorization()
         .WithName("GetTodayFocus")
         .WithSummary("Retrieves today's reading slice, micro-quiz, and interview scenario challenge.");
 

@@ -66,6 +66,23 @@ public static class LibraryEndpoints
         })
         .WithName("GetBookStatus");
 
+        // Public On-Demand Single Slice Retrieval
+        group.MapGet("/books/{id:guid}/slices/{order:int}", async (
+            Guid id,
+            int order,
+            [FromServices] IUseCase<TechDaily.Application.Features.Library.GetBookSlice.GetBookSliceRequest, TechDaily.Application.Features.Library.GetBookSlice.GetBookSliceResponse> handler,
+            CancellationToken ct) =>
+        {
+            var result = await handler.ExecuteAsync(new TechDaily.Application.Features.Library.GetBookSlice.GetBookSliceRequest(id, order), ct);
+            return result.Match(
+                success => Results.Ok(success),
+                error => error == Error.NotFound
+                    ? Results.NotFound(new { code = error.Code, error = error.Message })
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+            );
+        })
+        .WithName("GetBookSlice");
+
         // Public On-Demand JIT Slice Curation
         group.MapPost("/books/{id:guid}/slices/{order:int}/curate", async (
             Guid id,

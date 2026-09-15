@@ -187,6 +187,46 @@ export const useLibraryStore = defineStore("library", () => {
     }
   }
 
+  const inFlightSliceFetches = new Map<string, Promise<ChunkSummary | null>>();
+
+  function fetchSlice(
+    bookId: string,
+    order: number,
+  ): Promise<ChunkSummary | null> {
+    const key = `${bookId}:${order}`;
+    if (inFlightSliceFetches.has(key)) {
+      return inFlightSliceFetches.get(key)!;
+    }
+
+    const promise = (async () => {
+      try {
+        const api = useApiClient();
+        const res = await api.get<{ slice: ChunkSummary }>(
+          `/api/v1/library/books/${bookId}/slices/${order}`,
+        );
+        if (res.slice && selectedBook.value?.chunks) {
+          const idx = selectedBook.value.chunks.findIndex(
+            (c) => c.chunkOrder === order,
+          );
+          if (idx !== -1) {
+            selectedBook.value.chunks[idx] = {
+              ...selectedBook.value.chunks[idx],
+              ...res.slice,
+            };
+          }
+        }
+        return res.slice;
+      } catch {
+        return null;
+      } finally {
+        inFlightSliceFetches.delete(key);
+      }
+    })();
+
+    inFlightSliceFetches.set(key, promise);
+    return promise;
+  }
+
   const inFlightCurations = new Map<string, Promise<ChunkSummary | null>>();
 
   function curateSlice(
@@ -205,6 +245,17 @@ export const useLibraryStore = defineStore("library", () => {
           `/api/v1/library/books/${bookId}/slices/${order}/curate`,
           {},
         );
+        if (res.chunk && selectedBook.value?.chunks) {
+          const idx = selectedBook.value.chunks.findIndex(
+            (c) => c.chunkOrder === order,
+          );
+          if (idx !== -1) {
+            selectedBook.value.chunks[idx] = {
+              ...selectedBook.value.chunks[idx],
+              ...res.chunk,
+            };
+          }
+        }
         return res.chunk;
       } catch {
         return null;
@@ -225,6 +276,7 @@ export const useLibraryStore = defineStore("library", () => {
     error,
     fetchBooks,
     fetchBookById,
+    fetchSlice,
     importDocument,
     uploadPdf,
     getBookStatus,

@@ -57,10 +57,43 @@ const currentContext = ref("");
 
 const articleScrollContainer = ref<HTMLElement | null>(null);
 
+const loadedSlices = ref<Map<number, ChunkSummary>>(new Map());
+const isLoadingSlice = ref(false);
+
 const currentChunk = computed<ChunkSummary | null>(() => {
   if (!book.value?.chunks?.length) return null;
-  return book.value.chunks[activeChunkIndex.value] || null;
+  const basic = book.value.chunks[activeChunkIndex.value];
+  if (!basic) return null;
+  const cached = loadedSlices.value.get(basic.chunkOrder);
+  return cached || basic;
 });
+
+async function ensureSliceLoaded(order: number) {
+  const cached = loadedSlices.value.get(order);
+  if (cached?.originalTextMarkdown) {
+    return cached;
+  }
+
+  isLoadingSlice.value = true;
+  try {
+    const slice = await libraryStore.fetchSlice(bookId.value, order);
+    if (slice) {
+      loadedSlices.value.set(order, slice);
+      if (book.value?.chunks) {
+        const idx = book.value.chunks.findIndex((c) => c.chunkOrder === order);
+        if (idx !== -1) {
+          book.value.chunks[idx] = { ...book.value.chunks[idx], ...slice };
+        }
+      }
+      return slice;
+    }
+  } catch {
+    // ignore
+  } finally {
+    isLoadingSlice.value = false;
+  }
+  return null;
+}
 
 const nextChunk = computed<ChunkSummary | null>(() => {
   if (!book.value?.chunks?.length) return null;
@@ -154,6 +187,8 @@ onMounted(async () => {
     }
 
     markCurrentSliceCompleted();
+    const activeOrder = activeChunkIndex.value + 1;
+    await ensureSliceLoaded(activeOrder);
     checkAndCurateSlice();
   } catch (err) {
     // handled by store
@@ -206,12 +241,15 @@ async function checkAndCurateSlice() {
       bookId.value,
       chunk.chunkOrder,
     );
-    if (updated && book.value?.chunks) {
-      const idx = book.value.chunks.findIndex(
-        (c) => c.chunkOrder === updated.chunkOrder,
-      );
-      if (idx !== -1) {
-        book.value.chunks[idx] = updated;
+    if (updated) {
+      loadedSlices.value.set(updated.chunkOrder, updated);
+      if (book.value?.chunks) {
+        const idx = book.value.chunks.findIndex(
+          (c) => c.chunkOrder === updated.chunkOrder,
+        );
+        if (idx !== -1) {
+          book.value.chunks[idx] = updated;
+        }
       }
       curationError.value = null;
       scheduleLookaheadPrefetch();
@@ -244,7 +282,6 @@ async function triggerLookaheadPrefetch() {
   const nextSlice = book.value.chunks[nextIndex];
   if (
     !nextSlice ||
-    nextSlice.isAiFormatted ||
     prefetchedChunkOrders.value.has(nextSlice.chunkOrder)
   ) {
     return;
@@ -252,16 +289,29 @@ async function triggerLookaheadPrefetch() {
 
   prefetchedChunkOrders.value.add(nextSlice.chunkOrder);
   try {
-    const updated = await libraryStore.curateSlice(
-      bookId.value,
-      nextSlice.chunkOrder,
-    );
-    if (updated && book.value?.chunks) {
-      const idx = book.value.chunks.findIndex(
-        (c) => c.chunkOrder === updated.chunkOrder,
+    let slice = loadedSlices.value.get(nextSlice.chunkOrder);
+    if (!slice?.originalTextMarkdown) {
+      slice = (await libraryStore.fetchSlice(bookId.value, nextSlice.chunkOrder)) || undefined;
+      if (slice) {
+        loadedSlices.value.set(nextSlice.chunkOrder, slice);
+      }
+    }
+
+    if (slice && !slice.isAiFormatted) {
+      const updated = await libraryStore.curateSlice(
+        bookId.value,
+        nextSlice.chunkOrder,
       );
-      if (idx !== -1) {
-        book.value.chunks[idx] = updated;
+      if (updated) {
+        loadedSlices.value.set(nextSlice.chunkOrder, updated);
+        if (book.value?.chunks) {
+          const idx = book.value.chunks.findIndex(
+            (c) => c.chunkOrder === updated.chunkOrder,
+          );
+          if (idx !== -1) {
+            book.value.chunks[idx] = updated;
+          }
+        }
       }
     }
   } catch {
@@ -269,10 +319,12 @@ async function triggerLookaheadPrefetch() {
   }
 }
 
-watch(activeChunkIndex, () => {
+watch(activeChunkIndex, async () => {
   cancelPendingPrefetch();
   isViewingRawTemporarily.value = false;
   curationError.value = null;
+  const activeOrder = activeChunkIndex.value + 1;
+  await ensureSliceLoaded(activeOrder);
   checkAndCurateSlice();
 });
 
@@ -693,7 +745,7 @@ async function handleHighlightSelection() {
       >
         <!-- Loading State -->
         <div
-          v-if="libraryStore.isLoading"
+          v-if="libraryStore.isLoading || (isLoadingSlice && !currentChunk?.originalTextMarkdown)"
           class="flex flex-col items-center justify-center gap-3 py-20 text-slate-400"
         >
           <div

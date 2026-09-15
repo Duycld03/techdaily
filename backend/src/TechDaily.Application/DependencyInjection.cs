@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<UploadPdfRequest, UploadPdfResponse>, UploadPdfHandler>();
         services.AddScoped<IUseCase<CrawlUrlRequest, CrawlUrlResponse>, CrawlUrlHandler>();
         services.AddScoped<IUseCase<Features.Library.CurateSlice.CurateSliceRequest, Features.Library.CurateSlice.CurateSliceResponse>, Features.Library.CurateSlice.CurateSliceHandler>();
+        services.AddScoped<IUseCase<Features.Library.GetBookSlice.GetBookSliceRequest, Features.Library.GetBookSlice.GetBookSliceResponse>, Features.Library.GetBookSlice.GetBookSliceHandler>();
 
         // Notes / Highlights Handlers
         services.AddScoped<IUseCase<GetHighlightsRequest, GetHighlightsResponse>, GetHighlightsHandler>();

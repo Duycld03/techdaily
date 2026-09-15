@@ -26,7 +26,6 @@ public class GetBookByIdHandler : IUseCase<GetBookByIdRequest, GetBookByIdRespon
         CancellationToken cancellationToken = default)
     {
         var book = await _dbContext.DocumentBooks
-            .Include(b => b.Chunks.OrderBy(c => c.ChunkOrder))
             .AsNoTracking()
             .FirstOrDefaultAsync(b => b.Id == request.BookId, cancellationToken);
 
@@ -34,6 +33,20 @@ public class GetBookByIdHandler : IUseCase<GetBookByIdRequest, GetBookByIdRespon
         {
             return Error.NotFound;
         }
+
+        var chunks = await _dbContext.DocumentChunks
+            .Where(c => c.DocumentBookId == request.BookId)
+            .OrderBy(c => c.ChunkOrder)
+            .Select(c => new ChunkSummaryDto
+            {
+                Id = c.Id,
+                ChunkOrder = c.ChunkOrder,
+                ChapterTitle = c.ChapterTitle,
+                EstimatedReadMinutes = c.EstimatedReadMinutes,
+                IsAiFormatted = c.IsAiFormatted
+            })
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
 
         var detail = new BookDetailDto
         {
@@ -44,18 +57,11 @@ public class GetBookByIdHandler : IUseCase<GetBookByIdRequest, GetBookByIdRespon
             Category = book.Category,
             AuthorOrSourceUrl = book.AuthorOrSourceUrl,
             TotalChunks = book.TotalChunks,
-            Chunks = book.Chunks.Select(c => new ChunkSummaryDto
-            {
-                Id = c.Id,
-                ChunkOrder = c.ChunkOrder,
-                ChapterTitle = c.ChapterTitle,
-                SummaryMarkdown = c.SummaryMarkdown,
-                OriginalTextMarkdown = c.OriginalTextMarkdown,
-                KeyTakeaways = c.KeyTakeaways,
-                MicroQuiz = c.MicroQuiz,
-                EstimatedReadMinutes = c.EstimatedReadMinutes,
-                IsAiFormatted = c.IsAiFormatted
-            }).ToList()
+            IsFeatured = book.IsFeatured,
+            Status = book.Status,
+            ProgressPercentage = book.ProgressPercentage,
+            StatusMessage = book.StatusMessage,
+            Chunks = chunks
         };
 
         return new GetBookByIdResponse { Book = detail };
