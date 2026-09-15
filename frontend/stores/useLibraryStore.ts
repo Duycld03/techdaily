@@ -31,17 +31,6 @@ export interface ChunkSummary {
   microQuiz?: any;
 }
 
-export interface BookCitation {
-  chunkOrder: number;
-  chapterTitle: string;
-  relevanceScore: number;
-  excerpt: string;
-}
-
-export interface AskBookResult {
-  answerMarkdown: string;
-  citations: BookCitation[];
-}
 
 export interface BookDetail extends Book {
   chunks: ChunkSummary[];
@@ -280,19 +269,6 @@ export const useLibraryStore = defineStore("library", () => {
     return promise;
   }
 
-  async function askBook(
-    bookId: string,
-    question: string,
-    currentChunkId?: string,
-    locale: string = "en",
-  ): Promise<AskBookResult> {
-    const api = useApiClient();
-    return await api.post<AskBookResult>(`/api/v1/library/books/${bookId}/ask`, {
-      question,
-      currentChunkId: currentChunkId || null,
-      locale,
-    });
-  }
 
   return {
     books,
@@ -309,6 +285,5 @@ export const useLibraryStore = defineStore("library", () => {
     crawlUrl,
     deleteBook,
     curateSlice,
-    askBook,
   };
 });

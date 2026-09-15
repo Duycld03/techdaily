@@ -31,7 +31,7 @@ public class TermExplanationService : ITermExplanationService
         _httpClient = httpClient;
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
-        _model = configuration["Gemini:Model"] ?? "gemini-3.6-flash";
+        _model = configuration["Gemini:Model"] ?? "gemini-3.1-flash-lite";
     }
 
     public async Task<Result<TermExplanationResult>> ExplainTermAsync(

@@ -1,0 +1,21 @@
+# Tasks: Clean Reader AI Experience & Model Standardization
+
+- [x] 1. Backend & Infrastructure Cleanup
+  - [x] 1.1 Remove `POST /api/v1/library/books/{id}/ask` endpoint from `TechDaily.Api/Endpoints/LibraryEndpoints.cs`.
+  - [x] 1.2 Delete `AskBookHandler.cs` (including request, response, validator) in `TechDaily.Application/Features/Library/AskBook/`.
+  - [x] 1.3 Remove `IBookQAService` from `TechDaily.Application/Interfaces/IServiceInterfaces.cs` and `AskAsync` implementation from `TechDaily.Infrastructure/Services/GeminiAiService.cs`.
+  - [x] 1.4 Delete `AskBookHandlerTests.cs` from `TechDaily.Tests/Application/`.
+  - [x] 1.5 Update `nginx/nginx.conf` to remove `/library/books/[^/]+/ask` from the `ai_limit` location block.
+- [x] 2. Gemini Model Standardization & UI Copy
+  - [x] 2.1 Update default fallback model in `GeminiAiService.cs` and `TermExplanationService.cs` to `gemini-3.1-flash-lite` per `AGENTS.md` Rule 12.
+  - [x] 2.2 Standardize endpoint OpenAPI summaries in `InsightsEndpoints.cs` and `QuizEndpoints.cs`.
+  - [x] 2.3 Update `TermExplainerModal.vue` loading and footer text to "Analyzing term with Google Gemini..." and "Powered by Google Gemini".
+- [x] 3. Frontend Reader & Store Cleanup
+  - [x] 3.1 Delete `frontend/components/reader/AskBookDrawer.vue` and its unit test `frontend/tests/components/AskBookDrawer.spec.ts`.
+  - [x] 3.2 Remove "Hỏi AI" button, `Shift + ?` shortcut listener, and `<AskBookDrawer>` from `frontend/pages/read/[bookId].vue`.
+  - [x] 3.3 Remove `<AskBookDrawer>` and its toggle state from `frontend/pages/today.vue`.
+  - [x] 3.4 Remove `askBook` method and types from `frontend/stores/useLibraryStore.ts` and update `frontend/tests/stores/library.spec.ts`.
+  - [x] 3.5 Remove unused `ask_*` localization strings from `frontend/i18n/locales/en.json` and `vi.json`.
+- [x] 4. Automated Verification & Testing
+  - [x] 4.1 Run full backend test suite (`dotnet test`) to verify all domain, application, and infrastructure tests pass.
+  - [x] 4.2 Run full frontend test suite (`npm test`) to verify all components and stores pass.

@@ -51,13 +51,3 @@ public interface IQuizGeneratorService
         CancellationToken cancellationToken = default);
 }
 
-public interface IBookQAService
-{
-    Task<Result<string>> AnswerQuestionAsync(
-        string bookTitle,
-        string question,
-        List<(int ChunkOrder, string ChapterTitle, string Text)> contexts,
-        string locale = "en",
-        CancellationToken cancellationToken = default);
-}
-

@@ -69,7 +69,7 @@ public static class InsightsEndpoints
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GenerateInsight")
-        .WithSummary("Generates an on-demand senior technical insight using Gemini 3.6 Flash.");
+        .WithSummary("Generates an on-demand senior technical insight using Google Gemini Flash Lite.");
 
         // Bookmark Insight (Toggle Save)
         group.MapPost("/{id:guid}/bookmark", async (

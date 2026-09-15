@@ -39,7 +39,6 @@ public static class DependencyInjection
         services.AddScoped<ITechInsightGenerator, GeminiAiService>();
         services.AddScoped<IQuizGeneratorService, GeminiAiService>();
         services.AddScoped<IAiMarkdownFormatter, GeminiAiService>();
-        services.AddScoped<IBookQAService, GeminiAiService>();
         services.AddScoped<ITermExplanationService, TermExplanationService>();
         services.AddScoped<ITelegramNotifier, TelegramNotifier>();
         services.AddScoped<IPdfExtractor, PdfPigExtractor>();

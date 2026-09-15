@@ -47,7 +47,7 @@ public static class QuizEndpoints
         })
         .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("GenerateQuiz")
-        .WithSummary("Generates an interactive interview quiz batch tailored to seniority level using Gemini 3.6 Flash and unmastered DB questions.");
+        .WithSummary("Generates an interactive interview quiz batch tailored to seniority level using Google Gemini Flash Lite and unmastered DB questions.");
 
         // 2. Submit Question Answer
         group.MapPost("/submit", async (

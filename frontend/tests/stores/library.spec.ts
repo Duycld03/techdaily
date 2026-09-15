@@ -56,19 +56,6 @@ const mockPost = vi.fn(async (url: string, body: any) => {
       },
     };
   }
-  if (url.includes("/ask")) {
-    return {
-      answerMarkdown: "Here is the answer to your question.",
-      citations: [
-        {
-          chunkOrder: 1,
-          chapterTitle: "Reliability, Scalability, and Maintainability",
-          relevanceScore: 0.95,
-          excerpt: "Systems must maintain performance...",
-        },
-      ],
-    };
-  }
   throw new Error("Not found");
 });
 
@@ -182,15 +169,5 @@ describe("useLibraryStore", () => {
     expect(res1).toEqual(res2);
     expect(res1?.chapterTitle).toBe("Reliability, Scalability, and Maintainability");
     expect(res1?.originalTextMarkdown).toBe("Systems must maintain performance...");
-  });
-
-  it("askBook posts question and returns answer with citations", async () => {
-    const library = useLibraryStore();
-    const result = await library.askBook("b-1", "How does replication work?", "chk-1", "en");
-
-    expect(result.answerMarkdown).toBe("Here is the answer to your question.");
-    expect(result.citations).toHaveLength(1);
-    expect(result.citations[0].chunkOrder).toBe(1);
-    expect(result.citations[0].relevanceScore).toBe(0.95);
   });
 });
