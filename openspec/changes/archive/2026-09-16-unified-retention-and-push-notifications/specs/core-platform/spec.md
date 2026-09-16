@@ -8,7 +8,15 @@ Establishes native browser Web Push notification infrastructure (RFC 8291 / RFC 
 ## MODIFIED Requirements
 
 ### Requirement: User Profile Management, Route Guards & Security
-The user profile endpoints (`GET /api/v1/user/profile`, `PUT /api/v1/user/profile`) SHALL support managing user study schedules, streak preservation alert preferences, IANA timezones, and browser push status alongside existing profile properties.
+The user profile endpoints (`GET /api/v1/user/profile`, `PUT /api/v1/user/profile`, `PUT /api/v1/user/change-password`) SHALL support managing user study schedules, streak preservation alert preferences, IANA timezones, and browser push status alongside existing profile properties, protected with strict JWT Bearer authentication, reject unauthenticated requests with `HTTP 401 Unauthorized`, and enforce route middleware guards on protected frontend pages.
+
+#### Scenario: Unauthenticated request to user profile
+- **WHEN** unauthenticated client calls `GET /api/v1/user/profile`
+- **THEN** system returns `401 Unauthorized`.
+
+#### Scenario: User updates profile settings
+- **WHEN** authenticated user sends `PUT /api/v1/user/profile` with target level and learning goals
+- **THEN** system updates user profile and returns updated profile DTO.
 
 #### Scenario: User configures personal study schedule and timezone
 - **WHEN** an authenticated user submits `PUT /api/v1/user/profile` with `preferredStudyTime: "07:30"`, `streakAlertTime: "21:00"`, `timeZone: "Asia/Ho_Chi_Minh"`, and `isPushEnabled: true`
@@ -20,6 +28,8 @@ The user profile endpoints (`GET /api/v1/user/profile`, `PUT /api/v1/user/profil
 
 ---
 
+## ADDED Requirements
+
 ### Requirement: Notification Dispatch Multi-Channel Support
 The system SHALL support multi-channel notifications, giving precedence to native browser Web Push while maintaining optional Telegram integration for users who explicitly configure a `TelegramChatId`. Notification dispatches SHALL strictly respect the user's localized timezone and preferred time slots rather than firing at hardcoded server hours.
 
@@ -28,9 +38,6 @@ The system SHALL support multi-channel notifications, giving precedence to nativ
 - **THEN** the system sends a VAPID-encrypted Web Push notification to all active devices registered by that user, delivering the message directly to the operating system notification center.
 
 ---
-
-## NEW Requirements
-
 ### Requirement: Web Push Subscription & VAPID Infrastructure
 The system SHALL implement modern browser Web Push using Voluntary Application Server Identification (VAPID) across standard browser push endpoints (FCM, Apple Web Push, Mozilla autopush).
 

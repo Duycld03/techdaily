@@ -8,7 +8,19 @@ Bridges failed interview quiz questions directly into TechDaily's SM-2 spaced re
 ## MODIFIED Requirements
 
 ### Requirement: Mistake Review Queue & Mastery Analytics
-The quiz summary interface and Mistake Review Queue (`/quiz`) SHALL feature a 1-click action allowing users to promote any failed question directly into their daily SM-2 spaced repetition deck (`POST /api/v1/review/cards/from-quiz-mistake`), rather than confining mistake remediation strictly to manual re-quizzing.
+The system SHALL provide a dedicated review mode to practice unmastered questions and view overall mastery analytics. The quiz summary interface and Mistake Review Queue (`/quiz`) SHALL feature a 1-click action allowing users to promote any failed question directly into their daily SM-2 spaced repetition deck (`POST /api/v1/review/cards/from-quiz-mistake`), rather than confining mistake remediation strictly to manual re-quizzing.
+
+#### Scenario: User opens the Mistake Review Queue
+- **WHEN** user requests `GET /api/v1/quiz/review-queue`
+- **THEN** the system returns all questions where `IsMastered = false` for the user, allowing targeted re-practice.
+
+#### Scenario: User masters a previously failed question during review
+- **WHEN** user re-takes a question from the review queue and answers correctly
+- **THEN** `IsMastered` is updated to `true` and the question is removed from active review queues.
+
+#### Scenario: User requests quiz mastery statistics
+- **WHEN** user requests `GET /api/v1/quiz/stats`
+- **THEN** the system returns total answered, total mastered, unmastered count, and mastery rate percentage by category.
 
 #### Scenario: User promotes an incorrect question from quiz results
 - **WHEN** user finishes a quiz batch with one or more incorrect answers
@@ -20,7 +32,7 @@ The quiz summary interface and Mistake Review Queue (`/quiz`) SHALL feature a 1-
 
 ---
 
-## NEW Requirements
+## ADDED Requirements
 
 ### Requirement: 1-Click Spaced Repetition Bridge for Quiz Mistakes
 The backend SHALL expose `POST /api/v1/review/cards/from-quiz-mistake` allowing authenticated users to transform any `QuizQuestion` into an active `SpacedRepetitionCard`.

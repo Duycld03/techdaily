@@ -4,7 +4,7 @@
 Establishes fail-loud and transparent error propagation across all artificial intelligence and vector embedding subsystems, standardizes text generation 100% on `gemini-3.5-flash-lite`, upgrades the Google Gemini embedding model to `gemini-embedding-001` with explicit 768-dimensional Matryoshka Representation Learning (MRL) truncation, enforces seeder and ingestion data integrity by prohibiting synthetic/mock persistence, prioritizes RFC 7807 problem details in frontend error resolution, and introduces a dedicated System AI Health Check endpoint (`GET /api/v1/system/ai-health`).
 ---
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Cloud Embedding Service Contract & Dimensions
 The system SHALL provide an application-layer interface `IEmbeddingService` for vectorizing text with support for single-text (`GenerateEmbeddingAsync`) and batch-text (`GenerateBatchEmbeddingsAsync`) operations returning 768-dimensional `Pgvector.Vector` structures.
@@ -105,7 +105,7 @@ The client error resolution composable `frontend/composables/useApiError.ts` SHA
 
 ---
 
-## NEW Requirements
+---
 
 ### Requirement: System AI Health Check Endpoint
 The platform SHALL provide an operational diagnostics endpoint `GET /api/v1/system/ai-health` that concurrently probes Google Gemini text generation (`gemini-3.5-flash-lite`) and Google Gemini embedding generation (`gemini-embedding-001`) via `Task.WhenAll`.

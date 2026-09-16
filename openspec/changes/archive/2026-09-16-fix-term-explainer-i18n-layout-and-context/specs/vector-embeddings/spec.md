@@ -1,6 +1,6 @@
 # Vector Embeddings Capability Delta Specification
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Cache Hygiene for Term Explanation Service
 The `TermExplanationService` SHALL guarantee database cache hygiene by strictly reserving persistence into `TermExplanationCaches` for verified, non-empty responses successfully returned by the Google Gemini API. Local fallback explanations generated on API failure or missing credentials MUST NEVER be persisted to the database. Additionally, legacy database entries containing mock or fallback placeholder text SHALL be purged.

@@ -45,7 +45,7 @@ Specifies the permanent decommissioning and removal of obsolete `MicroQuiz` arti
 
 ---
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Document Chunk and Library Slice Projections
 The system SHALL serve document chunk and library slice DTOs (`DailyFocusChunkDto`, `BookSliceDto`) without serializing or allocating `MicroQuiz` objects.

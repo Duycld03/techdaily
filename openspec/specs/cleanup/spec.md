@@ -33,3 +33,14 @@ The `DailyDrills` entity contains only core drill fields (`UserId`, `QuestionId`
 #### Scenario: Developer queries database entities
 - **WHEN** inspecting database context and migrations
 - **THEN** `AiReviews` table and legacy audio columns are removed and `DailyDrills` contains only required drill attempt fields.
+
+### Requirement: Document Chunk and Library Slice Projections
+The system SHALL serve document chunk and library slice DTOs (`DailyFocusChunkDto`, `BookSliceDto`) without serializing or allocating `MicroQuiz` objects.
+
+#### Scenario: User queries today's reading slice
+- **WHEN** an authenticated user sends `GET /api/v1/daily/today`
+- **THEN** the returned `DailyFocusChunkDto` contains `id`, `chapterTitle`, `summaryMarkdown`, `originalTextMarkdown`, `keyTakeaways`, and `estimatedReadMinutes`, omitting any `microQuiz` key.
+
+#### Scenario: User queries book slice from library
+- **WHEN** a client sends `GET /api/v1/library/books/{id}/slices/{sliceOrder}`
+- **THEN** the returned `BookSliceDto` contains chapter metadata, original markdown, and key takeaways without `microQuiz` fields.

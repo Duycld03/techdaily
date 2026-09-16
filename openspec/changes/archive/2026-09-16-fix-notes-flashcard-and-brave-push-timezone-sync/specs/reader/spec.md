@@ -5,7 +5,7 @@ Defines delta requirements for Vue 3 Composition API lifecycle conformity in the
 
 ---
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Highlight Notes System & Flashcard Generation
 The Notes management interface (`/notes`) SHALL support converting reading highlights into active recall SM-2 flashcards via `POST /api/v1/review/cards/from-highlight`. Composable utilities (such as `useI18n`, `useToast`, `useReviewStore`, `useApiError`) SHALL be initialized and destructured exclusively at the synchronous top level of the `<script setup>` block in accordance with Vue 3 Composition API injection lifecycle constraints. Asynchronous event callbacks SHALL NOT invoke dependency-injecting composables inline.

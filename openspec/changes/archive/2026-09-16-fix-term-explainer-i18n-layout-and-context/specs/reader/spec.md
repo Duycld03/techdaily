@@ -1,6 +1,6 @@
 # Reader Capability Delta Specification
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Responsive Term Explainer Modal Layout
 The `TermExplainerModal` SHALL provide a responsive, overflow-resistant header layout that cleanly displays category metadata, term title, instant cache indicators, and modal dismiss controls across all screen sizes without text wrapping or button collision.

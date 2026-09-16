@@ -7,8 +7,12 @@ Enhances the technical reading experience with personal second-brain reflection 
 
 ## MODIFIED Requirements
 
-### Requirement: Scoped Floating Mini-Toolbar with In-Context Personal Reflection Capture
-The reader floating selection toolbar SHALL allow users to either instantly save a highlighted quote or attach personal reflection notes and technical tags (`POST /api/v1/notes/highlights`) via an expandable note popover directly above the selected text in `read/[bookId].vue`.
+### Requirement: Scoped Floating Mini-Toolbar & Active Recall Quiz
+The reader floating selection toolbar SHALL allow users to highlight text inside the markdown container (`✨ Explain with Gemini` and `📋 Copy`), save a highlighted quote, or attach personal reflection notes and technical tags (`POST /api/v1/notes/highlights`) via an expandable note popover directly above the selected text in `read/[bookId].vue`.
+
+#### Scenario: User highlights text in reader pane
+- **WHEN** user selects text inside the reader markdown container
+- **THEN** floating toolbar appears with Gemini Explainer and Copy actions.
 
 #### Scenario: User opens floating note popover on text selection
 - **WHEN** user selects technical text in the reader markdown pane and clicks `📝 Add Note`
@@ -24,7 +28,7 @@ The reader floating selection toolbar SHALL allow users to either instantly save
 
 ---
 
-## NEW Requirements
+## ADDED Requirements
 
 ### Requirement: 1-Click Active Recall Flashcard Generation from Highlights
 The system SHALL provide an automated bridge (`POST /api/v1/review/cards/from-highlight`) converting any highlighted quote and attached reflection note into an SM-2 spaced repetition flashcard via Google Gemini.

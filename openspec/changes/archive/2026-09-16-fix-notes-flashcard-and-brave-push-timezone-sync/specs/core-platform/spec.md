@@ -8,7 +8,19 @@ Defines delta requirements for auto-syncing the user's timezone during browser W
 ## MODIFIED Requirements
 
 ### Requirement: Web Push Subscription & VAPID Infrastructure
-The `POST /api/v1/notifications/push/subscribe` endpoint SHALL accept an optional `timeZone` string parameter alongside the endpoint, subscription keys, and user agent. When provided, the backend SHALL validate and persist this timezone to `User.TimeZone`, updating `User.UpdatedAt` and `User.IsPushEnabled = true` within the same transaction. The frontend Web Push composable (`useWebPush`) SHALL automatically detect the client browser's IANA timezone and include it in the subscription payload.
+The system SHALL implement modern browser Web Push using Voluntary Application Server Identification (VAPID) across standard browser push endpoints (FCM, Apple Web Push, Mozilla autopush). The `POST /api/v1/notifications/push/subscribe` endpoint SHALL accept an optional `timeZone` string parameter alongside the endpoint, subscription keys, and user agent. When provided, the backend SHALL validate and persist this timezone to `User.TimeZone`, updating `User.UpdatedAt` and `User.IsPushEnabled = true` within the same transaction. The frontend Web Push composable (`useWebPush`) SHALL automatically detect the client browser's IANA timezone and include it in the subscription payload.
+
+#### Scenario: Client retrieves VAPID public key
+- **WHEN** an authenticated client calls `GET /api/v1/notifications/push/vapid-public-key`
+- **THEN** the server returns the base64url-encoded VAPID public key configured in `WebPush:VapidPublicKey`.
+
+#### Scenario: Client subscribes browser device to push notifications
+- **WHEN** an authenticated user enables push and sends `POST /api/v1/notifications/push/subscribe` with `endpoint`, `keys.p256dh`, `keys.auth`, and optional `userAgent`
+- **THEN** the system upserts the record into `UserPushSubscriptions`, sets `User.IsPushEnabled = true`, and returns `HTTP 200 OK`.
+
+#### Scenario: Client unsubscribes browser device
+- **WHEN** a client sends `POST /api/v1/notifications/push/unsubscribe` with `endpoint`
+- **THEN** the system removes the subscription record, and sets `User.IsPushEnabled = false` if no remaining active subscriptions exist for that user.
 
 #### Scenario: Client subscribes to push notifications with detected timezone
 - **WHEN** an authenticated user calls `POST /api/v1/notifications/push/subscribe` with valid push keys and `timeZone: "Asia/Ho_Chi_Minh"`
@@ -24,8 +36,7 @@ The `POST /api/v1/notifications/push/subscribe` endpoint SHALL accept an optiona
 
 ---
 
-## NEW Requirements
-
+## ADDED Requirements
 ### Requirement: Brave Browser Push Service Restriction Handling & Actionable Guidance
 The client-side Web Push composable (`useWebPush`) and Settings view (`settings.vue`) SHALL detect when push subscription fails due to browser-level push service restrictions (such as Brave browser disabling Google services for push messaging by default), classify the restriction, and present clear, localized, actionable instructions directing the user to `brave://settings/privacy`.
 

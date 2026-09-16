@@ -73,11 +73,25 @@ The system SHALL automatically record the user's latest read slice for each book
 ---
 
 ### Requirement: Scoped Floating Mini-Toolbar & Active Recall Quiz
-The reader SHALL support highlighting text inside the markdown container to show a discreet floating action bar (`✨ Explain with Gemini` and `📋 Copy`), and optionally render an interactive Micro Quiz check at the end of the chapter.
+The reader floating selection toolbar SHALL allow users to highlight text inside the markdown container (`✨ Explain with Gemini` and `📋 Copy`), save a highlighted quote, or attach personal reflection notes and technical tags (`POST /api/v1/notes/highlights`) via an expandable note popover directly above the selected text in `read/[bookId].vue`.
 
 #### Scenario: User highlights text in reader pane
 - **WHEN** user selects text inside the reader markdown container
 - **THEN** floating toolbar appears with Gemini Explainer and Copy actions.
+
+#### Scenario: User opens floating note popover on text selection
+- **WHEN** user selects technical text in the reader markdown pane and clicks `📝 Add Note`
+- **THEN** an inline popover appears above the selection containing the quote preview, a multi-line note textarea, a tag input field, and action buttons (`Save Note`, `Cancel`).
+
+#### Scenario: User saves a highlight with attached personal reflection
+- **WHEN** user types a reflection note into the popover and clicks `Save Note`
+- **THEN** the client dispatches `POST /api/v1/notes/highlights` with `selectedText`, `documentChunkId`, `note`, and `tags`, persists the highlight note in PostgreSQL, displays a localized confirmation toast, and smoothly closes the popover.
+
+#### Scenario: User saves a simple highlight without a note
+- **WHEN** user selects text and clicks `Highlight` without opening the note popover
+- **THEN** the system saves the highlight with `note = null` and displays a confirmation toast.
+
+---
 
 ### Requirement: Sanitized Markdown Rendering and Code Block Copying
 The reader SHALL sanitize markdown rendering by suppressing duplicate first-line headings that match the active slice chapter title, formatting inline code without intrusive default pseudo-element backticks, parsing technical alert callouts (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) into distinct semantic callout boxes with dedicated icons without decorative quotation marks, and providing reliable one-click copy buttons on all code fences without throwing unhandled exceptions.
@@ -315,3 +329,91 @@ All AI generation and RAG endpoints (`/ask`, `/explain-term`, `/quiz/generate`) 
 #### Scenario: Request input bounds validation
 - **WHEN** a user submits an Ask Book question exceeding 300 characters or under 3 characters
 - **THEN** the request fails validation immediately with `HTTP 400 Bad Request`, preventing prompt injection and excessive token consumption.
+
+### Requirement: Responsive Term Explainer Modal Layout
+The `TermExplainerModal` SHALL provide a responsive, overflow-resistant header layout that cleanly displays category metadata, term title, instant cache indicators, and modal dismiss controls across all screen sizes without text wrapping or button collision.
+
+#### Scenario: Long book category title with cache hit
+- **WHEN** user opens the term explainer modal for a term whose category/book title exceeds 30 characters and the term was resolved from the cache (`isFromCache == true`)
+- **THEN** the category text is truncated cleanly with an ellipsis (`truncate max-w-[180px] sm:max-w-xs`), the `⚡ Instant Cache` badge maintains a single line with `whitespace-nowrap shrink-0`, and the modal close button remains unclipped and interactive at `shrink-0`.
+
+#### Scenario: Mobile viewport header containment
+- **WHEN** user views the term explainer modal on a mobile device (<640px viewport width)
+- **THEN** the header elements respect flex boundaries (`min-w-0 flex-1`), preventing horizontal scroll or content leaking outside the modal container.
+
+---
+
+### Requirement: Comprehensive i18n Localization in Reader Term Explainer
+All copy inside `TermExplainerModal` SHALL be fully localized through the platform's internationalization framework (`useI18n`), dynamically rendering translated labels for cache status, loading animations, branding footers, and copy-to-clipboard interactions based on the active locale (`en` or `vi`).
+
+#### Scenario: Explainer modal rendered in Vietnamese locale
+- **WHEN** a user with locale set to Vietnamese (`vi`) opens the term explainer modal
+- **THEN** the cache badge displays "⚡ Bộ nhớ tức thì", the loading state displays "Đang phân tích thuật ngữ với Google Gemini...", the footer displays "Được hỗ trợ bởi Google Gemini", and the action button displays "Sao chép giải thích" (transitioning to "Đã sao chép" upon click).
+
+#### Scenario: Explainer modal rendered in English locale
+- **WHEN** a user with locale set to English (`en`) opens the term explainer modal
+- **THEN** all modal copy displays corresponding English translations without missing key warnings or raw localization fallback keys.
+
+---
+
+### Requirement: Surrounding Document Context Extraction for In-Reader Term Explanations
+When invoking the AI term explainer from an active text selection in `/read/[bookId]`, the reader SHALL extract the surrounding document context from the enclosing DOM element (up to 500 characters enclosing the selected term) and pass this text to `currentContext`, falling back to the chapter title only when surrounding DOM text is unavailable.
+
+#### Scenario: User selects a term inside a narrative paragraph
+- **WHEN** user selects a technical term (such as "Write-Ahead Log") within a paragraph in the reader pane
+- **THEN** the reader captures up to 500 characters of the surrounding paragraph text encompassing the selection and sends it as the `context` parameter to the `/explain-term` API request.
+
+#### Scenario: Context extraction within dense code or list elements
+- **WHEN** user selects a term within an inline code block or list item
+- **THEN** the reader traverses to the nearest parent block container (`p`, `li`, `blockquote`, `div`), retrieves up to 500 characters of surrounding text, and supplies it as contextual grounding.
+
+#### Scenario: Fallback when selection container text is inaccessible
+- **WHEN** the selected text DOM node cannot be resolved or contains no additional textual context
+- **THEN** the reader gracefully defaults `currentContext` to the active slice chapter title (`currentChunk.chapterTitle`).
+
+---
+
+### Requirement: 1-Click Active Recall Flashcard Generation from Highlights
+The system SHALL provide an automated bridge (`POST /api/v1/review/cards/from-highlight`) converting any highlighted quote and attached reflection note into an SM-2 spaced repetition flashcard via Google Gemini.
+
+#### Scenario: User transforms a highlight into an active recall card
+- **WHEN** user clicks `⚡ Turn into Flashcard` from the reader note popover or from `/notes`
+- **THEN** the backend fetches the highlight and chapter context, prompts Google Gemini to synthesize a conceptual challenge question (`Front`) and architectural explanation (`Back`), saves a new `SpacedRepetitionCard` with `SourceType = CardSourceType.Highlight`, and schedules it for immediate review in `/review`.
+
+#### Scenario: Duplicate flashcard creation prevention
+- **WHEN** user attempts to turn the same highlight into a flashcard multiple times
+- **THEN** the system detects the existing card by `SourceHighlightId`, returns the existing card details without creating redundant duplicate database records, and notifies the user.
+
+#### Scenario: Gemini synthesis failure fallback
+- **WHEN** the AI service is unavailable or rate-limited during flashcard generation
+- **THEN** the system generates a structured fallback flashcard using the highlighted quote as the prompt context and the attached note or chapter summary as the answer, ensuring the review card is successfully provisioned.
+
+---
+
+### Requirement: Obsidian and Notion Markdown Book Exporter
+The system SHALL expose an automated export endpoint (`GET /api/v1/library/books/{id}/export-markdown`) compiling a book's metadata, chapter summaries, key takeaways, and user highlights/notes into a standardized Markdown file with YAML frontmatter suitable for Obsidian, Logseq, and Notion vaults.
+
+#### Scenario: User downloads book notes as Obsidian Markdown
+- **WHEN** user clicks `Export to Obsidian / Markdown` in the reader drawer or book details modal
+- **THEN** the browser downloads `{book-slug}-notes.md` with `Content-Type: text/markdown; charset=utf-8`.
+
+#### Scenario: Exported file YAML frontmatter structure
+- **WHEN** the export file is generated
+- **THEN** the file begins with a valid YAML frontmatter block enclosed by `---` containing `title`, `author`, `category`, `source_url`, `exported_at`, `total_chapters`, `total_highlights`, and array of `tags`.
+
+#### Scenario: Chapter highlights formatting with personal notes
+- **WHEN** the export compiles a chapter containing user highlights
+- **THEN** each highlight renders as a Markdown blockquote (`> "Quote text..."`), followed immediately by `**Personal Note:** {note}` and formatted hashtag chips (`#tag1 #tag2`), correctly linking the author's words with the engineer's reflections.
+
+### Requirement: Highlight Notes System & Flashcard Generation
+The Notes management interface (`/notes`) SHALL support converting reading highlights into active recall SM-2 flashcards via `POST /api/v1/review/cards/from-highlight`. Composable utilities (such as `useI18n`, `useToast`, `useReviewStore`, `useApiError`) SHALL be initialized and destructured exclusively at the synchronous top level of the `<script setup>` block in accordance with Vue 3 Composition API injection lifecycle constraints. Asynchronous event callbacks SHALL NOT invoke dependency-injecting composables inline.
+
+#### Scenario: User generates flashcard from highlight in notes view
+- **WHEN** an authenticated user clicks "Flashcard SM-2" on any saved reading highlight in `/notes`
+- **THEN** the handler reads the synchronously captured `locale` ref without triggering a `[vue-i18n] Not found injection "vue-i18n"` runtime exception
+- **AND** the client invokes `POST /api/v1/review/cards/from-highlight` passing the highlight ID and resolved locale string
+- **AND** upon successful generation, displays the localized success toast (`notes.toast_flashcard_success`) and marks the highlight card as generated.
+
+#### Scenario: Error handling during flashcard generation in notes view
+- **WHEN** the backend returns an error or network connection fails during flashcard creation from `/notes`
+- **THEN** the handler catches the error, releases the loading lock (`creatingCardHighlightId = null`), and displays a localized error toast (`notes.toast_flashcard_error`) without unhandled client crashes.

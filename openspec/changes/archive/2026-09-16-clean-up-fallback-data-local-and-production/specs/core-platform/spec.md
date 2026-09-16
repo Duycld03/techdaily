@@ -11,6 +11,12 @@ The system SHALL provide a batched backfill mechanism (`CurriculumSeeder.Backfil
 
 The backfill mechanism SHALL vectorize chunks using Google Gemini model `gemini-embedding-001` specifying `"outputDimensionality": 768`, assert that returned vectors have a length of exactly 768 floats, pace requests with an inter-batch delay to respect API rate limits, and persist changes transactionally.
 
+#### Scenario: Backfill encounters embedding service failure
+- **WHEN** `CurriculumSeeder.BackfillEmbeddingsAsync` executes during startup and `IEmbeddingService.GenerateBatchEmbeddingsAsync` returns a failure result
+- **THEN** the seeder logs an error message detailing the embedding failure
+- **AND** does NOT save changes to `DocumentChunks`
+- **AND** leaves unvectorized chunks with `Embedding = null` in the database.
+
 #### Scenario: Backfill processes all unvectorized chunks across multiple batches
 - **WHEN** the maintenance backfill runner executes against a database with 465 unvectorized document chunks
 - **THEN** the runner processes chunks in sequential batches of 25
@@ -30,6 +36,21 @@ AI content generation services SHALL standardize text generation on Google Gemin
 
 Application database tables (`TermExplanationCaches`, `TechInsights`, `QuizQuestions`, `SpacedRepetitionCards`) SHALL NOT contain synthetic mock records, canned boilerplate explanations, or un-synthesized flashcard templates. Any such records identified by database hygiene maintenance runners SHALL be purged.
 
+#### Scenario: AI insight generation fails
+- **WHEN** `GenerateInsightHandler` invokes `ITechInsightGenerator.GenerateInsightAsync` and Gemini API fails
+- **THEN** the generator returns `Result<TechInsight>.Failure`
+- **AND** the handler returns `Result<TechInsightDto>.Failure` without adding any record to the `TechInsights` table.
+
+#### Scenario: AI quiz question generation fails
+- **WHEN** `GenerateQuizHandler` requests new questions from `IQuizGeneratorService` and Gemini API fails
+- **THEN** the service returns `Result<List<QuizQuestion>>.Failure`
+- **AND** the handler does NOT persist canned mock questions to the `QuizQuestions` table.
+
+#### Scenario: Active recall flashcard synthesis fails
+- **WHEN** `CreateCardFromHighlightHandler` requests flashcard synthesis from `IGeminiAiService.SynthesizeActiveRecallCardAsync` and Gemini API fails
+- **THEN** the service returns `Result.Failure`
+- **AND** the handler returns `Result<CreateCardFromHighlightResponse>.Failure` without inserting a fallback card into `SpacedRepetitionCards`.
+
 #### Scenario: Detection of legacy boilerplate flashcards
 - **WHEN** a database maintenance scan evaluates `SpacedRepetitionCards`
 - **AND** a card has `SourceType = 'Highlight'` with front matching `"What is the core architectural principle behind: %"` or `"Nguyên lý kiến trúc cốt lõi đằng sau trích dẫn trong %"`
@@ -44,8 +65,7 @@ Application database tables (`TermExplanationCaches`, `TechInsights`, `QuizQuest
 
 ---
 
-## NEW Requirements
-
+## ADDED Requirements
 ### Requirement: Database Hygiene & Tainted Data Elimination
 The platform SHALL provide an operational data hygiene capability to identify, analyze, and purge synthetic, boilerplate, or corrupted fallback data across `TermExplanationCaches`, `TechInsights`, `QuizQuestions`, and `SpacedRepetitionCards`.
 
