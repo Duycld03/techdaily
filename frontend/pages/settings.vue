@@ -99,7 +99,11 @@ async function handleTogglePush() {
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Push notification error'
-    toast.error(msg)
+    if (msg === 'settings.brave_push_service_blocked' || msg.toLowerCase().includes('push service error')) {
+      toast.error(t('settings.brave_push_service_blocked'), 8000)
+    } else {
+      toast.error(msg)
+    }
   }
 }
 

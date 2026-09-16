@@ -329,6 +329,7 @@
     "web_push_enabled_desc": "Active on this device.",
     "web_push_disabled_desc": "Disabled on this device.",
     "web_push_not_supported": "Web Push is not supported by your current browser environment.",
+    "brave_push_service_blocked": "Brave browser blocks Google push services by default. Please enable 'Use Google services for push messaging' at brave://settings/privacy and restart Brave to receive notifications.",
     "web_push_test_btn": "Send Test Push",
     "web_push_test_sending": "Sending...",
     "web_push_test_success": "Test push notification sent successfully!",

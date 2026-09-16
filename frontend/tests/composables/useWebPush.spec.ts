@@ -100,8 +100,49 @@ describe('useWebPush (Browser Web Push & VAPID)', () => {
         p256dh: 'test-p256dh',
         auth: 'test-auth'
       },
-      userAgent: expect.any(String)
+      userAgent: expect.any(String),
+      timeZone: expect.any(String)
     })
+  })
+
+  it('classifies error as settings.brave_push_service_blocked when subscribe fails with push service error', async () => {
+    mockGet.mockResolvedValueOnce({ publicKey: 'BIk1JIgP1yE25O8mFA3cw4VV1R73s78sKQlnqN9X4LOqnFFW4auAtwtqh8W9XTpmrwWVGSKTb15lNhkyQ5rJnK0' })
+    const reg = await navigator.serviceWorker.ready
+    vi.spyOn(reg.pushManager, 'subscribe').mockRejectedValueOnce(new Error('push service error: registration failed'))
+
+    const { subscribeUser, error } = useWebPush()
+    await expect(subscribeUser()).rejects.toThrow('settings.brave_push_service_blocked')
+    expect(error.value).toBe('settings.brave_push_service_blocked')
+  })
+
+  it('classifies error as settings.brave_push_service_blocked when subscribe fails with Registration failed', async () => {
+    mockGet.mockResolvedValueOnce({ publicKey: 'BIk1JIgP1yE25O8mFA3cw4VV1R73s78sKQlnqN9X4LOqnFFW4auAtwtqh8W9XTpmrwWVGSKTb15lNhkyQ5rJnK0' })
+    const reg = await navigator.serviceWorker.ready
+    vi.spyOn(reg.pushManager, 'subscribe').mockRejectedValueOnce(new Error('Registration failed - push service disabled'))
+
+    const { subscribeUser, error } = useWebPush()
+    await expect(subscribeUser()).rejects.toThrow('settings.brave_push_service_blocked')
+    expect(error.value).toBe('settings.brave_push_service_blocked')
+  })
+
+  it('classifies error as settings.brave_push_service_blocked when Brave browser is detected', async () => {
+    mockGet.mockResolvedValueOnce({ publicKey: 'BIk1JIgP1yE25O8mFA3cw4VV1R73s78sKQlnqN9X4LOqnFFW4auAtwtqh8W9XTpmrwWVGSKTb15lNhkyQ5rJnK0' })
+    const reg = await navigator.serviceWorker.ready
+    vi.spyOn(reg.pushManager, 'subscribe').mockRejectedValueOnce(new Error('Generic failure'))
+
+    Object.defineProperty(global.navigator, 'brave', {
+      value: { isBrave: () => Promise.resolve(true) },
+      writable: true,
+      configurable: true
+    })
+
+    const { subscribeUser, error } = useWebPush()
+    try {
+      await expect(subscribeUser()).rejects.toThrow('settings.brave_push_service_blocked')
+      expect(error.value).toBe('settings.brave_push_service_blocked')
+    } finally {
+      Reflect.deleteProperty(global.navigator, 'brave')
+    }
   })
 
   it('handles permission denial gracefully without subscribing', async () => {

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
 using TechDaily.Infrastructure.Persistence;
+using TechDaily.Infrastructure.Workers;
 
 namespace TechDaily.Api.Endpoints;
 
@@ -12,8 +13,8 @@ public record PushSubscriptionKeys(string P256dh, string Auth);
 public record SubscribePushRequest(
     string Endpoint,
     PushSubscriptionKeys Keys,
-    string? UserAgent
-);
+    string? UserAgent = null,
+    string? TimeZone = null);
 
 public record UnsubscribePushRequest(string Endpoint);
 
@@ -78,6 +79,13 @@ public static class NotificationEndpoints
                     CreatedAt = DateTime.UtcNow
                 };
                 await db.UserPushSubscriptions.AddAsync(newSub, ct);
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.TimeZone))
+            {
+                var resolvedTz = DailyPushNotificationWorker.ResolveTimeZone(request.TimeZone.Trim());
+                user.TimeZone = resolvedTz.Id;
+                user.UpdatedAt = DateTime.UtcNow;
             }
 
             user.IsPushEnabled = true;

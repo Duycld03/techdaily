@@ -75,6 +75,7 @@ public class DailyPushNotificationWorkerTests : IDisposable
     public void ResolveTimeZone_ValidAndInvalid_ShouldResolveOrFallbackToUtc()
     {
         DailyPushNotificationWorker.ResolveTimeZone("UTC").Id.Should().Be(TimeZoneInfo.Utc.Id);
+        DailyPushNotificationWorker.ResolveTimeZone("Asia/Ho_Chi_Minh").Id.Should().Be("Asia/Ho_Chi_Minh");
         DailyPushNotificationWorker.ResolveTimeZone("Invalid/Timezone/String_XYZ").Id.Should().Be(TimeZoneInfo.Utc.Id);
         DailyPushNotificationWorker.ResolveTimeZone(null).Id.Should().Be(TimeZoneInfo.Utc.Id);
     }

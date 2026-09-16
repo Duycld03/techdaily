@@ -75,10 +75,26 @@ export function useWebPush() {
 
       // 3. Subscribe to push manager
       const applicationServerKey = urlBase64ToUint8Array(publicKey)
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey
-      })
+      let sub: PushSubscription
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey
+        })
+      } catch (err: unknown) {
+        const nav = typeof navigator !== 'undefined' ? (navigator as unknown as { brave?: { isBrave?: () => unknown } }) : null
+        const isBrave = Boolean(nav?.brave && typeof nav.brave.isBrave === 'function')
+        const errMsg = err instanceof Error ? err.message : String(err)
+        if (
+          errMsg.includes('push service error') ||
+          errMsg.includes('Registration failed') ||
+          isBrave
+        ) {
+          error.value = 'settings.brave_push_service_blocked'
+          throw new Error('settings.brave_push_service_blocked')
+        }
+        throw err
+      }
 
       // 4. Extract keys and send to backend
       const json = sub.toJSON()
@@ -86,15 +102,17 @@ export function useWebPush() {
         throw new Error('Incomplete push subscription payload from browser.')
       }
 
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+
       await api.post('/api/v1/notifications/push/subscribe', {
         endpoint: json.endpoint,
         keys: {
           p256dh: json.keys.p256dh,
           auth: json.keys.auth
         },
-        userAgent: navigator.userAgent
+        userAgent: navigator.userAgent,
+        timeZone
       })
-
       isSubscribed.value = true
       return true
     } catch (err: unknown) {

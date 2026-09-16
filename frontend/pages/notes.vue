@@ -7,7 +7,7 @@ import { useReviewStore } from '~/stores/useReviewStore'
 import { useApiError } from '~/composables/useApiError'
 import MarkdownIt from 'markdown-it'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { formatError } = useApiError()
 const notesStore = useNotesStore()
 const insightsStore = useInsightsStore()
@@ -19,7 +19,7 @@ const createdCardHighlightIds = ref<Set<string>>(new Set())
 async function handleCreateFlashcard(highlightId: string) {
   creatingCardHighlightId.value = highlightId
   try {
-    const localeVal = (useI18n().locale.value as string) || 'en'
+    const localeVal = (locale.value as string) || 'en'
     await reviewStore.createCardFromHighlight(highlightId, localeVal)
     createdCardHighlightIds.value.add(highlightId)
     toast.success(t('notes.toast_flashcard_success'))

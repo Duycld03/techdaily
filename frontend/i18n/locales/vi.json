@@ -329,6 +329,7 @@
     "web_push_enabled_desc": "Đang hoạt động trên thiết bị này.",
     "web_push_disabled_desc": "Đang tắt trên thiết bị này.",
     "web_push_not_supported": "Trình duyệt hiện tại không hỗ trợ Web Push.",
+    "brave_push_service_blocked": "Trình duyệt Brave mặc định chặn dịch vụ push của Google. Vui lòng bật 'Sử dụng dịch vụ của Google cho tin nhắn đẩy' tại brave://settings/privacy và khởi động lại Brave để nhận thông báo.",
     "web_push_test_btn": "Gửi Thông Báo Thử",
     "web_push_test_sending": "Đang gửi...",
     "web_push_test_success": "Đã gửi thông báo thử thành công!",
