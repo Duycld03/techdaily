@@ -8,12 +8,10 @@ import {
   Lock,
   Mail,
   Briefcase,
-  Globe,
   Save,
   Eye,
   EyeOff,
   Target,
-  Clock,
   Compass
 } from 'lucide-vue-next'
 import { useApiError } from '~/composables/useApiError'
@@ -32,17 +30,6 @@ const hasAvatarError = ref(false)
 const name = ref('')
 const targetRole = ref('Senior Engineer')
 const dailyGoalMinutes = ref(10)
-const preferredStudyTime = ref('08:00')
-const streakAlertTime = ref('20:00')
-const timeZone = ref(
-  (() => {
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-    } catch {
-      return 'UTC'
-    }
-  })()
-)
 // Password form state
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -104,17 +91,6 @@ onMounted(async () => {
     name.value = data.user.name
     targetRole.value = data.user.targetRole || 'Senior Engineer'
     dailyGoalMinutes.value = data.user.dailyGoalMinutes || 10
-    if (data.user.preferredStudyTime) preferredStudyTime.value = data.user.preferredStudyTime
-    if (data.user.streakAlertTime) streakAlertTime.value = data.user.streakAlertTime
-    if (data.user.timeZone && data.user.timeZone !== 'UTC') {
-      timeZone.value = data.user.timeZone
-    } else {
-      try {
-        timeZone.value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-      } catch {
-        timeZone.value = 'UTC'
-      }
-    }
   }
 })
 
@@ -123,10 +99,7 @@ async function handleProfileSave() {
     await profileStore.updateProfile({
       name: name.value.trim(),
       targetRole: targetRole.value,
-      dailyGoalMinutes: dailyGoalMinutes.value,
-      preferredStudyTime: preferredStudyTime.value,
-      streakAlertTime: streakAlertTime.value,
-      timeZone: timeZone.value
+      dailyGoalMinutes: dailyGoalMinutes.value
     })
 
     toast.success(t('profile.save_success'))
@@ -352,48 +325,6 @@ async function handlePasswordChange() {
             >
               {{ opt.label }}
             </button>
-          </div>
-        </div>
-
-        <!-- Study Schedule & Timezone -->
-        <div class="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 space-y-3">
-          <div class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-            <Clock class="w-3.5 h-3.5 text-brand-500" />
-            <span>{{ $t('settings.schedule_title') }}</span>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {{ $t('settings.preferred_study_time') }}
-              </label>
-              <input
-                type="time"
-                v-model="preferredStudyTime"
-                class="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {{ $t('settings.streak_alert_time') }}
-              </label>
-              <input
-                type="time"
-                v-model="streakAlertTime"
-                class="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {{ $t('profile.timezone_detected') }}
-              </label>
-              <div
-                class="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
-                :title="$t('profile.timezone_desc')"
-              >
-                <Globe class="w-3.5 h-3.5 text-brand-500 shrink-0" />
-                <span class="truncate">{{ timeZone }}</span>
-              </div>
-            </div>
           </div>
         </div>
 
