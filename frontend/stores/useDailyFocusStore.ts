@@ -27,13 +27,6 @@ export interface InterviewQuestion {
   difficulty: number
 }
 
-export interface MicroQuiz {
-  question: string
-  options: string[]
-  answerIndex: number
-  explanation: string
-}
-
 export interface DocumentChunk {
   id: string
   chunkOrder: number
@@ -41,7 +34,6 @@ export interface DocumentChunk {
   originalTextMarkdown: string
   summaryMarkdown: string
   keyTakeaways: string[]
-  microQuiz: MicroQuiz
   language: string
   estimatedReadMinutes: number
 }

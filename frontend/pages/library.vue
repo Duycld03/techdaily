@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles } from 'lucide-vue-next'
+import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download } from 'lucide-vue-next'
 import { useApiError } from '~/composables/useApiError'
 
 const { t, locale } = useI18n()
@@ -11,6 +11,19 @@ const toast = useToast()
 const searchQuery = ref('')
 const selectedCategory = ref<number | undefined>(undefined)
 const bookmarks = ref<Record<string, number>>({})
+const exportingBookId = ref<string | null>(null)
+
+async function handleExportBook(book: any) {
+  exportingBookId.value = book.id
+  try {
+    await libraryStore.exportBookMarkdown(book.id, book.slug)
+    toast.success(t('reader.toast_export_success') || 'Notes exported successfully!')
+  } catch (err: any) {
+    toast.error(err.message || 'Failed to export notes.')
+  } finally {
+    exportingBookId.value = null
+  }
+}
 
 // Import modal state
 const isImportModalOpen = ref(false)
@@ -388,6 +401,15 @@ async function confirmDeleteBook() {
               :aria-label="$t('library.delete_doc')"
             >
               <Trash2 class="w-4 h-4" />
+            </button>
+            <button
+              @click.stop="handleExportBook(book)"
+              :disabled="exportingBookId === book.id"
+              class="p-2 rounded-xl text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/40 border border-transparent hover:border-brand-200 dark:hover:border-brand-900/50 transition-colors shrink-0 disabled:opacity-50"
+              :title="$t('reader.export_obsidian')"
+              :aria-label="$t('reader.export_obsidian')"
+            >
+              <Download class="w-4 h-4" />
             </button>
             <span class="text-xs text-slate-400 font-medium truncate hidden sm:inline">GitBook Reader</span>
           </div>

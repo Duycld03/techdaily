@@ -4,7 +4,12 @@ import { useApiClient } from '~/composables/useApiClient'
 
 export interface ReviewCard {
   id: string
-  topicId: string
+  topicId?: string
+  sourceType?: number
+  frontMarkdown?: string
+  backMarkdown?: string
+  sourceHighlightId?: string
+  sourceQuizQuestionId?: string
   topicTitle: string
   category: number
   difficulty: number
@@ -58,6 +63,24 @@ export const useReviewStore = defineStore('review', () => {
     }
   }
 
+  async function createCardFromHighlight(highlightId: string, locale = 'en') {
+    const api = useApiClient()
+    const res = await api.post<{ cardId: string; front: string; back: string }>(
+      '/api/v1/review/cards/from-highlight',
+      { highlightId, locale }
+    )
+    return res
+  }
+
+  async function createCardFromQuizMistake(questionId: string) {
+    const api = useApiClient()
+    const res = await api.post<{ cardId: string }>(
+      '/api/v1/review/cards/from-quiz-mistake',
+      { questionId }
+    )
+    return res
+  }
+
   return {
     cards,
     totalCardsDue,
@@ -66,6 +89,8 @@ export const useReviewStore = defineStore('review', () => {
     isGrading,
     error,
     fetchReviewDeck,
-    gradeCard
+    gradeCard,
+    createCardFromHighlight,
+    createCardFromQuizMistake,
   }
 })

@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
 using TechDaily.Domain.Enums;
-using TechDaily.Domain.ValueObjects;
 
 namespace TechDaily.Infrastructure.Services;
 
@@ -143,13 +142,6 @@ public class LookAheadBufferService : ILookAheadBufferService
 
         await dbContext.InterviewQuestions.AddAsync(question, cancellationToken);
 
-        chunk.MicroQuiz = new MicroQuizVo
-        {
-            Question = question.QuestionText,
-            Options = question.Options,
-            AnswerIndex = question.CorrectOptionIndex,
-            Explanation = question.ExplanationMarkdown
-        };
 
         await dbContext.SaveChangesAsync(cancellationToken);
         return question;

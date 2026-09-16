@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Library.CrawlUrl;
@@ -8,6 +10,7 @@ using TechDaily.Application.Features.Library.GetBookStatus;
 using TechDaily.Application.Features.Library.GetBooks;
 using TechDaily.Application.Features.Library.ImportDocument;
 using TechDaily.Application.Features.Library.UploadPdf;
+using TechDaily.Application.Features.Library.ExportBookMarkdown;
 using TechDaily.Domain.Enums;
 
 namespace TechDaily.Api.Endpoints;
@@ -191,7 +194,41 @@ public static class LibraryEndpoints
         .RequireAuthorization()
         .WithName("CrawlWebDocument");
 
+        // Protected Book Markdown Export (Requires Authentication)
+        group.MapGet("/books/{id:guid}/export-markdown", async (
+            Guid id,
+            ClaimsPrincipal userClaims,
+            [FromServices] IUseCase<ExportBookMarkdownRequest, ExportBookMarkdownResponse> handler,
+            CancellationToken ct) =>
+        {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await handler.ExecuteAsync(new ExportBookMarkdownRequest(id, userId.Value), ct);
+            return result.Match(
+                success => Results.File(Encoding.UTF8.GetBytes(success.MarkdownContent), "text/markdown", success.FileName),
+                error => error == Error.NotFound
+                    ? Results.NotFound(new { code = error.Code, error = error.Message })
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+            );
+        })
+        .RequireAuthorization()
+        .WithName("ExportBookMarkdown");
+
         return app;
+    }
+
+    private static Guid? GetUserIdFromClaims(ClaimsPrincipal claims)
+    {
+        var idClaim = claims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(idClaim, out var guid))
+        {
+            return guid;
+        }
+        return null;
     }
 }
 

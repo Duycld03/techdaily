@@ -8,7 +8,6 @@ using TechDaily.Application.Features.Library.CurateSlice;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
 using TechDaily.Domain.Enums;
-using TechDaily.Domain.ValueObjects;
 using TechDaily.Infrastructure.Persistence;
 using Xunit;
 
@@ -117,8 +116,6 @@ public class CurateSliceHandlerTests : IDisposable
         // Verify entity updated in DB
         var updatedChunk = await _db.DocumentChunks.FirstAsync(c => c.DocumentBookId == bookId && c.ChunkOrder == 1);
         updatedChunk.IsAiFormatted.Should().BeTrue();
-        updatedChunk.MicroQuiz.Should().NotBeNull();
-        updatedChunk.MicroQuiz.Question.Should().Be("Scenario drill question?");
 
         var question = await _db.InterviewQuestions.FirstOrDefaultAsync(q => q.DocumentChunkId == chunk.Id);
         question.Should().NotBeNull();

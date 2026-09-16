@@ -5,7 +5,6 @@ using TechDaily.Application.Features.Library.DTOs;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
 using TechDaily.Domain.Enums;
-using TechDaily.Domain.ValueObjects;
 
 namespace TechDaily.Application.Features.Library.ImportDocument;
 
@@ -90,13 +89,6 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
                 Language = request.Language,
                 EstimatedReadMinutes = estimatedMinutes,
                 KeyTakeaways = new() { "Core Architecture Principle", "System Invariant" },
-                MicroQuiz = new MicroQuizVo
-                {
-                    Question = $"What is the primary architectural takeaway from {title}?",
-                    Options = new() { "Performance & Reliability", "Unnecessary Overhead", "Deprecation Notice", "Syntax sugar only" },
-                    AnswerIndex = 0,
-                    Explanation = "Core principle emphasizes robustness and performance efficiency."
-                }
             };
 
             book.Chunks.Add(chunk);

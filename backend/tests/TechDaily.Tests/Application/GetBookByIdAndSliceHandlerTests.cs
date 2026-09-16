@@ -5,7 +5,6 @@ using TechDaily.Application.Features.Library.GetBookById;
 using TechDaily.Application.Features.Library.GetBookSlice;
 using TechDaily.Domain.Entities;
 using TechDaily.Domain.Enums;
-using TechDaily.Domain.ValueObjects;
 using TechDaily.Infrastructure.Persistence;
 using Xunit;
 

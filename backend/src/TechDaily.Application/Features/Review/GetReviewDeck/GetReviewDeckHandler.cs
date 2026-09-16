@@ -1,3 +1,4 @@
+using TechDaily.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Review.DTOs;
@@ -36,11 +37,16 @@ public class GetReviewDeckHandler : IUseCase<GetReviewDeckRequest, GetReviewDeck
             {
                 Id = c.Id,
                 TopicId = c.TopicId,
-                TopicTitle = c.Topic.Title,
-                Category = c.Topic.Category,
-                Difficulty = c.Topic.Difficulty,
-                TopicSummary = c.Topic.Summary,
-                TopicDeepDiveMarkdown = c.Topic.DeepDiveMarkdown,
+                SourceType = c.SourceType,
+                SourceHighlightId = c.SourceHighlightId,
+                SourceQuizQuestionId = c.SourceQuizQuestionId,
+                FrontMarkdown = c.SourceType == CardSourceType.Topic && c.Topic != null ? c.Topic.Title : (c.FrontMarkdown ?? (c.Topic != null ? c.Topic.Title : string.Empty)),
+                BackMarkdown = c.SourceType == CardSourceType.Topic && c.Topic != null ? c.Topic.Summary : (c.BackMarkdown ?? (c.Topic != null ? c.Topic.Summary : string.Empty)),
+                TopicTitle = c.Topic != null ? c.Topic.Title : (c.FrontMarkdown ?? string.Empty),
+                Category = c.Topic != null ? c.Topic.Category : Category.FrontendWeb,
+                Difficulty = c.Topic != null ? c.Topic.Difficulty : Difficulty.Senior,
+                TopicSummary = c.Topic != null ? c.Topic.Summary : (c.BackMarkdown ?? string.Empty),
+                TopicDeepDiveMarkdown = c.Topic != null ? c.Topic.DeepDiveMarkdown : (c.BackMarkdown ?? string.Empty),
                 RepetitionCount = c.RepetitionCount,
                 EaseFactor = c.EaseFactor,
                 IntervalDays = c.IntervalDays,

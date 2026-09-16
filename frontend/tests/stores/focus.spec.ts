@@ -33,12 +33,6 @@ const mockFocusData = {
     originalTextMarkdown: 'Vue 3 Reactivity uses ES6 Proxy...',
     summaryMarkdown: 'Summary of Reactivity...',
     keyTakeaways: ['Proxy tracks get/set'],
-    microQuiz: {
-      question: 'What triggers track()?',
-      options: ['Property access', 'Destructure', 'Console log'],
-      answerIndex: 0,
-      explanation: 'Property access invokes Proxy get trap.'
-    },
     language: 'en',
     estimatedReadMinutes: 3
   },
@@ -110,7 +104,6 @@ describe('useDailyFocusStore', () => {
     expect(focus.data?.topic.title).toBe('Vue 3 Reactivity Engine')
     expect(focus.data?.question.options).toHaveLength(4)
     expect(focus.data?.currentStreak).toBe(5)
-    expect(focus.data?.documentChunk?.microQuiz?.answerIndex).toBe(0)
   })
 
   it('submits scenario option and updates state with score and explanation', async () => {

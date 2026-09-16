@@ -407,17 +407,6 @@ Leave the browser open with the Counter page loaded.
                 c.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
                 c.IsAiFormatted = true;
 
-                if (aiResult.Value.ScenarioDrill != null)
-                {
-                    var drill = aiResult.Value.ScenarioDrill;
-                    c.MicroQuiz = new TechDaily.Domain.ValueObjects.MicroQuizVo
-                    {
-                        Question = drill.QuestionText,
-                        Options = drill.Options,
-                        AnswerIndex = drill.CorrectOptionIndex,
-                        Explanation = drill.ExplanationMarkdown
-                    };
-                }
             }
             chunks.Add(c);
         }

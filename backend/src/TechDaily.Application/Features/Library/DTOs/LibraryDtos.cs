@@ -1,5 +1,4 @@
 using TechDaily.Domain.Enums;
-using TechDaily.Domain.ValueObjects;
 
 namespace TechDaily.Application.Features.Library.DTOs;
 
@@ -55,7 +54,6 @@ public class ChunkSummaryDto
     public string SummaryMarkdown { get; set; } = string.Empty;
     public string OriginalTextMarkdown { get; set; } = string.Empty;
     public List<string> KeyTakeaways { get; set; } = new();
-    public MicroQuizVo MicroQuiz { get; set; } = new();
     public int EstimatedReadMinutes { get; set; }
     public bool IsAiFormatted { get; set; }
 }

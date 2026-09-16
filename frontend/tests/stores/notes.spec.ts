@@ -41,6 +41,7 @@ vi.mock('~/composables/useApiClient', () => ({
             bookTitle: 'Clean Code',
             chapterTitle: 'Functions',
             selectedText: body.selectedText,
+            note: body.note,
             tags: body.tags || [],
             createdAt: '2026-08-31T12:00:00Z'
           }
@@ -80,6 +81,22 @@ describe('useNotesStore', () => {
 
     expect(notes.highlights).toHaveLength(3)
     expect(notes.highlights[0].selectedText).toContain('Functions should do one thing')
+  })
+
+  it('creates a new highlight with an attached personal reflection note and tags', async () => {
+    const notes = useNotesStore()
+    await notes.fetchHighlights()
+
+    const result = await notes.createHighlight({
+      documentChunkId: 'c-4',
+      selectedText: 'LSM-Trees append writes sequentially to WAL.',
+      note: 'Sequential writes turn random I/O into deterministic streaming.',
+      tags: ['storage', 'lsm-tree']
+    })
+
+    expect(result.note).toBe('Sequential writes turn random I/O into deterministic streaming.')
+    expect(result.tags).toEqual(['storage', 'lsm-tree'])
+    expect(notes.highlights[0].note).toBe('Sequential writes turn random I/O into deterministic streaming.')
   })
 
   it('deletes a highlight note', async () => {

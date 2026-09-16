@@ -28,6 +28,7 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
     public DbSet<QuizQuestion> QuizQuestions => Set<QuizQuestion>();
     public DbSet<UserQuizProgress> UserQuizProgresses => Set<UserQuizProgress>();
     public DbSet<UserBookPacer> UserBookPacers => Set<UserBookPacer>();
+    public DbSet<UserPushSubscription> UserPushSubscriptions => Set<UserPushSubscription>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -80,6 +81,15 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
                     modelBuilder.Entity(entityType.ClrType)
                         .Property(property.Name)
                         .HasConversion(new Microsoft.EntityFrameworkCore.Storage.ValueConversion.DateTimeOffsetToBinaryConverter());
+                }
+
+                var timeProperties = entityType.ClrType.GetProperties()
+                    .Where(p => p.PropertyType == typeof(TimeOnly) || p.PropertyType == typeof(TimeOnly?));
+                foreach (var property in timeProperties)
+                {
+                    modelBuilder.Entity(entityType.ClrType)
+                        .Property(property.Name)
+                        .HasConversion<string>();
                 }
             }
         }

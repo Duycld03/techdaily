@@ -28,7 +28,6 @@ export interface ChunkSummary {
   keyTakeaways: string[];
   estimatedReadMinutes: number;
   isAiFormatted?: boolean;
-  microQuiz?: any;
 }
 
 
@@ -268,6 +267,12 @@ export const useLibraryStore = defineStore("library", () => {
     inFlightCurations.set(key, promise);
     return promise;
   }
+  async function exportBookMarkdown(bookId: string, slug?: string) {
+    const api = useApiClient();
+    const defaultName = `${slug || 'book'}-notes.md`;
+    await api.download(`/api/v1/library/books/${bookId}/export-markdown`, defaultName);
+  }
+
 
 
   return {
@@ -285,5 +290,6 @@ export const useLibraryStore = defineStore("library", () => {
     crawlUrl,
     deleteBook,
     curateSlice,
+    exportBookMarkdown,
   };
 });

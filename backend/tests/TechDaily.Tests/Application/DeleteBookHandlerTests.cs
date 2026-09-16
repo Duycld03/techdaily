@@ -5,7 +5,6 @@ using TechDaily.Application.Common;
 using TechDaily.Application.Features.Library.DeleteBook;
 using TechDaily.Domain.Entities;
 using TechDaily.Domain.Enums;
-using TechDaily.Domain.ValueObjects;
 using TechDaily.Infrastructure.Persistence;
 using Xunit;
 
@@ -59,13 +58,6 @@ public class DeleteBookHandlerTests : IDisposable
             OriginalTextMarkdown = "# Scalability\nHigh throughput design.",
             SummaryMarkdown = "High throughput.",
             KeyTakeaways = new() { "Horizontal scaling" },
-            MicroQuiz = new MicroQuizVo
-            {
-                Question = "What is horizontal scaling?",
-                Options = new() { "Adding more nodes", "Upgrading CPU", "Using SQLite", "None" },
-                AnswerIndex = 0,
-                Explanation = "Adding nodes is horizontal scaling."
-            }
         };
 
         await _db.DocumentBooks.AddAsync(book);

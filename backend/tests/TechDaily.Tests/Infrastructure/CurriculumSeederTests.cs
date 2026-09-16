@@ -38,11 +38,6 @@ public class CurriculumSeederTests
             chunk.OriginalTextMarkdown.Should().NotBeNullOrWhiteSpace();
             chunk.SummaryMarkdown.Should().NotBeNullOrWhiteSpace();
             chunk.KeyTakeaways.Should().NotBeEmpty();
-            chunk.MicroQuiz.Should().NotBeNull();
-            chunk.MicroQuiz.Question.Should().NotBeNullOrWhiteSpace();
-            chunk.MicroQuiz.Options.Should().HaveCount(4);
-            chunk.MicroQuiz.AnswerIndex.Should().BeInRange(0, 3);
-            chunk.MicroQuiz.Explanation.Should().NotBeNullOrWhiteSpace();
         }
     }
 

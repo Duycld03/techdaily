@@ -62,6 +62,19 @@ public class GradeReviewCardHandler : IUseCase<GradeReviewCardRequest, GradeRevi
 
         card.ApplyReview(request.QualityGrade);
 
+        if (request.QualityGrade >= 3 && card.SourceQuizQuestionId.HasValue)
+        {
+            var progress = await _dbContext.UserQuizProgresses
+                .FirstOrDefaultAsync(p => p.UserId == request.UserId && p.QuestionId == card.SourceQuizQuestionId.Value, cancellationToken);
+            if (progress != null)
+            {
+                progress.IsMastered = true;
+                progress.CorrectCount++;
+                progress.LastAttemptedAt = DateTimeOffset.UtcNow;
+                progress.MarkUpdated();
+            }
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new GradeReviewCardResponse

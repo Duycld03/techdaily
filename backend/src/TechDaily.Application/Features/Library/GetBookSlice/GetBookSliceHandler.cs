@@ -44,7 +44,6 @@ public class GetBookSliceHandler : IUseCase<GetBookSliceRequest, GetBookSliceRes
             SummaryMarkdown = chunk.SummaryMarkdown,
             OriginalTextMarkdown = chunk.OriginalTextMarkdown,
             KeyTakeaways = chunk.KeyTakeaways,
-            MicroQuiz = chunk.MicroQuiz,
             EstimatedReadMinutes = chunk.EstimatedReadMinutes,
             IsAiFormatted = chunk.IsAiFormatted
         };

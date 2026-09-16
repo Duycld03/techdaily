@@ -18,18 +18,25 @@ import {
   AlertTriangle,
   AlertCircle,
   RefreshCw,
+  FileText,
+  Download,
+  Zap,
+  Loader2,
 } from "lucide-vue-next";
+import { useReviewStore } from "~/stores/useReviewStore";
 import type { BookDetail, ChunkSummary } from "~/stores/useLibraryStore";
 import TermExplainerModal from "~/components/today/TermExplainerModal.vue";
 import ThemeToggle from "~/components/common/ThemeToggle.vue";
 import { extractSurroundingContext } from "~/utils/contextExtractor";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
 const libraryStore = useLibraryStore();
 const notesStore = useNotesStore();
+const reviewStore = useReviewStore();
+const isCreatingFlashcard = ref(false);
 const {
   render: renderMarkdown,
   initHighlighter,
@@ -51,6 +58,69 @@ const floatingToolbar = ref({
   selectedText: "",
   surroundingContext: "",
 });
+// Note Popover State
+const isNotePopoverOpen = ref(false);
+const noteText = ref("");
+const tagInput = ref("");
+const isSavingNote = ref(false);
+
+// Export State
+const isExportingMarkdown = ref(false);
+
+function toggleNotePopover() {
+  isNotePopoverOpen.value = !isNotePopoverOpen.value;
+  if (!isNotePopoverOpen.value) {
+    noteText.value = "";
+    tagInput.value = "";
+  }
+}
+
+function cancelNotePopover() {
+  isNotePopoverOpen.value = false;
+  noteText.value = "";
+  tagInput.value = "";
+  floatingToolbar.value.visible = false;
+}
+
+async function handleSaveNote() {
+  if (!floatingToolbar.value.selectedText || !currentChunk.value?.id) return;
+  isSavingNote.value = true;
+  try {
+    const tags = tagInput.value
+      .split(",")
+      .map((t) => t.trim().replace(/^#/, ""))
+      .filter((t) => t.length > 0);
+
+    await notesStore.createHighlight({
+      documentChunkId: currentChunk.value.id,
+      selectedText: floatingToolbar.value.selectedText,
+      note: noteText.value.trim() || undefined,
+      tags: tags.length > 0 ? tags : undefined,
+    });
+    toast.success(t("reader.toast_note_success"));
+    isNotePopoverOpen.value = false;
+    noteText.value = "";
+    tagInput.value = "";
+    floatingToolbar.value.visible = false;
+  } catch (err: any) {
+    toast.error(err.message || t("reader.toast_highlight_error"));
+  } finally {
+    isSavingNote.value = false;
+  }
+}
+
+async function handleExportMarkdown() {
+  if (!book.value?.id) return;
+  isExportingMarkdown.value = true;
+  try {
+    await libraryStore.exportBookMarkdown(book.value.id, book.value.slug);
+    toast.success(t("reader.toast_export_success") || "Notes exported successfully!");
+  } catch (err: any) {
+    toast.error(err.message || "Failed to export notes.");
+  } finally {
+    isExportingMarkdown.value = false;
+  }
+}
 
 // Term Explainer Modal State
 const isExplainerOpen = ref(false);
@@ -418,21 +488,27 @@ function goToPrevSlice() {
 let selectionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 function handleTextSelection(event: MouseEvent) {
+  if (isNotePopoverOpen.value) {
+    return;
+  }
   if (selectionDebounceTimer) {
     clearTimeout(selectionDebounceTimer);
     selectionDebounceTimer = null;
   }
 
   selectionDebounceTimer = setTimeout(() => {
+    if (isNotePopoverOpen.value) return;
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
       floatingToolbar.value.visible = false;
+      isNotePopoverOpen.value = false;
       return;
     }
 
     const selectedStr = selection.toString().trim();
     if (selectedStr.length < 2 || selectedStr.length > 500) {
       floatingToolbar.value.visible = false;
+      isNotePopoverOpen.value = false;
       return;
     }
 
@@ -455,6 +531,7 @@ function handleCopySelection() {
   navigator.clipboard.writeText(floatingToolbar.value.selectedText);
   toast.info(t("reader.toast_copy"));
   floatingToolbar.value.visible = false;
+  isNotePopoverOpen.value = false;
 }
 
 function handleExplainSelection() {
@@ -465,6 +542,7 @@ function handleExplainSelection() {
     "";
   currentContext.value = surrounding || currentChunk.value?.chapterTitle || "";
   floatingToolbar.value.visible = false;
+  isNotePopoverOpen.value = false;
   isExplainerOpen.value = true;
 }
 
@@ -480,6 +558,27 @@ async function handleHighlightSelection() {
     toast.error(err.message || t("reader.toast_highlight_error"));
   } finally {
     floatingToolbar.value.visible = false;
+    isNotePopoverOpen.value = false;
+  }
+}
+async function handleCreateFlashcardFromSelection() {
+  if (!floatingToolbar.value.selectedText || !currentChunk.value?.id) return;
+  isCreatingFlashcard.value = true;
+  try {
+    const highlight = await notesStore.createHighlight({
+      documentChunkId: currentChunk.value.id,
+      selectedText: floatingToolbar.value.selectedText,
+    });
+    const localeVal = (locale.value as string) || "en";
+    await reviewStore.createCardFromHighlight(highlight.id, localeVal);
+    toast.success(t("reader.toast_flashcard_success"));
+    floatingToolbar.value.visible = false;
+    isNotePopoverOpen.value = false;
+    window.getSelection()?.removeAllRanges();
+  } catch (err: any) {
+    toast.error(err.message || "Failed to create flashcard.");
+  } finally {
+    isCreatingFlashcard.value = false;
   }
 }
 </script>
@@ -580,6 +679,19 @@ async function handleHighlightSelection() {
             $t("reader.quiz_chapter_btn")
           }}</span>
         </NuxtLink>
+        <!-- Export Obsidian / Markdown Action -->
+        <button
+          v-if="book"
+          @click="handleExportMarkdown"
+          :disabled="isExportingMarkdown"
+          class="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition-colors shrink-0 disabled:opacity-50"
+          :title="$t('reader.export_obsidian')"
+        >
+          <Download class="w-3.5 h-3.5 shrink-0" />
+          <span class="hidden md:inline">{{
+            isExportingMarkdown ? $t("reader.exporting") : $t("reader.export_obsidian")
+          }}</span>
+        </button>
 
         <!-- Theme Toggle -->
         <ThemeToggle />
@@ -687,6 +799,16 @@ async function handleHighlightSelection() {
             </div>
           </button>
         </div>
+        <div class="p-3 border-t border-slate-200 dark:border-slate-800/80 mt-auto">
+          <button
+            @click="handleExportMarkdown"
+            :disabled="isExportingMarkdown"
+            class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-200/70 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors disabled:opacity-50"
+          >
+            <Download class="w-3.5 h-3.5" />
+            <span>{{ isExportingMarkdown ? $t("reader.exporting") : $t("reader.export_obsidian") }}</span>
+          </button>
+        </div>
       </aside>
 
       <!-- Mobile Table of Contents Modal Drawer (Teleported to Body) -->
@@ -756,6 +878,16 @@ async function handleHighlightSelection() {
                     }}</span>
                   </div>
                 </div>
+              </button>
+            </div>
+            <div class="p-3 border-t border-slate-200 dark:border-slate-800/80">
+              <button
+                @click="handleExportMarkdown"
+                :disabled="isExportingMarkdown"
+                class="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors disabled:opacity-50"
+              >
+                <Download class="w-3.5 h-3.5" />
+                <span>{{ isExportingMarkdown ? $t("reader.exporting") : $t("reader.export_obsidian") }}</span>
               </button>
             </div>
           </div>
@@ -1058,39 +1190,115 @@ async function handleHighlightSelection() {
     <Teleport to="body">
       <div
         v-if="floatingToolbar.visible"
-        @mousedown.prevent
-        class="fixed z-50 -translate-x-1/2 flex items-center gap-1 p-1 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white shadow-2xl border border-slate-700 animate-in fade-in zoom-in-95 duration-150"
+        @mousedown.stop
+        class="fixed z-50 -translate-x-1/2 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white shadow-2xl border border-slate-700 animate-in fade-in zoom-in-95 duration-150"
         :style="{
           left: `${floatingToolbar.x}px`,
           top: `${floatingToolbar.y}px`,
         }"
       >
-        <button
-          @click="handleExplainSelection"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow transition-colors"
-        >
-          <Sparkles class="w-3.5 h-3.5" />
-          <span>{{ $t("reader.explain_with_gemini") }}</span>
-        </button>
+        <!-- Horizontal Action Buttons -->
+        <div class="flex items-center gap-1">
+          <button
+            @click="handleExplainSelection"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow transition-colors"
+          >
+            <Sparkles class="w-3.5 h-3.5" />
+            <span>{{ $t("reader.explain_with_gemini") }}</span>
+          </button>
 
-        <button
-          @click="handleHighlightSelection"
-          class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
-          :title="$t('reader.highlight_save_tooltip')"
-        >
-          <Highlighter class="w-3.5 h-3.5" />
-          <span>Highlight</span>
-        </button>
+          <!-- 1-Click Highlight without note -->
+          <button
+            @click="handleHighlightSelection"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
+            :title="$t('reader.highlight_save_tooltip')"
+          >
+            <Highlighter class="w-3.5 h-3.5" />
+            <span>Highlight</span>
+          </button>
 
-        <button
-          @click="handleCopySelection"
-          class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+          <!-- 1-Click Flashcard -->
+          <button
+            @click="handleCreateFlashcardFromSelection"
+            :disabled="isCreatingFlashcard"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-slate-950 transition-colors disabled:opacity-50"
+            title="Create Flashcard for SM-2 Review"
+          >
+            <Loader2 v-if="isCreatingFlashcard" class="w-3.5 h-3.5 animate-spin" />
+            <Zap v-else class="w-3.5 h-3.5" />
+            <span>{{ isCreatingFlashcard ? "..." : ($t("reader.btn_flashcard") || "Flashcard") }}</span>
+          </button>
+
+          <!-- Add Note with expandable popover -->
+          <button
+            @click="toggleNotePopover"
+            :class="[
+              'flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors',
+              isNotePopoverOpen
+                ? 'bg-blue-600 text-white shadow'
+                : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500 hover:text-white'
+            ]"
+            :title="$t('reader.add_note')"
+          >
+            <FileText class="w-3.5 h-3.5" />
+            <span>{{ $t("reader.add_note") }}</span>
+          </button>
+
+          <button
+            @click="handleCopySelection"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+          >
+            <Copy class="w-3.5 h-3.5" />
+            <span>{{ $t("reader.copy") }}</span>
+          </button>
+        </div>
+
+        <!-- Expandable Note Popover -->
+        <div
+          v-if="isNotePopoverOpen"
+          class="w-72 sm:w-80 p-3 bg-slate-950/95 rounded-xl border border-slate-700 text-left flex flex-col gap-2.5 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150"
         >
-          <Copy class="w-3.5 h-3.5" />
-          <span>{{ $t("reader.copy") }}</span>
-        </button>
+          <!-- Quote preview -->
+          <div class="text-[11px] text-slate-400 italic line-clamp-2 border-l-2 border-brand-500 pl-2">
+            "{{ floatingToolbar.selectedText }}"
+          </div>
+
+          <!-- Note reflection textarea -->
+          <textarea
+            v-model="noteText"
+            rows="3"
+            class="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 resize-none"
+            :placeholder="$t('reader.note_placeholder')"
+            autofocus
+          ></textarea>
+
+          <!-- Optional tags input -->
+          <input
+            v-model="tagInput"
+            type="text"
+            class="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            :placeholder="$t('reader.tags_placeholder')"
+            @keydown.enter.prevent="handleSaveNote"
+          />
+
+          <!-- Action buttons -->
+          <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-800">
+            <button
+              @click="cancelNotePopover"
+              class="px-2.5 py-1 text-xs text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+            >
+              {{ $t("reader.cancel") }}
+            </button>
+            <button
+              @click="handleSaveNote"
+              :disabled="isSavingNote"
+              class="flex items-center gap-1 px-3 py-1 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow disabled:opacity-50 transition-colors"
+            >
+              <span>{{ $t("reader.save_note") }}</span>
+            </button>
+          </div>
+        </div>
       </div>
-    </Teleport>
 
     <!-- Term Explainer Tooltip Modal -->
     <TermExplainerModal

@@ -3,7 +3,6 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using TechDaily.Domain.Entities;
 using TechDaily.Domain.Enums;
-using TechDaily.Domain.ValueObjects;
 using TechDaily.Application.Interfaces;
 
 namespace TechDaily.Infrastructure.Persistence.Seeders;
@@ -142,7 +141,6 @@ public static class CurriculumSeeder
                     existingChunk.OriginalTextMarkdown = seededChunk.OriginalTextMarkdown;
                     existingChunk.SummaryMarkdown = seededChunk.SummaryMarkdown;
                     existingChunk.KeyTakeaways = seededChunk.KeyTakeaways;
-                    existingChunk.MicroQuiz = seededChunk.MicroQuiz;
                     existingChunk.Language = seededChunk.Language;
                     existingChunk.EstimatedReadMinutes = seededChunk.EstimatedReadMinutes;
                 }
@@ -236,13 +234,6 @@ public static class CurriculumSeeder
                 OriginalTextMarkdown = c.OriginalTextMarkdown,
                 SummaryMarkdown = c.SummaryMarkdown,
                 KeyTakeaways = c.KeyTakeaways ?? new List<string>(),
-                MicroQuiz = c.MicroQuiz ?? new MicroQuizVo
-                {
-                    Question = "What is the key takeaway for this topic?",
-                    Options = new List<string> { "Option A", "Option B", "Option C", "Option D" },
-                    AnswerIndex = 0,
-                    Explanation = "Refer to the reading materials."
-                },
                 Language = string.IsNullOrWhiteSpace(c.Language) ? "en" : c.Language,
                 EstimatedReadMinutes = c.EstimatedReadMinutes > 0 ? c.EstimatedReadMinutes : 3
             };
@@ -323,7 +314,6 @@ public class CurriculumChunkDto
     public string OriginalTextMarkdown { get; set; } = string.Empty;
     public string SummaryMarkdown { get; set; } = string.Empty;
     public List<string> KeyTakeaways { get; set; } = new();
-    public MicroQuizVo? MicroQuiz { get; set; }
     public string Language { get; set; } = "en";
     public int EstimatedReadMinutes { get; set; } = 3;
 }

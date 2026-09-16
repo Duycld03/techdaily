@@ -5,7 +5,12 @@ namespace TechDaily.Application.Features.Review.DTOs;
 public class ReviewCardDto
 {
     public Guid Id { get; set; }
-    public Guid TopicId { get; set; }
+    public Guid? TopicId { get; set; }
+    public CardSourceType SourceType { get; set; } = CardSourceType.Topic;
+    public string? FrontMarkdown { get; set; }
+    public string? BackMarkdown { get; set; }
+    public Guid? SourceHighlightId { get; set; }
+    public Guid? SourceQuizQuestionId { get; set; }
     public string TopicTitle { get; set; } = string.Empty;
     public Category Category { get; set; }
     public Difficulty Difficulty { get; set; }
