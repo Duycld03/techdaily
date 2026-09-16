@@ -32,17 +32,24 @@ TechDaily (Clean Architecture)
 | **AI Synthesis Engine** | **Gemini 3.5 Flash Lite API** | Structured Output (JSON Schema), High-Speed Quiz & Challenge Synthesis (<5s), Semantic Term Cache, JIT Look-Ahead Buffer Pre-generation |
 | **Document Ingestion** | **PdfPig + ReverseMarkdown** | Asynchronous Channel-based queue with zero-LOH disk spooling for PDFs up to 300MB (8,000+ pages), native PDF Bookmarks/Outline segmentation, HTML-to-Markdown Web Crawler |
 | **Frontend Web** | **Nuxt 4 + Vue 3** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
-| **Notifications** | **Telegram Bot API** | Lightweight morning alerts and streak retention reminders with direct deep links to Web |
+| **Notifications** | **Web Push (VAPID) + Telegram** | Real-time browser push notifications (VAPID, Service Worker) and Telegram Bot alerts for Morning Curriculum and Streak Preservation with auto-detected IANA timezones |
 
 ---
 
 ## 🌟 Comprehensive Feature Set
 
 > 📖 **Feature Matrix & Specifications:** See [docs/features.md](docs/features.md)
+### 💡 Key Retention & Architecture Highlights
+- **Web Push Notifications (VAPID):** Real-time browser push notifications for Morning Curriculum (08:00) and Streak Preservation (20:00) with automatic IANA timezone detection and Brave browser guidance.
+- **1-Click Flashcard (SM-2) from Reading Highlights:** Transform any highlighted technical passage in `/notes` or `/read/[bookId]` into a spaced repetition card with backend idempotency and deduplication.
+- **Markdown Knowledge Export:** Export book notes and highlights with YAML frontmatter formatted for Obsidian and Logseq second-brain workflows.
+- **Bilingual Resilient AI Explainer:** DOM context window extraction (±300 characters) for accurate explanations, responsive non-wrapping layout, and HTTP 500 translation resilience with retry button.
+- **Decluttered Profile & Centralized Settings:** Clean separation between personal identity/career track (`/profile`) and system preferences/notifications (`/settings`).
+
 
 ### 1. 🏠 Daily Focus Hub (`/today`)
 - **Daily Doc Slice & Pacer Bar:** Curated 3–5 minute excerpt from official docs preserving original source language with structured takeaways, reading progress metrics, and 1-click active book switching dropdown.
-- **Inline AI Explainer:** Highlight any complex technical term to get instant popover explanation localized to your language (backed by `TermExplanationCaches`).
+- **Bilingual Resilient AI Explainer:** Highlight any complex technical term or sentence to get instant popover explanation localized to your language, powered by DOM context window extraction (±300 characters), responsive non-wrapping layout, and HTTP 500 translation resilience with instant retry button (backed by `TermExplanationCaches`).
 - **Senior Scenario Challenge:** Real-world architectural decision drill with instant option grading, trade-off analysis, and deep-dive explanations.
 - **JIT Look-Ahead Buffer:** Background pre-generation service keeping 3 scenario challenges ahead using Gemini 3.5 Flash Lite with resilient 6-second timeout fallback.
 - **Streak & Freeze Retention:** Automatic streak incrementing, longest streak tracking, and monthly streak freeze credits.
@@ -56,6 +63,7 @@ TechDaily (Clean Architecture)
 - **SuperMemo SM-2 Engine:** Strict mathematical intervals ($EF \in [1.30, 2.50]$, progression intervals $I_1=1, I_2=6, I_n = I_{n-1} \times EF$).
 - **Interactive 3D Cards:** Smooth flip animation between prompt/question and model architecture answer.
 - **4 Quality Grades:** *Again (0)*, *Hard (3)*, *Good (4)*, *Easy (5)* with real-time next review queue calculations.
+- **1-Click Flashcard from Highlights:** Convert highlighted technical passages from `/notes` or `/read/[bookId]` into spaced repetition cards with automatic question-answer synthesis, backend idempotency, and deduplication (`SourceType = 'Highlight'`).
 
 ### 4. 📚 Technical Library & Document Ingestion (`/library`)
 - **3-Tab Modern Ingestion Modal:**
@@ -68,7 +76,8 @@ TechDaily (Clean Architecture)
 - **Table of Contents Sidebar:** Real-time chapter navigation, active slice indicator, and reading completion status.
 - **IDE-Grade Shiki Highlighting:** Multi-language syntax highlighting for C#, TypeScript, JavaScript, SQL, Python, Go, JSON, Bash, YAML, Dockerfile with 1-click clipboard copying.
 - **Reading Progress Bar:** Live percentage counter and automatic local bookmark persistence (`localStorage`).
-- **Floating Selection Toolbar:** 1-click AI Explanation with Gemini, text highlighting, and clipboard copying.
+- **Floating Selection Toolbar:** 1-click AI Explanation with Gemini, text highlighting, 1-click SM-2 flashcard creation, and clipboard copying.
+- **Markdown Knowledge Export:** 1-click export of book chapters, executive summaries, takeaways, and user highlights with Obsidian/Logseq YAML frontmatter.
 
 ### 6. ✨ Infinite Senior Tech Insights Feed (`/insights`)
 - **Bite-Sized Architectural Lessons:** Curated feed of Senior Anti-Patterns vs Idiomatic Solutions across C#, Rust, Go, Python, TypeScript, Vue 3, and PostgreSQL.
@@ -82,6 +91,8 @@ TechDaily (Clean Architecture)
   - **🔖 Saved Insights:** Manage all bookmarked senior technical insights with summaries, fast jump links, and unbookmarking.
   - **🖍️ Reading Highlights:** Centralized archive of all highlighted quotes categorized by book and chapter with custom reflections and tagging.
 - **Production Confirmation Modals:** Sleek, accessible delete and unbookmark confirmation dialogs (Zero native browser popups).
+- **1-Click Flashcard Creation:** Generate spaced repetition cards directly from saved highlights with Gemini active recall prompt synthesis.
+- **Markdown Knowledge Export:** Export complete book notes, chapter reflections, and tagged highlights formatted for second-brain tools.
 
 ### 8. 🎯 Senior Technical Interview Quiz & Mastery Arena (`/quiz`)
 - **High-Speed AI Quiz Synthesis:** Generate 5 or 10 real-world interview scenario questions tailored to seniority level (Fresher to Senior/Staff) in under 5 seconds with Gemini 3.1 Flash Lite.
@@ -89,13 +100,18 @@ TechDaily (Clean Architecture)
 - **Spaced Repetition Mastery:** Automatically tracks user progress in PostgreSQL. Questions are marked as `Mastered` after 2 consecutive correct submissions.
 - **Weak Topics Analysis:** Aggregated analytics dashboard tracking accuracy rate, mastered cards, and ranking weakest vs strongest engineering topics.
 
-### 9. 🛡️ Hybrid Authentication & User Profile (`/login`, `/profile`)
+### 9. 🛡️ User Profile, Centralized Settings & Hybrid Auth (`/login`, `/profile`, `/settings`)
+- **Decluttered Profile & Centralized Settings:** Clean separation between personal identity/career track (`/profile`) and system preferences/notifications (`/settings`).
 - **Standard Email/Password:** Secure PBKDF2 hashing with 16-byte random salt and 100,000 SHA-256 iterations.
 - **Google OAuth 2.0:** One-Tap & standard Google authentication.
 - **Hybrid Password Setup:** Seamlessly set an initial password for Google accounts to enable multi-device / mobile login without OAuth.
 - **Password Strength Analyzer:** Real-time entropy & security feedback.
 - **Global Toast Notification System:** Non-blocking, glassmorphic top-right toast alerts for all user actions.
 - **Bilingual & Dual Theme:** 100% Vietnamese (`vi-VN`) & English (`en-US`) parity with Dark/Light mode support.
+
+### 10. 🔔 Web Push Notifications & Retention Hub (`/settings`)
+- **Web Push Notifications (VAPID):** Real-time browser push notifications for Morning Curriculum (08:00) and Streak Preservation (20:00) with automatic IANA timezone detection and Brave browser guidance.
+- **Multi-Device Sync:** Persistent endpoint subscriptions stored in `UserPushSubscriptions` with automatic device cleanup and test dispatch validation.
 
 ---
 

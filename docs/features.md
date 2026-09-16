@@ -69,7 +69,10 @@ This document serves as the single source of truth for all implemented, active, 
 | **External Link Tab Isolation** | External docs open in new tab (`target="_blank" rel="noopener noreferrer"`) while preserving in-page fragment bookmarks | 🟢 DONE | `frontend/composables/useMarkdownRenderer.ts` |
 | **Backward-Compatible Link Resolution**| Automatically resolves relative links in older books against `authorOrSourceUrl` | 🟢 DONE | `frontend/pages/read/[bookId].vue` |
 | **Reading Progress Persistence** | Live scroll percentage counter and local slice progress bookmarking | 🟢 DONE | `frontend/pages/read/[bookId].vue` |
-| **Floating Action Toolbar** | Scoped text selection toolbar for AI Explainer, highlight, copy | 🟢 DONE | `AGENTS.md` Rule 3 & 10 |
+| **Floating Action Toolbar** | Scoped text selection toolbar for AI Explainer, highlight, SM-2 flashcard, copy | 🟢 DONE | `AGENTS.md` Rule 3 & 10 |
+| **1-Click Flashcard Generation** | Direct synthesis of active recall cards from reader selections (`SourceType = 'Highlight'`) with backend idempotency | 🟢 DONE | `Application/Features/Review/CreateCardFromHighlight/` |
+| **Markdown Knowledge Export** | Export full book notes, chapter outlines, takeaways, and user highlights with Obsidian/Logseq YAML frontmatter | 🟢 DONE | `Application/Features/Library/ExportBookMarkdown/` |
+| **Bilingual Resilient AI Explainer** | DOM context window extraction (±300 chars), responsive layout, and HTTP 500 translation resilience with retry button | 🟢 DONE | `frontend/utils/contextExtractor.ts` & `TermExplainerModal.vue` |
 
 ---
 
@@ -88,6 +91,9 @@ This document serves as the single source of truth for all implemented, active, 
 |---|---|---|---|
 | **Saved Insights Management** | Centralized list of bookmarked cards with instant modal removal | 🟢 DONE | `frontend/pages/notes.vue` |
 | **Reading Highlights Hub** | Categorized quote archive by book/chapter with reflections & tags | 🟢 DONE | `Application/UseCases/Notes/` |
+| **1-Click Flashcard Generation** | Transform saved highlights into SM-2 cards with Gemini active recall prompt synthesis (`SourceType = 'Highlight'`) | 🟢 DONE | `Application/Features/Review/CreateCardFromHighlight/` |
+| **Markdown Knowledge Export** | Download book notes & highlights with YAML frontmatter formatted for second-brain tools (Obsidian, Logseq) | 🟢 DONE | `frontend/pages/notes.vue` & `useLibraryStore.ts` |
+| **Idempotent Highlight Deduplication** | Deduplicates identical highlighted passages (`UserId`, `DocumentChunkId`, trimmed text) while merging new notes and unioning tags | 🟢 DONE | `Application/Features/Notes/CreateHighlight/` |
 
 ---
 
@@ -109,13 +115,16 @@ This document serves as the single source of truth for all implemented, active, 
 | **PBKDF2 Password Security** | 16-byte random salt, 100k SHA-256 iterations | 🟢 DONE | `Infrastructure/Security/PasswordHasher.cs` |
 | **Google OAuth 2.0 Integration** | One-Tap & standard OAuth flow | 🟢 DONE | `openspec/changes/google-oauth-password-setup/` |
 | **Hybrid Password Setup** | Enable email/password login for Google OAuth accounts | 🟢 DONE | `Application/UseCases/User/ChangePassword` |
-| **Decluttered Profile Page** | Minimal 3-card stats, clean personal details & security tabs | 🟢 DONE | `frontend/pages/profile.vue` |
-| **Centralized System Settings** | Interface language, color theme, and Telegram notifications | 🟢 DONE | `frontend/pages/settings.vue` |
+| **Profile Decluttering (Single Source of Truth in `/settings`)** | Strict architectural separation: `/profile` retains personal identity, target role, daily study goals, and security tabs, while `/settings` serves as the single source of truth for language, theme, and notifications | 🟢 DONE | `frontend/pages/profile.vue` & `settings.vue` |
+| **Auto-Timezone Sync** | Automatic client IANA timezone detection (`Intl.DateTimeFormat`) synced to user profile and push dispatch scheduler | 🟢 DONE | `frontend/pages/settings.vue` & `UserEndpoints.cs` |
+| **Centralized System Settings** | Interface language, color theme, and browser Web Push / Telegram notifications | 🟢 DONE | `frontend/pages/settings.vue` |
 
 ---
 
-## 🤖 10. Notifications & Telegram Bot
+## 🔔 10. Notifications & Web Push Hub
 | Feature | Description | Status | Reference / Spec |
 |---|---|---|---|
-| **Morning Curriculum Dispatch** | Daily 08:00 AM Telegram lesson link push | 🟢 DONE | `Infrastructure/Telegram/` |
-| **Streak Preservation Reminder** | Daily 20:00 PM alert to prevent streak loss | 🟢 DONE | `Infrastructure/Telegram/` |
+| **Web Push Notifications via VAPID** | Real-time browser push notifications via VAPID (`UserPushSubscriptions`), Service Worker delivery, and Brave browser guidance | 🟢 DONE | `Infrastructure/Services/WebPushService.cs` & `NotificationEndpoints.cs` |
+| **Morning Curriculum Dispatch** | Daily 08:00 AM push notification (Web Push & Telegram) based on user's local timezone | 🟢 DONE | `Infrastructure/Workers/DailyPushNotificationWorker.cs` |
+| **Streak Preservation Reminder** | Daily 20:00 PM retention reminder (Web Push & Telegram) ensuring users maintain daily active streaks | 🟢 DONE | `Infrastructure/Workers/DailyPushNotificationWorker.cs` |
+| **Automated Device Sync & Cleanup** | Endpoint deduplication, device unsubscribe cleanup, and automatic `IsPushEnabled = false` fallback | 🟢 DONE | `Api/Endpoints/NotificationEndpoints.cs` |

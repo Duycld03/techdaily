@@ -319,6 +319,8 @@ All responses follow RFC 7807 problem details on error. Protected endpoints requ
 
 ## 6. Spaced Repetition (`/api/v1/review`)
 
+> ℹ️ **Updated Production Specifications:** See [Section 10: Review & Spaced Repetition](#10-review--spaced-repetition-apiv1review) for complete contracts, idempotency rules, and 1-Click Flashcard synthesis from reading highlights.
+
 ### `GET /api/v1/review/deck`
 - **Auth:** Optional / Recommended
 - **Response:** Due flashcard items calculated via SM-2 interval.
@@ -549,5 +551,219 @@ The `/quiz` route powers high-intensity interview scenario drills generated with
     ]
   }
   ```
+
+---
+
+## 10. Review & Spaced Repetition (`/api/v1/review`)
+
+The Spaced Repetition system powers active recall drills based on the SuperMemo SM-2 algorithm. Cards originate from curriculum topics (`SourceType = Topic`), highlighted reading passages (`SourceType = Highlight`), or failed interview quiz questions (`SourceType = QuizMistake`).
+
+### `POST /api/v1/review/from-highlight`
+- **Route Aliases:** `POST /api/v1/review/from-highlight`, `POST /api/v1/review/cards/from-highlight`
+- **Auth:** Required (`Bearer`)
+- **Description:** Synthesizes an active recall card (front question and back answer) using Gemini 3.5 Flash Lite from any saved user highlight (`UserHighlight`) in `/notes` or `/read/[bookId]`.
+- **Idempotency Guarantee:** Automatically checks `SpacedRepetitionCards` for existing records with `UserId == CurrentUserId` and `SourceHighlightId == HighlightId`. If an existing card is found, it returns the persisted card immediately without re-invoking Gemini or creating duplicates.
+- **Request Body:**
+  ```json
+  {
+    "highlightId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "locale": "en"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "cardId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "front": "**Architectural Concept**: What are the trade-offs of optimistic concurrency control?",
+    "back": "Optimistic concurrency control assumes conflicts are rare, checking version tokens on commit. It avoids long-lived locks but increases transaction aborts under high write contention."
+  }
+  ```
+- **Response (404 Not Found):** Specified highlight does not exist or does not belong to the user.
+
+### `GET /api/v1/review/due`
+- **Route Aliases:** `GET /api/v1/review/due`, `GET /api/v1/review/deck`
+- **Auth:** Required (`Bearer`)
+- **Description:** Retrieves all flashcards due for review on or before the requested date (`NextReviewDate <= date`).
+- **Query Params:**
+  - `date` *(optional string)*: Target evaluation date in `YYYY-MM-DD` format (defaults to UTC today).
+- **Response (200 OK):**
+  ```json
+  {
+    "cards": [
+      {
+        "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "sourceType": 1,
+        "front": "**Architectural Concept**: What are the trade-offs of optimistic concurrency control?",
+        "back": "Optimistic concurrency control assumes conflicts are rare...",
+        "repetitionCount": 2,
+        "easeFactor": 2.50,
+        "intervalDays": 6,
+        "nextReviewDate": "2026-09-17",
+        "status": 0,
+        "topicTitle": "Designing Data-Intensive Applications",
+        "topicSummary": "Transactions and Concurrency Control"
+      }
+    ],
+    "totalDue": 1
+  }
+  ```
+
+### `POST /api/v1/review/grade`
+- **Route Aliases:** `POST /api/v1/review/grade`, `POST /api/v1/review/cards/{cardId}/grade`
+- **Auth:** Required (`Bearer`)
+- **Description:** Applies user recall quality grade and recalculates ease factor ($EF$), interval ($I$), and next review date ($NextReviewDate$) using the SuperMemo SM-2 algorithm:
+  - $EF' = EF + (0.1 - (5 - q) \times (0.08 + (5 - q) \times 0.02))$, clamped to $[1.30, 2.50]$.
+  - If $q < 3$: Repetition count resets to 0, Interval resets to 1 day.
+  - If $q \ge 3$: Interval progression follows $I_1 = 1$, $I_2 = 6$, $I_n = I_{n-1} \times EF$.
+- **Quality Grades:**
+  - `0`: *Again* (complete blackout / reset)
+  - `3`: *Hard* (recalled with significant difficulty)
+  - `4`: *Good* (successful recall with slight hesitation)
+  - `5`: *Easy* (instant, effortless recall)
+- **Request Body:**
+  ```json
+  {
+    "cardId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "qualityGrade": 4
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "cardId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "repetitionCount": 3,
+    "easeFactor": 2.50,
+    "intervalDays": 15,
+    "nextReviewDate": "2026-10-02",
+    "status": 0
+  }
+  ```
+
+---
+
+## 11. Web Push Notifications & Schedule Settings (`/api/v1/notifications`)
+
+The notification engine dispatches daily curriculum reminders and streak preservation alerts across browser Web Push (VAPID) and the Telegram Bot API.
+
+### `POST /api/v1/notifications/push/subscribe`
+- **Auth:** Required (`Bearer`)
+- **Description:** Registers or updates a browser Web Push subscription (`UserPushSubscriptions`) for the authenticated user device. Persists encryption keys (`p256dh`, `auth`), registers user agent, automatically updates user IANA timezone, and activates push notifications (`IsPushEnabled = true`).
+- **Brave Browser Guidance:** On Brave, users must enable *"Use Google services for push messaging"* under `brave://settings/privacy` to avoid push service connection rejections.
+- **Request Body:**
+  ```json
+  {
+    "endpoint": "https://fcm.googleapis.com/fcm/send/dK9v...",
+    "keys": {
+      "p256dh": "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QT9h0rV30...",
+      "auth": "tBHItJI5svbpez7KI4CCXg=="
+    },
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36...",
+    "timeZone": "Asia/Ho_Chi_Minh"
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "success": true
+  }
+  ```
+- **Response (400 Bad Request):** Returned when endpoint or key parameters are missing or malformed.
+
+### `POST /api/v1/notifications/push/test`
+- **Auth:** Required (`Bearer`)
+- **Description:** Sends an immediate test Web Push notification to all active devices registered by the current user to verify VAPID signing and Service Worker delivery.
+- **Notification Payload:**
+  - **Title:** `TechDaily Test Push 🚀`
+  - **Body:** `Web Push notifications are successfully configured and active!`
+  - **Url:** `/today`
+  - **Tag:** `techdaily-test`
+- **Response (200 OK):**
+  ```json
+  {
+    "success": true,
+    "sent": 1,
+    "total": 1
+  }
+  ```
+- **Response (400 Bad Request):** Returned when user has no active push subscriptions.
+
+### `PUT /api/v1/notifications/schedule`
+- **Route Aliases:** `PUT /api/v1/notifications/schedule`, `PUT /api/v1/user/profile`
+- **Auth:** Required (`Bearer`)
+- **Description:** Updates the user's daily study dispatch schedule (`preferredStudyTime`), evening streak alert (`streakAlertTime`), and local IANA timezone (`timeZone`).
+  - **Morning Curriculum Push:** Dispatched at `preferredStudyTime` (default: `08:00`).
+  - **Streak Retention Push:** Dispatched at `streakAlertTime` (default: `20:00`).
+- **Request Body:**
+  ```json
+  {
+    "preferredStudyTime": "08:00",
+    "streakAlertTime": "20:00",
+    "timeZone": "Asia/Ho_Chi_Minh",
+    "isPushEnabled": true
+  }
+  ```
+- **Response (200 OK):**
+  ```json
+  {
+    "message": "Notification schedule updated successfully.",
+    "preferredStudyTime": "08:00",
+    "streakAlertTime": "20:00",
+    "timeZone": "Asia/Ho_Chi_Minh",
+    "isPushEnabled": true
+  }
+  ```
+
+### Supporting Push Endpoints
+- **`GET /api/v1/notifications/push/vapid-public-key`**: Returns the server VAPID public key for browser Service Worker push manager subscription.
+- **`POST /api/v1/notifications/push/unsubscribe`**: Unregisters a device endpoint. If no remaining subscriptions exist, automatically disables `IsPushEnabled`.
+
+---
+
+## 12. Knowledge Base & Export (`/api/v1/notes` & `/api/v1/library`)
+
+### `GET /api/v1/notes/export/{bookId}`
+- **Route Aliases:** `GET /api/v1/notes/export/{bookId}`, `GET /api/v1/library/books/{bookId}/export-markdown`
+- **Auth:** Required (`Bearer`)
+- **Description:** Streams a complete, structured Markdown document containing book outline chapters, executive summaries, key takeaways, and user highlights with reflections and tags. Formatted with YAML frontmatter ready for second-brain tools (Obsidian, Logseq).
+- **Headers:**
+  - `Accept: text/markdown`
+- **Response (200 OK):**
+  - **Content-Type:** `text/markdown; charset=utf-8`
+  - **Content-Disposition:** `attachment; filename="{slug}-notes.md"`
+  - **Sample Markdown Output:**
+    ```markdown
+    ---
+    book: "Designing Data-Intensive Applications"
+    author: "Martin Kleppmann"
+    exported_at: 2026-09-17
+    total_chapters: 12
+    total_highlights: 5
+    tags: [techdaily, architecture, notes]
+    ---
+
+    # Designing Data-Intensive Applications
+
+    *Exported from TechDaily on 2026-09-17*
+
+    ---
+
+    ## Chapter 1: Reliable, Scalable, and Maintainable Applications
+
+    ### Executive Summary
+    Core architectural foundations of distributed data systems focusing on fault tolerance, throughput percentiles, and operational manageability.
+
+    ### Key Takeaways
+    - Reliability means making systems work correctly even when faults occur.
+    - Scalability describes a system's ability to cope with increased load (evaluated via p95 and p99 latency).
+
+    ### Highlights & Engineering Reflections
+
+    > "Faults are defined as one component deviating from spec, whereas a failure is when the system as a whole stops providing the required service."
+    >
+    > **Personal Note:** Critical architectural distinction: design systems for fault containment to prevent cascading failures.
+    >
+    > *Tags: `#reliability` `#distributed-systems`*
+    ```
+- **Response (404 Not Found):** Specified `bookId` does not exist or has been deleted.
 
 
