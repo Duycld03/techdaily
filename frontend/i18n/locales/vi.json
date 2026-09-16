@@ -58,6 +58,8 @@
     "error_load_failed": "Không thể tải nội dung bài học hàng ngày.",
     "error_submit_failed": "Không thể gửi câu trả lời kịch bản.",
     "explain_error": "Không thể tải giải thích vào lúc này. Vui lòng thử lại sau.",
+    "explain_error_title": "Không thể giải thích thuật ngữ",
+    "retry": "Thử lại",
     "highlight_save_tooltip": "Highlight & Lưu Ghi Chú"
   },
   "roadmap": {
@@ -502,6 +504,8 @@
     "NETWORK_ERROR": "Lỗi kết nối mạng. Vui lòng kiểm tra đường truyền."
   },
   "common": {
-    "close": "Đóng"
+    "close": "Đóng",
+    "retry": "Thử lại",
+    "error": "Lỗi"
   }
 }

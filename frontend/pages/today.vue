@@ -349,7 +349,7 @@ function resetToScheduledDay() {
           </div>
 
           <span
-            v-if="focusStore.data?.drill?.status === 2"
+            v-if="focusStore.data?.drill?.status === 2 || focusStore.data?.drill?.status === 'Reviewed' || focusStore.data?.drill?.status === 'reviewed'"
             class="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold"
           >
             <CheckCircle2 class="w-3.5 h-3.5" />

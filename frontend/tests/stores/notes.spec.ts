@@ -32,11 +32,12 @@ vi.mock('~/composables/useApiClient', () => ({
       }
       throw new Error('Not found')
     }),
-    post: vi.fn(async (url: string, body: any) => {
+    post: vi.fn(async (url: string, body: { documentChunkId: string; selectedText: string; note?: string; tags?: string[] }) => {
       if (url.includes('/highlights')) {
+        const id = body.selectedText.includes('Replication lag') ? 'h-1' : 'h-3'
         return {
           highlight: {
-            id: 'h-3',
+            id,
             documentChunkId: body.documentChunkId,
             bookTitle: 'Clean Code',
             chapterTitle: 'Functions',
@@ -107,5 +108,22 @@ describe('useNotesStore', () => {
     await notes.deleteHighlight('h-1')
     expect(notes.highlights).toHaveLength(1)
     expect(notes.highlights[0].id).toBe('h-2')
+  })
+
+  it('updates existing highlight in place when backend returns existing id', async () => {
+    const notes = useNotesStore()
+    await notes.fetchHighlights()
+    expect(notes.highlights).toHaveLength(2)
+
+    const updated = await notes.createHighlight({
+      documentChunkId: 'c-1',
+      selectedText: 'Replication lag can cause stale reads under async replication.',
+      note: 'Updated note for h-1'
+    })
+
+    expect(updated.id).toBe('h-1')
+    expect(notes.highlights).toHaveLength(2)
+    expect(notes.highlights[0].id).toBe('h-1')
+    expect(notes.highlights[0].note).toBe('Updated note for h-1')
   })
 })

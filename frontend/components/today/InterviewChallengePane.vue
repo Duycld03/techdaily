@@ -53,7 +53,12 @@ watch(
   { immediate: true },
 );
 
-const isReviewed = computed(() => props.drill?.status === 2);
+const isReviewed = computed(
+  () =>
+    props.drill?.status === 2 ||
+    props.drill?.status === "Reviewed" ||
+    props.drill?.status === "reviewed"
+);
 
 const isCorrect = computed(() => {
   if (props.drill?.isCorrect !== undefined && props.drill?.isCorrect !== null) {
@@ -172,7 +177,7 @@ async function handleOptionSubmit() {
     </div>
 
     <!-- Scenario Multiple-Choice Interface -->
-    <div class="space-y-5 sm:space-y-6 flex-1 flex flex-col justify-between">
+    <div class="space-y-6 flex-1 flex flex-col justify-start">
       <!-- Options List -->
       <div class="space-y-3">
         <div

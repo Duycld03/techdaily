@@ -169,6 +169,140 @@ public class TermExplanationServiceTests : IDisposable
         record.Embedding.Should().NotBeNull();
         record.HitCount.Should().Be(1);
     }
+    [Fact]
+    public async Task ExplainTermAsync_WhenTermExceeds200Chars_ShouldClampTo200CharsWithoutException()
+    {
+        // Arrange
+        var fakeEmbedding = new CountingFakeEmbeddingService();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gemini:ApiKey"] = "fake-valid-key",
+                ["Gemini:Model"] = "gemini-3.1-flash-lite"
+            })
+            .Build();
+
+        var geminiResponseJson = JsonSerializer.Serialize(new
+        {
+            candidates = new[]
+            {
+                new
+                {
+                    content = new
+                    {
+                        parts = new[]
+                        {
+                            new { text = "An explanation for a very long technical phrase or excerpt." }
+                        }
+                    }
+                }
+            }
+        });
+
+        var handler = new MockHttpMessageHandler(HttpStatusCode.OK, geminiResponseJson);
+        var httpClient = new HttpClient(handler);
+
+        var service = new TermExplanationService(
+            _db,
+            fakeEmbedding,
+            httpClient,
+            config,
+            NullLogger<TermExplanationService>.Instance);
+
+        // A term of 250 characters with mixed case and trailing spaces
+        var rawLongTerm = "   " + new string('A', 150) + new string('B', 100) + "   ";
+        var expectedClampedTerm = new string('a', 150) + new string('b', 50); // exactly 200 chars, lowercased
+
+        // Act
+        var result = await service.ExplainTermAsync(rawLongTerm, "System Architecture", "Context", "en");
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Explanation.Should().Be("An explanation for a very long technical phrase or excerpt.");
+        result.Value.IsFromCache.Should().BeFalse();
+
+        var cachedRecords = await _db.TermExplanationCaches.ToListAsync();
+        cachedRecords.Should().HaveCount(1);
+        cachedRecords[0].Term.Length.Should().Be(200);
+        cachedRecords[0].Term.Should().Be(expectedClampedTerm);
+
+        // Second call with same long term should hit the exact cache using the clamped term
+        var cachedResult = await service.ExplainTermAsync(rawLongTerm, "System Architecture", "Context", "en");
+        cachedResult.IsSuccess.Should().BeTrue();
+        cachedResult.Value.IsFromCache.Should().BeTrue();
+        cachedResult.Value.Explanation.Should().Be("An explanation for a very long technical phrase or excerpt.");
+    }
+
+    [Fact]
+    public async Task ExplainTermAsync_WhenDatabaseFailsDuringCacheSave_ShouldNotThrowAndReturnGeneratedExplanation()
+    {
+        // Arrange
+        using var failingConnection = new SqliteConnection("DataSource=:memory:");
+        failingConnection.Open();
+
+        var options = new DbContextOptionsBuilder<TechDailyDbContext>()
+            .UseSqlite(failingConnection)
+            .Options;
+
+        using var throwingDb = new ThrowingSaveChangesDbContext(options);
+        throwingDb.Database.EnsureCreated();
+
+        var fakeEmbedding = new CountingFakeEmbeddingService();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gemini:ApiKey"] = "fake-valid-key",
+                ["Gemini:Model"] = "gemini-3.1-flash-lite"
+            })
+            .Build();
+
+        var geminiResponseJson = JsonSerializer.Serialize(new
+        {
+            candidates = new[]
+            {
+                new
+                {
+                    content = new
+                    {
+                        parts = new[]
+                        {
+                            new { text = "Resilient explanation delivered despite cache failure." }
+                        }
+                    }
+                }
+            }
+        });
+
+        var handler = new MockHttpMessageHandler(HttpStatusCode.OK, geminiResponseJson);
+        var httpClient = new HttpClient(handler);
+
+        var service = new TermExplanationService(
+            throwingDb,
+            fakeEmbedding,
+            httpClient,
+            config,
+            NullLogger<TermExplanationService>.Instance);
+
+        // Act
+        var result = await service.ExplainTermAsync("Kubernetes Ingress", "Cloud Native", "Context", "en");
+
+        // Assert - The failure during SaveChangesAsync must NOT bubble up as an unhandled 500 error
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Explanation.Should().Be("Resilient explanation delivered despite cache failure.");
+        result.Value.IsFromCache.Should().BeFalse();
+    }
+
+    private class ThrowingSaveChangesDbContext : TechDailyDbContext
+    {
+        public ThrowingSaveChangesDbContext(DbContextOptions<TechDailyDbContext> options) : base(options)
+        {
+        }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            throw new DbUpdateException("Simulated database failure during cache save.");
+        }
+    }
 
     private class MockHttpMessageHandler : HttpMessageHandler
     {

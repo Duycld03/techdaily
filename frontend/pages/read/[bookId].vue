@@ -551,7 +551,7 @@ async function handleHighlightSelection() {
   try {
     await notesStore.createHighlight({
       documentChunkId: currentChunk.value.id,
-      selectedText: floatingToolbar.value.selectedText,
+      selectedText: floatingToolbar.value.selectedText.trim(),
     });
     toast.success(t("reader.toast_highlight_success"));
   } catch (err: any) {
@@ -567,7 +567,7 @@ async function handleCreateFlashcardFromSelection() {
   try {
     const highlight = await notesStore.createHighlight({
       documentChunkId: currentChunk.value.id,
-      selectedText: floatingToolbar.value.selectedText,
+      selectedText: floatingToolbar.value.selectedText.trim(),
     });
     const localeVal = (locale.value as string) || "en";
     await reviewStore.createCardFromHighlight(highlight.id, localeVal);

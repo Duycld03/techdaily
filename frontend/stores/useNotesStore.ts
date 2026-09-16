@@ -44,8 +44,14 @@ export const useNotesStore = defineStore('notes', () => {
     try {
       const api = useApiClient()
       const res = await api.post<{ highlight: Highlight }>('/api/v1/notes/highlights', params)
-      highlights.value.unshift(res.highlight)
-      return res.highlight
+      const highlightItem = res.highlight || (res as unknown as Highlight)
+      const existingIndex = highlights.value.findIndex((h) => h.id === highlightItem.id)
+      if (existingIndex !== -1) {
+        highlights.value[existingIndex] = highlightItem
+      } else {
+        highlights.value.unshift(highlightItem)
+      }
+      return highlightItem
     } catch (err: any) {
       error.value = err.message || 'Failed to save highlight.'
       throw err

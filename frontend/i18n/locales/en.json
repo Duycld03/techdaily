@@ -58,6 +58,8 @@
     "error_load_failed": "Failed to load daily focus.",
     "error_submit_failed": "Failed to submit scenario option.",
     "explain_error": "Could not load explanation at this moment. Please try again later.",
+    "explain_error_title": "Unable to explain term",
+    "retry": "Retry",
     "highlight_save_tooltip": "Highlight & Save Note"
   },
   "roadmap": {
@@ -502,6 +504,8 @@
     "NETWORK_ERROR": "Network error. Please check your internet connection."
   },
   "common": {
-    "close": "Close"
+    "close": "Close",
+    "retry": "Retry",
+    "error": "Error"
   }
 }

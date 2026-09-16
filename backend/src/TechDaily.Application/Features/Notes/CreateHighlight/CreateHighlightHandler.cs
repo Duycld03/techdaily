@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Notes.DTOs;
 using TechDaily.Application.Interfaces;
@@ -51,18 +52,72 @@ public class CreateHighlightHandler : IUseCase<CreateHighlightRequest, CreateHig
             return Error.Custom("Validation.Failed", validation.Errors.First().ErrorMessage);
         }
 
+        var trimmedText = request.SelectedText?.Trim() ?? string.Empty;
+
+        var existingHighlight = await _dbContext.UserHighlights
+            .FirstOrDefaultAsync(h =>
+                h.UserId == request.UserId &&
+                h.DocumentChunkId == request.DocumentChunkId &&
+                h.SelectedText == trimmedText &&
+                !h.IsDeleted,
+                cancellationToken);
+
+        if (existingHighlight != null)
+        {
+            bool updated = false;
+
+            if (!string.IsNullOrWhiteSpace(request.Note) && existingHighlight.Note != request.Note)
+            {
+                existingHighlight.Note = request.Note;
+                updated = true;
+            }
+
+            if (request.Tags != null && request.Tags.Any())
+            {
+                var existingTags = existingHighlight.Tags ?? new List<string>();
+                var mergedTags = existingTags
+                    .Union(request.Tags, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (existingHighlight.Tags == null || mergedTags.Count != existingHighlight.Tags.Count)
+                {
+                    existingHighlight.Tags = mergedTags;
+                    updated = true;
+                }
+            }
+
+            if (updated)
+            {
+                existingHighlight.MarkUpdated();
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            return new CreateHighlightResponse
+            {
+                Highlight = new HighlightDto
+                {
+                    Id = existingHighlight.Id,
+                    DocumentChunkId = existingHighlight.DocumentChunkId,
+                    SelectedText = existingHighlight.SelectedText,
+                    Note = existingHighlight.Note,
+                    Tags = existingHighlight.Tags,
+                    CreatedAt = existingHighlight.CreatedAt
+                }
+            };
+        }
+
         var highlight = new UserHighlight
         {
             UserId = request.UserId,
             DocumentChunkId = request.DocumentChunkId,
-            SelectedText = request.SelectedText,
+            SelectedText = trimmedText,
             Note = request.Note,
             Tags = request.Tags ?? new()
         };
 
         await _dbContext.UserHighlights.AddAsync(highlight, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
-
         return new CreateHighlightResponse
         {
             Highlight = new HighlightDto

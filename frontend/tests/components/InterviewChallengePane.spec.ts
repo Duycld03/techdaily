@@ -120,4 +120,56 @@ describe('InterviewChallengePane.vue', () => {
     expect(wrapper.text()).toContain('today.optimal_choice')
     expect(wrapper.text()).toContain('SETNX provides atomic lock')
   })
+
+  it('renders review state and explanation when drill.status is string "Reviewed"', () => {
+    const reviewedQuestion = {
+      ...mockQuestion,
+      correctOptionIndex: 1,
+      explanationMarkdown: '### Architectural Breakdown\nSETNX provides atomic lock.'
+    }
+    const stringReviewedDrill = {
+      ...mockReviewedDrill,
+      status: 'Reviewed' as const
+    }
+
+    const wrapper = mount(InterviewChallengePane, {
+      props: {
+        question: reviewedQuestion,
+        drill: stringReviewedDrill
+      },
+      global: {
+        mocks: {
+          $t: (key: string) => key
+        },
+        stubs: {
+          NuxtLink: true
+        }
+      }
+    })
+
+    expect(wrapper.text()).toContain('+10 Pts')
+    expect(wrapper.text()).toContain('today.optimal_choice')
+    expect(wrapper.text()).toContain('SETNX provides atomic lock')
+  })
+
+  it('uses natural layout flow (justify-start) instead of vertical stretching (justify-between)', () => {
+    const wrapper = mount(InterviewChallengePane, {
+      props: {
+        question: mockQuestion,
+        drill: mockPendingDrill
+      },
+      global: {
+        mocks: {
+          $t: (key: string) => key
+        },
+        stubs: {
+          NuxtLink: true
+        }
+      }
+    })
+
+    const container = wrapper.find('.space-y-6.flex-1.flex.flex-col.justify-start')
+    expect(container.exists()).toBe(true)
+    expect(wrapper.find('.flex-1.flex-col.justify-between').exists()).toBe(false)
+  })
 })

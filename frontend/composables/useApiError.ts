@@ -63,6 +63,27 @@ export function useApiError() {
     // Extract response data (from ofetch, axios, or error itself)
     const responseData = (errorObj?.data || (errorObj?.response as Record<string, unknown> | undefined)?._data || errorObj) as Record<string, unknown> | undefined
 
+    const statusCode =
+      (typeof responseData?.status === 'number' ? responseData.status : undefined) ||
+      (typeof errorObj?.status === 'number' ? errorObj.status : undefined) ||
+      (typeof errorObj?.statusCode === 'number' ? errorObj.statusCode : undefined) ||
+      (typeof (errorObj?.response as Record<string, unknown> | undefined)?.status === 'number'
+        ? ((errorObj?.response as Record<string, unknown>).status as number)
+        : undefined)
+
+    if (statusCode === 500) {
+      if (fallbackKey && te(fallbackKey)) {
+        return t(fallbackKey)
+      }
+      if (fallbackKey && !i18n) {
+        return fallbackKey
+      }
+      if (te('api_errors.SERVER_ERROR')) {
+        return t('api_errors.SERVER_ERROR')
+      }
+      return i18n ? 'An unexpected server error occurred. Please try again.' : 'api_errors.SERVER_ERROR'
+    }
+
     // Check for backend detail and error messages BEFORE falling back to fallbackKey:
     if (responseData && typeof responseData === 'object') {
       // If responseData?.title and responseData?.detail, return `${responseData.title}: ${responseData.detail}`

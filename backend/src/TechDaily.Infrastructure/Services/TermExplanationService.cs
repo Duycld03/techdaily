@@ -41,12 +41,13 @@ public class TermExplanationService : ITermExplanationService
         string locale = "en",
         CancellationToken cancellationToken = default)
     {
-        var normalizedTerm = term.Trim().ToLowerInvariant();
+        var trimmed = term.Trim();
+        var safeTerm = (trimmed.Length > 200 ? trimmed[..200] : trimmed).ToLowerInvariant();
         var safeCategory = category.Length > 200 ? category[..200] : category;
 
         // 1. Tier 1: Check Exact DB Cache via B-Tree Index (<5ms)
         var cached = await _dbContext.TermExplanationCaches
-            .FirstOrDefaultAsync(t => t.Term == normalizedTerm && t.Locale == locale, cancellationToken);
+            .FirstOrDefaultAsync(t => t.Term == safeTerm && t.Locale == locale, cancellationToken);
 
         if (cached != null)
         {
@@ -58,7 +59,7 @@ public class TermExplanationService : ITermExplanationService
 
         // 2. Tier 2: Check Semantic Vector Cache via pgvector HNSW Index (<150ms)
         Pgvector.Vector? termVector = null;
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync($"[{safeCategory}] {normalizedTerm}", cancellationToken);
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync($"[{safeCategory}] {safeTerm}", cancellationToken);
         if (embeddingResult.IsSuccess)
         {
             try
@@ -163,28 +164,35 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
             return Result<TermExplanationResult>.Failure(Error.Custom("AiService.Unavailable", "AI term explanation is temporarily unavailable. Please try again later."));
         }
 
-        // 4. Save to DB Cache with Vector Embedding (only for LLM-generated explanations)
-        if (termVector == null)
+        // 4. Save to DB Cache with Vector Embedding (Non-blocking resilience)
+        try
         {
-            var embRes = await _embeddingService.GenerateEmbeddingAsync($"[{safeCategory}] {normalizedTerm}", cancellationToken);
-            if (embRes.IsSuccess)
+            if (termVector == null)
             {
-                termVector = embRes.Value;
+                var embRes = await _embeddingService.GenerateEmbeddingAsync($"[{safeCategory}] {safeTerm}", cancellationToken);
+                if (embRes.IsSuccess)
+                {
+                    termVector = embRes.Value;
+                }
             }
+
+            var newCache = new TermExplanationCache
+            {
+                Term = safeTerm,
+                Category = safeCategory,
+                Locale = locale,
+                ExplanationText = explanation,
+                Embedding = termVector,
+                HitCount = 1
+            };
+
+            await _dbContext.TermExplanationCaches.AddAsync(newCache, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
         }
-
-        var newCache = new TermExplanationCache
+        catch (Exception ex)
         {
-            Term = normalizedTerm,
-            Category = safeCategory,
-            Locale = locale,
-            ExplanationText = explanation,
-            Embedding = termVector,
-            HitCount = 1
-        };
-
-        await _dbContext.TermExplanationCaches.AddAsync(newCache, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+            _logger.LogWarning(ex, "Failed to cache term explanation for '{Term}'. Returning generated result to client.", safeTerm);
+        }
 
         return new TermExplanationResult(explanation, false);
     }

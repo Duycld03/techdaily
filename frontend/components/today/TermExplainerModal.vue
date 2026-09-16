@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { Sparkles, X, Check, Copy } from "lucide-vue-next";
+import { Sparkles, X, Check, Copy, AlertCircle, RotateCcw } from "lucide-vue-next";
 
 const props = withDefaults(
   defineProps<{
@@ -28,6 +28,7 @@ const { formatError } = useApiError();
 const { render: renderMarkdown, isHighlighterReady } = useMarkdownRenderer();
 
 const explanation = ref<string | null>(null);
+const errorMessage = ref<string | null>(null);
 const isFromCache = ref(false);
 const isLoading = ref(false);
 const copied = ref(false);
@@ -40,6 +41,8 @@ const renderedExplanation = computed(() => {
 
 async function loadExplanation() {
   isLoading.value = true;
+  errorMessage.value = null;
+  explanation.value = null;
   try {
     const res = await focusStore.explainTerm(
       props.term,
@@ -50,7 +53,8 @@ async function loadExplanation() {
     explanation.value = res.explanation;
     isFromCache.value = !!res.isFromCache;
   } catch (err: any) {
-    explanation.value = formatError(err, "today.explain_error");
+    errorMessage.value = formatError(err, "today.explain_error");
+    explanation.value = "";
   } finally {
     isLoading.value = false;
   }
@@ -61,7 +65,7 @@ onMounted(() => {
 });
 
 function copyText() {
-  if (explanation.value) {
+  if (explanation.value && !errorMessage.value) {
     navigator.clipboard.writeText(explanation.value);
     copied.value = true;
     setTimeout(() => (copied.value = false), 2000);
@@ -129,7 +133,30 @@ function copyText() {
           <span>{{ $t('reader.term_explainer_loading') }}</span>
         </div>
 
-        <div v-else class="space-y-3">
+        <!-- Error State -->
+        <div
+          v-else-if="errorMessage"
+          class="p-5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 flex flex-col items-start gap-3.5 text-rose-900 dark:text-rose-200"
+        >
+          <div class="flex items-center gap-2.5 font-bold text-sm">
+            <AlertCircle class="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
+            <span>{{ $t("today.explain_error_title") || $t("common.error") || "Error" }}</span>
+          </div>
+          <p class="text-xs sm:text-sm leading-relaxed text-rose-800 dark:text-rose-300">
+            {{ errorMessage }}
+          </p>
+          <button
+            type="button"
+            @click="loadExplanation"
+            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition-colors shadow-sm active:scale-95"
+          >
+            <RotateCcw class="w-3.5 h-3.5" />
+            <span>{{ $t("today.retry") || $t("common.retry") || "Retry" }}</span>
+          </button>
+        </div>
+
+        <!-- Success Explanation -->
+        <div v-else-if="explanation" class="space-y-3">
           <div
             class="prose prose-slate dark:prose-invert max-w-none text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-slate-950/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80"
             v-html="renderedExplanation"
@@ -144,7 +171,8 @@ function copyText() {
         <span class="font-medium">{{ $t('reader.term_explainer_powered_by') }}</span>
         <button
           @click="copyText"
-          class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors shadow-sm"
+          :disabled="!explanation || !!errorMessage"
+          class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Check v-if="copied" class="w-3.5 h-3.5 text-emerald-500" />
           <Copy v-else class="w-3.5 h-3.5" />

@@ -236,4 +236,43 @@ describe("TermExplainerModal.vue", () => {
     await overlay.trigger("click");
     expect(wrapper.emitted("close")?.length).toBe(2);
   });
+
+  it("renders dedicated error banner and retry button on API failure", async () => {
+    mockExplainTerm.mockRejectedValueOnce(new Error("API failure"));
+    const wrapper = createWrapper();
+    await flushPromises();
+
+    expect(wrapper.find(".bg-rose-50").exists()).toBe(true);
+    const retryBtn = wrapper.find(".bg-rose-50 button");
+    expect(retryBtn.exists()).toBe(true);
+    expect(retryBtn.text()).toContain("Retry");
+
+    expect(wrapper.find(".prose").exists()).toBe(false);
+
+    const copyBtn = wrapper.find(".border-t button");
+    expect(copyBtn.attributes("disabled")).toBeDefined();
+  });
+
+  it("retrying invokes loadExplanation and clears error banner on success", async () => {
+    mockExplainTerm.mockRejectedValueOnce(new Error("Network timeout"));
+    const wrapper = createWrapper();
+    await flushPromises();
+
+    expect(wrapper.find(".bg-rose-50").exists()).toBe(true);
+
+    mockExplainTerm.mockResolvedValueOnce({
+      term: "Write-Ahead Log",
+      explanation: "WAL ensures data durability before committing to storage.",
+      isFromCache: false,
+      locale: "en",
+    });
+
+    const retryBtn = wrapper.find(".bg-rose-50 button");
+    await retryBtn.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find(".bg-rose-50").exists()).toBe(false);
+    expect(wrapper.find(".prose").exists()).toBe(true);
+    expect(wrapper.text()).toContain("WAL ensures data durability before committing to storage.");
+  });
 });

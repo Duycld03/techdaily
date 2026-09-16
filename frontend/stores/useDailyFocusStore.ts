@@ -38,10 +38,12 @@ export interface DocumentChunk {
   estimatedReadMinutes: number
 }
 
+export type DrillStatus = 'Pending' | 'Submitted' | 'Reviewed' | 'Skipped' | 0 | 1 | 2 | 3
+
 export interface DailyDrill {
   id: string
   scheduledDate: string
-  status: number // 0=Pending, 1=Submitted, 2=Reviewed
+  status: DrillStatus // 0=Pending, 1=Submitted, 2=Reviewed
   selectedOptionIndex?: number
   isCorrect?: boolean
   score?: number
@@ -124,6 +126,13 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
       if (locale) query.append('locale', locale)
 
       const res = await api.get<TodayFocusResponse>(`/api/v1/daily/today?${query.toString()}`)
+      if (res?.drill && typeof res.drill.status === 'string') {
+        const statusStr = res.drill.status.toLowerCase()
+        if (statusStr === 'reviewed') res.drill.status = 2
+        else if (statusStr === 'submitted') res.drill.status = 1
+        else if (statusStr === 'skipped') res.drill.status = 3
+        else res.drill.status = 0
+      }
       data.value = res
       isGeneratingQuestion.value = res.isGeneratingQuestion ?? false
 

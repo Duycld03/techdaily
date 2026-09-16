@@ -162,7 +162,7 @@ async function handleHighlightSelection() {
   try {
     await notesStore.createHighlight({
       documentChunkId: chunkId,
-      selectedText: floatingMenu.value.text
+      selectedText: floatingMenu.value.text.trim()
     })
     toast.success(t('today.toast_highlight_saved'))
   } catch (err: any) {

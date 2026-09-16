@@ -78,4 +78,32 @@ describe('useApiError', () => {
     const err = { data: { code: 'RESOURCE_NOT_FOUND' } }
     expect(formatError(err, 'today.error_submit_failed')).toBe('api_errors.RESOURCE_NOT_FOUND')
   })
+
+  it('maps HTTP 500 ProblemDetails to fallbackKey when fallbackKey is provided', () => {
+    const { formatError } = useApiError()
+    const err = {
+      status: 500,
+      data: { title: 'Server Error', detail: 'An unhandled exception occurred.', status: 500 }
+    }
+    expect(formatError(err, 'today.explain_error')).toBe('today.explain_error')
+  })
+
+  it('maps HTTP 500 ProblemDetails to api_errors.SERVER_ERROR when no fallbackKey provided', () => {
+    const { formatError } = useApiError()
+    const err = {
+      status: 500,
+      data: { title: 'Server Error', detail: 'An unhandled exception occurred.', status: 500 }
+    }
+    expect(formatError(err)).toBe('api_errors.SERVER_ERROR')
+  })
+
+  it('does not return raw English title: detail string on HTTP 500', () => {
+    const { formatError } = useApiError()
+    const err = {
+      response: { status: 500, _data: { title: 'Internal Server Error', detail: 'Database connection failed' } }
+    }
+    const result = formatError(err, 'today.explain_error')
+    expect(result).not.toContain('Database connection failed')
+    expect(result).toBe('today.explain_error')
+  })
 })
