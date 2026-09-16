@@ -3,7 +3,7 @@
 ## Title
 Deduplicate Profile Notification Settings and Live Production E2E Verification Plan
 
-## Context & Problem Statement
+## Why
 
 TechDaily provides continuous daily learning and active recall retention for software engineers. User configuration is split across several management surfaces, primarily `/profile` (personal identity, target role, daily study pace, password security) and `/settings` (UI language, theme mode, Web Push notification subscription, study reminder schedule, and timezone).
 

@@ -8,11 +8,29 @@ Defines delta specifications for separating personal user profile management fro
 ## MODIFIED Requirements
 
 ### Requirement: User Profile Management, Route Guards & Security
+The user profile endpoints (`GET /api/v1/user/profile`, `PUT /api/v1/user/profile`, `PUT /api/v1/user/change-password`) SHALL support managing user study schedules, streak preservation alert preferences, IANA timezones, and browser push status alongside existing profile properties, protected with strict JWT Bearer authentication, reject unauthenticated requests with `HTTP 401 Unauthorized`, and enforce route middleware guards on protected frontend pages.
+
 The User Profile interface (`frontend/pages/profile.vue`) and update action SHALL be strictly dedicated to personal identity (`name`), career role targets (`targetRole`), daily study pace (`dailyGoalMinutes`), and account credentials/password security. 
 
 The User Profile interface SHALL NOT display notification scheduling controls (`preferredStudyTime`, `streakAlertTime`) or timezone displays. The User Profile interface SHALL NOT include redirection links or navigational bridges to the system settings page, keeping the user experience clean and decluttered.
 
 When submitting profile updates from the profile page, the client application SHALL dispatch only personal identity and pace fields (`name`, `targetRole`, `dailyGoalMinutes`) to `PUT /api/v1/user/profile`. The backend API SHALL support partial updates, preserving existing notification schedule and timezone database records when those fields are omitted.
+
+#### Scenario: Unauthenticated request to user profile
+- **WHEN** unauthenticated client calls `GET /api/v1/user/profile`
+- **THEN** system returns `401 Unauthorized`.
+
+#### Scenario: User updates profile settings
+- **WHEN** authenticated user sends `PUT /api/v1/user/profile` with target level and learning goals
+- **THEN** system updates user profile and returns updated profile DTO.
+
+#### Scenario: User configures personal study schedule and timezone
+- **WHEN** an authenticated user submits `PUT /api/v1/user/profile` with `preferredStudyTime: "07:30"`, `streakAlertTime: "21:00"`, `timeZone: "Asia/Ho_Chi_Minh"`, and `isPushEnabled: true`
+- **THEN** the system validates the IANA timezone string, persists the preferences on the `User` entity, and returns the updated profile DTO.
+
+#### Scenario: Validation of invalid timezone identifier
+- **WHEN** a client submits an invalid or unrecognized timezone string (e.g., `"Invalid/Zone"`)
+- **THEN** the system falls back safely to `"UTC"` or responds with `HTTP 400 Bad Request` with code `VALIDATION_FAILED`.
 
 #### Scenario: User updates personal profile information from `/profile`
 - **WHEN** an authenticated user modifies their name, target role, or daily goal minutes in `/profile` and submits the form
@@ -33,6 +51,8 @@ When submitting profile updates from the profile page, the client application SH
 
 ---
 
+## ADDED Requirements
+
 ### Requirement: System Settings, Notification Scheduling & Timezone Configuration
 The Settings interface (`frontend/pages/settings.vue`) SHALL serve as the exclusive single source of truth for notification schedule configuration (`preferredStudyTime`, `streakAlertTime`) and timezone preferences (`timeZone`). 
 
@@ -49,9 +69,6 @@ All user modifications to notification reminder timing and timezone detection SH
 - **AND** the backend updates `User.TimeZone` and `User.IsPushEnabled = true` simultaneously.
 
 ---
-
-## NEW Requirements
-
 ### Requirement: Zero-Repo-Footprint Live Production E2E Verification
 The platform verification harness SHALL support running live end-to-end headless browser test suites against the production deployment (`https://techdaily.duckdns.org`) using an ephemeral runner outside the git repository (`/tmp/techdaily-live-e2e.mjs`) leveraging host pre-cached Chromium binaries without committing test scripts, configuration files, or temporary artifacts to the source repository.
 
