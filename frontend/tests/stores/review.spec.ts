@@ -39,7 +39,7 @@ vi.mock('~/composables/useApiClient', () => ({
       if (url.includes('/deck')) return { dueCards: [...mockCards], totalCardsDue: 2 }
       throw new Error('Not found')
     }),
-    post: vi.fn(async (url: string, body: any) => {
+    post: vi.fn(async (url: string, _body?: unknown) => {
       if (url.includes('/grade')) {
         return {
           cardId: 'c-101',
@@ -47,6 +47,20 @@ vi.mock('~/composables/useApiClient', () => ({
           newIntervalDays: 6,
           newEaseFactor: 2.6,
           newRepetitionCount: 2
+        }
+      }
+      if (url.includes('/from-highlight')) {
+        return {
+          id: 'c-h1',
+          cardId: 'c-h1',
+          front: 'Synthesized Question?',
+          back: 'Synthesized Explanation'
+        }
+      }
+      if (url.includes('/from-quiz-mistake')) {
+        return {
+          id: 'c-q1',
+          cardId: 'c-q1'
         }
       }
       throw new Error('Not found')
@@ -77,5 +91,19 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
     await review.gradeCard('c-101', 5)
     expect(review.cards).toHaveLength(1)
     expect(review.cards[0].id).toBe('c-102')
+  })
+
+  it('creates flashcard from user highlight', async () => {
+    const review = useReviewStore()
+    const result = await review.createCardFromHighlight('h-123', 'en')
+    expect(result).toBeDefined()
+    expect(result.id).toBe('c-h1')
+  })
+
+  it('creates flashcard from quiz mistake', async () => {
+    const review = useReviewStore()
+    const result = await review.createCardFromQuizMistake('q-456')
+    expect(result).toBeDefined()
+    expect(result.id).toBe('c-q1')
   })
 })

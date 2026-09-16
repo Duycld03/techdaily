@@ -17,8 +17,11 @@ import {
   Layers,
   ChevronRight,
   TrendingUp,
-  Target
+  Target,
+  Check,
+  AlertCircle
 } from 'lucide-vue-next'
+import { useReviewStore } from '~/stores/useReviewStore'
 import { useInterviewQuizStore, type QuizQuestion } from '~/stores/useInterviewQuizStore'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useProfileStore } from '~/stores/useProfileStore'
@@ -31,6 +34,31 @@ const authStore = useAuthStore()
 const profileStore = useProfileStore()
 const quizStore = useInterviewQuizStore()
 const libraryStore = useLibraryStore()
+const reviewStore = useReviewStore()
+const toast = useToast()
+
+const sessionMistakes = computed(() => {
+  return quizStore.questions.filter(q => {
+    const sub = quizStore.submissions[q.id]
+    return sub && !sub.isCorrect
+  })
+})
+
+const pushedQuestionIds = ref<Set<string>>(new Set())
+const pushingQuestionId = ref<string | null>(null)
+
+async function handlePushToReview(questionId: string) {
+  pushingQuestionId.value = questionId
+  try {
+    await reviewStore.createCardFromQuizMistake(questionId)
+    pushedQuestionIds.value.add(questionId)
+    toast.success(t('quiz.toast_pushed_to_sm2'))
+  } catch (err: any) {
+    toast.error(err.message || 'Failed to push to SM-2 Deck.')
+  } finally {
+    pushingQuestionId.value = null
+  }
+}
 const { render: renderMarkdownRaw, isHighlighterReady } = useMarkdownRenderer()
 
 function renderMarkdown(raw: string | undefined | null): string {
@@ -648,6 +676,43 @@ function getOptionClass(idx: number): string {
           </button>
         </div>
       </div>
+        <!-- Session Mistakes List with Push to SM-2 -->
+        <div v-if="sessionMistakes.length > 0" class="text-left pt-6 border-t border-slate-200 dark:border-slate-800 space-y-3">
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <AlertCircle class="w-4 h-4 text-rose-500" />
+            <span>{{ $t('quiz.mistakes_to_review') }} ({{ sessionMistakes.length }})</span>
+          </h3>
+          <div class="space-y-3">
+            <div
+              v-for="q in sessionMistakes"
+              :key="q.id"
+              class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-2"
+            >
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-bold text-brand-600 dark:text-brand-400">{{ q.topic }}</span>
+                <span class="text-rose-500 font-semibold">Incorrect</span>
+              </div>
+              <p class="text-sm font-bold text-slate-900 dark:text-white">
+                {{ q.questionText }}
+              </p>
+              <div class="flex items-center justify-end pt-1">
+                <button
+                  @click="handlePushToReview(q.id)"
+                  :disabled="pushedQuestionIds.has(q.id) || pushingQuestionId === q.id"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-60"
+                  :class="pushedQuestionIds.has(q.id)
+                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                    : 'bg-brand-600 hover:bg-brand-500 text-white'"
+                >
+                  <Check v-if="pushedQuestionIds.has(q.id)" class="w-3.5 h-3.5" />
+                  <Loader2 v-else-if="pushingQuestionId === q.id" class="w-3.5 h-3.5 animate-spin" />
+                  <RotateCcw v-else class="w-3.5 h-3.5" />
+                  <span>{{ pushedQuestionIds.has(q.id) ? $t('quiz.btn_pushed_sm2') : $t('quiz.btn_push_sm2') }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
     </div>
 
     <!-- TAB 4: MISTAKE REVIEW QUEUE -->
@@ -693,6 +758,21 @@ function getOptionClass(idx: number): string {
             <p class="text-sm sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2">
               {{ q.questionText }}
             </p>
+            <div class="flex items-center justify-end pt-1">
+              <button
+                @click="handlePushToReview(q.id)"
+                :disabled="pushedQuestionIds.has(q.id) || pushingQuestionId === q.id"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-60"
+                :class="pushedQuestionIds.has(q.id)
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                  : 'bg-brand-600 hover:bg-brand-500 text-white'"
+              >
+                <Check v-if="pushedQuestionIds.has(q.id)" class="w-3.5 h-3.5" />
+                <Loader2 v-else-if="pushingQuestionId === q.id" class="w-3.5 h-3.5 animate-spin" />
+                <RotateCcw v-else class="w-3.5 h-3.5" />
+                <span>{{ pushedQuestionIds.has(q.id) ? $t('quiz.btn_pushed_sm2') : $t('quiz.btn_push_sm2') }}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

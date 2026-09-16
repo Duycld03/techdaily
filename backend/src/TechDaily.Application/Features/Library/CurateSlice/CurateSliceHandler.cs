@@ -83,13 +83,6 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
                             if (aiResult.Value.ScenarioDrill != null)
                             {
                                 var drill = aiResult.Value.ScenarioDrill;
-                                chunk.MicroQuiz = new TechDaily.Domain.ValueObjects.MicroQuizVo
-                                {
-                                    Question = drill.QuestionText,
-                                    Options = drill.Options,
-                                    AnswerIndex = drill.CorrectOptionIndex,
-                                    Explanation = drill.ExplanationMarkdown
-                                };
 
                                 var existingQuestion = await _dbContext.InterviewQuestions
                                     .FirstOrDefaultAsync(q => q.DocumentChunkId == chunk.Id, cancellationToken);
@@ -150,7 +143,6 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
             SummaryMarkdown = chunk.SummaryMarkdown,
             OriginalTextMarkdown = chunk.OriginalTextMarkdown,
             KeyTakeaways = chunk.KeyTakeaways,
-            MicroQuiz = chunk.MicroQuiz,
             EstimatedReadMinutes = chunk.EstimatedReadMinutes,
             IsAiFormatted = chunk.IsAiFormatted
         };

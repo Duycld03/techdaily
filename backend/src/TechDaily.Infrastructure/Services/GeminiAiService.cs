@@ -11,7 +11,7 @@ using TechDaily.Domain.Enums;
 
 namespace TechDaily.Infrastructure.Services;
 
-public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAiMarkdownFormatter
+public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAiMarkdownFormatter, IGeminiAiService
 {
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
@@ -1322,6 +1322,127 @@ Respond strictly in valid JSON without markdown wrapping:
             return text.Replace(@"\r\n", "\n").Replace(@"\n", "\n").Replace(@"\t", "\t");
         }
         return text;
+    }
+
+    public async Task<(string Front, string Back)> SynthesizeActiveRecallCardAsync(
+        string quote,
+        string? note,
+        string chapterTitle,
+        string locale = "en",
+        CancellationToken ct = default)
+    {
+        var isVi = locale.Equals("vi", StringComparison.OrdinalIgnoreCase);
+        var noteContext = string.IsNullOrWhiteSpace(note) ? "None provided" : note.Trim();
+
+        (string Front, string Back) Fallback()
+        {
+            var fallbackFront = isVi
+                ? $"Nguyên lý kiến trúc cốt lõi đằng sau trích dẫn trong '{chapterTitle}' là gì?"
+                : $"What is the core architectural principle behind: \"{quote.Trim()}\"?";
+            var fallbackBack = !string.IsNullOrWhiteSpace(note)
+                ? $"{note.Trim()}\n\n> \"{quote.Trim()}\""
+                : quote.Trim();
+            return (fallbackFront, fallbackBack);
+        }
+
+        if (string.IsNullOrWhiteSpace(_apiKey))
+        {
+            return Fallback();
+        }
+
+        try
+        {
+            var systemInstruction = $@"
+You are an expert technical curriculum designer for senior software engineers.
+Given this quote highlighted by an engineer from chapter '{chapterTitle}':
+QUOTE: ""{quote}""
+ENGINEER'S NOTE: ""{noteContext}""
+
+Create an active recall flashcard:
+1. Front: A concise, direct conceptual question testing understanding of the underlying engineering mechanism or trade-off in {(isVi ? "Vietnamese" : "English")}. Do NOT ask ""What did the author say about X?"". Instead ask: ""Why does X achieve Y?"" or ""How does mechanism X handle failure condition Y?"".
+2. Back: A clear, authoritative explanation (2-3 sentences max) detailing the answer, architectural trade-offs, and operational invariants in {(isVi ? "Vietnamese" : "English")}.
+
+Respond strictly in valid JSON without markdown wrapping:
+{{
+  ""front"": ""Concise conceptual question..."",
+  ""back"": ""Authoritative 2-3 sentence explanation...""
+}}";
+
+            var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
+            var requestPayload = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        role = "user",
+                        parts = new object[]
+                        {
+                            new { text = $"Chapter: '{chapterTitle}'\nQuote: '{quote}'\nNote: '{noteContext}'" }
+                        }
+                    }
+                },
+                systemInstruction = new
+                {
+                    parts = new[]
+                    {
+                        new { text = systemInstruction }
+                    }
+                },
+                generationConfig = new
+                {
+                    temperature = 0.3,
+                    maxOutputTokens = 1024,
+                    responseMimeType = "application/json"
+                }
+            };
+
+            var jsonContent = JsonSerializer.Serialize(requestPayload);
+            var response = await PostGeminiWithRetryAsync(requestUri, jsonContent, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Gemini API error ({StatusCode}) during recall card synthesis.", response.StatusCode);
+                return Fallback();
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(responseBody);
+            var candidates = doc.RootElement.GetProperty("candidates");
+            if (candidates.GetArrayLength() == 0) return Fallback();
+
+            var content = candidates[0].GetProperty("content");
+            var parts = content.GetProperty("parts");
+            string? rawJson = null;
+            foreach (var part in parts.EnumerateArray())
+            {
+                if (part.TryGetProperty("text", out var textProp))
+                {
+                    rawJson = textProp.GetString();
+                    break;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(rawJson)) return Fallback();
+
+            var cleanJson = ExtractJsonObject(rawJson.Trim());
+            using var cardDoc = JsonDocument.Parse(cleanJson);
+            var root = cardDoc.RootElement;
+
+            var front = root.TryGetProperty("front", out var fp) ? fp.GetString() : null;
+            var back = root.TryGetProperty("back", out var bp) ? bp.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(front) || string.IsNullOrWhiteSpace(back))
+            {
+                return Fallback();
+            }
+
+            return (NormalizeEscapedNewlines(front.Trim()), NormalizeEscapedNewlines(back.Trim()));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to synthesize active recall card for highlight in '{Title}'.", chapterTitle);
+            return Fallback();
+        }
     }
 }
 

@@ -4,7 +4,6 @@ using TechDaily.Application.Features.DailyFocus.DTOs;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
 using TechDaily.Domain.Enums;
-using TechDaily.Domain.ValueObjects;
 
 namespace TechDaily.Application.Features.DailyFocus.GetTodayFocus;
 
@@ -193,13 +192,6 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                     if (aiResult.Value.ScenarioDrill != null)
                     {
                         var scenarioDrill = aiResult.Value.ScenarioDrill;
-                        documentChunk.MicroQuiz = new Domain.ValueObjects.MicroQuizVo
-                        {
-                            Question = scenarioDrill.QuestionText,
-                            Options = scenarioDrill.Options,
-                            AnswerIndex = scenarioDrill.CorrectOptionIndex,
-                            Explanation = scenarioDrill.ExplanationMarkdown
-                        };
 
                         var existingQ = await _dbContext.InterviewQuestions
                             .FirstOrDefaultAsync(q => q.DocumentChunkId == documentChunk.Id, cancellationToken);
@@ -521,7 +513,6 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                 OriginalTextMarkdown = chunk.OriginalTextMarkdown,
                 SummaryMarkdown = chunk.SummaryMarkdown,
                 KeyTakeaways = chunk.KeyTakeaways,
-                MicroQuiz = chunk.MicroQuiz,
                 Language = chunk.Language,
                 EstimatedReadMinutes = chunk.EstimatedReadMinutes,
                 IsAiFormatted = chunk.IsAiFormatted

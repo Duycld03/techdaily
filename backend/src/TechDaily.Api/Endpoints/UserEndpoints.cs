@@ -58,6 +58,10 @@ public static class UserEndpoints
                     user.TargetRole,
                     user.DailyGoalMinutes,
                     user.TelegramChatId,
+                    preferredStudyTime = user.PreferredStudyTime?.ToString("HH:mm"),
+                    streakAlertTime = user.StreakAlertTime?.ToString("HH:mm"),
+                    user.TimeZone,
+                    user.IsPushEnabled,
                     hasPassword = !string.IsNullOrEmpty(user.PasswordHash),
                     isGoogleLinked = !string.IsNullOrEmpty(user.GoogleSubjectId)
                 },
@@ -113,6 +117,18 @@ public static class UserEndpoints
             if (request.TelegramChatId.HasValue)
                 user.TelegramChatId = request.TelegramChatId.Value;
 
+            if (!string.IsNullOrWhiteSpace(request.PreferredStudyTime) && TimeOnly.TryParse(request.PreferredStudyTime, out var studyTime))
+                user.PreferredStudyTime = studyTime;
+
+            if (!string.IsNullOrWhiteSpace(request.StreakAlertTime) && TimeOnly.TryParse(request.StreakAlertTime, out var streakTime))
+                user.StreakAlertTime = streakTime;
+
+            if (!string.IsNullOrWhiteSpace(request.TimeZone))
+                user.TimeZone = request.TimeZone.Trim();
+
+            if (request.IsPushEnabled.HasValue)
+                user.IsPushEnabled = request.IsPushEnabled.Value;
+
             user.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
@@ -125,7 +141,11 @@ public static class UserEndpoints
                 user.PreferredLocale,
                 user.TargetRole,
                 user.DailyGoalMinutes,
-                user.TelegramChatId
+                user.TelegramChatId,
+                preferredStudyTime = user.PreferredStudyTime?.ToString("HH:mm"),
+                streakAlertTime = user.StreakAlertTime?.ToString("HH:mm"),
+                user.TimeZone,
+                user.IsPushEnabled
             });
         })
         .WithName("UpdateUserProfile")
@@ -193,7 +213,11 @@ public record UpdateProfileRequest(
     string? PreferredLocale,
     string? TargetRole,
     int? DailyGoalMinutes,
-    long? TelegramChatId
+    long? TelegramChatId,
+    string? PreferredStudyTime,
+    string? StreakAlertTime,
+    string? TimeZone,
+    bool? IsPushEnabled
 );
 
 public record ChangePasswordRequest(

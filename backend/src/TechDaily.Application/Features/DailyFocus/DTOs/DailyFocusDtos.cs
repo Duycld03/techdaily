@@ -1,5 +1,4 @@
 using TechDaily.Domain.Enums;
-using TechDaily.Domain.ValueObjects;
 
 namespace TechDaily.Application.Features.DailyFocus.DTOs;
 
@@ -36,7 +35,6 @@ public class DocumentChunkDto
     public string OriginalTextMarkdown { get; set; } = string.Empty;
     public string SummaryMarkdown { get; set; } = string.Empty;
     public List<string> KeyTakeaways { get; set; } = new();
-    public MicroQuizVo MicroQuiz { get; set; } = new();
     public string Language { get; set; } = "en";
     public int EstimatedReadMinutes { get; set; }
     public bool IsAiFormatted { get; set; }

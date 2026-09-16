@@ -39,14 +39,17 @@ public static class DependencyInjection
         services.AddScoped<ITechInsightGenerator, GeminiAiService>();
         services.AddScoped<IQuizGeneratorService, GeminiAiService>();
         services.AddScoped<IAiMarkdownFormatter, GeminiAiService>();
+        services.AddScoped<IGeminiAiService, GeminiAiService>();
         services.AddScoped<ITermExplanationService, TermExplanationService>();
         services.AddScoped<ITelegramNotifier, TelegramNotifier>();
         services.AddScoped<IPdfExtractor, PdfPigExtractor>();
         services.AddSingleton<IPdfIngestionQueue, PdfIngestionQueue>();
         services.AddScoped<ILookAheadBufferService, LookAheadBufferService>();
+        services.AddSingleton<IWebPushService, WebPushService>();
 
         // Background Workers
         services.AddHostedService<Workers.PdfIngestionWorker>();
+        services.AddHostedService<Workers.DailyPushNotificationWorker>();
 
         return services;
     }

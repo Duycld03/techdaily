@@ -1,6 +1,5 @@
 using Pgvector;
 using TechDaily.Domain.Common;
-using TechDaily.Domain.ValueObjects;
 
 namespace TechDaily.Domain.Entities;
 
@@ -12,7 +11,6 @@ public class DocumentChunk : BaseEntity
     public string OriginalTextMarkdown { get; set; } = string.Empty;
     public string SummaryMarkdown { get; set; } = string.Empty;
     public List<string> KeyTakeaways { get; set; } = new();
-    public MicroQuizVo MicroQuiz { get; set; } = new();
     public string Language { get; set; } = "en";
     public Vector? Embedding { get; set; }
     public int EstimatedReadMinutes { get; set; } = 3;

@@ -58,6 +58,10 @@ const mockPost = vi.fn(async (url: string, body: any) => {
   }
   throw new Error("Not found");
 });
+const mockDownload = vi.fn(async (url: string, defaultName: string) => {
+  return;
+});
+
 
 vi.mock("~/composables/useApiClient", () => ({
   useApiClient: () => ({
@@ -100,6 +104,7 @@ vi.mock("~/composables/useApiClient", () => ({
       throw new Error("Not found");
     }),
     post: mockPost,
+    download: mockDownload,
   }),
 }));
 
@@ -169,5 +174,15 @@ describe("useLibraryStore", () => {
     expect(res1).toEqual(res2);
     expect(res1?.chapterTitle).toBe("Reliability, Scalability, and Maintainability");
     expect(res1?.originalTextMarkdown).toBe("Systems must maintain performance...");
+  });
+
+  it("exports book markdown notes via download API", async () => {
+    const library = useLibraryStore();
+    await library.exportBookMarkdown("b-1", "ddia");
+
+    expect(mockDownload).toHaveBeenCalledWith(
+      "/api/v1/library/books/b-1/export-markdown",
+      "ddia-notes.md"
+    );
   });
 });

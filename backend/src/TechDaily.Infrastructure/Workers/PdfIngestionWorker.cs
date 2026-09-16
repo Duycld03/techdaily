@@ -144,13 +144,6 @@ public class PdfIngestionWorker : BackgroundService
                                 if (aiResult.Value.ScenarioDrill != null)
                                 {
                                     var drill = aiResult.Value.ScenarioDrill;
-                                    chunk.MicroQuiz = new Domain.ValueObjects.MicroQuizVo
-                                    {
-                                        Question = drill.QuestionText,
-                                        Options = drill.Options,
-                                        AnswerIndex = drill.CorrectOptionIndex,
-                                        Explanation = drill.ExplanationMarkdown
-                                    };
 
                                     var question = new Domain.Entities.InterviewQuestion
                                     {

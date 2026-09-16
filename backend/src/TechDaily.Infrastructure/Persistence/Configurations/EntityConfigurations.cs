@@ -44,6 +44,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.GoogleSubjectId).HasMaxLength(255);
         builder.Property(u => u.TelegramChatId);
         builder.Property(u => u.PreferredLocale).HasMaxLength(10).HasDefaultValue("en");
+        builder.Property(u => u.TimeZone).HasMaxLength(100).HasDefaultValue("UTC");
+        builder.Property(u => u.IsPushEnabled).HasDefaultValue(false);
+        builder.Property(u => u.PreferredStudyTime);
+        builder.Property(u => u.StreakAlertTime);
 
         builder.HasOne(u => u.StreakRecord)
             .WithOne(s => s.User)
@@ -178,14 +182,6 @@ public class DocumentChunkConfiguration : IEntityTypeConfiguration<DocumentChunk
                 v => ConfigurationHelpers.DeserializeStringList(v))
             .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
 
-        builder.OwnsOne(c => c.MicroQuiz, b =>
-        {
-            b.Property(q => q.Options)
-                .HasConversion(
-                    v => ConfigurationHelpers.SerializeStringList(v),
-                    v => ConfigurationHelpers.DeserializeStringList(v))
-                .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
-        });
     }
 }
 
@@ -224,6 +220,10 @@ public class SpacedRepetitionCardConfiguration : IEntityTypeConfiguration<Spaced
     public void Configure(EntityTypeBuilder<SpacedRepetitionCard> builder)
     {
         builder.HasKey(c => c.Id);
+        builder.Property(c => c.TopicId).IsRequired(false);
+        builder.Property(c => c.SourceType).HasConversion<string>().HasMaxLength(50).IsRequired();
+        builder.Property(c => c.FrontMarkdown);
+        builder.Property(c => c.BackMarkdown);
         builder.Property(c => c.EaseFactor).HasPrecision(5, 2).HasDefaultValue(2.50m);
         builder.Property(c => c.IntervalDays).HasDefaultValue(1);
         builder.Property(c => c.RepetitionCount).HasDefaultValue(0);
@@ -232,6 +232,8 @@ public class SpacedRepetitionCardConfiguration : IEntityTypeConfiguration<Spaced
 
         builder.HasIndex(c => new { c.UserId, c.TopicId }).IsUnique();
         builder.HasIndex(c => new { c.UserId, c.NextReviewDate });
+        builder.HasIndex(c => new { c.UserId, c.SourceHighlightId });
+        builder.HasIndex(c => new { c.UserId, c.SourceQuizQuestionId });
 
         builder.HasOne(c => c.User)
             .WithMany(u => u.SpacedRepetitionCards)
@@ -241,7 +243,18 @@ public class SpacedRepetitionCardConfiguration : IEntityTypeConfiguration<Spaced
         builder.HasOne(c => c.Topic)
             .WithMany(t => t.SpacedRepetitionCards)
             .HasForeignKey(c => c.TopicId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Cascade)
+            .IsRequired(false);
+
+        builder.HasOne(c => c.SourceHighlight)
+            .WithMany()
+            .HasForeignKey(c => c.SourceHighlightId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(c => c.SourceQuizQuestion)
+            .WithMany()
+            .HasForeignKey(c => c.SourceQuizQuestionId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -411,6 +424,26 @@ public class UserQuizProgressConfiguration : IEntityTypeConfiguration<UserQuizPr
         builder.HasOne(p => p.Question)
             .WithMany(q => q.UserProgresses)
             .HasForeignKey(p => p.QuestionId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class UserPushSubscriptionConfiguration : IEntityTypeConfiguration<UserPushSubscription>
+{
+    public void Configure(EntityTypeBuilder<UserPushSubscription> builder)
+    {
+        builder.ToTable("UserPushSubscriptions");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Endpoint).IsRequired();
+        builder.Property(s => s.P256dh).IsRequired();
+        builder.Property(s => s.Auth).IsRequired();
+        builder.Property(s => s.UserAgent).HasMaxLength(500);
+
+        builder.HasIndex(s => new { s.UserId, s.Endpoint }).IsUnique();
+
+        builder.HasOne(s => s.User)
+            .WithMany(u => u.PushSubscriptions)
+            .HasForeignKey(s => s.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

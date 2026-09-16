@@ -13,6 +13,10 @@ public class User : BaseEntity
     public string PreferredLocale { get; set; } = "en"; // "en" or "vi"
     public string TargetRole { get; set; } = "Senior Engineer";
     public int DailyGoalMinutes { get; set; } = 10;
+    public TimeOnly? PreferredStudyTime { get; set; } = new TimeOnly(8, 0);
+    public TimeOnly? StreakAlertTime { get; set; } = new TimeOnly(20, 0);
+    public string TimeZone { get; set; } = "UTC";
+    public bool IsPushEnabled { get; set; } = false;
 
     // Navigation properties
     public StreakRecord? StreakRecord { get; set; }
@@ -21,4 +25,5 @@ public class User : BaseEntity
     public ICollection<UserHighlight> UserHighlights { get; set; } = new List<UserHighlight>();
     public ICollection<UserQuizProgress> QuizProgresses { get; set; } = new List<UserQuizProgress>();
     public ICollection<UserBookPacer> BookPacers { get; set; } = new List<UserBookPacer>();
+    public ICollection<UserPushSubscription> PushSubscriptions { get; set; } = new List<UserPushSubscription>();
 }

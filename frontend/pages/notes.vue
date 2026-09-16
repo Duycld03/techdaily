@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Highlighter, Bookmark, Trash2, BookOpen, AlertTriangle, Zap, ExternalLink, ArrowRight } from 'lucide-vue-next'
+import { ref, computed, onMounted } from 'vue'
+import { Highlighter, Bookmark, Trash2, BookOpen, AlertTriangle, Zap, ExternalLink, ArrowRight, Search, Sparkles, X } from 'lucide-vue-next'
 import { useNotesStore } from '~/stores/useNotesStore'
 import { useInsightsStore } from '~/stores/useInsightsStore'
+import { useReviewStore } from '~/stores/useReviewStore'
 import { useApiError } from '~/composables/useApiError'
 import MarkdownIt from 'markdown-it'
 
@@ -11,10 +12,40 @@ const { formatError } = useApiError()
 const notesStore = useNotesStore()
 const insightsStore = useInsightsStore()
 const toast = useToast()
+const reviewStore = useReviewStore()
+const creatingCardHighlightId = ref<string | null>(null)
+const createdCardHighlightIds = ref<Set<string>>(new Set())
+
+async function handleCreateFlashcard(highlightId: string) {
+  creatingCardHighlightId.value = highlightId
+  try {
+    const localeVal = (useI18n().locale.value as string) || 'en'
+    await reviewStore.createCardFromHighlight(highlightId, localeVal)
+    createdCardHighlightIds.value.add(highlightId)
+    toast.success(t('notes.toast_flashcard_success'))
+  } catch (err: any) {
+    toast.error(err.message || 'Failed to create flashcard.')
+  } finally {
+    creatingCardHighlightId.value = null
+  }
+}
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
 
 const activeTab = ref<'insights' | 'highlights'>('insights')
 
+const highlightSearchQuery = ref('')
+
+const filteredHighlights = computed(() => {
+  const q = highlightSearchQuery.value.trim().toLowerCase()
+  if (!q) return notesStore.highlights
+  return notesStore.highlights.filter(h =>
+    h.selectedText.toLowerCase().includes(q) ||
+    (h.note && h.note.toLowerCase().includes(q)) ||
+    h.bookTitle.toLowerCase().includes(q) ||
+    h.chapterTitle.toLowerCase().includes(q) ||
+    h.tags?.some(tag => tag.toLowerCase().includes(q.replace(/^#/, '')))
+  )
+})
 // Delete Highlight Modal State
 const highlightToDelete = ref<string | null>(null)
 const isDeleteModalOpen = ref(false)
@@ -225,55 +256,103 @@ async function confirmUnbookmark() {
     </div>
 
     <!-- TAB 2: Highlights List -->
-    <div v-else-if="activeTab === 'highlights'">
+    <div v-else-if="activeTab === 'highlights'" class="space-y-4">
+      <!-- Search & Filter Bar -->
+      <div v-if="notesStore.highlights.length > 0" class="relative">
+        <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <input
+          v-model="highlightSearchQuery"
+          type="text"
+          class="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
+          :placeholder="$t('notes.search_placeholder')"
+        />
+        <button
+          v-if="highlightSearchQuery"
+          @click="highlightSearchQuery = ''"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full"
+        >
+          <X class="w-4 h-4" />
+        </button>
+      </div>
+
       <div v-if="notesStore.isLoading" class="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 text-sm">
         <div class="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin mb-3"></div>
         <span>Loading saved highlights...</span>
       </div>
 
-      <div v-else-if="notesStore.highlights.length > 0" class="space-y-4">
+      <div v-else-if="filteredHighlights.length > 0" class="space-y-4">
         <div
-          v-for="item in notesStore.highlights"
+          v-for="item in filteredHighlights"
           :key="item.id"
           class="p-5 sm:p-7 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-slate-700 transition-all space-y-3.5 sm:space-y-4 shadow-md dark:shadow-sm"
         >
           <!-- Reference bar -->
           <div class="flex items-center justify-between text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-semibold">
-            <div class="flex items-center gap-2">
-              <BookOpen class="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span class="text-slate-800 dark:text-slate-200">{{ item.bookTitle }}</span>
-              <span class="text-slate-400 dark:text-slate-600">•</span>
-              <span>{{ item.chapterTitle }}</span>
+            <div class="flex items-center gap-2 min-w-0">
+              <BookOpen class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span class="text-slate-800 dark:text-slate-200 truncate">{{ item.bookTitle }}</span>
+              <span class="text-slate-400 dark:text-slate-600 shrink-0">•</span>
+              <span class="truncate">{{ item.chapterTitle }}</span>
             </div>
 
-            <button
-              @click="openDeleteModal(item.id)"
-              class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors"
-              title="Delete Highlight"
-            >
-              <Trash2 class="w-4 h-4" />
-            </button>
-          </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button
+                @click="handleCreateFlashcard(item.id)"
+                :disabled="creatingCardHighlightId === item.id || createdCardHighlightIds.has(item.id)"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all disabled:opacity-60"
+                :class="createdCardHighlightIds.has(item.id)
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                  : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border-amber-200 dark:border-amber-800/60'"
+                :title="$t('notes.create_flashcard')"
+              >
+                <Zap class="w-3.5 h-3.5 text-amber-500" />
+                <span class="hidden sm:inline">{{
+                  createdCardHighlightIds.has(item.id)
+                    ? 'In SM-2'
+                    : creatingCardHighlightId === item.id
+                      ? $t('notes.creating_card')
+                      : $t('notes.create_flashcard')
+                }}</span>
+              </button>
+
+              <button
+                @click="openDeleteModal(item.id)"
+                class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors shrink-0"
+                title="Delete Highlight"
+              >
+                <Trash2 class="w-4 h-4" />
+              </button>
+            </div>
 
           <!-- Highlighted Text Quote -->
-          <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border-l-4 border-indigo-500 text-sm md:text-lg text-slate-800 dark:text-slate-200 leading-relaxed font-sans italic">
+          <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border-l-4 border-indigo-500 text-sm md:text-base text-slate-800 dark:text-slate-200 leading-relaxed font-sans italic">
             "{{ item.selectedText }}"
           </div>
 
-          <!-- Note (if any) -->
-          <p v-if="item.note" class="text-sm md:text-lg text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/40 p-3.5 sm:p-4 rounded-xl border border-slate-200 dark:border-slate-800">
-            <strong class="text-slate-900 dark:text-slate-400">Note:</strong> {{ item.note }}
-          </p>
+          <!-- Personal Reflection Note Block -->
+          <div
+            v-if="item.note"
+            class="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 space-y-1.5"
+          >
+            <div class="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400">
+              <Sparkles class="w-3.5 h-3.5" />
+              <span>Personal Reflection</span>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+              {{ item.note }}
+            </p>
+          </div>
 
           <!-- Tags -->
           <div v-if="item.tags?.length" class="flex flex-wrap gap-1.5 pt-1">
-            <span
+            <button
               v-for="(tag, i) in item.tags"
               :key="i"
-              class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+              @click="highlightSearchQuery = tag"
+              class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-indigo-700 dark:hover:text-indigo-300 border border-slate-200 dark:border-slate-700 transition-colors"
             >
-              #{{ tag }}
-            </span>
+              #{{ tag.replace(/^#/, '') }}
+            </button>
           </div>
         </div>
       </div>
@@ -281,7 +360,8 @@ async function confirmUnbookmark() {
       <!-- Empty State for Highlights -->
       <div v-else class="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-sm">
         <Highlighter class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
-        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $t('notes.no_notes') }}</h3>
+        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ highlightSearchQuery ? 'No highlights match your search.' : $t('notes.no_notes') }}</h3>
+        <p v-if="highlightSearchQuery" class="text-xs text-slate-500 mt-1">Try searching for a different keyword or tag.</p>
       </div>
     </div>
 

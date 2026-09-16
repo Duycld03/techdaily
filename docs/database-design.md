@@ -87,7 +87,6 @@ erDiagram
 | `OriginalTextMarkdown` | `text` | NOT NULL | Sanitized Markdown content with code blocks |
 | `SummaryMarkdown` | `text` | NOT NULL | 3-5 core takeaways |
 | `KeyTakeaways` | `jsonb` | NOT NULL | Array of bullet point strings `string[]` |
-| `MicroQuiz` | `jsonb` | NOT NULL | `{ question: string, options: string[], answerIndex: int, explanation: string }` |
 | `StartPage` | `int` | NULL | Starting physical page in source PDF |
 | `EndPage` | `int` | NULL | Ending physical page in source PDF |
 | `Language` | `varchar(10)` | NOT NULL, Default 'en' | ISO language code (`en`, `vi`, etc.) |

@@ -164,6 +164,39 @@ export function useApiClient() {
         method: 'PUT',
         body: body ? JSON.stringify(body) : undefined
       }),
-    delete: <T>(url: string) => request<T>(url, { method: 'DELETE' })
+    delete: <T>(url: string) => request<T>(url, { method: 'DELETE' }),
+    download: async (url: string, defaultFileName = 'export.md'): Promise<void> => {
+      const token = getAuthToken()
+      const headers: Record<string, string> = {}
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      const response = await fetch(`${baseUrl}${url}`, {
+        method: 'GET',
+        headers
+      })
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`)
+      }
+      const blob = await response.blob()
+      let fileName = defaultFileName
+      const disposition = response.headers.get('Content-Disposition')
+      if (disposition && disposition.includes('filename=')) {
+        const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+        if (match && match[1]) {
+          fileName = match[1].replace(/['"]/g, '')
+        }
+      }
+      if (typeof window !== 'undefined') {
+        const blobUrl = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = blobUrl
+        a.download = fileName
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(blobUrl)
+        document.body.removeChild(a)
+      }
+    },
   }
 }

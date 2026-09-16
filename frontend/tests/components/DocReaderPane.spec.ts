@@ -98,15 +98,7 @@ describe('DocReaderPane.vue', () => {
     const wrapper = mount(DocReaderPane, {
       props: {
         topic: mockTopic,
-        documentChunk: {
-          ...mockDocumentChunk,
-          microQuiz: {
-            question: 'Sample quiz question?',
-            options: ['A', 'B'],
-            answerIndex: 0,
-            explanation: 'Sample explanation'
-          }
-        } as any
+        documentChunk: mockDocumentChunk
       },
       global: {
         mocks: {

@@ -254,6 +254,10 @@ app.MapGroup("/api/v1/user")
     .RequireAuthorization()
     .MapUserEndpoints();
 
+app.MapGroup("/api/v1/notifications")
+    .WithTags("Web Push & Notifications")
+    .MapNotificationEndpoints();
+
 // Health Check Endpoint
 app.MapGet("/health", async (TechDailyDbContext db) =>
 {

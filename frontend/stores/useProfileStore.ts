@@ -12,6 +12,10 @@ export interface UserProfile {
   targetRole: string
   dailyGoalMinutes: number
   telegramChatId?: number
+  preferredStudyTime?: string
+  streakAlertTime?: string
+  timeZone?: string
+  isPushEnabled?: boolean
   hasPassword: boolean
   isGoogleLinked: boolean
 }
@@ -58,6 +62,10 @@ export const useProfileStore = defineStore('profile', () => {
     targetRole?: string
     dailyGoalMinutes?: number
     telegramChatId?: number
+    preferredStudyTime?: string
+    streakAlertTime?: string
+    timeZone?: string
+    isPushEnabled?: boolean
   }) {
     isUpdating.value = true
     error.value = null
@@ -73,6 +81,10 @@ export const useProfileStore = defineStore('profile', () => {
         targetRole: string
         dailyGoalMinutes: number
         telegramChatId?: number
+        preferredStudyTime?: string
+        streakAlertTime?: string
+        timeZone?: string
+        isPushEnabled?: boolean
       }>('/api/v1/user/profile', data)
 
       if (profile.value) {
@@ -81,7 +93,6 @@ export const useProfileStore = defineStore('profile', () => {
           ...updated
         }
       }
-
       // Sync with auth store & localStorage
       const authStore = useAuthStore()
       authStore.updateUser({

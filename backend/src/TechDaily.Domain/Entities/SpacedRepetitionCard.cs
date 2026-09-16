@@ -6,7 +6,12 @@ namespace TechDaily.Domain.Entities;
 public class SpacedRepetitionCard : BaseEntity
 {
     public Guid UserId { get; set; }
-    public Guid TopicId { get; set; }
+    public Guid? TopicId { get; set; }
+    public CardSourceType SourceType { get; set; } = CardSourceType.Topic;
+    public string? FrontMarkdown { get; set; }
+    public string? BackMarkdown { get; set; }
+    public Guid? SourceHighlightId { get; set; }
+    public Guid? SourceQuizQuestionId { get; set; }
     public int RepetitionCount { get; private set; } = 0;
     public decimal EaseFactor { get; private set; } = 2.50m;
     public int IntervalDays { get; private set; } = 1;
@@ -16,7 +21,9 @@ public class SpacedRepetitionCard : BaseEntity
 
     // Navigation properties
     public User User { get; set; } = null!;
-    public Topic Topic { get; set; } = null!;
+    public Topic? Topic { get; set; }
+    public UserHighlight? SourceHighlight { get; set; }
+    public QuizQuestion? SourceQuizQuestion { get; set; }
 
     public SpacedRepetitionCard()
     {
@@ -29,6 +36,44 @@ public class SpacedRepetitionCard : BaseEntity
         {
             UserId = userId,
             TopicId = topicId,
+            NextReviewDate = initialDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
+            Status = CardStatus.Learning
+        };
+    }
+
+    public static SpacedRepetitionCard CreateFromHighlight(
+        Guid userId,
+        Guid highlightId,
+        string frontMarkdown,
+        string backMarkdown,
+        DateOnly? initialDate = null)
+    {
+        return new SpacedRepetitionCard
+        {
+            UserId = userId,
+            SourceType = CardSourceType.Highlight,
+            SourceHighlightId = highlightId,
+            FrontMarkdown = frontMarkdown,
+            BackMarkdown = backMarkdown,
+            NextReviewDate = initialDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
+            Status = CardStatus.Learning
+        };
+    }
+
+    public static SpacedRepetitionCard CreateFromQuizMistake(
+        Guid userId,
+        Guid questionId,
+        string frontMarkdown,
+        string backMarkdown,
+        DateOnly? initialDate = null)
+    {
+        return new SpacedRepetitionCard
+        {
+            UserId = userId,
+            SourceType = CardSourceType.QuizMistake,
+            SourceQuizQuestionId = questionId,
+            FrontMarkdown = frontMarkdown,
+            BackMarkdown = backMarkdown,
             NextReviewDate = initialDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
             Status = CardStatus.Learning
         };

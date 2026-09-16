@@ -356,6 +356,9 @@ namespace TechDaily.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BackMarkdown")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -364,6 +367,9 @@ namespace TechDaily.Infrastructure.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)")
                         .HasDefaultValue(2.50m);
+
+                    b.Property<string>("FrontMarkdown")
+                        .HasColumnType("text");
 
                     b.Property<int>("IntervalDays")
                         .ValueGeneratedOnAdd()
@@ -384,12 +390,23 @@ namespace TechDaily.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<Guid?>("SourceHighlightId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SourceQuizQuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<Guid>("TopicId")
+                    b.Property<Guid?>("TopicId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
@@ -400,9 +417,17 @@ namespace TechDaily.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SourceHighlightId");
+
+                    b.HasIndex("SourceQuizQuestionId");
+
                     b.HasIndex("TopicId");
 
                     b.HasIndex("UserId", "NextReviewDate");
+
+                    b.HasIndex("UserId", "SourceHighlightId");
+
+                    b.HasIndex("UserId", "SourceQuizQuestionId");
 
                     b.HasIndex("UserId", "TopicId")
                         .IsUnique();
@@ -693,6 +718,11 @@ namespace TechDaily.Infrastructure.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsPushEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -708,12 +738,25 @@ namespace TechDaily.Infrastructure.Migrations
                         .HasColumnType("character varying(10)")
                         .HasDefaultValue("en");
 
+                    b.Property<TimeOnly?>("PreferredStudyTime")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<TimeOnly?>("StreakAlertTime")
+                        .HasColumnType("time without time zone");
+
                     b.Property<string>("TargetRole")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<long?>("TelegramChatId")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("UTC");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -852,6 +895,51 @@ namespace TechDaily.Infrastructure.Migrations
                     b.ToTable("UserInsightBookmarks", (string)null);
                 });
 
+            modelBuilder.Entity("TechDaily.Domain.Entities.UserPushSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Auth")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Endpoint")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LastDispatchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("P256dh")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Endpoint")
+                        .IsUnique();
+
+                    b.ToTable("UserPushSubscriptions", (string)null);
+                });
+
             modelBuilder.Entity("TechDaily.Domain.Entities.UserQuizProgress", b =>
                 {
                     b.Property<Guid>("Id")
@@ -943,38 +1031,7 @@ namespace TechDaily.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsOne("TechDaily.Domain.ValueObjects.MicroQuizVo", "MicroQuiz", b1 =>
-                        {
-                            b1.Property<Guid>("DocumentChunkId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<int>("AnswerIndex")
-                                .HasColumnType("integer");
-
-                            b1.Property<string>("Explanation")
-                                .IsRequired()
-                                .HasColumnType("text");
-
-                            b1.Property<string>("Options")
-                                .IsRequired()
-                                .HasColumnType("text");
-
-                            b1.Property<string>("Question")
-                                .IsRequired()
-                                .HasColumnType("text");
-
-                            b1.HasKey("DocumentChunkId");
-
-                            b1.ToTable("DocumentChunks");
-
-                            b1.WithOwner()
-                                .HasForeignKey("DocumentChunkId");
-                        });
-
                     b.Navigation("DocumentBook");
-
-                    b.Navigation("MicroQuiz")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("TechDaily.Domain.Entities.InterviewQuestion", b =>
@@ -1006,17 +1063,30 @@ namespace TechDaily.Infrastructure.Migrations
 
             modelBuilder.Entity("TechDaily.Domain.Entities.SpacedRepetitionCard", b =>
                 {
+                    b.HasOne("TechDaily.Domain.Entities.UserHighlight", "SourceHighlight")
+                        .WithMany()
+                        .HasForeignKey("SourceHighlightId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("TechDaily.Domain.Entities.QuizQuestion", "SourceQuizQuestion")
+                        .WithMany()
+                        .HasForeignKey("SourceQuizQuestionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("TechDaily.Domain.Entities.Topic", "Topic")
                         .WithMany("SpacedRepetitionCards")
                         .HasForeignKey("TopicId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("TechDaily.Domain.Entities.User", "User")
                         .WithMany("SpacedRepetitionCards")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("SourceHighlight");
+
+                    b.Navigation("SourceQuizQuestion");
 
                     b.Navigation("Topic");
 
@@ -1091,6 +1161,17 @@ namespace TechDaily.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TechDaily.Domain.Entities.UserPushSubscription", b =>
+                {
+                    b.HasOne("TechDaily.Domain.Entities.User", "User")
+                        .WithMany("PushSubscriptions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TechDaily.Domain.Entities.UserQuizProgress", b =>
                 {
                     b.HasOne("TechDaily.Domain.Entities.QuizQuestion", "Question")
@@ -1146,6 +1227,8 @@ namespace TechDaily.Infrastructure.Migrations
                     b.Navigation("BookPacers");
 
                     b.Navigation("DailyDrills");
+
+                    b.Navigation("PushSubscriptions");
 
                     b.Navigation("QuizProgresses");
 
