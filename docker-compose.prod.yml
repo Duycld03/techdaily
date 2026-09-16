@@ -3,10 +3,12 @@ services:
     image: pgvector/pgvector:pg17
     container_name: techdaily_postgres_prod
     restart: always
+    ports:
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: techdaily_db
       POSTGRES_USER: techdaily_user
-      POSTGRES_PASSWORD: techdaily_password_secret
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     command:
       - "postgres"
       - "-c"
@@ -38,8 +40,8 @@ services:
     restart: always
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=techdaily_db;Username=techdaily_user;Password=techdaily_password_secret"
-      Jwt__Secret: "${JWT_SECRET:-TechDaily_Senior_Super_Secret_Key_2026_Min_32_Chars!}"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=techdaily_db;Username=techdaily_user;Password=${POSTGRES_PASSWORD}"
+      Jwt__Secret: "${JWT_SECRET}"
       Jwt__Issuer: "TechDaily"
       Jwt__Audience: "TechDailyUsers"
       Gemini__ApiKey: "${GEMINI_API_KEY}"
