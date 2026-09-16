@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TechDaily.Application.Interfaces;
 using TechDaily.Infrastructure.Persistence;
 using TechDaily.Infrastructure.Services;
+using TechDaily.Infrastructure.Maintenance;
 
 namespace TechDaily.Infrastructure;
 
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<ILookAheadBufferService, LookAheadBufferService>();
         services.AddSingleton<IWebPushService, WebPushService>();
 
+        services.AddScoped<DatabaseMaintenanceRunner>();
         // Background Workers
         services.AddHostedService<Workers.PdfIngestionWorker>();
         services.AddHostedService<Workers.DailyPushNotificationWorker>();

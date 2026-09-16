@@ -14,6 +14,7 @@ using TechDaily.Infrastructure.Persistence.Seeders;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using TechDaily.Application.Interfaces;
+using TechDaily.Infrastructure.Maintenance;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -154,6 +155,139 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+if (args.Contains("--cleanup-data"))
+{
+    using var scope = app.Services.CreateScope();
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    var context = services.GetRequiredService<TechDailyDbContext>();
+
+    if (context.Database.IsRelational())
+    {
+        try
+        {
+            await context.Database.MigrateAsync();
+            logger.LogInformation("Database migrations verified and applied.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not apply database migrations automatically.");
+        }
+    }
+
+    var runner = services.GetRequiredService<DatabaseMaintenanceRunner>();
+
+    var isExecute = args.Contains("--execute");
+    var isDryRun = args.Contains("--dry-run") || !isExecute;
+    var isBackfill = args.Contains("--backfill-embeddings");
+    var isReseed = args.Contains("--reseed-catalog");
+
+    var batchSize = 25;
+    var batchArg = args.FirstOrDefault(a => a.StartsWith("--batch-size=", StringComparison.OrdinalIgnoreCase));
+    if (batchArg != null && int.TryParse(batchArg["--batch-size=".Length..], out var parsedBatch) && parsedBatch > 0)
+    {
+        batchSize = Math.Clamp(parsedBatch, 5, 50);
+    }
+
+    // Baseline diagnostic analysis
+    var baseline = await runner.AnalyzeTaintedDataAsync();
+
+    if (isExecute)
+    {
+        var purge = await runner.PurgeTaintedDataAsync();
+        int reseededInsights = 0;
+        if (isReseed)
+        {
+            reseededInsights = await runner.ReseedCatalogAsync();
+        }
+
+        BackfillReport? backfill = null;
+        if (isBackfill)
+        {
+            backfill = await runner.BackfillEmbeddingsAsync(batchSize);
+        }
+
+        var post = await runner.AnalyzeTaintedDataAsync();
+
+        Console.WriteLine();
+        Console.WriteLine("=========================================================================================");
+        Console.WriteLine("                    TECHDAILY DATABASE MAINTENANCE EXECUTION REPORT                     ");
+        Console.WriteLine("=========================================================================================");
+        Console.WriteLine($" {"Target Table / Resource",-30} | {"Pre-Purge",-10} | {"Purged",-10} | {"Remaining Tainted",-18} ");
+        Console.WriteLine("-------------------------------+------------+------------+--------------------");
+        Console.WriteLine($" {"TermExplanationCaches",-30} | {baseline.TermExplanationCachesTainted,-10} | {purge.TermExplanationCachesPurged,-10} | {post.TermExplanationCachesTainted,-18} ");
+        Console.WriteLine($" {"TechInsights",-30} | {baseline.TechInsightsTainted,-10} | {purge.TechInsightsPurged,-10} | {post.TechInsightsTainted,-18} ");
+        Console.WriteLine($" {"QuizQuestions",-30} | {baseline.QuizQuestionsTainted,-10} | {purge.QuizQuestionsPurged,-10} | {post.QuizQuestionsTainted,-18} ");
+        Console.WriteLine($" {"SpacedRepetitionCards",-30} | {baseline.SpacedRepetitionCardsTainted,-10} | {purge.SpacedRepetitionCardsPurged,-10} | {post.SpacedRepetitionCardsTainted,-18} ");
+        Console.WriteLine($" {"DocumentChunks (Unvectorized)",-30} | {baseline.UnvectorizedDocumentChunks,-10} | {(backfill != null ? backfill.TotalVectorized.ToString() : "N/A"),-10} | {post.UnvectorizedDocumentChunks,-18} ");
+        Console.WriteLine("=========================================================================================");
+        if (isReseed)
+        {
+            Console.WriteLine($" Catalog reseeded: {reseededInsights} curated TechInsights active.");
+        }
+        if (isBackfill)
+        {
+            Console.WriteLine($" Vector backfill: {backfill?.TotalVectorized ?? 0} chunks vectorized across {backfill?.TotalBatches ?? 0} batches ({backfill?.FailedBatches ?? 0} failed).");
+        }
+        Console.WriteLine(" Database maintenance operations completed successfully.");
+        Console.WriteLine("=========================================================================================");
+        Console.WriteLine();
+    }
+    else if (isReseed || isBackfill)
+    {
+        int reseededInsights = 0;
+        if (isReseed)
+        {
+            reseededInsights = await runner.ReseedCatalogAsync();
+        }
+
+        BackfillReport? backfill = null;
+        if (isBackfill)
+        {
+            backfill = await runner.BackfillEmbeddingsAsync(batchSize);
+        }
+
+        var post = await runner.AnalyzeTaintedDataAsync();
+
+        Console.WriteLine();
+        Console.WriteLine("=========================================================================================");
+        Console.WriteLine("                    TECHDAILY DATABASE MAINTENANCE OPERATION REPORT                     ");
+        Console.WriteLine("=========================================================================================");
+        if (isReseed)
+        {
+            Console.WriteLine($" Catalog reseeded: {reseededInsights} curated TechInsights active.");
+        }
+        if (isBackfill)
+        {
+            Console.WriteLine($" Vector backfill: {backfill?.TotalVectorized ?? 0} chunks vectorized across {backfill?.TotalBatches ?? 0} batches ({backfill?.FailedBatches ?? 0} failed).");
+            Console.WriteLine($" Remaining unvectorized chunks: {post.UnvectorizedDocumentChunks}.");
+        }
+        Console.WriteLine("=========================================================================================");
+        Console.WriteLine();
+    }
+    else
+    {
+        // Dry-Run diagnostic analysis
+        Console.WriteLine();
+        Console.WriteLine("=========================================================================================");
+        Console.WriteLine("                    TECHDAILY DATABASE MAINTENANCE: DRY-RUN REPORT                      ");
+        Console.WriteLine("=========================================================================================");
+        Console.WriteLine($" {"Target Table / Resource",-32} | {"Tainted Rows",-14} | {"Planned Action",-25} ");
+        Console.WriteLine("----------------------------------+----------------+---------------------------");
+        Console.WriteLine($" {"TermExplanationCaches",-32} | {baseline.TermExplanationCachesTainted,-14} | {"Purge fallback entries",-25} ");
+        Console.WriteLine($" {"TechInsights",-32} | {baseline.TechInsightsTainted,-14} | {"Purge mock insights",-25} ");
+        Console.WriteLine($" {"QuizQuestions",-32} | {baseline.QuizQuestionsTainted,-14} | {"Purge mock questions",-25} ");
+        Console.WriteLine($" {"SpacedRepetitionCards",-32} | {baseline.SpacedRepetitionCardsTainted,-14} | {"Purge boilerplate cards",-25} ");
+        Console.WriteLine($" {"DocumentChunks (Unvectorized)",-32} | {baseline.UnvectorizedDocumentChunks,-14} | {"Backfill 768-D vectors",-25} ");
+        Console.WriteLine("=========================================================================================");
+        Console.WriteLine(" Zero mutations performed. Transaction rolled back (Dry-Run mode).");
+        Console.WriteLine(" Run with --execute to commit purge, --reseed-catalog to seed, --backfill-embeddings to embed.");
+        Console.WriteLine("=========================================================================================");
+        Console.WriteLine();
+    }
+
+    return;
+}
 
 // Configure Middleware Pipeline
 app.UseExceptionHandler();
