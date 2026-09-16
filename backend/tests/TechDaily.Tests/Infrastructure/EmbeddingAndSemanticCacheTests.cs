@@ -41,7 +41,12 @@ public class EmbeddingAndSemanticCacheTests : IDisposable
     public async Task GeminiEmbeddingService_WithoutApiKey_ShouldReturnNormalized768DimMockVector()
     {
         // Arrange
-        var config = new ConfigurationBuilder().Build();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gemini:UseOfflineMock"] = "true"
+            })
+            .Build();
         var httpClient = new HttpClient();
         var service = new GeminiEmbeddingService(httpClient, config, NullLogger<GeminiEmbeddingService>.Instance);
 
@@ -57,12 +62,38 @@ public class EmbeddingAndSemanticCacheTests : IDisposable
         var norm = Math.Sqrt(vec.ToArray().Sum(x => x * x));
         norm.Should().BeApproximately(1.0, 0.001);
     }
+    [Fact]
+    public async Task GeminiEmbeddingService_WithoutApiKey_WhenMockDisabled_ShouldReturnFailure()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gemini:UseOfflineMock"] = "false"
+            })
+            .Build();
+        var httpClient = new HttpClient();
+        var service = new GeminiEmbeddingService(httpClient, config, NullLogger<GeminiEmbeddingService>.Instance);
+
+        // Act
+        var result = await service.GenerateEmbeddingAsync("PostgreSQL write ahead log");
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("Embedding.MissingApiKey");
+    }
+
 
     [Fact]
     public async Task GeminiEmbeddingService_BatchEmbeddings_WithoutApiKey_ShouldReturnMatchingCount()
     {
         // Arrange
-        var config = new ConfigurationBuilder().Build();
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gemini:UseOfflineMock"] = "true"
+            })
+            .Build();
         var httpClient = new HttpClient();
         var service = new GeminiEmbeddingService(httpClient, config, NullLogger<GeminiEmbeddingService>.Instance);
 
@@ -79,6 +110,29 @@ public class EmbeddingAndSemanticCacheTests : IDisposable
             v.ToArray().Length.Should().Be(768);
         }
     }
+    [Fact]
+    public async Task GeminiEmbeddingService_BatchEmbeddings_WithoutApiKey_WhenMockDisabled_ShouldReturnFailure()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gemini:UseOfflineMock"] = "false"
+            })
+            .Build();
+        var httpClient = new HttpClient();
+        var service = new GeminiEmbeddingService(httpClient, config, NullLogger<GeminiEmbeddingService>.Instance);
+
+        var texts = new List<string> { "Text A", "Text B", "Text C" };
+
+        // Act
+        var result = await service.GenerateBatchEmbeddingsAsync(texts);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("Embedding.MissingApiKey");
+    }
+
 
     [Fact]
     public async Task TermExplanationService_WhenExactCacheHit_ShouldReturnWithoutCallingAI()

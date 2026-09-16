@@ -44,10 +44,11 @@ public class SpacedRepetitionBridgeTests : IDisposable
     private class FakeGeminiAiService : IGeminiAiService
     {
         public int CallCount = 0;
+        public bool ShouldFail = false;
         public string MockFront = "What is the primary trade-off of LSM-Trees?";
         public string MockBack = "LSM-Trees optimize for sequential write throughput at the expense of read amplification.";
 
-        public Task<(string Front, string Back)> SynthesizeActiveRecallCardAsync(
+        public Task<Result<(string Front, string Back)>> SynthesizeActiveRecallCardAsync(
             string quote,
             string? note,
             string chapterTitle,
@@ -55,7 +56,11 @@ public class SpacedRepetitionBridgeTests : IDisposable
             CancellationToken ct = default)
         {
             CallCount++;
-            return Task.FromResult((MockFront, MockBack));
+            if (ShouldFail)
+            {
+                return Task.FromResult(Result<(string Front, string Back)>.Failure(Error.Custom("AiService.RecallFailed", "Synthesis failed.")));
+            }
+            return Task.FromResult(Result<(string Front, string Back)>.Success((MockFront, MockBack)));
         }
     }
 
@@ -107,6 +112,52 @@ public class SpacedRepetitionBridgeTests : IDisposable
         cardInDb.SourceHighlightId.Should().Be(highlight.Id);
         cardInDb.TopicId.Should().BeNull();
     }
+    [Fact]
+    public async Task CreateCardFromHighlight_WhenRecallSynthesisFails_ShouldReturnFailureAndNotPersistCard()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, Email = "failuser@test.com", Name = "Fail User" };
+        await _db.Users.AddAsync(user);
+
+        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Failure Testing Book", Slug = "fail-book" };
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = 1,
+            ChapterTitle = "Reliability",
+            OriginalTextMarkdown = "Fail loud principle."
+        };
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.DocumentChunks.AddAsync(chunk);
+
+        var highlight = new UserHighlight
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            DocumentChunkId = chunk.Id,
+            SelectedText = "Fail loud principle.",
+            Note = "Important note."
+        };
+        await _db.UserHighlights.AddAsync(highlight);
+        await _db.SaveChangesAsync();
+
+        var fakeGemini = new FakeGeminiAiService { ShouldFail = true };
+        var handler = new CreateCardFromHighlightHandler(_db, fakeGemini);
+
+        // Act
+        var result = await handler.ExecuteAsync(new CreateCardFromHighlightRequest(highlight.Id, userId));
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("AiService.RecallFailed");
+        fakeGemini.CallCount.Should().Be(1);
+
+        var cardsCount = await _db.SpacedRepetitionCards.CountAsync();
+        cardsCount.Should().Be(0);
+    }
+
 
     [Fact]
     public async Task CreateCardFromHighlight_ShouldBeIdempotent_WhenCardAlreadyExists()

@@ -216,8 +216,9 @@ export const useLibraryStore = defineStore("library", () => {
           }
         }
         return res.slice;
-      } catch {
-        return null;
+      } catch (err) {
+        console.error(`Failed to fetch slice ${order} for book ${bookId}:`, err);
+        throw err;
       } finally {
         inFlightSliceFetches.delete(key);
       }
@@ -257,8 +258,9 @@ export const useLibraryStore = defineStore("library", () => {
           }
         }
         return res.chunk;
-      } catch {
-        return null;
+      } catch (err) {
+        console.error(`Failed to curate slice ${order} for book ${bookId}:`, err);
+        throw err;
       } finally {
         inFlightCurations.delete(key);
       }

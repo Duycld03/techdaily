@@ -159,8 +159,8 @@ async function ensureSliceLoaded(order: number) {
       }
       return slice;
     }
-  } catch {
-    // ignore
+  } catch (err) {
+    console.warn(`Failed to fetch slice ${order}:`, err);
   } finally {
     isLoadingSlice.value = false;
   }

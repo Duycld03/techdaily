@@ -31,7 +31,7 @@ public class TermExplanationService : ITermExplanationService
         _httpClient = httpClient;
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
-        _model = configuration["Gemini:Model"] ?? "gemini-3.1-flash-lite";
+        _model = configuration["Gemini:Model"] ?? "gemini-3.5-flash-lite";
     }
 
     public async Task<Result<TermExplanationResult>> ExplainTermAsync(
@@ -159,9 +159,8 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
 
         if (!isLlmGenerated || string.IsNullOrWhiteSpace(explanation))
         {
-            var fallback = GetFallbackExplanation(term, safeCategory, locale);
-            _logger.LogWarning("Gemini API call was unavailable or failed for term '{Term}'. Returning transient fallback without caching.", term);
-            return new TermExplanationResult(fallback, false);
+            _logger.LogError("Gemini API call failed for term '{Term}'.", term);
+            return Result<TermExplanationResult>.Failure(Error.Custom("AiService.Unavailable", "AI term explanation is temporarily unavailable. Please try again later."));
         }
 
         // 4. Save to DB Cache with Vector Embedding (only for LLM-generated explanations)
@@ -190,11 +189,4 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
         return new TermExplanationResult(explanation, false);
     }
 
-    private static string GetFallbackExplanation(string term, string category, string locale)
-    {
-        var isVi = locale.Equals("vi", StringComparison.OrdinalIgnoreCase);
-        return isVi
-            ? $"Thuật ngữ '{term}' trong {category}: Khái niệm kỹ thuật quan trọng mô tả cơ chế hoạt động nội tại và hành vi tài nguyên của hệ thống."
-            : $"The term '{term}' in {category} represents a core runtime or architectural mechanism governing system performance and data flow.";
-    }
 }

@@ -62,13 +62,19 @@ public class CreateCardFromHighlightHandler : IUseCase<CreateCardFromHighlightRe
         }
 
         var chapterTitle = highlight.DocumentChunk?.ChapterTitle ?? "Technical Guide";
-        var (front, back) = await _geminiAiService.SynthesizeActiveRecallCardAsync(
+        var cardResult = await _geminiAiService.SynthesizeActiveRecallCardAsync(
             highlight.SelectedText,
             highlight.Note,
             chapterTitle,
             request.Locale,
             cancellationToken);
 
+        if (!cardResult.IsSuccess)
+        {
+            return Result<CreateCardFromHighlightResponse>.Failure(cardResult.Error);
+        }
+
+        var (front, back) = cardResult.Value;
         var card = SpacedRepetitionCard.CreateFromHighlight(
             request.UserId,
             highlight.Id,

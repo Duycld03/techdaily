@@ -44,14 +44,6 @@ export function useApiError() {
 
     const errorObj = typeof err === 'object' && err !== null ? (err as Record<string, unknown>) : null
 
-    // Check machine-readable error code (e.g. AUTH_INVALID_CREDENTIALS, RESOURCE_NOT_FOUND)
-    if (errorObj && typeof errorObj.code === 'string') {
-      const i18nKey = `api_errors.${errorObj.code}`
-      if (te(i18nKey)) {
-        return t(i18nKey)
-      }
-    }
-
     const message = errorObj && typeof errorObj.message === 'string' ? errorObj.message : undefined
     const isNumericMessage = typeof message === 'string' && /^\d+$/.test(message.trim())
 
@@ -68,7 +60,32 @@ export function useApiError() {
       return t('api_errors.NETWORK_ERROR')
     }
 
-    // Specific fallback key passed by caller
+    // Extract response data (from ofetch, axios, or error itself)
+    const responseData = (errorObj?.data || (errorObj?.response as Record<string, unknown> | undefined)?._data || errorObj) as Record<string, unknown> | undefined
+
+    // Check for backend detail and error messages BEFORE falling back to fallbackKey:
+    if (responseData && typeof responseData === 'object') {
+      // If responseData?.title and responseData?.detail, return `${responseData.title}: ${responseData.detail}`
+      if (typeof responseData.title === 'string' && typeof responseData.detail === 'string') {
+        return `${responseData.title}: ${responseData.detail}`
+      }
+      // If responseData?.detail (RFC 7807 standard problem details), return responseData.detail
+      if (typeof responseData.detail === 'string') {
+        return responseData.detail
+      }
+      // If responseData?.error (string), return responseData.error
+      if (typeof responseData.error === 'string') {
+        return responseData.error
+      }
+      // If responseData?.code and i18n has api_errors.${responseData.code}, return t('api_errors.' + responseData.code)
+      const code = (typeof responseData.code === 'string' ? responseData.code : undefined) ||
+                   (typeof errorObj?.code === 'string' ? errorObj.code : undefined)
+      if (code && te(`api_errors.${code}`)) {
+        return t(`api_errors.${code}`)
+      }
+    }
+
+    // Only if none of the above are present, fall back to fallbackKey ? t(fallbackKey) : t('common.error')
     if (fallbackKey && te(fallbackKey)) {
       return t(fallbackKey)
     }
@@ -89,10 +106,13 @@ export function useApiError() {
     if (te('api_errors.SERVER_ERROR')) {
       return t('api_errors.SERVER_ERROR')
     }
+    if (te('common.error')) {
+      return t('common.error')
+    }
 
     return (
       (message && !isNumericMessage ? message : '') ||
-      'An unexpected error occurred. Please try again.'
+      (fallbackKey ? t(fallbackKey) : (te('common.error') ? t('common.error') : 'An unexpected error occurred. Please try again.'))
     )
   }
 

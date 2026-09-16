@@ -54,7 +54,9 @@ function triggerNextDayPrefetch() {
   const pacer = focusStore.data.pacer;
   const nextChunkOrder = pacer.currentChunkOrder + 1;
   if (nextChunkOrder <= pacer.totalChunks) {
-    libraryStore.curateSlice(pacer.bookId, nextChunkOrder).catch(() => {});
+    libraryStore.curateSlice(pacer.bookId, nextChunkOrder).catch((err) => {
+      console.warn("Failed to prefetch next day slice curation:", err);
+    });
   }
 }
 

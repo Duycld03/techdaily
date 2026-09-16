@@ -191,7 +191,7 @@ using (var scope = app.Services.CreateScope())
             var embeddingService = services.GetService<IEmbeddingService>();
             if (embeddingService != null)
             {
-                await CurriculumSeeder.BackfillEmbeddingsAsync(context, embeddingService);
+                await CurriculumSeeder.BackfillEmbeddingsAsync(context, embeddingService, logger);
                 logger.LogInformation("Curriculum vector embeddings verified and backfilled.");
             }
 
@@ -258,6 +258,9 @@ app.MapGroup("/api/v1/notifications")
     .WithTags("Web Push & Notifications")
     .MapNotificationEndpoints();
 
+app.MapGroup("/api/v1/system")
+    .WithTags("System Diagnostics & Health")
+    .MapSystemEndpoints();
 // Health Check Endpoint
 app.MapGet("/health", async (TechDailyDbContext db) =>
 {

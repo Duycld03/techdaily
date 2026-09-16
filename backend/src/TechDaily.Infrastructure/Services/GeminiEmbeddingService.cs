@@ -13,6 +13,7 @@ public class GeminiEmbeddingService : IEmbeddingService
     private readonly HttpClient _httpClient;
     private readonly string _apiKey;
     private readonly string _model;
+    private readonly bool _useOfflineMock;
     private readonly ILogger<GeminiEmbeddingService> _logger;
 
     public GeminiEmbeddingService(
@@ -23,7 +24,8 @@ public class GeminiEmbeddingService : IEmbeddingService
         _httpClient = httpClient;
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
-        _model = configuration["Gemini:EmbeddingModel"] ?? "text-embedding-004";
+        _model = configuration["Gemini:EmbeddingModel"] ?? "gemini-embedding-001";
+        _useOfflineMock = configuration.GetValue<bool>("Gemini:UseOfflineMock");
     }
 
     public async Task<Result<Vector>> GenerateEmbeddingAsync(
@@ -37,8 +39,12 @@ public class GeminiEmbeddingService : IEmbeddingService
 
         if (string.IsNullOrWhiteSpace(_apiKey))
         {
-            _logger.LogWarning("Gemini API key is not configured. Returning deterministic mock vector for testing.");
-            return GenerateDeterministicMockVector(text);
+            if (_useOfflineMock)
+            {
+                _logger.LogWarning("Gemini API key is not configured. Returning deterministic mock vector for testing.");
+                return GenerateDeterministicMockVector(text);
+            }
+            return Result<Vector>.Failure(Error.Custom("Embedding.MissingApiKey", "Gemini API key is not configured."));
         }
 
         try
@@ -50,7 +56,8 @@ public class GeminiEmbeddingService : IEmbeddingService
                 content = new
                 {
                     parts = new[] { new { text = cleanText } }
-                }
+                },
+                outputDimensionality = 768
             };
 
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:embedContent";
@@ -83,13 +90,23 @@ public class GeminiEmbeddingService : IEmbeddingService
             }
 
             var errBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogWarning("Gemini Embedding API returned status {Status}: {Error}. Using fallback.", response.StatusCode, errBody);
-            return GenerateDeterministicMockVector(text);
+            _logger.LogWarning("Gemini Embedding API returned status {Status}: {Error}.", response.StatusCode, errBody);
+            if (_useOfflineMock)
+            {
+                _logger.LogWarning("Using offline mock vector due to API error.");
+                return GenerateDeterministicMockVector(text);
+            }
+            return Result<Vector>.Failure(Error.Custom("Embedding.ApiError", $"Gemini Embedding API returned {response.StatusCode}: {errBody}"));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError(ex, "Failed to call Gemini Embedding API. Using fallback.");
-            return GenerateDeterministicMockVector(text);
+            _logger.LogError(ex, "Failed to call Gemini Embedding API.");
+            if (_useOfflineMock)
+            {
+                _logger.LogWarning("Using offline mock vector due to exception.");
+                return GenerateDeterministicMockVector(text);
+            }
+            return Result<Vector>.Failure(Error.Custom("Embedding.Exception", ex.Message));
         }
     }
 
@@ -102,16 +119,14 @@ public class GeminiEmbeddingService : IEmbeddingService
             return new List<Vector>();
         }
 
-        var results = new List<Vector>();
-
         if (string.IsNullOrWhiteSpace(_apiKey))
         {
-            _logger.LogWarning("Gemini API key is not configured. Returning deterministic mock vectors.");
-            foreach (var t in texts)
+            if (_useOfflineMock)
             {
-                results.Add(GenerateDeterministicMockVector(t));
+                _logger.LogWarning("Gemini API key is not configured. Returning deterministic mock vectors.");
+                return texts.Select(GenerateDeterministicMockVector).ToList();
             }
-            return results;
+            return Result<List<Vector>>.Failure(Error.Custom("Embedding.MissingApiKey", "Gemini API key is not configured."));
         }
 
         try
@@ -122,7 +137,8 @@ public class GeminiEmbeddingService : IEmbeddingService
                 content = new
                 {
                     parts = new[] { new { text = t.Length > 2000 ? t[..2000] : t } }
-                }
+                },
+                outputDimensionality = 768
             }).ToList();
 
             var requestBody = new { requests = requestsPayload };
@@ -141,6 +157,7 @@ public class GeminiEmbeddingService : IEmbeddingService
                 using var doc = JsonDocument.Parse(responseJson);
                 if (doc.RootElement.TryGetProperty("embeddings", out var embeddingsProp))
                 {
+                    var results = new List<Vector>();
                     foreach (var emb in embeddingsProp.EnumerateArray())
                     {
                         if (emb.TryGetProperty("values", out var valuesProp))
@@ -165,24 +182,26 @@ public class GeminiEmbeddingService : IEmbeddingService
                 }
             }
 
-            _logger.LogWarning("Batch embedding failed or incomplete. Falling back to sequential generation.");
+            var errBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogError("Gemini Batch Embedding API failed with status {Status}: {Error}", response.StatusCode, errBody);
+            if (_useOfflineMock)
+            {
+                _logger.LogWarning("Using offline mock fallback for batch embeddings.");
+                return texts.Select(GenerateDeterministicMockVector).ToList();
+            }
+            return Result<List<Vector>>.Failure(Error.Custom("Embedding.ApiError", $"Gemini Batch Embedding API returned {response.StatusCode}: {errBody}"));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Batch embedding error. Falling back to sequential generation.");
+            _logger.LogError(ex, "Gemini Batch Embedding API exception.");
+            if (_useOfflineMock)
+            {
+                _logger.LogWarning("Using offline mock fallback for batch embeddings.");
+                return texts.Select(GenerateDeterministicMockVector).ToList();
+            }
+            return Result<List<Vector>>.Failure(Error.Custom("Embedding.Exception", ex.Message));
         }
-
-        // Sequential fallback
-        results.Clear();
-        foreach (var text in texts)
-        {
-            var singleRes = await GenerateEmbeddingAsync(text, cancellationToken);
-            results.Add(singleRes.IsSuccess ? singleRes.Value : GenerateDeterministicMockVector(text));
-        }
-
-        return results;
     }
-
     private static Vector GenerateDeterministicMockVector(string text)
     {
         var floats = new float[768];

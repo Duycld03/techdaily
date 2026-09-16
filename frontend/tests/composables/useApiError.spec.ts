@@ -54,4 +54,28 @@ describe('useApiError', () => {
     expect(formatError(err, 'notes.toast_flashcard_error')).toBe('notes.toast_flashcard_error')
     expect(formatError(err)).toBe('api_errors.SERVER_ERROR')
   })
+
+  it('returns responseData.detail (RFC 7807) even when fallbackKey is provided', () => {
+    const { formatError } = useApiError()
+    const err = { data: { detail: 'AI term explanation is temporarily unavailable' } }
+    expect(formatError(err, 'today.error_explain_failed')).toBe('AI term explanation is temporarily unavailable')
+  })
+
+  it('returns responseData.error string when present', () => {
+    const { formatError } = useApiError()
+    const err = { response: { _data: { error: 'Invalid payload provided' } } }
+    expect(formatError(err, 'today.error_submit_failed')).toBe('Invalid payload provided')
+  })
+
+  it('returns combined title and detail when both are present', () => {
+    const { formatError } = useApiError()
+    const err = { data: { title: 'Service Unavailable', detail: 'Gemini model is overloaded' } }
+    expect(formatError(err, 'today.error_submit_failed')).toBe('Service Unavailable: Gemini model is overloaded')
+  })
+
+  it('translates responseData.code when present in response body', () => {
+    const { formatError } = useApiError()
+    const err = { data: { code: 'RESOURCE_NOT_FOUND' } }
+    expect(formatError(err, 'today.error_submit_failed')).toBe('api_errors.RESOURCE_NOT_FOUND')
+  })
 })

@@ -114,8 +114,9 @@ onMounted(async () => {
   }
 
   // Load books for grounded selector dropdown
-  libraryStore.fetchBooks().catch(() => {})
-
+  libraryStore.fetchBooks().catch((err) => {
+    console.warn('Failed to load books for quiz dropdown:', err)
+  })
   // Pre-fill level based on user profile if available
   if (profileStore.profile?.targetRole) {
     const roleLower = profileStore.profile.targetRole.toLowerCase()

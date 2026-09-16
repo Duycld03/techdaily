@@ -1,8 +1,10 @@
+using TechDaily.Application.Common;
+
 namespace TechDaily.Application.Interfaces;
 
 public interface IGeminiAiService
 {
-    Task<(string Front, string Back)> SynthesizeActiveRecallCardAsync(
+    Task<Result<(string Front, string Back)>> SynthesizeActiveRecallCardAsync(
         string quote,
         string? note,
         string chapterTitle,

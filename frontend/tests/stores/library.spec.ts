@@ -62,13 +62,27 @@ const mockDownload = vi.fn(async (url: string, defaultName: string) => {
   return;
 });
 
-
-vi.mock("~/composables/useApiClient", () => ({
-  useApiClient: () => ({
-    get: vi.fn(async (url: string) => {
-      if (url.includes("/slices/")) {
-        return {
-          slice: {
+const mockGet = vi.fn(async (url: string) => {
+  if (url.includes("/slices/")) {
+    return {
+      slice: {
+        id: "chk-1",
+        chunkOrder: 1,
+        chapterTitle: "Reliability, Scalability, and Maintainability",
+        summaryMarkdown: "Core qualities of data systems.",
+        originalTextMarkdown: "Systems must maintain performance...",
+        keyTakeaways: ["High availability", "Fault tolerance"],
+        estimatedReadMinutes: 4,
+        isAiFormatted: true,
+      },
+    };
+  }
+  if (url.includes("/books/b-1")) {
+    return {
+      book: {
+        ...mockBooks[0],
+        chunks: [
+          {
             id: "chk-1",
             chunkOrder: 1,
             chapterTitle: "Reliability, Scalability, and Maintainability",
@@ -76,33 +90,20 @@ vi.mock("~/composables/useApiClient", () => ({
             originalTextMarkdown: "Systems must maintain performance...",
             keyTakeaways: ["High availability", "Fault tolerance"],
             estimatedReadMinutes: 4,
-            isAiFormatted: true,
           },
-        };
-      }
-      if (url.includes("/books/b-1")) {
-        return {
-          book: {
-            ...mockBooks[0],
-            chunks: [
-              {
-                id: "chk-1",
-                chunkOrder: 1,
-                chapterTitle: "Reliability, Scalability, and Maintainability",
-                summaryMarkdown: "Core qualities of data systems.",
-                originalTextMarkdown: "Systems must maintain performance...",
-                keyTakeaways: ["High availability", "Fault tolerance"],
-                estimatedReadMinutes: 4,
-              },
-            ],
-          },
-        };
-      }
-      if (url.includes("/books")) {
-        return { books: [...mockBooks] };
-      }
-      throw new Error("Not found");
-    }),
+        ],
+      },
+    };
+  }
+  if (url.includes("/books")) {
+    return { books: [...mockBooks] };
+  }
+  throw new Error("Not found");
+});
+
+vi.mock("~/composables/useApiClient", () => ({
+  useApiClient: () => ({
+    get: mockGet,
     post: mockPost,
     download: mockDownload,
   }),
@@ -184,5 +185,19 @@ describe("useLibraryStore", () => {
       "/api/v1/library/books/b-1/export-markdown",
       "ddia-notes.md"
     );
+  });
+
+  it("re-throws error when curateSlice API call fails", async () => {
+    const library = useLibraryStore();
+    mockPost.mockRejectedValueOnce(new Error("AI curation failed"));
+
+    await expect(library.curateSlice("b-1", 1)).rejects.toThrow("AI curation failed");
+  });
+
+  it("re-throws error when fetchSlice API call fails", async () => {
+    const library = useLibraryStore();
+    mockGet.mockRejectedValueOnce(new Error("Slice fetch failed"));
+
+    await expect(library.fetchSlice("b-1", 1)).rejects.toThrow("Slice fetch failed");
   });
 });

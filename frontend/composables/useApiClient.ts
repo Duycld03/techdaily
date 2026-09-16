@@ -4,14 +4,16 @@ import { useToast } from '~/composables/useToast'
 export class ApiError extends Error {
   code?: string
   status: number
-  details?: any
+  details?: unknown
+  data?: unknown
 
-  constructor(message: string, status: number, code?: string, details?: any) {
+  constructor(message: string, status: number, code?: string, details?: unknown, data?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
     this.details = details
+    this.data = data
     Object.setPrototypeOf(this, ApiError.prototype)
   }
 }
@@ -114,13 +116,15 @@ export function useApiClient() {
 
       let errorMessage = `HTTP Error ${response.status}`
       let errorCode: string | undefined = undefined
-      let errorDetails: any = undefined
+      let errorDetails: unknown = undefined
+      let errorData: unknown = undefined
 
       try {
         const errorJson = await response.json()
-        errorMessage = errorJson.error || errorJson.message || errorJson.title || errorMessage
+        errorData = errorJson
+        errorMessage = errorJson.detail || errorJson.error || errorJson.message || errorJson.title || errorMessage
         errorCode = errorJson.code
-        errorDetails = errorJson.details || errorJson.errors
+        errorDetails = errorJson.details || errorJson.errors || errorJson.detail
       } catch {
         // fallback
       }
@@ -132,9 +136,8 @@ export function useApiClient() {
         else if (response.status >= 500) errorCode = 'SERVER_ERROR'
       }
 
-      throw new ApiError(errorMessage, response.status, errorCode, errorDetails)
+      throw new ApiError(errorMessage, response.status, errorCode, errorDetails, errorData)
     }
-
     if (response.status === 204 || response.headers.get('content-length') === '0') {
       return {} as T
     }

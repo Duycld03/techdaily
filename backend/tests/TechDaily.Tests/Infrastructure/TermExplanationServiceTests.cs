@@ -41,7 +41,7 @@ public class TermExplanationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExplainTermAsync_WhenGeminiApiFails_ShouldReturnFallbackAndNotPersistToCache()
+    public async Task ExplainTermAsync_WhenGeminiApiFails_ShouldReturnFailureAndNotPersistToCache()
     {
         // Arrange
         var fakeEmbedding = new CountingFakeEmbeddingService();
@@ -67,10 +67,8 @@ public class TermExplanationServiceTests : IDisposable
         var result = await service.ExplainTermAsync("Goroutine", "Go Concurrency", "Context about goroutines", "en");
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Explanation.Should().Contain("Goroutine");
-        result.Value.Explanation.Should().Contain("represents a core runtime or architectural mechanism");
-        result.Value.IsFromCache.Should().BeFalse();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("AiService.Unavailable");
 
         // Must NOT add any record to TermExplanationCaches
         var cacheCount = await _db.TermExplanationCaches.CountAsync();
@@ -78,7 +76,7 @@ public class TermExplanationServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task ExplainTermAsync_WhenNoApiKey_ShouldReturnFallbackAndNotPersistToCache()
+    public async Task ExplainTermAsync_WhenNoApiKey_ShouldReturnFailureAndNotPersistToCache()
     {
         // Arrange
         var fakeEmbedding = new CountingFakeEmbeddingService();
@@ -103,10 +101,8 @@ public class TermExplanationServiceTests : IDisposable
         var result = await service.ExplainTermAsync("Goroutine", "Go Concurrency", "Context about goroutines", "vi");
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Explanation.Should().Contain("Goroutine");
-        result.Value.Explanation.Should().Contain("Khái niệm kỹ thuật quan trọng mô tả cơ chế hoạt động nội tại");
-        result.Value.IsFromCache.Should().BeFalse();
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("AiService.Unavailable");
 
         // Must NOT add any record to TermExplanationCaches
         var cacheCount = await _db.TermExplanationCaches.CountAsync();

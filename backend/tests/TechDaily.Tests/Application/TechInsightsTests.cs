@@ -272,29 +272,24 @@ public class TechInsightsTests : IDisposable
     }
 
     [Fact]
-    public async Task GeminiAiService_MockGenerator_ShouldSupportAspnetAspects()
+    public async Task GeminiAiService_WhenApiKeyMissing_ShouldReturnFailure()
     {
         // Arrange
         var config = new FakeConfiguration(new Dictionary<string, string?>
         {
             ["Gemini:ApiKey"] = "",
-            ["Gemini:Model"] = "gemini-3.1-flash-lite"
+            ["Gemini:Model"] = "gemini-3.5-flash-lite"
         });
 
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<TechDaily.Infrastructure.Services.GeminiAiService>.Instance;
         var service = new TechDaily.Infrastructure.Services.GeminiAiService(new System.Net.Http.HttpClient(), config, logger);
 
-        // Act - Call multiple times with "asp.net"
+        // Act - Call with "asp.net"
         var result1 = await service.GenerateInsightAsync(Category.BackendDotNet, "về asp.net", locale: "vi");
-        var result2 = await service.GenerateInsightAsync(Category.BackendDotNet, "về asp.net", locale: "vi");
 
         // Assert
-        result1.IsSuccess.Should().BeTrue();
-        result2.IsSuccess.Should().BeTrue();
-        result1.Value.Category.Should().Be(Category.BackendDotNet);
-        result2.Value.Category.Should().Be(Category.BackendDotNet);
-        result1.Value.Title.Should().NotBeNullOrWhiteSpace();
-        result2.Value.Title.Should().NotBeNullOrWhiteSpace();
+        result1.IsSuccess.Should().BeFalse();
+        result1.Error.Code.Should().Be("AiService.Unavailable");
     }
 
     [Fact]

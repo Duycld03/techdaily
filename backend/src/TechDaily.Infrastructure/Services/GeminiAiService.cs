@@ -26,7 +26,7 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAi
         _httpClient = httpClient;
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
-        _model = configuration["Gemini:Model"] ?? "gemini-3.1-flash-lite";
+        _model = configuration["Gemini:Model"] ?? "gemini-3.5-flash-lite";
     }
 
     public async Task<Result<TechInsight>> GenerateInsightAsync(
@@ -45,8 +45,8 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAi
 
         if (string.IsNullOrWhiteSpace(_apiKey))
         {
-            _logger.LogWarning("Gemini API key is not configured. Falling back to local generated insight.");
-            return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topicPrompt, isVi);
+            _logger.LogError("Gemini API key is not configured.");
+            return Result<TechInsight>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI insight generation failed."));
         }
 
         try
@@ -145,11 +145,7 @@ No markdown backticks around JSON.";
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError("Gemini API error ({StatusCode}): {Error}", response.StatusCode, errorBody);
-                if (!string.IsNullOrWhiteSpace(_apiKey))
-                {
-                    return new Error("Error.GeminiApi", $"AI service is temporarily busy (status {(int)response.StatusCode}). Please try again in a few moments.");
-                }
-                return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topicPrompt, isVi);
+                return Result<TechInsight>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI insight generation failed."));
             }
 
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -158,11 +154,7 @@ No markdown backticks around JSON.";
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception while generating insight with Gemini API.");
-            if (!string.IsNullOrWhiteSpace(_apiKey))
-            {
-                return new Error("Error.GeminiException", "An error occurred while communicating with the AI service. Please try again.");
-            }
-            return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topicPrompt, isVi);
+            return Result<TechInsight>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI insight generation failed."));
         }
     }
 
@@ -180,11 +172,7 @@ No markdown backticks around JSON.";
             if (candidates.GetArrayLength() == 0)
             {
                 _logger.LogWarning("Gemini API returned 0 candidates for insight topic '{Topic}'.", topic);
-                if (!string.IsNullOrWhiteSpace(_apiKey))
-                {
-                    return new Error("Error.GeminiEmptyCandidates", "AI model returned no candidates. Please try again.");
-                }
-                return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topic, isVi);
+                return Result<TechInsight>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI insight generation failed."));
             }
 
             var content = candidates[0].GetProperty("content");
@@ -207,11 +195,7 @@ No markdown backticks around JSON.";
             if (string.IsNullOrWhiteSpace(rawText))
             {
                 _logger.LogWarning("Gemini API returned empty text part for insight topic '{Topic}'.", topic);
-                if (!string.IsNullOrWhiteSpace(_apiKey))
-                {
-                    return new Error("Error.GeminiEmptyText", "AI model returned empty text. Please try again.");
-                }
-                return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topic, isVi);
+                return Result<TechInsight>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI insight generation failed."));
             }
 
             var cleanJson = rawText.Trim();
@@ -281,11 +265,7 @@ No markdown backticks around JSON.";
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception while parsing Gemini insight response for topic '{Topic}'. Raw snippet: {Snippet}", topic, rawText ?? responseBody.Substring(0, Math.Min(responseBody.Length, 300)));
-            if (!string.IsNullOrWhiteSpace(_apiKey))
-            {
-                return new Error("Error.GeminiParse", "Failed to parse insight response from AI model. Please try again.");
-            }
-            return GenerateMockInsight(preferredCategory ?? Category.BackendDotNet, topic, isVi);
+            return Result<TechInsight>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI insight generation failed."));
         }
     }
 
@@ -678,8 +658,8 @@ No markdown backticks around JSON.";
 
         if (string.IsNullOrWhiteSpace(_apiKey))
         {
-            _logger.LogWarning("Gemini API key is not configured. Falling back to local mock quiz questions.");
-            return GenerateMockQuestions(topic, category, level, count, isVi);
+            _logger.LogError("Gemini API key is not configured.");
+            return Result<List<QuizQuestion>>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI quiz generation failed."));
         }
 
         try
@@ -752,11 +732,7 @@ No markdown backticks around JSON.";
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogError("Gemini API error ({StatusCode}): {Error}", response.StatusCode, errorBody);
-                if (!string.IsNullOrWhiteSpace(_apiKey))
-                {
-                    return new Error("Error.GeminiApi", $"AI question generation is temporarily busy (status {(int)response.StatusCode}). Please try again in a few moments.");
-                }
-                return GenerateMockQuestions(topic, category, level, count, isVi);
+                return Result<List<QuizQuestion>>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI quiz generation failed."));
             }
 
             var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -765,11 +741,7 @@ No markdown backticks around JSON.";
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception while generating quiz with Gemini API.");
-            if (!string.IsNullOrWhiteSpace(_apiKey))
-            {
-                return new Error("Error.GeminiException", "An error occurred while communicating with the AI service. Please try again.");
-            }
-            return GenerateMockQuestions(topic, category, level, count, isVi);
+            return Result<List<QuizQuestion>>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI quiz generation failed."));
         }
     }
 
@@ -789,11 +761,7 @@ No markdown backticks around JSON.";
             if (candidates.GetArrayLength() == 0)
             {
                 _logger.LogWarning("Gemini API returned 0 candidates for topic '{Topic}'.", topic);
-                if (!string.IsNullOrWhiteSpace(_apiKey))
-                {
-                    return new Error("Error.GeminiEmptyCandidates", "AI model returned no candidates. Please try again.");
-                }
-                return GenerateMockQuestions(topic, category, level, count, isVi);
+                return Result<List<QuizQuestion>>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI quiz generation failed."));
             }
 
             var content = candidates[0].GetProperty("content");
@@ -816,11 +784,7 @@ No markdown backticks around JSON.";
             if (string.IsNullOrWhiteSpace(rawText))
             {
                 _logger.LogWarning("Gemini API returned empty text part for topic '{Topic}'.", topic);
-                if (!string.IsNullOrWhiteSpace(_apiKey))
-                {
-                    return new Error("Error.GeminiEmptyText", "AI model returned empty text. Please try again.");
-                }
-                return GenerateMockQuestions(topic, category, level, count, isVi);
+                return Result<List<QuizQuestion>>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI quiz generation failed."));
             }
 
             var cleanJson = rawText.Trim();
@@ -850,11 +814,7 @@ No markdown backticks around JSON.";
             if (root.ValueKind != JsonValueKind.Array)
             {
                 _logger.LogWarning("Gemini response is not a JSON array for topic '{Topic}'. Cleaned text: {CleanJson}", topic, cleanJson);
-                if (!string.IsNullOrWhiteSpace(_apiKey))
-                {
-                    return new Error("Error.GeminiNotArray", "AI model response was not in expected array format. Please try again.");
-                }
-                return GenerateMockQuestions(topic, category, level, count, isVi);
+                return Result<List<QuizQuestion>>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI quiz generation failed."));
             }
 
             var list = new List<QuizQuestion>();
@@ -919,11 +879,7 @@ No markdown backticks around JSON.";
             if (list.Count == 0)
             {
                 _logger.LogWarning("No valid questions parsed from Gemini response for topic '{Topic}'.", topic);
-                if (!string.IsNullOrWhiteSpace(_apiKey))
-                {
-                    return new Error("Error.GeminiEmptyParsed", "No valid questions could be extracted from AI response. Please try again.");
-                }
-                return GenerateMockQuestions(topic, category, level, count, isVi);
+                return Result<List<QuizQuestion>>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI quiz generation failed."));
             }
 
             return list;
@@ -931,11 +887,7 @@ No markdown backticks around JSON.";
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception while parsing Gemini quiz response for topic '{Topic}'. Raw response snippet: {Snippet}", topic, rawText ?? responseBody.Substring(0, Math.Min(responseBody.Length, 300)));
-            if (!string.IsNullOrWhiteSpace(_apiKey))
-            {
-                return new Error("Error.GeminiParse", "Failed to parse quiz response from AI model. Please try again.");
-            }
-            return GenerateMockQuestions(topic, category, level, count, isVi);
+            return Result<List<QuizQuestion>>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI quiz generation failed."));
         }
     }
 
@@ -1324,7 +1276,7 @@ Respond strictly in valid JSON without markdown wrapping:
         return text;
     }
 
-    public async Task<(string Front, string Back)> SynthesizeActiveRecallCardAsync(
+    public async Task<Result<(string Front, string Back)>> SynthesizeActiveRecallCardAsync(
         string quote,
         string? note,
         string chapterTitle,
@@ -1334,20 +1286,10 @@ Respond strictly in valid JSON without markdown wrapping:
         var isVi = locale.Equals("vi", StringComparison.OrdinalIgnoreCase);
         var noteContext = string.IsNullOrWhiteSpace(note) ? "None provided" : note.Trim();
 
-        (string Front, string Back) Fallback()
-        {
-            var fallbackFront = isVi
-                ? $"Nguyên lý kiến trúc cốt lõi đằng sau trích dẫn trong '{chapterTitle}' là gì?"
-                : $"What is the core architectural principle behind: \"{quote.Trim()}\"?";
-            var fallbackBack = !string.IsNullOrWhiteSpace(note)
-                ? $"{note.Trim()}\n\n> \"{quote.Trim()}\""
-                : quote.Trim();
-            return (fallbackFront, fallbackBack);
-        }
-
         if (string.IsNullOrWhiteSpace(_apiKey))
         {
-            return Fallback();
+            _logger.LogError("Gemini API key is not configured for recall card synthesis.");
+            return Result<(string Front, string Back)>.Failure(Error.Custom("AiService.RecallFailed", "Gemini API key is not configured."));
         }
 
         try
@@ -1401,14 +1343,19 @@ Respond strictly in valid JSON without markdown wrapping:
             var response = await PostGeminiWithRetryAsync(requestUri, jsonContent, ct);
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Gemini API error ({StatusCode}) during recall card synthesis.", response.StatusCode);
-                return Fallback();
+                var errorBody = await response.Content.ReadAsStringAsync(ct);
+                _logger.LogError("Gemini API error ({StatusCode}) during recall card synthesis: {Error}", response.StatusCode, errorBody);
+                return Result<(string Front, string Back)>.Failure(Error.Custom("AiService.RecallFailed", $"Gemini API returned status {response.StatusCode}."));
             }
 
             var responseBody = await response.Content.ReadAsStringAsync(ct);
             using var doc = JsonDocument.Parse(responseBody);
             var candidates = doc.RootElement.GetProperty("candidates");
-            if (candidates.GetArrayLength() == 0) return Fallback();
+            if (candidates.GetArrayLength() == 0)
+            {
+                _logger.LogError("Gemini API returned 0 candidates during recall card synthesis.");
+                return Result<(string Front, string Back)>.Failure(Error.Custom("AiService.RecallFailed", "AI model returned no candidates."));
+            }
 
             var content = candidates[0].GetProperty("content");
             var parts = content.GetProperty("parts");
@@ -1422,7 +1369,11 @@ Respond strictly in valid JSON without markdown wrapping:
                 }
             }
 
-            if (string.IsNullOrWhiteSpace(rawJson)) return Fallback();
+            if (string.IsNullOrWhiteSpace(rawJson))
+            {
+                _logger.LogError("Gemini API returned empty text part during recall card synthesis.");
+                return Result<(string Front, string Back)>.Failure(Error.Custom("AiService.RecallFailed", "AI model returned empty text."));
+            }
 
             var cleanJson = ExtractJsonObject(rawJson.Trim());
             using var cardDoc = JsonDocument.Parse(cleanJson);
@@ -1433,15 +1384,16 @@ Respond strictly in valid JSON without markdown wrapping:
 
             if (string.IsNullOrWhiteSpace(front) || string.IsNullOrWhiteSpace(back))
             {
-                return Fallback();
+                _logger.LogError("Parsed recall card JSON missing front or back properties.");
+                return Result<(string Front, string Back)>.Failure(Error.Custom("AiService.RecallFailed", "Parsed recall card missing front or back."));
             }
 
             return (NormalizeEscapedNewlines(front.Trim()), NormalizeEscapedNewlines(back.Trim()));
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to synthesize active recall card for highlight in '{Title}'.", chapterTitle);
-            return Fallback();
+            _logger.LogError(ex, "Failed to synthesize active recall card for highlight in '{Title}'.", chapterTitle);
+            return Result<(string Front, string Back)>.Failure(Error.Custom("AiService.RecallFailed", ex.Message));
         }
     }
 }

@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TechDaily.Domain.Entities;
 using TechDaily.Domain.Enums;
 using TechDaily.Application.Interfaces;
@@ -150,7 +151,11 @@ public static class CurriculumSeeder
         await context.SaveChangesAsync();
     }
 
-    public static async Task BackfillEmbeddingsAsync(TechDailyDbContext context, IEmbeddingService embeddingService, CancellationToken cancellationToken = default)
+    public static async Task BackfillEmbeddingsAsync(
+        TechDailyDbContext context,
+        IEmbeddingService embeddingService,
+        ILogger? logger = null,
+        CancellationToken cancellationToken = default)
     {
         var unvectorizedChunks = await context.DocumentChunks
             .Where(c => c.Embedding == null)
@@ -165,7 +170,13 @@ public static class CurriculumSeeder
             .ToList();
 
         var embResult = await embeddingService.GenerateBatchEmbeddingsAsync(texts, cancellationToken);
-        if (embResult.IsSuccess && embResult.Value.Count == unvectorizedChunks.Count)
+        if (!embResult.IsSuccess)
+        {
+            logger?.LogError("Curriculum vector embeddings backfill failed: {Error}", embResult.Error.Message);
+            return;
+        }
+
+        if (embResult.Value.Count == unvectorizedChunks.Count)
         {
             for (int i = 0; i < unvectorizedChunks.Count; i++)
             {
