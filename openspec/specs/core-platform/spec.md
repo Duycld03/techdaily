@@ -351,7 +351,7 @@ The endpoint `POST /api/v1/daily/explain-term` SHALL return an error HTTP status
 ---
 
 ### Requirement: Frontend Client Error Resolution & Problem Details
-The client error resolution composable `frontend/composables/useApiError.ts` SHALL prioritize RFC 7807 problem details (`detail`) and backend custom error messages (`error`) over generic caller-specified fallback keys (`fallbackKey`).
+The client error resolution composable `frontend/composables/useApiError.ts` SHALL prioritize RFC 7807 problem details (`detail`) and backend custom error messages (`error`) for client-actionable 4xx errors, while mapping HTTP 500 Internal Server Error responses to localized platform error translations (`api_errors.SERVER_ERROR` or caller-provided `fallbackKey`) to prevent leaking unlocalized English server fault strings.
 
 #### Scenario: Backend returns RFC 7807 ProblemDetails with detail
 - **WHEN** an API request fails and the backend returns `{ "detail": "Google Gemini rate limit exceeded", "status": 429 }`
@@ -363,7 +363,14 @@ The client error resolution composable `frontend/composables/useApiError.ts` SHA
 - **AND** the caller invokes `formatError(err, "common.error")`
 - **THEN** `formatError` returns `"Gemini Embedding API returned status 503"`.
 
----
+#### Scenario: Backend returns HTTP 500 ProblemDetails
+- **WHEN** an API request encounters an unhandled server error and returns HTTP 500 with `{ "title": "Server Error", "detail": "An unexpected error occurred.", "status": 500 }`
+- **AND** the active locale is Vietnamese (`vi`)
+- **THEN** `formatError` resolves to the localized server error message `"Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau."` (`api_errors.SERVER_ERROR`) instead of the raw English string.
+
+#### Scenario: Backend returns HTTP 500 with caller fallback key
+- **WHEN** an API request fails with HTTP 500 and the caller provides a specific fallback key (e.g., `"today.explain_error"`)
+- **THEN** `formatError` resolves to the localized translation of the fallback key or `api_errors.SERVER_ERROR` rather than unlocalized server details.
 
 ---
 
@@ -451,3 +458,15 @@ The platform application `TechDaily.Api` SHALL provide command-line arguments fo
 #### Scenario: Maintenance CLI dry-run reports non-zero tainted records
 - **WHEN** the maintenance CLI is executed with `--cleanup-data --dry-run` against a database containing legacy fallback records
 - **THEN** the CLI outputs the exact count of tainted records per table and exits with code `0` without altering database state.
+
+### Requirement: Resilient Secondary Operation Fault Isolation
+Application services performing secondary or auxiliary caching operations (such as embedding generation and cache persistence in `TermExplanationService`) SHALL isolate secondary database interactions within non-blocking exception handlers. Secondary caching failures SHALL NOT fail primary user-facing requests or discard valid LLM generation outputs.
+
+#### Scenario: Auxiliary caching failure does not fail primary user operation
+- **WHEN** a primary business operation succeeds (e.g. Gemini generates a term explanation) but secondary caching to PostgreSQL encounters a database exception
+- **THEN** the application service catches and logs the exception without propagating an unhandled HTTP 500 error to the client
+- **AND** returns the generated output to the user.
+
+#### Scenario: Diagnostic logging on auxiliary caching failure
+- **WHEN** a secondary caching failure occurs
+- **THEN** the service logs a structured warning containing the entity identifier, error message, and context for operational observability.
