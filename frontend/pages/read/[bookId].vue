@@ -1299,6 +1299,7 @@ async function handleCreateFlashcardFromSelection() {
           </div>
         </div>
       </div>
+    </Teleport>
 
     <!-- Term Explainer Tooltip Modal -->
     <TermExplainerModal

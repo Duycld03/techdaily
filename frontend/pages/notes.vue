@@ -323,6 +323,7 @@ async function confirmUnbookmark() {
                 <Trash2 class="w-4 h-4" />
               </button>
             </div>
+          </div>
 
           <!-- Highlighted Text Quote -->
           <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border-l-4 border-indigo-500 text-sm md:text-base text-slate-800 dark:text-slate-200 leading-relaxed font-sans italic">
