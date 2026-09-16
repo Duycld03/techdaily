@@ -8,7 +8,7 @@ import {
   Lock,
   Mail,
   Briefcase,
-  Send,
+  Globe,
   Save,
   Eye,
   EyeOff,
@@ -32,11 +32,17 @@ const hasAvatarError = ref(false)
 const name = ref('')
 const targetRole = ref('Senior Engineer')
 const dailyGoalMinutes = ref(10)
-const telegramChatId = ref<number | undefined>(undefined)
 const preferredStudyTime = ref('08:00')
 const streakAlertTime = ref('20:00')
-const timeZone = ref('UTC')
-
+const timeZone = ref(
+  (() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    } catch {
+      return 'UTC'
+    }
+  })()
+)
 // Password form state
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -98,11 +104,11 @@ onMounted(async () => {
     name.value = data.user.name
     targetRole.value = data.user.targetRole || 'Senior Engineer'
     dailyGoalMinutes.value = data.user.dailyGoalMinutes || 10
-    telegramChatId.value = data.user.telegramChatId
     if (data.user.preferredStudyTime) preferredStudyTime.value = data.user.preferredStudyTime
     if (data.user.streakAlertTime) streakAlertTime.value = data.user.streakAlertTime
-    if (data.user.timeZone) timeZone.value = data.user.timeZone
-    else {
+    if (data.user.timeZone && data.user.timeZone !== 'UTC') {
+      timeZone.value = data.user.timeZone
+    } else {
       try {
         timeZone.value = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
       } catch {
@@ -118,14 +124,13 @@ async function handleProfileSave() {
       name: name.value.trim(),
       targetRole: targetRole.value,
       dailyGoalMinutes: dailyGoalMinutes.value,
-      telegramChatId: telegramChatId.value,
       preferredStudyTime: preferredStudyTime.value,
       streakAlertTime: streakAlertTime.value,
-      timeZone: timeZone.value,
+      timeZone: timeZone.value
     })
 
     toast.success(t('profile.save_success'))
-  } catch (err: any) {
+  } catch (err: unknown) {
     toast.error(formatError(err, 'profile.save_failed'))
   }
 }
@@ -147,7 +152,7 @@ async function handlePasswordChange() {
     currentPassword.value = ''
     newPassword.value = ''
     confirmPassword.value = ''
-  } catch (err: any) {
+  } catch (err: unknown) {
     toast.error(formatError(err, 'profile.password_change_failed'))
   }
 }
@@ -327,45 +332,26 @@ async function handlePasswordChange() {
           </div>
         </div>
 
-        <!-- Daily Goal & Telegram Chat ID -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <!-- Goal Selection -->
-          <div>
-            <label class="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">
-              {{ $t('profile.daily_goal') }}
-            </label>
-            <div class="grid grid-cols-4 gap-1.5">
-              <button
-                v-for="opt in dailyGoalOptions"
-                :key="opt.minutes"
-                type="button"
-                @click="dailyGoalMinutes = opt.minutes"
-                :class="[
-                  'py-2 rounded-xl text-center border transition-all text-xs sm:text-sm font-bold',
-                  dailyGoalMinutes === opt.minutes
-                    ? 'bg-brand-50 dark:bg-brand-950/60 border-brand-500 text-brand-700 dark:text-brand-300 ring-1 ring-brand-500/20'
-                    : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
-                ]"
-              >
-                {{ opt.label }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Telegram Chat ID -->
-          <div>
-            <label class="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">
-              {{ $t('profile.telegram_id') }}
-            </label>
-            <div class="relative">
-              <Send class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                v-model.number="telegramChatId"
-                type="number"
-                :placeholder="$t('profile.telegram_placeholder')"
-                class="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-all"
-              />
-            </div>
+        <!-- Daily Goal -->
+        <div>
+          <label class="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+            {{ $t('profile.daily_goal') }}
+          </label>
+          <div class="grid grid-cols-4 gap-2 max-w-sm">
+            <button
+              v-for="opt in dailyGoalOptions"
+              :key="opt.minutes"
+              type="button"
+              @click="dailyGoalMinutes = opt.minutes"
+              :class="[
+                'py-2 rounded-xl text-center border transition-all text-xs sm:text-sm font-bold',
+                dailyGoalMinutes === opt.minutes
+                  ? 'bg-brand-50 dark:bg-brand-950/60 border-brand-500 text-brand-700 dark:text-brand-300 ring-1 ring-brand-500/20'
+                  : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+              ]"
+            >
+              {{ opt.label }}
+            </button>
           </div>
         </div>
 
@@ -398,14 +384,15 @@ async function handlePasswordChange() {
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {{ $t('settings.timezone_label') }}
+                {{ $t('profile.timezone_detected') }}
               </label>
-              <input
-                type="text"
-                v-model="timeZone"
-                placeholder="e.g. UTC, Asia/Ho_Chi_Minh"
-                class="w-full px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold"
-              />
+              <div
+                class="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300"
+                :title="$t('profile.timezone_desc')"
+              >
+                <Globe class="w-3.5 h-3.5 text-brand-500 shrink-0" />
+                <span class="truncate">{{ timeZone }}</span>
+              </div>
             </div>
           </div>
         </div>

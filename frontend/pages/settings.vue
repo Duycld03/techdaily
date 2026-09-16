@@ -4,7 +4,6 @@ import {
   Settings as SettingsIcon,
   Globe,
   Bell,
-  Send,
   Loader2,
   Clock,
   Compass,
@@ -292,18 +291,5 @@ async function handleSaveSchedule() {
       </div>
     </div>
 
-    <!-- Telegram Notifications -->
-    <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3 shadow-sm">
-      <h2 class="text-sm sm:text-base font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
-        <Send class="w-4 h-4 text-brand-600 dark:text-brand-400" />
-        <span>{{ $t('settings.telegram_title') }}</span>
-      </h2>
-      <p class="text-sm md:text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
-        {{ $t('settings.telegram_desc') }}
-      </p>
-      <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 text-xs sm:text-sm md:text-base font-mono text-brand-700 dark:text-brand-300">
-        {{ $t('settings.telegram_bot_info') }}
-      </div>
-    </div>
   </div>
 </template>

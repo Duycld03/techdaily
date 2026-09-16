@@ -23,8 +23,8 @@ async function handleCreateFlashcard(highlightId: string) {
     await reviewStore.createCardFromHighlight(highlightId, localeVal)
     createdCardHighlightIds.value.add(highlightId)
     toast.success(t('notes.toast_flashcard_success'))
-  } catch (err: any) {
-    toast.error(err.message || 'Failed to create flashcard.')
+  } catch (err: unknown) {
+    toast.error(formatError(err, 'notes.toast_flashcard_error'))
   } finally {
     creatingCardHighlightId.value = null
   }
@@ -97,7 +97,7 @@ async function confirmDeleteHighlight() {
     toast.success(t('notes.toast_delete_success'))
     isDeleteModalOpen.value = false
     highlightToDelete.value = null
-  } catch (err: any) {
+  } catch (err: unknown) {
     toast.error(formatError(err, 'notes.toast_delete_error'))
   } finally {
     isDeleting.value = false
@@ -117,7 +117,7 @@ async function confirmUnbookmark() {
     toast.success(t('notes.toast_unbookmark_success'))
     isUnbookmarkModalOpen.value = false
     insightToUnbookmark.value = null
-  } catch (err: any) {
+  } catch (err: unknown) {
     toast.error(formatError(err, 'notes.toast_unbookmark_error'))
   } finally {
     isUnbookmarking.value = false
@@ -198,14 +198,6 @@ async function confirmUnbookmark() {
                 <Zap class="w-3.5 h-3.5 fill-emerald-500 text-emerald-500 shrink-0" />
                 <span>{{ item.benchmarkStats }}</span>
               </div>
-
-              <button
-                @click="openUnbookmarkModal(item.id)"
-                class="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors"
-                :title="$t('notes.unbookmark_btn')"
-              >
-                <Trash2 class="w-4 h-4" />
-              </button>
             </div>
           </div>
 

@@ -222,11 +222,15 @@
     "save_note": "Save Note",
     "cancel": "Cancel",
     "toast_note_success": "Note saved successfully!",
+    "toast_highlight_error": "Failed to save highlight.",
     "export_obsidian": "Export Obsidian (.md)",
     "export_notes": "Export Notes (.md)",
     "exporting": "Exporting...",
+    "toast_export_success": "Book notes exported to Markdown successfully!",
+    "toast_export_error": "Failed to export book notes.",
     "btn_flashcard": "Flashcard",
     "toast_flashcard_success": "Active recall flashcard generated & added to SM-2 Deck!",
+    "toast_flashcard_error": "Failed to generate flashcard.",
     "curating_title": "AI is curating this chapter...",
     "curating_desc": "Standardizing markdown formatting, code syntax, and generating scenario challenges.",
     "curate_error_title": "Unable to format with AI right now",
@@ -269,7 +273,8 @@
     "loading_insights": "Loading saved insights...",
     "create_flashcard": "Flashcard SM-2",
     "creating_card": "Generating...",
-    "toast_flashcard_success": "Flashcard created & added to SM-2 Deck!"
+    "toast_flashcard_success": "Flashcard created & added to SM-2 Deck!",
+    "toast_flashcard_error": "Failed to create flashcard."
   },
   "profile": {
     "title": "User Profile",
@@ -303,7 +308,9 @@
     "password_strength_strong": "Strong password",
     "passwords_must_match": "Passwords do not match.",
     "save_failed": "Failed to save profile.",
-    "password_change_failed": "Failed to change password."
+    "password_change_failed": "Failed to change password.",
+    "timezone_detected": "Auto-Detected Timezone",
+    "timezone_desc": "Detected automatically from your browser"
   },
   "settings": {
     "title": "Settings",
@@ -492,5 +499,8 @@
     "CONFLICT": "A conflict occurred with existing state.",
     "SERVER_ERROR": "An unexpected server error occurred. Please try again.",
     "NETWORK_ERROR": "Network error. Please check your internet connection."
+  },
+  "common": {
+    "close": "Close"
   }
 }

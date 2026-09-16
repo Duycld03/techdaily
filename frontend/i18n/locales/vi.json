@@ -215,7 +215,7 @@
     "quiz_chapter_btn": "Luyện Quiz Chương Này",
     "toast_copy": "Đã sao chép đoạn trích!",
     "toast_highlight_success": "Đã lưu vào Ghi chú & Highlights!",
-    "toast_highlight_error": "Không thể lưu highlight.",
+    "toast_highlight_error": "Không thể lưu trích dẫn.",
     "highlight_save_tooltip": "Highlight & Lưu Ghi Chú",
     "add_note": "Ghi chú",
     "note_placeholder": "Viết đúc kết hoặc suy ngẫm kiến trúc của bạn...",
@@ -226,8 +226,11 @@
     "export_obsidian": "Xuất Obsidian (.md)",
     "export_notes": "Xuất Ghi Chú (.md)",
     "exporting": "Đang xuất...",
+    "toast_export_success": "Đã xuất ghi chú sách sang Markdown thành công!",
+    "toast_export_error": "Không thể xuất ghi chú sách.",
     "btn_flashcard": "Flashcard",
     "toast_flashcard_success": "Đã tạo Flashcard recall và đưa vào bộ ôn tập SM-2!",
+    "toast_flashcard_error": "Không thể tạo flashcard từ trích dẫn.",
     "curating_title": "AI đang biên tập chương này...",
     "curating_desc": "Chuẩn hóa định dạng markdown, cú pháp code và tạo tình huống luyện tập scenario.",
     "curate_error_title": "Tạm thời không thể biên tập bằng AI",
@@ -270,7 +273,8 @@
     "loading_insights": "Đang tải bài viết đã lưu...",
     "create_flashcard": "Flashcard SM-2",
     "creating_card": "Đang tạo...",
-    "toast_flashcard_success": "Đã tạo Flashcard và đưa vào bộ ôn tập SM-2!"
+    "toast_flashcard_success": "Đã tạo Flashcard và đưa vào bộ ôn tập SM-2!",
+    "toast_flashcard_error": "Không thể tạo flashcard từ trích dẫn."
   },
   "profile": {
     "title": "Hồ Sơ Cá Nhân",
@@ -304,7 +308,9 @@
     "password_strength_strong": "Mật khẩu mạnh",
     "passwords_must_match": "Mật khẩu xác nhận không khớp.",
     "save_failed": "Không thể lưu thông tin hồ sơ.",
-    "password_change_failed": "Không thể đổi mật khẩu."
+    "password_change_failed": "Không thể đổi mật khẩu.",
+    "timezone_detected": "Múi giờ phát hiện tự động",
+    "timezone_desc": "Tự động phát hiện từ trình duyệt của bạn"
   },
   "settings": {
     "title": "Cài Đặt",
@@ -493,5 +499,8 @@
     "CONFLICT": "Đã xảy ra xung đột với trạng thái hiện tại.",
     "SERVER_ERROR": "Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau.",
     "NETWORK_ERROR": "Lỗi kết nối mạng. Vui lòng kiểm tra đường truyền."
+  },
+  "common": {
+    "close": "Đóng"
   }
 }

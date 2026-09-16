@@ -41,4 +41,17 @@ describe('useApiError', () => {
     const { formatError } = useApiError()
     expect(formatError('Direct string error')).toBe('Direct string error')
   })
+
+  it('sanitizes pure numeric error string "26" with fallbackKey or default', () => {
+    const { formatError } = useApiError()
+    expect(formatError('26', 'notes.toast_flashcard_error')).toBe('notes.toast_flashcard_error')
+    expect(formatError('26')).toBe('api_errors.SERVER_ERROR')
+  })
+
+  it('sanitizes Error with pure numeric message "26" with fallbackKey or default', () => {
+    const { formatError } = useApiError()
+    const err = new Error('26')
+    expect(formatError(err, 'notes.toast_flashcard_error')).toBe('notes.toast_flashcard_error')
+    expect(formatError(err)).toBe('api_errors.SERVER_ERROR')
+  })
 })
