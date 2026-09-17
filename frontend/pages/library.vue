@@ -68,6 +68,96 @@ const categories = computed(() => [
   { id: 4, label: t('library.categories.craft') }
 ])
 
+function getCategoryLabel(category: number | string | undefined | null): string {
+  if (category === undefined || category === null) {
+    return t('library.categories.craft')
+  }
+
+  const normalized = String(category).toLowerCase()
+  switch (normalized) {
+    case '0':
+    case 'frontendweb':
+    case 'frontend':
+      return t('library.categories.frontend')
+    case '1':
+    case 'backenddotnet':
+    case 'backend':
+      return t('library.categories.backend')
+    case '2':
+    case 'databasestorage':
+    case 'database':
+      return t('library.categories.database')
+    case '3':
+    case 'systemdesign':
+    case 'system_design':
+      return t('library.categories.system_design')
+    case '4':
+    case 'engineeringcraft':
+    case 'craft':
+      return t('library.categories.craft')
+    default:
+      return categories.value.find((c) => String(c.id) === normalized)?.label || t('library.categories.craft')
+  }
+}
+
+function getStatusMessage(book: any): string {
+  const msg = book?.statusMessage
+  if (!msg) {
+    return t('library.processing_pdf')
+  }
+
+  const curatingMatch = msg.match(/curating (?:initial )?slice (\d+)\/(\d+)/i)
+  if (curatingMatch) {
+    return t('library.status_curating_slice', { current: curatingMatch[1], total: curatingMatch[2] })
+  }
+
+  const analyzingPagesMatch = msg.match(/analyzing (?:content:\s*page\s*)?(\d+)(?:\/(\d+)|\s+pdf\s+pages)?/i)
+  if (analyzingPagesMatch) {
+    const pages = analyzingPagesMatch[2] ? `${analyzingPagesMatch[1]}/${analyzingPagesMatch[2]}` : analyzingPagesMatch[1]
+    return t('library.status_analyzing_pages', { pages })
+  }
+
+  const extractingTopicMatch = msg.match(/extracting (?:chapter content|topic):\s*(.+)/i)
+  if (extractingTopicMatch) {
+    return t('library.status_extracting_topic', { topic: extractingTopicMatch[1].trim() })
+  }
+
+  const extractedCompleteMatch = msg.match(/extracted (\d+) slices(?:\.\s*complete!?|\))/i)
+  if (extractedCompleteMatch) {
+    return t('library.status_extracted_complete', { slices: extractedCompleteMatch[1] })
+  }
+
+  if (/uploaded,?\s*queued/i.test(msg)) {
+    return t('library.status_uploaded_queued')
+  }
+
+  if (/remote pdf download/i.test(msg)) {
+    return t('library.status_remote_download')
+  }
+
+  if (/analyzing (?:pdf|document) structure/i.test(msg)) {
+    return t('library.status_analyzing_structure')
+  }
+
+  if (/persisting (?:chapters|slices)/i.test(msg) || /saving slices/i.test(msg)) {
+    return t('library.status_persisting_slices')
+  }
+
+  if (/parsing pages/i.test(msg)) {
+    return t('library.status_parsing_pages')
+  }
+
+  if (/generating (?:reading )?chunks/i.test(msg)) {
+    return t('library.status_generating_chunks')
+  }
+
+  if (/ready (?:for reading|to read)/i.test(msg)) {
+    return t('library.status_ready')
+  }
+
+  return msg
+}
+
 let backgroundPollTimer: ReturnType<typeof setInterval> | null = null
 
 function checkBackgroundPolling() {
@@ -388,7 +478,7 @@ async function confirmDeleteBook() {
         <div>
           <div class="flex items-center justify-between gap-2 mb-3.5">
             <span class="px-3 py-1 rounded-lg bg-brand-100 dark:bg-brand-950/80 border border-brand-200 dark:border-brand-800/60 text-brand-800 dark:text-brand-300 text-xs font-bold">
-              {{ categories.find((c) => c.id === book.category)?.label || 'Engineering' }}
+              {{ getCategoryLabel(book.category) }}
             </span>
             <span class="text-xs text-slate-500 font-mono flex items-center gap-1">
               <Layers class="w-3.5 h-3.5" />
@@ -419,11 +509,10 @@ async function confirmDeleteBook() {
           <div v-if="book.status === 'Processing' || (book.status as any) === 1" class="mt-3.5 p-3 rounded-2xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20">
             <div class="flex items-center gap-2 text-xs font-semibold text-brand-700 dark:text-brand-300">
               <Loader2 class="w-3.5 h-3.5 text-brand-500 animate-spin shrink-0" />
-              <span class="truncate">{{ book.statusMessage || $t('library.processing_pdf') }}</span>
+              <span class="truncate">{{ getStatusMessage(book) }}</span>
             </div>
           </div>
         </div>
-
         <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3">
           <div class="flex items-center gap-1.5 min-w-0">
             <button
@@ -443,7 +532,6 @@ async function confirmDeleteBook() {
             >
               <Download class="w-4 h-4" />
             </button>
-            <span class="text-xs text-slate-400 font-medium truncate hidden sm:inline">GitBook Reader</span>
           </div>
 
           <NuxtLink
@@ -573,7 +661,7 @@ async function confirmDeleteBook() {
                 v-model="importContent"
                 required
                 rows="6"
-                placeholder="Paste Markdown document with # and ## headers here..."
+                :placeholder="$t('library.content_placeholder')"
                 class="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-mono text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none resize-none"
               ></textarea>
             </div>
@@ -622,8 +710,8 @@ async function confirmDeleteBook() {
               </p>
 
               <div class="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 pt-2 border-t border-brand-200/50 dark:border-brand-800/50">
-                <span>300 MB Streaming • Background Service</span>
-                <span>Look-Ahead Buffer Synthesis</span>
+                <span>{{ $t('library.pdf_service_note_1') }}</span>
+                <span>{{ $t('library.pdf_service_note_2') }}</span>
               </div>
             </div>
 
@@ -671,7 +759,7 @@ async function confirmDeleteBook() {
                     <CheckCircle2 class="w-4 h-4" />
                     <span>{{ pdfFile.name }} ({{ (pdfFile.size / (1024 * 1024)).toFixed(1) }} MB)</span>
                   </div>
-                  <p class="text-xs text-slate-400">Click or drop another file to replace</p>
+                  <p class="text-xs text-slate-400">{{ $t('library.pdf_replace_hint') }}</p>
                 </div>
               </div>
             </div>
@@ -682,7 +770,7 @@ async function confirmDeleteBook() {
                 <input
                   v-model="pdfTitle"
                   type="text"
-                  placeholder="Optional: Auto-extracted from PDF if blank"
+                  :placeholder="$t('library.title_placeholder')"
                   class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
                 />
               </div>
