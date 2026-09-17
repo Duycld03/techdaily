@@ -102,8 +102,8 @@ describe('profile.vue (Asymmetric 2-Column Bento Dashboard)', () => {
 
     // Left Column: Domain Goal Tracker
     expect(wrapper.text()).toContain('profile.domain_mastery')
-    expect(wrapper.text()).toContain('profile.domain_dotnet')
-    expect(wrapper.text()).toContain('profile.domain_postgres')
+    expect(wrapper.text()).toContain('profile.domain_backend_runtime')
+    expect(wrapper.text()).toContain('profile.domain_data_storage')
     expect(wrapper.text()).toContain('profile.domain_system_design')
     expect(wrapper.text()).toContain('profile.domain_frontend')
   })

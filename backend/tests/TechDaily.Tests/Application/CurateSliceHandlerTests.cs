@@ -46,6 +46,7 @@ public class CurateSliceHandlerTests : IDisposable
             string rawText,
             string chapterTitle,
             string language = "en",
+            Category? category = null,
             CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref CallCount);
@@ -214,5 +215,63 @@ public class CurateSliceHandlerTests : IDisposable
 
         // AI formatter must have been called EXACTLY ONCE due to double-checked locking!
         fakeFormatter.CallCount.Should().Be(1, "Double-checked locking must prevent redundant AI formatting calls");
+    }
+
+    [Fact]
+    public async Task CurateSlice_ShouldPreserveVerbatimOriginalTextMarkdown_WhenBookIsEngineeringCraft()
+    {
+        // Arrange
+        var bookId = Guid.NewGuid();
+        var book = new DocumentBook
+        {
+            Id = bookId,
+            Title = "Thói Quen Nguyên Tử",
+            Slug = "thoi-quen-nguyen-tu",
+            Category = Category.EngineeringCraft,
+            SourceType = SourceType.PdfBook,
+            TotalChunks = 1
+        };
+
+        const string verbatimProse = "Vào đúng ngày cuối cùng của năm thứ hai cao trung, tôi bị một cây gậy bóng chày nện trúng mặt. Dave Brailsford và triết lý tích lũy lợi ích cận biên 1% mỗi ngày.";
+
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = bookId,
+            ChunkOrder = 1,
+            ChapterTitle = "Sức Mạnh Của Những Thay Đổi Nhỏ",
+            OriginalTextMarkdown = verbatimProse,
+            SummaryMarkdown = "Raw summary",
+            KeyTakeaways = new List<string>(),
+            IsAiFormatted = false
+        };
+
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.DocumentChunks.AddAsync(chunk);
+        await _db.SaveChangesAsync();
+
+        var fakeFormatter = new FakeAiFormatter();
+        var handler = new CurateSliceHandler(_db, fakeFormatter, NullLogger<CurateSliceHandler>.Instance);
+
+        // Act
+        var result = await handler.ExecuteAsync(new CurateSliceRequest(bookId, 1));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Chunk.IsAiFormatted.Should().BeTrue();
+
+        // Verbatim Guardrail: OriginalTextMarkdown MUST remain 100% identical to verbatim prose
+        result.Value.Chunk.OriginalTextMarkdown.Should().Be(verbatimProse);
+        result.Value.Chunk.OriginalTextMarkdown.Should().NotContain("> [!NOTE]");
+
+        // Auxiliary fields must be populated
+        result.Value.Chunk.SummaryMarkdown.Should().Contain("Summary for Sức Mạnh Của Những Thay Đổi Nhỏ");
+        result.Value.Chunk.KeyTakeaways.Should().HaveCount(2);
+
+        // Database entity verification
+        var dbChunk = await _db.DocumentChunks.FirstAsync(c => c.DocumentBookId == bookId && c.ChunkOrder == 1);
+        dbChunk.OriginalTextMarkdown.Should().Be(verbatimProse);
+        dbChunk.SummaryMarkdown.Should().Contain("Summary for Sức Mạnh Của Những Thay Đổi Nhỏ");
+        dbChunk.IsAiFormatted.Should().BeTrue();
     }
 }

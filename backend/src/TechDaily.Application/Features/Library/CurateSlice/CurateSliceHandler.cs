@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Library.DTOs;
 using TechDaily.Application.Interfaces;
+using TechDaily.Domain.Enums;
 
 namespace TechDaily.Application.Features.Library.CurateSlice;
 
@@ -37,8 +38,8 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
         CancellationToken cancellationToken = default)
     {
         var chunk = await _dbContext.DocumentChunks
+            .Include(c => c.DocumentBook)
             .FirstOrDefaultAsync(c => c.DocumentBookId == request.BookId && c.ChunkOrder == request.ChunkOrder, cancellationToken);
-
         if (chunk == null)
         {
             return Error.NotFound;
@@ -53,8 +54,8 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
             {
                 // Double-checked locking: re-query chunk state under lock to see if a concurrent request already curated it
                 var freshChunk = await _dbContext.DocumentChunks
+                    .Include(c => c.DocumentBook)
                     .FirstOrDefaultAsync(c => c.DocumentBookId == request.BookId && c.ChunkOrder == request.ChunkOrder, cancellationToken);
-
                 if (freshChunk == null)
                 {
                     return Error.NotFound;
@@ -70,12 +71,21 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
                             chunk.OriginalTextMarkdown,
                             chunk.ChapterTitle,
                             chunk.Language,
+                            chunk.DocumentBook?.Category,
                             cancellationToken);
 
                         if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
                         {
-                            chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
-                            chunk.SummaryMarkdown = aiResult.Value.SummaryMarkdown;
+                            // Verbatim Guardrail: NEVER overwrite OriginalTextMarkdown for EngineeringCraft!
+                            // chunk.OriginalTextMarkdown remains the author's verbatim text.
+                            if (chunk.DocumentBook?.Category != Category.EngineeringCraft)
+                            {
+                                chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
+                            }
+
+                            chunk.SummaryMarkdown = !string.IsNullOrWhiteSpace(aiResult.Value.SummaryMarkdown)
+                                ? aiResult.Value.SummaryMarkdown
+                                : aiResult.Value.FormattedMarkdown;
                             chunk.KeyTakeaways = aiResult.Value.KeyTakeaways;
                             chunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
                             chunk.IsAiFormatted = true;

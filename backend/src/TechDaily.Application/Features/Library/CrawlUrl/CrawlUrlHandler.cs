@@ -10,7 +10,9 @@ public record CrawlUrlResponse(
     string Title,
     string SourceUrl,
     string MarkdownContent,
-    int EstimatedWordCount);
+    int EstimatedWordCount,
+    bool IsPdfDetected = false,
+    string? DetectedPdfUrl = null);
 
 public class CrawlUrlValidator : AbstractValidator<CrawlUrlRequest>
 {
@@ -53,7 +55,9 @@ public class CrawlUrlHandler : IUseCase<CrawlUrlRequest, CrawlUrlResponse>
                 Title: result.Title,
                 SourceUrl: result.SourceUrl,
                 MarkdownContent: result.MarkdownContent,
-                EstimatedWordCount: result.EstimatedWordCount
+                EstimatedWordCount: result.EstimatedWordCount,
+                IsPdfDetected: result.IsPdfDetected,
+                DetectedPdfUrl: result.DetectedPdfUrl
             );
         }
         catch (Exception ex)

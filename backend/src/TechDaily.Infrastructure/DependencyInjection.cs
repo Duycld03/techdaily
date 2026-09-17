@@ -5,6 +5,7 @@ using TechDaily.Application.Interfaces;
 using TechDaily.Infrastructure.Persistence;
 using TechDaily.Infrastructure.Services;
 using TechDaily.Infrastructure.Maintenance;
+using TechDaily.Application.Features.Library.ImportRemotePdf;
 
 namespace TechDaily.Infrastructure;
 
@@ -34,6 +35,7 @@ public static class DependencyInjection
         services.AddHttpClient<TelegramNotifier>();
         services.AddHttpClient<IWebArticleCrawler, WebArticleCrawler>();
         services.AddHttpClient<LookAheadBufferService>(client => client.Timeout = TimeSpan.FromSeconds(15));
+        services.AddHttpClient<ImportRemotePdfHandler>(client => client.Timeout = TimeSpan.FromSeconds(180));
 
         // Service Registrations
         services.AddScoped<IEmbeddingService, GeminiEmbeddingService>();

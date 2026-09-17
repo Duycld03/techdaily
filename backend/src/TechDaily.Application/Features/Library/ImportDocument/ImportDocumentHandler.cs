@@ -134,6 +134,30 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
     {
         if (string.IsNullOrWhiteSpace(text)) return new List<string>();
 
+        // Pass 1: Split on headings (#, ##, ###) outside code blocks
+        var headingChunks = SplitOnHeadings(text);
+
+        // Pass 2: Subdivide long sections exceeding 1,500 words
+        var finalChunks = new List<string>();
+        foreach (var chunk in headingChunks)
+        {
+            var wordCount = CountWords(chunk);
+            if (wordCount <= 1500)
+            {
+                finalChunks.Add(chunk);
+            }
+            else
+            {
+                var subSlices = SubdivideLongSection(chunk, targetWords: 1000, maxWords: 1500);
+                finalChunks.AddRange(subSlices);
+            }
+        }
+
+        return finalChunks.Any() ? finalChunks : new List<string> { text.Trim() };
+    }
+
+    private static List<string> SplitOnHeadings(string text)
+    {
         var lines = text.Split('\n');
         var chunks = new List<string>();
         var currentChunk = new System.Text.StringBuilder();
@@ -172,6 +196,129 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
         }
 
         return chunks.Any() ? chunks : new List<string> { text.Trim() };
+    }
+
+    private static List<string> SubdivideLongSection(string chunk, int targetWords = 1000, int maxWords = 1500)
+    {
+        var lines = chunk.Split('\n');
+        string sectionTitle = "Section";
+        bool hasHeading = false;
+        int bodyStartIndex = 0;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var trimmed = lines[i].Trim();
+            if (string.IsNullOrEmpty(trimmed)) continue;
+
+            var headingMatch = Regex.Match(trimmed, @"^#{1,6}\s+(.+)");
+            if (headingMatch.Success)
+            {
+                sectionTitle = headingMatch.Groups[1].Value.Trim();
+                hasHeading = true;
+                bodyStartIndex = i + 1;
+            }
+            break;
+        }
+
+        // Parse into atomic blocks (paragraphs, code blocks, tables, blockquotes)
+        var blocks = new List<string>();
+        var currentBlock = new System.Text.StringBuilder();
+        bool inCodeBlock = false;
+
+        for (int i = hasHeading ? bodyStartIndex : 0; i < lines.Length; i++)
+        {
+            var rawLine = lines[i];
+            var trimmed = rawLine.TrimStart();
+
+            if (trimmed.StartsWith("```"))
+            {
+                inCodeBlock = !inCodeBlock;
+            }
+
+            if (!inCodeBlock && string.IsNullOrWhiteSpace(rawLine))
+            {
+                if (currentBlock.Length > 0)
+                {
+                    var blockText = currentBlock.ToString().Trim();
+                    if (!string.IsNullOrEmpty(blockText))
+                    {
+                        blocks.Add(blockText);
+                    }
+                    currentBlock.Clear();
+                }
+            }
+            else
+            {
+                currentBlock.AppendLine(rawLine);
+            }
+        }
+
+        if (currentBlock.Length > 0)
+        {
+            var blockText = currentBlock.ToString().Trim();
+            if (!string.IsNullOrEmpty(blockText))
+            {
+                blocks.Add(blockText);
+            }
+        }
+
+        if (blocks.Count == 0)
+        {
+            return new List<string> { chunk };
+        }
+
+        // Group blocks into slices aiming for ~800 to 1200 words (max 1500)
+        var slices = new List<string>();
+        var currentSliceBlocks = new List<string>();
+        int currentWordCount = 0;
+
+        foreach (var block in blocks)
+        {
+            var blockWords = CountWords(block);
+
+            if (currentSliceBlocks.Count > 0 &&
+                ((currentWordCount >= 800 && currentWordCount + blockWords > 1200) ||
+                 (currentWordCount >= targetWords) ||
+                 (currentWordCount + blockWords > maxWords)))
+            {
+                slices.Add(string.Join("\n\n", currentSliceBlocks));
+                currentSliceBlocks.Clear();
+                currentWordCount = 0;
+            }
+
+            currentSliceBlocks.Add(block);
+            currentWordCount += blockWords;
+        }
+
+        if (currentSliceBlocks.Count > 0)
+        {
+            if (slices.Count > 0 && currentWordCount < 400 && (CountWords(slices[^1]) + currentWordCount <= maxWords))
+            {
+                slices[^1] = slices[^1] + "\n\n" + string.Join("\n\n", currentSliceBlocks);
+            }
+            else
+            {
+                slices.Add(string.Join("\n\n", currentSliceBlocks));
+            }
+        }
+
+        if (slices.Count <= 1)
+        {
+            return new List<string> { chunk };
+        }
+
+        var result = new List<string>();
+        for (int i = 0; i < slices.Count; i++)
+        {
+            result.Add($"# {sectionTitle} (Part {i + 1})\n\n{slices[i]}");
+        }
+        return result;
+    }
+
+    private static int CountWords(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return 0;
+        return text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
     }
 
     private static string ExtractTitle(string chunk, int order)

@@ -110,11 +110,10 @@ describe('DomainGoalTracker.vue', () => {
     })
 
     // Titles or title keys
-    expect(wrapper.text()).toContain('profile.domain_dotnet')
-    expect(wrapper.text()).toContain('profile.domain_postgres')
+    expect(wrapper.text()).toContain('profile.domain_backend_runtime')
+    expect(wrapper.text()).toContain('profile.domain_data_storage')
     expect(wrapper.text()).toContain('profile.domain_system_design')
     expect(wrapper.text()).toContain('profile.domain_frontend')
-
     // 0% percentages for all 4
     const text = wrapper.text()
     const matches = text.match(/0%/g)
@@ -160,5 +159,25 @@ describe('DomainGoalTracker.vue', () => {
     expect(wrapper.text()).toContain('100%') // 7 / 7 = 100%
     expect(wrapper.text()).toContain('50%')  // 4 / 8 = 50%
     expect(wrapper.text()).toContain('43%')  // 3 / 7 = 43%
+  })
+
+  it('calculates progress accurately for multi-stack keywords (NestJS, Mongo, Kafka, React)', () => {
+    const multiStackBreakdown = [
+      { topic: 'NestJS Event Loop & V8', answeredCount: 10, masteredCount: 8 },
+      { topic: 'MongoDB Indexes & Transactions', answeredCount: 10, masteredCount: 7 },
+      { topic: 'Kafka Event-Driven Architecture', answeredCount: 10, masteredCount: 9 },
+      { topic: 'React Server Components & DOM', answeredCount: 10, masteredCount: 6 }
+    ]
+
+    const wrapper = mount(DomainGoalTracker, {
+      props: {
+        topicBreakdown: multiStackBreakdown
+      }
+    })
+
+    expect(wrapper.text()).toContain('80%') // Backend Runtime (Nest): 8 / 10
+    expect(wrapper.text()).toContain('70%') // Data Storage (Mongo): 7 / 10
+    expect(wrapper.text()).toContain('90%') // Distributed Systems (Kafka): 9 / 10
+    expect(wrapper.text()).toContain('60%') // Frontend (React): 6 / 10
   })
 })

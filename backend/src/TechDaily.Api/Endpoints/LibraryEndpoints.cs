@@ -11,6 +11,7 @@ using TechDaily.Application.Features.Library.GetBooks;
 using TechDaily.Application.Features.Library.ImportDocument;
 using TechDaily.Application.Features.Library.UploadPdf;
 using TechDaily.Application.Features.Library.ExportBookMarkdown;
+using TechDaily.Application.Features.Library.ImportRemotePdf;
 using TechDaily.Domain.Enums;
 
 namespace TechDaily.Api.Endpoints;
@@ -178,6 +179,21 @@ public static class LibraryEndpoints
         .DisableAntiforgery()
         .RequireAuthorization()
         .WithName("UploadPdfDocument");
+
+        // Protected Remote PDF Streaming Ingestion (Requires Authentication, streams directly to temp disk)
+        group.MapPost("/import-remote-pdf", async (
+            [FromBody] ImportRemotePdfRequest request,
+            [FromServices] IUseCase<ImportRemotePdfRequest, UploadPdfResponse> handler,
+            CancellationToken ct) =>
+        {
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.Match(
+                success => Results.Accepted($"/api/v1/library/books/{success.Book.Id}/status", success),
+                error => Results.BadRequest(new { code = error.Code, error = error.Message })
+            );
+        })
+        .RequireAuthorization()
+        .WithName("ImportRemotePdf");
 
         // Protected URL Crawler (Requires Authentication)
         group.MapPost("/crawl-url", async (

@@ -179,12 +179,18 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                     documentChunk.OriginalTextMarkdown,
                     documentChunk.ChapterTitle,
                     documentChunk.Language,
+                    targetBook.Category,
                     cancellationToken);
 
                 if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
                 {
-                    documentChunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
-                    documentChunk.SummaryMarkdown = aiResult.Value.SummaryMarkdown;
+                    if (targetBook.Category != Category.EngineeringCraft)
+                    {
+                        documentChunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
+                    }
+                    documentChunk.SummaryMarkdown = !string.IsNullOrWhiteSpace(aiResult.Value.SummaryMarkdown)
+                        ? aiResult.Value.SummaryMarkdown
+                        : aiResult.Value.FormattedMarkdown;
                     documentChunk.KeyTakeaways = aiResult.Value.KeyTakeaways;
                     documentChunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
                     documentChunk.IsAiFormatted = true;

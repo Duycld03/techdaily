@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download } from 'lucide-vue-next'
 import { useApiError } from '~/composables/useApiError'
+import { useLibraryStore } from '~/stores/useLibraryStore'
 
 const { t, locale } = useI18n()
 const { formatError } = useApiError()
@@ -50,6 +51,8 @@ let pollInterval: ReturnType<typeof setInterval> | null = null
 const crawlUrlInput = ref('')
 const isCrawling = ref(false)
 const crawlSuccess = ref(false)
+const isPdfDetected = ref(false)
+const detectedPdfUrl = ref<string | null>(null)
 
 // Delete modal state
 const bookToDelete = ref<{ id: string; title: string } | null>(null)
@@ -61,8 +64,8 @@ const categories = computed(() => [
   { id: 0, label: t('library.categories.frontend') },
   { id: 1, label: t('library.categories.backend') },
   { id: 2, label: t('library.categories.database') },
-  { id: 3, label: t('library.categories.cloud') },
-  { id: 4, label: t('library.categories.system_design') }
+  { id: 3, label: t('library.categories.system_design') },
+  { id: 4, label: t('library.categories.craft') }
 ])
 
 let backgroundPollTimer: ReturnType<typeof setInterval> | null = null
@@ -250,6 +253,8 @@ async function handleCrawlUrl() {
   if (!crawlUrlInput.value) return
   isCrawling.value = true
   crawlSuccess.value = false
+  isPdfDetected.value = false
+  detectedPdfUrl.value = null
 
   try {
     const result = await libraryStore.crawlUrl(crawlUrlInput.value)
@@ -257,13 +262,40 @@ async function handleCrawlUrl() {
     importSourceUrl.value = result.sourceUrl
     importContent.value = result.markdownContent
     crawlSuccess.value = true
-    toast.success(t('library.toast_crawl_success'))
-    // Switch to markdown tab for preview & confirmation
-    activeTab.value = 'markdown'
+
+    if (result.isPdfDetected) {
+      isPdfDetected.value = true
+      detectedPdfUrl.value = result.detectedPdfUrl || null
+    } else {
+      toast.success(t('library.toast_crawl_success'))
+      // Switch to markdown tab for preview & confirmation
+      activeTab.value = 'markdown'
+    }
   } catch (err: any) {
     toast.error(formatError(err, 'library.toast_crawl_failed'))
   } finally {
     isCrawling.value = false
+  }
+}
+
+async function handleImportRemotePdf() {
+  if (!detectedPdfUrl.value) return
+  isProcessingPdf.value = true
+  try {
+    await libraryStore.importRemotePdf({
+      pdfUrl: detectedPdfUrl.value,
+      title: importTitle.value || 'PDF Document',
+      category: importCategory.value,
+      language: locale.value || 'vi'
+    })
+    isImportModalOpen.value = false
+    toast.success(t('library.upload_success_async'))
+    await libraryStore.fetchBooks(selectedCategory.value, searchQuery.value)
+    checkBackgroundPolling()
+  } catch (err: any) {
+    toast.error(formatError(err, 'library.toast_import_failed'))
+  } finally {
+    isProcessingPdf.value = false
   }
 }
 
@@ -511,11 +543,11 @@ async function confirmDeleteBook() {
                   v-model="importCategory"
                   class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
                 >
-                  <option :value="0">Frontend & Web</option>
-                  <option :value="1">Backend & Distributed</option>
-                  <option :value="2">Database & Storage</option>
-                  <option :value="3">Cloud & DevOps</option>
-                  <option :value="4">System Design</option>
+                  <option :value="0">{{ $t('library.categories.frontend') }}</option>
+                  <option :value="1">{{ $t('library.categories.backend') }}</option>
+                  <option :value="2">{{ $t('library.categories.database') }}</option>
+                  <option :value="3">{{ $t('library.categories.system_design') }}</option>
+                  <option :value="4">{{ $t('library.categories.craft') }}</option>
                 </select>
               </div>
 
@@ -656,11 +688,11 @@ async function confirmDeleteBook() {
                   v-model="pdfCategory"
                   class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
                 >
-                  <option :value="0">Frontend & Web</option>
-                  <option :value="1">Backend & Distributed</option>
-                  <option :value="2">Database & Storage</option>
-                  <option :value="3">Cloud & DevOps</option>
-                  <option :value="4">System Design</option>
+                  <option :value="0">{{ $t('library.categories.frontend') }}</option>
+                  <option :value="1">{{ $t('library.categories.backend') }}</option>
+                  <option :value="2">{{ $t('library.categories.database') }}</option>
+                  <option :value="3">{{ $t('library.categories.system_design') }}</option>
+                  <option :value="4">{{ $t('library.categories.craft') }}</option>
                 </select>
               </div>
             </div>
@@ -709,6 +741,39 @@ async function confirmDeleteBook() {
                   <span>{{ isCrawling ? $t('library.fetching_url') : $t('library.fetch_url_btn') }}</span>
                 </button>
               </div>
+            </div>
+
+            <!-- Category Selector for URL import -->
+            <div>
+              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
+              <select
+                v-model="importCategory"
+                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
+              >
+                <option :value="0">{{ $t('library.categories.frontend') }}</option>
+                <option :value="1">{{ $t('library.categories.backend') }}</option>
+                <option :value="2">{{ $t('library.categories.database') }}</option>
+                <option :value="3">{{ $t('library.categories.system_design') }}</option>
+                <option :value="4">{{ $t('library.categories.craft') }}</option>
+              </select>
+            </div>
+
+            <!-- Embedded PDF Preview Card -->
+            <div v-if="isPdfDetected && detectedPdfUrl" class="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/80 space-y-3">
+              <div class="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-bold text-xs sm:text-sm">
+                <FileUp class="w-4 h-4 shrink-0" />
+                <span>{{ $t('library.embedded_pdf_detected') }}</span>
+              </div>
+              <p class="text-xs text-slate-600 dark:text-slate-400 font-mono truncate">{{ detectedPdfUrl }}</p>
+              <button
+                type="button"
+                @click="handleImportRemotePdf"
+                :disabled="isProcessingPdf"
+                class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap shrink-0"
+              >
+                <FileUp class="w-4 h-4 shrink-0" />
+                <span class="whitespace-nowrap">{{ $t('library.import_detected_pdf') }}</span>
+              </button>
             </div>
 
             <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-2">

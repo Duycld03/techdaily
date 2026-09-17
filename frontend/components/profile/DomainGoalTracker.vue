@@ -39,9 +39,9 @@ interface PillarConfig {
 const pillars: PillarConfig[] = [
   {
     category: 1, // Category.BackendDotNet
-    key: 'dotnet',
-    titleKey: 'profile.domain_dotnet',
-    defaultTitle: '.NET 10 & C# 13 Runtime',
+    key: 'backend_runtime',
+    titleKey: 'profile.domain_backend_runtime',
+    defaultTitle: 'Backend Runtime & Concurrency',
     defaultTarget: 8,
     icon: Cpu,
     barColor: 'bg-violet-500 dark:bg-violet-400',
@@ -51,9 +51,9 @@ const pillars: PillarConfig[] = [
   },
   {
     category: 2, // Category.DatabaseStorage
-    key: 'postgres',
-    titleKey: 'profile.domain_postgres',
-    defaultTitle: 'PostgreSQL 17 Storage Engine',
+    key: 'data_storage',
+    titleKey: 'profile.domain_data_storage',
+    defaultTitle: 'Data Storage & Persistence',
     defaultTarget: 7,
     icon: Database,
     barColor: 'bg-sky-500 dark:bg-sky-400',
@@ -65,7 +65,7 @@ const pillars: PillarConfig[] = [
     category: 3, // Category.SystemDesign
     key: 'system_design',
     titleKey: 'profile.domain_system_design',
-    defaultTitle: 'System Design & Distributed',
+    defaultTitle: 'Distributed Systems & Architecture',
     defaultTarget: 8,
     icon: Network,
     barColor: 'bg-emerald-500 dark:bg-emerald-400',
@@ -77,7 +77,7 @@ const pillars: PillarConfig[] = [
     category: 0, // Category.FrontendWeb
     key: 'frontend',
     titleKey: 'profile.domain_frontend',
-    defaultTitle: 'Frontend & Browser Performance',
+    defaultTitle: 'Frontend & Browser Engineering',
     defaultTarget: 7,
     icon: Layers,
     barColor: 'bg-amber-500 dark:bg-amber-400',
@@ -88,19 +88,55 @@ const pillars: PillarConfig[] = [
 ]
 
 function matchCategory(keyOrTopic: string): number | null {
-  const k = keyOrTopic.toLowerCase()
-  if (k === '1' || k === 'category.backenddotnet' || k.includes('backend') || k.includes('dotnet') || k.includes('.net') || k.includes('c#') || k.includes('csharp') || k.includes('clr')) {
+  const k = keyOrTopic.toLowerCase().trim()
+
+  // Pillar 1: Backend Runtime & Concurrency (.NET, Node, Nest, Express, V8, Go, Java, Spring, JVM, Python, etc.)
+  if (
+    k === '1' || k === 'category.backenddotnet' ||
+    k.includes('backend') || k.includes('runtime') || k.includes('concurrency') ||
+    k.includes('dotnet') || k.includes('.net') || k.includes('c#') || k.includes('csharp') || k.includes('clr') ||
+    k.includes('node') || k.includes('nest') || k.includes('express') || k.includes('v8') || k.includes('event loop') ||
+    k.includes('golang') || k.includes('goroutine') || /\bgo\b/.test(k) ||
+    (k.includes('java') && !k.includes('javascript')) || k.includes('spring') || k.includes('jvm') ||
+    k.includes('python') || k.includes('threading') || k.includes('task') || k.includes('channel')
+  ) {
     return 1
   }
-  if (k === '2' || k === 'category.databasestorage' || k.includes('database') || k.includes('storage') || k.includes('postgres') || k.includes('sql') || k.includes('b-tree') || k.includes('mvcc')) {
+
+  // Pillar 2: Data Storage & Persistence (Postgres, Mongo, Redis, MySQL, SQLite, Cassandra, ACID, B-Tree, LSM, etc.)
+  if (
+    k === '2' || k === 'category.databasestorage' ||
+    k.includes('database') || k.includes('storage') || k.includes('sql') || k.includes('query') ||
+    k.includes('postgres') || k.includes('mongo') || k.includes('redis') || k.includes('mysql') ||
+    k.includes('sqlite') || k.includes('cassandra') || k.includes('b-tree') || k.includes('lsm') ||
+    k.includes('mvcc') || k.includes('acid') || k.includes('index') || k.includes('table') || k.includes('cache')
+  ) {
     return 2
   }
-  if (k === '3' || k === 'category.systemdesign' || k.includes('systemdesign') || k.includes('system_design') || k.includes('system design') || k.includes('distributed') || k.includes('architecture') || k.includes('outbox') || k.includes('microservice')) {
+
+  // Pillar 3: Distributed Systems & Architecture (Microservices, Kafka, Rabbit, Outbox, CAP, Consensus, Saga, etc.)
+  if (
+    k === '3' || k === 'category.systemdesign' ||
+    k.includes('system') || k.includes('distributed') || k.includes('architecture') ||
+    k.includes('microservice') || k.includes('outbox') || k.includes('kafka') || k.includes('rabbit') ||
+    k.includes('event-driven') || k.includes('cap') || k.includes('consensus') || k.includes('rate-limit') ||
+    k.includes('resilience') || k.includes('circuit') || k.includes('saga')
+  ) {
     return 3
   }
-  if (k === '0' || k === 'category.frontendweb' || k.includes('frontend') || k.includes('browser') || k.includes('web') || k.includes('vue') || k.includes('react') || k.includes('javascript') || k.includes('typescript')) {
+
+  // Pillar 4: Frontend & Browser Engineering (DOM, Rendering, Vue, React, Next, Nuxt, TypeScript, etc.)
+  if (
+    k === '0' || k === 'category.frontendweb' ||
+    k.includes('frontend') || k.includes('browser') || k.includes('web') ||
+    k.includes('react') || k.includes('vue') || k.includes('next') || k.includes('nuxt') ||
+    k.includes('angular') || k.includes('svelte') || k.includes('javascript') || k.includes('typescript') ||
+    (k.includes('dom') && !k.includes('domain')) || k.includes('vitals') || k.includes('css') ||
+    k.includes('rendering') || k.includes('html')
+  ) {
     return 0
   }
+
   return null
 }
 

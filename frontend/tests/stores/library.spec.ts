@@ -27,7 +27,15 @@ const mockBooks = [
   },
 ];
 
-const mockPost = vi.fn(async (url: string, body: any) => {
+const mockPost = vi.fn(async (url: string, body: Record<string, unknown>) => {
+  if (url.includes("/import-remote-pdf")) {
+    return {
+      bookId: "b-remote-1",
+      title: body.title,
+      status: "Processing",
+      message: "Remote PDF queued for ingestion"
+    };
+  }
   if (url.includes("/import")) {
     return {
       book: {
@@ -149,6 +157,27 @@ describe("useLibraryStore", () => {
     expect(result.title).toBe("Site Reliability Engineering");
     expect(result.totalChunks).toBe(5);
     expect(library.books).toHaveLength(1);
+  });
+
+  it("imports remote PDF via importRemotePdf action", async () => {
+    const library = useLibraryStore();
+    const res = await library.importRemotePdf({
+      pdfUrl: "https://example.com/books/atomic-habits.pdf",
+      title: "Atomic Habits",
+      category: 4,
+      language: "vi"
+    });
+
+    expect(mockPost).toHaveBeenCalledWith(
+      "/api/v1/library/import-remote-pdf",
+      expect.objectContaining({
+        pdfUrl: "https://example.com/books/atomic-habits.pdf",
+        title: "Atomic Habits",
+        category: 4
+      })
+    );
+    expect(res.bookId).toBe("b-remote-1");
+    expect(res.status).toBe("Processing");
   });
 
   it("deduplicates concurrent curateSlice calls for the same slice", async () => {

@@ -158,6 +158,8 @@ export const useLibraryStore = defineStore("library", () => {
         sourceUrl: string;
         markdownContent: string;
         estimatedWordCount: number;
+        isPdfDetected?: boolean;
+        detectedPdfUrl?: string | null;
       }>("/api/v1/library/crawl-url", { url });
       return res;
     } catch (err: any) {
@@ -167,6 +169,14 @@ export const useLibraryStore = defineStore("library", () => {
       isImporting.value = false;
     }
   }
+  async function importRemotePdf(payload: { pdfUrl: string; title: string; category: number; language?: string }) {
+    const api = useApiClient();
+    return await api.post<{ bookId: string; title: string; status: string; message: string }>(
+      '/api/v1/library/import-remote-pdf',
+      payload
+    );
+  }
+
 
   async function deleteBook(id: string) {
     isLoading.value = true;
@@ -290,6 +300,7 @@ export const useLibraryStore = defineStore("library", () => {
     uploadPdf,
     getBookStatus,
     crawlUrl,
+    importRemotePdf,
     deleteBook,
     curateSlice,
     exportBookMarkdown,

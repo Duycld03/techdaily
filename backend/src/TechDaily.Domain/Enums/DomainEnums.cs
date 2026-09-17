@@ -5,7 +5,8 @@ public enum Category
     FrontendWeb,
     BackendDotNet,
     DatabaseStorage,
-    SystemDesign
+    SystemDesign,
+    EngineeringCraft = 4
 }
 
 public enum Difficulty

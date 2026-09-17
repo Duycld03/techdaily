@@ -131,12 +131,21 @@ public class PdfIngestionWorker : BackgroundService
                                 chunk.OriginalTextMarkdown,
                                 chunk.ChapterTitle,
                                 chunk.Language,
+                                book.Category,
                                 stoppingToken);
 
                             if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
                             {
-                                chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
-                                chunk.SummaryMarkdown = aiResult.Value.SummaryMarkdown;
+                                // Verbatim Guardrail: NEVER overwrite OriginalTextMarkdown for EngineeringCraft!
+                                // Keep chunk.OriginalTextMarkdown exactly as extracted by PdfPigExtractor.
+                                if (book.Category != Category.EngineeringCraft)
+                                {
+                                    chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
+                                }
+
+                                chunk.SummaryMarkdown = !string.IsNullOrWhiteSpace(aiResult.Value.SummaryMarkdown)
+                                    ? aiResult.Value.SummaryMarkdown
+                                    : aiResult.Value.FormattedMarkdown;
                                 chunk.KeyTakeaways = aiResult.Value.KeyTakeaways;
                                 chunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
                                 chunk.IsAiFormatted = true;

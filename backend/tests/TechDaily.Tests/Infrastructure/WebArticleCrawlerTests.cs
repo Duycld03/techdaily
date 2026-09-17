@@ -182,4 +182,105 @@ public class WebArticleCrawlerTests
         result.MarkdownContent.Should().NotContain("[Visual Studio]");
         result.MarkdownContent.Should().NotContain("[Visual Studio Code]");
     }
+
+    [Fact]
+    public async Task CrawlUrlAsync_ShouldSniffPdfJsViewer_AndResolvePdfUrl()
+    {
+        // Arrange
+        var html = @"
+<!DOCTYPE html>
+<html>
+<head><title>Thoi quen nguyen tu - Viewer</title></head>
+<body>
+<script>
+    var DEFAULT_URL = ""/img/pdf/827-thoi-quen-nguyen-tu-thuviensach.vn.pdf"";
+</script>
+<div id=""viewerContainer""><div id=""viewer"" class=""pdfViewer""></div></div>
+</body>
+</html>";
+
+        using var httpClient = new HttpClient(new FakeHttpMessageHandler(html));
+        var crawler = new WebArticleCrawler(httpClient);
+
+        // Act
+        var result = await crawler.CrawlUrlAsync("https://thuviensach.vn/pdf/viewer.php?id=1c342b");
+
+        // Assert
+        result.IsPdfDetected.Should().BeTrue();
+        result.DetectedPdfUrl.Should().Be("https://thuviensach.vn/img/pdf/827-thoi-quen-nguyen-tu-thuviensach.vn.pdf");
+        result.Title.Should().Contain("Thoi quen nguyen tu");
+        result.MarkdownContent.Should().Contain("827-thoi-quen-nguyen-tu-thuviensach.vn.pdf");
+    }
+
+    [Fact]
+    public async Task CrawlUrlAsync_ShouldSniffIframeEmbeddedPdf()
+    {
+        // Arrange
+        var html = @"
+<!DOCTYPE html>
+<html>
+<head><title>Systems Architecture Specification</title></head>
+<body>
+<iframe src=""https://cdn.example.com/docs/architecture-spec.pdf"" width=""100%"" height=""800px""></iframe>
+</body>
+</html>";
+
+        using var httpClient = new HttpClient(new FakeHttpMessageHandler(html));
+        var crawler = new WebArticleCrawler(httpClient);
+
+        // Act
+        var result = await crawler.CrawlUrlAsync("https://example.com/viewer");
+
+        // Assert
+        result.IsPdfDetected.Should().BeTrue();
+        result.DetectedPdfUrl.Should().Be("https://cdn.example.com/docs/architecture-spec.pdf");
+    }
+
+    [Fact]
+    public async Task CrawlUrlAsync_ShouldSniffGoogleDocsViewer_AndDecodePdfUrl()
+    {
+        // Arrange
+        var html = @"
+<!DOCTYPE html>
+<html>
+<head><title>Google Docs Viewer</title></head>
+<body>
+<iframe src=""https://docs.google.com/viewer?url=https%3A%2F%2Fexample.com%2Fresearch-paper.pdf&embedded=true""></iframe>
+</body>
+</html>";
+
+        using var httpClient = new HttpClient(new FakeHttpMessageHandler(html));
+        var crawler = new WebArticleCrawler(httpClient);
+
+        // Act
+        var result = await crawler.CrawlUrlAsync("https://example.com/viewer");
+
+        // Assert
+        result.IsPdfDetected.Should().BeTrue();
+        result.DetectedPdfUrl.Should().Be("https://example.com/research-paper.pdf");
+    }
+
+    [Fact]
+    public async Task CrawlUrlAsync_ShouldRejectEmbeddedPdf_WhenDetectedUrlPointsToInternalIp()
+    {
+        // Arrange
+        var html = @"
+<!DOCTYPE html>
+<html>
+<head><title>Internal Viewer</title></head>
+<body>
+<script>
+    var DEFAULT_URL = ""http://127.0.0.1/private-report.pdf"";
+</script>
+</body>
+</html>";
+
+        using var httpClient = new HttpClient(new FakeHttpMessageHandler(html));
+        var crawler = new WebArticleCrawler(httpClient);
+
+        // Act & Assert
+        var act = async () => await crawler.CrawlUrlAsync("https://example.com/viewer");
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*private or loopback*");
+    }
 }

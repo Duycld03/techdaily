@@ -1030,6 +1030,7 @@ No markdown backticks around JSON.";
         string rawText,
         string chapterTitle,
         string language = "en",
+        Category? category = null,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(rawText))
@@ -1053,7 +1054,61 @@ No markdown backticks around JSON.";
             // Truncate rawText if excessively long to prevent token overflow (~25,000 chars is ~6,000 tokens)
             var inputSample = rawText.Length > 25000 ? rawText.Substring(0, 25000) : rawText;
 
-            var systemInstruction = $@"
+            string systemInstruction;
+            if (category == Category.EngineeringCraft)
+            {
+                systemInstruction = $@"
+You are a Principal Software Engineer and Leadership Coach specializing in Engineering Craft, Cognitive Habits, and Productivity Systems.
+Your task is to convert raw extracted text from an engineering leadership, productivity, or mindset book into a structured TechInsight-style reading slice.
+
+MANDATORY RULES:
+1. Document Heading: Start immediately with '# {chapterTitle}' as the top-level H1 header.
+2. Context Note: Follow directly with an executive context callout:
+> [!NOTE]
+> 2-3 sentences explaining the core behavioral framework, cognitive principle, or engineering habit.
+3. Actionable Narrative Prose: Merge fragmented text into natural paragraphs explaining key principles, real-world workplace scenarios, and actionable techniques.
+4. Code Blocks (Optional): Include code or pseudocode ONLY if present in the source text. Do NOT force synthetic code blocks into behavioral literature.
+5. Practical Callouts: Highlight critical mindset shifts or antipatterns with GitHub alerts (`> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`).
+6. Remove Junk Boilerplate: Completely strip print headers, publication dates, copyright notices, and page artifacts.
+7. Key Takeaways: Conclude with '### Key Takeaways' containing exactly 3 bullet points of high-impact engineering habits or principles.
+8. Senior Leadership Drill: Create exactly 1 high-impact Scenario Challenge evaluating trade-offs in engineering focus, habit formation, time allocation, or staff-level influence without authority.
+   - questionText: A realistic engineering workplace scenario evaluating cognitive focus, habit formation, deep work systems, mental models, or engineering leadership trade-offs.
+   - options: Exactly 4 distinct, plausible choices (Option A, B, C, D).
+   - correctOptionIndex: 0-indexed integer (0 to 3) pointing to the optimal senior choice.
+   - explanationMarkdown: Comprehensive markdown explaining why the chosen option succeeds and why alternatives fail or incur organizational friction.
+   - expectedKeyPoints: Array of 2-3 key evaluation trade-off criteria.
+9. Language: Preserve the author's original language ({language}) for explanations, text, and scenario drill challenge.
+
+Respond strictly in valid JSON without markdown wrapping:
+{{
+  ""formattedMarkdown"": ""# {chapterTitle}\n\n> [!NOTE]\n> Executive context summary...\n\nBody paragraphs...\n\n### Key Takeaways\n- Point 1\n- Point 2\n- Point 3"",
+  ""summaryMarkdown"": ""A concise 2-3 sentence overview of this chapter."",
+  ""keyTakeaways"": [
+    ""First key habit or principle"",
+    ""Second key habit or principle"",
+    ""Third key habit or principle""
+  ],
+  ""estimatedReadMinutes"": 5,
+  ""scenarioDrill"": {{
+    ""questionText"": ""Realistic scenario stating an engineering leadership or habit trade-off..."",
+    ""options"": [
+      ""Option A description..."",
+      ""Option B description (optimal choice)..."",
+      ""Option C description..."",
+      ""Option D description...""
+    ],
+    ""correctOptionIndex"": 1,
+    ""explanationMarkdown"": ""Detailed explanation analyzing why the chosen option succeeds and alternatives fail..."",
+    ""expectedKeyPoints"": [
+      ""Trade-off factor 1"",
+      ""Trade-off factor 2""
+    ]
+  }}
+}}";
+            }
+            else
+            {
+                systemInstruction = $@"
 You are a Principal Software Architect and Technical Editor.
 Your task is to convert raw extracted text from a technical book or documentation chapter into a standardized TechInsight-style Markdown reading article.
 
@@ -1103,7 +1158,7 @@ Respond strictly in valid JSON without markdown wrapping:
     ]
   }}
 }}";
-
+            }
             var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
             var requestPayload = new
             {

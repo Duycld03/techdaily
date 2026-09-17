@@ -1,4 +1,5 @@
 using TechDaily.Application.Common;
+using TechDaily.Domain.Enums;
 
 namespace TechDaily.Application.Interfaces;
 
@@ -22,5 +23,6 @@ public interface IAiMarkdownFormatter
         string rawText,
         string chapterTitle,
         string language = "en",
+        Category? category = null,
         CancellationToken cancellationToken = default);
 }

@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using ReverseMarkdown;
 using TechDaily.Application.Interfaces;
+using TechDaily.Application.Common;
 
 namespace TechDaily.Infrastructure.Services;
 
@@ -38,9 +39,39 @@ public class WebArticleCrawler : IWebArticleCrawler
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
 
+        // 2. Direct PDF Document Handling
+        if (targetUrl.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ||
+            response.Content.Headers.ContentType?.MediaType?.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) == true ||
+            response.Content.Headers.ContentType?.MediaType?.Equals("application/x-pdf", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            var uri = new Uri(targetUrl);
+            var fileName = Path.GetFileNameWithoutExtension(uri.AbsolutePath);
+            var title = !string.IsNullOrWhiteSpace(fileName)
+                ? WebUtility.UrlDecode(fileName).Replace('-', ' ').Replace('_', ' ')
+                : "PDF Document";
+            var description = $"# {title}\n\nA direct PDF document was detected at: [{targetUrl}]({targetUrl}).\n\nUse the Remote PDF Ingestion feature to download and slice this document into reading chapters.";
+            var directWordCount = description.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+
+            return new CrawlArticleResult(
+                Title: title,
+                SourceUrl: url,
+                MarkdownContent: description,
+                EstimatedWordCount: directWordCount,
+                IsPdfDetected: true,
+                DetectedPdfUrl: targetUrl
+            );
+        }
+
         var rawContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        // 2. Direct Markdown / Plaintext File Handling
+        // 3. Embedded PDF Sniffing (PDF.js, iframes, embeds, Google Docs viewer)
+        var (isPdfDetected, detectedPdfUrl) = SniffEmbeddedPdf(rawContent, targetUrl);
+        if (isPdfDetected && !string.IsNullOrWhiteSpace(detectedPdfUrl))
+        {
+            ValidateSafeUrl(detectedPdfUrl);
+        }
+
+        // 4. Direct Markdown / Plaintext File Handling
         if (targetUrl.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
             targetUrl.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) ||
             response.Content.Headers.ContentType?.MediaType?.Equals("text/plain", StringComparison.OrdinalIgnoreCase) == true)
@@ -73,6 +104,10 @@ public class WebArticleCrawler : IWebArticleCrawler
 
         if (contentNode == null)
         {
+            if (isPdfDetected && !string.IsNullOrWhiteSpace(detectedPdfUrl))
+            {
+                return CreatePdfFallbackResult(pageTitle, detectedPdfUrl, url);
+            }
             throw new InvalidOperationException("Could not extract readable article content from the web page.");
         }
 
@@ -112,6 +147,10 @@ public class WebArticleCrawler : IWebArticleCrawler
 
         if (string.IsNullOrWhiteSpace(markdown) || markdown.Length < 40)
         {
+            if (isPdfDetected && !string.IsNullOrWhiteSpace(detectedPdfUrl))
+            {
+                return CreatePdfFallbackResult(pageTitle, detectedPdfUrl, url);
+            }
             throw new InvalidOperationException("Extracted article content was empty or unreadable.");
         }
 
@@ -121,7 +160,9 @@ public class WebArticleCrawler : IWebArticleCrawler
             Title: pageTitle,
             SourceUrl: url,
             MarkdownContent: markdown,
-            EstimatedWordCount: wordCount
+            EstimatedWordCount: wordCount,
+            IsPdfDetected: isPdfDetected,
+            DetectedPdfUrl: detectedPdfUrl
         );
     }
 
@@ -366,80 +407,88 @@ public class WebArticleCrawler : IWebArticleCrawler
         return cleaned.Trim();
     }
 
-    private static void ValidateSafeUrl(string url)
+    public static void ValidateSafeUrl(string url) => UrlSecurityValidator.ValidateSafeUrl(url);
+
+    private static CrawlArticleResult CreatePdfFallbackResult(string pageTitle, string detectedPdfUrl, string sourceUrl)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-        {
-            throw new ArgumentException("Invalid absolute URL format.", nameof(url));
-        }
+        var title = !string.IsNullOrWhiteSpace(pageTitle) && !pageTitle.Equals("Web Document", StringComparison.OrdinalIgnoreCase)
+            ? pageTitle
+            : Path.GetFileNameWithoutExtension(new Uri(detectedPdfUrl).AbsolutePath).Replace('-', ' ').Replace('_', ' ');
+        if (string.IsNullOrWhiteSpace(title)) title = "Embedded Technical PDF";
 
-        if (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
-        {
-            throw new ArgumentException("Only HTTP and HTTPS protocols are allowed.", nameof(url));
-        }
+        var description = $"# {title}\n\nAn embedded PDF document was detected at: [{detectedPdfUrl}]({detectedPdfUrl}).\n\nClick **Import & Slice PDF Directly** to download and process this document into reading slices.";
+        var wordCount = description.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
 
-        var host = uri.DnsSafeHost;
-        if (string.IsNullOrWhiteSpace(host))
-        {
-            throw new ArgumentException("Invalid host in URL.", nameof(url));
-        }
-
-        if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
-            host.Equals("backend", StringComparison.OrdinalIgnoreCase) ||
-            host.Equals("frontend", StringComparison.OrdinalIgnoreCase) ||
-            host.Equals("db", StringComparison.OrdinalIgnoreCase) ||
-            host.Equals("pgadmin", StringComparison.OrdinalIgnoreCase) ||
-            host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) ||
-            host.EndsWith(".internal", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException("Requests to internal hostnames are prohibited.");
-        }
-
-        if (IPAddress.TryParse(host, out var ip))
-        {
-            if (IsPrivateOrRestrictedIp(ip))
-            {
-                throw new InvalidOperationException("Requests to private or loopback IP addresses are prohibited.");
-            }
-        }
-        else
-        {
-            try
-            {
-                var ips = Dns.GetHostAddresses(host);
-                if (ips.Any(IsPrivateOrRestrictedIp))
-                {
-                    throw new InvalidOperationException("Requests to internal or private IP addresses are prohibited.");
-                }
-            }
-            catch (SocketException)
-            {
-                // DNS lookup failure will be handled gracefully during HTTP fetch
-            }
-        }
+        return new CrawlArticleResult(
+            Title: title,
+            SourceUrl: sourceUrl,
+            MarkdownContent: description,
+            EstimatedWordCount: wordCount,
+            IsPdfDetected: true,
+            DetectedPdfUrl: detectedPdfUrl
+        );
     }
 
-    private static bool IsPrivateOrRestrictedIp(IPAddress ip)
+    private static (bool IsPdf, string? PdfUrl) SniffEmbeddedPdf(string rawHtml, string baseUrl)
     {
-        if (IPAddress.IsLoopback(ip)) return true;
-        if (ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
-
-        var bytes = ip.GetAddressBytes();
-        if (ip.AddressFamily == AddressFamily.InterNetwork)
+        // a) PDF.js: DEFAULT_URL, pdfDoc, file:
+        var pdfJsRegex = new Regex(@"DEFAULT_URL\s*=\s*[""']([^""']+\.pdf(?:\?[^""']*)?)[""']|pdfDoc\s*=\s*[""']([^""']+\.pdf(?:\?[^""']*)?)[""']|file:\s*[""']([^""']+\.pdf(?:\?[^""']*)?)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        var match = pdfJsRegex.Match(rawHtml);
+        if (match.Success)
         {
-            if (bytes[0] == 10) return true;
-            if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return true;
-            if (bytes[0] == 192 && bytes[1] == 168) return true;
-            if (bytes[0] == 169 && bytes[1] == 254) return true;
-            if (bytes[0] == 127) return true;
-            if (bytes[0] == 0) return true;
-        }
-        else if (ip.AddressFamily == AddressFamily.InterNetworkV6)
-        {
-            if (ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal) return true;
-            if (bytes[0] == 0xfc || bytes[0] == 0xfd) return true;
+            var matched = match.Groups[1].Success ? match.Groups[1].Value
+                : (match.Groups[2].Success ? match.Groups[2].Value : match.Groups[3].Value);
+            var resolved = ResolveAbsoluteUrl(baseUrl, matched);
+            return (true, resolved);
         }
 
-        return false;
+        // b) <iframe[^>]+src=["']([^"']+\.pdf[^"']*)["']
+        var iframeRegex = new Regex(@"<iframe[^>]+src=[""']([^""']+\.pdf(?:\?[^""']*)?)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        var iframeMatch = iframeRegex.Match(rawHtml);
+        if (iframeMatch.Success)
+        {
+            var resolved = ResolveAbsoluteUrl(baseUrl, iframeMatch.Groups[1].Value);
+            return (true, resolved);
+        }
+
+        // c) <embed[^>]+src=["']([^"']+\.pdf[^"']*)["'] or <object[^>]+data=["']([^"']+\.pdf[^"']*)["']
+        var embedRegex = new Regex(@"<(?:embed|object)[^>]+(?:src|data)=[""']([^""']+\.pdf(?:\?[^""']*)?)[""']", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        var embedMatch = embedRegex.Match(rawHtml);
+        if (embedMatch.Success)
+        {
+            var resolved = ResolveAbsoluteUrl(baseUrl, embedMatch.Groups[1].Value);
+            return (true, resolved);
+        }
+
+        // d) Google Docs/Drive viewer: docs.google.com/viewer\?.*url=([^&"']+)
+        var googleDocsRegex = new Regex(@"docs\.google\.com/viewer\?[^""']*url=([^&""']+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        var googleMatch = googleDocsRegex.Match(rawHtml);
+        if (!googleMatch.Success)
+        {
+            googleMatch = googleDocsRegex.Match(baseUrl);
+        }
+        if (googleMatch.Success)
+        {
+            var decoded = WebUtility.UrlDecode(googleMatch.Groups[1].Value);
+            var resolved = ResolveAbsoluteUrl(baseUrl, decoded);
+            return (true, resolved);
+        }
+
+        return (false, null);
+    }
+
+    private static string ResolveAbsoluteUrl(string baseUrl, string relativeOrAbsoluteUrl)
+    {
+        if (Uri.TryCreate(relativeOrAbsoluteUrl, UriKind.Absolute, out var absUri) &&
+            (absUri.Scheme == Uri.UriSchemeHttp || absUri.Scheme == Uri.UriSchemeHttps))
+        {
+            return absUri.ToString();
+        }
+        if (Uri.TryCreate(new Uri(baseUrl), relativeOrAbsoluteUrl, out var combinedUri))
+        {
+            return combinedUri.ToString();
+        }
+
+        return relativeOrAbsoluteUrl;
     }
 }
