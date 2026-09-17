@@ -383,7 +383,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Empty / Completed State -->
-      <div v-else class="w-full max-w-md text-center p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl animate-in zoom-in-95 duration-200 my-auto space-y-4">
+      <div v-else class="w-full max-w-xl text-center p-10 sm:p-12 md:p-14 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl animate-in zoom-in-95 duration-200 my-auto space-y-6 sm:space-y-7">
         <div class="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto shadow-sm">
           <CheckCircle class="w-8 h-8" />
         </div>
@@ -394,7 +394,7 @@ onUnmounted(() => {
           {{ $t('review.no_cards_desc') }}
         </p>
         <!-- Action CTAs -->
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 pt-4 sm:pt-6">
           <button
             @click="activeTab = 'management'"
             class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0"
