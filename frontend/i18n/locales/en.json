@@ -89,7 +89,31 @@
     "search_chapters": "Search chapters...",
     "expand_all": "Expand All",
     "collapse_all": "Collapse All",
-    "load_more_chapters": "Show {count} More Chapters ({remaining} remaining)"
+    "load_more_chapters": "Show {count} More Chapters ({remaining} remaining)",
+    "track_switcher_label": "Active Learning Track",
+    "in_progress_tracks": "In-Progress Documents",
+    "curriculum_track": "30-Day Senior Curriculum",
+    "curriculum_track_desc": "Core fullstack architecture skill tree",
+    "browse_library": "Choose from Library",
+    "active_badge": "Active",
+    "timeline_view": "Timeline View",
+    "mindmap_view": "Mindmap View",
+    "view_mode_label": "Roadmap view mode",
+    "mindmap": {
+      "zoom_in": "Zoom In",
+      "zoom_out": "Zoom Out",
+      "fit_screen": "Fit to Screen",
+      "expand_all": "Expand All",
+      "collapse_all": "Collapse All",
+      "active_badge": "Active Today",
+      "completed_badge": "Completed",
+      "upcoming_badge": "Upcoming",
+      "read_slice": "Read Slice",
+      "review_drill": "Review Drill",
+      "start_drill": "Start Today's Drill",
+      "chapters_count": "{count} Chapters",
+      "slices_count": "{count} Slices"
+    }
   },
   "pacer": {
     "slice": "Slice",

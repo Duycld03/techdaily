@@ -89,7 +89,31 @@
     "search_chapters": "Tìm kiếm chương...",
     "expand_all": "Mở tất cả",
     "collapse_all": "Thu gọn",
-    "load_more_chapters": "Xem thêm {count} chương ({remaining} còn lại)"
+    "load_more_chapters": "Xem thêm {count} chương ({remaining} còn lại)",
+    "track_switcher_label": "Lộ Trình Đang Học",
+    "in_progress_tracks": "Tài Liệu Đang Đọc",
+    "curriculum_track": "Lộ Trình 30 Ngày Chuẩn",
+    "curriculum_track_desc": "Cây kỹ năng kiến trúc fullstack senior",
+    "browse_library": "Khám phá Thư Viện",
+    "active_badge": "Đang Học",
+    "timeline_view": "Dạng Dòng Thời Gian",
+    "mindmap_view": "Dạng Sơ Đồ Tư Duy",
+    "view_mode_label": "Chế độ hiển thị lộ trình",
+    "mindmap": {
+      "zoom_in": "Phóng to",
+      "zoom_out": "Thu nhỏ",
+      "fit_screen": "Vừa màn hình",
+      "expand_all": "Mở rộng tất cả",
+      "collapse_all": "Thu gọn tất cả",
+      "active_badge": "Đang học hôm nay",
+      "completed_badge": "Đã hoàn thành",
+      "upcoming_badge": "Sắp tới",
+      "read_slice": "Đọc bài học",
+      "review_drill": "Xem lại thử thách",
+      "start_drill": "Bắt đầu thử thách hôm nay",
+      "chapters_count": "{count} chương",
+      "slices_count": "{count} lát cắt"
+    }
   },
   "pacer": {
     "slice": "Lát cắt",
