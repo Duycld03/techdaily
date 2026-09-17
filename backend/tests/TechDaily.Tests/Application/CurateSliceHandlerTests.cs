@@ -218,7 +218,7 @@ public class CurateSliceHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task CurateSlice_ShouldPreserveVerbatimOriginalTextMarkdown_WhenBookIsEngineeringCraft()
+    public async Task CurateSlice_ShouldSaveFormattedMarkdownToOriginalTextMarkdown_WhenBookIsEngineeringCraft()
     {
         // Arrange
         var bookId = Guid.NewGuid();
@@ -260,9 +260,11 @@ public class CurateSliceHandlerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value.Chunk.IsAiFormatted.Should().BeTrue();
 
-        // Verbatim Guardrail: OriginalTextMarkdown MUST remain 100% identical to verbatim prose
-        result.Value.Chunk.OriginalTextMarkdown.Should().Be(verbatimProse);
-        result.Value.Chunk.OriginalTextMarkdown.Should().NotContain("> [!NOTE]");
+        var expectedFormatted = $"# {chunk.ChapterTitle}\n\n> [!NOTE]\n> Curated context.";
+
+        // AI-restored clean formatted markdown is saved to OriginalTextMarkdown across all categories including EngineeringCraft
+        result.Value.Chunk.OriginalTextMarkdown.Should().Be(expectedFormatted);
+        result.Value.Chunk.OriginalTextMarkdown.Should().Contain("> [!NOTE]");
 
         // Auxiliary fields must be populated
         result.Value.Chunk.SummaryMarkdown.Should().Contain("Summary for Sức Mạnh Của Những Thay Đổi Nhỏ");
@@ -270,7 +272,7 @@ public class CurateSliceHandlerTests : IDisposable
 
         // Database entity verification
         var dbChunk = await _db.DocumentChunks.FirstAsync(c => c.DocumentBookId == bookId && c.ChunkOrder == 1);
-        dbChunk.OriginalTextMarkdown.Should().Be(verbatimProse);
+        dbChunk.OriginalTextMarkdown.Should().Be(expectedFormatted);
         dbChunk.SummaryMarkdown.Should().Contain("Summary for Sức Mạnh Của Những Thay Đổi Nhỏ");
         dbChunk.IsAiFormatted.Should().BeTrue();
     }

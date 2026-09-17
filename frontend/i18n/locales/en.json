@@ -280,7 +280,7 @@
     "toast_crawl_failed": "Failed to extract article content from URL.",
     "toast_delete_success": "Document removed from library.",
     "toast_delete_failed": "Failed to remove document.",
-    "verbatim_category_hint": "Tip: Select \"Engineering Craft & Mindset\" to preserve 100% verbatim text (no AI summary)."
+    "verbatim_category_hint": "Tip: Select \"Engineering Craft & Mindset\" to preserve 100% verbatim book text (AI restores headings & paragraphs)."
   },
   "reader": {
     "library": "Library",

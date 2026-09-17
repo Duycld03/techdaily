@@ -76,9 +76,7 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
 
                         if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
                         {
-                            // Verbatim Guardrail: NEVER overwrite OriginalTextMarkdown for EngineeringCraft!
-                            // chunk.OriginalTextMarkdown remains the author's verbatim text.
-                            if (chunk.DocumentBook?.Category != Category.EngineeringCraft)
+                            if (!string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
                             {
                                 chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
                             }

@@ -65,61 +65,24 @@ const isSavingNote = ref(false);
 const isExportingMarkdown = ref(false);
 
 // Typography State & Settings
-interface ReaderTypography {
-  fontSize: 'sm' | 'base' | 'lg' | 'xl' | '2xl'
-  fontFamily: 'sans' | 'serif' | 'mono'
-  lineSpacing: 'normal' | 'relaxed' | 'loose'
-  readingWidth: 'standard' | 'wide' | 'full'
-}
-
-const TYPOGRAPHY_STORAGE_KEY = 'techdaily_reader_typography'
-const DEFAULT_TYPOGRAPHY: ReaderTypography = {
-  fontSize: 'base',
-  fontFamily: 'sans',
-  lineSpacing: 'relaxed',
-  readingWidth: 'standard'
-}
-
-const typography = ref<ReaderTypography>({ ...DEFAULT_TYPOGRAPHY })
-const isTypographyOpen = ref(false)
-const typographyDropdownRef = ref<HTMLElement | null>(null)
-
-const fontSizes: Array<ReaderTypography['fontSize']> = ['sm', 'base', 'lg', 'xl', '2xl']
-const fontScalePercentages: Record<ReaderTypography['fontSize'], string> = {
-  sm: '85%',
-  base: '100%',
-  lg: '115%',
-  xl: '130%',
-  '2xl': '145%'
-}
-const fontSizePxMap: Record<ReaderTypography['fontSize'], string> = {
-  sm: '14px',
-  base: '16px',
-  lg: '18px',
-  xl: '20px',
-  '2xl': '22px'
-}
-const lineHeightMap: Record<ReaderTypography['lineSpacing'], string> = {
-  normal: '1.5',
-  relaxed: '1.75',
-  loose: '2.05'
-}
-
-const currentFontSizeIndex = computed(() => fontSizes.indexOf(typography.value.fontSize))
-const canDecreaseFontSize = computed(() => currentFontSizeIndex.value > 0)
-const canIncreaseFontSize = computed(() => currentFontSizeIndex.value < fontSizes.length - 1)
-
-function decreaseFontSize() {
-  if (canDecreaseFontSize.value) {
-    typography.value.fontSize = fontSizes[currentFontSizeIndex.value - 1]
-  }
-}
-
-function increaseFontSize() {
-  if (canIncreaseFontSize.value) {
-    typography.value.fontSize = fontSizes[currentFontSizeIndex.value + 1]
-  }
-}
+const {
+  typography,
+  fontSizes,
+  fontSizePxMap,
+  fontScalePercentages,
+  lineHeightMap,
+  currentFontSizeIndex,
+  canDecreaseFontSize,
+  canIncreaseFontSize,
+  decreaseFontSize,
+  increaseFontSize,
+  fontSizePx,
+  lineHeightValue,
+  fontFamilyClass,
+  readingWidthClass
+} = useReaderTypography();
+const isTypographyOpen = ref(false);
+const typographyDropdownRef = ref<HTMLElement | null>(null);
 
 function handleTypographyClickOutside(event: MouseEvent) {
   if (
@@ -127,23 +90,9 @@ function handleTypographyClickOutside(event: MouseEvent) {
     typographyDropdownRef.value &&
     !typographyDropdownRef.value.contains(event.target as Node)
   ) {
-    isTypographyOpen.value = false
+    isTypographyOpen.value = false;
   }
 }
-
-watch(
-  typography,
-  (newVal) => {
-    if (import.meta.client) {
-      try {
-        localStorage.setItem(TYPOGRAPHY_STORAGE_KEY, JSON.stringify(newVal))
-      } catch {
-        // ignore quota errors
-      }
-    }
-  },
-  { deep: true }
-)
 
 function cancelNotePopover() {
   isNotePopoverOpen.value = false;
@@ -348,31 +297,8 @@ onMounted(async () => {
     // handled by store
   }
 
-  // Hydrate typography settings from localStorage
   if (import.meta.client) {
-    try {
-      const saved = localStorage.getItem(TYPOGRAPHY_STORAGE_KEY)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        typography.value = {
-          fontSize: ['sm', 'base', 'lg', 'xl', '2xl'].includes(parsed.fontSize)
-            ? parsed.fontSize
-            : DEFAULT_TYPOGRAPHY.fontSize,
-          fontFamily: ['sans', 'serif', 'mono'].includes(parsed.fontFamily)
-            ? parsed.fontFamily
-            : DEFAULT_TYPOGRAPHY.fontFamily,
-          lineSpacing: ['normal', 'relaxed', 'loose'].includes(parsed.lineSpacing)
-            ? parsed.lineSpacing
-            : DEFAULT_TYPOGRAPHY.lineSpacing,
-          readingWidth: ['standard', 'wide', 'full'].includes(parsed.readingWidth)
-            ? parsed.readingWidth
-            : DEFAULT_TYPOGRAPHY.readingWidth,
-        }
-      }
-    } catch {
-      // Fallback gracefully to defaults
-    }
-    window.addEventListener('click', handleTypographyClickOutside)
+    window.addEventListener('click', handleTypographyClickOutside);
   }
 
   // Attach global keyboard listener for Shift + Left/Right and Escape
@@ -1294,9 +1220,7 @@ async function handleHighlightAndNote() {
         <div
           v-else-if="currentChunk"
           class="w-full space-y-8 sm:space-y-10 transition-all duration-200"
-          :class="[
-            typography.readingWidth === 'wide' ? 'max-w-4xl' : (typography.readingWidth === 'full' ? 'max-w-full' : 'max-w-3xl')
-          ]"
+          :class="[readingWidthClass]"
         >
           <!-- Ephemeral Raw Text Fallback Amber Banner -->
           <div
@@ -1357,12 +1281,10 @@ async function handleHighlightAndNote() {
           <!-- Markdown Body -->
           <article
             class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-blockquote:not-italic prose-blockquote:before:content-none prose-blockquote:after:content-none prose-p:my-4 transition-all duration-150"
-            :class="[
-              typography.fontFamily === 'serif' ? 'font-serif' : (typography.fontFamily === 'mono' ? 'font-mono' : 'font-sans')
-            ]"
+            :class="[fontFamilyClass]"
             :style="{
-              fontSize: fontSizePxMap[typography.fontSize],
-              lineHeight: lineHeightMap[typography.lineSpacing]
+              fontSize: fontSizePx,
+              lineHeight: lineHeightValue
             }"
             v-html="renderedMarkdown"
           ></article>

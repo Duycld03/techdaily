@@ -280,7 +280,7 @@
     "toast_crawl_failed": "Không thể trích xuất bài viết từ URL.",
     "toast_delete_success": "Đã xóa tài liệu khỏi thư viện.",
     "toast_delete_failed": "Không thể xóa tài liệu.",
-    "verbatim_category_hint": "Mẹo: Chọn chuyên mục \"Tư Duy Kỹ Sư & Năng Suất\" để giữ nguyên văn 100% nội dung gốc (không tóm tắt)."
+    "verbatim_category_hint": "Mẹo: Chọn chuyên mục \"Tư Duy Kỹ Sư & Năng Suất\" để giữ nguyên văn 100% nội dung sách (AI khôi phục tiêu đề & ngắt dòng)."
   },
   "reader": {
     "library": "Thư Viện",

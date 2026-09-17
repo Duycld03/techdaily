@@ -111,4 +111,46 @@ describe('DocReaderPane.vue', () => {
 
     expect(wrapper.find('.micro-quiz-container').exists()).toBe(false)
   })
+
+  it('renders Aa button, toggles popover, and dynamically binds typography styles', async () => {
+    const wrapper = mount(DocReaderPane, {
+      props: {
+        topic: mockTopic,
+        documentChunk: mockDocumentChunk
+      },
+      global: {
+        mocks: {
+          $t: (key: string) => key,
+          t: (key: string) => key,
+          locale: 'en'
+        }
+      }
+    })
+
+    // Aa button exists in header
+    const aaButton = wrapper.findAll('button').find(b => b.text().includes('Aa'))
+    expect(aaButton).toBeDefined()
+    expect(aaButton!.exists()).toBe(true)
+
+    // Popover is initially closed
+    expect(wrapper.text()).not.toContain('reader.font_size')
+
+    // Click Aa button to open popover
+    await aaButton!.trigger('click')
+    expect(wrapper.text()).toContain('reader.font_size')
+    expect(wrapper.text()).toContain('reader.font_family')
+    expect(wrapper.text()).toContain('reader.line_spacing')
+
+    // Reader content has dynamic inline style and font class
+    const readerContent = wrapper.find('.doc-reader-content')
+    expect(readerContent.exists()).toBe(true)
+    expect(readerContent.attributes('style')).toContain('font-size: 16px')
+    expect(readerContent.attributes('style')).toContain('line-height: 1.75')
+    expect(readerContent.classes()).toContain('font-sans')
+
+    // Dismiss via Escape key
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).not.toContain('reader.font_size')
+  })
 })

@@ -7,7 +7,7 @@ import { useToast } from '~/composables/useToast'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 import { useApiError } from '~/composables/useApiError'
-
+import { useReaderTypography } from '~/composables/useReaderTypography'
 const { t, locale } = useI18n()
 const { formatError } = useApiError()
 const notesStore = useNotesStore()
@@ -18,6 +18,28 @@ const props = defineProps<{
   topic: Topic
   documentChunk?: DocumentChunk
 }>()
+const {
+  typography,
+  fontSizes,
+  fontScalePercentages,
+  currentFontSizeIndex,
+  canDecreaseFontSize,
+  canIncreaseFontSize,
+  decreaseFontSize,
+  increaseFontSize,
+  fontSizePx,
+  lineHeightValue,
+  fontFamilyClass
+} = useReaderTypography()
+
+const isTypographyOpen = ref(false)
+const typographyDropdownRef = ref<HTMLElement | null>(null)
+
+function handleKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && isTypographyOpen.value) {
+    isTypographyOpen.value = false
+  }
+}
 
 const cleanSummary = computed(() => {
   if (!props.topic.summary) return ''
@@ -131,6 +153,13 @@ function handleDocumentClick(e: MouseEvent) {
   if (!target.closest('.floating-selection-menu') && !target.closest('.doc-reader-content')) {
     floatingMenu.value.visible = false
   }
+  if (
+    isTypographyOpen.value &&
+    typographyDropdownRef.value &&
+    !typographyDropdownRef.value.contains(target)
+  ) {
+    isTypographyOpen.value = false
+  }
 }
 
 function triggerExplainWithAi() {
@@ -174,6 +203,7 @@ async function handleHighlightSelection() {
 
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
+  document.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
@@ -182,6 +212,7 @@ onUnmounted(() => {
     selectionDebounceTimer = null
   }
   document.removeEventListener('click', handleDocumentClick)
+  document.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
@@ -189,14 +220,168 @@ onUnmounted(() => {
   <div class="h-full bg-white/60 dark:bg-slate-950/40 overflow-y-auto p-4 sm:p-6 md:p-9 transition-colors duration-200 min-w-0 max-w-full" @mouseup="handleMouseUp">
     <!-- Header info -->
     <div class="mb-5 sm:mb-6">
-      <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider mb-2">
-        <BookOpen class="w-4 h-4 shrink-0" />
-        <span>{{ $t('today.doc_reader') }}</span>
-        <span class="text-slate-400 dark:text-slate-600">•</span>
-        <span class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
-          <Clock class="w-3.5 h-3.5" />
-          {{ documentChunk?.estimatedReadMinutes || 3 }} {{ $t('today.estimated_read') }}
-        </span>
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <div class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
+          <BookOpen class="w-4 h-4 shrink-0" />
+          <span>{{ $t('today.doc_reader') }}</span>
+          <span class="text-slate-400 dark:text-slate-600">•</span>
+          <span class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+            <Clock class="w-3.5 h-3.5" />
+            {{ documentChunk?.estimatedReadMinutes || 3 }} {{ $t('today.estimated_read') }}
+          </span>
+        </div>
+
+        <!-- Typography Settings Popover -->
+        <div ref="typographyDropdownRef" class="relative shrink-0">
+          <button
+            @click.stop="isTypographyOpen = !isTypographyOpen"
+            :class="[
+              'px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap',
+              isTypographyOpen
+                ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+            ]"
+            :title="$t('reader.typography_settings')"
+          >
+            <span class="font-serif text-sm font-black">Aa</span>
+          </button>
+
+          <!-- Typography Popover Dropdown (click-outside dismissed) -->
+          <div
+            v-if="isTypographyOpen"
+            class="absolute right-0 mt-2 w-80 sm:w-84 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl z-50 space-y-4 text-xs select-none"
+          >
+            <!-- Section 1: Font Size -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 font-semibold">
+                <span>{{ $t('reader.font_size') }}</span>
+                <span class="font-mono text-xs font-bold text-slate-700 dark:text-slate-200">
+                  {{ fontScalePercentages[typography.fontSize] }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between gap-2 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  @click="decreaseFontSize"
+                  :disabled="!canDecreaseFontSize"
+                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm whitespace-nowrap shrink-0"
+                  title="Smaller Font"
+                >
+                  <span class="text-xs font-bold">A</span>
+                  <span class="text-[10px] font-mono">−</span>
+                </button>
+                <div class="flex items-center gap-1.5 px-2">
+                  <span
+                    v-for="(size, idx) in fontSizes"
+                    :key="size"
+                    class="w-1.5 h-1.5 rounded-full transition-all"
+                    :class="[
+                      typography.fontSize === size
+                        ? 'w-2 h-2 bg-brand-500 scale-110'
+                        : (idx < currentFontSizeIndex ? 'bg-slate-400 dark:bg-slate-500' : 'bg-slate-300 dark:bg-slate-700')
+                    ]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  @click="increaseFontSize"
+                  :disabled="!canIncreaseFontSize"
+                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm whitespace-nowrap shrink-0"
+                  title="Larger Font"
+                >
+                  <span class="text-sm font-black">A</span>
+                  <span class="text-[10px] font-mono">+</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 2: Font Family -->
+            <div class="space-y-2">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.font_family') }}</span>
+              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  @click="typography.fontFamily = 'sans'"
+                  class="py-2 px-2 rounded-lg font-sans font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
+                  :class="[
+                    typography.fontFamily === 'sans'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  Sans
+                </button>
+                <button
+                  type="button"
+                  @click="typography.fontFamily = 'serif'"
+                  class="py-2 px-2 rounded-lg font-serif font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
+                  :class="[
+                    typography.fontFamily === 'serif'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  Serif
+                </button>
+                <button
+                  type="button"
+                  @click="typography.fontFamily = 'mono'"
+                  class="py-2 px-2 rounded-lg font-mono font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
+                  :class="[
+                    typography.fontFamily === 'mono'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  Mono
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 3: Line Spacing -->
+            <div class="space-y-2">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.line_spacing') }}</span>
+              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  @click="typography.lineSpacing = 'normal'"
+                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
+                  :class="[
+                    typography.lineSpacing === 'normal'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.spacing_normal') }}
+                </button>
+                <button
+                  type="button"
+                  @click="typography.lineSpacing = 'relaxed'"
+                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
+                  :class="[
+                    typography.lineSpacing === 'relaxed'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.spacing_relaxed') }}
+                </button>
+                <button
+                  type="button"
+                  @click="typography.lineSpacing = 'loose'"
+                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
+                  :class="[
+                    typography.lineSpacing === 'loose'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.spacing_loose') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-snug mb-3">
@@ -223,7 +408,13 @@ onUnmounted(() => {
     <div class="w-full h-px bg-slate-200 dark:bg-slate-800/80 mb-5 sm:mb-6"></div>
 
     <!-- Reading Content (Rendered Architectural Deep Dive) -->
-    <div ref="readerContentRef" class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200 min-w-0 max-w-full break-words space-y-4 text-sm md:text-lg leading-relaxed" v-html="renderedDeepDiveHtml"></div>
+    <div
+      ref="readerContentRef"
+      class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200 min-w-0 max-w-full break-words space-y-4"
+      :class="[fontFamilyClass]"
+      :style="{ fontSize: fontSizePx, lineHeight: lineHeightValue }"
+      v-html="renderedDeepDiveHtml"
+    ></div>
 
     <!-- Authoritative Source Excerpt (if distinct) -->
     <div v-if="renderedChunkHtml" class="mt-6 p-4 sm:p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-2">
@@ -289,3 +480,14 @@ onUnmounted(() => {
     />
   </div>
 </template>
+
+<style scoped>
+:deep(.markdown-body p),
+:deep(.markdown-body li),
+:deep(.markdown-body blockquote),
+:deep(.prose p),
+:deep(.prose li) {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+</style>

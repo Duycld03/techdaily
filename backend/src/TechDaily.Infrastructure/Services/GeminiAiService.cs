@@ -1066,7 +1066,12 @@ MANDATORY RULES:
 2. Context Note: Follow directly with an executive context callout:
 > [!NOTE]
 > 2-3 sentences explaining the core behavioral framework, cognitive principle, or engineering habit.
-3. Actionable Narrative Prose: Merge fragmented text into natural paragraphs explaining key principles, real-world workplace scenarios, and actionable techniques.
+3. 100% Verbatim Text Retention & Structural Restoration:
+   - ZERO SUMMARIZATION: Retain 100% of the author's original words, stories, examples, and sentences without summarizing, shortening, condensing, paraphrasing, or omitting any narrative or technical details.
+   - Detect Run-in Headings: Detect and separate run-in headings (subheadings stuck to body paragraphs, e.g. 'Sức mạnh đáng kinh ngạc của những thói quen nhỏ bé.') into dedicated Markdown subheadings (`### {{SectionTitle}}`).
+   - Eliminate Duplicated Heading Echo: Strip duplicate heading echoes, subtitles, or running headers repeated immediately before the first sentence following '# {chapterTitle}'.
+   - Paragraph Rhythm & Spacing: Ensure proper paragraph division with double newlines (`\n\n`) between paragraphs and dialogue.
+   - Preserve Spoken Dialogue & Quotes: Keep dialogue exchanges and quotations on distinct lines without collapsing into adjoining narrative blocks.
 4. Code Blocks (Optional): Include code or pseudocode ONLY if present in the source text. Do NOT force synthetic code blocks into behavioral literature.
 5. Practical Callouts: Highlight critical mindset shifts or antipatterns with GitHub alerts (`> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`).
 6. Remove Junk Boilerplate: Completely strip print headers, publication dates, copyright notices, and page artifacts.
