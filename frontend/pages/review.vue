@@ -29,15 +29,16 @@ import MasteryGaugeCard from '~/components/review/MasteryGaugeCard.vue'
 import ReviewForecastChart from '~/components/review/ReviewForecastChart.vue'
 import AdvancedFilterModal from '~/components/review/AdvancedFilterModal.vue'
 import FlashcardBentoCard from '~/components/review/FlashcardBentoCard.vue'
+import BasePagination from '~/components/common/BasePagination.vue'
 import { useReviewStore, type ReviewCard, type ReviewFilterState } from '~/stores/useReviewStore'
-import { useApiError } from '~/composables/useApiError'
 import MarkdownIt from 'markdown-it'
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const { formatError } = useApiError()
 const reviewStore = useReviewStore()
 const toast = useToast()
-
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
 
 function renderMarkdown(raw: string | undefined | null): string {
@@ -104,6 +105,18 @@ async function fetchDeck(page = 1) {
   }
 }
 
+function onDeckPageChange(newPage: number) {
+  router.replace({
+    query: {
+      ...route.query,
+      page: newPage > 1 ? newPage.toString() : undefined
+    }
+  })
+  fetchDeck(newPage)
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 watch(searchQuery, () => {
   if (searchTimer) clearTimeout(searchTimer)
@@ -282,7 +295,13 @@ async function confirmDeleteCard() {
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   reviewStore.fetchReviewDeck()
-  fetchDeck(1)
+
+  if (route.query.tab === 'management') {
+    activeTab.value = 'management'
+  }
+  const queryPage = route.query.page ? parseInt(route.query.page as string, 10) : 1
+  const initialPage = isNaN(queryPage) || queryPage < 1 ? 1 : queryPage
+  fetchDeck(initialPage)
 })
 
 onUnmounted(() => {
@@ -518,29 +537,14 @@ onUnmounted(() => {
         </div>
 
         <!-- Pagination Controls -->
-        <div v-if="totalPages > 1" class="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
-          <button
-            @click="fetchDeck(reviewStore.deckCurrentPage - 1)"
-            :disabled="reviewStore.deckCurrentPage <= 1 || reviewStore.isDeckLoading"
-            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors whitespace-nowrap shrink-0"
-          >
-            <ChevronLeft class="w-4 h-4" />
-            <span>{{ $t('review.prev_page') }}</span>
-          </button>
-
-          <span class="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
-            {{ $t('review.page_info', { page: reviewStore.deckCurrentPage, totalPages }) }}
-          </span>
-
-          <button
-            @click="fetchDeck(reviewStore.deckCurrentPage + 1)"
-            :disabled="reviewStore.deckCurrentPage >= totalPages || reviewStore.isDeckLoading"
-            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors whitespace-nowrap shrink-0"
-          >
-            <span>{{ $t('review.next_page') }}</span>
-            <ChevronRight class="w-4 h-4" />
-          </button>
-        </div>
+        <BasePagination
+          :current-page="reviewStore.deckCurrentPage"
+          :total-pages="totalPages"
+          :total-count="reviewStore.deckTotalCount"
+          :page-size="reviewStore.deckPageSize"
+          show-summary
+          @change="onDeckPageChange"
+        />
       </div>
 
       <!-- Empty Deck State -->

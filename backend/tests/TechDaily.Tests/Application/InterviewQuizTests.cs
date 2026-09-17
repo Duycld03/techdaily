@@ -392,6 +392,7 @@ public class InterviewQuizTests : IDisposable
         result.Value.Questions.Should().HaveCount(1);
         result.Value.Questions[0].Id.Should().Be(qFailed.Id);
         result.Value.TotalCount.Should().Be(1);
+        result.Value.TotalPages.Should().Be(1);
     }
 
     [Fact]

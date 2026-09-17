@@ -28,7 +28,20 @@ vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     get: vi.fn(async (url: string) => {
       if (url.includes('/highlights')) {
-        return { highlights: [...mockHighlights] }
+        const urlObj = new URL('http://localhost' + url)
+        const page = parseInt(urlObj.searchParams.get('page') || '1', 10)
+        const pageSize = parseInt(urlObj.searchParams.get('pageSize') || '15', 10)
+        return {
+          highlights: [...mockHighlights],
+          totalCount: 30,
+          page,
+          pageSize,
+          totalPages: 2,
+          tagCounts: [
+            { tag: 'distributed', count: 12 },
+            { tag: 'vue', count: 8 }
+          ]
+        }
       }
       throw new Error('Not found')
     }),
@@ -82,6 +95,29 @@ describe('useNotesStore', () => {
     await notes.fetchHighlights()
     expect(notes.highlights).toHaveLength(2)
     expect(notes.highlights[0].selectedText).toContain('Replication lag')
+  })
+
+  it('manages pagination and global tagCounts correctly', async () => {
+    const notes = useNotesStore()
+    expect(notes.currentPage).toBe(1)
+    expect(notes.pageSize).toBe(15)
+
+    await notes.fetchHighlights({ page: 2, pageSize: 15, tag: 'vue' })
+    expect(notes.currentPage).toBe(2)
+    expect(notes.pageSize).toBe(15)
+    expect(notes.totalCount).toBe(30)
+    expect(notes.totalPages).toBe(2)
+    expect(notes.tagCounts).toHaveLength(2)
+    expect(notes.tagCounts[0].tag).toBe('distributed')
+  })
+
+  it('appends and deduplicates highlights when append is true', async () => {
+    const notes = useNotesStore()
+    await notes.fetchHighlights({ page: 1 })
+    expect(notes.highlights).toHaveLength(2)
+
+    await notes.fetchHighlights({ page: 2, append: true })
+    expect(notes.highlights).toHaveLength(2)
   })
 
   it('creates a new highlight note', async () => {

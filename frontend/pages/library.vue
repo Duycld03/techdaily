@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb } from 'lucide-vue-next'
+import BasePagination from '~/components/common/BasePagination.vue'
 import { useApiError } from '~/composables/useApiError'
 import { useLibraryStore } from '~/stores/useLibraryStore'
-
 const { t, locale } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const { formatError } = useApiError()
 const libraryStore = useLibraryStore()
 const toast = useToast()
-
 const searchQuery = ref('')
 const selectedCategory = ref<number | undefined>(undefined)
 const bookmarks = ref<Record<string, number>>({})
@@ -170,7 +171,12 @@ function checkBackgroundPolling() {
   )
   if (hasInProgressBook) {
     backgroundPollTimer = setInterval(async () => {
-      await libraryStore.fetchBooks(selectedCategory.value, searchQuery.value)
+      await libraryStore.fetchBooks({
+        category: selectedCategory.value,
+        search: searchQuery.value,
+        page: libraryStore.currentPage,
+        pageSize: libraryStore.pageSize
+      })
       const stillActive = libraryStore.books.some(
         b => b.status === 'Processing' || (b.status as any) === 1
       )
@@ -183,11 +189,21 @@ function checkBackgroundPolling() {
 }
 
 onMounted(async () => {
-  await libraryStore.fetchBooks()
+  const queryPage = route.query.page ? parseInt(route.query.page as string, 10) : 1
+  const initialPage = isNaN(queryPage) || queryPage < 1 ? 1 : queryPage
+
+  if (route.query.category !== undefined) {
+    const cat = parseInt(route.query.category as string, 10)
+    if (!isNaN(cat)) selectedCategory.value = cat
+  }
+  if (typeof route.query.search === 'string') {
+    searchQuery.value = route.query.search
+  }
+
+  await loadBooksWithPagination(initialPage)
   checkBackgroundPolling()
   loadBookmarks()
 })
-
 onUnmounted(() => {
   if (pollInterval) {
     clearInterval(pollInterval)
@@ -217,13 +233,46 @@ function loadBookmarks() {
   }
 }
 
+async function loadBooksWithPagination(page = 1) {
+  await libraryStore.fetchBooks({
+    category: selectedCategory.value,
+    search: searchQuery.value,
+    page,
+    pageSize: libraryStore.pageSize
+  })
+}
+
+function onPageChange(newPage: number) {
+  router.replace({
+    query: {
+      ...route.query,
+      page: newPage > 1 ? newPage.toString() : undefined
+    }
+  })
+  loadBooksWithPagination(newPage)
+}
+
 function handleCategorySelect(catId?: number) {
   selectedCategory.value = catId
-  libraryStore.fetchBooks(selectedCategory.value, searchQuery.value)
+  router.replace({
+    query: {
+      ...route.query,
+      category: catId !== undefined ? catId.toString() : undefined,
+      page: undefined
+    }
+  })
+  loadBooksWithPagination(1)
 }
 
 function handleSearch() {
-  libraryStore.fetchBooks(selectedCategory.value, searchQuery.value)
+  router.replace({
+    query: {
+      ...route.query,
+      search: searchQuery.value ? searchQuery.value : undefined,
+      page: undefined
+    }
+  })
+  loadBooksWithPagination(1)
 }
 
 async function handleImportSubmit() {
@@ -380,7 +429,7 @@ async function handleImportRemotePdf() {
     })
     isImportModalOpen.value = false
     toast.success(t('library.upload_success_async'))
-    await libraryStore.fetchBooks(selectedCategory.value, searchQuery.value)
+    await loadBooksWithPagination(1)
     checkBackgroundPolling()
   } catch (err: any) {
     toast.error(formatError(err, 'library.toast_import_failed'))
@@ -402,6 +451,7 @@ async function confirmDeleteBook() {
     toast.success(t('library.toast_delete_success'))
     isDeleteModalOpen.value = false
     bookToDelete.value = null
+    await loadBooksWithPagination(libraryStore.currentPage)
   } catch (err: any) {
     toast.error(formatError(err, 'library.toast_delete_failed'))
   } finally {
@@ -546,6 +596,17 @@ async function confirmDeleteBook() {
         </div>
       </div>
     </div>
+
+    <!-- Pagination -->
+    <BasePagination
+      v-if="libraryStore.books.length > 0"
+      :current-page="libraryStore.currentPage"
+      :total-pages="libraryStore.totalPages"
+      :total-count="libraryStore.totalCount"
+      :page-size="libraryStore.pageSize"
+      show-summary
+      @change="onPageChange"
+    />
 
     <!-- Empty state -->
     <div v-else class="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-sm">

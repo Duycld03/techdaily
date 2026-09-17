@@ -56,6 +56,7 @@ export const useReviewStore = defineStore('review', () => {
   const deckTotalCount = ref(0)
   const deckCurrentPage = ref(1)
   const deckPageSize = ref(20)
+  const deckTotalPages = ref(0)
   const deckStatistics = ref<DeckStatistics>({
     totalCards: 0,
     learningCount: 0,
@@ -138,6 +139,7 @@ export const useReviewStore = defineStore('review', () => {
         totalCount: number
         page: number
         pageSize: number
+        totalPages?: number
         statistics?: {
           totalCards: number
           learningCards?: number
@@ -153,6 +155,9 @@ export const useReviewStore = defineStore('review', () => {
       deckTotalCount.value = res.totalCount ?? 0
       deckCurrentPage.value = res.page ?? (params?.page || 1)
       deckPageSize.value = res.pageSize ?? (params?.pageSize || 20)
+      deckTotalPages.value =
+        res.totalPages ??
+        (deckTotalCount.value > 0 ? Math.ceil(deckTotalCount.value / deckPageSize.value) : 0)
       if (res.statistics) {
         deckStatistics.value = {
           totalCards: res.statistics.totalCards ?? 0,
@@ -210,6 +215,7 @@ export const useReviewStore = defineStore('review', () => {
     deckTotalCount,
     deckCurrentPage,
     deckPageSize,
+    deckTotalPages,
     deckStatistics,
     isDeckLoading,
     fetchReviewDeck,

@@ -104,7 +104,16 @@ const mockGet = vi.fn(async (url: string) => {
     };
   }
   if (url.includes("/books")) {
-    return { books: [...mockBooks] };
+    const urlObj = new URL("http://localhost" + url);
+    const pageParam = parseInt(urlObj.searchParams.get("page") || "1", 10);
+    const pageSizeParam = parseInt(urlObj.searchParams.get("pageSize") || "12", 10);
+    return {
+      books: [...mockBooks],
+      totalCount: 24,
+      page: pageParam,
+      pageSize: pageSizeParam,
+      totalPages: 2
+    };
   }
   throw new Error("Not found");
 });
@@ -132,6 +141,21 @@ describe("useLibraryStore", () => {
     expect(library.books[0].title).toBe(
       "Designing Data-Intensive Applications",
     );
+  });
+
+  it("fetches books list with pagination state", async () => {
+    const library = useLibraryStore();
+    expect(library.currentPage).toBe(1);
+    expect(library.pageSize).toBe(12);
+
+    await library.fetchBooks({ page: 2, pageSize: 12 });
+    expect(library.books).toHaveLength(2);
+    expect(library.currentPage).toBe(2);
+    expect(library.pageSize).toBe(12);
+    expect(library.totalCount).toBe(24);
+    expect(library.totalPages).toBe(2);
+    expect(mockGet).toHaveBeenCalledWith(expect.stringContaining("page=2"));
+    expect(mockGet).toHaveBeenCalledWith(expect.stringContaining("pageSize=12"));
   });
 
   it("fetches specific book details with chunks", async () => {

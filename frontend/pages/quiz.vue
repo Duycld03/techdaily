@@ -47,9 +47,11 @@ import { useInterviewQuizStore, type QuizQuestion } from '~/stores/useInterviewQ
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useProfileStore } from '~/stores/useProfileStore'
 import { useLibraryStore } from '~/stores/useLibraryStore'
+import BasePagination from '~/components/common/BasePagination.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 
 const route = useRoute()
+const router = useRouter()
 const { t, locale } = useI18n()
 const authStore = useAuthStore()
 const profileStore = useProfileStore()
@@ -106,7 +108,36 @@ const quickTopics = [
   'Go Routines, Channels & Memory Model'
 ]
 
+function onReviewPageChange(newPage: number) {
+  router.replace({
+    query: {
+      ...route.query,
+      tab: 'review',
+      page: newPage > 1 ? newPage.toString() : undefined
+    }
+  })
+  quizStore.fetchReviewQueue({ page: newPage, pageSize: quizStore.reviewPageSize })
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
 
+function handlePracticeCurrentBatch() {
+  quizStore.startReviewSession(quizStore.reviewQueue)
+}
+
+async function handlePracticeAllMistakes() {
+  try {
+    const res = await quizStore.fetchReviewQueue({ page: 1, pageSize: 100 })
+    if (res && res.questions && res.questions.length > 0) {
+      quizStore.startReviewSession(res.questions)
+    } else {
+      quizStore.startReviewSession()
+    }
+  } catch {
+    quizStore.startReviewSession()
+  }
+}
 onMounted(async () => {
   if (!authStore.isLoggedIn) {
     return navigateTo({
@@ -128,7 +159,12 @@ onMounted(async () => {
     isGrounded.value = true
   }
 
-  // Load books for grounded selector dropdown
+  if (route.query.tab === 'review') {
+    quizStore.activeTab = 'review'
+    const queryPage = route.query.page ? parseInt(route.query.page as string, 10) : 1
+    const initialPage = isNaN(queryPage) || queryPage < 1 ? 1 : queryPage
+    quizStore.fetchReviewQueue({ page: initialPage, pageSize: quizStore.reviewPageSize })
+  }
   libraryStore.fetchBooks().catch((err) => {
     console.warn('Failed to load books for quiz dropdown:', err)
   })
@@ -394,7 +430,7 @@ defineExpose({
 
         <button
           data-testid="review-tab-btn"
-          @click="quizStore.activeTab = 'review'; quizStore.fetchReviewQueue()"
+          @click="quizStore.activeTab = 'review'; router.replace({ query: { ...route.query, tab: 'review' } }); quizStore.fetchReviewQueue({ page: 1, pageSize: quizStore.reviewPageSize })"
           :class="[
             'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
             quizStore.activeTab === 'review'
@@ -861,17 +897,26 @@ defineExpose({
 
       <div v-else class="space-y-4">
         <!-- Review Header Action -->
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <span class="text-sm font-bold text-slate-700 dark:text-slate-300">
-            {{ $t('quiz.review_count_badge', { count: quizStore.reviewQueueTotal }) }}
+            {{ $t('quiz.review_count_badge', { count: quizStore.reviewTotalCount }) }}
           </span>
-          <button
-            @click="quizStore.startReviewSession()"
-            class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-sm flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
-          >
-            <RotateCcw class="w-4 h-4" />
-            {{ $t('quiz.btn_start_review', { count: quizStore.reviewQueueTotal }) }}
-          </button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button
+              @click="handlePracticeCurrentBatch"
+              class="px-4 py-2 sm:py-2.5 rounded-xl bg-brand-50 dark:bg-brand-950/60 hover:bg-brand-100 dark:hover:bg-brand-900/60 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 font-bold text-xs sm:text-sm shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <RotateCcw class="w-4 h-4" />
+              {{ $t('quiz.practice_current_batch', { count: quizStore.reviewQueue.length }) }}
+            </button>
+            <button
+              @click="handlePracticeAllMistakes"
+              class="px-4 py-2 sm:py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+            >
+              <RotateCcw class="w-4 h-4" />
+              {{ $t('quiz.practice_all_mistakes', { count: quizStore.reviewTotalCount }) }}
+            </button>
+          </div>
         </div>
 
         <!-- Question Cards List -->
@@ -905,6 +950,16 @@ defineExpose({
             </div>
           </div>
         </div>
+
+        <!-- Pagination -->
+        <BasePagination
+          :current-page="quizStore.reviewPage"
+          :total-pages="quizStore.reviewTotalPages"
+          :total-count="quizStore.reviewTotalCount"
+          :page-size="quizStore.reviewPageSize"
+          show-summary
+          @change="onReviewPageChange"
+        />
       </div>
     </div>
 

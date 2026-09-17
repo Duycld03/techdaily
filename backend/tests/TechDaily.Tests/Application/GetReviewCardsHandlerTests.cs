@@ -264,8 +264,8 @@ public class GetReviewCardsHandlerTests : IDisposable
         resPage1.Value.TotalCount.Should().Be(5);
         resPage1.Value.Page.Should().Be(1);
         resPage1.Value.PageSize.Should().Be(2);
+        resPage1.Value.TotalPages.Should().Be(3);
         resPage1.Value.Cards.Should().HaveCount(2);
-
         resPage2.Value.Page.Should().Be(2);
         resPage2.Value.Cards.Should().HaveCount(2);
 

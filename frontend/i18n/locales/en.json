@@ -408,7 +408,10 @@
     "creating_card": "Generating...",
     "in_sm2": "In SM-2",
     "toast_flashcard_success": "Flashcard created & added to SM-2 Deck!",
-    "toast_flashcard_error": "Failed to create flashcard."
+    "toast_flashcard_error": "Failed to create flashcard.",
+    "load_more": "Load More Notes",
+    "loading_more": "Loading...",
+    "all_notes_loaded": "All notes loaded"
   },
   "profile": {
     "title": "User Profile",
@@ -636,7 +639,9 @@
     "readiness_ready": "Interview Ready",
     "readiness_building": "Building Reflexes",
     "readiness_starting": "Getting Started",
-    "btn_review_mistakes": "Review Mistakes ({count})"
+    "btn_review_mistakes": "Review Mistakes ({count})",
+    "practice_current_batch": "Practice This Page ({count})",
+    "practice_all_mistakes": "Practice All ({count})"
   },
   "error": {
     "not_found_title": "Page Not Found",
@@ -672,6 +677,16 @@
   "common": {
     "close": "Close",
     "retry": "Retry",
-    "error": "Error"
+    "error": "Error",
+    "pagination": {
+      "navigation_label": "Pagination Navigation",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page",
+      "page_number": "Page {page}",
+      "page_of_total": "Page {current} of {total}",
+      "showing_range": "Showing {start}–{end} of {total}",
+      "ellipsis": "More pages"
+    }
   }
 }

@@ -27,10 +27,12 @@ public static class LibraryEndpoints
         group.MapGet("/books", async (
             [FromQuery] Category? category,
             [FromQuery] string? search,
-            [FromServices] IUseCase<GetBooksRequest, GetBooksResponse> handler,
-            CancellationToken ct) =>
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 12,
+            [FromServices] IUseCase<GetBooksRequest, GetBooksResponse> handler = null!,
+            CancellationToken ct = default) =>
         {
-            var result = await handler.ExecuteAsync(new GetBooksRequest(category, search), ct);
+            var result = await handler.ExecuteAsync(new GetBooksRequest(category, search, page, pageSize), ct);
             return result.Match(
                 success => Results.Ok(success),
                 error => Results.BadRequest(new { code = error.Code, error = error.Message })

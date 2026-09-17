@@ -68,7 +68,10 @@ public record GetQuizReviewQueueResponse(
     int TotalCount,
     int Page,
     int PageSize
-);
+)
+{
+    public int TotalPages => TotalCount == 0 ? 0 : (int)Math.Ceiling((double)TotalCount / (PageSize > 0 ? PageSize : 20));
+}
 
 public record LevelStatDto(
     QuizLevel Level,

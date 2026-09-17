@@ -43,6 +43,7 @@ vi.mock('~/composables/useApiClient', () => ({
           totalCount: 2,
           page: 1,
           pageSize: 20,
+          totalPages: 1,
           statistics: {
             totalCards: 2,
             learningCount: 1,
@@ -155,6 +156,7 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
     await review.fetchDeckCards({ page: 1, pageSize: 20 })
     expect(review.deckCards).toHaveLength(2)
     expect(review.deckTotalCount).toBe(2)
+    expect(review.deckTotalPages).toBe(1)
     expect(review.deckStatistics.totalCards).toBe(2)
     expect(review.deckStatistics.learningCount).toBe(1)
     expect(review.deckStatistics.reviewingCount).toBe(1)

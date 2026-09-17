@@ -18,9 +18,12 @@ public static class NotesEndpoints
 
         group.MapGet("/highlights", async (
             [FromQuery] string? tag,
-            ClaimsPrincipal userClaims,
-            [FromServices] IUseCase<GetHighlightsRequest, GetHighlightsResponse> handler,
-            CancellationToken ct) =>
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 15,
+            ClaimsPrincipal userClaims = null!,
+            [FromServices] IUseCase<GetHighlightsRequest, GetHighlightsResponse> handler = null!,
+            CancellationToken ct = default) =>
         {
             var userId = GetUserIdFromClaims(userClaims);
             if (!userId.HasValue)
@@ -28,7 +31,7 @@ public static class NotesEndpoints
                 return Results.Unauthorized();
             }
 
-            var result = await handler.ExecuteAsync(new GetHighlightsRequest(userId.Value, tag), ct);
+            var result = await handler.ExecuteAsync(new GetHighlightsRequest(userId.Value, tag, search, page, pageSize), ct);
             return result.Match(
                 success => Results.Ok(success),
                 error => Results.BadRequest(new { code = error.Code, error = error.Message })

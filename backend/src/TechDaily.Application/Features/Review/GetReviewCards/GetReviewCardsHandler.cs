@@ -43,6 +43,7 @@ public class GetReviewCardsResponse
     public int TotalCount { get; set; }
     public int Page { get; set; }
     public int PageSize { get; set; }
+    public int TotalPages => TotalCount == 0 ? 0 : (int)Math.Ceiling((double)TotalCount / (PageSize > 0 ? PageSize : 20));
     public DeckStatisticsDto Statistics { get; set; } = new();
 
     public GetReviewCardsResponse() { }

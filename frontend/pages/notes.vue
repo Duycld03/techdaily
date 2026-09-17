@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { Highlighter, Trash2, BookOpen, AlertTriangle, Zap, Search, Sparkles, X, Pencil, Check } from 'lucide-vue-next'
+import BasePagination from '~/components/common/BasePagination.vue'
 import { useNotesStore, type Highlight } from '~/stores/useNotesStore'
 import { useReviewStore } from '~/stores/useReviewStore'
 import { useApiError } from '~/composables/useApiError'
 import MarkdownIt from 'markdown-it'
 
 const { t, locale } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const { formatError } = useApiError()
 const notesStore = useNotesStore()
 const toast = useToast()
-const reviewStore = useReviewStore()
 const creatingCardHighlightId = ref<string | null>(null)
 const createdCardHighlightIds = ref<Set<string>>(new Set())
 
@@ -54,6 +56,10 @@ interface TagCount {
 }
 
 const tagCounts = computed<TagCount[]>(() => {
+  if (notesStore.tagCounts && notesStore.tagCounts.length > 0) {
+    return notesStore.tagCounts
+  }
+
   const counts: Record<string, number> = {}
   notesStore.highlights.forEach((h) => {
     if (h.tags && Array.isArray(h.tags)) {
@@ -76,14 +82,23 @@ const selectedTag = ref<string | null>(null)
 function selectTag(tag: string | null) {
   if (!tag) {
     selectedTag.value = null
-    return
-  }
-  const clean = tag.trim().replace(/^#/, '').toLowerCase()
-  if (selectedTag.value === clean) {
-    selectedTag.value = null
   } else {
-    selectedTag.value = clean
+    const clean = tag.trim().replace(/^#/, '').toLowerCase()
+    if (selectedTag.value === clean) {
+      selectedTag.value = null
+    } else {
+      selectedTag.value = clean
+    }
   }
+
+  router.replace({
+    query: {
+      ...route.query,
+      tag: selectedTag.value ? selectedTag.value : undefined,
+      page: undefined
+    }
+  })
+  loadNotes(1, false)
 }
 
 const filteredHighlights = computed(() => {
@@ -113,11 +128,57 @@ const filteredHighlights = computed(() => {
   })
 })
 
+async function loadNotes(page = 1, append = false) {
+  await notesStore.fetchHighlights({
+    tag: selectedTag.value || undefined,
+    search: highlightSearchQuery.value.trim() || undefined,
+    page,
+    pageSize: notesStore.pageSize,
+    append
+  })
+}
+
+function onPageChange(newPage: number) {
+  router.replace({
+    query: {
+      ...route.query,
+      page: newPage > 1 ? newPage.toString() : undefined
+    }
+  })
+  loadNotes(newPage, false)
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+}
+
+async function handleLoadMore() {
+  if (notesStore.currentPage < notesStore.totalPages) {
+    await loadNotes(notesStore.currentPage + 1, true)
+  }
+}
+
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+watch(highlightSearchQuery, (newVal) => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(() => {
+    router.replace({
+      query: {
+        ...route.query,
+        search: newVal.trim() ? newVal.trim() : undefined,
+        page: undefined
+      }
+    })
+    loadNotes(1, false)
+  }, 300)
+})
+
 defineExpose({
   tagCounts,
   selectedTag,
   selectTag,
-  filteredHighlights
+  filteredHighlights,
+  handleLoadMore,
+  onPageChange
 })
 
 // Inline Editing State
@@ -167,7 +228,17 @@ const isDeleteModalOpen = ref(false)
 const isDeleting = ref(false)
 
 onMounted(async () => {
-  await notesStore.fetchHighlights()
+  const queryPage = route.query.page ? parseInt(route.query.page as string, 10) : 1
+  const initialPage = isNaN(queryPage) || queryPage < 1 ? 1 : queryPage
+
+  if (typeof route.query.tag === 'string') {
+    selectedTag.value = route.query.tag.trim().replace(/^#/, '').toLowerCase()
+  }
+  if (typeof route.query.search === 'string') {
+    highlightSearchQuery.value = route.query.search
+  }
+
+  await loadNotes(initialPage, false)
   syncFlashcardState()
 })
 
@@ -243,7 +314,7 @@ async function confirmDeleteHighlight() {
         >
           <span>{{ $t('notes.tag_all') }}</span>
           <span :class="selectedTag === null ? 'text-white/80' : 'text-slate-400 dark:text-slate-500'">
-            ({{ notesStore.highlights.length }})
+            ({{ notesStore.totalCount || notesStore.highlights.length }})
           </span>
         </button>
 
@@ -414,6 +485,34 @@ async function confirmDeleteHighlight() {
             </div>
           </template>
         </div>
+      </div>
+
+      <!-- Load More Action & Pagination Controls -->
+      <div v-if="filteredHighlights.length > 0" class="pt-4 space-y-4">
+        <!-- Streaming "Load More" trigger -->
+        <div v-if="notesStore.currentPage < notesStore.totalPages" class="flex justify-center">
+          <button
+            @click="handleLoadMore"
+            :disabled="notesStore.isLoading"
+            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 text-slate-700 dark:text-slate-300 hover:text-indigo-600 font-semibold text-xs sm:text-sm shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+          >
+            <span v-if="notesStore.isLoading">{{ $t('notes.loading_more') }}</span>
+            <span v-else>{{ $t('notes.load_more') }}</span>
+          </button>
+        </div>
+        <div v-else-if="notesStore.totalPages > 1 && notesStore.currentPage >= notesStore.totalPages" class="text-center text-xs text-slate-400 font-medium py-1">
+          {{ $t('notes.all_notes_loaded') }}
+        </div>
+
+        <!-- Numbered BasePagination -->
+        <BasePagination
+          :current-page="notesStore.currentPage"
+          :total-pages="notesStore.totalPages"
+          :total-count="notesStore.totalCount"
+          :page-size="notesStore.pageSize"
+          show-summary
+          @change="onPageChange"
+        />
       </div>
 
       <!-- Empty State for Highlights -->

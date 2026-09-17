@@ -30,7 +30,28 @@ vi.mock('~/composables/useApiClient', () => ({
         return { ...mockQuizStats }
       }
       if (url.includes('/api/v1/quiz/review-queue')) {
-        return { questions: [], totalCount: 0, page: 1 }
+        return {
+          questions: [
+            {
+              id: 'q-1',
+              topic: '.NET 10',
+              category: 1,
+              level: 3,
+              questionText: 'What is dynamic PGO?',
+              options: ['A', 'B'],
+              correctOptionIndex: 0,
+              explanationMarkdown: 'Profile guided optimization',
+              tags: ['dotnet'],
+              isMastered: false,
+              correctCount: 0,
+              incorrectCount: 1
+            }
+          ],
+          totalCount: 15,
+          page: 1,
+          pageSize: 10,
+          totalPages: 2
+        }
       }
       if (url.includes('/api/v1/library/books')) {
         return { books: [] }
@@ -131,5 +152,28 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     expect(reviewMistakesBtn).toBeDefined()
     await reviewMistakesBtn!.trigger('click')
     expect(quizStore.activeTab).toBe('review')
+  })
+
+  it('renders dual review triggers and BasePagination in review tab', async () => {
+    const wrapper = mount(QuizPage, {
+      global: {
+        stubs: {
+          ShikiCodeBlock: true,
+          Teleport: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const quizStore = useInterviewQuizStore()
+    quizStore.activeTab = 'review'
+    await quizStore.fetchReviewQueue()
+    await wrapper.vm.$nextTick()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('quiz.practice_current_batch')
+    expect(wrapper.text()).toContain('quiz.practice_all_mistakes')
+    expect(wrapper.find('nav').exists()).toBe(true)
+    expect(wrapper.find('nav').attributes('role')).toBe('navigation')
   })
 })

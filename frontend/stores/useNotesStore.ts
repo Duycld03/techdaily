@@ -14,20 +14,96 @@ export interface Highlight {
   hasFlashcard?: boolean
 }
 
+export interface TagCount {
+  tag: string
+  count: number
+}
+
 export const useNotesStore = defineStore('notes', () => {
   const highlights = ref<Highlight[]>([])
   const isLoading = ref(false)
   const isCreating = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchHighlights(tag?: string) {
+  const currentPage = ref(1)
+  const pageSize = ref(15)
+  const totalCount = ref(0)
+  const totalPages = ref(0)
+  const tagCounts = ref<TagCount[]>([])
+
+  async function fetchHighlights(
+    paramsOrTag?:
+      | {
+          tag?: string
+          search?: string
+          page?: number
+          pageSize?: number
+          append?: boolean
+        }
+      | string,
+    maybePage?: number
+  ) {
+    let tag: string | undefined
+    let search: string | undefined
+    let page: number | undefined
+    let size: number | undefined
+    let append = false
+
+    if (typeof paramsOrTag === 'object' && paramsOrTag !== null) {
+      tag = paramsOrTag.tag
+      search = paramsOrTag.search
+      page = paramsOrTag.page
+      size = paramsOrTag.pageSize
+      append = Boolean(paramsOrTag.append)
+    } else {
+      tag = paramsOrTag
+      page = maybePage
+    }
+
+    const targetPage = page ?? (append ? currentPage.value + 1 : 1)
+    const targetSize = size ?? pageSize.value
+
     isLoading.value = true
     error.value = null
     try {
       const api = useApiClient()
-      const query = tag ? `?tag=${encodeURIComponent(tag)}` : ''
-      const res = await api.get<{ highlights: Highlight[] }>(`/api/v1/notes/highlights${query}`)
-      highlights.value = res.highlights
+      const queryParams = new URLSearchParams()
+      if (tag) queryParams.append('tag', tag)
+      if (search) queryParams.append('search', search)
+      queryParams.append('page', targetPage.toString())
+      queryParams.append('pageSize', targetSize.toString())
+
+      const res = await api.get<{
+        highlights: Highlight[]
+        totalCount?: number
+        page?: number
+        pageSize?: number
+        totalPages?: number
+        tagCounts?: TagCount[]
+      }>(`/api/v1/notes/highlights?${queryParams.toString()}`)
+
+      const items = res.highlights || []
+      if (append) {
+        const existingIds = new Set<string>(highlights.value.map((h) => h.id))
+        for (const item of items) {
+          if (!existingIds.has(item.id)) {
+            highlights.value.push(item)
+            existingIds.add(item.id)
+          }
+        }
+      } else {
+        highlights.value = items
+      }
+
+      totalCount.value = res.totalCount ?? highlights.value.length
+      totalPages.value =
+        res.totalPages ??
+        (totalCount.value > 0 ? Math.ceil(totalCount.value / targetSize) : 0)
+      currentPage.value = res.page ?? targetPage
+      pageSize.value = res.pageSize ?? targetSize
+      if (res.tagCounts) {
+        tagCounts.value = res.tagCounts
+      }
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : 'Failed to load highlights.'
     } finally {
@@ -88,6 +164,11 @@ export const useNotesStore = defineStore('notes', () => {
     isLoading,
     isCreating,
     error,
+    currentPage,
+    pageSize,
+    totalCount,
+    totalPages,
+    tagCounts,
     fetchHighlights,
     createHighlight,
     updateHighlight,

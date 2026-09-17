@@ -64,6 +64,10 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
   const submissions = ref<Record<string, QuizSubmissionResult>>({})
   const reviewQueue = ref<QuizQuestion[]>([])
   const reviewQueueTotal = ref(0)
+  const reviewPage = ref(1)
+  const reviewPageSize = ref(10)
+  const reviewTotalCount = ref(0)
+  const reviewTotalPages = ref(0)
   const stats = ref<QuizStats | null>(null)
 
   const activeTab = ref<'generate' | 'arena' | 'review' | 'stats' | 'summary'>('generate')
@@ -218,32 +222,72 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
   }
 
   async function fetchReviewQueue(
-    category?: number | null,
-    level?: number | null,
-    topic?: string | null,
-    page: number = 1,
-    pageSize: number = 20
+    paramsOrCategory?:
+      | {
+          category?: number | null
+          level?: number | null
+          topic?: string | null
+          page?: number
+          pageSize?: number
+        }
+      | number
+      | null,
+    maybeLevel?: number | null,
+    maybeTopic?: string | null,
+    maybePage?: number,
+    maybePageSize?: number
   ) {
+    let category: number | null | undefined
+    let level: number | null | undefined
+    let topic: string | null | undefined
+    let page: number | undefined
+    let pageSize: number | undefined
+
+    if (typeof paramsOrCategory === 'object' && paramsOrCategory !== null) {
+      category = paramsOrCategory.category
+      level = paramsOrCategory.level
+      topic = paramsOrCategory.topic
+      page = paramsOrCategory.page
+      pageSize = paramsOrCategory.pageSize
+    } else {
+      category = paramsOrCategory
+      level = maybeLevel
+      topic = maybeTopic
+      page = maybePage
+      pageSize = maybePageSize
+    }
+
+    const targetPage = page ?? reviewPage.value
+    const targetPageSize = pageSize ?? reviewPageSize.value
+
     isLoading.value = true
     try {
       const queryParams = new URLSearchParams()
       if (category !== undefined && category !== null) queryParams.set('category', category.toString())
       if (level !== undefined && level !== null) queryParams.set('level', level.toString())
       if (topic) queryParams.set('topic', topic)
-      queryParams.set('page', page.toString())
-      queryParams.set('pageSize', pageSize.toString())
+      queryParams.set('page', targetPage.toString())
+      queryParams.set('pageSize', targetPageSize.toString())
 
       const response = await api.get<{
         questions: QuizQuestion[]
-        totalCount: number
-        page: number
-        pageSize: number
+        totalCount?: number
+        page?: number
+        pageSize?: number
+        totalPages?: number
       }>(`/api/v1/quiz/review-queue?${queryParams.toString()}`)
 
       reviewQueue.value = response.questions || []
-      reviewQueueTotal.value = response.totalCount || 0
+      reviewTotalCount.value = response.totalCount ?? reviewQueue.value.length
+      reviewQueueTotal.value = reviewTotalCount.value
+      reviewPage.value = response.page ?? targetPage
+      reviewPageSize.value = response.pageSize ?? targetPageSize
+      reviewTotalPages.value =
+        response.totalPages ??
+        (reviewTotalCount.value > 0 ? Math.ceil(reviewTotalCount.value / reviewPageSize.value) : 0)
+
       return response
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(formatError(err, 'quiz.review_queue_failed'))
     } finally {
       isLoading.value = false
@@ -310,6 +354,10 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
     nextQuestion,
     prevQuestion,
     jumpToQuestion,
+    reviewPage,
+    reviewPageSize,
+    reviewTotalCount,
+    reviewTotalPages,
     fetchReviewQueue,
     startReviewSession,
     fetchStats,

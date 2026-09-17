@@ -53,7 +53,39 @@ export const useLibraryStore = defineStore("library", () => {
   const isImporting = ref(false);
   const error = ref<string | null>(null);
 
-  async function fetchBooks(category?: number, search?: string) {
+  const currentPage = ref(1);
+  const pageSize = ref(12);
+  const totalCount = ref(0);
+  const totalPages = ref(0);
+  async function fetchBooks(
+    paramsOrCategory?:
+      | {
+          category?: number;
+          search?: string;
+          page?: number;
+          pageSize?: number;
+        }
+      | number,
+    maybeSearch?: string
+  ) {
+    let category: number | undefined;
+    let search: string | undefined;
+    let page: number | undefined;
+    let size: number | undefined;
+
+    if (typeof paramsOrCategory === "object" && paramsOrCategory !== null) {
+      category = paramsOrCategory.category;
+      search = paramsOrCategory.search;
+      page = paramsOrCategory.page;
+      size = paramsOrCategory.pageSize;
+    } else {
+      category = paramsOrCategory;
+      search = maybeSearch;
+    }
+
+    const targetPage = page ?? currentPage.value;
+    const targetSize = size ?? pageSize.value;
+
     isLoading.value = true;
     error.value = null;
     try {
@@ -62,13 +94,26 @@ export const useLibraryStore = defineStore("library", () => {
       if (category !== undefined && category !== null)
         query.append("category", category.toString());
       if (search) query.append("search", search);
+      query.append("page", targetPage.toString());
+      query.append("pageSize", targetSize.toString());
 
-      const res = await api.get<{ books: Book[] }>(
-        `/api/v1/library/books?${query.toString()}`,
-      );
-      books.value = res.books;
-    } catch (err: any) {
-      error.value = err.message || "Failed to load books.";
+      const res = await api.get<{
+        books: Book[];
+        totalCount?: number;
+        page?: number;
+        pageSize?: number;
+        totalPages?: number;
+      }>(`/api/v1/library/books?${query.toString()}`);
+
+      books.value = res.books || [];
+      totalCount.value = res.totalCount ?? (res.books ? res.books.length : 0);
+      currentPage.value = res.page ?? targetPage;
+      pageSize.value = res.pageSize ?? targetSize;
+      totalPages.value =
+        res.totalPages ??
+        (totalCount.value > 0 ? Math.ceil(totalCount.value / pageSize.value) : 0);
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : "Failed to load books.";
     } finally {
       isLoading.value = false;
     }
@@ -293,6 +338,10 @@ export const useLibraryStore = defineStore("library", () => {
     isLoading,
     isImporting,
     error,
+    currentPage,
+    pageSize,
+    totalCount,
+    totalPages,
     fetchBooks,
     fetchBookById,
     fetchSlice,

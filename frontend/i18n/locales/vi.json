@@ -408,7 +408,10 @@
     "creating_card": "Đang tạo...",
     "in_sm2": "Đã Trong SM-2",
     "toast_flashcard_success": "Đã tạo Flashcard và đưa vào bộ ôn tập SM-2!",
-    "toast_flashcard_error": "Không thể tạo flashcard từ trích dẫn."
+    "toast_flashcard_error": "Không thể tạo flashcard từ trích dẫn.",
+    "load_more": "Tải thêm ghi chú",
+    "loading_more": "Đang tải thêm...",
+    "all_notes_loaded": "Đã tải hết ghi chú"
   },
   "profile": {
     "title": "Hồ Sơ Cá Nhân",
@@ -636,7 +639,9 @@
     "readiness_ready": "Sẵn Sàng Phỏng Vấn",
     "readiness_building": "Đang Rèn Phản Xạ",
     "readiness_starting": "Bắt Đầu Luyện Tập",
-    "btn_review_mistakes": "Ôn Tập Câu Sai ({count})"
+    "btn_review_mistakes": "Ôn Tập Câu Sai ({count})",
+    "practice_current_batch": "Luyện tập trang này ({count})",
+    "practice_all_mistakes": "Luyện tập tất cả ({count})"
   },
   "error": {
     "not_found_title": "Không Tìm Thấy Trang",
@@ -672,6 +677,16 @@
   "common": {
     "close": "Đóng",
     "retry": "Thử lại",
-    "error": "Lỗi"
+    "error": "Lỗi",
+    "pagination": {
+      "navigation_label": "Điều hướng phân trang",
+      "previous": "Trang trước",
+      "next": "Trang sau",
+      "page": "Trang",
+      "page_number": "Trang {page}",
+      "page_of_total": "Trang {current} / {total}",
+      "showing_range": "Hiển thị {start}–{end} trong tổng số {total}",
+      "ellipsis": "Các trang tiếp theo"
+    }
   }
 }

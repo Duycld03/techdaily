@@ -156,4 +156,131 @@ public class GetHighlightsHandlerTests : IDisposable
         resultUserB.IsSuccess.Should().BeTrue();
         resultUserB.Value.Highlights.Should().NotContain(h => h.Id == highlightA.Id);
     }
+    [Fact]
+    public async Task GetHighlights_Pagination_ReturnsCorrectPageAndTotalPages()
+    {
+        // Arrange: seed user and 20 highlights
+        var (user, chunk, _) = await SeedHighlightAsync();
+        for (int i = 1; i <= 19; i++)
+        {
+            _db.UserHighlights.Add(new UserHighlight
+            {
+                UserId = user.Id,
+                DocumentChunkId = chunk.Id,
+                SelectedText = $"Highlight excerpt {i}",
+                Tags = new List<string> { "paging" },
+                CreatedAt = DateTimeOffset.UtcNow.AddMinutes(i)
+            });
+        }
+        await _db.SaveChangesAsync();
+
+        // Act: Page 1 with default PageSize (15)
+        var resPage1 = await _handler.ExecuteAsync(new GetHighlightsRequest(user.Id, Page: 1, PageSize: 15));
+        // Act: Page 2
+        var resPage2 = await _handler.ExecuteAsync(new GetHighlightsRequest(user.Id, Page: 2, PageSize: 15));
+
+        // Assert
+        resPage1.IsSuccess.Should().BeTrue();
+        resPage1.Value.TotalCount.Should().Be(20);
+        resPage1.Value.Page.Should().Be(1);
+        resPage1.Value.PageSize.Should().Be(15);
+        resPage1.Value.TotalPages.Should().Be(2);
+        resPage1.Value.Highlights.Should().HaveCount(15);
+
+        resPage2.IsSuccess.Should().BeTrue();
+        resPage2.Value.TotalCount.Should().Be(20);
+        resPage2.Value.Page.Should().Be(2);
+        resPage2.Value.TotalPages.Should().Be(2);
+        resPage2.Value.Highlights.Should().HaveCount(5);
+    }
+
+    [Fact]
+    public async Task GetHighlights_ComputesGlobalTagCounts_OrderedByCountDescendingThenTagAscending()
+    {
+        // Arrange
+        var (user, chunk, _) = await SeedHighlightAsync(); // already has tags: "storage", "lsm"
+        _db.UserHighlights.AddRange(
+            new UserHighlight
+            {
+                UserId = user.Id,
+                DocumentChunkId = chunk.Id,
+                SelectedText = "Text 1",
+                Tags = new List<string> { "storage", "indexing" }
+            },
+            new UserHighlight
+            {
+                UserId = user.Id,
+                DocumentChunkId = chunk.Id,
+                SelectedText = "Text 2",
+                Tags = new List<string> { "storage", "btree" }
+            }
+        );
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetHighlightsRequest(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        // "storage" appears 3 times, others ("btree", "indexing", "lsm") appear 1 time each
+        result.Value.TagCounts.Should().NotBeEmpty();
+        result.Value.TagCounts[0].Tag.Should().Be("storage");
+        result.Value.TagCounts[0].Count.Should().Be(3);
+
+        // Count == 1 items are ordered alphabetically: btree, indexing, lsm
+        var tieGroup = result.Value.TagCounts.Skip(1).Select(t => t.Tag).ToList();
+        tieGroup.Should().Equal("btree", "indexing", "lsm");
+    }
+
+    [Fact]
+    public async Task GetHighlights_FilterByTag_ReturnsMatchingHighlightsWhilePreservingGlobalTagCounts()
+    {
+        // Arrange
+        var (user, chunk, _) = await SeedHighlightAsync(); // tags: "storage", "lsm"
+        _db.UserHighlights.Add(new UserHighlight
+        {
+            UserId = user.Id,
+            DocumentChunkId = chunk.Id,
+            SelectedText = "PostgreSQL indexing text",
+            Tags = new List<string> { "database" }
+        });
+        await _db.SaveChangesAsync();
+
+        // Act: filter by "database"
+        var result = await _handler.ExecuteAsync(new GetHighlightsRequest(user.Id, Tag: "database"));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.TotalCount.Should().Be(1);
+        result.Value.Highlights.Should().ContainSingle().Which.SelectedText.Should().Be("PostgreSQL indexing text");
+        // Global tag counts should still contain "storage", "lsm", and "database"
+        result.Value.TagCounts.Should().Contain(t => t.Tag == "storage");
+        result.Value.TagCounts.Should().Contain(t => t.Tag == "lsm");
+        result.Value.TagCounts.Should().Contain(t => t.Tag == "database");
+    }
+
+    [Fact]
+    public async Task GetHighlights_FilterBySearch_MatchesSelectedTextNoteOrBookTitle()
+    {
+        // Arrange
+        var (user, chunk, _) = await SeedHighlightAsync(); // BookTitle = "Designing Data-Intensive Applications", SelectedText = "LSM-Tree...", Note = "Important storage concept"
+
+        // Act 1: Search by note keyword
+        var resNote = await _handler.ExecuteAsync(new GetHighlightsRequest(user.Id, Search: "concept"));
+        // Act 2: Search by book title keyword
+        var resBook = await _handler.ExecuteAsync(new GetHighlightsRequest(user.Id, Search: "intensive"));
+        // Act 3: Search with no match
+        var resNone = await _handler.ExecuteAsync(new GetHighlightsRequest(user.Id, Search: "nonexistent_token_xyz"));
+
+        // Assert
+        resNote.IsSuccess.Should().BeTrue();
+        resNote.Value.TotalCount.Should().Be(1);
+
+        resBook.IsSuccess.Should().BeTrue();
+        resBook.Value.TotalCount.Should().Be(1);
+
+        resNone.IsSuccess.Should().BeTrue();
+        resNone.Value.TotalCount.Should().Be(0);
+        resNone.Value.TotalPages.Should().Be(0);
+    }
 }

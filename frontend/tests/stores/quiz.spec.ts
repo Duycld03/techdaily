@@ -14,6 +14,9 @@ vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     get: vi.fn(async (url: string) => {
       if (url.includes('/api/v1/quiz/review-queue')) {
+        const urlObj = new URL('http://localhost' + url)
+        const page = parseInt(urlObj.searchParams.get('page') || '1', 10)
+        const pageSize = parseInt(urlObj.searchParams.get('pageSize') || '20', 10)
         return {
           questions: [
             {
@@ -32,8 +35,9 @@ vi.mock('~/composables/useApiClient', () => ({
             }
           ],
           totalCount: 1,
-          page: 1,
-          pageSize: 20
+          page,
+          pageSize,
+          totalPages: 1
         }
       }
       if (url.includes('/api/v1/quiz/stats')) {
@@ -182,9 +186,21 @@ describe('useInterviewQuizStore', () => {
     await store.fetchReviewQueue()
     expect(store.reviewQueue.length).toBe(1)
     expect(store.reviewQueueTotal).toBe(1)
-
+    expect(store.reviewPage).toBe(1)
+    expect(store.reviewTotalCount).toBe(1)
+    expect(store.reviewTotalPages).toBe(1)
     await store.fetchStats()
     expect(store.stats?.totalAnswered).toBe(10)
     expect(store.stats?.accuracyRate).toBe(80.0)
+  })
+
+  it('manages review queue pagination state correctly', async () => {
+    const store = useInterviewQuizStore()
+    expect(store.reviewPage).toBe(1)
+    expect(store.reviewPageSize).toBe(10)
+
+    await store.fetchReviewQueue({ page: 2, pageSize: 10 })
+    expect(store.reviewPage).toBe(2)
+    expect(store.reviewPageSize).toBe(10)
   })
 })
