@@ -26,6 +26,8 @@ using TechDaily.Application.Features.Review.GetReviewCards;
 using TechDaily.Application.Features.Review.UpdateReviewCard;
 using TechDaily.Application.Features.Review.DeleteReviewCard;
 using TechDaily.Application.Features.Review.ResetReviewCardProgress;
+using TechDaily.Application.Features.KnowledgeGraph.DTOs;
+using TechDaily.Application.Features.KnowledgeGraph.GetKnowledgeGraph;
 
 namespace TechDaily.Application;
 
@@ -84,6 +86,9 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<Features.InterviewQuiz.DTOs.SubmitQuizAnswerRequest, Features.InterviewQuiz.DTOs.SubmitQuizAnswerResponse>, Features.InterviewQuiz.SubmitQuizAnswer.SubmitQuizAnswerHandler>();
         services.AddScoped<IUseCase<Features.InterviewQuiz.DTOs.GetQuizReviewQueueRequest, Features.InterviewQuiz.DTOs.GetQuizReviewQueueResponse>, Features.InterviewQuiz.GetQuizReviewQueue.GetQuizReviewQueueHandler>();
         services.AddScoped<IUseCase<Features.InterviewQuiz.DTOs.GetQuizStatsRequest, Features.InterviewQuiz.DTOs.GetQuizStatsResponse>, Features.InterviewQuiz.GetQuizStats.GetQuizStatsHandler>();
+
+        // Knowledge Graph Handlers
+        services.AddScoped<IUseCase<GetKnowledgeGraphQuery, KnowledgeGraphResponse>, GetKnowledgeGraphQueryHandler>();
 
         return services;
     }

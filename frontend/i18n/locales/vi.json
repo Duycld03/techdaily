@@ -10,6 +10,7 @@
     "review": "Flashcards",
     "library": "Thư Viện",
     "notes": "Ghi Chú",
+    "graph": "Sơ Đồ Tri Thức",
     "profile": "Cá Nhân",
     "analytics": "Thống Kê",
     "settings": "Cài Đặt",
@@ -412,6 +413,55 @@
     "load_more": "Tải thêm ghi chú",
     "loading_more": "Đang tải thêm...",
     "all_notes_loaded": "Đã tải hết ghi chú"
+  },
+  "graph": {
+    "title": "Sơ Đồ Tri Thức Kiến Trúc",
+    "subtitle": "Bản đồ tư duy tương tác kết nối các khái niệm kỹ thuật, ghi chú nổi bật và độ ghi nhớ flashcard",
+    "fitScreen": "Vừa Khung Hình",
+    "resetFilters": "Đặt Lại Bộ Lọc",
+    "searchPlaceholder": "Tìm kiếm khái niệm, sách, ghi chú...",
+    "filters": {
+      "pillars": "Trụ Cột Kỹ Thuật",
+      "nodeTypes": "Loại Nút",
+      "mastery": "Mức Độ Ghi Nhớ",
+      "allPillars": "Tất Cả Trụ Cột",
+      "allTypes": "Tất Cả Loại",
+      "allMastery": "Tất Cả Trạng Thái",
+      "learning": "Đang Học",
+      "reviewing": "Đang Ôn Tập",
+      "mastered": "Thành Thạo",
+      "topics": "Chủ Đề",
+      "books": "Sách",
+      "cards": "Flashcard",
+      "highlights": "Ghi Chú"
+    },
+    "drawer": {
+      "takeaways": "Điểm Cốt Lõi",
+      "quote": "Trích Dẫn Nổi Bật",
+      "note": "Suy Nghĩ Cá Nhân",
+      "source": "Chương Nguồn",
+      "metrics": "Chỉ Số Ghi Nhớ SM-2",
+      "intervalDays": "Khoảng Cách",
+      "easeFactor": "Hệ Số Dễ",
+      "repetitions": "Lần Ôn",
+      "nextReview": "Ôn Tập Tiếp",
+      "practiceQuiz": "Luyện Trắc Nghiệm",
+      "viewRoadmap": "Xem Trên Lộ Trình",
+      "browseLibrary": "Xem Trong Thư Viện",
+      "readSlices": "Đọc Nội Dung",
+      "reviewFlashcard": "Ôn Flashcard",
+      "readChapter": "Đọc Chương Này",
+      "viewInNotes": "Xem Trong Ghi Chú"
+    },
+    "empty": {
+      "title": "Không Có Nút Nào Phù Hợp Bộ Lọc",
+      "description": "Điều chỉnh danh mục hoặc từ khóa tìm kiếm để khám phá sơ đồ tri thức của bạn."
+    },
+    "error": {
+      "title": "Không Thể Tải Sơ Đồ Tri Thức",
+      "retry": "Thử Lại Kết Nối"
+    },
+    "loading": "Đang tổng hợp sơ đồ tri thức..."
   },
   "profile": {
     "title": "Hồ Sơ Cá Nhân",

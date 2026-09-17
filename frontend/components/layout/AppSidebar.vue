@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Target, Map, Sparkles, HelpCircle, Layers, BookOpen, Highlighter, User, Settings } from 'lucide-vue-next'
+import { Target, Map, Sparkles, HelpCircle, Layers, BookOpen, Highlighter, Network, User, Settings } from 'lucide-vue-next'
 
 const route = useRoute()
 
@@ -27,7 +27,8 @@ const navGroups: NavGroup[] = [
     links: [
       { name: 'nav.insights', path: '/insights', icon: Sparkles },
       { name: 'nav.library', path: '/library', icon: BookOpen },
-      { name: 'nav.notes', path: '/notes', icon: Highlighter }
+      { name: 'nav.notes', path: '/notes', icon: Highlighter },
+      { name: 'nav.graph', path: '/graph', icon: Network }
     ]
   },
   {
@@ -46,6 +47,9 @@ function isLinkActive(linkPath: string): boolean {
   }
   if (linkPath === '/library') {
     return currentPath === '/library' || currentPath.startsWith('/read')
+  }
+  if (linkPath === '/graph') {
+    return currentPath === '/graph' || currentPath.startsWith('/graph')
   }
   return currentPath === linkPath
 }

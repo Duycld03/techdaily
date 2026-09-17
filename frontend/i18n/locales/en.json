@@ -10,6 +10,7 @@
     "review": "Flashcards",
     "library": "Library",
     "notes": "Notes",
+    "graph": "Knowledge Graph",
     "profile": "Profile",
     "analytics": "Analytics",
     "settings": "Settings",
@@ -412,6 +413,55 @@
     "load_more": "Load More Notes",
     "loading_more": "Loading...",
     "all_notes_loaded": "All notes loaded"
+  },
+  "graph": {
+    "title": "Architecture Knowledge Graph",
+    "subtitle": "Interactive mental map of engineering concepts, reading highlights, and flashcard retention",
+    "fitScreen": "Fit to Screen",
+    "resetFilters": "Reset Filters",
+    "searchPlaceholder": "Search concepts, books, notes...",
+    "filters": {
+      "pillars": "Engineering Pillars",
+      "nodeTypes": "Node Types",
+      "mastery": "Flashcard Mastery",
+      "allPillars": "All Pillars",
+      "allTypes": "All Types",
+      "allMastery": "All Statuses",
+      "learning": "Learning",
+      "reviewing": "Reviewing",
+      "mastered": "Mastered",
+      "topics": "Topics",
+      "books": "Books",
+      "cards": "Flashcards",
+      "highlights": "Highlights"
+    },
+    "drawer": {
+      "takeaways": "Key Takeaways",
+      "quote": "Highlighted Excerpt",
+      "note": "Personal Reflection",
+      "source": "Source Chapter",
+      "metrics": "SM-2 Mastery Metrics",
+      "intervalDays": "Interval",
+      "easeFactor": "Ease Factor",
+      "repetitions": "Reviews",
+      "nextReview": "Next Review",
+      "practiceQuiz": "Practice Quiz",
+      "viewRoadmap": "View in Roadmap",
+      "browseLibrary": "Browse in Library",
+      "readSlices": "Read Slices",
+      "reviewFlashcard": "Review Flashcard",
+      "readChapter": "Read Chapter",
+      "viewInNotes": "View in Notes"
+    },
+    "empty": {
+      "title": "No Nodes Match Filters",
+      "description": "Adjust your category or search filter to explore your knowledge graph."
+    },
+    "error": {
+      "title": "Failed to Load Knowledge Graph",
+      "retry": "Retry Connection"
+    },
+    "loading": "Synthesizing knowledge graph..."
   },
   "profile": {
     "title": "User Profile",

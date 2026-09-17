@@ -379,6 +379,11 @@ app.MapLibraryEndpoints();
 
 app.MapNotesEndpoints();
 
+app.MapGroup("/api/v1/graph")
+    .WithTags("Knowledge Graph")
+    .RequireAuthorization()
+    .MapKnowledgeGraphEndpoints();
+
 app.MapGroup("/api/v1/auth")
     .WithTags("Authentication")
     .MapAuthEndpoints(builder.Configuration);
