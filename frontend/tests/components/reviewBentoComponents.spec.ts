@@ -218,6 +218,48 @@ describe('AdvancedFilterModal.vue', () => {
 
     expect(wrapper.emitted('reset')).toBeTruthy()
   })
+
+  it('applies uniform brand active styling, whitespace-nowrap, and no checkmark icons on filter buttons', async () => {
+    const wrapper = mount(AdvancedFilterModal, {
+      props: {
+        isOpen: true,
+        currentFilters: {
+          status: 1,
+          sourceType: 0,
+          urgency: 'due',
+          sortBy: 'difficulty'
+        }
+      },
+      global: {
+        stubs: {
+          Teleport: true
+        }
+      }
+    })
+
+    const selectedSourceBtn = wrapper.findAll('button').find((b) => b.text().includes('review.source_topic'))
+    expect(selectedSourceBtn?.classes()).toContain('bg-brand-600')
+    expect(selectedSourceBtn?.classes()).toContain('font-bold')
+    expect(selectedSourceBtn?.classes()).toContain('whitespace-nowrap')
+
+    const selectedStatusBtn = wrapper.findAll('button').find((b) => b.text().includes('review.status_reviewing'))
+    expect(selectedStatusBtn?.classes()).toContain('bg-brand-600')
+    expect(selectedStatusBtn?.classes()).toContain('font-bold')
+    expect(selectedStatusBtn?.classes()).toContain('whitespace-nowrap')
+
+    const selectedUrgencyBtn = wrapper.findAll('button').find((b) => b.text().includes('review.urgency_due'))
+    expect(selectedUrgencyBtn?.classes()).toContain('bg-brand-600')
+    expect(selectedUrgencyBtn?.classes()).toContain('font-bold')
+    expect(selectedUrgencyBtn?.classes()).toContain('whitespace-nowrap')
+
+    const selectedSortBtn = wrapper.findAll('button').find((b) => b.text().includes('review.sort_difficulty'))
+    expect(selectedSortBtn?.classes()).toContain('bg-brand-600')
+    expect(selectedSortBtn?.classes()).toContain('font-bold')
+    expect(selectedSortBtn?.classes()).toContain('whitespace-nowrap')
+
+    const checkIcons = wrapper.findAll('.lucide-check')
+    expect(checkIcons.length).toBe(0)
+  })
 })
 
 describe('FlashcardBentoCard.vue', () => {

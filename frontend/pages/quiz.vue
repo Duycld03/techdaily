@@ -911,9 +911,9 @@ defineExpose({
     <!-- TAB 5: MASTERY STATS -->
     <div v-if="quizStore.activeTab === 'stats' && quizStore.stats" class="space-y-6">
       <!-- 4-Card Bento Grid Dashboard -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6">
-        <!-- Bento Card 1: Hero Performance Card (lg:col-span-7) -->
-        <div class="lg:col-span-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <!-- Bento Card 1: Hero Performance Card -->
+        <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-5">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
@@ -967,8 +967,8 @@ defineExpose({
           </div>
         </div>
 
-        <!-- Bento Card 2: Spaced Mastery Gauge Card (lg:col-span-5) -->
-        <div class="lg:col-span-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+        <!-- Bento Card 2: Spaced Mastery Gauge Card -->
+        <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-5 sm:p-6 shadow-sm flex flex-col justify-between">
           <!-- Header -->
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
@@ -1037,8 +1037,8 @@ defineExpose({
           </div>
         </div>
 
-        <!-- Bento Card 3: Seniority Matrix Card (lg:col-span-6) -->
-        <div class="lg:col-span-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
+        <!-- Bento Card 3: Seniority Matrix Card -->
+        <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
@@ -1087,8 +1087,8 @@ defineExpose({
           </div>
         </div>
 
-        <!-- Bento Card 4: Topic Strengths & Weaknesses Radar Card (lg:col-span-6) -->
-        <div class="lg:col-span-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
+        <!-- Bento Card 4: Topic Strengths & Weaknesses Radar Card -->
+        <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">

@@ -19,13 +19,19 @@ import {
   Lightbulb
 } from 'lucide-vue-next'
 import { useInsightsStore } from '~/stores/useInsightsStore'
+import { useAuthStore } from '~/stores/useAuthStore'
 import { useApiError } from '~/composables/useApiError'
 import MarkdownIt from 'markdown-it'
 
 const { t, locale } = useI18n()
 const { formatError } = useApiError()
+const authStore = useAuthStore()
 const insightsStore = useInsightsStore()
+const toast = useToast()
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+
+const viewMode = ref<'explore' | 'saved'>('explore')
+const bookmarkedCount = computed(() => insightsStore.bookmarkedInsights.length)
 
 function renderMarkdown(raw: string | undefined | null): string {
   if (!raw) return ''
@@ -97,7 +103,8 @@ onMounted(async () => {
   }
   await Promise.all([
     insightsStore.fetchFeed(),
-    insightsStore.fetchMetadata()
+    insightsStore.fetchMetadata(),
+    insightsStore.fetchBookmarkedInsights()
   ])
   window.addEventListener('keydown', handleKeyDown)
 })
@@ -125,18 +132,23 @@ function handleKeyDown(e: KeyboardEvent) {
   }
 }
 
-async function handleCategorySelect(catId: number | null) {
-  await insightsStore.fetchFeed(catId, null, false)
+async function switchViewMode(mode: 'explore' | 'saved') {
+  if (mode === 'saved') {
+    if (!authStore.isAuthenticated) {
+      toast.warning(t('insights.toast_login_required_saved'))
+      return
+    }
+    viewMode.value = 'saved'
+    await insightsStore.fetchFeed(insightsStore.selectedCategory, null, true)
+  } else {
+    viewMode.value = 'explore'
+    await insightsStore.fetchFeed(insightsStore.selectedCategory, null, false)
+  }
 }
 
-const authStore = useAuthStore()
-
-async function handleSavedFilter() {
-  if (!authStore.isAuthenticated) {
-    toast.warning(t('insights.toast_login_required_saved'))
-    return
-  }
-  await insightsStore.fetchFeed(null, null, true)
+async function handleCategorySelect(catId: number | null) {
+  const onlySaved = viewMode.value === 'saved'
+  await insightsStore.fetchFeed(catId, null, onlySaved)
 }
 
 async function handleToggleBookmark(id: string) {
@@ -147,8 +159,9 @@ async function handleToggleBookmark(id: string) {
     } else {
       toast.info(t('insights.toast_bookmark_removed'))
     }
-  } catch (err: any) {
-    if (err?.message === 'UNAUTHENTICATED' || err?.response?.status === 401 || err?.status === 401) {
+  } catch (err: unknown) {
+    const apiErr = err as { message?: string; status?: number; response?: { status?: number } }
+    if (apiErr?.message === 'UNAUTHENTICATED' || apiErr?.response?.status === 401 || apiErr?.status === 401) {
       toast.warning(t('insights.toast_login_required_bookmark'))
     } else {
       toast.error(formatError(err, 'insights.toast_bookmark_failed'))
@@ -156,7 +169,6 @@ async function handleToggleBookmark(id: string) {
   }
 }
 
-const toast = useToast()
 
 async function handleGenerateSubmit() {
   if (insightsStore.isGenerating) return
@@ -165,7 +177,7 @@ async function handleGenerateSubmit() {
     toast.success(t('insights.toast_generate_success'))
     isGenerateModalOpen.value = false
     customTopicInput.value = ''
-  } catch (err: any) {
+  } catch (err: unknown) {
     toast.error(formatError(err, 'insights.toast_generate_failed'))
   }
 }
@@ -226,6 +238,33 @@ function getCategoryBadge(cat: number) {
         </div>
       </div>
     </div>
+    <!-- View Mode Switcher -->
+    <div class="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-fit">
+      <button
+        @click="switchViewMode('explore')"
+        :class="[
+          'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0',
+          viewMode === 'explore'
+            ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+        ]"
+      >
+        <Sparkles class="w-4 h-4 text-indigo-500" />
+        <span>{{ $t('insights.view_explore') }}</span>
+      </button>
+      <button
+        @click="switchViewMode('saved')"
+        :class="[
+          'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0',
+          viewMode === 'saved'
+            ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+        ]"
+      >
+        <BookmarkCheck class="w-4 h-4 text-indigo-500" />
+        <span>{{ $t('insights.view_saved', { count: bookmarkedCount }) }}</span>
+      </button>
+    </div>
 
     <!-- Category Filter Bar -->
     <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -234,26 +273,13 @@ function getCategoryBadge(cat: number) {
         :key="String(cat.id)"
         @click="handleCategorySelect(cat.id)"
         :class="[
-          'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 border',
-          !insightsStore.onlyBookmarked && insightsStore.selectedCategory === cat.id
+          'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 border whitespace-nowrap',
+          insightsStore.selectedCategory === cat.id
             ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 border-transparent shadow-sm'
             : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
         ]"
       >
         {{ cat.label }}
-      </button>
-
-      <!-- Bookmarked Filter Button -->
-      <button
-        @click="handleSavedFilter"
-        :class="[
-          'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 border inline-flex items-center justify-center',
-          insightsStore.onlyBookmarked
-            ? 'bg-indigo-600 text-white dark:bg-indigo-500 dark:text-white border-transparent shadow-sm'
-            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-        ]"
-      >
-        <span>{{ $t('insights.saved_tab') }}</span>
       </button>
     </div>
 
@@ -263,7 +289,26 @@ function getCategoryBadge(cat: number) {
       <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading senior technical insights...</p>
     </div>
 
-    <!-- Empty State -->
+    <!-- Empty State: Saved Mode -->
+    <div
+      v-else-if="!insightsStore.currentInsight && viewMode === 'saved'"
+      class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4"
+    >
+      <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center mx-auto text-indigo-600 dark:text-indigo-400">
+        <BookmarkCheck class="w-6 h-6" />
+      </div>
+      <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ $t('insights.saved_empty_title') }}</h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ $t('insights.saved_empty_desc') }}</p>
+      <button
+        @click="switchViewMode('explore')"
+        class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 shadow-md shadow-indigo-500/20 transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0"
+      >
+        <Sparkles class="w-4 h-4" />
+        <span>{{ $t('insights.saved_empty_cta') }}</span>
+      </button>
+    </div>
+
+    <!-- Empty State: Explore Mode -->
     <div
       v-else-if="!insightsStore.currentInsight"
       class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4"
@@ -275,7 +320,7 @@ function getCategoryBadge(cat: number) {
       <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ $t('insights.empty_desc') }}</p>
       <button
         @click="isGenerateModalOpen = true"
-        class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 shadow-md shadow-indigo-500/20 transition-all"
+        class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 shadow-md shadow-indigo-500/20 transition-all whitespace-nowrap shrink-0"
       >
         {{ $t('insights.generate_ai') }}
       </button>

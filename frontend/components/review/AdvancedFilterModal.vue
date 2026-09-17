@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { X, SlidersHorizontal, RotateCcw, Check } from 'lucide-vue-next'
+import { X, SlidersHorizontal, RotateCcw } from 'lucide-vue-next'
 import type { ReviewFilterState } from '~/stores/useReviewStore'
 
 const props = defineProps<{
@@ -103,52 +103,48 @@ function handleBackdropClick(e: MouseEvent) {
               type="button"
               @click="localSourceType = null"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localSourceType === null
-                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localSourceType === null" class="w-3.5 h-3.5" />
               <span>{{ $t('review.source_all') }}</span>
             </button>
             <button
               type="button"
               @click="localSourceType = 0"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localSourceType === 0
-                  ? 'bg-sky-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localSourceType === 0" class="w-3.5 h-3.5" />
               <span>{{ $t('review.source_topic') }}</span>
             </button>
             <button
               type="button"
               @click="localSourceType = 1"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localSourceType === 1
-                  ? 'bg-amber-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localSourceType === 1" class="w-3.5 h-3.5" />
               <span>{{ $t('review.source_highlight') }}</span>
             </button>
             <button
               type="button"
               @click="localSourceType = 2"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localSourceType === 2
-                  ? 'bg-rose-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localSourceType === 2" class="w-3.5 h-3.5" />
               <span>{{ $t('review.source_quiz_mistake') }}</span>
             </button>
           </div>
@@ -164,52 +160,48 @@ function handleBackdropClick(e: MouseEvent) {
               type="button"
               @click="localStatus = null"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localStatus === null
-                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localStatus === null" class="w-3.5 h-3.5" />
               <span>{{ $t('review.status_all') }}</span>
             </button>
             <button
               type="button"
               @click="localStatus = 0"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localStatus === 0
-                  ? 'bg-amber-500 text-slate-950 border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localStatus === 0" class="w-3.5 h-3.5" />
               <span>{{ $t('review.status_learning') }}</span>
             </button>
             <button
               type="button"
               @click="localStatus = 1"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localStatus === 1
-                  ? 'bg-purple-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localStatus === 1" class="w-3.5 h-3.5" />
               <span>{{ $t('review.status_reviewing') }}</span>
             </button>
             <button
               type="button"
               @click="localStatus = 2"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localStatus === 2
-                  ? 'bg-emerald-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localStatus === 2" class="w-3.5 h-3.5" />
               <span>{{ $t('review.status_mastered') }}</span>
             </button>
           </div>
@@ -225,52 +217,48 @@ function handleBackdropClick(e: MouseEvent) {
               type="button"
               @click="localUrgency = null"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localUrgency === null
-                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localUrgency === null" class="w-3.5 h-3.5" />
               <span>{{ $t('review.urgency_all') }}</span>
             </button>
             <button
               type="button"
               @click="localUrgency = 'due'"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localUrgency === 'due'
-                  ? 'bg-amber-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localUrgency === 'due'" class="w-3.5 h-3.5" />
               <span>{{ $t('review.urgency_due') }}</span>
             </button>
             <button
               type="button"
               @click="localUrgency = 'overdue'"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localUrgency === 'overdue'
-                  ? 'bg-rose-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localUrgency === 'overdue'" class="w-3.5 h-3.5" />
               <span>{{ $t('review.urgency_overdue') }}</span>
             </button>
             <button
               type="button"
               @click="localUrgency = 'upcoming'"
               :class="[
-                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5',
+                'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
                 localUrgency === 'upcoming'
-                  ? 'bg-purple-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
-              <Check v-if="localUrgency === 'upcoming'" class="w-3.5 h-3.5" />
               <span>{{ $t('review.urgency_upcoming') }}</span>
             </button>
           </div>
@@ -286,53 +274,49 @@ function handleBackdropClick(e: MouseEvent) {
               type="button"
               @click="localSortBy = null"
               :class="[
-                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left flex items-center justify-between',
+                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left whitespace-nowrap',
                 localSortBy === null
-                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
               <span>{{ $t('review.sort_next_review_asc') }}</span>
-              <Check v-if="localSortBy === null" class="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
               @click="localSortBy = 'nextReviewDate_desc'"
               :class="[
-                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left flex items-center justify-between',
+                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left whitespace-nowrap',
                 localSortBy === 'nextReviewDate_desc'
-                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
               <span>{{ $t('review.sort_next_review_desc') }}</span>
-              <Check v-if="localSortBy === 'nextReviewDate_desc'" class="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
               @click="localSortBy = 'difficulty'"
               :class="[
-                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left flex items-center justify-between',
+                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left whitespace-nowrap',
                 localSortBy === 'difficulty'
-                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
               <span>{{ $t('review.sort_difficulty') }}</span>
-              <Check v-if="localSortBy === 'difficulty'" class="w-3.5 h-3.5" />
             </button>
             <button
               type="button"
               @click="localSortBy = 'recent'"
               :class="[
-                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left flex items-center justify-between',
+                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left whitespace-nowrap',
                 localSortBy === 'recent'
-                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
               ]"
             >
               <span>{{ $t('review.sort_recent') }}</span>
-              <Check v-if="localSortBy === 'recent'" class="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

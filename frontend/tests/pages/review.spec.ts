@@ -190,10 +190,9 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
     expect(wrapper.text()).toContain('review.no_cards')
     expect(wrapper.text()).toContain('review.no_cards_desc')
 
-    // Embedded Mastery Gauge and Review Forecast
-    expect(wrapper.text()).toContain('review.mastery_rate')
-    expect(wrapper.text()).toContain('review.forecast_title')
-
+    // Deduplicated: Mastery Gauge and Review Forecast are NOT in completion session
+    expect(wrapper.text()).not.toContain('review.mastery_rate')
+    expect(wrapper.text()).not.toContain('review.forecast_title')
     // Action CTAs
     expect(wrapper.text()).toContain('review.browse_deck_btn')
     expect(wrapper.text()).toContain('review.cram_practice_btn')
@@ -205,6 +204,8 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('review.cards_due')
+    expect(wrapper.text()).toContain('review.mastery_rate')
+    expect(wrapper.text()).toContain('review.forecast_title')
     expect(wrapper.text()).toContain('Explain Raft leader election invariants.')
   })
 })

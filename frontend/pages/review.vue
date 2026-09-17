@@ -364,46 +364,32 @@ onUnmounted(() => {
       </div>
 
       <!-- Empty / Completed State -->
-      <div v-else class="w-full max-w-4xl space-y-6 sm:space-y-8 animate-in fade-in zoom-in-95 duration-200">
-        <!-- Celebratory Hero Banner -->
-        <div class="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-brand-500/5 to-transparent border border-emerald-500/20 dark:border-emerald-500/30 text-center space-y-3 shadow-sm">
-          <div class="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto shadow-sm">
-            <CheckCircle class="w-8 h-8" />
-          </div>
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {{ $t('review.no_cards') }}
-          </h2>
-          <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-xl mx-auto leading-relaxed">
-            {{ $t('review.no_cards_desc') }}
-          </p>
-          <!-- Action CTAs -->
-          <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <button
-              @click="activeTab = 'management'"
-              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0"
-            >
-              <Library class="w-4 h-4" />
-              <span>{{ $t('review.browse_deck_btn') }} ({{ reviewStore.deckStatistics.totalCards }} {{ $t('review.cards_unit') }})</span>
-            </button>
-            <NuxtLink
-              to="/today"
-              class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm border border-slate-200 dark:border-slate-800 transition-all shadow-sm whitespace-nowrap shrink-0"
-            >
-              <Sparkles class="w-4 h-4 text-brand-500" />
-              <span>{{ $t('review.cram_practice_btn') }}</span>
-            </NuxtLink>
-          </div>
+      <div v-else class="w-full max-w-md text-center p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl animate-in zoom-in-95 duration-200 my-auto space-y-4">
+        <div class="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto shadow-sm">
+          <CheckCircle class="w-8 h-8" />
         </div>
-
-        <!-- Embedded Bento Analytics (Mastery Gauge + 7-Day Forecast) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          <MasteryGaugeCard
-            :mastered-count="reviewStore.deckStatistics.masteredCount"
-            :total-count="reviewStore.deckStatistics.totalCards"
-          />
-          <ReviewForecastChart
-            :cards="reviewStore.deckCards.length > 0 ? reviewStore.deckCards : reviewStore.cards"
-          />
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          {{ $t('review.no_cards') }}
+        </h2>
+        <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+          {{ $t('review.no_cards_desc') }}
+        </p>
+        <!-- Action CTAs -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <button
+            @click="activeTab = 'management'"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0"
+          >
+            <Library class="w-4 h-4" />
+            <span>{{ $t('review.browse_deck_btn') }} ({{ reviewStore.deckStatistics.totalCards }} {{ $t('review.cards_unit') }})</span>
+          </button>
+          <NuxtLink
+            to="/today"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm border border-slate-200 dark:border-slate-800 transition-all shadow-sm whitespace-nowrap shrink-0"
+          >
+            <Sparkles class="w-4 h-4 text-brand-500" />
+            <span>{{ $t('review.cram_practice_btn') }}</span>
+          </NuxtLink>
         </div>
       </div>
     </div>
