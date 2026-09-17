@@ -31,7 +31,7 @@ export interface QuizSubmissionResult {
 }
 
 export interface LevelStat {
-  level: number
+  level: number | string
   answeredCount: number
   masteredCount: number
   accuracyRate: number

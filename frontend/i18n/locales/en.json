@@ -140,6 +140,8 @@
     "delete_confirm_desc": "Are you sure you want to remove this flashcard from your deck? This action cannot be undone.",
     "confirm_delete": "Delete Card",
     "browse_deck_btn": "Browse Full Deck",
+    "cards_unit": "cards",
+    "cram_practice_btn": "Extended Practice",
     "toast_update_success": "Flashcard updated successfully.",
     "toast_update_error": "Failed to update flashcard.",
     "toast_reset_success": "SM-2 progression reset to Learning.",
@@ -342,6 +344,7 @@
   "notes": {
     "title": "Highlights & Notes",
     "subtitle": "Important excerpts, curated snippets, and saved senior architecture insights",
+    "tag_all": "All",
     "tab_saved_insights": "🔖 Saved Insights ({count})",
     "tab_highlights": "🖍️ Reading Highlights ({count})",
     "search_placeholder": "Filter notes by tags or keywords...",
@@ -589,7 +592,15 @@
     "btn_push_sm2": "Push to SM-2 Deck",
     "btn_pushed_sm2": "Added to SM-2",
     "toast_pushed_to_sm2": "Question pushed to SM-2 review deck!",
-    "mistakes_to_review": "Questions to Review"
+    "mistakes_to_review": "Questions to Review",
+    "bento_hero_title": "Performance Overview",
+    "bento_seniority_title": "Seniority Matrix",
+    "bento_topic_title": "Topic Strengths & Radar",
+    "bento_mastery_title": "Spaced Mastery Rate",
+    "readiness_ready": "Interview Ready",
+    "readiness_building": "Building Reflexes",
+    "readiness_starting": "Getting Started",
+    "btn_review_mistakes": "Review Mistakes ({count})"
   },
   "error": {
     "not_found_title": "Page Not Found",

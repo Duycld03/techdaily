@@ -140,6 +140,8 @@
     "delete_confirm_desc": "Bạn có chắc chắn muốn xóa thẻ này khỏi kho thẻ? Hành động này không thể hoàn tác.",
     "confirm_delete": "Đồng ý xóa",
     "browse_deck_btn": "Khám phá kho thẻ",
+    "cards_unit": "thẻ",
+    "cram_practice_btn": "Luyện Tập Mở Rộng",
     "toast_update_success": "Cập nhật thẻ ôn tập thành công.",
     "toast_update_error": "Không thể cập nhật thẻ ôn tập.",
     "toast_reset_success": "Đã đặt lại tiến độ về Đang học.",
@@ -342,6 +344,7 @@
   "notes": {
     "title": "Trích Dẫn & Ghi Chú",
     "subtitle": "Tổng hợp kiến thức chuyên sâu và trích dẫn đã lưu",
+    "tag_all": "Tất cả",
     "tab_saved_insights": "🔖 Insights Đã Lưu ({count})",
     "tab_highlights": "🖍️ Trích Dẫn ({count})",
     "search_placeholder": "Lọc ghi chú theo thẻ tag hoặc từ khóa...",
@@ -589,7 +592,15 @@
     "btn_push_sm2": "Đưa vào Bộ Ôn Tập SM-2",
     "btn_pushed_sm2": "Đã Thêm vào SM-2",
     "toast_pushed_to_sm2": "Đã đưa câu hỏi vào bộ ôn tập SM-2!",
-    "mistakes_to_review": "Các Câu Hỏi Cần Xem Lại"
+    "mistakes_to_review": "Các Câu Hỏi Cần Xem Lại",
+    "bento_hero_title": "Tổng Quan Hiệu Suất",
+    "bento_seniority_title": "Ma Trận Cấp Bậc",
+    "bento_topic_title": "Radar Thế Mạnh & Điểm Yếu",
+    "bento_mastery_title": "Tỷ Lệ Thành Thạo SM-2",
+    "readiness_ready": "Sẵn Sàng Phỏng Vấn",
+    "readiness_building": "Đang Rèn Phản Xạ",
+    "readiness_starting": "Bắt Đầu Luyện Tập",
+    "btn_review_mistakes": "Ôn Tập Câu Sai ({count})"
   },
   "error": {
     "not_found_title": "Không Tìm Thấy Trang",

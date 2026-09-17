@@ -48,16 +48,76 @@ const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
 
 const highlightSearchQuery = ref('')
 
+interface TagCount {
+  tag: string
+  count: number
+}
+
+const tagCounts = computed<TagCount[]>(() => {
+  const counts: Record<string, number> = {}
+  notesStore.highlights.forEach((h) => {
+    if (h.tags && Array.isArray(h.tags)) {
+      h.tags.forEach((rawTag) => {
+        const clean = rawTag.trim().replace(/^#/, '').toLowerCase()
+        if (clean.length > 0) {
+          counts[clean] = (counts[clean] || 0) + 1
+        }
+      })
+    }
+  })
+
+  return Object.entries(counts)
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+})
+
+const selectedTag = ref<string | null>(null)
+
+function selectTag(tag: string | null) {
+  if (!tag) {
+    selectedTag.value = null
+    return
+  }
+  const clean = tag.trim().replace(/^#/, '').toLowerCase()
+  if (selectedTag.value === clean) {
+    selectedTag.value = null
+  } else {
+    selectedTag.value = clean
+  }
+}
+
 const filteredHighlights = computed(() => {
   const q = highlightSearchQuery.value.trim().toLowerCase()
-  if (!q) return notesStore.highlights
-  return notesStore.highlights.filter(h =>
-    h.selectedText.toLowerCase().includes(q) ||
-    (h.note && h.note.toLowerCase().includes(q)) ||
-    h.bookTitle.toLowerCase().includes(q) ||
-    h.chapterTitle.toLowerCase().includes(q) ||
-    h.tags?.some(tag => tag.toLowerCase().includes(q.replace(/^#/, '')))
-  )
+  const activeTag = selectedTag.value ? selectedTag.value.toLowerCase() : null
+
+  return notesStore.highlights.filter((h) => {
+    // 1. Tag matching
+    if (activeTag) {
+      const hasTag = h.tags?.some((t) => t.trim().replace(/^#/, '').toLowerCase() === activeTag)
+      if (!hasTag) return false
+    }
+
+    // 2. Keyword matching
+    if (q) {
+      const matchText = h.selectedText.toLowerCase().includes(q)
+      const matchNote = h.note ? h.note.toLowerCase().includes(q) : false
+      const matchBook = h.bookTitle.toLowerCase().includes(q)
+      const matchChapter = h.chapterTitle.toLowerCase().includes(q)
+      const matchTags = h.tags?.some((t) => t.toLowerCase().includes(q.replace(/^#/, '')))
+      if (!matchText && !matchNote && !matchBook && !matchChapter && !matchTags) {
+        return false
+      }
+    }
+
+    return true
+  })
+})
+
+defineExpose({
+  tagCounts,
+  selectedTag,
+  selectTag,
+  filteredHighlights
 })
 
 // Inline Editing State
@@ -166,6 +226,43 @@ async function confirmDeleteHighlight() {
           class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full"
         >
           <X class="w-4 h-4" />
+        </button>
+      </div>
+
+      <!-- Horizontal Scrollable Tag Chip Bar -->
+      <div v-if="notesStore.highlights.length > 0" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+        <!-- Default All Chip -->
+        <button
+          @click="selectTag(null)"
+          :class="[
+            'px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 border inline-flex items-center gap-1.5',
+            selectedTag === null
+              ? 'bg-indigo-600 text-white border-transparent shadow-sm'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          ]"
+        >
+          <span>{{ $t('notes.tag_all') }}</span>
+          <span :class="selectedTag === null ? 'text-white/80' : 'text-slate-400 dark:text-slate-500'">
+            ({{ notesStore.highlights.length }})
+          </span>
+        </button>
+
+        <!-- Dynamic Tag Chips -->
+        <button
+          v-for="item in tagCounts"
+          :key="item.tag"
+          @click="selectTag(item.tag)"
+          :class="[
+            'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 border inline-flex items-center gap-1',
+            selectedTag === item.tag
+              ? 'bg-indigo-600 text-white border-transparent shadow-sm'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+          ]"
+        >
+          <span>#{{ item.tag }}</span>
+          <span :class="selectedTag === item.tag ? 'text-white/80' : 'text-slate-400 dark:text-slate-500'">
+            ({{ item.count }})
+          </span>
         </button>
       </div>
 
@@ -304,8 +401,13 @@ async function confirmDeleteHighlight() {
               <button
                 v-for="(tag, i) in item.tags"
                 :key="i"
-                @click="highlightSearchQuery = tag"
-                class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-indigo-700 dark:hover:text-indigo-300 border border-slate-200 dark:border-slate-700 transition-colors whitespace-nowrap shrink-0"
+                @click="selectTag(tag)"
+                :class="[
+                  'px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors whitespace-nowrap shrink-0',
+                  selectedTag === tag.trim().replace(/^#/, '').toLowerCase()
+                    ? 'bg-indigo-600 text-white border-transparent shadow-sm'
+                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-slate-600 dark:text-slate-400 hover:text-indigo-700 dark:hover:text-indigo-300 border-slate-200 dark:border-slate-700'
+                ]"
               >
                 #{{ tag.replace(/^#/, '') }}
               </button>
@@ -317,8 +419,8 @@ async function confirmDeleteHighlight() {
       <!-- Empty State for Highlights -->
       <div v-else class="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-sm">
         <Highlighter class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
-        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ highlightSearchQuery ? 'No highlights match your search.' : $t('notes.no_notes') }}</h3>
-        <p v-if="highlightSearchQuery" class="text-xs text-slate-500 mt-1">Try searching for a different keyword or tag.</p>
+        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ (highlightSearchQuery || selectedTag) ? 'No highlights match your search.' : $t('notes.no_notes') }}</h3>
+        <p v-if="highlightSearchQuery || selectedTag" class="text-xs text-slate-500 mt-1">Try searching for a different keyword or tag.</p>
       </div>
     </div>
 

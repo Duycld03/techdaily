@@ -36,6 +36,13 @@ vi.mock('~/composables/useApiClient', () => ({
   })
 }))
 
+interface NotesComponentInstance {
+  tagCounts: Array<{ tag: string; count: number }>
+  selectedTag: string | null
+  selectTag: (tag: string | null) => void
+  filteredHighlights: Array<{ id: string }>
+}
+
 describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -89,8 +96,8 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     await textarea.setValue('Updated reflection note for async replication')
 
     // Save
-    const saveBtn = wrapper.find('button.bg-indigo-600')
-    expect(saveBtn.exists()).toBe(true)
+    const saveBtn = wrapper.findAll('button').find(b => b.text().includes('notes.save_note'))!
+    expect(saveBtn).toBeDefined()
     await saveBtn.trigger('click')
     await flushPromises()
 
@@ -129,5 +136,156 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     expect(sm2Btn.text()).toContain('notes.in_sm2')
     expect(sm2Btn.attributes('disabled')).toBeDefined()
     expect(sm2Btn.findComponent(Check).exists() || sm2Btn.find('svg.text-emerald-500').exists()).toBe(true)
+  })
+
+  it('extracts unique tags, counts them, and renders horizontal tag chip bar', async () => {
+    currentHighlights = [
+      {
+        id: 'h-1',
+        documentChunkId: 'c-1',
+        chapterTitle: 'Chapter 1: Reliability',
+        bookTitle: 'DDIA',
+        selectedText: 'Replication lag can cause stale reads under async replication.',
+        note: 'Important for consistency',
+        tags: ['#Distributed', 'replication'],
+        createdAt: '2026-08-31T10:00:00Z',
+        hasFlashcard: false
+      },
+      {
+        id: 'h-2',
+        documentChunkId: 'c-2',
+        chapterTitle: 'Chapter 2: Partitioning',
+        bookTitle: 'DDIA',
+        selectedText: 'Consistent hashing helps minimize reshuffling.',
+        note: 'Partitioning rule',
+        tags: ['distributed', 'hashing'],
+        createdAt: '2026-08-31T11:00:00Z',
+        hasFlashcard: false
+      }
+    ]
+
+    const wrapper = mount(NotesPage, {
+      global: {
+        stubs: {
+          NuxtLink: true,
+          Teleport: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const vm = wrapper.vm as unknown as NotesComponentInstance
+    const tagCounts = vm.tagCounts
+    expect(tagCounts).toEqual([
+      { tag: 'distributed', count: 2 },
+      { tag: 'hashing', count: 1 },
+      { tag: 'replication', count: 1 }
+    ])
+
+    const buttons = wrapper.findAll('button')
+    const allChip = buttons.find((b) => b.text().includes('notes.tag_all'))
+    expect(allChip).toBeDefined()
+    expect(allChip?.text()).toContain('(2)')
+
+    const distChip = buttons.find((b) => b.text().includes('#distributed'))
+    expect(distChip).toBeDefined()
+    expect(distChip?.text()).toContain('(2)')
+  })
+
+  it('filters highlights conjunctively by active tag and search query', async () => {
+    currentHighlights = [
+      {
+        id: 'h-1',
+        documentChunkId: 'c-1',
+        chapterTitle: 'Chapter 1: Reliability',
+        bookTitle: 'DDIA',
+        selectedText: 'Replication lag can cause stale reads under async replication.',
+        note: 'Consistency notes',
+        tags: ['distributed', 'replication'],
+        createdAt: '2026-08-31T10:00:00Z',
+        hasFlashcard: false
+      },
+      {
+        id: 'h-2',
+        documentChunkId: 'c-2',
+        chapterTitle: 'Chapter 2: Partitioning',
+        bookTitle: 'DDIA',
+        selectedText: 'Consistent hashing helps minimize reshuffling.',
+        note: 'Partitioning notes',
+        tags: ['distributed', 'hashing'],
+        createdAt: '2026-08-31T11:00:00Z',
+        hasFlashcard: false
+      }
+    ]
+
+    const wrapper = mount(NotesPage, {
+      global: {
+        stubs: {
+          NuxtLink: true,
+          Teleport: true
+        }
+      }
+    })
+    await flushPromises()
+
+    // 1. Select tag 'hashing'
+    const vm = wrapper.vm as unknown as NotesComponentInstance
+    vm.selectTag('hashing')
+    await wrapper.vm.$nextTick()
+    expect(vm.filteredHighlights.length).toBe(1)
+    expect(vm.filteredHighlights[0].id).toBe('h-2')
+
+    // 2. Add search query that does not match h-2
+    const searchInput = wrapper.find('input[type="text"]')
+    await searchInput.setValue('replication')
+    await wrapper.vm.$nextTick()
+    expect(vm.filteredHighlights.length).toBe(0)
+
+    // 3. Search query that matches h-2
+    await searchInput.setValue('reshuffling')
+    await wrapper.vm.$nextTick()
+    expect(vm.filteredHighlights.length).toBe(1)
+    expect(vm.filteredHighlights[0].id).toBe('h-2')
+
+    // 4. Toggle/clear tag by clicking null
+    vm.selectTag(null)
+    await wrapper.vm.$nextTick()
+    expect(vm.selectedTag).toBeNull()
+  })
+
+  it('wires tag badge on highlight card to selectTag', async () => {
+    currentHighlights = [
+      {
+        id: 'h-1',
+        documentChunkId: 'c-1',
+        chapterTitle: 'Chapter 1: Reliability',
+        bookTitle: 'DDIA',
+        selectedText: 'Replication lag can cause stale reads.',
+        note: 'Consistency notes',
+        tags: ['distributed'],
+        createdAt: '2026-08-31T10:00:00Z',
+        hasFlashcard: false
+      }
+    ]
+
+    const wrapper = mount(NotesPage, {
+      global: {
+        stubs: {
+          NuxtLink: true,
+          Teleport: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const tagBadge = wrapper.findAll('button').find((b) => b.text().trim() === '#distributed')
+    expect(tagBadge).toBeDefined()
+    await tagBadge?.trigger('click')
+    const vm = wrapper.vm as unknown as NotesComponentInstance
+    expect(vm.selectedTag).toBe('distributed')
+
+    // Re-clicking toggles it off
+    await tagBadge?.trigger('click')
+    expect(vm.selectedTag).toBeNull()
   })
 })

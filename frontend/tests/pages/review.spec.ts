@@ -20,6 +20,7 @@ const mockDueCards = [
     status: 1
   }
 ]
+let currentDueCards = [...mockDueCards]
 
 const mockDeckCards = [
   {
@@ -45,7 +46,7 @@ vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     get: vi.fn(async (url: string) => {
       if (url.includes('/deck')) {
-        return { dueCards: [...mockDueCards], totalCardsDue: 1 }
+        return { dueCards: [...currentDueCards], totalCardsDue: currentDueCards.length }
       }
       if (url.includes('/cards')) {
         return {
@@ -91,6 +92,7 @@ vi.mock('~/composables/useApiClient', () => ({
 describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    currentDueCards = [...mockDueCards]
   })
 
   it('renders top tab switcher with both Review Session and Deck Management tabs', async () => {
@@ -167,5 +169,42 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
 
     const reviewStore = useReviewStore()
     expect(reviewStore.deckCards).toBeDefined()
+  })
+
+  it('renders Daily Review Completion Hub when zero cards are due and navigates to deck management via CTA', async () => {
+    currentDueCards = []
+
+    const wrapper = mount(ReviewPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' },
+          Teleport: true,
+          FlashcardDeck: true
+        }
+      }
+    })
+
+    await flushPromises()
+
+    // Completion hub banner
+    expect(wrapper.text()).toContain('review.no_cards')
+    expect(wrapper.text()).toContain('review.no_cards_desc')
+
+    // Embedded Mastery Gauge and Review Forecast
+    expect(wrapper.text()).toContain('review.mastery_rate')
+    expect(wrapper.text()).toContain('review.forecast_title')
+
+    // Action CTAs
+    expect(wrapper.text()).toContain('review.browse_deck_btn')
+    expect(wrapper.text()).toContain('review.cram_practice_btn')
+
+    // Primary CTA click transitions to deck management tab
+    const browseBtn = wrapper.findAll('button').find((b) => b.text().includes('review.browse_deck_btn'))
+    expect(browseBtn).toBeDefined()
+    await browseBtn!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('review.cards_due')
+    expect(wrapper.text()).toContain('Explain Raft leader election invariants.')
   })
 })

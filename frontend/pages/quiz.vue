@@ -1,3 +1,24 @@
+<script lang="ts">
+export const seniorityLevels = [
+  { id: 0, key: 'level_fresher', label: 'Fresher / Entry', desc: 'Core syntax, OOP, basic algorithms' },
+  { id: 1, key: 'level_junior', label: 'Junior', desc: 'Framework APIs, standard libraries, debugging' },
+  { id: 2, key: 'level_middle', label: 'Mid-Level', desc: 'Design patterns, concurrency, SQL tuning' },
+  { id: 3, key: 'level_senior', label: 'Senior / Staff', desc: 'Under-the-hood runtime, memory trade-offs' }
+]
+
+export function formatSeniorityLevel(level: string | number) {
+  if (typeof level === 'number') {
+    return seniorityLevels[level] || seniorityLevels[3]
+  }
+  const levelStr = String(level).trim().toLowerCase()
+  if (levelStr === 'fresher' || levelStr === '0') return seniorityLevels[0]
+  if (levelStr === 'junior' || levelStr === '1') return seniorityLevels[1]
+  if (levelStr === 'middle' || levelStr === 'mid' || levelStr === '2') return seniorityLevels[2]
+  if (levelStr === 'senior' || levelStr === '3') return seniorityLevels[3]
+  return seniorityLevels[3]
+}
+</script>
+
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import {
@@ -85,12 +106,6 @@ const quickTopics = [
   'Go Routines, Channels & Memory Model'
 ]
 
-const seniorityLevels = [
-  { id: 0, key: 'level_fresher', label: 'Fresher / Entry', desc: 'Core syntax, OOP, basic algorithms' },
-  { id: 1, key: 'level_junior', label: 'Junior', desc: 'Framework APIs, standard libraries, debugging' },
-  { id: 2, key: 'level_middle', label: 'Mid-Level', desc: 'Design patterns, concurrency, SQL tuning' },
-  { id: 3, key: 'level_senior', label: 'Senior / Staff', desc: 'Under-the-hood runtime, memory trade-offs' }
-]
 
 onMounted(async () => {
   if (!authStore.isLoggedIn) {
@@ -217,6 +232,120 @@ function getOptionClass(idx: number): string {
   }
   return 'opacity-50 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-slate-500 dark:text-slate-500'
 }
+
+// Readiness Tier Calculation for Bento Hero Card
+const readinessInfo = computed(() => {
+  const acc = quizStore.stats?.accuracyRate ?? 0
+  if (acc >= 75) {
+    return {
+      labelKey: 'quiz.readiness_ready',
+      badgeClass: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+    }
+  }
+  if (acc >= 50) {
+    return {
+      labelKey: 'quiz.readiness_building',
+      badgeClass: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+    }
+  }
+  return {
+    labelKey: 'quiz.readiness_starting',
+    badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+  }
+})
+
+// Spaced Mastery Gauge Calculation for Bento Card 2
+const masteryRate = computed(() => {
+  const total = quizStore.stats?.totalAnswered ?? 0
+  const mastered = quizStore.stats?.masteredCount ?? 0
+  if (total <= 0) return 0
+  const rate = (mastered / total) * 100
+  return Math.min(100, Math.max(0, Math.round(rate)))
+})
+
+const arcCircumference = 141.37
+const strokeDashoffset = computed(() => {
+  const percent = masteryRate.value / 100
+  return arcCircumference - percent * arcCircumference
+})
+
+const masteryTierInfo = computed(() => {
+  const rate = masteryRate.value
+  if (rate <= 25) {
+    return {
+      labelKey: 'review.tier_starting',
+      badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+      arcColor: 'text-slate-400 dark:text-slate-500'
+    }
+  }
+  if (rate <= 50) {
+    return {
+      labelKey: 'review.tier_building',
+      badgeClass: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      arcColor: 'text-amber-500'
+    }
+  }
+  if (rate <= 75) {
+    return {
+      labelKey: 'review.tier_solid',
+      badgeClass: 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800',
+      arcColor: 'text-brand-500'
+    }
+  }
+  return {
+    labelKey: 'review.tier_mastered',
+    badgeClass: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+    arcColor: 'text-emerald-500'
+  }
+})
+
+// Seniority Progress Bar Styling for Bento Card 3
+function getSeniorityColor(levelId: number) {
+  switch (levelId) {
+    case 0:
+      return {
+        bar: 'bg-emerald-500',
+        text: 'text-emerald-600 dark:text-emerald-400'
+      }
+    case 1:
+      return {
+        bar: 'bg-sky-500',
+        text: 'text-sky-600 dark:text-sky-400'
+      }
+    case 2:
+      return {
+        bar: 'bg-amber-500',
+        text: 'text-amber-600 dark:text-amber-400'
+      }
+    default:
+      return {
+        bar: 'bg-brand-500',
+        text: 'text-brand-600 dark:text-brand-400'
+      }
+  }
+}
+
+// Topic Accuracy Badge Styling for Bento Card 4
+function getTopicBadge(rate: number) {
+  if (rate >= 80) {
+    return {
+      class: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+    }
+  }
+  if (rate >= 50) {
+    return {
+      class: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+    }
+  }
+  return {
+    class: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+  }
+}
+
+defineExpose({
+  formatSeniorityLevel,
+  seniorityLevels
+})
 </script>
 
 <template>
@@ -486,7 +615,7 @@ function getOptionClass(idx: number): string {
 
           <div class="flex items-center gap-2">
             <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-              {{ seniorityLevels[currentQ.level]?.label || 'Senior' }}
+              {{ formatSeniorityLevel(currentQ.level).label }}
             </span>
             <span
               v-if="currentQ.isMastered"
@@ -781,53 +910,230 @@ function getOptionClass(idx: number): string {
 
     <!-- TAB 5: MASTERY STATS -->
     <div v-if="quizStore.activeTab === 'stats' && quizStore.stats" class="space-y-6">
-      <!-- 4 Stat Metric Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="p-5 rounded-2xl bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1">
-          <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">{{ $t('quiz.stats_total') }}</span>
-          <p class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{{ quizStore.stats.totalAnswered }}</p>
-        </div>
+      <!-- 4-Card Bento Grid Dashboard -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6">
+        <!-- Bento Card 1: Hero Performance Card (lg:col-span-7) -->
+        <div class="lg:col-span-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
+                <Target class="w-4 h-4" />
+              </div>
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  {{ $t('quiz.bento_hero_title') }}
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  {{ quizStore.stats.totalAnswered }} {{ $t('quiz.stats_total').toLowerCase() }}
+                </p>
+              </div>
+            </div>
 
-        <div class="p-5 rounded-2xl bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1">
-          <span class="text-xs font-bold text-emerald-500 uppercase tracking-wider">{{ $t('quiz.stats_mastered') }}</span>
-          <p class="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">{{ quizStore.stats.masteredCount }}</p>
-        </div>
+            <!-- Readiness Badge -->
+            <span
+              :class="[
+                'px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors whitespace-nowrap shrink-0',
+                readinessInfo.badgeClass
+              ]"
+            >
+              {{ $t(readinessInfo.labelKey) }}
+            </span>
+          </div>
 
-        <div class="p-5 rounded-2xl bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1">
-          <span class="text-xs font-bold text-amber-500 uppercase tracking-wider">{{ $t('quiz.stats_review_queue') }}</span>
-          <p class="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400">{{ quizStore.stats.reviewQueueCount }}</p>
-        </div>
-
-        <div class="p-5 rounded-2xl bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1">
-          <span class="text-xs font-bold text-brand-500 uppercase tracking-wider">{{ $t('quiz.stats_accuracy') }}</span>
-          <p class="text-2xl sm:text-3xl font-black text-brand-600 dark:text-brand-400">{{ quizStore.stats.accuracyRate }}%</p>
-        </div>
-      </div>
-
-      <!-- Breakdown by Seniority Level -->
-      <div class="bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 space-y-4">
-        <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <TrendingUp class="w-4 h-4 text-brand-500" />
-          {{ $t('quiz.stats_level_breakdown') }}
-        </h3>
-        <div class="space-y-3">
-          <div
-            v-for="lvl in quizStore.stats.levelBreakdown"
-            :key="lvl.level"
-            class="space-y-1.5"
-          >
-            <div class="flex items-center justify-between text-xs sm:text-sm">
-              <span class="font-semibold text-slate-700 dark:text-slate-300">
-                {{ seniorityLevels[lvl.level]?.label || 'Senior' }} ({{ lvl.masteredCount }}/{{ lvl.answeredCount }} mastered)
+          <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-1">
+            <div class="space-y-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                {{ $t('quiz.stats_accuracy') }}
               </span>
-              <span class="font-black text-brand-600 dark:text-brand-400">{{ lvl.accuracyRate }}%</span>
+              <div class="flex items-baseline gap-2">
+                <span class="text-3xl sm:text-4xl font-black text-brand-600 dark:text-brand-400 tracking-tight">
+                  {{ quizStore.stats.accuracyRate }}%
+                </span>
+                <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  ({{ quizStore.stats.masteredCount }}/{{ quizStore.stats.totalAnswered }} {{ $t('quiz.stats_mastered').toLowerCase() }})
+                </span>
+              </div>
             </div>
-            <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div
-                class="h-full bg-brand-500 rounded-full transition-all"
-                :style="{ width: `${lvl.accuracyRate}%` }"
-              ></div>
+
+            <!-- 1-Click Mistake Review CTA -->
+            <button
+              @click="quizStore.activeTab = 'review'"
+              :disabled="quizStore.stats.reviewQueueCount === 0"
+              class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:hover:bg-brand-600 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0"
+            >
+              <RotateCcw class="w-4 h-4" />
+              <span>{{ $t('quiz.btn_review_mistakes', { count: quizStore.stats.reviewQueueCount }) }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Bento Card 2: Spaced Mastery Gauge Card (lg:col-span-5) -->
+        <div class="lg:col-span-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+          <!-- Header -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
+                <Award class="w-4 h-4" />
+              </div>
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  {{ $t('quiz.bento_mastery_title') }}
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  {{ quizStore.stats.masteredCount }} / {{ quizStore.stats.totalAnswered }} {{ $t('quiz.stats_mastered').toLowerCase() }}
+                </p>
+              </div>
             </div>
+
+            <!-- Dynamic Proficiency Tier Badge -->
+            <span
+              :class="[
+                'px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors whitespace-nowrap shrink-0',
+                masteryTierInfo.badgeClass
+              ]"
+            >
+              {{ $t(masteryTierInfo.labelKey) }}
+            </span>
+          </div>
+
+          <!-- Semi-Circular Radial Arc Gauge -->
+          <div class="relative flex flex-col items-center justify-center my-auto pt-3">
+            <div class="relative w-40 h-24 flex items-end justify-center">
+              <svg
+                class="w-full h-full overflow-visible"
+                viewBox="0 0 120 70"
+                aria-label="Quiz mastery rate gauge"
+              >
+                <!-- Background Arc (180deg) -->
+                <path
+                  d="M 15 60 A 45 45 0 0 1 105 60"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="10"
+                  stroke-linecap="round"
+                  class="text-slate-100 dark:text-slate-800"
+                />
+
+                <!-- Foreground Value Arc -->
+                <path
+                  d="M 15 60 A 45 45 0 0 1 105 60"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="10"
+                  stroke-linecap="round"
+                  :stroke-dasharray="arcCircumference"
+                  :stroke-dashoffset="strokeDashoffset"
+                  :class="['transition-all duration-700 ease-out', masteryTierInfo.arcColor]"
+                />
+              </svg>
+
+              <!-- Center Numerical Label -->
+              <div class="absolute inset-x-0 bottom-0 text-center flex flex-col items-center pointer-events-none">
+                <span class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
+                  {{ masteryRate }}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bento Card 3: Seniority Matrix Card (lg:col-span-6) -->
+        <div class="lg:col-span-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
+                <TrendingUp class="w-4 h-4" />
+              </div>
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  {{ $t('quiz.bento_seniority_title') }}
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  {{ $t('quiz.stats_level_breakdown') }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3.5 pt-1">
+            <div
+              v-for="lvl in quizStore.stats.levelBreakdown"
+              :key="String(lvl.level)"
+              class="space-y-1.5"
+            >
+              <div class="flex items-center justify-between text-xs sm:text-sm">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="font-bold text-slate-800 dark:text-slate-200 truncate">
+                    {{ formatSeniorityLevel(lvl.level).label }}
+                  </span>
+                  <span class="text-xs text-slate-400 dark:text-slate-500 truncate hidden sm:inline">
+                    • {{ formatSeniorityLevel(lvl.level).desc }}
+                  </span>
+                  <span class="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                    ({{ lvl.masteredCount }}/{{ lvl.answeredCount }})
+                  </span>
+                </div>
+                <span :class="['font-black whitespace-nowrap shrink-0 ml-2', getSeniorityColor(formatSeniorityLevel(lvl.level).id).text]">
+                  {{ lvl.accuracyRate }}%
+                </span>
+              </div>
+              <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div
+                  :class="['h-full rounded-full transition-all duration-500', getSeniorityColor(formatSeniorityLevel(lvl.level).id).bar]"
+                  :style="{ width: `${lvl.accuracyRate}%` }"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bento Card 4: Topic Strengths & Weaknesses Radar Card (lg:col-span-6) -->
+        <div class="lg:col-span-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
+                <BarChart3 class="w-4 h-4" />
+              </div>
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  {{ $t('quiz.bento_topic_title') }}
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  {{ quizStore.stats.topicBreakdown?.length || 0 }} {{ $t('insights.all_categories').toLowerCase() }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Topic List -->
+          <div v-if="quizStore.stats.topicBreakdown?.length" class="space-y-2.5 pt-1 max-h-72 overflow-y-auto pr-1">
+            <div
+              v-for="topic in quizStore.stats.topicBreakdown"
+              :key="topic.topic"
+              class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 gap-2"
+            >
+              <div class="min-w-0 flex-1">
+                <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                  {{ topic.topic }}
+                </p>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500">
+                  {{ topic.answeredCount }} {{ $t('quiz.stats_total').toLowerCase() }} • {{ topic.masteredCount }} {{ $t('quiz.stats_mastered').toLowerCase() }}
+                </p>
+              </div>
+
+              <span
+                :class="[
+                  'px-2.5 py-1 rounded-full text-xs font-bold border whitespace-nowrap shrink-0',
+                  getTopicBadge(topic.accuracyRate).class
+                ]"
+              >
+                {{ topic.accuracyRate }}%
+              </span>
+            </div>
+          </div>
+
+          <div v-else class="text-center py-8 text-slate-400 dark:text-slate-500 text-xs">
+            {{ $t('insights.empty_title') }}
           </div>
         </div>
       </div>
