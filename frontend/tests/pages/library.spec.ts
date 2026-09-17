@@ -153,4 +153,38 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       })
     )
   })
+
+  it('renders verbatim category hint in import modal tabs', async () => {
+    const wrapper = mount(LibraryPage, {
+      global: {
+        stubs: {
+          NuxtLink: true,
+          Teleport: true
+        }
+      }
+    })
+
+    // Open import modal
+    const importBtn = wrapper.find('button.bg-brand-600')
+    await importBtn.trigger('click')
+    await flushPromises()
+
+    // Tab 0 (Markdown) contains hint
+    expect(wrapper.text()).toContain('library.verbatim_category_hint')
+
+    // Switch to PDF tab
+    const tabButtons = wrapper.findAll('button')
+    const pdfTabBtn = tabButtons.find(b => b.text().includes('library.tab_pdf'))
+    expect(pdfTabBtn).toBeDefined()
+    await pdfTabBtn!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('library.verbatim_category_hint')
+
+    // Switch to URL tab
+    const urlTabBtn = tabButtons.find(b => b.text().includes('library.tab_url'))
+    expect(urlTabBtn).toBeDefined()
+    await urlTabBtn!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('library.verbatim_category_hint')
+  })
 })

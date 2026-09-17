@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download } from 'lucide-vue-next'
+import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb } from 'lucide-vue-next'
 import { useApiError } from '~/composables/useApiError'
 import { useLibraryStore } from '~/stores/useLibraryStore'
 
@@ -549,6 +549,10 @@ async function confirmDeleteBook() {
                   <option :value="3">{{ $t('library.categories.system_design') }}</option>
                   <option :value="4">{{ $t('library.categories.craft') }}</option>
                 </select>
+                <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+                  <Lightbulb class="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
+                  <span>{{ $t('library.verbatim_category_hint') }}</span>
+                </div>
               </div>
 
               <div>
@@ -694,6 +698,10 @@ async function confirmDeleteBook() {
                   <option :value="3">{{ $t('library.categories.system_design') }}</option>
                   <option :value="4">{{ $t('library.categories.craft') }}</option>
                 </select>
+                <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+                  <Lightbulb class="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
+                  <span>{{ $t('library.verbatim_category_hint') }}</span>
+                </div>
               </div>
             </div>
 
@@ -756,6 +764,10 @@ async function confirmDeleteBook() {
                 <option :value="3">{{ $t('library.categories.system_design') }}</option>
                 <option :value="4">{{ $t('library.categories.craft') }}</option>
               </select>
+              <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+                <Lightbulb class="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
+                <span>{{ $t('library.verbatim_category_hint') }}</span>
+              </div>
             </div>
 
             <!-- Embedded PDF Preview Card -->

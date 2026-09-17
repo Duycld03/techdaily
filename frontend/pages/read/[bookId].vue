@@ -64,6 +64,75 @@ const isSavingNote = ref(false);
 // Export State
 const isExportingMarkdown = ref(false);
 
+// Typography State & Settings
+interface ReaderTypography {
+  fontSize: 'sm' | 'base' | 'lg' | 'xl' | '2xl'
+  fontFamily: 'sans' | 'serif' | 'mono'
+  lineSpacing: 'normal' | 'relaxed' | 'loose'
+  readingWidth: 'standard' | 'wide' | 'full'
+}
+
+const TYPOGRAPHY_STORAGE_KEY = 'techdaily_reader_typography'
+const DEFAULT_TYPOGRAPHY: ReaderTypography = {
+  fontSize: 'base',
+  fontFamily: 'sans',
+  lineSpacing: 'relaxed',
+  readingWidth: 'standard'
+}
+
+const typography = ref<ReaderTypography>({ ...DEFAULT_TYPOGRAPHY })
+const isTypographyOpen = ref(false)
+const typographyDropdownRef = ref<HTMLElement | null>(null)
+
+const fontSizes: ('sm' | 'base' | 'lg' | 'xl' | '2xl')[] = ['sm', 'base', 'lg', 'xl', '2xl']
+const fontScalePercentages: Record<ReaderTypography['fontSize'], string> = {
+  sm: '85%',
+  base: '100%',
+  lg: '115%',
+  xl: '130%',
+  '2xl': '145%'
+}
+
+const currentFontSizeIndex = computed(() => fontSizes.indexOf(typography.value.fontSize))
+const canDecreaseFontSize = computed(() => currentFontSizeIndex.value > 0)
+const canIncreaseFontSize = computed(() => currentFontSizeIndex.value < fontSizes.length - 1)
+
+function decreaseFontSize() {
+  if (canDecreaseFontSize.value) {
+    typography.value.fontSize = fontSizes[currentFontSizeIndex.value - 1]
+  }
+}
+
+function increaseFontSize() {
+  if (canIncreaseFontSize.value) {
+    typography.value.fontSize = fontSizes[currentFontSizeIndex.value + 1]
+  }
+}
+
+function handleTypographyClickOutside(event: MouseEvent) {
+  if (
+    isTypographyOpen.value &&
+    typographyDropdownRef.value &&
+    !typographyDropdownRef.value.contains(event.target as Node)
+  ) {
+    isTypographyOpen.value = false
+  }
+}
+
+watch(
+  typography,
+  (newVal) => {
+    if (import.meta.client) {
+      try {
+        localStorage.setItem(TYPOGRAPHY_STORAGE_KEY, JSON.stringify(newVal))
+      } catch {
+        // ignore quota errors
+      }
+    }
+  },
+  { deep: true }
+)
+
 function cancelNotePopover() {
   isNotePopoverOpen.value = false;
   currentHighlightId.value = null;
@@ -267,6 +336,33 @@ onMounted(async () => {
     // handled by store
   }
 
+  // Hydrate typography settings from localStorage
+  if (import.meta.client) {
+    try {
+      const saved = localStorage.getItem(TYPOGRAPHY_STORAGE_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        typography.value = {
+          fontSize: ['sm', 'base', 'lg', 'xl', '2xl'].includes(parsed.fontSize)
+            ? parsed.fontSize
+            : DEFAULT_TYPOGRAPHY.fontSize,
+          fontFamily: ['sans', 'serif', 'mono'].includes(parsed.fontFamily)
+            ? parsed.fontFamily
+            : DEFAULT_TYPOGRAPHY.fontFamily,
+          lineSpacing: ['normal', 'relaxed', 'loose'].includes(parsed.lineSpacing)
+            ? parsed.lineSpacing
+            : DEFAULT_TYPOGRAPHY.lineSpacing,
+          readingWidth: ['standard', 'wide', 'full'].includes(parsed.readingWidth)
+            ? parsed.readingWidth
+            : DEFAULT_TYPOGRAPHY.readingWidth,
+        }
+      }
+    } catch {
+      // Fallback gracefully to defaults
+    }
+    window.addEventListener('click', handleTypographyClickOutside)
+  }
+
   // Attach global keyboard listener for Shift + Left/Right and Escape
   window.addEventListener("keydown", handleKeyDown);
 });
@@ -408,6 +504,9 @@ onUnmounted(() => {
     selectionDebounceTimer = null;
   }
   window.removeEventListener("keydown", handleKeyDown);
+  if (import.meta.client) {
+    window.removeEventListener('click', handleTypographyClickOutside)
+  }
 });
 
 function handleKeyDown(e: KeyboardEvent) {
@@ -422,6 +521,10 @@ function handleKeyDown(e: KeyboardEvent) {
     !isExplainerOpen.value &&
     !isMobileTocOpen.value
   ) {
+    if (isTypographyOpen.value) {
+      isTypographyOpen.value = false;
+      return;
+    }
     router.push("/library");
   }
 }
@@ -686,6 +789,201 @@ async function handleHighlightAndNote() {
             isExportingMarkdown ? $t("reader.exporting") : $t("reader.export_obsidian")
           }}</span>
         </button>
+
+        <!-- Novel-Style Typography Popover -->
+        <div ref="typographyDropdownRef" class="relative">
+          <button
+            @click.stop="isTypographyOpen = !isTypographyOpen"
+            :class="[
+              'px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 shrink-0',
+              isTypographyOpen
+                ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+            ]"
+            :title="$t('reader.typography_settings')"
+          >
+            <span class="font-serif text-sm font-black">Aa</span>
+          </button>
+
+          <!-- Typography Popover Dropdown (click-outside dismissed) -->
+          <div
+            v-if="isTypographyOpen"
+            class="absolute right-0 mt-2 w-72 sm:w-80 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl z-50 space-y-4 text-xs select-none"
+          >
+            <!-- Section 1: Font Size -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 font-semibold">
+                <span>{{ $t('reader.font_size') }}</span>
+                <span class="font-mono text-xs font-bold text-slate-700 dark:text-slate-200">
+                  {{ fontScalePercentages[typography.fontSize] }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between gap-2 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  @click="decreaseFontSize"
+                  :disabled="!canDecreaseFontSize"
+                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm"
+                  title="Smaller Font"
+                >
+                  <span class="text-xs font-bold">A</span>
+                  <span class="text-[10px] font-mono">−</span>
+                </button>
+                <div class="flex items-center gap-1.5 px-2">
+                  <span
+                    v-for="(size, idx) in fontSizes"
+                    :key="size"
+                    class="w-1.5 h-1.5 rounded-full transition-all"
+                    :class="[
+                      typography.fontSize === size
+                        ? 'w-2 h-2 bg-brand-500 scale-110'
+                        : (idx < currentFontSizeIndex ? 'bg-slate-400 dark:bg-slate-500' : 'bg-slate-300 dark:bg-slate-700')
+                    ]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  @click="increaseFontSize"
+                  :disabled="!canIncreaseFontSize"
+                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm"
+                  title="Larger Font"
+                >
+                  <span class="text-sm font-black">A</span>
+                  <span class="text-[10px] font-mono">+</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 2: Font Family -->
+            <div class="space-y-2">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.font_family') }}</span>
+              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  @click="typography.fontFamily = 'sans'"
+                  class="py-2 px-2 rounded-lg font-sans font-medium text-xs transition-all text-center truncate"
+                  :class="[
+                    typography.fontFamily === 'sans'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.font_sans') }}
+                </button>
+                <button
+                  type="button"
+                  @click="typography.fontFamily = 'serif'"
+                  class="py-2 px-2 rounded-lg font-serif font-medium text-xs transition-all text-center truncate"
+                  :class="[
+                    typography.fontFamily === 'serif'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.font_serif') }}
+                </button>
+                <button
+                  type="button"
+                  @click="typography.fontFamily = 'mono'"
+                  class="py-2 px-2 rounded-lg font-mono font-medium text-xs transition-all text-center truncate"
+                  :class="[
+                    typography.fontFamily === 'mono'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.font_mono') }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 3: Line Spacing -->
+            <div class="space-y-2">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.line_spacing') }}</span>
+              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  @click="typography.lineSpacing = 'normal'"
+                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
+                  :class="[
+                    typography.lineSpacing === 'normal'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.spacing_normal') }}
+                </button>
+                <button
+                  type="button"
+                  @click="typography.lineSpacing = 'relaxed'"
+                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
+                  :class="[
+                    typography.lineSpacing === 'relaxed'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.spacing_relaxed') }}
+                </button>
+                <button
+                  type="button"
+                  @click="typography.lineSpacing = 'loose'"
+                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
+                  :class="[
+                    typography.lineSpacing === 'loose'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.spacing_loose') }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 4: Reading Column Width -->
+            <div class="space-y-2">
+              <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.reading_width') }}</span>
+              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                <button
+                  type="button"
+                  @click="typography.readingWidth = 'standard'"
+                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
+                  :class="[
+                    typography.readingWidth === 'standard'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.width_standard') }}
+                </button>
+                <button
+                  type="button"
+                  @click="typography.readingWidth = 'wide'"
+                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
+                  :class="[
+                    typography.readingWidth === 'wide'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.width_wide') }}
+                </button>
+                <button
+                  type="button"
+                  @click="typography.readingWidth = 'full'"
+                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
+                  :class="[
+                    typography.readingWidth === 'full'
+                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('reader.width_full') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Theme Toggle -->
         <ThemeToggle />
@@ -983,7 +1281,10 @@ async function handleHighlightAndNote() {
         <!-- Article Content Card -->
         <div
           v-else-if="currentChunk"
-          class="w-full max-w-3xl space-y-8 sm:space-y-10"
+          class="w-full space-y-8 sm:space-y-10 transition-all duration-200"
+          :class="[
+            typography.readingWidth === 'wide' ? 'max-w-4xl' : (typography.readingWidth === 'full' ? 'max-w-full' : 'max-w-3xl')
+          ]"
         >
           <!-- Ephemeral Raw Text Fallback Amber Banner -->
           <div
@@ -1043,7 +1344,18 @@ async function handleHighlightAndNote() {
 
           <!-- Markdown Body -->
           <article
-            class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-blockquote:not-italic prose-blockquote:before:content-none prose-blockquote:after:content-none prose-p:before:content-none prose-p:after:content-none leading-relaxed text-sm md:text-lg"
+            class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-blockquote:not-italic prose-blockquote:before:content-none prose-blockquote:after:content-none prose-p:before:content-none prose-p:after:content-none prose-p:my-4 prose-p:leading-inherit transition-all duration-150"
+            :class="[
+              {
+                'text-sm': typography.fontSize === 'sm',
+                'text-base': typography.fontSize === 'base',
+                'text-lg': typography.fontSize === 'lg',
+                'text-xl': typography.fontSize === 'xl',
+                'text-2xl': typography.fontSize === '2xl'
+              },
+              typography.fontFamily === 'serif' ? 'font-serif' : (typography.fontFamily === 'mono' ? 'font-mono' : 'font-sans'),
+              typography.lineSpacing === 'loose' ? 'leading-loose' : (typography.lineSpacing === 'normal' ? 'leading-normal' : 'leading-relaxed')
+            ]"
             v-html="renderedMarkdown"
           ></article>
 

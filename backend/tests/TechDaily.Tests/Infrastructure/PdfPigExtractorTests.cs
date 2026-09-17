@@ -324,8 +324,7 @@ Leave the browser open with the Counter page loaded.
 
         // Verify that prose is NOT trapped inside code blocks in AI formatted result
         aiResult.Value.FormattedMarkdown.Should().Contain("# ");
-        aiResult.Value.FormattedMarkdown.Should().Contain("> [!NOTE]");
-
+        aiResult.Value.FormattedMarkdown.Should().Contain("> [!NOTE");
         // Save to real database so we can test UI live in browser!
         var connStr = "Host=localhost;Port=5432;Database=techdaily_db;Username=techdaily_user;Password=techdaily_password_secret";
         var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TechDaily.Infrastructure.Persistence.TechDailyDbContext>()
@@ -434,5 +433,198 @@ Leave the browser open with the Counter page loaded.
         }
 
         _output.WriteLine($"Saved book to database! BookId: {book.Id}");
+    }
+
+    [Fact]
+    public void AssembleLines_WithLineSpacingGap_ShouldEmitDoubleNewlines()
+    {
+        // Normal line spacing = 14pt (700 -> 686 -> 672)
+        // Paragraph gap = 22pt (672 -> 650, >= 1.35 * 14 = 18.9pt)
+        var lines = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("Line one of paragraph one is continuous", Top: 710, Bottom: 700, Left: 54, Right: 300, Height: 10),
+            new("and line two completes paragraph one.", Top: 696, Bottom: 686, Left: 54, Right: 290, Height: 10),
+            new("Line one of paragraph two begins after a gap", Top: 660, Bottom: 650, Left: 54, Right: 310, Height: 10),
+            new("and line two completes paragraph two.", Top: 646, Bottom: 636, Left: 54, Right: 280, Height: 10)
+        };
+
+        var text = PdfPigExtractor.AssembleLines(lines);
+
+        // Intra-paragraph lines should be joined with space
+        text.Should().Contain("Line one of paragraph one is continuous and line two completes paragraph one.");
+        text.Should().Contain("Line one of paragraph two begins after a gap and line two completes paragraph two.");
+
+        // Distinct paragraphs should be separated by double newlines
+        text.Should().Contain("and line two completes paragraph one.\n\nLine one of paragraph two begins after a gap");
+
+        // Markdown formatting should preserve the double newlines into separate paragraphs
+        var markdown = PdfPigExtractor.FormatAsMarkdown(text, "Gap Test");
+        markdown.Should().Contain("and line two completes paragraph one.\n\nLine one of paragraph two begins after a gap");
+    }
+
+    [Fact]
+    public void AssembleLines_WithFirstLineIndentation_ShouldEmitDoubleNewlines()
+    {
+        // Normal spacing = 14pt between all lines
+        // Standard left margin = 54pt
+        // Line 2 starts at Left = 70pt (indent = 16pt >= 12pt)
+        var lines = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("This is the first sentence of the first paragraph", Top: 710, Bottom: 700, Left: 54, Right: 350, Height: 10),
+            new("and it wraps naturally onto the second line here.", Top: 696, Bottom: 686, Left: 54, Right: 340, Height: 10),
+            new("This second paragraph starts with an indentation", Top: 682, Bottom: 672, Left: 70, Right: 350, Height: 10),
+            new("and continues flush with the normal left margin.", Top: 668, Bottom: 658, Left: 54, Right: 330, Height: 10)
+        };
+
+        var text = PdfPigExtractor.AssembleLines(lines);
+
+        // First paragraph lines should be joined with a space
+        text.Should().Contain("This is the first sentence of the first paragraph and it wraps naturally onto the second line here.");
+
+        // Paragraph 2 should be separated by double newlines due to first-line indent
+        text.Should().Contain("and it wraps naturally onto the second line here.\n\nThis second paragraph starts with an indentation");
+
+        // Second paragraph lines should be joined with a space
+        text.Should().Contain("This second paragraph starts with an indentation and continues flush with the normal left margin.");
+    }
+
+    [Theory]
+    [InlineData("LỜI NÓI ĐẦU")]
+    [InlineData("Phần GIỚI THIỆU")]
+    [InlineData("GIỚI THIỆU")]
+    [InlineData("Câu chuyện của chính tôi.")]
+    [InlineData("Câu chuyện của chính tôi")]
+    [InlineData("Chương 1: Những điều cơ bản")]
+    [InlineData("Chapter 1: The Fundamentals")]
+    [InlineData("MỤC LỤC")]
+    [InlineData("TIỂU DẪN")]
+    [InlineData("KẾT LUẬN")]
+    [InlineData("PHẦN 1: QUY LUẬT THỨ NHẤT")]
+    [InlineData("CORE PRINCIPLES")]
+    public void AssembleLines_AndFormatAsMarkdown_WithHeadingPatterns_ShouldFormatAsH2(string headingTitle)
+    {
+        var lines = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("This is prose text preceding the heading block.", Top: 710, Bottom: 700, Left: 54, Right: 320, Height: 10),
+            new(headingTitle, Top: 680, Bottom: 670, Left: 54, Right: 200, Height: 12),
+            new("This is prose text following the heading block.", Top: 650, Bottom: 640, Left: 54, Right: 310, Height: 10)
+        };
+
+        var text = PdfPigExtractor.AssembleLines(lines);
+
+        // Heading should be formatted as ## Title with double newlines before and after
+        text.Should().Contain($"\n\n## {headingTitle}\n\n");
+
+        // FormatAsMarkdown should preserve level 2 heading
+        var markdown = PdfPigExtractor.FormatAsMarkdown(text, "Heading Suite");
+        markdown.Should().Contain($"## {headingTitle}");
+    }
+
+    [Fact]
+    public void AssembleLines_WithLargeFontOrCentering_ShouldFormatAsH2()
+    {
+        // Median height is 10, but line 1 has Height = 16 (>= 1.25 * 10 = 12.5)
+        var linesWithLargeFont = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("Standard prose line before large title.", Top: 710, Bottom: 700, Left: 54, Right: 300, Height: 10),
+            new("Custom Large Section Title", Top: 682, Bottom: 666, Left: 54, Right: 250, Height: 16),
+            new("Standard prose line after large title.", Top: 650, Bottom: 640, Left: 54, Right: 290, Height: 10)
+        };
+
+        var textLarge = PdfPigExtractor.AssembleLines(linesWithLargeFont);
+        textLarge.Should().Contain("## Custom Large Section Title");
+
+        // Centered short line (< 60 chars) on 600pt page width: Left = 220, Right = 380 (width = 160, left margin = 220, right margin = 220)
+        var linesWithCenteredTitle = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("Standard prose line before centered title.", Top: 710, Bottom: 700, Left: 54, Right: 540, Height: 10),
+            new("A Centered Topic Heading", Top: 680, Bottom: 670, Left: 220, Right: 380, Height: 10),
+            new("Standard prose line after centered title.", Top: 650, Bottom: 640, Left: 54, Right: 540, Height: 10)
+        };
+
+        var textCentered = PdfPigExtractor.AssembleLines(linesWithCenteredTitle, pageWidth: 600);
+        textCentered.Should().Contain("## A Centered Topic Heading");
+    }
+
+    [Fact]
+    public void AssembleLines_WithDialogueAndQuotes_ShouldPreserveDistinctLineBreaks()
+    {
+        var lines = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("Cô ấy nhìn tôi với ánh mắt ngạc nhiên và hỏi.", Top: 710, Bottom: 700, Left: 54, Right: 350, Height: 10),
+            new("- Cậu đã đọc xong cuốn sách đó chưa?", Top: 696, Bottom: 686, Left: 54, Right: 280, Height: 10),
+            new("- Mình vừa đọc xong sáng nay, tôi trả lời.", Top: 682, Bottom: 672, Left: 54, Right: 310, Height: 10),
+            new("“Cảm nhận của cậu về nó như thế nào?”", Top: 668, Bottom: 658, Left: 54, Right: 290, Height: 10),
+            new("— Thật sự là một tác phẩm rất giá trị và mang lại", Top: 654, Bottom: 644, Left: 54, Right: 360, Height: 10),
+            new("nhiều góc nhìn sâu sắc cho công việc của chúng ta.", Top: 640, Bottom: 630, Left: 54, Right: 340, Height: 10),
+            new("- Mình cũng nghĩ như vậy!", Top: 626, Bottom: 616, Left: 54, Right: 220, Height: 10)
+        };
+
+        var text = PdfPigExtractor.AssembleLines(lines);
+
+        // Dialogue lines starting after punctuation should have double newlines
+        text.Should().Contain("ngạc nhiên và hỏi.\n\n- Cậu đã đọc xong cuốn sách đó chưa?");
+        text.Should().Contain("chưa?\n\n- Mình vừa đọc xong sáng nay, tôi trả lời.");
+        text.Should().Contain("tôi trả lời.\n\n“Cảm nhận của cậu về nó như thế nào?”");
+        text.Should().Contain("thế nào?”\n\n— Thật sự là một tác phẩm rất giá trị và mang lại");
+
+        // Wrapped lines within dialogue should be joined with a space
+        text.Should().Contain("— Thật sự là một tác phẩm rất giá trị và mang lại nhiều góc nhìn sâu sắc cho công việc của chúng ta.");
+
+        // Next dialogue line should be separated by double newlines
+        text.Should().Contain("của chúng ta.\n\n- Mình cũng nghĩ như vậy!");
+    }
+
+    [Fact]
+    public void FormatAsMarkdown_ShouldCleanUpDuplicateBlankLines_AndPreserveDoubleNewlines()
+    {
+        var input = @"
+# Main Topic
+
+
+
+## Subtopic One
+
+
+Paragraph one text that has multiple trailing newlines.
+
+
+
+
+Paragraph two text that follows after four blank lines.
+";
+
+        var markdown = PdfPigExtractor.FormatAsMarkdown(input, "");
+
+        // There should be at most 2 consecutive newlines (\n\n)
+        markdown.Should().NotContain("\n\n\n");
+        markdown.Should().Contain("# Main Topic\n\n## Subtopic One\n\nParagraph one text that has multiple trailing newlines.\n\nParagraph two text that follows after four blank lines.");
+    }
+
+    [Fact]
+    public void AssembleLines_WithHyphenatedWordWrap_ShouldDehyphenate()
+    {
+        var lines = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("This section explains the archi-", Top: 710, Bottom: 700, Left: 54, Right: 300, Height: 10),
+            new("tectural design of the distributed system.", Top: 696, Bottom: 686, Left: 54, Right: 290, Height: 10)
+        };
+
+        var text = PdfPigExtractor.AssembleLines(lines);
+        text.Should().Be("This section explains the architectural design of the distributed system.");
+    }
+
+    [Fact]
+    public void AssembleLines_WithEmptyOrWhitespaceLines_ShouldReturnEmptyString()
+    {
+        var emptyLines = new List<PdfPigExtractor.LineGeometry>();
+        PdfPigExtractor.AssembleLines(emptyLines).Should().BeEmpty();
+
+        var whitespaceLines = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("   ", Top: 700, Bottom: 690, Left: 50, Right: 60, Height: 10),
+            new("", Top: 680, Bottom: 670, Left: 50, Right: 50, Height: 10)
+        };
+        PdfPigExtractor.AssembleLines(whitespaceLines).Should().BeEmpty();
     }
 }

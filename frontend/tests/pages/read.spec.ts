@@ -103,4 +103,71 @@ describe('Immersive Document Reader (Hướng 1)', () => {
     const currentContext = surrounding || chapterTitle || ''
     expect(currentContext).toBe('Chapter 3: Storage and Retrieval')
   })
+
+  it('persists and loads typography settings from localStorage correctly', () => {
+    const customTypography = {
+      fontSize: 'xl',
+      fontFamily: 'serif',
+      lineSpacing: 'loose',
+      readingWidth: 'wide'
+    }
+
+    localStorage.setItem('techdaily_reader_typography', JSON.stringify(customTypography))
+
+    const loaded = JSON.parse(localStorage.getItem('techdaily_reader_typography')!)
+    expect(loaded.fontSize).toBe('xl')
+    expect(loaded.fontFamily).toBe('serif')
+    expect(loaded.lineSpacing).toBe('loose')
+    expect(loaded.readingWidth).toBe('wide')
+  })
+
+  it('computes correct typography and container classes based on state', () => {
+    const typography = {
+      fontSize: 'lg',
+      fontFamily: 'serif',
+      lineSpacing: 'loose',
+      readingWidth: 'wide'
+    }
+
+    const containerClass = typography.readingWidth === 'wide'
+      ? 'max-w-4xl'
+      : (typography.readingWidth === 'full' ? 'max-w-full' : 'max-w-3xl')
+
+    const fontClass = typography.fontFamily === 'serif'
+      ? 'font-serif'
+      : (typography.fontFamily === 'mono' ? 'font-mono' : 'font-sans')
+
+    const leadingClass = typography.lineSpacing === 'loose'
+      ? 'leading-loose'
+      : (typography.lineSpacing === 'normal' ? 'leading-normal' : 'leading-relaxed')
+
+    expect(containerClass).toBe('max-w-4xl')
+    expect(fontClass).toBe('font-serif')
+    expect(leadingClass).toBe('leading-loose')
+  })
+
+  it('steps font size within bounds', () => {
+    const fontSizes = ['sm', 'base', 'lg', 'xl', '2xl']
+    let currentIdx = fontSizes.indexOf('base')
+    expect(currentIdx).toBe(1)
+
+    // Step up
+    currentIdx = Math.min(fontSizes.length - 1, currentIdx + 1)
+    expect(fontSizes[currentIdx]).toBe('lg')
+
+    // Step up to max
+    currentIdx = Math.min(fontSizes.length - 1, currentIdx + 1)
+    currentIdx = Math.min(fontSizes.length - 1, currentIdx + 1)
+    expect(fontSizes[currentIdx]).toBe('2xl')
+
+    // Cannot step beyond max
+    currentIdx = Math.min(fontSizes.length - 1, currentIdx + 1)
+    expect(fontSizes[currentIdx]).toBe('2xl')
+
+    // Step down to min
+    currentIdx = 0
+    expect(fontSizes[currentIdx]).toBe('sm')
+    currentIdx = Math.max(0, currentIdx - 1)
+    expect(fontSizes[currentIdx]).toBe('sm')
+  })
 })

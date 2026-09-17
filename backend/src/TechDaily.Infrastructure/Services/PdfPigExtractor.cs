@@ -11,7 +11,23 @@ public class PdfPigExtractor : IPdfExtractor
         @"^(Chương\s+\d+|Chapter\s+\d+|Chuyên\s+đề\s+\d+|Part\s+\d+|Section\s+\d+|Bài\s+\d+|Topic\s+\d+|[A-Z0-9\.\s]{4,60}$)",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
+    private static readonly Regex TitlePatternRegex = new(
+        @"^(LỜI\s+NÓI\s+ĐẦU|Phần\s+GIỚI\s+THIỆU|GIỚI\s+THIỆU|Câu\s+chuyện\s+của\s+chính\s+tôi\.?|Chương\s+\d+|Chapter\s+\d+|MỤC\s+LỤC|TIỂU\s+DẪN|KẾT\s+LUẬN|PHẦN\s+([IVXLCDM\d]+|[A-ZÀ-Ỹ]+))(\.|\b|$)",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    private static readonly Regex AllCapsTitleRegex = new(
+        @"^[A-Z0-9\s/&-]{4,50}$",
+        RegexOptions.Compiled);
+
     internal record RawBookmark(string Title, int PageNumber, int Level, string? ParentTitle = null);
+
+    public readonly record struct LineGeometry(
+        string Text,
+        double Top,
+        double Bottom,
+        double Left,
+        double Right,
+        double Height);
 
     public async Task<PdfExtractionResult> ExtractSlicesAsync(
         Stream pdfStream,
@@ -341,9 +357,10 @@ public class PdfPigExtractor : IPdfExtractor
             string? detectedHeading = null;
             foreach (var line in firstLines)
             {
-                if (HeadingRegex.IsMatch(line) && line.Length >= 4 && line.Length <= 80)
+                var cleanLine = line.StartsWith('#') ? line.TrimStart('#', ' ').Trim() : line;
+                if ((HeadingRegex.IsMatch(cleanLine) || IsTitlePattern(cleanLine)) && cleanLine.Length >= 4 && cleanLine.Length <= 80)
                 {
-                    detectedHeading = line;
+                    detectedHeading = cleanLine;
                     break;
                 }
             }
@@ -586,24 +603,21 @@ public class PdfPigExtractor : IPdfExtractor
         return false;
     }
 
-    private static string ExtractPageLines(UglyToad.PdfPig.Content.Page page)
+    internal static string ExtractPageLines(UglyToad.PdfPig.Content.Page page)
     {
         try
         {
             var words = page.GetWords()?.ToList();
             if (words != null && words.Count > 0)
             {
-                // Group words by baseline Y coordinate (tolerance ~3 points)
-                var lines = words
-                    .GroupBy(w => (int)Math.Round(w.BoundingBox.Bottom / 3.5))
-                    .OrderByDescending(g => g.Key)
-                    .Select(g => string.Join(" ", g.OrderBy(w => w.BoundingBox.Left).Select(w => w.Text)).Trim())
-                    .Where(line => !string.IsNullOrWhiteSpace(line));
-
-                var text = string.Join("\n", lines).Trim();
-                if (!string.IsNullOrWhiteSpace(text))
+                var lines = GroupWordsIntoLines(words);
+                if (lines.Count > 0)
                 {
-                    return text;
+                    var text = AssembleLines(lines, page.Width);
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        return text;
+                    }
                 }
             }
         }
@@ -620,6 +634,309 @@ public class PdfPigExtractor : IPdfExtractor
         {
             return string.Empty;
         }
+    }
+
+    internal static List<LineGeometry> GroupWordsIntoLines(IReadOnlyList<UglyToad.PdfPig.Content.Word> words)
+    {
+        if (words == null || words.Count == 0)
+        {
+            return new List<LineGeometry>();
+        }
+
+        // Group words by baseline Y coordinate (tolerance ~3.5 points)
+        var groups = words
+            .GroupBy(w => (int)Math.Round(w.BoundingBox.Bottom / 3.5))
+            .OrderByDescending(g => g.Key);
+
+        var result = new List<LineGeometry>();
+        foreach (var group in groups)
+        {
+            var orderedWords = group.OrderBy(w => w.BoundingBox.Left).ToList();
+            var text = string.Join(" ", orderedWords.Select(w => w.Text)).Trim();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                continue;
+            }
+
+            double top = orderedWords.Max(w => w.BoundingBox.Top);
+            double bottom = orderedWords.Min(w => w.BoundingBox.Bottom);
+            double left = orderedWords.Min(w => w.BoundingBox.Left);
+            double right = orderedWords.Max(w => w.BoundingBox.Right);
+            double height = Math.Max(0, top - bottom);
+
+            result.Add(new LineGeometry(text, top, bottom, left, right, height));
+        }
+
+        return result;
+    }
+
+    internal static string AssembleLines(IReadOnlyList<LineGeometry> lines, double? pageWidth = null)
+    {
+        var validLines = lines
+            .Where(l => !string.IsNullOrWhiteSpace(l.Text))
+            .ToList();
+
+        if (validLines.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        // Calculate vertical spacing between consecutive lines: dy_i = Bottom_i - Bottom_{i+1}
+        var spacings = new List<double>();
+        for (int i = 0; i < validLines.Count - 1; i++)
+        {
+            double dy = validLines[i].Bottom - validLines[i + 1].Bottom;
+            if (dy > 0)
+            {
+                spacings.Add(dy);
+            }
+        }
+
+        double medianSpacing;
+        if (spacings.Count > 0)
+        {
+            var sortedSpacings = spacings.OrderBy(s => s).ToList();
+            medianSpacing = sortedSpacings[sortedSpacings.Count / 2];
+        }
+        else
+        {
+            medianSpacing = validLines[0].Height > 0 ? validLines[0].Height * 1.3 : 14.0;
+        }
+
+        var heights = validLines.Select(l => l.Height).Where(h => h > 0).OrderBy(h => h).ToList();
+        double medianHeight = heights.Count > 0 ? heights[heights.Count / 2] : 10.0;
+
+        // Calculate left column margin X_min (10th percentile or minimum of substantial lines)
+        var substantialLines = validLines.Where(l => l.Text.Length > 20).ToList();
+        double xMin;
+        double xMax;
+
+        if (substantialLines.Count >= 3)
+        {
+            var sortedLefts = substantialLines.Select(l => l.Left).OrderBy(x => x).ToList();
+            int p10Index = (int)Math.Floor(sortedLefts.Count * 0.10);
+            xMin = sortedLefts[Math.Clamp(p10Index, 0, sortedLefts.Count - 1)];
+
+            var sortedRights = substantialLines.Select(l => l.Right).OrderBy(x => x).ToList();
+            int p90Index = (int)Math.Floor(sortedRights.Count * 0.90);
+            xMax = sortedRights[Math.Clamp(p90Index, 0, sortedRights.Count - 1)];
+        }
+        else if (substantialLines.Count > 0)
+        {
+            xMin = substantialLines.Min(l => l.Left);
+            xMax = substantialLines.Max(l => l.Right);
+        }
+        else
+        {
+            xMin = validLines.Min(l => l.Left);
+            xMax = validLines.Max(l => l.Right);
+        }
+
+        var sb = new StringBuilder();
+
+        // First line
+        if (IsHeadingLine(validLines[0], medianHeight, xMin, xMax, pageWidth))
+        {
+            sb.Append(FormatHeading(validLines[0].Text));
+        }
+        else
+        {
+            sb.Append(validLines[0].Text);
+        }
+
+        for (int i = 1; i < validLines.Count; i++)
+        {
+            var prev = validLines[i - 1];
+            var curr = validLines[i];
+
+            bool prevIsHeading = IsHeadingLine(prev, medianHeight, xMin, xMax, pageWidth);
+            bool currIsHeading = IsHeadingLine(curr, medianHeight, xMin, xMax, pageWidth);
+
+            string separator;
+
+            if (prevIsHeading || currIsHeading)
+            {
+                separator = "\n\n";
+            }
+            else
+            {
+                double dy = prev.Bottom - curr.Bottom;
+                bool isGap = dy > 0 && medianSpacing > 0 && dy >= 1.35 * medianSpacing;
+                bool isIndent = (curr.Left - xMin) >= 12.0;
+
+                var prevText = prev.Text.Trim();
+                var currText = curr.Text.Trim();
+
+                bool startsWithDialogue =
+                    currText.StartsWith('"') ||
+                    currText.StartsWith('“') ||
+                    currText.StartsWith('”') ||
+                    currText.StartsWith('—') ||
+                    currText.StartsWith('–') ||
+                    (currText.StartsWith('-') && (currText.Length == 1 || char.IsWhiteSpace(currText[1])));
+
+                bool prevEndsPunctuation =
+                    prevText.Length > 0 &&
+                    (char.IsPunctuation(prevText[^1]) || prevText.EndsWith("…"));
+
+                bool isDialogue = startsWithDialogue && prevEndsPunctuation;
+
+                if (isGap || isIndent || isDialogue)
+                {
+                    separator = "\n\n";
+                }
+                else if (IsCodeLike(prevText) || IsCodeLike(currText))
+                {
+                    separator = "\n";
+                }
+                else
+                {
+                    separator = " ";
+                }
+            }
+
+            if (separator == "\n\n")
+            {
+                sb.Append("\n\n");
+                if (currIsHeading)
+                {
+                    sb.Append(FormatHeading(curr.Text));
+                }
+                else
+                {
+                    sb.Append(curr.Text);
+                }
+            }
+            else if (separator == "\n")
+            {
+                sb.Append('\n');
+                sb.Append(curr.Text);
+            }
+            else
+            {
+                // Normal intra-paragraph wrap
+                var prevTrimmed = prev.Text.TrimEnd();
+                var currTrimmed = curr.Text.TrimStart();
+                if (prevTrimmed.EndsWith('-') && prevTrimmed.Length >= 2 && char.IsLetter(prevTrimmed[^2]) &&
+                    currTrimmed.Length > 0 && char.IsLower(currTrimmed[0]))
+                {
+                    // Dehyphenate
+                    sb.Length--;
+                    sb.Append(currTrimmed);
+                }
+                else
+                {
+                    sb.Append(' ');
+                    sb.Append(currTrimmed);
+                }
+            }
+        }
+
+        return sb.ToString().Trim();
+    }
+
+    private static bool IsCentered(LineGeometry line, double xMin, double xMax, double? pageWidth)
+    {
+        if (line.Text.Length >= 60) return false;
+
+        if (xMax - xMin > 100)
+        {
+            double leftGap = line.Left - xMin;
+            double rightGap = xMax - line.Right;
+
+            if (leftGap >= 12.0 && rightGap >= 12.0 && Math.Abs(leftGap - rightGap) <= Math.Max(25.0, (xMax - xMin) * 0.15))
+            {
+                return true;
+            }
+        }
+
+        if (pageWidth.HasValue && pageWidth.Value > 200)
+        {
+            double leftMargin = line.Left;
+            double rightMargin = pageWidth.Value - line.Right;
+            double lineWidth = line.Right - line.Left;
+
+            if (lineWidth < pageWidth.Value * 0.75 &&
+                leftMargin >= 20.0 && rightMargin >= 20.0 &&
+                Math.Abs(leftMargin - rightMargin) <= Math.Max(30.0, pageWidth.Value * 0.10))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsHeadingLine(LineGeometry line, double medianHeight, double xMin, double xMax, double? pageWidth)
+    {
+        var text = line.Text.Trim();
+        if (string.IsNullOrWhiteSpace(text)) return false;
+
+        if (text.StartsWith('#')) return true;
+
+        if (Regex.IsMatch(text, @"^[\d\s\.\-—–]{1,5}$"))
+        {
+            return false;
+        }
+
+        if (IsTitlePattern(text))
+        {
+            return true;
+        }
+
+        if (text.Length < 60)
+        {
+            if (medianHeight > 0 && line.Height >= 1.25 * medianHeight)
+            {
+                return true;
+            }
+
+            if (IsCentered(line, xMin, xMax, pageWidth))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static bool IsTitlePattern(string text)
+    {
+        var trimmed = text.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)) return false;
+        if (trimmed.Length > 70) return false;
+
+        if (TitlePatternRegex.IsMatch(trimmed)) return true;
+
+        if (trimmed.Length >= 4 && trimmed.Length <= 50 &&
+            !trimmed.Contains('.') && !trimmed.Contains(':') &&
+            (AllCapsTitleRegex.IsMatch(trimmed) || (trimmed.Any(char.IsLetter) && trimmed.All(c => !char.IsLetter(c) || char.IsUpper(c)))))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string FormatHeading(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.StartsWith('#'))
+        {
+            return trimmed;
+        }
+        return $"## {trimmed}";
+    }
+
+    private static bool IsCodeLike(string trimmed)
+    {
+        if (string.IsNullOrWhiteSpace(trimmed)) return false;
+        if (trimmed.StartsWith("//") || trimmed.StartsWith("/*") || trimmed.StartsWith("@page") || trimmed.StartsWith("@code")) return true;
+        if (trimmed is "{" or "}" or "};" or "});") return true;
+        if (trimmed.StartsWith("using ") && trimmed.EndsWith(';')) return true;
+        if (trimmed.StartsWith("namespace ")) return true;
+        if (trimmed.EndsWith(';') && (trimmed.Contains("var ") || trimmed.Contains('=') || trimmed.Contains("return ") || trimmed.Contains('('))) return true;
+        return false;
     }
 
     private static ExtractedPdfSlice CreateSlice(int order, string title, string content)
@@ -712,7 +1029,10 @@ public class PdfPigExtractor : IPdfExtractor
                 }
                 else
                 {
-                    sb.AppendLine();
+                    if (emptyLineStreak == 1)
+                    {
+                        sb.AppendLine();
+                    }
                 }
                 continue;
             }
@@ -732,20 +1052,6 @@ public class PdfPigExtractor : IPdfExtractor
                 continue;
             }
 
-            // Subheading detection: ALL CAPS lines (e.g. WORK EXPERIENCE, PREREQUISITES)
-            if (Regex.IsMatch(trimmed, @"^[A-Z0-9\s/&-]{4,40}$") && trimmed.Length >= 4 && !trimmed.Contains('.') && !trimmed.Contains(':'))
-            {
-                if (inCodeBlock)
-                {
-                    sb.AppendLine("```");
-                    inCodeBlock = false;
-                }
-                sb.AppendLine();
-                sb.AppendLine($"### {trimmed}");
-                sb.AppendLine();
-                continue;
-            }
-
             // Explicit markdown heading
             if (trimmed.StartsWith('#'))
             {
@@ -754,7 +1060,23 @@ public class PdfPigExtractor : IPdfExtractor
                     sb.AppendLine("```");
                     inCodeBlock = false;
                 }
+                sb.AppendLine();
                 sb.AppendLine(trimmed);
+                sb.AppendLine();
+                continue;
+            }
+
+            // Subheading detection: title patterns or uppercase titles
+            if (IsTitlePattern(trimmed))
+            {
+                if (inCodeBlock)
+                {
+                    sb.AppendLine("```");
+                    inCodeBlock = false;
+                }
+                sb.AppendLine();
+                sb.AppendLine($"## {trimmed}");
+                sb.AppendLine();
                 continue;
             }
 
@@ -793,8 +1115,9 @@ public class PdfPigExtractor : IPdfExtractor
         {
             sb.AppendLine("```");
         }
-
-        return sb.ToString();
+        var result = sb.ToString();
+        result = Regex.Replace(result, @"(\r?\n){3,}", "\n\n");
+        return result.Trim();
     }
 
     private static bool IsObviousProse(string trimmed)

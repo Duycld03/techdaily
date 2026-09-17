@@ -274,4 +274,12 @@ async function toggleFavorite(itemId: string) {
     expect(output).toContain('Vue.js')
     expect(output).toContain('href="https://learn.microsoft.com"')
   })
+
+  it('parses double newlines into separate semantic paragraph tags without collapsing', () => {
+    const { render } = useMarkdownRenderer()
+    const input = 'First paragraph with some text.\n\nSecond paragraph following double newline.'
+    const output = render(input)
+    expect(output).toContain('<p>First paragraph with some text.</p>')
+    expect(output).toContain('<p>Second paragraph following double newline.</p>')
+  })
 })
