@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import LibraryPage from '~/pages/library.vue'
-import { useLibraryStore } from '~/stores/useLibraryStore'
+import { useLibraryStore, type Book } from '~/stores/useLibraryStore'
 
 const mockBooks = [
   {
@@ -402,5 +402,156 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(wrapper.text()).toContain('library.pdf_service_note_2')
     expect(wrapper.text()).not.toContain('300 MB Streaming • Background Service')
     expect(wrapper.text()).not.toContain('Look-Ahead Buffer Synthesis')
+  })
+
+  it('renders book cards with flex flex-col flex-1 upper container and mt-auto pt-3 badge container', async () => {
+    const wrapper = mount(LibraryPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' },
+          Teleport: true
+        },
+        mocks: {
+          $t: (key: string, params?: Record<string, unknown>) => {
+            if (params && 'slice' in params) {
+              return `${key}:${params.slice}`
+            }
+            return key
+          }
+        }
+      }
+    })
+
+    const store = useLibraryStore()
+    store.books = [
+      {
+        id: 'book-1',
+        title: 'Clean Code',
+        slug: 'clean-code',
+        sourceType: 0,
+        category: 2,
+        totalChunks: 10,
+        isPublished: true,
+        createdAt: '2026-09-01T00:00:00Z',
+        status: 'Ready',
+        authorOrSourceUrl: 'Robert C. Martin'
+      } satisfies Book
+    ]
+    store.isLoading = false
+    await flushPromises()
+
+    // Card upper content container
+    const upperContainer = wrapper.find('.grid > div > div.flex.flex-col.flex-1')
+    expect(upperContainer.exists()).toBe(true)
+    expect(upperContainer.classes()).toContain('flex')
+    expect(upperContainer.classes()).toContain('flex-col')
+    expect(upperContainer.classes()).toContain('flex-1')
+
+    // Status badge container
+    const badgeContainer = upperContainer.find('div.mt-auto.pt-3')
+    expect(badgeContainer.exists()).toBe(true)
+    expect(badgeContainer.classes()).toContain('mt-auto')
+    expect(badgeContainer.classes()).toContain('pt-3')
+  })
+
+  it('maintains consistent mt-auto pt-3 container for multi-card scenario with 1-line and 2-line titles', async () => {
+    const wrapper = mount(LibraryPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' },
+          Teleport: true
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+
+    const store = useLibraryStore()
+    store.books = [
+      {
+        id: 'book-short',
+        title: 'Short Title',
+        slug: 'short-title',
+        sourceType: 0,
+        category: 1,
+        totalChunks: 5,
+        isPublished: true,
+        createdAt: '2026-09-01T00:00:00Z',
+        status: 'Ready',
+        authorOrSourceUrl: 'Short Author'
+      } satisfies Book,
+      {
+        id: 'book-long',
+        title: 'A Very Long Multi-Line Document Title That Wraps Across Multiple Lines In The Grid View',
+        slug: 'long-title',
+        sourceType: 0,
+        category: 2,
+        totalChunks: 25,
+        isPublished: true,
+        createdAt: '2026-09-01T00:00:00Z',
+        status: 'Ready',
+        authorOrSourceUrl: 'Long Author Details'
+      } satisfies Book
+    ]
+    store.isLoading = false
+    await flushPromises()
+
+    const cardUpperContainers = wrapper.findAll('.grid > div > div.flex.flex-col.flex-1')
+    expect(cardUpperContainers).toHaveLength(2)
+
+    cardUpperContainers.forEach((upper) => {
+      expect(upper.classes()).toContain('flex')
+      expect(upper.classes()).toContain('flex-col')
+      expect(upper.classes()).toContain('flex-1')
+
+      const badgeWrapper = upper.find('div.mt-auto.pt-3')
+      expect(badgeWrapper.exists()).toBe(true)
+      expect(badgeWrapper.classes()).toContain('mt-auto')
+      expect(badgeWrapper.classes()).toContain('pt-3')
+    })
+  })
+
+  it('maintains mt-auto pt-3 badge wrapper on book cards without authorOrSourceUrl without layout shift', async () => {
+    const wrapper = mount(LibraryPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' },
+          Teleport: true
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+
+    const store = useLibraryStore()
+    store.books = [
+      {
+        id: 'book-no-author',
+        title: 'Document Without Author',
+        slug: 'no-author',
+        sourceType: 0,
+        category: 3,
+        totalChunks: 14,
+        isPublished: true,
+        createdAt: '2026-09-01T00:00:00Z',
+        status: 'Ready'
+      } satisfies Book
+    ]
+    store.isLoading = false
+    await flushPromises()
+
+    const upperContainer = wrapper.find('.grid > div > div.flex.flex-col.flex-1')
+    expect(upperContainer.exists()).toBe(true)
+
+    // Verify author paragraph is absent
+    expect(upperContainer.find('p.font-mono').exists()).toBe(false)
+
+    // Verify status badge container remains correctly bottom-anchored
+    const badgeContainer = upperContainer.find('div.mt-auto.pt-3')
+    expect(badgeContainer.exists()).toBe(true)
+    expect(badgeContainer.classes()).toContain('mt-auto')
+    expect(badgeContainer.classes()).toContain('pt-3')
   })
 })

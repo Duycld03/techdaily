@@ -475,7 +475,7 @@ async function confirmDeleteBook() {
         :key="book.id"
         class="p-6 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-400 dark:hover:border-slate-700 transition-all flex flex-col justify-between space-y-4 group shadow-md dark:shadow-sm"
       >
-        <div>
+        <div class="flex flex-col flex-1">
           <div class="flex items-center justify-between gap-2 mb-3.5">
             <span class="px-3 py-1 rounded-lg bg-brand-100 dark:bg-brand-950/80 border border-brand-200 dark:border-brand-800/60 text-brand-800 dark:text-brand-300 text-xs font-bold">
               {{ getCategoryLabel(book.category) }}
@@ -494,22 +494,24 @@ async function confirmDeleteBook() {
             {{ book.authorOrSourceUrl }}
           </p>
 
-          <!-- Bookmark Badge if exists -->
-          <div v-if="bookmarks[book.id]" class="mt-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900 text-brand-700 dark:text-brand-300 text-xs sm:text-sm font-semibold">
-            <Bookmark class="w-3.5 h-3.5 text-brand-500 fill-brand-500" />
-            <span>{{ $t('library.resumes_at', { slice: bookmarks[book.id] }) }}</span>
-          </div>
-          <!-- Ready Badge if no bookmark -->
-          <div v-else-if="book.status === 'Ready' || (book.status as any) === 2" class="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm font-semibold">
-            <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
-            <span>{{ $t('library.ready_to_read') }}</span>
-          </div>
+          <div class="mt-auto pt-3">
+            <!-- Bookmark Badge if exists -->
+            <div v-if="bookmarks[book.id]" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900 text-brand-700 dark:text-brand-300 text-xs sm:text-sm font-semibold">
+              <Bookmark class="w-3.5 h-3.5 text-brand-500 fill-brand-500" />
+              <span>{{ $t('library.resumes_at', { slice: bookmarks[book.id] }) }}</span>
+            </div>
+            <!-- Ready Badge if no bookmark -->
+            <div v-else-if="book.status === 'Ready' || (book.status as any) === 2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm font-semibold">
+              <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
+              <span>{{ $t('library.ready_to_read') }}</span>
+            </div>
 
-          <!-- In-Progress Ingestion Indicator (Tier 1 Uploading) -->
-          <div v-if="book.status === 'Processing' || (book.status as any) === 1" class="mt-3.5 p-3 rounded-2xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20">
-            <div class="flex items-center gap-2 text-xs font-semibold text-brand-700 dark:text-brand-300">
-              <Loader2 class="w-3.5 h-3.5 text-brand-500 animate-spin shrink-0" />
-              <span class="truncate">{{ getStatusMessage(book) }}</span>
+            <!-- In-Progress Ingestion Indicator (Tier 1 Uploading) -->
+            <div v-if="book.status === 'Processing' || (book.status as any) === 1" class="p-3 rounded-2xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20">
+              <div class="flex items-center gap-2 text-xs font-semibold text-brand-700 dark:text-brand-300">
+                <Loader2 class="w-3.5 h-3.5 text-brand-500 animate-spin shrink-0" />
+                <span class="truncate">{{ getStatusMessage(book) }}</span>
+              </div>
             </div>
           </div>
         </div>
