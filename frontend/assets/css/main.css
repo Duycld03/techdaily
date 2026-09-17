@@ -41,7 +41,7 @@
 
 /* Markdown render styling with enhanced typography & dual theme */
 .markdown-body {
-  @apply text-base leading-relaxed;
+  @apply text-inherit leading-inherit;
 }
 
 .markdown-body h1 {
@@ -57,19 +57,24 @@
 }
 
 .markdown-body p {
-  @apply leading-relaxed mb-4 text-slate-700 dark:text-slate-300 text-sm md:text-base;
+  @apply mb-4 text-slate-700 dark:text-slate-300 text-inherit leading-inherit;
 }
 
 .markdown-body ul {
-  @apply list-disc list-outside ml-6 mb-4 space-y-1.5 text-slate-700 dark:text-slate-300 text-sm md:text-base;
+  @apply list-disc list-outside ml-6;
 }
 
 .markdown-body ol {
-  @apply list-decimal list-outside ml-6 mb-4 space-y-1.5 text-slate-700 dark:text-slate-300 text-sm md:text-base;
+  @apply list-decimal list-outside ml-6;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  @apply mb-4 space-y-1.5 text-slate-700 dark:text-slate-300 text-inherit leading-inherit;
 }
 
 .markdown-body li {
-  @apply pl-1 leading-relaxed;
+  @apply pl-1 leading-inherit text-inherit;
 }
 
 .markdown-body code:not(pre code) {

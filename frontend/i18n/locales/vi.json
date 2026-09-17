@@ -280,7 +280,7 @@
     "toast_crawl_failed": "Không thể trích xuất bài viết từ URL.",
     "toast_delete_success": "Đã xóa tài liệu khỏi thư viện.",
     "toast_delete_failed": "Không thể xóa tài liệu.",
-    "verbatim_category_hint": "💡 Mẹo: Chọn danh mục \"Tư Duy Kỹ Sư & Năng Suất\" nếu bạn muốn giữ nguyên văn 100% từng câu chữ của sách (không dùng AI tóm tắt ngắn lại)."
+    "verbatim_category_hint": "Mẹo: Chọn chuyên mục \"Tư Duy Kỹ Sư & Năng Suất\" để giữ nguyên văn 100% nội dung gốc (không tóm tắt)."
   },
   "reader": {
     "library": "Thư Viện",
@@ -297,9 +297,9 @@
     "typography_settings": "Cài đặt phông chữ & bố cục",
     "font_size": "Cỡ chữ",
     "font_family": "Phông chữ",
-    "font_sans": "Không chân (Sans)",
-    "font_serif": "Có chân (Serif)",
-    "font_mono": "Đơn cách (Mono)",
+    "font_sans": "Sans",
+    "font_serif": "Serif",
+    "font_mono": "Mono",
     "line_spacing": "Khoảng cách dòng",
     "spacing_normal": "Tiêu chuẩn",
     "spacing_relaxed": "Thoải mái",
@@ -307,7 +307,7 @@
     "reading_width": "Độ rộng trang",
     "width_standard": "Tiêu chuẩn",
     "width_wide": "Rộng",
-    "width_full": "Toàn màn hình",
+    "width_full": "Đầy đủ",
     "toc": "Mục Lục Tài Liệu",
     "done": "{count}/{total} hoàn thành",
     "read_min": "{minutes} phút đọc",

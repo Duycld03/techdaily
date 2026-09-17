@@ -84,13 +84,25 @@ const typography = ref<ReaderTypography>({ ...DEFAULT_TYPOGRAPHY })
 const isTypographyOpen = ref(false)
 const typographyDropdownRef = ref<HTMLElement | null>(null)
 
-const fontSizes: ('sm' | 'base' | 'lg' | 'xl' | '2xl')[] = ['sm', 'base', 'lg', 'xl', '2xl']
+const fontSizes: Array<ReaderTypography['fontSize']> = ['sm', 'base', 'lg', 'xl', '2xl']
 const fontScalePercentages: Record<ReaderTypography['fontSize'], string> = {
   sm: '85%',
   base: '100%',
   lg: '115%',
   xl: '130%',
   '2xl': '145%'
+}
+const fontSizePxMap: Record<ReaderTypography['fontSize'], string> = {
+  sm: '14px',
+  base: '16px',
+  lg: '18px',
+  xl: '20px',
+  '2xl': '22px'
+}
+const lineHeightMap: Record<ReaderTypography['lineSpacing'], string> = {
+  normal: '1.5',
+  relaxed: '1.75',
+  loose: '2.05'
 }
 
 const currentFontSizeIndex = computed(() => fontSizes.indexOf(typography.value.fontSize))
@@ -808,7 +820,7 @@ async function handleHighlightAndNote() {
           <!-- Typography Popover Dropdown (click-outside dismissed) -->
           <div
             v-if="isTypographyOpen"
-            class="absolute right-0 mt-2 w-72 sm:w-80 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl z-50 space-y-4 text-xs select-none"
+            class="absolute right-0 mt-2 w-80 sm:w-84 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl z-50 space-y-4 text-xs select-none"
           >
             <!-- Section 1: Font Size -->
             <div class="space-y-2">
@@ -868,7 +880,7 @@ async function handleHighlightAndNote() {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
-                  {{ $t('reader.font_sans') }}
+                  Sans
                 </button>
                 <button
                   type="button"
@@ -880,7 +892,7 @@ async function handleHighlightAndNote() {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
-                  {{ $t('reader.font_serif') }}
+                  Serif
                 </button>
                 <button
                   type="button"
@@ -892,7 +904,7 @@ async function handleHighlightAndNote() {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
-                  {{ $t('reader.font_mono') }}
+                  Mono
                 </button>
               </div>
             </div>
@@ -1344,18 +1356,14 @@ async function handleHighlightAndNote() {
 
           <!-- Markdown Body -->
           <article
-            class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-blockquote:not-italic prose-blockquote:before:content-none prose-blockquote:after:content-none prose-p:before:content-none prose-p:after:content-none prose-p:my-4 prose-p:leading-inherit transition-all duration-150"
+            class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-blockquote:not-italic prose-blockquote:before:content-none prose-blockquote:after:content-none prose-p:my-4 transition-all duration-150"
             :class="[
-              {
-                'text-sm': typography.fontSize === 'sm',
-                'text-base': typography.fontSize === 'base',
-                'text-lg': typography.fontSize === 'lg',
-                'text-xl': typography.fontSize === 'xl',
-                'text-2xl': typography.fontSize === '2xl'
-              },
-              typography.fontFamily === 'serif' ? 'font-serif' : (typography.fontFamily === 'mono' ? 'font-mono' : 'font-sans'),
-              typography.lineSpacing === 'loose' ? 'leading-loose' : (typography.lineSpacing === 'normal' ? 'leading-normal' : 'leading-relaxed')
+              typography.fontFamily === 'serif' ? 'font-serif' : (typography.fontFamily === 'mono' ? 'font-mono' : 'font-sans')
             ]"
+            :style="{
+              fontSize: fontSizePxMap[typography.fontSize],
+              lineHeight: lineHeightMap[typography.lineSpacing]
+            }"
             v-html="renderedMarkdown"
           ></article>
 
@@ -1600,3 +1608,14 @@ async function handleHighlightAndNote() {
 
   </div>
 </template>
+
+<style scoped>
+:deep(.markdown-body p),
+:deep(.markdown-body li),
+:deep(.markdown-body blockquote),
+:deep(.prose p),
+:deep(.prose li) {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+</style>

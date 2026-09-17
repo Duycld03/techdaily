@@ -549,10 +549,6 @@ async function confirmDeleteBook() {
                   <option :value="3">{{ $t('library.categories.system_design') }}</option>
                   <option :value="4">{{ $t('library.categories.craft') }}</option>
                 </select>
-                <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
-                  <Lightbulb class="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
-                  <span>{{ $t('library.verbatim_category_hint') }}</span>
-                </div>
               </div>
 
               <div>
@@ -564,6 +560,11 @@ async function confirmDeleteBook() {
                   class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
                 />
               </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+              <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
+              <span>{{ $t('library.verbatim_category_hint') }}</span>
             </div>
 
             <div>
@@ -698,11 +699,12 @@ async function confirmDeleteBook() {
                   <option :value="3">{{ $t('library.categories.system_design') }}</option>
                   <option :value="4">{{ $t('library.categories.craft') }}</option>
                 </select>
-                <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
-                  <Lightbulb class="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
-                  <span>{{ $t('library.verbatim_category_hint') }}</span>
-                </div>
               </div>
+            </div>
+
+            <div v-show="!isProcessingPdf" class="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+              <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
+              <span>{{ $t('library.verbatim_category_hint') }}</span>
             </div>
 
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3 pt-3 sm:pt-4">
@@ -764,8 +766,8 @@ async function confirmDeleteBook() {
                 <option :value="3">{{ $t('library.categories.system_design') }}</option>
                 <option :value="4">{{ $t('library.categories.craft') }}</option>
               </select>
-              <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
-                <Lightbulb class="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
+              <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+                <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
                 <span>{{ $t('library.verbatim_category_hint') }}</span>
               </div>
             </div>

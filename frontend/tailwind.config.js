@@ -48,6 +48,12 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         serif: ['Merriweather', 'Georgia', 'Cambria', 'Times New Roman', 'serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+      },
+      spacing: {
+        84: '21rem'
+      },
+      lineHeight: {
+        inherit: 'inherit'
       }
     }
   },
