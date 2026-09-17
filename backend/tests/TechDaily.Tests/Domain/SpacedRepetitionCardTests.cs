@@ -104,4 +104,49 @@ public class SpacedRepetitionCardTests
         var act = () => card.ApplyReview(invalidGrade);
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
+
+    [Fact]
+    public void UpdateContent_ShouldUpdateMarkdownAndSetUpdatedAt()
+    {
+        // Arrange
+        var card = SpacedRepetitionCard.Create(Guid.NewGuid(), Guid.NewGuid());
+        var before = DateTimeOffset.UtcNow.AddSeconds(-1);
+
+        // Act
+        card.UpdateContent("# Updated Front", "# Updated Back");
+
+        // Assert
+        card.FrontMarkdown.Should().Be("# Updated Front");
+        card.BackMarkdown.Should().Be("# Updated Back");
+        card.UpdatedAt.Should().NotBeNull();
+        card.UpdatedAt.Should().BeAfter(before);
+    }
+
+    [Fact]
+    public void ResetProgression_ShouldResetSM2MetricsBackToInitialLearningState()
+    {
+        // Arrange
+        var card = SpacedRepetitionCard.Create(Guid.NewGuid(), Guid.NewGuid(), new DateOnly(2026, 1, 1));
+        card.ApplyReview(5, new DateOnly(2026, 1, 1));
+        card.ApplyReview(5, new DateOnly(2026, 1, 2));
+        card.ApplyReview(5, new DateOnly(2026, 1, 8));
+        card.ApplyReview(5, new DateOnly(2026, 1, 24)); // Reaches Mastered
+
+        card.Status.Should().Be(CardStatus.Mastered);
+        card.RepetitionCount.Should().Be(4);
+        card.IntervalDays.Should().BeGreaterThan(1);
+
+        var resetDate = new DateOnly(2026, 5, 1);
+
+        // Act
+        card.ResetProgression(resetDate);
+
+        // Assert
+        card.RepetitionCount.Should().Be(0);
+        card.IntervalDays.Should().Be(1);
+        card.EaseFactor.Should().Be(2.50m);
+        card.Status.Should().Be(CardStatus.Learning);
+        card.NextReviewDate.Should().Be(resetDate);
+        card.UpdatedAt.Should().NotBeNull();
+    }
 }

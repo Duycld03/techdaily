@@ -5,6 +5,11 @@ using TechDaily.Application.Features.Review.GetReviewDeck;
 using TechDaily.Application.Features.Review.GradeReviewCard;
 using TechDaily.Application.Features.Review.CreateCardFromHighlight;
 using TechDaily.Application.Features.Review.CreateCardFromQuizMistake;
+using TechDaily.Application.Features.Review.GetReviewCards;
+using TechDaily.Application.Features.Review.UpdateReviewCard;
+using TechDaily.Application.Features.Review.DeleteReviewCard;
+using TechDaily.Application.Features.Review.ResetReviewCardProgress;
+using TechDaily.Domain.Enums;
 
 namespace TechDaily.Api.Endpoints;
 
@@ -115,6 +120,109 @@ public static class ReviewEndpoints
         .WithName("CreateCardFromQuizMistake")
         .WithSummary("Creates or retrieves a spaced repetition card from a failed quiz question.");
 
+        group.MapGet("/cards", async (
+            [FromQuery] string? search,
+            [FromQuery] CardStatus? status,
+            [FromQuery] CardSourceType? sourceType,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            ClaimsPrincipal userClaims = null!,
+            IUseCase<GetReviewCardsRequest, GetReviewCardsResponse> handler = null!,
+            CancellationToken ct = default) =>
+        {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var request = new GetReviewCardsRequest(userId.Value, search, status, sourceType, page, pageSize);
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.Match(
+                success => Results.Ok(success),
+                error => Results.BadRequest(new { code = error.Code, error = error.Message })
+            );
+        })
+        .RequireAuthorization()
+        .WithName("GetReviewCards")
+        .WithSummary("Retrieves paginated flashcards in user's personal deck with search, filtering, and deck statistics.");
+
+        group.MapPut("/cards/{id:guid}", async (
+            Guid id,
+            [FromBody] UpdateReviewCardApiRequest body,
+            ClaimsPrincipal userClaims,
+            IUseCase<UpdateReviewCardRequest, UpdateReviewCardResponse> handler,
+            CancellationToken ct) =>
+        {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var request = new UpdateReviewCardRequest(id, userId.Value, body.FrontMarkdown, body.BackMarkdown);
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.Match(
+                success => Results.Ok(success),
+                error => error == Error.NotFound
+                    ? Results.NotFound(new { code = error.Code, error = error.Message })
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+            );
+        })
+        .RequireAuthorization()
+        .WithName("UpdateReviewCard")
+        .WithSummary("Updates front and back markdown content for a flashcard.");
+
+        group.MapDelete("/cards/{id:guid}", async (
+            Guid id,
+            ClaimsPrincipal userClaims,
+            IUseCase<DeleteReviewCardRequest, DeleteReviewCardResponse> handler,
+            CancellationToken ct) =>
+        {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var request = new DeleteReviewCardRequest(id, userId.Value);
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.Match(
+                success => Results.Ok(success),
+                error => error == Error.NotFound
+                    ? Results.NotFound(new { code = error.Code, error = error.Message })
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+            );
+        })
+        .RequireAuthorization()
+        .WithName("DeleteReviewCard")
+        .WithSummary("Soft-deletes a spaced repetition card from user's personal deck.");
+
+        group.MapPost("/cards/{id:guid}/reset", async (
+            Guid id,
+            ClaimsPrincipal userClaims,
+            IUseCase<ResetReviewCardProgressRequest, ResetReviewCardProgressResponse> handler,
+            CancellationToken ct) =>
+        {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var request = new ResetReviewCardProgressRequest(id, userId.Value);
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.Match(
+                success => Results.Ok(success),
+                error => error == Error.NotFound
+                    ? Results.NotFound(new { code = error.Code, error = error.Message })
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+            );
+        })
+        .RequireAuthorization()
+        .WithName("ResetReviewCardProgress")
+        .WithSummary("Resets SM-2 progression for a review card back to initial learning state.");
+
         return group;
     }
 
@@ -144,3 +252,5 @@ public class CreateCardFromQuizMistakeJsonRequest
 {
     public Guid QuestionId { get; set; }
 }
+
+public record UpdateReviewCardApiRequest(string FrontMarkdown, string BackMarkdown);

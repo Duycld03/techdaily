@@ -16,10 +16,15 @@ using TechDaily.Application.Features.Library.ExportBookMarkdown;
 using TechDaily.Application.Features.Notes.CreateHighlight;
 using TechDaily.Application.Features.Notes.DeleteHighlight;
 using TechDaily.Application.Features.Notes.GetHighlights;
+using TechDaily.Application.Features.Notes.UpdateHighlight;
 using TechDaily.Application.Features.Review.GetReviewDeck;
 using TechDaily.Application.Features.Review.GradeReviewCard;
 using TechDaily.Application.Features.Review.CreateCardFromHighlight;
 using TechDaily.Application.Features.Review.CreateCardFromQuizMistake;
+using TechDaily.Application.Features.Review.GetReviewCards;
+using TechDaily.Application.Features.Review.UpdateReviewCard;
+using TechDaily.Application.Features.Review.DeleteReviewCard;
+using TechDaily.Application.Features.Review.ResetReviewCardProgress;
 
 namespace TechDaily.Application;
 
@@ -43,6 +48,10 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<GradeReviewCardRequest, GradeReviewCardResponse>, GradeReviewCardHandler>();
         services.AddScoped<IUseCase<CreateCardFromHighlightRequest, CreateCardFromHighlightResponse>, CreateCardFromHighlightHandler>();
         services.AddScoped<IUseCase<CreateCardFromQuizMistakeRequest, CreateCardFromQuizMistakeResponse>, CreateCardFromQuizMistakeHandler>();
+        services.AddScoped<IUseCase<GetReviewCardsRequest, GetReviewCardsResponse>, GetReviewCardsHandler>();
+        services.AddScoped<IUseCase<UpdateReviewCardRequest, UpdateReviewCardResponse>, UpdateReviewCardHandler>();
+        services.AddScoped<IUseCase<DeleteReviewCardRequest, DeleteReviewCardResponse>, DeleteReviewCardHandler>();
+        services.AddScoped<IUseCase<ResetReviewCardProgressRequest, ResetReviewCardProgressResponse>, ResetReviewCardProgressHandler>();
 
         // Library Handlers
         services.AddScoped<IUseCase<GetBooksRequest, GetBooksResponse>, GetBooksHandler>();
@@ -60,6 +69,7 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<GetHighlightsRequest, GetHighlightsResponse>, GetHighlightsHandler>();
         services.AddScoped<IUseCase<CreateHighlightRequest, CreateHighlightResponse>, CreateHighlightHandler>();
         services.AddScoped<IUseCase<DeleteHighlightRequest, DeleteHighlightResponse>, DeleteHighlightHandler>();
+        services.AddScoped<IUseCase<UpdateHighlightRequest, UpdateHighlightResponse>, UpdateHighlightHandler>();
 
         // Tech Insights Feed Handlers
         services.AddScoped<IUseCase<Features.Insights.DTOs.GetInsightsFeedRequest, Features.Insights.DTOs.GetInsightsFeedResponse>, Features.Insights.GetInsightsFeed.GetInsightsFeedHandler>();

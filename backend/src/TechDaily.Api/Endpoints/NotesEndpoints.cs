@@ -4,6 +4,7 @@ using TechDaily.Application.Common;
 using TechDaily.Application.Features.Notes.CreateHighlight;
 using TechDaily.Application.Features.Notes.DeleteHighlight;
 using TechDaily.Application.Features.Notes.GetHighlights;
+using TechDaily.Application.Features.Notes.UpdateHighlight;
 
 namespace TechDaily.Api.Endpoints;
 
@@ -62,6 +63,31 @@ public static class NotesEndpoints
         })
         .WithName("CreateHighlight");
 
+        group.MapPut("/highlights/{id:guid}", async (
+            Guid id,
+            [FromBody] UpdateHighlightApiRequest body,
+            ClaimsPrincipal userClaims,
+            [FromServices] IUseCase<UpdateHighlightRequest, UpdateHighlightResponse> handler,
+            CancellationToken ct) =>
+        {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var request = new UpdateHighlightRequest(id, userId.Value, body.Note, body.Tags);
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.Match(
+                success => Results.Ok(success),
+                error => error == Error.NotFound 
+                    ? Results.NotFound(new { code = error.Code, error = error.Message }) 
+                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+            );
+        })
+        .WithName("UpdateHighlight")
+        .WithSummary("Updates reflection note and tags for a reading highlight.");
+
         group.MapDelete("/highlights/{id:guid}", async (
             Guid id,
             ClaimsPrincipal userClaims,
@@ -101,5 +127,9 @@ public static class NotesEndpoints
 public record CreateHighlightApiRequest(
     Guid DocumentChunkId,
     string SelectedText,
+    string? Note = null,
+    List<string>? Tags = null);
+
+public record UpdateHighlightApiRequest(
     string? Note = null,
     List<string>? Tags = null);

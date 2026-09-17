@@ -18,12 +18,9 @@ import {
   AlertTriangle,
   AlertCircle,
   RefreshCw,
-  FileText,
   Download,
-  Zap,
   Loader2,
 } from "lucide-vue-next";
-import { useReviewStore } from "~/stores/useReviewStore";
 import type { BookDetail, ChunkSummary } from "~/stores/useLibraryStore";
 import TermExplainerModal from "~/components/today/TermExplainerModal.vue";
 import ThemeToggle from "~/components/common/ThemeToggle.vue";
@@ -35,8 +32,6 @@ const route = useRoute();
 const router = useRouter();
 const libraryStore = useLibraryStore();
 const notesStore = useNotesStore();
-const reviewStore = useReviewStore();
-const isCreatingFlashcard = ref(false);
 const {
   render: renderMarkdown,
   initHighlighter,
@@ -58,8 +53,10 @@ const floatingToolbar = ref({
   selectedText: "",
   surroundingContext: "",
 });
-// Note Popover State
+// Note Popover & Highlight State
 const isNotePopoverOpen = ref(false);
+const currentHighlightId = ref<string | null>(null);
+const isCreatingHighlight = ref(false);
 const noteText = ref("");
 const tagInput = ref("");
 const isSavingNote = ref(false);
@@ -67,21 +64,13 @@ const isSavingNote = ref(false);
 // Export State
 const isExportingMarkdown = ref(false);
 
-function toggleNotePopover() {
-  isNotePopoverOpen.value = !isNotePopoverOpen.value;
-  if (!isNotePopoverOpen.value) {
-    noteText.value = "";
-    tagInput.value = "";
-  }
-}
-
 function cancelNotePopover() {
   isNotePopoverOpen.value = false;
+  currentHighlightId.value = null;
   noteText.value = "";
   tagInput.value = "";
   floatingToolbar.value.visible = false;
 }
-
 async function handleSaveNote() {
   if (!floatingToolbar.value.selectedText || !currentChunk.value?.id) return;
   isSavingNote.value = true;
@@ -91,19 +80,31 @@ async function handleSaveNote() {
       .map((t) => t.trim().replace(/^#/, ""))
       .filter((t) => t.length > 0);
 
-    await notesStore.createHighlight({
-      documentChunkId: currentChunk.value.id,
-      selectedText: floatingToolbar.value.selectedText,
-      note: noteText.value.trim() || undefined,
-      tags: tags.length > 0 ? tags : undefined,
-    });
+    const note = noteText.value.trim() || undefined;
+    const finalTags = tags.length > 0 ? tags : undefined;
+
+    if (currentHighlightId.value) {
+      await notesStore.updateHighlight(currentHighlightId.value, {
+        note,
+        tags: finalTags,
+      });
+    } else {
+      await notesStore.createHighlight({
+        documentChunkId: currentChunk.value.id,
+        selectedText: floatingToolbar.value.selectedText.trim(),
+        note,
+        tags: finalTags,
+      });
+    }
+
     toast.success(t("reader.toast_note_success"));
     isNotePopoverOpen.value = false;
+    currentHighlightId.value = null;
     noteText.value = "";
     tagInput.value = "";
     floatingToolbar.value.visible = false;
-  } catch (err: any) {
-    toast.error(err.message || t("reader.toast_highlight_error"));
+  } catch (err: unknown) {
+    toast.error(err instanceof Error ? err.message : t("reader.toast_highlight_error"));
   } finally {
     isSavingNote.value = false;
   }
@@ -502,6 +503,7 @@ function handleTextSelection(event: MouseEvent) {
     if (!selection || selection.isCollapsed) {
       floatingToolbar.value.visible = false;
       isNotePopoverOpen.value = false;
+      currentHighlightId.value = null;
       return;
     }
 
@@ -509,6 +511,7 @@ function handleTextSelection(event: MouseEvent) {
     if (selectedStr.length < 2 || selectedStr.length > 500) {
       floatingToolbar.value.visible = false;
       isNotePopoverOpen.value = false;
+      currentHighlightId.value = null;
       return;
     }
 
@@ -532,6 +535,7 @@ function handleCopySelection() {
   toast.info(t("reader.toast_copy"));
   floatingToolbar.value.visible = false;
   isNotePopoverOpen.value = false;
+  currentHighlightId.value = null;
 }
 
 function handleExplainSelection() {
@@ -543,42 +547,32 @@ function handleExplainSelection() {
   currentContext.value = surrounding || currentChunk.value?.chapterTitle || "";
   floatingToolbar.value.visible = false;
   isNotePopoverOpen.value = false;
+  currentHighlightId.value = null;
   isExplainerOpen.value = true;
 }
 
-async function handleHighlightSelection() {
+async function handleHighlightAndNote() {
   if (!floatingToolbar.value.selectedText || !currentChunk.value?.id) return;
-  try {
-    await notesStore.createHighlight({
-      documentChunkId: currentChunk.value.id,
-      selectedText: floatingToolbar.value.selectedText.trim(),
-    });
-    toast.success(t("reader.toast_highlight_success"));
-  } catch (err: any) {
-    toast.error(err.message || t("reader.toast_highlight_error"));
-  } finally {
-    floatingToolbar.value.visible = false;
-    isNotePopoverOpen.value = false;
-  }
-}
-async function handleCreateFlashcardFromSelection() {
-  if (!floatingToolbar.value.selectedText || !currentChunk.value?.id) return;
-  isCreatingFlashcard.value = true;
+  if (isCreatingHighlight.value) return;
+
+  if (isNotePopoverOpen.value) return;
+
+  isCreatingHighlight.value = true;
   try {
     const highlight = await notesStore.createHighlight({
       documentChunkId: currentChunk.value.id,
       selectedText: floatingToolbar.value.selectedText.trim(),
     });
-    const localeVal = (locale.value as string) || "en";
-    await reviewStore.createCardFromHighlight(highlight.id, localeVal);
-    toast.success(t("reader.toast_flashcard_success"));
+    currentHighlightId.value = highlight.id;
+    isNotePopoverOpen.value = true;
+    toast.success(t("reader.toast_highlight_success"));
+  } catch (err: unknown) {
+    toast.error(err instanceof Error ? err.message : t("reader.toast_highlight_error"));
     floatingToolbar.value.visible = false;
     isNotePopoverOpen.value = false;
-    window.getSelection()?.removeAllRanges();
-  } catch (err: any) {
-    toast.error(err.message || "Failed to create flashcard.");
+    currentHighlightId.value = null;
   } finally {
-    isCreatingFlashcard.value = false;
+    isCreatingHighlight.value = false;
   }
 }
 </script>
@@ -1199,54 +1193,36 @@ async function handleCreateFlashcardFromSelection() {
       >
         <!-- Horizontal Action Buttons -->
         <div class="flex items-center gap-1">
+          <!-- 1. Explain with Gemini -->
           <button
             @click="handleExplainSelection"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow transition-colors"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow transition-colors whitespace-nowrap shrink-0"
           >
             <Sparkles class="w-3.5 h-3.5" />
             <span>{{ $t("reader.explain_with_gemini") }}</span>
           </button>
 
-          <!-- 1-Click Highlight without note -->
+          <!-- 2. Highlight/Note -->
           <button
-            @click="handleHighlightSelection"
-            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950 transition-colors"
-            :title="$t('reader.highlight_save_tooltip')"
-          >
-            <Highlighter class="w-3.5 h-3.5" />
-            <span>Highlight</span>
-          </button>
-
-          <!-- 1-Click Flashcard -->
-          <button
-            @click="handleCreateFlashcardFromSelection"
-            :disabled="isCreatingFlashcard"
-            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500 hover:text-slate-950 transition-colors disabled:opacity-50"
-            title="Create Flashcard for SM-2 Review"
-          >
-            <Loader2 v-if="isCreatingFlashcard" class="w-3.5 h-3.5 animate-spin" />
-            <Zap v-else class="w-3.5 h-3.5" />
-            <span>{{ isCreatingFlashcard ? "..." : ($t("reader.btn_flashcard") || "Flashcard") }}</span>
-          </button>
-
-          <!-- Add Note with expandable popover -->
-          <button
-            @click="toggleNotePopover"
+            @click="handleHighlightAndNote"
+            :disabled="isCreatingHighlight"
             :class="[
-              'flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors',
+              'flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap shrink-0 disabled:opacity-50',
               isNotePopoverOpen
-                ? 'bg-blue-600 text-white shadow'
-                : 'bg-blue-500/20 text-blue-300 hover:bg-blue-500 hover:text-white'
+                ? 'bg-amber-500 text-slate-950 shadow'
+                : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950'
             ]"
-            :title="$t('reader.add_note')"
+            :title="$t('reader.highlight_note')"
           >
-            <FileText class="w-3.5 h-3.5" />
-            <span>{{ $t("reader.add_note") }}</span>
+            <Loader2 v-if="isCreatingHighlight" class="w-3.5 h-3.5 animate-spin" />
+            <Highlighter v-else class="w-3.5 h-3.5" />
+            <span>{{ $t("reader.highlight_note") }}</span>
           </button>
 
+          <!-- 3. Copy -->
           <button
             @click="handleCopySelection"
-            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors whitespace-nowrap shrink-0"
           >
             <Copy class="w-3.5 h-3.5" />
             <span>{{ $t("reader.copy") }}</span>

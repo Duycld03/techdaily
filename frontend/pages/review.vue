@@ -1,15 +1,49 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
-import { CheckCircle, Sparkles } from 'lucide-vue-next'
+import { ref, computed, watch, onMounted } from 'vue'
+import {
+  CheckCircle,
+  Sparkles,
+  Layers,
+  Clock,
+  Search,
+  X,
+  Pencil,
+  RotateCcw,
+  Trash2,
+  Library,
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  Check,
+  HelpCircle,
+  FileText
+} from 'lucide-vue-next'
 import confetti from 'canvas-confetti'
 import FlashcardDeck from '~/components/review/FlashcardDeck.vue'
+import { useReviewStore, type ReviewCard } from '~/stores/useReviewStore'
+import { useApiError } from '~/composables/useApiError'
+import MarkdownIt from 'markdown-it'
 
+const { t } = useI18n()
+const { formatError } = useApiError()
 const reviewStore = useReviewStore()
+const toast = useToast()
 
-onMounted(() => {
-  reviewStore.fetchReviewDeck()
-})
+const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
 
+function renderMarkdown(raw: string | undefined | null): string {
+  if (!raw) return ''
+  const clean = raw.replace(/\\n/g, '\n')
+  return md.render(clean)
+}
+
+// Navigation Tab State
+const activeTab = ref<'session' | 'management'>('session')
+
+// Tab 1: Review Session Logic
 const currentCard = computed(() => {
   return reviewStore.cards[0] || null
 })
@@ -27,53 +61,845 @@ async function onGrade(score: number) {
     })
   }
 }
+
+// Tab 2: Deck Management State
+const searchQuery = ref('')
+const selectedStatus = ref<number | null>(null)
+const selectedSource = ref<number | null>(null)
+const expandedCardIds = ref<Set<string>>(new Set())
+
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(reviewStore.deckTotalCount / reviewStore.deckPageSize))
+})
+
+async function fetchDeck(page = 1) {
+  try {
+    await reviewStore.fetchDeckCards({
+      page,
+      pageSize: reviewStore.deckPageSize,
+      search: searchQuery.value.trim() || undefined,
+      status: selectedStatus.value !== null ? selectedStatus.value : undefined,
+      sourceType: selectedSource.value !== null ? selectedSource.value : undefined
+    })
+  } catch (err: unknown) {
+    toast.error(formatError(err, 'review.toast_update_error'))
+  }
+}
+
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+watch(searchQuery, () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    fetchDeck(1)
+  }, 300)
+})
+
+function setStatusFilter(status: number | null) {
+  selectedStatus.value = status
+  fetchDeck(1)
+}
+
+function setSourceFilter(source: number | null) {
+  selectedSource.value = source
+  fetchDeck(1)
+}
+
+function toggleCardAnswer(cardId: string) {
+  if (expandedCardIds.value.has(cardId)) {
+    expandedCardIds.value.delete(cardId)
+  } else {
+    expandedCardIds.value.add(cardId)
+  }
+}
+
+function isDueToday(dateStr: string): boolean {
+  if (!dateStr) return false
+  const today = new Date().toISOString().slice(0, 10)
+  return dateStr <= today
+}
+
+function getSourceBadge(sourceType?: number) {
+  switch (sourceType) {
+    case 1:
+      return {
+        label: t('review.source_highlight'),
+        color: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+      }
+    case 2:
+      return {
+        label: t('review.source_quiz_mistake'),
+        color: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+      }
+    default:
+      return {
+        label: t('review.source_topic'),
+        color: 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800'
+      }
+  }
+}
+
+function getStatusBadge(status?: number) {
+  switch (status) {
+    case 1:
+      return {
+        label: t('review.status_reviewing'),
+        color: 'bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+      }
+    case 2:
+      return {
+        label: t('review.status_mastered'),
+        color: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+      }
+    default:
+      return {
+        label: t('review.status_learning'),
+        color: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+      }
+  }
+}
+
+// Edit Modal State
+const cardToEdit = ref<ReviewCard | null>(null)
+const editFrontMarkdown = ref('')
+const editBackMarkdown = ref('')
+const editActiveTab = ref<'edit' | 'preview'>('edit')
+const isSavingCard = ref(false)
+
+function openEditModal(card: ReviewCard) {
+  cardToEdit.value = card
+  editFrontMarkdown.value = card.frontMarkdown || card.topicTitle || ''
+  editBackMarkdown.value = card.backMarkdown || card.topicSummary || ''
+  editActiveTab.value = 'edit'
+}
+
+function closeEditModal() {
+  cardToEdit.value = null
+  editFrontMarkdown.value = ''
+  editBackMarkdown.value = ''
+}
+
+async function confirmSaveCard() {
+  if (!cardToEdit.value) return
+  if (!editFrontMarkdown.value.trim() || !editBackMarkdown.value.trim()) {
+    toast.error('Both front and back markdown cannot be empty.')
+    return
+  }
+
+  isSavingCard.value = true
+  try {
+    await reviewStore.updateCard(cardToEdit.value.id, {
+      frontMarkdown: editFrontMarkdown.value.trim(),
+      backMarkdown: editBackMarkdown.value.trim()
+    })
+    toast.success(t('review.toast_update_success'))
+    closeEditModal()
+  } catch (err: unknown) {
+    toast.error(formatError(err, 'review.toast_update_error'))
+  } finally {
+    isSavingCard.value = false
+  }
+}
+
+// Reset Modal State
+const cardToReset = ref<ReviewCard | null>(null)
+const isResetting = ref(false)
+
+function openResetModal(card: ReviewCard) {
+  cardToReset.value = card
+}
+
+function closeResetModal() {
+  cardToReset.value = null
+}
+
+async function confirmResetCard() {
+  if (!cardToReset.value) return
+  isResetting.value = true
+  try {
+    await reviewStore.resetCardProgress(cardToReset.value.id)
+    toast.success(t('review.toast_reset_success'))
+    closeResetModal()
+    // Refresh review queue as well since reset cards become due
+    await reviewStore.fetchReviewDeck()
+  } catch (err: unknown) {
+    toast.error(formatError(err, 'review.toast_reset_error'))
+  } finally {
+    isResetting.value = false
+  }
+}
+
+// Delete Modal State
+const cardToDelete = ref<ReviewCard | null>(null)
+const isDeleting = ref(false)
+
+function openDeleteModal(card: ReviewCard) {
+  cardToDelete.value = card
+}
+
+function closeDeleteModal() {
+  cardToDelete.value = null
+}
+
+async function confirmDeleteCard() {
+  if (!cardToDelete.value) return
+  isDeleting.value = true
+  try {
+    await reviewStore.deleteCard(cardToDelete.value.id)
+    toast.success(t('review.toast_delete_success'))
+    closeDeleteModal()
+    // If it was in today's review deck, refresh it too
+    await reviewStore.fetchReviewDeck()
+  } catch (err: unknown) {
+    toast.error(formatError(err, 'review.toast_delete_error'))
+  } finally {
+    isDeleting.value = false
+  }
+}
+
+onMounted(() => {
+  reviewStore.fetchReviewDeck()
+  fetchDeck(1)
+})
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] p-4 sm:p-6 md:p-10 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-    <!-- Loading -->
-    <div v-if="reviewStore.isLoading" class="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
-      <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"></div>
-      <span>Loading Spaced Repetition Deck...</span>
+  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] p-4 sm:p-6 md:p-10 flex flex-col items-center bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+    <!-- Top-Level Tab Switcher -->
+    <div class="w-full max-w-5xl flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-6 sm:mb-8">
+      <div class="flex items-center gap-2">
+        <!-- Tab 1: Review Session -->
+        <button
+          @click="activeTab = 'session'"
+          :class="[
+            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 border whitespace-nowrap shrink-0',
+            activeTab === 'session'
+              ? 'bg-brand-600 text-white border-transparent shadow-sm'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+          ]"
+        >
+          <Layers class="w-4 h-4" />
+          <span>{{ $t('review.tab_session') }}</span>
+          <span
+            v-if="reviewStore.cards.length > 0"
+            class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white ml-0.5"
+          >
+            {{ reviewStore.cards.length }}
+          </span>
+        </button>
+
+        <!-- Tab 2: Deck Management -->
+        <button
+          @click="activeTab = 'management'"
+          :class="[
+            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 border whitespace-nowrap shrink-0',
+            activeTab === 'management'
+              ? 'bg-brand-600 text-white border-transparent shadow-sm'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+          ]"
+        >
+          <Library class="w-4 h-4" />
+          <span>{{ $t('review.tab_management') }}</span>
+          <span
+            v-if="reviewStore.deckStatistics.totalCards > 0"
+            class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 ml-0.5 border border-slate-200 dark:border-slate-700"
+          >
+            {{ reviewStore.deckStatistics.totalCards }}
+          </span>
+        </button>
+      </div>
     </div>
 
-    <!-- Active Review Deck -->
-    <div v-else-if="currentCard" class="w-full max-w-2xl">
-      <div class="text-center mb-8">
-        <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          {{ $t('review.title') }}
-        </h1>
-        <p class="text-sm md:text-lg text-slate-500 dark:text-slate-400 mt-1.5">{{ $t('review.subtitle') }}</p>
+    <!-- ========================================================================= -->
+    <!-- TAB 1: REVIEW SESSION                                                     -->
+    <!-- ========================================================================= -->
+    <div v-if="activeTab === 'session'" class="w-full flex flex-col items-center justify-center flex-1">
+      <!-- Loading State -->
+      <div v-if="reviewStore.isLoading" class="flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400 text-sm py-16">
+        <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"></div>
+        <span>Loading Spaced Repetition Deck...</span>
       </div>
 
-      <FlashcardDeck
-        :card="currentCard"
-        :remaining-count="reviewStore.cards.length"
-        @grade="onGrade"
-      />
+      <!-- Active Review Deck -->
+      <div v-else-if="currentCard" class="w-full max-w-2xl">
+        <div class="text-center mb-6 sm:mb-8">
+          <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            {{ $t('review.title') }}
+          </h1>
+          <p class="text-sm md:text-lg text-slate-500 dark:text-slate-400 mt-1.5">{{ $t('review.subtitle') }}</p>
+        </div>
+
+        <FlashcardDeck
+          :card="currentCard"
+          :remaining-count="reviewStore.cards.length"
+          @grade="onGrade"
+        />
+      </div>
+
+      <!-- Empty / Completed State -->
+      <div v-else class="text-center max-w-md p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl animate-in zoom-in-95 duration-200 my-auto">
+        <div class="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <CheckCircle class="w-8 h-8" />
+        </div>
+
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2">
+          {{ $t('review.no_cards') }}
+        </h2>
+
+        <p class="text-sm md:text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-7">
+          {{ $t('review.no_cards_desc') }}
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <!-- Button to switch to Tab 2 to browse full deck -->
+          <button
+            @click="activeTab = 'management'"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm border border-slate-200 dark:border-slate-700 transition-all whitespace-nowrap shrink-0"
+          >
+            <Library class="w-4 h-4 text-brand-500" />
+            <span>{{ $t('review.browse_deck_btn') }}</span>
+          </button>
+
+          <!-- Continue drill button -->
+          <NuxtLink
+            to="/today"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0"
+          >
+            <Sparkles class="w-4 h-4" />
+            <span>{{ $t('review.continue_drill') }}</span>
+          </NuxtLink>
+        </div>
+      </div>
     </div>
 
-    <!-- Empty / Completed State -->
-    <div v-else class="text-center max-w-md p-8 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl animate-in zoom-in-95 duration-200">
-      <div class="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto mb-4 shadow-sm">
-        <CheckCircle class="w-8 h-8" />
+    <!-- ========================================================================= -->
+    <!-- TAB 2: DECK MANAGEMENT                                                    -->
+    <!-- ========================================================================= -->
+    <div v-else-if="activeTab === 'management'" class="w-full max-w-5xl space-y-6">
+      <!-- 1. Statistics Cards Overview -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- Total Cards -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div class="w-11 h-11 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800 flex items-center justify-center shrink-0">
+            <Layers class="w-5 h-5" />
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $t('review.total_cards') }}</div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">{{ reviewStore.deckStatistics.totalCards }}</div>
+          </div>
+        </div>
+
+        <!-- Learning Cards -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div class="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center justify-center shrink-0">
+            <Sparkles class="w-5 h-5" />
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $t('review.learning_cards') }}</div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">{{ reviewStore.deckStatistics.learningCount }}</div>
+          </div>
+        </div>
+
+        <!-- Reviewing Cards -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div class="w-11 h-11 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 flex items-center justify-center shrink-0">
+            <Clock class="w-5 h-5" />
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $t('review.reviewing_cards') }}</div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">{{ reviewStore.deckStatistics.reviewingCount }}</div>
+          </div>
+        </div>
+
+        <!-- Mastered Cards -->
+        <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3.5">
+          <div class="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center shrink-0">
+            <CheckCircle class="w-5 h-5" />
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $t('review.mastered_cards') }}</div>
+            <div class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">{{ reviewStore.deckStatistics.masteredCount }}</div>
+          </div>
+        </div>
       </div>
 
-      <h2 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mb-2">
-        {{ $t('review.no_cards') }}
-      </h2>
+      <!-- 2. Search & Filter Bar -->
+      <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <!-- Search input -->
+        <div class="relative">
+          <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            class="w-full pl-10 pr-9 py-2.5 text-xs sm:text-sm rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
+            :placeholder="$t('review.search_placeholder')"
+          />
+          <button
+            v-if="searchQuery"
+            @click="searchQuery = ''"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full"
+          >
+            <X class="w-4 h-4" />
+          </button>
+        </div>
 
-      <p class="text-sm md:text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-7">
-        {{ $t('review.no_cards_desc') }}
-      </p>
+        <!-- Filter Chips -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+          <!-- Status Filters -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <span class="text-slate-400 font-semibold mr-1 whitespace-nowrap shrink-0">Status:</span>
+            <button
+              @click="setStatusFilter(null)"
+              :class="[
+                'px-2.5 py-1 rounded-xl font-semibold border transition-all whitespace-nowrap shrink-0',
+                selectedStatus === null
+                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+              ]"
+            >
+              {{ $t('review.status_all') }}
+            </button>
+            <button
+              @click="setStatusFilter(0)"
+              :class="[
+                'px-2.5 py-1 rounded-xl font-semibold border transition-all whitespace-nowrap shrink-0',
+                selectedStatus === 0
+                  ? 'bg-amber-500 text-slate-950 border-transparent shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+              ]"
+            >
+              {{ $t('review.status_learning') }}
+            </button>
+            <button
+              @click="setStatusFilter(1)"
+              :class="[
+                'px-2.5 py-1 rounded-xl font-semibold border transition-all whitespace-nowrap shrink-0',
+                selectedStatus === 1
+                  ? 'bg-purple-600 text-white border-transparent shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+              ]"
+            >
+              {{ $t('review.status_reviewing') }}
+            </button>
+            <button
+              @click="setStatusFilter(2)"
+              :class="[
+                'px-2.5 py-1 rounded-xl font-semibold border transition-all whitespace-nowrap shrink-0',
+                selectedStatus === 2
+                  ? 'bg-emerald-600 text-white border-transparent shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+              ]"
+            >
+              {{ $t('review.status_mastered') }}
+            </button>
+          </div>
 
-      <NuxtLink
-        to="/today"
-        class="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm md:text-base shadow-lg shadow-brand-500/20 transition-all active:scale-95"
+          <!-- Source Filters -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <span class="text-slate-400 font-semibold mr-1 whitespace-nowrap shrink-0">Source:</span>
+            <button
+              @click="setSourceFilter(null)"
+              :class="[
+                'px-2.5 py-1 rounded-xl font-semibold border transition-all whitespace-nowrap shrink-0',
+                selectedSource === null
+                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+              ]"
+            >
+              {{ $t('review.source_all') }}
+            </button>
+            <button
+              @click="setSourceFilter(0)"
+              :class="[
+                'px-2.5 py-1 rounded-xl font-semibold border transition-all whitespace-nowrap shrink-0',
+                selectedSource === 0
+                  ? 'bg-sky-600 text-white border-transparent shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+              ]"
+            >
+              {{ $t('review.source_topic') }}
+            </button>
+            <button
+              @click="setSourceFilter(1)"
+              :class="[
+                'px-2.5 py-1 rounded-xl font-semibold border transition-all whitespace-nowrap shrink-0',
+                selectedSource === 1
+                  ? 'bg-amber-600 text-white border-transparent shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+              ]"
+            >
+              {{ $t('review.source_highlight') }}
+            </button>
+            <button
+              @click="setSourceFilter(2)"
+              :class="[
+                'px-2.5 py-1 rounded-xl font-semibold border transition-all whitespace-nowrap shrink-0',
+                selectedSource === 2
+                  ? 'bg-rose-600 text-white border-transparent shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+              ]"
+            >
+              {{ $t('review.source_quiz_mistake') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Cards List View -->
+      <div v-if="reviewStore.isDeckLoading" class="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 text-sm">
+        <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mb-3"></div>
+        <span>Loading flashcard library...</span>
+      </div>
+
+      <div v-else-if="reviewStore.deckCards.length > 0" class="space-y-4">
+        <div
+          v-for="card in reviewStore.deckCards"
+          :key="card.id"
+          class="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-400 dark:hover:border-slate-700 transition-all shadow-sm space-y-4"
+        >
+          <!-- Card Header Badges & Actions -->
+          <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-3">
+            <div class="flex flex-wrap items-center gap-2 min-w-0">
+              <!-- Source Badge -->
+              <span :class="['px-2.5 py-0.5 rounded-full text-xs font-bold border whitespace-nowrap shrink-0', getSourceBadge(card.sourceType).color]">
+                {{ getSourceBadge(card.sourceType).label }}
+              </span>
+
+              <!-- Status Badge -->
+              <span :class="['px-2.5 py-0.5 rounded-full text-xs font-bold border whitespace-nowrap shrink-0', getStatusBadge(card.status).color]">
+                {{ getStatusBadge(card.status).label }}
+              </span>
+
+              <!-- Due Today indicator if applicable -->
+              <span
+                v-if="isDueToday(card.nextReviewDate)"
+                class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 whitespace-nowrap shrink-0"
+              >
+                {{ $t('review.due_today') }}
+              </span>
+            </div>
+
+            <!-- Card Actions -->
+            <div class="flex items-center gap-1.5 shrink-0">
+              <!-- Edit Button -->
+              <button
+                @click="openEditModal(card)"
+                class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+                :title="$t('review.edit_card')"
+              >
+                <Pencil class="w-4 h-4" />
+              </button>
+
+              <!-- Reset Progression Button -->
+              <button
+                @click="openResetModal(card)"
+                class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+                :title="$t('review.reset_progress')"
+              >
+                <RotateCcw class="w-4 h-4" />
+              </button>
+
+              <!-- Delete Button -->
+              <button
+                @click="openDeleteModal(card)"
+                class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+                :title="$t('review.delete_card')"
+              >
+                <Trash2 class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Card Content: Question (Front) & Answer (Back) -->
+          <div class="space-y-3">
+            <!-- Front Markdown -->
+            <div class="space-y-1">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                <HelpCircle class="w-3.5 h-3.5 text-brand-500" />
+                <span>{{ $t('review.front_label') }}</span>
+              </div>
+              <div
+                class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-slate-100 leading-relaxed font-sans prose dark:prose-invert max-w-none"
+                v-html="renderMarkdown(card.frontMarkdown || card.topicTitle)"
+              ></div>
+            </div>
+
+            <!-- Back Markdown (Collapsible / Toggleable) -->
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                  <FileText class="w-3.5 h-3.5 text-emerald-500" />
+                  <span>{{ $t('review.back_label') }}</span>
+                </div>
+                <button
+                  @click="toggleCardAnswer(card.id)"
+                  class="text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1 whitespace-nowrap shrink-0"
+                >
+                  <EyeOff v-if="expandedCardIds.has(card.id)" class="w-3 h-3" />
+                  <Eye v-else class="w-3 h-3" />
+                  <span>{{ expandedCardIds.has(card.id) ? $t('review.hide_answer') : $t('review.show_answer') }}</span>
+                </button>
+              </div>
+
+              <div
+                v-if="expandedCardIds.has(card.id)"
+                class="p-3.5 rounded-xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-xs sm:text-sm text-slate-900 dark:text-slate-100 leading-relaxed font-sans prose dark:prose-invert max-w-none animate-in fade-in duration-150"
+                v-html="renderMarkdown(card.backMarkdown || card.topicSummary)"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Card Footer: SM-2 Metrics Pill Row -->
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs font-mono text-slate-500 dark:text-slate-400">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 whitespace-nowrap shrink-0">
+                {{ $t('review.interval_days', { days: card.intervalDays }) }}
+              </span>
+              <span class="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 whitespace-nowrap shrink-0">
+                {{ $t('review.repetitions', { count: card.repetitionCount }) }}
+              </span>
+              <span class="px-2.5 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 whitespace-nowrap shrink-0">
+                {{ $t('review.ease_factor', { factor: card.easeFactor.toFixed(2) }) }}
+              </span>
+            </div>
+
+            <div class="font-sans font-semibold text-slate-600 dark:text-slate-300">
+              {{ $t('review.next_review', { date: card.nextReviewDate }) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Pagination Controls -->
+        <div v-if="totalPages > 1" class="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+          <button
+            @click="fetchDeck(reviewStore.deckCurrentPage - 1)"
+            :disabled="reviewStore.deckCurrentPage <= 1 || reviewStore.isDeckLoading"
+            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors whitespace-nowrap shrink-0"
+          >
+            <ChevronLeft class="w-4 h-4" />
+            <span>{{ $t('review.prev_page') }}</span>
+          </button>
+
+          <span class="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
+            {{ $t('review.page_info', { page: reviewStore.deckCurrentPage, totalPages }) }}
+          </span>
+
+          <button
+            @click="fetchDeck(reviewStore.deckCurrentPage + 1)"
+            :disabled="reviewStore.deckCurrentPage >= totalPages || reviewStore.isDeckLoading"
+            class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors whitespace-nowrap shrink-0"
+          >
+            <span>{{ $t('review.next_page') }}</span>
+            <ChevronRight class="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty Deck State -->
+      <div v-else class="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-sm space-y-3">
+        <Layers class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto" />
+        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $t('review.empty_deck') }}</h3>
+        <p v-if="searchQuery || selectedStatus !== null || selectedSource !== null" class="text-xs text-slate-500 max-w-sm mx-auto">
+          Try clearing search filters to see all cards in your library.
+        </p>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODALS (Teleported to Body)                                               -->
+    <!-- ========================================================================= -->
+
+    <!-- 1. Edit Flashcard Modal -->
+    <Teleport to="body">
+      <div
+        v-if="cardToEdit"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
       >
-        <Sparkles class="w-4 h-4" />
-        <span>{{ $t('review.continue_drill') }}</span>
-      </NuxtLink>
-    </div>
+        <div class="w-full max-w-2xl p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Pencil class="w-5 h-5 text-brand-500" />
+              <span>{{ $t('review.edit_card') }}</span>
+            </h3>
+
+            <!-- Mode Switcher: Edit vs Preview -->
+            <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+              <button
+                @click="editActiveTab = 'edit'"
+                :class="[
+                  'px-3 py-1 rounded-lg transition-all',
+                  editActiveTab === 'edit'
+                    ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ]"
+              >
+                {{ $t('review.tab_edit') }}
+              </button>
+              <button
+                @click="editActiveTab = 'preview'"
+                :class="[
+                  'px-3 py-1 rounded-lg transition-all',
+                  editActiveTab === 'preview'
+                    ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ]"
+              >
+                {{ $t('review.tab_preview') }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Edit Mode -->
+          <div v-if="editActiveTab === 'edit'" class="space-y-4">
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {{ $t('review.front_label') }}
+              </label>
+              <textarea
+                v-model="editFrontMarkdown"
+                rows="4"
+                class="w-full text-xs sm:text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-mono"
+                placeholder="Front prompt markdown..."
+              ></textarea>
+            </div>
+
+            <div class="space-y-1.5">
+              <label class="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {{ $t('review.back_label') }}
+              </label>
+              <textarea
+                v-model="editBackMarkdown"
+                rows="6"
+                class="w-full text-xs sm:text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-mono"
+                placeholder="Back explanation markdown..."
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Live Preview Mode -->
+          <div v-else class="space-y-4">
+            <div class="space-y-1.5">
+              <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('review.front_label') }}</div>
+              <div
+                class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm prose dark:prose-invert max-w-none"
+                v-html="renderMarkdown(editFrontMarkdown)"
+              ></div>
+            </div>
+
+            <div class="space-y-1.5">
+              <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('review.back_label') }}</div>
+              <div
+                class="p-4 rounded-xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-xs sm:text-sm prose dark:prose-invert max-w-none"
+                v-html="renderMarkdown(editBackMarkdown)"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Modal Action Buttons -->
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+            <button
+              type="button"
+              @click="closeEditModal"
+              class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0"
+            >
+              {{ $t('review.cancel') }}
+            </button>
+            <button
+              type="button"
+              :disabled="isSavingCard"
+              @click="confirmSaveCard"
+              class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-brand-500/20 active:scale-95 transition-all whitespace-nowrap shrink-0 disabled:opacity-50"
+            >
+              <span v-if="isSavingCard" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <Check v-else class="w-4 h-4" />
+              <span>{{ isSavingCard ? $t('review.saving') : $t('review.save_changes') }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- 2. Reset Progression Confirmation Modal -->
+    <Teleport to="body">
+      <div
+        v-if="cardToReset"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      >
+        <div class="w-full max-w-md p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+          <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 flex items-center justify-center">
+            <RotateCcw class="w-6 h-6" />
+          </div>
+
+          <div class="space-y-1.5">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+              {{ $t('review.reset_confirm_title') }}
+            </h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              {{ $t('review.reset_confirm_desc') }}
+            </p>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              @click="closeResetModal"
+              class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors whitespace-nowrap shrink-0"
+            >
+              {{ $t('review.cancel') }}
+            </button>
+            <button
+              type="button"
+              :disabled="isResetting"
+              @click="confirmResetCard"
+              class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-amber-600/20 active:scale-95 transition-all whitespace-nowrap shrink-0 disabled:opacity-50"
+            >
+              <span v-if="isResetting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ isResetting ? $t('review.resetting') : $t('review.confirm_reset') }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- 3. Delete Confirmation Modal -->
+    <Teleport to="body">
+      <div
+        v-if="cardToDelete"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      >
+        <div class="w-full max-w-md p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+          <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 flex items-center justify-center">
+            <AlertTriangle class="w-6 h-6" />
+          </div>
+
+          <div class="space-y-1.5">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+              {{ $t('review.delete_confirm_title') }}
+            </h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              {{ $t('review.delete_confirm_desc') }}
+            </p>
+          </div>
+
+          <div class="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              @click="closeDeleteModal"
+              class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors whitespace-nowrap shrink-0"
+            >
+              {{ $t('review.cancel') }}
+            </button>
+            <button
+              type="button"
+              :disabled="isDeleting"
+              @click="confirmDeleteCard"
+              class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-600/20 active:scale-95 transition-all whitespace-nowrap shrink-0 disabled:opacity-50"
+            >
+              <span v-if="isDeleting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>{{ isDeleting ? $t('review.deleting') : $t('review.confirm_delete') }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

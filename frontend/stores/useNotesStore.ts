@@ -27,8 +27,8 @@ export const useNotesStore = defineStore('notes', () => {
       const query = tag ? `?tag=${encodeURIComponent(tag)}` : ''
       const res = await api.get<{ highlights: Highlight[] }>(`/api/v1/notes/highlights${query}`)
       highlights.value = res.highlights
-    } catch (err: any) {
-      error.value = err.message || 'Failed to load highlights.'
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Failed to load highlights.'
     } finally {
       isLoading.value = false
     }
@@ -52,12 +52,23 @@ export const useNotesStore = defineStore('notes', () => {
         highlights.value.unshift(highlightItem)
       }
       return highlightItem
-    } catch (err: any) {
-      error.value = err.message || 'Failed to save highlight.'
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Failed to save highlight.'
       throw err
     } finally {
       isCreating.value = false
     }
+  }
+
+  async function updateHighlight(id: string, payload: { note?: string; tags?: string[] }) {
+    const api = useApiClient()
+    const res = await api.put<{ highlight: Highlight }>(`/api/v1/notes/highlights/${id}`, payload)
+    const updated = res.highlight || (res as unknown as Highlight)
+    const idx = highlights.value.findIndex((h) => h.id === id)
+    if (idx !== -1) {
+      highlights.value[idx] = updated
+    }
+    return updated
   }
 
   async function deleteHighlight(id: string) {
@@ -65,8 +76,8 @@ export const useNotesStore = defineStore('notes', () => {
       const api = useApiClient()
       await api.delete(`/api/v1/notes/highlights/${id}`)
       highlights.value = highlights.value.filter((h) => h.id !== id)
-    } catch (err: any) {
-      error.value = err.message || 'Failed to delete highlight.'
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Failed to delete highlight.'
       throw err
     }
   }
@@ -78,6 +89,7 @@ export const useNotesStore = defineStore('notes', () => {
     error,
     fetchHighlights,
     createHighlight,
+    updateHighlight,
     deleteHighlight
   }
 })

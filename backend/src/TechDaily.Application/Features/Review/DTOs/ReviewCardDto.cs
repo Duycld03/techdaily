@@ -21,4 +21,28 @@ public class ReviewCardDto
     public int IntervalDays { get; set; }
     public DateOnly NextReviewDate { get; set; }
     public CardStatus Status { get; set; }
+
+    public static ReviewCardDto FromEntity(Domain.Entities.SpacedRepetitionCard card)
+    {
+        return new ReviewCardDto
+        {
+            Id = card.Id,
+            TopicId = card.TopicId,
+            SourceType = card.SourceType,
+            SourceHighlightId = card.SourceHighlightId,
+            SourceQuizQuestionId = card.SourceQuizQuestionId,
+            FrontMarkdown = !string.IsNullOrWhiteSpace(card.FrontMarkdown) ? card.FrontMarkdown : (card.Topic != null ? card.Topic.Title : string.Empty),
+            BackMarkdown = !string.IsNullOrWhiteSpace(card.BackMarkdown) ? card.BackMarkdown : (card.Topic != null ? card.Topic.Summary : string.Empty),
+            TopicTitle = card.Topic != null ? card.Topic.Title : (card.FrontMarkdown ?? string.Empty),
+            Category = card.Topic != null ? card.Topic.Category : Category.FrontendWeb,
+            Difficulty = card.Topic != null ? card.Topic.Difficulty : Difficulty.Senior,
+            TopicSummary = card.Topic != null ? card.Topic.Summary : (card.BackMarkdown ?? string.Empty),
+            TopicDeepDiveMarkdown = card.Topic != null ? card.Topic.DeepDiveMarkdown : (card.BackMarkdown ?? string.Empty),
+            RepetitionCount = card.RepetitionCount,
+            EaseFactor = card.EaseFactor,
+            IntervalDays = card.IntervalDays,
+            NextReviewDate = card.NextReviewDate,
+            Status = card.Status
+        };
+    }
 }

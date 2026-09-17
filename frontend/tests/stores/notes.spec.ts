@@ -50,6 +50,20 @@ vi.mock('~/composables/useApiClient', () => ({
       }
       throw new Error('Not found')
     }),
+    put: vi.fn(async (url: string, body: { note?: string; tags?: string[] }) => {
+      if (url.includes('/highlights/')) {
+        const id = url.split('/highlights/')[1]
+        const existing = mockHighlights.find((h) => h.id === id) || mockHighlights[0]
+        return {
+          highlight: {
+            ...existing,
+            note: body.note,
+            tags: body.tags || existing.tags
+          }
+        }
+      }
+      throw new Error('Not found')
+    }),
     delete: vi.fn(async (url: string) => {
       return { success: true }
     })
@@ -125,5 +139,22 @@ describe('useNotesStore', () => {
     expect(notes.highlights).toHaveLength(2)
     expect(notes.highlights[0].id).toBe('h-1')
     expect(notes.highlights[0].note).toBe('Updated note for h-1')
+  })
+
+  it('updates a highlight via updateHighlight action', async () => {
+    const notes = useNotesStore()
+    await notes.fetchHighlights()
+    expect(notes.highlights).toHaveLength(2)
+
+    const result = await notes.updateHighlight('h-1', {
+      note: 'Updated reflection note',
+      tags: ['consistency', 'raft']
+    })
+
+    expect(result.id).toBe('h-1')
+    expect(result.note).toBe('Updated reflection note')
+    expect(result.tags).toEqual(['consistency', 'raft'])
+    expect(notes.highlights[0].note).toBe('Updated reflection note')
+    expect(notes.highlights[0].tags).toEqual(['consistency', 'raft'])
   })
 })

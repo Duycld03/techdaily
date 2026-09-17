@@ -13,4 +13,14 @@ public class UserHighlight : BaseEntity
     // Navigation properties
     public User User { get; set; } = null!;
     public DocumentChunk DocumentChunk { get; set; } = null!;
+
+    public void Update(string? note, List<string>? tags)
+    {
+        Note = note;
+        if (tags != null)
+        {
+            Tags = tags;
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

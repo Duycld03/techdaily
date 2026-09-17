@@ -130,4 +130,21 @@ public class SpacedRepetitionCard : BaseEntity
         NextReviewDate = today.AddDays(IntervalDays);
         MarkUpdated();
     }
+
+    public void UpdateContent(string frontMarkdown, string backMarkdown)
+    {
+        FrontMarkdown = frontMarkdown;
+        BackMarkdown = backMarkdown;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ResetProgression(DateOnly? resetDate = null)
+    {
+        RepetitionCount = 0;
+        IntervalDays = 1;
+        EaseFactor = 2.50m;
+        Status = CardStatus.Learning;
+        NextReviewDate = resetDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

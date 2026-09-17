@@ -37,6 +37,20 @@ vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     get: vi.fn(async (url: string) => {
       if (url.includes('/deck')) return { dueCards: [...mockCards], totalCardsDue: 2 }
+      if (url.includes('/cards')) {
+        return {
+          cards: [...mockCards],
+          totalCount: 2,
+          page: 1,
+          pageSize: 20,
+          statistics: {
+            totalCards: 2,
+            learningCount: 1,
+            reviewingCount: 1,
+            masteredCount: 0
+          }
+        }
+      }
       throw new Error('Not found')
     }),
     post: vi.fn(async (url: string, _body?: unknown) => {
@@ -63,7 +77,33 @@ vi.mock('~/composables/useApiClient', () => ({
           cardId: 'c-q1'
         }
       }
+      if (url.includes('/reset')) {
+        return {
+          card: {
+            ...mockCards[0],
+            repetitionCount: 0,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            status: 0
+          }
+        }
+      }
       throw new Error('Not found')
+    }),
+    put: vi.fn(async (url: string, body: { frontMarkdown: string; backMarkdown: string }) => {
+      if (url.includes('/cards/')) {
+        return {
+          card: {
+            ...mockCards[0],
+            frontMarkdown: body.frontMarkdown,
+            backMarkdown: body.backMarkdown
+          }
+        }
+      }
+      throw new Error('Not found')
+    }),
+    delete: vi.fn(async (url: string) => {
+      return { success: true }
     })
   })
 }))
@@ -105,5 +145,54 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
     const result = await review.createCardFromQuizMistake('q-456')
     expect(result).toBeDefined()
     expect(result.id).toBe('c-q1')
+  })
+
+  it('fetches deck cards and statistics', async () => {
+    const review = useReviewStore()
+    expect(review.deckCards).toHaveLength(0)
+    expect(review.deckStatistics.totalCards).toBe(0)
+
+    await review.fetchDeckCards({ page: 1, pageSize: 20 })
+    expect(review.deckCards).toHaveLength(2)
+    expect(review.deckTotalCount).toBe(2)
+    expect(review.deckStatistics.totalCards).toBe(2)
+    expect(review.deckStatistics.learningCount).toBe(1)
+    expect(review.deckStatistics.reviewingCount).toBe(1)
+  })
+
+  it('updates card markdown content', async () => {
+    const review = useReviewStore()
+    await review.fetchDeckCards()
+
+    const updated = await review.updateCard('c-101', {
+      frontMarkdown: 'Updated Front Question',
+      backMarkdown: 'Updated Back Answer'
+    })
+
+    expect(updated.frontMarkdown).toBe('Updated Front Question')
+    expect(updated.backMarkdown).toBe('Updated Back Answer')
+    expect(review.deckCards[0].frontMarkdown).toBe('Updated Front Question')
+  })
+
+  it('deletes card from deck', async () => {
+    const review = useReviewStore()
+    await review.fetchDeckCards()
+    expect(review.deckCards).toHaveLength(2)
+
+    await review.deleteCard('c-101')
+    expect(review.deckCards).toHaveLength(1)
+    expect(review.deckCards[0].id).toBe('c-102')
+    expect(review.deckTotalCount).toBe(1)
+  })
+
+  it('resets card progression to day 1', async () => {
+    const review = useReviewStore()
+    await review.fetchDeckCards()
+
+    const reset = await review.resetCardProgress('c-101')
+    expect(reset.repetitionCount).toBe(0)
+    expect(reset.intervalDays).toBe(1)
+    expect(reset.status).toBe(0)
+    expect(review.deckCards[0].repetitionCount).toBe(0)
   })
 })

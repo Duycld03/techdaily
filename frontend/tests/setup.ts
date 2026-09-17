@@ -1,8 +1,24 @@
 import { vi } from 'vitest'
+import { config } from '@vue/test-utils'
 import { useApiError } from '~/composables/useApiError'
+import { useToast } from '~/composables/useToast'
 
+config.global.mocks = {
+  ...config.global.mocks,
+  $t: (key: string, params?: Record<string, unknown>) => {
+    if (params) {
+      let result = key
+      for (const [k, v] of Object.entries(params)) {
+        result = result.replace(new RegExp(`{${k}}`, 'g'), String(v))
+      }
+      return result
+    }
+    return key
+  }
+}
 // Global Nuxt mock composables for Vitest
 ;(globalThis as any).useApiError = useApiError
+;(globalThis as any).useToast = useToast
 ;(globalThis as any).useRuntimeConfig = () => ({
   public: {
     apiBaseUrl: 'http://localhost:5000',
