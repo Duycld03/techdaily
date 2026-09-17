@@ -58,8 +58,8 @@
 ## 6. Production Deployment & Live Verification via MCP Tools
 
 - [x] 6.1 Commit all implementation changes to git and push to `origin main`. Verify `git status` is clean and commit is pushed to remote.
-- [ ] 6.2 Monitor GitHub Actions CI/CD deployment pipeline and wait 4–5 minutes until workflow run completes successfully. Verify deployment status on remote server.
-- [ ] 6.3 Execute live browser verification on production `https://techdaily.duckdns.org` via MCP tools:
+- [x] 6.2 Monitor GitHub Actions CI/CD deployment pipeline and wait 4–5 minutes until workflow run completes successfully. Verify deployment status on remote server.
+- [x] 6.3 Execute live browser verification on production `https://techdaily.duckdns.org` via MCP tools:
   - Navigate to `/library` and open the import modal: verify verbatim category helper callout displays under Category dropdown across Markdown, PDF, and URL Crawler tabs.
   - Navigate to `/read/[bookId]` for an imported book: verify paragraphs render with clean line breaks and distinct `<p>` tags instead of a solid block of text.
   - In `/read/[bookId]`, open the `Aa` typography popover: verify font size changes dynamically with `A-` / `A+`, font family switches between Sans and Serif, line height adjusts, and preferences persist upon page refresh.
