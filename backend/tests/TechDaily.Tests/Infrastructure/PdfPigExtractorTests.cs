@@ -627,4 +627,72 @@ Paragraph two text that follows after four blank lines.
         };
         PdfPigExtractor.AssembleLines(whitespaceLines).Should().BeEmpty();
     }
+
+    [Fact]
+    public void AssembleLines_WithLinesEndingWithoutPunctuation_ShouldJoinWithSpacesNotChopSentences()
+    {
+        // Scenario: A page has a header or margin at Left = 54, but story body lines are set at Left = 95.
+        // Lines end mid-sentence without terminal punctuation ("trúng mặt. Khi", "và hướng", "về cái", "Vụ va").
+        // They must NOT be chopped by \n\n even if Left is offset from page xMin or if there is slight spacing.
+        var lines = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("CHƯƠNG 1: BẮT ĐẦU MỘT HÀNH TRÌNH DÀI", Top: 780, Bottom: 770, Left: 54, Right: 300, Height: 10),
+            new("Vào đúng ngày cuối cùng của năm thứ hai cao trung, tôi bị một cây gậy bóng chày nện trúng mặt. Khi", Top: 720, Bottom: 706, Left: 95, Right: 500, Height: 10),
+            new("đó cậu bạn cùng lớp đang vung gậy thực hiện một cú đánh bóng, cây gậy trượt khỏi tay cậu ấy và hướng", Top: 704, Bottom: 690, Left: 95, Right: 502, Height: 10),
+            new("thẳng về phía tôi trước khi đập thẳng vào vùng giữa hai mắt tôi. Tôi không nhớ bất kì điều gì về cái", Top: 688, Bottom: 674, Left: 95, Right: 501, Height: 10),
+            new("khoảnh khắc va đập đó. Vụ va", Top: 672, Bottom: 658, Left: 95, Right: 498, Height: 10),
+            new("chạm khiến tôi bất tỉnh nhân sự ngay tại chỗ.", Top: 656, Bottom: 642, Left: 95, Right: 380, Height: 10)
+        };
+
+        var text = PdfPigExtractor.AssembleLines(lines);
+
+        // Header should be separated with \n\n
+        text.Should().Contain("## CHƯƠNG 1: BẮT ĐẦU MỘT HÀNH TRÌNH DÀI\n\n");
+
+        // The wrapped story sentences must be joined with space, not split by \n\n
+        text.Should().NotContain("Khi\n\nđó");
+        text.Should().NotContain("hướng\n\nthẳng");
+        text.Should().NotContain("cái\n\nkhoảnh khắc");
+        text.Should().NotContain("Vụ va\n\nchạm");
+
+        text.Should().Contain("nện trúng mặt. Khi đó cậu bạn cùng lớp đang vung gậy thực hiện một cú đánh bóng, cây gậy trượt khỏi tay cậu ấy và hướng thẳng về phía tôi trước khi đập thẳng vào vùng giữa hai mắt tôi. Tôi không nhớ bất kì điều gì về cái khoảnh khắc va đập đó. Vụ va chạm khiến tôi bất tỉnh nhân sự ngay tại chỗ.");
+    }
+
+    [Fact]
+    public void AssembleLines_WithGenuineIndentedParagraph_WhenPreviousLineEndsWithPunctuationOrShort_ShouldSeparateWithDoubleNewlines()
+    {
+        // Scenario: Genuine paragraph break where previous line ends with terminal punctuation '.' and is short,
+        // and next paragraph line is indented relative to previous line (curr.Left - prev.Left >= 12).
+        var lines = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("Đây là câu mở đầu của đoạn văn thứ nhất trong tài liệu này,", Top: 720, Bottom: 708, Left: 80, Right: 450, Height: 10),
+            new("và câu này kéo dài cho đến khi kết thúc hoàn chỉnh.", Top: 706, Bottom: 694, Left: 80, Right: 360, Height: 10),
+            new("Đoạn văn thứ hai bắt đầu với lùi đầu dòng rõ ràng,", Top: 692, Bottom: 680, Left: 96, Right: 450, Height: 10),
+            new("tiếp tục bình thường ở lề chuẩn sau dòng thụt đầu dòng.", Top: 678, Bottom: 666, Left: 80, Right: 440, Height: 10)
+        };
+
+        var text = PdfPigExtractor.AssembleLines(lines);
+
+        // First paragraph lines should be joined with space
+        text.Should().Contain("Đây là câu mở đầu của đoạn văn thứ nhất trong tài liệu này, và câu này kéo dài cho đến khi kết thúc hoàn chỉnh.");
+
+        // Paragraph boundary should be separated by \n\n
+        text.Should().Contain("kết thúc hoàn chỉnh.\n\nĐoạn văn thứ hai bắt đầu với lùi đầu dòng rõ ràng, tiếp tục bình thường ở lề chuẩn sau dòng thụt đầu dòng.");
+    }
+
+    [Fact]
+    public void AssembleLines_WhenLineIndentedOrGappedMidSentence_ShouldNotBreakParagraph()
+    {
+        // Even if curr.Left - prev.Left >= 12 or dy is large, if previous line ends mid-sentence ("và hướng"),
+        // canBreakParagraph is false and it must be joined with space.
+        var lines = new List<PdfPigExtractor.LineGeometry>
+        {
+            new("Cậu ấy vung gậy và hướng", Top: 720, Bottom: 708, Left: 60, Right: 400, Height: 10),
+            new("thẳng về phía tôi trước khi đập vào mặt.", Top: 680, Bottom: 668, Left: 75, Right: 400, Height: 10)
+        };
+
+        var text = PdfPigExtractor.AssembleLines(lines);
+
+        text.Should().Be("Cậu ấy vung gậy và hướng thẳng về phía tôi trước khi đập vào mặt.");
+    }
 }

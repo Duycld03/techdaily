@@ -762,7 +762,7 @@ public class PdfPigExtractor : IPdfExtractor
             {
                 double dy = prev.Bottom - curr.Bottom;
                 bool isGap = dy > 0 && medianSpacing > 0 && dy >= 1.35 * medianSpacing;
-                bool isIndent = (curr.Left - xMin) >= 12.0;
+                bool isIndent = (curr.Left - prev.Left) >= 12.0;
 
                 var prevText = prev.Text.Trim();
                 var currText = curr.Text.Trim();
@@ -775,13 +775,24 @@ public class PdfPigExtractor : IPdfExtractor
                     currText.StartsWith('–') ||
                     (currText.StartsWith('-') && (currText.Length == 1 || char.IsWhiteSpace(currText[1])));
 
-                bool prevEndsPunctuation =
-                    prevText.Length > 0 &&
-                    (char.IsPunctuation(prevText[^1]) || prevText.EndsWith("…"));
+                bool prevEndsPunctuation = prevText.Length > 0 && (
+                    prevText.EndsWith('.') ||
+                    prevText.EndsWith('!') ||
+                    prevText.EndsWith('?') ||
+                    prevText.EndsWith('…') ||
+                    prevText.EndsWith(':') ||
+                    prevText.EndsWith('"') ||
+                    prevText.EndsWith('”') ||
+                    prevText.EndsWith('\'') ||
+                    prevText.EndsWith('’')
+                );
 
                 bool isDialogue = startsWithDialogue && prevEndsPunctuation;
 
-                if (isGap || isIndent || isDialogue)
+                bool prevIsShortLine = (xMax - prev.Right) >= 35.0; // Line ended well before the right margin
+                bool canBreakParagraph = prevEndsPunctuation || prevIsShortLine;
+
+                if (isDialogue || ((isGap || isIndent) && canBreakParagraph))
                 {
                     separator = "\n\n";
                 }
