@@ -122,7 +122,7 @@ describe('useInsightsStore', () => {
     await store.fetchFeed()
 
     const newInsight = await store.generateWithAi('Memory Optimization')
-    expect(newInsight.slug).toBe('ai-generated-insight')
+    expect(newInsight?.slug).toBe('ai-generated-insight')
     expect(store.insights.length).toBe(3)
     expect(store.currentIndex).toBe(0)
     expect(store.currentInsight?.title).toBe('AI Generated Architecture Pattern')
@@ -142,8 +142,8 @@ describe('useInsightsStore', () => {
     await store.fetchMetadata()
 
     expect(store.categoryMetadata.length).toBe(2)
-    expect(store.categoryMetadata[0].labelEn).toBe('Frontend & Vue')
-    expect(store.categoryMetadata[1].count).toBe(12)
+    expect(store.categoryMetadata[0]?.labelEn).toBe('Frontend & Vue')
+    expect(store.categoryMetadata[1]?.count).toBe(12)
     expect(store.suggestedTopics[0]).toEqual(['Vue Reactivity', 'Vite SSR'])
     expect(store.suggestedTopics[1]).toEqual(['Span<T>', 'Kestrel Sockets'])
   })

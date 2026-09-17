@@ -72,7 +72,7 @@ describe('Immersive Document Reader (Hướng 1)', () => {
 
     const parsedSlice = parseInt(saved!, 10)
     expect(parsedSlice).toBe(2)
-    expect(mockBookDetail.chunks[parsedSlice - 1].chapterTitle).toBe('Data Models and Query Languages')
+    expect(mockBookDetail.chunks[parsedSlice - 1]?.chapterTitle).toBe('Data Models and Query Languages')
   })
 
   it('tracks completed slices across the document', () => {
@@ -94,7 +94,7 @@ describe('Immersive Document Reader (Hướng 1)', () => {
     const book = await store.fetchBookById('book-123')
     expect(book.title).toBe('Designing Data-Intensive Applications')
     expect(book.chunks.length).toBe(3)
-    expect(book.chunks[0].chunkOrder).toBe(1)
+    expect(book.chunks[0]?.chunkOrder).toBe(1)
   })
 
   it('falls back to chapterTitle when selection context extraction produces empty text', () => {

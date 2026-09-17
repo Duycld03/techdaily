@@ -101,7 +101,7 @@ describe('useDailyFocusStore', () => {
 
     await focus.fetchTodayFocus()
     expect(focus.data).not.toBeNull()
-    expect(focus.data?.topic.title).toBe('Vue 3 Reactivity Engine')
+    expect(focus.data?.topic?.title).toBe('Vue 3 Reactivity Engine')
     expect(focus.data?.question.options).toHaveLength(4)
     expect(focus.data?.currentStreak).toBe(5)
   })
@@ -112,9 +112,9 @@ describe('useDailyFocusStore', () => {
 
     const result = await focus.submitOption(1, 'en')
 
-    expect(result.isCorrect).toBe(true)
-    expect(result.score).toBe(10)
-    expect(result.correctOptionIndex).toBe(1)
+    expect(result?.isCorrect).toBe(true)
+    expect(result?.score).toBe(10)
+    expect(result?.correctOptionIndex).toBe(1)
     expect(focus.data?.drill.status).toBe(2)
     expect(focus.data?.drill.selectedOptionIndex).toBe(1)
     expect(focus.data?.drill.isCorrect).toBe(true)
@@ -129,8 +129,8 @@ describe('useDailyFocusStore', () => {
 
     const result = await focus.submitOption(0, 'en')
 
-    expect(result.isCorrect).toBe(false)
-    expect(result.score).toBe(0)
+    expect(result?.isCorrect).toBe(false)
+    expect(result?.score).toBe(0)
     expect(focus.data?.drill.status).toBe(2)
     expect(focus.data?.drill.selectedOptionIndex).toBe(0)
     expect(focus.data?.drill.isCorrect).toBe(false)

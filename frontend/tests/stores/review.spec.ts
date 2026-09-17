@@ -103,7 +103,7 @@ vi.mock('~/composables/useApiClient', () => ({
       }
       throw new Error('Not found')
     }),
-    delete: vi.fn(async (url: string) => {
+    delete: vi.fn(async (_url: string) => {
       return { success: true }
     })
   })
@@ -120,7 +120,7 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
 
     await review.fetchReviewDeck()
     expect(review.cards).toHaveLength(2)
-    expect(review.cards[0].topicTitle).toBe('Vue 3 Reactivity Engine')
+    expect(review.cards[0]?.topicTitle).toBe('Vue 3 Reactivity Engine')
     expect(review.totalCardsDue).toBe(2)
   })
 
@@ -131,21 +131,21 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
 
     await review.gradeCard('c-101', 5)
     expect(review.cards).toHaveLength(1)
-    expect(review.cards[0].id).toBe('c-102')
+    expect(review.cards[0]?.id).toBe('c-102')
   })
 
   it('creates flashcard from user highlight', async () => {
     const review = useReviewStore()
     const result = await review.createCardFromHighlight('h-123', 'en')
     expect(result).toBeDefined()
-    expect(result.id).toBe('c-h1')
+    expect(result.cardId).toBe('c-h1')
   })
 
   it('creates flashcard from quiz mistake', async () => {
     const review = useReviewStore()
     const result = await review.createCardFromQuizMistake('q-456')
     expect(result).toBeDefined()
-    expect(result.id).toBe('c-q1')
+    expect(result.cardId).toBe('c-q1')
   })
 
   it('fetches deck cards and statistics', async () => {
@@ -173,7 +173,7 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
 
     expect(updated.frontMarkdown).toBe('Updated Front Question')
     expect(updated.backMarkdown).toBe('Updated Back Answer')
-    expect(review.deckCards[0].frontMarkdown).toBe('Updated Front Question')
+    expect(review.deckCards[0]?.frontMarkdown).toBe('Updated Front Question')
   })
 
   it('deletes card from deck', async () => {
@@ -183,7 +183,7 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
 
     await review.deleteCard('c-101')
     expect(review.deckCards).toHaveLength(1)
-    expect(review.deckCards[0].id).toBe('c-102')
+    expect(review.deckCards[0]?.id).toBe('c-102')
     expect(review.deckTotalCount).toBe(1)
   })
 
@@ -195,6 +195,6 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
     expect(reset.repetitionCount).toBe(0)
     expect(reset.intervalDays).toBe(1)
     expect(reset.status).toBe(0)
-    expect(review.deckCards[0].repetitionCount).toBe(0)
+    expect(review.deckCards[0]?.repetitionCount).toBe(0)
   })
 })

@@ -136,13 +136,19 @@ export function useReaderTypography() {
 
   function decreaseFontSize() {
     if (canDecreaseFontSize.value) {
-      typography.value.fontSize = fontSizes[currentFontSizeIndex.value - 1]
+      const nextSize = fontSizes[currentFontSizeIndex.value - 1]
+      if (nextSize) {
+        typography.value.fontSize = nextSize
+      }
     }
   }
 
   function increaseFontSize() {
     if (canIncreaseFontSize.value) {
-      typography.value.fontSize = fontSizes[currentFontSizeIndex.value + 1]
+      const nextSize = fontSizes[currentFontSizeIndex.value + 1]
+      if (nextSize) {
+        typography.value.fontSize = nextSize
+      }
     }
   }
 

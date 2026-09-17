@@ -67,6 +67,9 @@ vi.mock('~/composables/useApiClient', () => ({
       if (url.includes('/highlights/')) {
         const id = url.split('/highlights/')[1]
         const existing = mockHighlights.find((h) => h.id === id) || mockHighlights[0]
+        if (!existing) {
+          throw new Error('Not found')
+        }
         return {
           highlight: {
             ...existing,
@@ -94,7 +97,7 @@ describe('useNotesStore', () => {
 
     await notes.fetchHighlights()
     expect(notes.highlights).toHaveLength(2)
-    expect(notes.highlights[0].selectedText).toContain('Replication lag')
+    expect(notes.highlights[0]?.selectedText).toContain('Replication lag')
   })
 
   it('manages pagination and global tagCounts correctly', async () => {
@@ -108,7 +111,7 @@ describe('useNotesStore', () => {
     expect(notes.totalCount).toBe(30)
     expect(notes.totalPages).toBe(2)
     expect(notes.tagCounts).toHaveLength(2)
-    expect(notes.tagCounts[0].tag).toBe('distributed')
+    expect(notes.tagCounts[0]?.tag).toBe('distributed')
   })
 
   it('appends and deduplicates highlights when append is true', async () => {
@@ -131,7 +134,7 @@ describe('useNotesStore', () => {
     })
 
     expect(notes.highlights).toHaveLength(3)
-    expect(notes.highlights[0].selectedText).toContain('Functions should do one thing')
+    expect(notes.highlights[0]?.selectedText).toContain('Functions should do one thing')
   })
 
   it('creates a new highlight with an attached personal reflection note and tags', async () => {
@@ -147,7 +150,7 @@ describe('useNotesStore', () => {
 
     expect(result.note).toBe('Sequential writes turn random I/O into deterministic streaming.')
     expect(result.tags).toEqual(['storage', 'lsm-tree'])
-    expect(notes.highlights[0].note).toBe('Sequential writes turn random I/O into deterministic streaming.')
+    expect(notes.highlights[0]?.note).toBe('Sequential writes turn random I/O into deterministic streaming.')
   })
 
   it('deletes a highlight note', async () => {
@@ -157,7 +160,7 @@ describe('useNotesStore', () => {
 
     await notes.deleteHighlight('h-1')
     expect(notes.highlights).toHaveLength(1)
-    expect(notes.highlights[0].id).toBe('h-2')
+    expect(notes.highlights[0]?.id).toBe('h-2')
   })
 
   it('updates existing highlight in place when backend returns existing id', async () => {
@@ -173,8 +176,8 @@ describe('useNotesStore', () => {
 
     expect(updated.id).toBe('h-1')
     expect(notes.highlights).toHaveLength(2)
-    expect(notes.highlights[0].id).toBe('h-1')
-    expect(notes.highlights[0].note).toBe('Updated note for h-1')
+    expect(notes.highlights[0]?.id).toBe('h-1')
+    expect(notes.highlights[0]?.note).toBe('Updated note for h-1')
   })
 
   it('updates a highlight via updateHighlight action', async () => {
@@ -190,7 +193,7 @@ describe('useNotesStore', () => {
     expect(result.id).toBe('h-1')
     expect(result.note).toBe('Updated reflection note')
     expect(result.tags).toEqual(['consistency', 'raft'])
-    expect(notes.highlights[0].note).toBe('Updated reflection note')
-    expect(notes.highlights[0].tags).toEqual(['consistency', 'raft'])
+    expect(notes.highlights[0]?.note).toBe('Updated reflection note')
+    expect(notes.highlights[0]?.tags).toEqual(['consistency', 'raft'])
   })
 })

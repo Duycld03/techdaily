@@ -177,13 +177,13 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
       submissions.value[questionId] = result
 
       // Update question state
-      const qIndex = questions.value.findIndex(q => q.id === questionId)
-      if (qIndex !== -1) {
-        questions.value[qIndex].isMastered = result.isMastered
-        questions.value[qIndex].lastSelectedOptionIndex = selectedOptionIndex
-        questions.value[qIndex].isLastAnswerCorrect = result.isCorrect
-        questions.value[qIndex].correctCount = result.correctCount
-        questions.value[qIndex].incorrectCount = result.incorrectCount
+      const targetQuestion = questions.value.find(q => q.id === questionId)
+      if (targetQuestion) {
+        targetQuestion.isMastered = result.isMastered
+        targetQuestion.lastSelectedOptionIndex = selectedOptionIndex
+        targetQuestion.isLastAnswerCorrect = result.isCorrect
+        targetQuestion.correctCount = result.correctCount
+        targetQuestion.incorrectCount = result.incorrectCount
       }
 
       // If in review queue and now mastered, remove from queue

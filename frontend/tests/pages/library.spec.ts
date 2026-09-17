@@ -27,7 +27,7 @@ const mockBooks = [
   }
 ]
 
-const mockGet = vi.fn(async (url: string) => {
+const mockGet = vi.fn(async (url: string): Promise<any> => {
   if (url.includes('/api/v1/library/books')) {
     return { books: [...mockBooks] }
   }

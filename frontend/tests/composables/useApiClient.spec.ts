@@ -1,8 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useApiClient } from '~/composables/useApiClient'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useToast } from '~/composables/useToast'
+
+interface GlobalWithNavigateTo {
+  navigateTo: Mock
+}
 
 describe('useApiClient 401 Interceptor', () => {
   beforeEach(() => {
@@ -50,11 +54,11 @@ describe('useApiClient 401 Interceptor', () => {
     // 2. Toast warning must be emitted with i18n key
     const toast = useToast()
     expect(toast.toasts.value.length).toBeGreaterThan(0)
-    expect(toast.toasts.value[0].type).toBe('warning')
-    expect(toast.toasts.value[0].message).toBe('auth.session_expired')
+    expect(toast.toasts.value[0]?.type).toBe('warning')
+    expect(toast.toasts.value[0]?.message).toBe('auth.session_expired')
 
     // 3. navigateTo must be called with redirect to login
-    expect(globalThis.navigateTo).toHaveBeenCalledWith(
+    expect((globalThis as unknown as GlobalWithNavigateTo).navigateTo).toHaveBeenCalledWith(
       expect.objectContaining({
         path: '/login'
       })
@@ -74,6 +78,6 @@ describe('useApiClient 401 Interceptor', () => {
 
     const toast = useToast()
     expect(toast.toasts.value.length).toBe(0)
-    expect(globalThis.navigateTo).not.toHaveBeenCalled()
+    expect((globalThis as unknown as GlobalWithNavigateTo).navigateTo).not.toHaveBeenCalled()
   })
 })

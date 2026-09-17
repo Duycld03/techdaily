@@ -17,8 +17,8 @@ export const useAuthStore = defineStore('auth', () => {
   function parseJwtPayload(jwt: string): any | null {
     try {
       const parts = jwt.split('.')
-      if (parts.length < 2) return null
       const base64Url = parts[1]
+      if (!base64Url) return null
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
       const jsonPayload = decodeURIComponent(
         atob(base64)

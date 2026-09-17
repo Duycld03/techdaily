@@ -106,9 +106,10 @@ describe('MasteryGaugeCard.vue', () => {
     const paths = gaugeSvg.findAll('path')
     expect(paths.length).toBe(2) // background arc and value arc
     const valueArc = paths[1]
-    expect(valueArc.attributes('stroke-dasharray')).toBe('141.37')
+    expect(valueArc).toBeDefined()
+    expect(valueArc!.attributes('stroke-dasharray')).toBe('141.37')
     // 50% of 141.37 ≈ 70.685
-    const offset = parseFloat(valueArc.attributes('stroke-dashoffset') || '0')
+    const offset = parseFloat(valueArc!.attributes('stroke-dashoffset') || '0')
     expect(Math.round(offset)).toBe(71)
   })
 })
@@ -189,7 +190,7 @@ describe('AdvancedFilterModal.vue', () => {
     await applyBtn!.trigger('click')
 
     expect(wrapper.emitted('apply')).toBeTruthy()
-    const applied = wrapper.emitted('apply')![0][0] as { sourceType: number }
+    const applied = wrapper.emitted('apply')![0]![0] as { sourceType: number }
     expect(applied.sourceType).toBe(0)
     expect(wrapper.emitted('close')).toBeTruthy()
   })

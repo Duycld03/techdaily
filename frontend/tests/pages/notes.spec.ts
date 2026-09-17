@@ -102,7 +102,7 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     await flushPromises()
 
     const notesStore = useNotesStore()
-    expect(notesStore.highlights[0].note).toBe('Updated reflection note for async replication')
+    expect(notesStore.highlights[0]?.note).toBe('Updated reflection note for async replication')
   })
 
   it('renders flashcard button in disabled In SM-2 state with Check icon when highlight has hasFlashcard true', async () => {
@@ -233,7 +233,7 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     vm.selectTag('hashing')
     await wrapper.vm.$nextTick()
     expect(vm.filteredHighlights.length).toBe(1)
-    expect(vm.filteredHighlights[0].id).toBe('h-2')
+    expect(vm.filteredHighlights[0]?.id).toBe('h-2')
 
     // 2. Add search query that does not match h-2
     const searchInput = wrapper.find('input[type="text"]')
@@ -245,7 +245,7 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     await searchInput.setValue('reshuffling')
     await wrapper.vm.$nextTick()
     expect(vm.filteredHighlights.length).toBe(1)
-    expect(vm.filteredHighlights[0].id).toBe('h-2')
+    expect(vm.filteredHighlights[0]?.id).toBe('h-2')
 
     // 4. Toggle/clear tag by clicking null
     vm.selectTag(null)

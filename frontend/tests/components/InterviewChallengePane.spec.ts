@@ -89,8 +89,8 @@ describe('InterviewChallengePane.vue', () => {
     })
 
     const optionButtons = wrapper.findAll('button[type="button"]')
-    await optionButtons[1].trigger('click')
-
+    expect(optionButtons[1]).toBeDefined()
+    await optionButtons[1]!.trigger('click')
     expect(wrapper.find('.ring-brand-500\\/30').exists()).toBe(true)
   })
 

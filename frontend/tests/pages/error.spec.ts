@@ -54,7 +54,8 @@ describe('error.vue', () => {
     })
 
     const homeButton = wrapper.findAll('button')[0]
-    await homeButton.trigger('click')
+    expect(homeButton).toBeDefined()
+    await homeButton!.trigger('click')
 
     expect(clearErrorMock).toHaveBeenCalledWith({ redirect: '/today' })
   })
@@ -74,7 +75,8 @@ describe('error.vue', () => {
 
     const buttons = wrapper.findAll('button')
     const retryButton = buttons[1]
-    await retryButton.trigger('click')
+    expect(retryButton).toBeDefined()
+    await retryButton!.trigger('click')
 
     expect(clearErrorMock).toHaveBeenCalledWith()
   })

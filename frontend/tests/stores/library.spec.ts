@@ -138,7 +138,7 @@ describe("useLibraryStore", () => {
 
     await library.fetchBooks();
     expect(library.books).toHaveLength(2);
-    expect(library.books[0].title).toBe(
+    expect(library.books[0]?.title).toBe(
       "Designing Data-Intensive Applications",
     );
   });
@@ -164,7 +164,7 @@ describe("useLibraryStore", () => {
 
     expect(book.id).toBe("b-1");
     expect(book.chunks).toHaveLength(1);
-    expect(book.chunks[0].chapterTitle).toBe(
+    expect(book.chunks[0]?.chapterTitle).toBe(
       "Reliability, Scalability, and Maintainability",
     );
   });

@@ -152,7 +152,7 @@ describe('useInterviewQuizStore', () => {
     expect(result?.isCorrect).toBe(true)
     expect(result?.isMastered).toBe(true)
     expect(store.isCurrentAnswered).toBe(true)
-    expect(store.questions[0].isMastered).toBe(true)
+    expect(store.questions[0]?.isMastered).toBe(true)
   })
 
   it('submits incorrect answer and keeps question unmastered', async () => {
@@ -162,8 +162,8 @@ describe('useInterviewQuizStore', () => {
     const result = await store.submitAnswer('q-1', 1)
     expect(result?.isCorrect).toBe(false)
     expect(result?.isMastered).toBe(false)
-    expect(store.questions[0].isMastered).toBe(false)
-    expect(store.questions[0].incorrectCount).toBe(1)
+    expect(store.questions[0]?.isMastered).toBe(false)
+    expect(store.questions[0]?.incorrectCount).toBe(1)
   })
 
   it('navigates next and prev question, transitions to summary on finish', async () => {

@@ -74,8 +74,9 @@ describe('SettingsPage handleSendTestPush', () => {
 
     const toast = useToast()
     const lastToast = toast.toasts.value[toast.toasts.value.length - 1]
-    expect(lastToast.type).toBe('success')
-    expect(lastToast.message).toBe('settings.web_push_test_success')
+    expect(lastToast).toBeDefined()
+    expect(lastToast?.type).toBe('success')
+    expect(lastToast?.message).toBe('settings.web_push_test_success')
   })
 
   it('shows warning toast when test push succeeds with sent === 0', async () => {
@@ -96,8 +97,9 @@ describe('SettingsPage handleSendTestPush', () => {
 
     const toast = useToast()
     const lastToast = toast.toasts.value[toast.toasts.value.length - 1]
-    expect(lastToast.type).toBe('warning')
-    expect(lastToast.message).toBe('settings.web_push_test_zero_sent')
+    expect(lastToast).toBeDefined()
+    expect(lastToast?.type).toBe('warning')
+    expect(lastToast?.message).toBe('settings.web_push_test_zero_sent')
   })
 
   it('handles PUSH_SUBSCRIPTION_EXPIRED ApiError by setting isSubscribed false and 8000ms error toast', async () => {
@@ -126,9 +128,10 @@ describe('SettingsPage handleSendTestPush', () => {
     expect(mockIsSubscribed.value).toBe(false)
     const toast = useToast()
     const lastToast = toast.toasts.value[toast.toasts.value.length - 1]
-    expect(lastToast.type).toBe('error')
-    expect(lastToast.message).toBe('settings.web_push_test_expired')
-    expect(lastToast.duration).toBe(8000)
+    expect(lastToast).toBeDefined()
+    expect(lastToast?.type).toBe('error')
+    expect(lastToast?.message).toBe('settings.web_push_test_expired')
+    expect(lastToast?.duration).toBe(8000)
   })
 
   it('handles other errors using formatError and fallback key', async () => {
@@ -156,7 +159,8 @@ describe('SettingsPage handleSendTestPush', () => {
 
     const toast = useToast()
     const lastToast = toast.toasts.value[toast.toasts.value.length - 1]
-    expect(lastToast.type).toBe('error')
-    expect(lastToast.message).toBe('api_errors.PUSH_DELIVERY_FAILED')
+    expect(lastToast).toBeDefined()
+    expect(lastToast?.type).toBe('error')
+    expect(lastToast?.message).toBe('api_errors.PUSH_DELIVERY_FAILED')
   })
 })

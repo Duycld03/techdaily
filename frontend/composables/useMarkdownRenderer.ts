@@ -136,10 +136,13 @@ export function useMarkdownRenderer() {
 
     md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
       const token = tokens[idx];
+      if (!token) {
+        return defaultLinkOpen(tokens, idx, options, env, self);
+      }
       const hrefIndex = token.attrIndex("href");
 
       if (hrefIndex >= 0) {
-        const href = token.attrs ? token.attrs[hrefIndex][1] : "";
+        const href = token.attrs?.[hrefIndex]?.[1] ?? "";
 
         if (/^https?:\/\//i.test(href) || href.startsWith("//")) {
           token.attrSet("target", "_blank");
@@ -184,10 +187,12 @@ export function useMarkdownRenderer() {
 
     md.renderer.rules.fence = (tokens, idx, options, env, self) => {
       const token = tokens[idx];
+      if (!token) {
+        return defaultFence(tokens, idx, options, env, self);
+      }
       const info = token.info ? token.info.trim() : "";
-      const rawLang = info.split(/\s+/)[0].toLowerCase() || "";
+      const rawLang = info.split(/\s+/)[0]?.toLowerCase() ?? "";
       const code = token.content;
-
       const effectiveLang = detectCodeLanguage(code, rawLang);
       const targetLang = normalizeLanguage(effectiveLang);
       const langDisplay = formatLanguageLabel(targetLang);
@@ -243,14 +248,17 @@ export function useMarkdownRenderer() {
     md.core.ruler.after("block", "callouts", (state) => {
       const tokens = state.tokens;
       for (let i = 0; i < tokens.length; i++) {
-        if (tokens[i].type !== "blockquote_open") continue;
+        const currentToken = tokens[i];
+        if (!currentToken || currentToken.type !== "blockquote_open") continue;
 
         // Find matching blockquote_close
         let level = 1;
         let closeIdx = -1;
         for (let j = i + 1; j < tokens.length; j++) {
-          if (tokens[j].type === "blockquote_open") level++;
-          else if (tokens[j].type === "blockquote_close") {
+          const innerToken = tokens[j];
+          if (!innerToken) continue;
+          if (innerToken.type === "blockquote_open") level++;
+          else if (innerToken.type === "blockquote_close") {
             level--;
             if (level === 0) {
               closeIdx = j;
@@ -260,20 +268,26 @@ export function useMarkdownRenderer() {
         }
         if (closeIdx === -1) continue;
 
+        const nextToken = tokens[i + 1];
+        const inlineToken = tokens[i + 2];
         if (
-          tokens[i + 1]?.type === "paragraph_open" &&
-          tokens[i + 2]?.type === "inline"
+          nextToken?.type === "paragraph_open" &&
+          inlineToken &&
+          inlineToken.type === "inline"
         ) {
-          const inlineToken = tokens[i + 2];
           const markerMatch = inlineToken.content.match(
             /^\s*(?:\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]|\*{0,2}\[(NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]\*{0,2})(?:\s*|\n|$)/i,
           );
 
           if (markerMatch) {
-            const rawType = (markerMatch[1] || markerMatch[2]).toUpperCase();
+            const matchedType = markerMatch[1] ?? markerMatch[2] ?? "";
+            const rawType = matchedType.toUpperCase();
             const alertType = rawType === "DANGER" ? "CAUTION" : rawType;
-            tokens[i].meta = { alertType };
-            tokens[closeIdx].meta = { alertType };
+            currentToken.meta = { alertType };
+            const closeToken = tokens[closeIdx];
+            if (closeToken) {
+              closeToken.meta = { alertType };
+            }
 
             // Remaining content in the first inline token
             let remaining = inlineToken.content
@@ -293,12 +307,15 @@ export function useMarkdownRenderer() {
               closeIdx -= 3;
 
               // Check if the next paragraph is purely the duplicate title
+              const nextPara = tokens[i + 1];
+              const nextInline = tokens[i + 2];
               if (
-                tokens[i + 1]?.type === "paragraph_open" &&
-                tokens[i + 2]?.type === "inline"
+                nextPara?.type === "paragraph_open" &&
+                nextInline &&
+                nextInline.type === "inline"
               ) {
                 if (
-                  tokens[i + 2].content.trim().toLowerCase() ===
+                  nextInline.content.trim().toLowerCase() ===
                   alertType.toLowerCase()
                 ) {
                   tokens.splice(i + 1, 3);
@@ -316,16 +333,18 @@ export function useMarkdownRenderer() {
 
     // Custom Blockquote Renderer for Alerts & Callouts
     md.renderer.rules.blockquote_open = (tokens, idx) => {
-      const alertType = tokens[idx].meta?.alertType as string | undefined;
-      if (!alertType || !ALERT_CONFIGS[alertType]) {
+      const token = tokens[idx];
+      const alertType = token?.meta?.alertType as string | undefined;
+      const cfg = alertType ? ALERT_CONFIGS[alertType] : undefined;
+      if (!alertType || !cfg) {
         return '<blockquote class="my-4 pl-4 border-l-4 border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/40 py-2.5 px-4 rounded-r-xl text-slate-700 dark:text-slate-300 not-italic">';
       }
-      const cfg = ALERT_CONFIGS[alertType];
       return `<div class="callout-box callout-${alertType.toLowerCase()} my-5 p-4 sm:p-5 rounded-2xl border-l-4 ${cfg.borderClass} ${cfg.bgClass} shadow-sm not-italic"><div class="flex items-center gap-2 font-bold ${cfg.titleClass} text-xs sm:text-sm uppercase tracking-wider mb-2 select-none">${cfg.iconSvg}<span>${cfg.label}</span></div><div class="callout-content text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-relaxed prose-p:my-1.5 prose-p:leading-relaxed">`;
     };
 
     md.renderer.rules.blockquote_close = (tokens, idx) => {
-      if (tokens[idx].meta?.alertType) {
+      const token = tokens[idx];
+      if (token?.meta?.alertType) {
         return "</div></div>";
       }
       return "</blockquote>";

@@ -2,6 +2,10 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import QuizPage, { formatSeniorityLevel, seniorityLevels } from '~/pages/quiz.vue'
+declare module '~/pages/quiz.vue' {
+  export const seniorityLevels: Array<{ id: number; key: string; label: string; desc: string }>
+  export function formatSeniorityLevel(level: string | number): { id: number; key: string; label: string; desc: string }
+}
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useInterviewQuizStore } from '~/stores/useInterviewQuizStore'
 

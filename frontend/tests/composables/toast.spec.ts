@@ -13,16 +13,16 @@ describe('useToast', () => {
 
     const id1 = toast.success('Operation succeeded!')
     expect(toast.toasts.value.length).toBe(1)
-    expect(toast.toasts.value[0].message).toBe('Operation succeeded!')
-    expect(toast.toasts.value[0].type).toBe('success')
+    expect(toast.toasts.value[0]?.message).toBe('Operation succeeded!')
+    expect(toast.toasts.value[0]?.type).toBe('success')
 
     const id2 = toast.error('Something went wrong!')
     expect(toast.toasts.value.length).toBe(2)
-    expect(toast.toasts.value[1].type).toBe('error')
+    expect(toast.toasts.value[1]?.type).toBe('error')
 
     toast.remove(id1)
     expect(toast.toasts.value.length).toBe(1)
-    expect(toast.toasts.value[0].id).toBe(id2)
+    expect(toast.toasts.value[0]?.id).toBe(id2)
   })
 
   it('supports info and warning toasts', () => {
@@ -31,7 +31,7 @@ describe('useToast', () => {
     toast.warning('Check your connection')
 
     expect(toast.toasts.value.length).toBe(2)
-    expect(toast.toasts.value[0].type).toBe('info')
-    expect(toast.toasts.value[1].type).toBe('warning')
+    expect(toast.toasts.value[0]?.type).toBe('info')
+    expect(toast.toasts.value[1]?.type).toBe('warning')
   })
 })
