@@ -29,6 +29,20 @@ export interface DeckStatistics {
   masteredCount: number
 }
 
+export interface ReviewFilterState {
+  status: number | null
+  sourceType: number | null
+  urgency: string | null
+  sortBy: string | null
+}
+
+export interface ForecastDayBin {
+  date: string
+  dayLabel: string
+  count: number
+  isToday: boolean
+}
+
 export const useReviewStore = defineStore('review', () => {
   const cards = ref<ReviewCard[]>([])
   const totalCardsDue = ref(0)

@@ -36,6 +36,15 @@ The User Profile interface SHALL NOT display notification scheduling controls (`
 
 When submitting profile updates from the profile page, the client application SHALL dispatch only personal identity and pace fields (`name`, `targetRole`, `dailyGoalMinutes`) to `PUT /api/v1/user/profile`. The backend API SHALL support partial updates, preserving existing notification schedule and timezone database records when those fields are omitted.
 
+The User Profile interface (`frontend/pages/profile.vue`) SHALL present an Asymmetric 2-Column Engineer Portfolio Dashboard (Desktop 2/3 - 1/3, stacking on mobile):
+1. Left Column (Settings & Goals): Personal info tab (Name, Target Role selector, interactive Daily Goal Pace chips 5m/10m/15m/30m) and Security tab (Current password, New password with dynamic strength bar, Confirm password).
+2. Right Column (Identity & Milestones Widget): Large avatar with status badge, display name, target role badge, account type (Google linked / Standard email). Stacked milestone card: Active Streak with fire icon, longest streak, freeze credits remaining; Total Drills completed; Quiz Accuracy rate.
+3. Domain Mastery Progress Bar (Goal Tracker): Progress bars tracking curriculum domain coverage (.NET, PostgreSQL, System Design, Frontend) showing learning progress.
+
+The Engineer Portfolio Dashboard SHALL adapt responsively across Desktop (≥ 1280px, asymmetric 2-column 2/3 - 1/3 layout) and Mobile (~375px - 390px, single-column vertically stacked layout) viewports without horizontal scrolling or layout overlap.
+
+The Identity widget, milestone statistics, and domain goal tracker SHALL support bilingual rendering in both English and Vietnamese, ensuring that longer Vietnamese strings (such as curriculum domain titles, target role descriptions, and milestone counters) render cleanly without text truncation, badge clipping, or broken progress bar labels.
+
 #### Scenario: Unauthenticated request to user profile
 - **WHEN** unauthenticated client calls `GET /api/v1/user/profile`
 - **THEN** system returns `401 Unauthorized`.
@@ -69,7 +78,24 @@ When submitting profile updates from the profile page, the client application SH
 - **WHEN** the backend `PUT /api/v1/user/profile` endpoint receives a request with `Name`, `TargetRole`, and `DailyGoalMinutes` populated, but with `PreferredStudyTime`, `StreakAlertTime`, and `TimeZone` null/omitted
 - **THEN** the server updates only the non-null properties, updates `UpdatedAt = DateTime.UtcNow`, and returns `200 OK` with the updated `UserProfileDto`.
 
----
+#### Scenario: Desktop 2-column vs mobile single-column stacked responsive layout
+- **WHEN** authenticated user accesses `/profile` on a desktop viewport ($\ge 1280\text{px}$)
+- **THEN** the layout renders an asymmetric 2-column structure with settings and domain tracker on the left (2/3 width) and identity/milestone cards on the right (1/3 width)
+- **WHEN** user accesses `/profile` on a mobile viewport ($375\text{px} - 390\text{px}$)
+- **THEN** the layout stacks into a single vertical column with the Identity widget at the top followed by the settings tabs and domain goal tracker, maintaining touch-friendly targets and zero horizontal overflow.
+
+#### Scenario: User inspects identity and learning milestones widget
+- **WHEN** user views the right-column identity card
+- **THEN** UI renders the user avatar, account connection badge (Google / Email), active streak with fire icon and freeze credits, total drills completed, and quiz accuracy percentage.
+
+#### Scenario: User monitors curriculum domain mastery goal progress
+- **WHEN** user views the Domain Mastery Goal Tracker section
+- **THEN** UI displays categorized visual progress bars for each curriculum domain (.NET, PostgreSQL, System Design, Frontend) reflecting user learning progress.
+
+#### Scenario: Bilingual visual verification for identity widget, milestone stats, and domain goal tracker
+- **WHEN** user toggles between English (`en`) and Vietnamese (`vi`) on the `/profile` page
+- **THEN** all copy across the Identity card, milestone badges (active streak, drills completed, quiz accuracy), and domain goal tracker updates dynamically
+- **AND** longer Vietnamese domain titles (such as "Thiết kế hệ thống phân tán", "Hệ cơ sở dữ liệu PostgreSQL", "Độ phủ kiến thức chuyên môn") render without badge clipping, text truncation, or misalignment of progress bar percentages.
 
 ### Requirement: Daily Doc Reading Slice
 The system SHALL serve one curated 3–5 minute reading slice per active document series per day (`GET /api/v1/daily/today`) preserving source documentation excerpt language, structured summary, key takeaways, and quick-check questions.

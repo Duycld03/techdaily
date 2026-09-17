@@ -31,6 +31,16 @@ export interface UserLearningStats {
   memberSince: string
 }
 
+export interface DomainMasteryProgress {
+  category: number
+  titleKey: string
+  defaultTitle: string
+  completedCount: number
+  totalCount: number
+  percentage: number
+  accentColor: string
+}
+
 export const useProfileStore = defineStore('profile', () => {
   const profile = ref<UserProfile | null>(null)
   const stats = ref<UserLearningStats | null>(null)

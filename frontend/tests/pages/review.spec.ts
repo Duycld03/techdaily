@@ -134,11 +134,10 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
 
     await flushPromises()
 
-    // Tab 2 content rendered
-    expect(wrapper.text()).toContain('review.total_cards')
-    expect(wrapper.text()).toContain('review.learning_cards')
-    expect(wrapper.text()).toContain('review.reviewing_cards')
-    expect(wrapper.text()).toContain('review.mastered_cards')
+    // Tab 2 Bento content rendered
+    expect(wrapper.text()).toContain('review.cards_due')
+    expect(wrapper.text()).toContain('review.mastery_rate')
+    expect(wrapper.text()).toContain('review.forecast_title')
     expect(wrapper.text()).toContain('Explain Raft leader election invariants.')
   })
 
@@ -161,10 +160,10 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
     await deckTabBtn!.trigger('click')
     await flushPromises()
 
-    // Status filter chip
-    const learningChip = wrapper.findAll('button').find((b) => b.text().includes('review.status_learning'))
-    expect(learningChip).toBeDefined()
-    await learningChip!.trigger('click')
+    // Quick filter chip
+    const masteredChip = wrapper.findAll('button').find((b) => b.text().includes('review.quick_filter_mastered'))
+    expect(masteredChip).toBeDefined()
+    await masteredChip!.trigger('click')
 
     const reviewStore = useReviewStore()
     expect(reviewStore.deckCards).toBeDefined()
