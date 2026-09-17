@@ -38,6 +38,11 @@ public class GetHighlightsHandler : IUseCase<GetHighlightsRequest, GetHighlights
         {
             list = list.Where(h => h.Tags.Contains(request.Tag, StringComparer.OrdinalIgnoreCase)).ToList();
         }
+        var cardHighlightIds = await _dbContext.SpacedRepetitionCards
+            .AsNoTracking()
+            .Where(c => c.UserId == request.UserId && c.SourceHighlightId != null)
+            .Select(c => c.SourceHighlightId!.Value)
+            .ToHashSetAsync(cancellationToken);
 
         var dtos = list.Select(h => new HighlightDto
         {
@@ -48,9 +53,9 @@ public class GetHighlightsHandler : IUseCase<GetHighlightsRequest, GetHighlights
             SelectedText = h.SelectedText,
             Note = h.Note,
             Tags = h.Tags,
-            CreatedAt = h.CreatedAt
+            CreatedAt = h.CreatedAt,
+            HasFlashcard = cardHighlightIds.Contains(h.Id)
         }).ToList();
-
         return new GetHighlightsResponse { Highlights = dtos };
     }
 }

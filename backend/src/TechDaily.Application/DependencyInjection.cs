@@ -75,6 +75,7 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<Features.Insights.DTOs.GetInsightsFeedRequest, Features.Insights.DTOs.GetInsightsFeedResponse>, Features.Insights.GetInsightsFeed.GetInsightsFeedHandler>();
         services.AddScoped<IUseCase<Features.Insights.DTOs.GenerateInsightRequest, Features.Insights.DTOs.TechInsightDto>, Features.Insights.GenerateInsight.GenerateInsightHandler>();
         services.AddScoped<IUseCase<Features.Insights.DTOs.BookmarkInsightRequest, Features.Insights.DTOs.BookmarkInsightResponse>, Features.Insights.BookmarkInsight.BookmarkInsightHandler>();
+        services.AddScoped<IUseCase<Features.Insights.DTOs.GetInsightsMetaRequest, Features.Insights.DTOs.GetInsightsMetaResponse>, Features.Insights.GetInsightsMeta.GetInsightsMetaHandler>();
 
         // Interview Quiz & Mastery Arena Handlers
         services.AddScoped<IUseCase<Features.InterviewQuiz.DTOs.GenerateQuizRequest, Features.InterviewQuiz.DTOs.GenerateQuizResponse>, Features.InterviewQuiz.GenerateQuiz.GenerateQuizHandler>();

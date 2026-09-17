@@ -368,6 +368,7 @@
     "loading_insights": "Đang tải bài viết đã lưu...",
     "create_flashcard": "Flashcard SM-2",
     "creating_card": "Đang tạo...",
+    "in_sm2": "Đã Trong SM-2",
     "toast_flashcard_success": "Đã tạo Flashcard và đưa vào bộ ôn tập SM-2!",
     "toast_flashcard_error": "Không thể tạo flashcard từ trích dẫn."
   },
@@ -480,7 +481,7 @@
     "keyboard_hint": "Nhấn [Space] hoặc [→] để chuyển nhanh",
     "save_bookmark": "Lưu Dấu",
     "saved": "Đã Lưu",
-    "saved_tab": "🔖 Đã Lưu",
+    "saved_tab": "Đã Lưu",
     "empty_title": "Chưa có kiến thức phù hợp",
     "empty_desc": "Hãy thử chọn chủ đề khác hoặc bấm Tạo Với AI để sinh mẫu kiến thức mới.",
     "card_counter": "Mẫu {current} / {total}",

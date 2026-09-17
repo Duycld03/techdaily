@@ -12,6 +12,19 @@ public static class InsightsEndpoints
     {
         group.RequireAuthorization();
 
+        // Dynamic Insights Metadata & Topic Inspirations
+        group.MapGet("/meta", async (
+            IUseCase<GetInsightsMetaRequest, GetInsightsMetaResponse> handler,
+            CancellationToken ct) =>
+        {
+            var result = await handler.ExecuteAsync(new GetInsightsMetaRequest(), ct);
+            return result.IsSuccess
+                ? Results.Ok(result.Value)
+                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+        })
+        .WithName("GetInsightsMeta")
+        .WithSummary("Retrieves dynamic category metadata and curated AI topic suggestions.");
+
         // Authenticated Infinite Feed
         group.MapGet("/feed", async (
             [FromQuery] int? category,

@@ -50,6 +50,18 @@ vi.mock('~/composables/useApiClient', () => ({
           hasMore: false
         }
       }
+      if (url.includes('/api/v1/insights/meta')) {
+        return {
+          categories: [
+            { id: 0, key: 'FrontendWeb', labelEn: 'Frontend & Vue', labelVi: 'Frontend & Vue', count: 5 },
+            { id: 1, key: 'BackendDotNet', labelEn: '.NET & C#', labelVi: '.NET & C#', count: 12 }
+          ],
+          suggestedTopics: {
+            0: ['Vue Reactivity', 'Vite SSR'],
+            1: ['Span<T>', 'Kestrel Sockets']
+          }
+        }
+      }
       throw new Error('Unknown endpoint')
     }),
     post: vi.fn(async (url: string, body: any) => {
@@ -123,5 +135,16 @@ describe('useInsightsStore', () => {
     await store.toggleBookmark('ins-1')
     expect(store.currentInsight?.bookmarksCount).toBe(3)
     expect(store.currentInsight?.isBookmarkedByUser).toBe(true)
+  })
+
+  it('fetches metadata and populates categoryMetadata and suggestedTopics', async () => {
+    const store = useInsightsStore()
+    await store.fetchMetadata()
+
+    expect(store.categoryMetadata.length).toBe(2)
+    expect(store.categoryMetadata[0].labelEn).toBe('Frontend & Vue')
+    expect(store.categoryMetadata[1].count).toBe(12)
+    expect(store.suggestedTopics[0]).toEqual(['Vue Reactivity', 'Vite SSR'])
+    expect(store.suggestedTopics[1]).toEqual(['Span<T>', 'Kestrel Sockets'])
   })
 })

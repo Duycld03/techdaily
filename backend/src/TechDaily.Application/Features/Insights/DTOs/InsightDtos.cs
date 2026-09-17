@@ -53,3 +53,18 @@ public record BookmarkInsightResponse(
     bool IsBookmarked,
     int TotalBookmarks
 );
+
+public record InsightCategoryMetaDto(
+    int Id,
+    string Key,
+    string LabelEn,
+    string LabelVi,
+    int Count
+);
+
+public record GetInsightsMetaRequest();
+
+public record GetInsightsMetaResponse(
+    List<InsightCategoryMetaDto> Categories,
+    Dictionary<int, List<string>> SuggestedTopics
+);

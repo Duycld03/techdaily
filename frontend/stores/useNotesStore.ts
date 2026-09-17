@@ -11,6 +11,7 @@ export interface Highlight {
   note?: string
   tags: string[]
   createdAt: string
+  hasFlashcard?: boolean
 }
 
 export const useNotesStore = defineStore('notes', () => {

@@ -10,4 +10,5 @@ public class HighlightDto
     public string? Note { get; set; }
     public List<string> Tags { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; }
+    public bool HasFlashcard { get; set; } = false;
 }

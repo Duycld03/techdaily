@@ -28,6 +28,19 @@ export interface InsightsFeedResponse {
   hasMore: boolean
 }
 
+export interface CategoryMeta {
+  id: number
+  key: string
+  labelEn: string
+  labelVi: string
+  count: number
+}
+
+export interface InsightsMetaResponse {
+  categories: CategoryMeta[]
+  suggestedTopics: Record<number, string[]>
+}
+
 export const useInsightsStore = defineStore('insights', () => {
   const insights = ref<TechInsight[]>([])
   const bookmarkedInsights = ref<TechInsight[]>([])
@@ -35,6 +48,8 @@ export const useInsightsStore = defineStore('insights', () => {
   const selectedCategory = ref<number | null>(null)
   const selectedTag = ref<string | null>(null)
   const onlyBookmarked = ref(false)
+  const categoryMetadata = ref<CategoryMeta[]>([])
+  const suggestedTopics = ref<Record<number, string[]>>({})
   const isLoading = ref(false)
   const isGenerating = ref(false)
   const isLoadingBookmarks = ref(false)
@@ -188,6 +203,20 @@ export const useInsightsStore = defineStore('insights', () => {
     }
   }
 
+  async function fetchMetadata() {
+    try {
+      const api = useApiClient()
+      const response = await api.get<InsightsMetaResponse>('/api/v1/insights/meta')
+      if (response) {
+        categoryMetadata.value = response.categories || []
+        suggestedTopics.value = response.suggestedTopics || {}
+      }
+      return response
+    } catch (err: unknown) {
+      console.error('Failed to fetch insights metadata', err)
+    }
+  }
+
   return {
     insights,
     bookmarkedInsights,
@@ -209,6 +238,9 @@ export const useInsightsStore = defineStore('insights', () => {
     prevInsight,
     shuffle,
     generateWithAi,
-    toggleBookmark
+    toggleBookmark,
+    categoryMetadata,
+    suggestedTopics,
+    fetchMetadata,
   }
 })

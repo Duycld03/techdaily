@@ -45,12 +45,6 @@ const isGenerateModalOpen = ref(false)
 const customTopicInput = ref('')
 const activeCodeTab = ref<'solution' | 'problem'>('solution')
 
-const suggestedTopicPool: Record<number, string[]> = {
-  0: ['Vue 3 shallowRef vs reactive', 'Component Composition vs Re-renders', 'Web Workers Offloading', 'Event Loop & Microtasks'],
-  1: ['Kestrel Socket Pipeline & HTTP/3', 'ArrayPool<T> Memory Pooling', 'System.Threading.Channels', 'OutputCache Tag Eviction', 'EF Core Compiled Queries', 'Sync-over-Async Mitigation'],
-  2: ['Index-Only Scan & INCLUDE', 'Heap-Only Tuples (HOT)', 'GIN Index for JSONB', 'BRIN Index Time-series', 'PgBouncer Connection Pooling'],
-  3: ['Transactional Outbox & CDC', 'Cache Stampede & XFetch', 'Token Bucket Rate Limiting', 'Circuit Breaker with Jitter']
-}
 
 const defaultTopics = [
   'Kestrel Socket Pipeline',
@@ -62,8 +56,8 @@ const defaultTopics = [
 
 const currentSuggestedTopics = computed(() => {
   const cat = insightsStore.selectedCategory
-  if (cat !== null && suggestedTopicPool[cat]) {
-    return suggestedTopicPool[cat]
+  if (cat !== null && insightsStore.suggestedTopics[cat] && insightsStore.suggestedTopics[cat].length > 0) {
+    return insightsStore.suggestedTopics[cat]
   }
   return defaultTopics
 })
@@ -74,13 +68,25 @@ function pickRandomTopic() {
   customTopicInput.value = randomChoice
 }
 
-const categories = [
-  { id: null, label: 'insights.all_categories' },
-  { id: 0, label: 'insights.cat_frontend' },
-  { id: 1, label: 'insights.cat_dotnet' },
-  { id: 2, label: 'insights.cat_database' },
-  { id: 3, label: 'insights.cat_system' }
-]
+const computedCategories = computed(() => {
+  const list = [{ id: null as number | null, label: t('insights.all_categories') }]
+  if (insightsStore.categoryMetadata && insightsStore.categoryMetadata.length > 0) {
+    for (const cat of insightsStore.categoryMetadata) {
+      list.push({
+        id: cat.id,
+        label: locale.value === 'vi' ? cat.labelVi : cat.labelEn
+      })
+    }
+  } else {
+    list.push(
+      { id: 0, label: t('insights.cat_frontend') },
+      { id: 1, label: t('insights.cat_dotnet') },
+      { id: 2, label: t('insights.cat_database') },
+      { id: 3, label: t('insights.cat_system') }
+    )
+  }
+  return list
+})
 
 onMounted(async () => {
   if (!authStore.isLoggedIn) {
@@ -89,7 +95,10 @@ onMounted(async () => {
       query: { redirect: '/insights' }
     })
   }
-  await insightsStore.fetchFeed()
+  await Promise.all([
+    insightsStore.fetchFeed(),
+    insightsStore.fetchMetadata()
+  ])
   window.addEventListener('keydown', handleKeyDown)
 })
 
@@ -221,7 +230,7 @@ function getCategoryBadge(cat: number) {
     <!-- Category Filter Bar -->
     <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
       <button
-        v-for="cat in categories"
+        v-for="cat in computedCategories"
         :key="String(cat.id)"
         @click="handleCategorySelect(cat.id)"
         :class="[
@@ -231,20 +240,19 @@ function getCategoryBadge(cat: number) {
             : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
         ]"
       >
-        {{ $t(cat.label) }}
+        {{ cat.label }}
       </button>
 
       <!-- Bookmarked Filter Button -->
       <button
         @click="handleSavedFilter"
         :class="[
-          'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 border inline-flex items-center gap-1.5',
+          'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 border inline-flex items-center justify-center',
           insightsStore.onlyBookmarked
             ? 'bg-indigo-600 text-white dark:bg-indigo-500 dark:text-white border-transparent shadow-sm'
             : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
         ]"
       >
-        <Bookmark class="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
         <span>{{ $t('insights.saved_tab') }}</span>
       </button>
     </div>

@@ -1,9 +1,4 @@
-# notes Specification
-
-## Purpose
-Provides a dedicated reading notes and highlights management hub (`/notes`), enabling software engineers to curate chapter highlights, edit personal technical reflections and tags inline, filter by tags and search keywords, and deliberately generate SuperMemo SM-2 flashcards without interface clutter from saved insights.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Dedicated Reading Notes Management View
 The `/notes` page SHALL serve as an exclusive reading notes hub, displaying all user highlights with book titles, chapter titles, selected excerpt quotes, reflection notes, tags, timestamps, and persistent flashcard association state (`HasFlashcard`). The page SHALL NOT include a "Saved Insights" tab, delegating all insight bookmarking exclusively to `/insights` (`[Đã Lưu]`).
@@ -22,26 +17,6 @@ The `/notes` page SHALL serve as an exclusive reading notes hub, displaying all 
 - **WHEN** user clicks `Delete` on a highlight card and confirms in the deletion dialog
 - **THEN** client invokes `DELETE /api/v1/notes/highlights/{id}`
 - **AND** removes the highlight card from the local view and displays a confirmation toast (`notes.toast_delete_success`).
-
----
-
-### Requirement: Highlight Reflection and Tag Updating
-The system SHALL provide an API endpoint `PUT /api/v1/notes/highlights/{id}` allowing users to update the personal reflection note and technical tags of an existing reading highlight. The frontend `/notes` interface SHALL provide an inline editing mechanism for highlights, enabling in-place editing of notes and tags without page reloads.
-
-#### Scenario: User saves updated reflection note and tags inline
-- **WHEN** user clicks "Edit Note" on a highlight card in `/notes`, modifies the note text and tag list, and clicks "Save Changes"
-- **THEN** client sends `PUT /api/v1/notes/highlights/{id}` with `note` and `tags`
-- **AND** backend validates the request, updates `Note`, `Tags`, and `UpdatedAt` on the entity, and returns HTTP 200 OK with the updated highlight DTO
-- **AND** frontend updates the highlight card in `useNotesStore` and displays a success toast (`notes.toast_update_success`).
-
-#### Scenario: User clears reflection note
-- **WHEN** user clears the note text and submits the inline editor
-- **THEN** client sends `PUT /api/v1/notes/highlights/{id}` with `note = null` or empty string
-- **AND** backend clears the `Note` property on the highlight and persists changes.
-
-#### Scenario: Unauthorized update attempt
-- **WHEN** user attempts to update a highlight belonging to another user account
-- **THEN** backend rejects the request with HTTP 404 Not Found or HTTP 403 Forbidden without modifying database records.
 
 ---
 

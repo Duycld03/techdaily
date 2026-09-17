@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { Highlighter, Trash2, BookOpen, AlertTriangle, Zap, Search, Sparkles, X, Pencil, Check } from 'lucide-vue-next'
 import { useNotesStore, type Highlight } from '~/stores/useNotesStore'
 import { useReviewStore } from '~/stores/useReviewStore'
@@ -27,6 +27,22 @@ async function handleCreateFlashcard(highlightId: string) {
     creatingCardHighlightId.value = null
   }
 }
+
+function syncFlashcardState() {
+  notesStore.highlights.forEach(h => {
+    if (h.hasFlashcard) {
+      createdCardHighlightIds.value.add(h.id)
+    }
+  })
+}
+
+watch(
+  () => notesStore.highlights,
+  () => {
+    syncFlashcardState()
+  },
+  { deep: true }
+)
 
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
 
@@ -92,6 +108,7 @@ const isDeleting = ref(false)
 
 onMounted(async () => {
   await notesStore.fetchHighlights()
+  syncFlashcardState()
 })
 
 function renderMarkdown(raw: string | undefined | null): string {
@@ -192,12 +209,13 @@ async function confirmDeleteHighlight() {
                 :class="createdCardHighlightIds.has(item.id)
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                   : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border-amber-200 dark:border-amber-800/60'"
-                :title="$t('notes.create_flashcard')"
+                :title="createdCardHighlightIds.has(item.id) ? $t('notes.in_sm2') : $t('notes.create_flashcard')"
               >
-                <Zap class="w-3.5 h-3.5 text-amber-500" />
+                <Check v-if="createdCardHighlightIds.has(item.id)" class="w-3.5 h-3.5 text-emerald-500" />
+                <Zap v-else class="w-3.5 h-3.5 text-amber-500" />
                 <span class="hidden sm:inline">{{
                   createdCardHighlightIds.has(item.id)
-                    ? 'In SM-2'
+                    ? $t('notes.in_sm2')
                     : creatingCardHighlightId === item.id
                       ? $t('notes.creating_card')
                       : $t('notes.create_flashcard')

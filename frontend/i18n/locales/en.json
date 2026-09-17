@@ -368,6 +368,7 @@
     "loading_insights": "Loading saved insights...",
     "create_flashcard": "Flashcard SM-2",
     "creating_card": "Generating...",
+    "in_sm2": "In SM-2",
     "toast_flashcard_success": "Flashcard created & added to SM-2 Deck!",
     "toast_flashcard_error": "Failed to create flashcard."
   },
@@ -480,7 +481,7 @@
     "keyboard_hint": "Press [Space] or [→] for Next",
     "save_bookmark": "Bookmark",
     "saved": "Bookmarked",
-    "saved_tab": "🔖 Saved",
+    "saved_tab": "Saved",
     "empty_title": "No insights found",
     "empty_desc": "Try selecting another category or click Generate with AI to create a new one.",
     "card_counter": "Insight {current} of {total}",
