@@ -441,6 +441,9 @@
     "web_push_test_btn": "Send Test Push",
     "web_push_test_sending": "Sending...",
     "web_push_test_success": "Test push notification sent successfully!",
+    "web_push_test_error": "Failed to send test push notification. Please try again later.",
+    "web_push_test_expired": "Push notification subscription on your browser has expired or was revoked. Please toggle notifications off and on to refresh your registration.",
+    "web_push_test_zero_sent": "No notifications were delivered to your device. Please check your browser notification permissions.",
     "schedule_title": "Study & Alert Schedule",
     "preferred_study_time": "Preferred Study Time",
     "preferred_study_time_desc": "Morning window for your daily reading slice reminder",
@@ -607,7 +610,10 @@
     "VALIDATION_FAILED": "Validation failed for the request.",
     "CONFLICT": "A conflict occurred with existing state.",
     "SERVER_ERROR": "An unexpected server error occurred. Please try again.",
-    "NETWORK_ERROR": "Network error. Please check your internet connection."
+    "NETWORK_ERROR": "Network error. Please check your internet connection.",
+    "PUSH_SUBSCRIPTION_EXPIRED": "Push notification subscription has expired. Please toggle notifications off and on to refresh.",
+    "PUSH_NO_SUBSCRIPTIONS": "No registered devices found for notifications.",
+    "PUSH_DELIVERY_FAILED": "Failed to deliver test notification to your browser. Please try again."
   },
   "common": {
     "close": "Close",

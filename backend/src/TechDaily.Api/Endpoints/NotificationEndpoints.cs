@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
 using TechDaily.Infrastructure.Persistence;
+using TechDaily.Infrastructure.Services;
 using TechDaily.Infrastructure.Workers;
 
 namespace TechDaily.Api.Endpoints;
@@ -147,18 +148,24 @@ public static class NotificationEndpoints
             ClaimsPrincipal userClaims,
             TechDailyDbContext db,
             IWebPushService webPushService,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             var userId = GetCurrentUserId(userClaims);
             if (!userId.HasValue) return Results.Unauthorized();
 
             var subscriptions = await db.UserPushSubscriptions
-                .Where(s => s.UserId == userId.Value)
+                .Where(s => s.UserId == userId.Value && !s.IsDeleted)
                 .ToListAsync(ct);
 
             if (subscriptions.Count == 0)
             {
-                return Results.BadRequest(new { error = "No active push subscriptions found for this device." });
+                return Results.BadRequest(new
+                {
+                    code = "PUSH_NO_SUBSCRIPTIONS",
+                    error = "No active push subscriptions found for this device.",
+                    details = (object?)null
+                });
             }
 
             var payload = new PushNotificationPayload(
@@ -168,18 +175,92 @@ public static class NotificationEndpoints
                 "techdaily-test"
             );
 
+            var logger = loggerFactory.CreateLogger("TechDaily.Api.Endpoints.NotificationEndpoints");
             var sentCount = 0;
+            var staleSubscriptions = new List<UserPushSubscription>();
+
             foreach (var sub in subscriptions)
             {
-                var ok = await webPushService.SendNotificationAsync(sub.Endpoint, sub.P256dh, sub.Auth, payload, ct);
-                if (ok) sentCount++;
+                try
+                {
+                    var ok = await webPushService.SendNotificationAsync(sub.Endpoint, sub.P256dh, sub.Auth, payload, ct);
+                    if (ok)
+                    {
+                        sentCount++;
+                    }
+                }
+                catch (WebPushSubscriptionExpiredException ex)
+                {
+                    logger.LogWarning(ex, "Web Push endpoint expired ({Endpoint}). Marking for purge.", sub.Endpoint);
+                    staleSubscriptions.Add(sub);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Transient error sending push notification to endpoint {Endpoint}", sub.Endpoint);
+                }
             }
 
-            return Results.Ok(new { success = true, sent = sentCount, total = subscriptions.Count });
+            if (staleSubscriptions.Count > 0)
+            {
+                db.UserPushSubscriptions.RemoveRange(staleSubscriptions);
+                await db.SaveChangesAsync(ct);
+
+                var remaining = await db.UserPushSubscriptions
+                    .CountAsync(s => s.UserId == userId.Value && !s.IsDeleted, ct);
+
+                if (remaining == 0)
+                {
+                    var user = await db.Users.FindAsync([userId.Value], ct);
+                    if (user != null)
+                    {
+                        user.IsPushEnabled = false;
+                        user.UpdatedAt = DateTime.UtcNow;
+                        await db.SaveChangesAsync(ct);
+                    }
+                }
+            }
+
+            if (sentCount == 0 && staleSubscriptions.Count == subscriptions.Count)
+            {
+                return Results.BadRequest(new
+                {
+                    code = "PUSH_SUBSCRIPTION_EXPIRED",
+                    error = "All push notification subscriptions for this device have expired. Please toggle notifications off and on to renew your browser subscription.",
+                    details = new
+                    {
+                        sent = 0,
+                        total = subscriptions.Count,
+                        stalePurged = staleSubscriptions.Count
+                    }
+                });
+            }
+
+            if (sentCount == 0)
+            {
+                return Results.BadRequest(new
+                {
+                    code = "PUSH_DELIVERY_FAILED",
+                    error = "Failed to deliver push notifications.",
+                    details = new
+                    {
+                        sent = 0,
+                        total = subscriptions.Count,
+                        stalePurged = staleSubscriptions.Count
+                    }
+                });
+            }
+
+            return Results.Ok(new
+            {
+                success = true,
+                sent = sentCount,
+                total = subscriptions.Count,
+                stalePurged = staleSubscriptions.Count
+            });
         })
         .RequireAuthorization()
         .WithName("TestPushNotification")
-        .WithSummary("Sends an immediate test push notification to all registered devices of the current user.");
+        .WithSummary("Sends an immediate test push notification and prunes stale subscriptions.");
 
         return group;
     }

@@ -14,9 +14,12 @@ import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
 import { useProfileStore } from '~/stores/useProfileStore'
 import { useWebPush } from '~/composables/useWebPush'
+import { ApiError } from '~/composables/useApiClient'
+import { useApiError } from '~/composables/useApiError'
 
 const { t } = useI18n()
 const toast = useToast()
+const { formatError } = useApiError()
 const profileStore = useProfileStore()
 const {
   isPushSupported,
@@ -110,11 +113,23 @@ async function handleTogglePush() {
 async function handleSendTestPush() {
   isSendingTest.value = true
   try {
-    await sendTestPush()
-    toast.success(t('settings.web_push_test_success'))
+    const res = await sendTestPush()
+    if (res.sent > 0) {
+      toast.success(t('settings.web_push_test_success'))
+    } else {
+      toast.warning(t('settings.web_push_test_zero_sent'))
+    }
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to send test push.'
-    toast.error(msg)
+    const isExpired =
+      (err instanceof ApiError && err.code === 'PUSH_SUBSCRIPTION_EXPIRED') ||
+      (err instanceof Error && err.message?.toLowerCase().includes('expired'))
+
+    if (isExpired) {
+      isSubscribed.value = false
+      toast.error(t('settings.web_push_test_expired'), 8000)
+    } else {
+      toast.error(formatError(err, 'settings.web_push_test_error'))
+    }
   } finally {
     isSendingTest.value = false
   }

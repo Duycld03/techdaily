@@ -84,7 +84,16 @@ export function useApiError() {
       return i18n ? 'An unexpected server error occurred. Please try again.' : 'api_errors.SERVER_ERROR'
     }
 
-    // Check for backend detail and error messages BEFORE falling back to fallbackKey:
+    // 1. Check for machine-readable error code FIRST against i18n
+    const code =
+      (typeof responseData?.code === 'string' ? responseData.code : undefined) ||
+      (typeof errorObj?.code === 'string' ? errorObj.code : undefined)
+
+    if (code && te(`api_errors.${code}`)) {
+      return t(`api_errors.${code}`)
+    }
+
+    // 2. Check for backend detail and error messages BEFORE falling back to fallbackKey:
     if (responseData && typeof responseData === 'object') {
       // If responseData?.title and responseData?.detail, return `${responseData.title}: ${responseData.detail}`
       if (typeof responseData.title === 'string' && typeof responseData.detail === 'string') {
@@ -97,12 +106,6 @@ export function useApiError() {
       // If responseData?.error (string), return responseData.error
       if (typeof responseData.error === 'string') {
         return responseData.error
-      }
-      // If responseData?.code and i18n has api_errors.${responseData.code}, return t('api_errors.' + responseData.code)
-      const code = (typeof responseData.code === 'string' ? responseData.code : undefined) ||
-                   (typeof errorObj?.code === 'string' ? errorObj.code : undefined)
-      if (code && te(`api_errors.${code}`)) {
-        return t(`api_errors.${code}`)
       }
     }
 

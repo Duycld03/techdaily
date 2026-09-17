@@ -106,4 +106,33 @@ describe('useApiError', () => {
     expect(result).not.toContain('Database connection failed')
     expect(result).toBe('today.explain_error')
   })
+
+  it('prioritizes api_errors.<CODE> localized translation when apiError.code matches an existing translation key', () => {
+    const { formatError } = useApiError()
+    const error = new ApiError(
+      'All push notification subscriptions for this device have expired.',
+      400,
+      'PUSH_SUBSCRIPTION_EXPIRED',
+      null,
+      {
+        code: 'PUSH_SUBSCRIPTION_EXPIRED',
+        error: 'All push notification subscriptions for this device have expired.'
+      }
+    )
+    const result = formatError(error, 'settings.web_push_test_error')
+    expect(result).toBe('api_errors.PUSH_SUBSCRIPTION_EXPIRED')
+  })
+
+  it('prioritizes api_errors.<CODE> over responseData.detail and responseData.error', () => {
+    const { formatError } = useApiError()
+    const error = {
+      data: {
+        code: 'PUSH_NO_SUBSCRIPTIONS',
+        error: 'No registered devices found for notifications.',
+        detail: 'Detailed backend message'
+      }
+    }
+    const result = formatError(error, 'settings.web_push_test_error')
+    expect(result).toBe('api_errors.PUSH_NO_SUBSCRIPTIONS')
+  })
 })

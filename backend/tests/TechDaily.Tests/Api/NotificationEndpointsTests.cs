@@ -17,6 +17,7 @@ using TechDaily.Api.Endpoints;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
 using TechDaily.Infrastructure.Persistence;
+using TechDaily.Infrastructure.Services;
 using Xunit;
 
 namespace TechDaily.Tests.Api;
@@ -25,10 +26,10 @@ public class NotificationEndpointsTests : IAsyncLifetime
 {
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<TechDailyDbContext> _dbOptions;
+    private readonly MockWebPushService _mockWebPushService = new();
     private WebApplication _app = null!;
     private HttpClient _client = null!;
     private readonly Guid _userId = Guid.NewGuid();
-
     public NotificationEndpointsTests()
     {
         _connection = new SqliteConnection("DataSource=:memory:");
@@ -48,7 +49,7 @@ public class NotificationEndpointsTests : IAsyncLifetime
         builder.WebHost.UseTestServer();
         builder.Services.AddRouting();
         builder.Services.AddScoped<TechDailyDbContext>(_ => new TechDailyDbContext(_dbOptions));
-        builder.Services.AddSingleton<IWebPushService>(new MockWebPushService());
+        builder.Services.AddSingleton<IWebPushService>(_mockWebPushService);
         builder.Services.AddAuthentication(defaultScheme: "Test")
             .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", _ => { });
         builder.Services.AddAuthorization();
@@ -276,9 +277,190 @@ public class NotificationEndpointsTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task TestPushNotification_WithValidSubscription_DispatchesAndReturnsOk()
+    {
+        // Arrange
+        using (var db = CreateDbContext())
+        {
+            db.Users.Add(new User
+            {
+                Id = _userId,
+                Email = "valid-sub@techdaily.local",
+                Name = "Valid User",
+                IsPushEnabled = true
+            });
+            db.UserPushSubscriptions.Add(new UserPushSubscription
+            {
+                UserId = _userId,
+                Endpoint = "https://push.example.com/sub/valid",
+                P256dh = "valid-p256dh",
+                Auth = "valid-auth"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // Act
+        var response = await _client.PostAsync("/api/v1/notifications/push/test", null);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<TestPushSuccessResponse>();
+        body.Should().NotBeNull();
+        body!.Success.Should().BeTrue();
+        body.Sent.Should().Be(1);
+        body.Total.Should().Be(1);
+        body.StalePurged.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task TestPushNotification_WithExpiredSubscription_PurgesStaleAndReturnsExpired()
+    {
+        // Arrange
+        const string expiredEndpoint = "https://push.example.com/sub/expired";
+        _mockWebPushService.ExpiredEndpoints.Add(expiredEndpoint);
+
+        using (var db = CreateDbContext())
+        {
+            db.Users.Add(new User
+            {
+                Id = _userId,
+                Email = "expired-sub@techdaily.local",
+                Name = "Expired User",
+                IsPushEnabled = true
+            });
+            db.UserPushSubscriptions.Add(new UserPushSubscription
+            {
+                UserId = _userId,
+                Endpoint = expiredEndpoint,
+                P256dh = "expired-p256dh",
+                Auth = "expired-auth"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // Act
+        var response = await _client.PostAsync("/api/v1/notifications/push/test", null);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadFromJsonAsync<TestPushErrorResponse>();
+        body.Should().NotBeNull();
+        body!.Code.Should().Be("PUSH_SUBSCRIPTION_EXPIRED");
+        body.Details.Should().NotBeNull();
+        body.Details!.Sent.Should().Be(0);
+        body.Details.Total.Should().Be(1);
+        body.Details.StalePurged.Should().Be(1);
+
+        using (var db = CreateDbContext())
+        {
+            var remainingSubs = await db.UserPushSubscriptions
+                .Where(s => s.UserId == _userId)
+                .ToListAsync();
+            remainingSubs.Should().BeEmpty();
+
+            var user = await db.Users.FirstAsync(u => u.Id == _userId);
+            user.IsPushEnabled.Should().BeFalse();
+        }
+    }
+
+    [Fact]
+    public async Task TestPushNotification_WithMixedSubscriptions_DeliversActiveAndPurgesExpired()
+    {
+        // Arrange
+        const string activeEndpoint = "https://push.example.com/sub/active";
+        const string expiredEndpoint = "https://push.example.com/sub/expired";
+        _mockWebPushService.ExpiredEndpoints.Add(expiredEndpoint);
+
+        using (var db = CreateDbContext())
+        {
+            db.Users.Add(new User
+            {
+                Id = _userId,
+                Email = "mixed-sub@techdaily.local",
+                Name = "Mixed User",
+                IsPushEnabled = true
+            });
+            db.UserPushSubscriptions.AddRange(
+                new UserPushSubscription
+                {
+                    UserId = _userId,
+                    Endpoint = activeEndpoint,
+                    P256dh = "active-p256dh",
+                    Auth = "active-auth"
+                },
+                new UserPushSubscription
+                {
+                    UserId = _userId,
+                    Endpoint = expiredEndpoint,
+                    P256dh = "expired-p256dh",
+                    Auth = "expired-auth"
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        // Act
+        var response = await _client.PostAsync("/api/v1/notifications/push/test", null);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<TestPushSuccessResponse>();
+        body.Should().NotBeNull();
+        body!.Success.Should().BeTrue();
+        body.Sent.Should().Be(1);
+        body.Total.Should().Be(2);
+        body.StalePurged.Should().Be(1);
+
+        using (var db = CreateDbContext())
+        {
+            var remainingSubs = await db.UserPushSubscriptions
+                .Where(s => s.UserId == _userId)
+                .ToListAsync();
+            remainingSubs.Should().ContainSingle(s => s.Endpoint == activeEndpoint);
+
+            var user = await db.Users.FirstAsync(u => u.Id == _userId);
+            user.IsPushEnabled.Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public async Task TestPushNotification_WithNoSubscriptions_ReturnsBadRequest()
+    {
+        // Arrange - user exists but has no push subscriptions
+        using (var db = CreateDbContext())
+        {
+            db.Users.Add(new User
+            {
+                Id = _userId,
+                Email = "no-sub@techdaily.local",
+                Name = "No Sub User",
+                IsPushEnabled = false
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // Act
+        var response = await _client.PostAsync("/api/v1/notifications/push/test", null);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadFromJsonAsync<TestPushErrorResponse>();
+        body.Should().NotBeNull();
+        body!.Code.Should().Be("PUSH_NO_SUBSCRIPTIONS");
+        body.Error.Should().Be("No active push subscriptions found for this device.");
+        body.Details.Should().BeNull();
+    }
+
+    private record TestPushSuccessResponse(bool Success, int Sent, int Total, int StalePurged);
+    private record TestPushErrorDetails(int Sent, int Total, int StalePurged);
+    private record TestPushErrorResponse(string Code, string Error, TestPushErrorDetails? Details);
+
     private class MockWebPushService : IWebPushService
     {
         public string PublicKey => "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U";
+        public List<PushNotificationPayload> DispatchedPayloads { get; } = new();
+        public HashSet<string> ExpiredEndpoints { get; } = new();
 
         public Task<bool> SendNotificationAsync(
             string endpoint,
@@ -287,6 +469,12 @@ public class NotificationEndpointsTests : IAsyncLifetime
             PushNotificationPayload payload,
             CancellationToken cancellationToken = default)
         {
+            if (ExpiredEndpoints.Contains(endpoint))
+            {
+                throw new WebPushSubscriptionExpiredException(endpoint, "410 Gone");
+            }
+
+            DispatchedPayloads.Add(payload);
             return Task.FromResult(true);
         }
     }

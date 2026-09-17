@@ -150,11 +150,11 @@ export function useWebPush() {
     }
   }
 
-  async function sendTestPush(): Promise<{ success: boolean; sent: number }> {
+  async function sendTestPush(): Promise<{ success: boolean; sent: number; total: number; stalePurged?: number }> {
     isLoading.value = true
     error.value = null
     try {
-      const res = await api.post<{ success: boolean; sent: number; total: number }>(
+      const res = await api.post<{ success: boolean; sent: number; total: number; stalePurged?: number }>(
         '/api/v1/notifications/push/test'
       )
       return res

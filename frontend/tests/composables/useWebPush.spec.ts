@@ -172,13 +172,15 @@ describe('useWebPush (Browser Web Push & VAPID)', () => {
   })
 
   it('sends test push notification via API client', async () => {
-    mockPost.mockResolvedValueOnce({ success: true, sent: 1, total: 1 })
+    mockPost.mockResolvedValueOnce({ success: true, sent: 1, total: 1, stalePurged: 0 })
 
     const { sendTestPush } = useWebPush()
     const result = await sendTestPush()
 
     expect(result.success).toBe(true)
     expect(result.sent).toBe(1)
+    expect(result.total).toBe(1)
+    expect(result.stalePurged).toBe(0)
     expect(mockPost).toHaveBeenCalledWith('/api/v1/notifications/push/test')
   })
 })

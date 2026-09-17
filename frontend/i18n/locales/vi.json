@@ -441,6 +441,9 @@
     "web_push_test_btn": "Gửi Thông Báo Thử",
     "web_push_test_sending": "Đang gửi...",
     "web_push_test_success": "Đã gửi thông báo thử thành công!",
+    "web_push_test_error": "Không thể gửi thông báo thử. Vui lòng thử lại sau.",
+    "web_push_test_expired": "Đăng ký thông báo trên trình duyệt của bạn đã hết hạn hoặc bị hủy. Vui lòng tắt và bật lại thông báo để làm mới mã đăng ký.",
+    "web_push_test_zero_sent": "Không có thông báo nào được gửi đến thiết bị. Vui lòng kiểm tra lại quyền thông báo trên trình duyệt.",
     "schedule_title": "Lịch Học & Cảnh Báo",
     "preferred_study_time": "Thời Gian Học Mong Muốn",
     "preferred_study_time_desc": "Khung giờ nhắc học bài đọc và thử thách trong ngày",
@@ -607,7 +610,10 @@
     "VALIDATION_FAILED": "Dữ liệu yêu cầu không hợp lệ.",
     "CONFLICT": "Đã xảy ra xung đột với trạng thái hiện tại.",
     "SERVER_ERROR": "Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau.",
-    "NETWORK_ERROR": "Lỗi kết nối mạng. Vui lòng kiểm tra đường truyền."
+    "NETWORK_ERROR": "Lỗi kết nối mạng. Vui lòng kiểm tra đường truyền.",
+    "PUSH_SUBSCRIPTION_EXPIRED": "Đăng ký thông báo đẩy đã hết hạn. Vui lòng tắt và bật lại thông báo để làm mới.",
+    "PUSH_NO_SUBSCRIPTIONS": "Không tìm thấy thiết bị nào được đăng ký nhận thông báo.",
+    "PUSH_DELIVERY_FAILED": "Không thể gửi thông báo thử tới trình duyệt của bạn. Vui lòng thử lại."
   },
   "common": {
     "close": "Đóng",
