@@ -49,10 +49,10 @@ function onReset() {
 const categoryPills = [
   { id: 'all', key: 'graph.filters.allPillars', defaultLabel: 'All Pillars' },
   { id: 'BackendRuntime', key: 'graph.filters.backendRuntime', defaultLabel: 'Backend & Runtime' },
-  { id: 'DatabaseStorage', key: '', defaultLabel: 'Database & Storage' },
-  { id: 'SystemDesign', key: '', defaultLabel: 'Distributed Systems' },
-  { id: 'FrontendWeb', key: '', defaultLabel: 'Frontend & Web' },
-  { id: 'EngineeringCraft', key: '', defaultLabel: 'Engineering Craft' }
+  { id: 'DatabaseStorage', key: 'graph.filters.databaseStorage', defaultLabel: 'Database & Storage' },
+  { id: 'SystemDesign', key: 'graph.filters.systemDesign', defaultLabel: 'Distributed Systems' },
+  { id: 'FrontendWeb', key: 'graph.filters.frontendWeb', defaultLabel: 'Frontend & Web' },
+  { id: 'EngineeringCraft', key: 'graph.filters.engineeringCraft', defaultLabel: 'Engineering Craft' }
 ]
 
 // Node type toggles
@@ -183,7 +183,7 @@ const hasActiveFilters = computed(() => {
     <!-- Filter Pills Container (Desktop visible, mobile collapsible) -->
     <div :class="['space-y-2.5 transition-all', isExpanded ? 'block' : 'hidden sm:block']">
       <!-- Category Pillars Row -->
-      <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+      <div class="flex flex-wrap items-center gap-1.5">
         <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 whitespace-nowrap shrink-0">
           {{ $t('graph.filters.pillars') }}:
         </span>
@@ -206,7 +206,7 @@ const hasActiveFilters = computed(() => {
       <!-- Secondary Row: Node Types & Flashcard Mastery -->
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
         <!-- Node Type Toggles -->
-        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <div class="flex flex-wrap items-center gap-1.5">
           <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 whitespace-nowrap shrink-0">
             {{ $t('graph.filters.nodeTypes') }}:
           </span>
@@ -229,7 +229,7 @@ const hasActiveFilters = computed(() => {
         <!-- Flashcard Mastery Selector (visible if card is not filtered out) -->
         <div
           v-if="store.selectedNodeType.toLowerCase() === 'all' || store.selectedNodeType.toLowerCase() === 'card'"
-          class="flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+          class="flex flex-wrap items-center gap-1.5"
         >
           <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 whitespace-nowrap shrink-0">
             {{ $t('graph.filters.mastery') }}:
