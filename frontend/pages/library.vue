@@ -561,7 +561,7 @@ async function confirmDeleteBook() {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+  <div class="max-w-6xl mx-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 bg-slate-50 dark:bg-canvas transition-colors duration-200">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
@@ -590,10 +590,10 @@ async function confirmDeleteBook() {
           :key="cat.label"
           @click="handleCategorySelect(cat.id)"
           :class="[
-            'px-4 py-2 rounded-xl text-xs sm:text-sm border transition-colors outline-none focus:outline-none',
+            'px-4 py-2 rounded-xl text-xs sm:text-sm border transition-all outline-none focus:outline-none',
             selectedCategory === cat.id
-              ? 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-slate-700 font-medium'
+              ? 'bg-slate-100 dark:bg-canvas-elevated border-slate-300 dark:border-white/[0.12] text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+              : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-white/[0.16] font-medium'
           ]"
         >
           {{ cat.label }}
@@ -608,7 +608,7 @@ async function confirmDeleteBook() {
           @keyup.enter="handleSearch"
           type="text"
           :placeholder="$t('library.search_placeholder')"
-          class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
+          class="w-full pl-10 pr-4 py-2 bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
         />
       </div>
     </div>
@@ -623,11 +623,11 @@ async function confirmDeleteBook() {
       <div
         v-for="book in libraryStore.books"
         :key="book.id"
-        class="p-6 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-brand-400 dark:hover:border-slate-700 transition-all flex flex-col justify-between space-y-4 group shadow-md dark:shadow-sm"
+        class="glass-card p-6 sm:p-7 rounded-3xl border-slate-200/80 dark:border-white/[0.08] hover:border-brand-400 dark:hover:border-brand-500/30 transition-all flex flex-col justify-between space-y-4 group shadow-md dark:shadow-none"
       >
         <div class="flex flex-col flex-1">
           <div class="flex items-center justify-between gap-2 mb-3.5">
-            <span class="px-3 py-1 rounded-lg bg-brand-100 dark:bg-brand-950/80 border border-brand-200 dark:border-brand-800/60 text-brand-800 dark:text-brand-300 text-xs font-bold">
+            <span class="px-3 py-1 rounded-lg bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-300 text-xs font-bold">
               {{ getCategoryLabel(book.category) }}
             </span>
             <span class="text-xs text-slate-500 font-mono flex items-center gap-1">
@@ -646,12 +646,12 @@ async function confirmDeleteBook() {
 
           <div class="mt-auto pt-3">
             <!-- Bookmark Badge if exists -->
-            <div v-if="bookmarks[book.id]" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900 text-brand-700 dark:text-brand-300 text-xs sm:text-sm font-semibold">
+            <div v-if="bookmarks[book.id]" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-300 text-xs sm:text-sm font-semibold">
               <Bookmark class="w-3.5 h-3.5 text-brand-500 fill-brand-500" />
               <span>{{ $t('library.resumes_at', { slice: bookmarks[book.id] }) }}</span>
             </div>
             <!-- Ready Badge if no bookmark -->
-            <div v-else-if="book.status === 'Ready' || (book.status as any) === 2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm font-semibold">
+            <div v-else-if="book.status === 'Ready' || (book.status as any) === 2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/80 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm font-semibold">
               <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
               <span>{{ $t('library.ready_to_read') }}</span>
             </div>
@@ -665,7 +665,7 @@ async function confirmDeleteBook() {
             </div>
           </div>
         </div>
-        <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3">
+        <div class="pt-4 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-3">
           <div class="flex items-center gap-1.5 min-w-0">
             <button
               @click.stop="openDeleteModal(book)"
@@ -678,7 +678,7 @@ async function confirmDeleteBook() {
             <button
               @click.stop="handleExportBook(book)"
               :disabled="exportingBookId === book.id"
-              class="p-2 rounded-xl text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/40 border border-transparent hover:border-brand-200 dark:hover:border-brand-900/50 transition-colors shrink-0 disabled:opacity-50"
+              class="p-2 rounded-xl text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-500/10 border border-transparent hover:border-brand-200 dark:hover:border-brand-500/20 transition-colors shrink-0 disabled:opacity-50"
               :title="$t('reader.export_obsidian')"
               :aria-label="$t('reader.export_obsidian')"
             >
@@ -709,7 +709,7 @@ async function confirmDeleteBook() {
     />
 
     <!-- Empty state -->
-    <div v-else class="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-sm">
+    <div v-else class="text-center py-16 glass-card rounded-3xl border border-slate-200/80 dark:border-white/[0.08] p-8 shadow-sm">
       <FileText class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
       <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $t('library.no_books') }}</h3>
       <p class="text-sm text-slate-500 mt-1">{{ $t('library.empty_desc') }}</p>
@@ -718,26 +718,26 @@ async function confirmDeleteBook() {
     <!-- Import Document Modal (Teleported to Body) -->
     <Teleport to="body">
       <div v-if="isImportModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in" @click.self="isImportModalOpen = false">
-        <div class="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-5 sm:p-8 md:p-9 space-y-5 sm:space-y-6 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 gap-2">
+        <div class="w-full max-w-2xl glass-panel border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-2xl p-5 sm:p-8 md:p-9 space-y-5 sm:space-y-6 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-white/[0.08] gap-2">
             <div class="min-w-0">
               <h3 class="text-base sm:text-xl font-bold text-slate-900 dark:text-white truncate">{{ $t('library.import_modal_title') }}</h3>
               <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{{ $t('library.import_modal_desc') }}</p>
             </div>
-            <button @click="isImportModalOpen = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0" aria-label="Close modal">
+            <button @click="isImportModalOpen = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-canvas-elevated shrink-0" aria-label="Close modal">
               <X class="w-5 h-5" />
             </button>
           </div>
 
           <!-- 3-Tab Selector -->
-          <div class="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 bg-slate-100 dark:bg-slate-950/80 rounded-2xl border border-slate-200/80 dark:border-slate-800/80">
+          <div class="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 bg-slate-100 dark:bg-canvas-subtle rounded-2xl border border-slate-200/80 dark:border-white/[0.08]">
             <button
               type="button"
               @click="activeTab = 'markdown'"
               :class="[
                 'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all',
                 activeTab === 'markdown'
-                  ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                  ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
@@ -751,7 +751,7 @@ async function confirmDeleteBook() {
               :class="[
                 'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all',
                 activeTab === 'pdf'
-                  ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                  ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
@@ -765,7 +765,7 @@ async function confirmDeleteBook() {
               :class="[
                 'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all',
                 activeTab === 'url'
-                  ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200 dark:border-slate-700'
+                  ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
@@ -783,7 +783,7 @@ async function confirmDeleteBook() {
                 required
                 type="text"
                 placeholder="e.g. Designing Data-Intensive Applications — Chapter 5"
-                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
+                class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
               />
             </div>
 
@@ -792,7 +792,7 @@ async function confirmDeleteBook() {
                 <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
                 <select
                   v-model="importCategory"
-                  class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
+                  class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
                 >
                   <option :value="0">{{ $t('library.categories.frontend') }}</option>
                   <option :value="1">{{ $t('library.categories.backend') }}</option>
@@ -808,7 +808,7 @@ async function confirmDeleteBook() {
                   v-model="importSourceUrl"
                   type="url"
                   placeholder="https://..."
-                  class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
+                  class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -825,7 +825,7 @@ async function confirmDeleteBook() {
                 required
                 rows="6"
                 :placeholder="$t('library.content_placeholder')"
-                class="w-full p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-mono text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none resize-none"
+                class="w-full p-4 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm font-mono text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none resize-none"
               ></textarea>
             </div>
 
@@ -888,7 +888,7 @@ async function confirmDeleteBook() {
                 'border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center transition-all cursor-pointer relative',
                 isDraggingPdf
                   ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40'
-                  : 'border-slate-300 dark:border-slate-800 hover:border-brand-400 dark:hover:border-slate-700 bg-slate-50/60 dark:bg-slate-950/40'
+                  : 'border-slate-300 dark:border-white/[0.08] hover:border-brand-400 dark:hover:border-brand-500/30 bg-slate-50/60 dark:bg-canvas-subtle'
               ]"
               @click="($refs.pdfInput as HTMLInputElement)?.click()"
             >
@@ -934,7 +934,7 @@ async function confirmDeleteBook() {
                   v-model="pdfTitle"
                   type="text"
                   :placeholder="$t('library.title_placeholder')"
-                  class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
+                  class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
                 />
               </div>
 
@@ -942,7 +942,7 @@ async function confirmDeleteBook() {
                 <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
                 <select
                   v-model="pdfCategory"
-                  class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
+                  class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
                 >
                   <option :value="0">{{ $t('library.categories.frontend') }}</option>
                   <option :value="1">{{ $t('library.categories.backend') }}</option>
@@ -988,7 +988,7 @@ async function confirmDeleteBook() {
                   v-model="crawlUrlInput"
                   type="url"
                   :placeholder="$t('library.url_input_placeholder')"
-                  class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
+                  class="flex-1 px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
                   @keyup.enter="handleCrawlUrl"
                 />
                 <button
@@ -1009,7 +1009,7 @@ async function confirmDeleteBook() {
               <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
               <select
                 v-model="importCategory"
-                class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
+                class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
               >
                 <option :value="0">{{ $t('library.categories.frontend') }}</option>
                 <option :value="1">{{ $t('library.categories.backend') }}</option>
@@ -1066,7 +1066,7 @@ async function confirmDeleteBook() {
     <!-- Delete Confirmation Modal (Teleported to Body) -->
     <Teleport to="body">
       <div v-if="isDeleteModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in" @click.self="isDeleteModalOpen = false; bookToDelete = null">
-        <div class="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-5 animate-in zoom-in-95">
+        <div class="w-full max-w-md glass-panel border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-2xl p-6 sm:p-8 space-y-5 animate-in zoom-in-95">
           <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 flex items-center justify-center mx-auto">
             <AlertTriangle class="w-6 h-6" />
           </div>
@@ -1084,7 +1084,7 @@ async function confirmDeleteBook() {
             <button
               type="button"
               @click="isDeleteModalOpen = false; bookToDelete = null"
-              class="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-xs sm:text-sm transition-colors"
+              class="flex-1 py-3 rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated font-semibold text-xs sm:text-sm transition-colors"
             >
               {{ $t('library.cancel') }}
             </button>

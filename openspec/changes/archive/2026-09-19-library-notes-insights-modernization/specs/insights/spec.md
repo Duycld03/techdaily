@@ -1,9 +1,6 @@
-# Insights Specification
+# Spec Delta
 
-## Purpose
-Provides an infinite feed of bite-sized architectural tech insights (anti-patterns vs idiomatic solutions), on-demand AI insight generation via Gemini, and one-click bookmarking to personal notes.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Tech Insights Feed Data Model & Query API
 The system SHALL maintain a standalone `TechInsight` catalog decoupled from library documents and expose paginated/random browsing APIs alongside a dynamic metadata query endpoint `GET /api/v1/insights/meta`, adhering to the **Dev-Learning Studio** visual theme:
@@ -76,19 +73,3 @@ The system SHALL maintain a standalone `TechInsight` catalog decoupled from libr
 - **THEN** client calls `POST /api/v1/insights/{id}/bookmark`
 - **AND** card bookmark status toggles to active
 - **AND** the View Mode Switcher counter reactively increments to `[ 🔖 Đã Lưu (4) ]`.
-
-### Requirement: On-Demand AI Insight Synthesizer
-The system SHALL support generating fresh, high-impact senior technical insights on-demand via Google Gemini 3.6 Flash.
-
-#### Scenario: User triggers AI insight generation
-- **WHEN** user sends `POST /api/v1/insights/generate` with a specified technical topic or category
-- **THEN** the system invokes Gemini 3.6 Flash to synthesize a concrete senior-level breakdown with code snippets, saves the result to `TechInsights` table, and returns the newly created insight card.
-
----
-
-### Requirement: Insight 1-Click Bookmark & Note Saving
-The system SHALL allow users to save insights directly to their personal notes or spaced repetition review deck.
-
-#### Scenario: User bookmarks an insight card
-- **WHEN** user clicks "Save to Notes" on an insight card
-- **THEN** the system persists the bookmark and increments the card's bookmark count.

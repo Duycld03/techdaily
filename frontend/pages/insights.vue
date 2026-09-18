@@ -201,10 +201,10 @@ function getCategoryBadge(cat: number) {
 <template>
   <div class="max-w-4xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-300">
     <!-- Header Banner -->
-    <div class="p-4 sm:p-7 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-brand-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950/40 border border-slate-200/90 dark:border-slate-800 text-slate-900 dark:text-white shadow-md dark:shadow-xl relative overflow-hidden transition-all">
+    <div class="p-4 sm:p-7 rounded-2xl sm:rounded-3xl glass-panel border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-white shadow-md dark:shadow-none relative overflow-hidden transition-all">
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 relative z-10">
         <div class="space-y-1 sm:space-y-2 flex-1 min-w-0">
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20 text-xs font-bold uppercase tracking-wider">
+          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/20 text-xs font-bold uppercase tracking-wider">
             <Sparkles class="w-3.5 h-3.5" />
             <span>{{ $t('insights.badge') }}</span>
           </div>
@@ -221,7 +221,7 @@ function getCategoryBadge(cat: number) {
         <div class="flex items-center gap-2.5 sm:gap-3 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
           <button
             @click="insightsStore.shuffle()"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm md:text-base font-bold transition-all border border-slate-200 dark:border-slate-700 shadow-sm active:scale-95"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-white dark:bg-canvas-subtle hover:bg-slate-50 dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-200 text-sm md:text-base font-bold transition-all border border-slate-200/80 dark:border-white/[0.08] shadow-sm active:scale-95"
             :title="$t('insights.shuffle')"
           >
             <Shuffle class="w-4 h-4 text-slate-500 dark:text-slate-400" />
@@ -230,7 +230,7 @@ function getCategoryBadge(cat: number) {
 
           <button
             @click="isGenerateModalOpen = true"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-brand-600 hover:from-indigo-500 hover:to-brand-500 text-white text-sm md:text-base font-bold transition-all shadow-md shadow-indigo-500/20 active:scale-95"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white text-sm md:text-base font-bold transition-all shadow-md shadow-brand-500/20 active:scale-95"
           >
             <Plus class="w-4 h-4" />
             <span>{{ $t('insights.generate_ai') }}</span>
@@ -239,17 +239,17 @@ function getCategoryBadge(cat: number) {
       </div>
     </div>
     <!-- View Mode Switcher -->
-    <div class="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-fit">
+    <div class="flex items-center gap-2 p-1 bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-2xl w-fit">
       <button
         @click="switchViewMode('explore')"
         :class="[
           'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0',
           viewMode === 'explore'
-            ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+            ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 border border-slate-200/80 dark:border-white/[0.12] shadow-sm'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
         ]"
       >
-        <Sparkles class="w-4 h-4 text-indigo-500" />
+        <Sparkles class="w-4 h-4 text-brand-500" />
         <span>{{ $t('insights.view_explore') }}</span>
       </button>
       <button
@@ -257,11 +257,11 @@ function getCategoryBadge(cat: number) {
         :class="[
           'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0',
           viewMode === 'saved'
-            ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
+            ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 border border-slate-200/80 dark:border-white/[0.12] shadow-sm'
             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
         ]"
       >
-        <BookmarkCheck class="w-4 h-4 text-indigo-500" />
+        <BookmarkCheck class="w-4 h-4 text-brand-500" />
         <span>{{ $t('insights.view_saved', { count: bookmarkedCount }) }}</span>
       </button>
     </div>
@@ -275,8 +275,8 @@ function getCategoryBadge(cat: number) {
         :class="[
           'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 border whitespace-nowrap',
           insightsStore.selectedCategory === cat.id
-            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 border-transparent shadow-sm'
-            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+            ? 'bg-brand-600 text-white border-transparent shadow-sm shadow-brand-500/20'
+            : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
         ]"
       >
         {{ cat.label }}
@@ -285,23 +285,22 @@ function getCategoryBadge(cat: number) {
 
     <!-- Main Card Container -->
     <div v-if="insightsStore.isLoading" class="flex flex-col items-center justify-center py-20 space-y-4">
-      <div class="w-10 h-10 border-4 border-indigo-500/20 border-t-indigo-600 rounded-full animate-spin"></div>
+      <div class="w-10 h-10 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin"></div>
       <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading senior technical insights...</p>
     </div>
 
     <!-- Empty State: Saved Mode -->
     <div
       v-else-if="!insightsStore.currentInsight && viewMode === 'saved'"
-      class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4"
+      class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl glass-card border border-slate-200/80 dark:border-white/[0.08] space-y-4"
     >
-      <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center mx-auto text-indigo-600 dark:text-indigo-400">
-        <BookmarkCheck class="w-6 h-6" />
+      <div class="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto text-brand-500 border border-brand-500/20">
       </div>
       <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ $t('insights.saved_empty_title') }}</h3>
       <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ $t('insights.saved_empty_desc') }}</p>
       <button
         @click="switchViewMode('explore')"
-        class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 shadow-md shadow-indigo-500/20 transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0"
+        class="px-5 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-500 shadow-md shadow-brand-500/20 transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0"
       >
         <Sparkles class="w-4 h-4" />
         <span>{{ $t('insights.saved_empty_cta') }}</span>
@@ -311,16 +310,15 @@ function getCategoryBadge(cat: number) {
     <!-- Empty State: Explore Mode -->
     <div
       v-else-if="!insightsStore.currentInsight"
-      class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4"
+      class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl glass-card border border-slate-200/80 dark:border-white/[0.08] space-y-4"
     >
-      <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center mx-auto text-indigo-600 dark:text-indigo-400">
-        <Sparkles class="w-6 h-6" />
+      <div class="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto text-brand-500 border border-brand-500/20">
       </div>
       <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ $t('insights.empty_title') }}</h3>
       <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ $t('insights.empty_desc') }}</p>
       <button
         @click="isGenerateModalOpen = true"
-        class="px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-500 shadow-md shadow-indigo-500/20 transition-all whitespace-nowrap shrink-0"
+        class="px-5 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-500 shadow-md shadow-brand-500/20 transition-all whitespace-nowrap shrink-0"
       >
         {{ $t('insights.generate_ai') }}
       </button>
@@ -329,10 +327,10 @@ function getCategoryBadge(cat: number) {
     <!-- Active Insight Card -->
     <div
       v-else
-      class="rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-all duration-300"
+      class="rounded-2xl sm:rounded-3xl glass-card border border-slate-200/80 dark:border-white/[0.08] shadow-xl overflow-hidden transition-all duration-300"
     >
       <!-- Card Top Header -->
-      <div class="p-4 sm:p-7 md:p-8 border-b border-slate-100 dark:border-slate-800/80 space-y-3.5 sm:space-y-4">
+      <div class="p-4 sm:p-7 md:p-8 border-b border-slate-100 dark:border-white/[0.06] space-y-3.5 sm:space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
           <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span :class="['px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold border shrink-0', getCategoryBadge(insightsStore.currentInsight.category).color]">
@@ -342,7 +340,7 @@ function getCategoryBadge(cat: number) {
             <span
               v-for="tag in insightsStore.currentInsight.tags"
               :key="tag"
-              class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-mono font-medium"
+              class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06] text-xs font-mono font-medium"
             >
               #{{ tag }}
             </span>
@@ -361,12 +359,12 @@ function getCategoryBadge(cat: number) {
               :class="[
                 'p-1.5 sm:p-2 rounded-xl transition-all shrink-0 flex items-center gap-1.5 border active:scale-95',
                 insightsStore.currentInsight.isBookmarkedByUser
-                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800/80 shadow-sm'
-                  : 'bg-white dark:bg-slate-800/80 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
+                  ? 'bg-brand-500/10 text-brand-400 border-brand-500/20 shadow-sm'
+                  : 'bg-white dark:bg-canvas-subtle text-slate-400 hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated border-slate-200/80 dark:border-white/[0.08]'
               ]"
               :title="insightsStore.currentInsight.isBookmarkedByUser ? $t('insights.saved') : $t('insights.save_bookmark')"
             >
-              <BookmarkCheck v-if="insightsStore.currentInsight.isBookmarkedByUser" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 fill-indigo-600/20" />
+              <BookmarkCheck v-if="insightsStore.currentInsight.isBookmarkedByUser" class="w-4 h-4 text-brand-400 fill-brand-400/20" />
               <Bookmark v-else class="w-4 h-4" />
               <span class="text-xs font-bold font-mono">{{ insightsStore.currentInsight.bookmarksCount }}</span>
             </button>
@@ -384,8 +382,8 @@ function getCategoryBadge(cat: number) {
       </div>
 
       <!-- Code Snippets Showcase -->
-      <div class="p-4 sm:p-7 md:p-8 bg-slate-50/60 dark:bg-slate-950/40 border-b border-slate-100 dark:border-slate-800/80 space-y-4 sm:space-y-5">
-        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div class="p-4 sm:p-7 md:p-8 bg-slate-50/60 dark:bg-canvas-subtle/50 border-b border-slate-100 dark:border-white/[0.06] space-y-4 sm:space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-200/80 dark:border-white/[0.08] pb-3">
           <div class="flex items-center gap-2">
             <button
               @click="activeCodeTab = 'solution'"
@@ -439,7 +437,7 @@ function getCategoryBadge(cat: number) {
       <!-- Under The Hood Deep Dive -->
       <div class="p-4 sm:p-8 space-y-3.5 sm:space-y-4">
         <div class="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-sm sm:text-base">
-          <Cpu class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+          <Cpu class="w-5 h-5 text-brand-600 dark:text-brand-400" />
           <span>{{ $t('insights.underthehood_title') }}</span>
         </div>
 
@@ -454,7 +452,7 @@ function getCategoryBadge(cat: number) {
             :href="insightsStore.currentInsight.sourceUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+            class="inline-flex items-center gap-1 text-brand-600 dark:text-brand-400 hover:underline font-semibold"
           >
             <span>Learn More</span>
             <ExternalLink class="w-3.5 h-3.5" />
@@ -463,7 +461,7 @@ function getCategoryBadge(cat: number) {
       </div>
 
       <!-- Navigation & Action Footer -->
-      <div class="p-4 sm:p-6 bg-slate-50 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+      <div class="p-4 sm:p-6 bg-slate-50 dark:bg-canvas-subtle/70 border-t border-slate-200/80 dark:border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
         <!-- Counter and Keyboard Hint -->
         <div class="flex items-center gap-3 text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">
           <span>
@@ -479,7 +477,7 @@ function getCategoryBadge(cat: number) {
         <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
           <button
             @click="insightsStore.prevInsight()"
-            class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm active:scale-95"
+            class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-50 dark:hover:bg-canvas-elevated transition-colors shadow-sm active:scale-95"
           >
             <ChevronLeft class="w-4 h-4" />
             <span>{{ $t('insights.prev') }}</span>
@@ -487,7 +485,7 @@ function getCategoryBadge(cat: number) {
 
           <button
             @click="insightsStore.nextInsight()"
-            class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs sm:text-sm font-bold hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-md active:scale-95"
+            class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-bold transition-all shadow-md shadow-brand-500/20 active:scale-95"
           >
             <span>{{ $t('insights.next') }}</span>
             <ChevronRight class="w-4 h-4" />
@@ -503,10 +501,10 @@ function getCategoryBadge(cat: number) {
         class="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in"
         @click.self="isGenerateModalOpen = false"
       >
-        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-5 sm:p-7 space-y-5 shadow-2xl animate-in zoom-in-95">
+        <div class="glass-panel rounded-3xl border border-slate-200/80 dark:border-white/[0.08] max-w-lg w-full p-5 sm:p-7 space-y-5 shadow-2xl animate-in zoom-in-95">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2 font-black text-base sm:text-lg text-slate-900 dark:text-white">
-              <Sparkles class="w-5 h-5 text-indigo-500" />
+              <Sparkles class="w-5 h-5 text-brand-500" />
               <span>{{ $t('insights.generate_modal_title') }}</span>
             </div>
             <button
@@ -528,7 +526,7 @@ function getCategoryBadge(cat: number) {
               @keyup.enter="handleGenerateSubmit"
               type="text"
               :placeholder="$t('insights.generate_topic_placeholder')"
-              class="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              class="w-full px-4 py-3 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50 dark:bg-canvas-elevated text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-brand-500"
               autofocus
             />
 
@@ -539,7 +537,7 @@ function getCategoryBadge(cat: number) {
                 <button
                   type="button"
                   @click="pickRandomTopic"
-                  class="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+                  class="inline-flex items-center gap-1 text-brand-600 dark:text-brand-400 hover:underline font-semibold"
                 >
                   <Shuffle class="w-3 h-3" />
                   <span>{{ $t('insights.surprise_me') }}</span>
@@ -554,8 +552,8 @@ function getCategoryBadge(cat: number) {
                   :class="[
                     'px-2.5 py-1 rounded-lg text-xs font-medium transition-all border text-left',
                     customTopicInput === chip
-                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 font-bold'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700'
+                      ? 'bg-brand-500/15 text-brand-400 border-brand-500/30 font-bold'
+                      : 'bg-slate-100 dark:bg-canvas-subtle text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-200 dark:hover:bg-canvas-elevated'
                   ]"
                 >
                   {{ chip }}
@@ -567,7 +565,7 @@ function getCategoryBadge(cat: number) {
           <div class="flex items-center justify-end gap-3 pt-2">
             <button
               @click="isGenerateModalOpen = false"
-              class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors"
             >
               Cancel
             </button>
@@ -575,7 +573,7 @@ function getCategoryBadge(cat: number) {
             <button
               @click="handleGenerateSubmit"
               :disabled="insightsStore.isGenerating"
-              class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-500/20 disabled:opacity-50 transition-all"
+              class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md shadow-brand-500/20 disabled:opacity-50 transition-all"
             >
               <div v-if="insightsStore.isGenerating" class="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
               <span>{{ insightsStore.isGenerating ? $t('insights.generating_btn') : $t('insights.generate_btn') }}</span>
