@@ -8,11 +8,11 @@ context: |
   - Multi-language UI (i18n: en-US, vi-VN).
   - Dark Mode first for night-time developer usage.
   Tech stack:
-  - Backend: ASP.NET Core (.NET 10), C# 13, Clean Architecture with Plain Use-Case Handlers (Pure DI), Rich Domain Model, EF Core 10, PostgreSQL 17 (pgvector)
-  - Frontend: Nuxt 4 (Vue 3, SSR/PWA), Tailwind CSS, Pinia, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode (Dark/Light), CodeMirror 6 + Shiki Live Preview, Floating UI Inline Explainer, HTML5 MediaRecorder
-  - AI Engine: Gemini 2.5 / 2.0 Flash (1-Pass Multimodal voice & text evaluation, Structured JSON Output, Semantic Term Cache)
-  - Background Jobs: BackgroundService / Quartz.NET for 08:00 AM dispatch & Spaced Repetition (SM-2)
-  - Notifications: Telegram Bot API (alerts with Web deep links)
+  - Backend: ASP.NET Core (.NET 10), C# 13, Clean Architecture with Plain Use-Case Handlers (Pure DI), Rich Domain Model, EF Core 9 (Npgsql), PostgreSQL 17 (pgvector)
+  - Frontend: Nuxt 3 (Vue 3.5, SSR/PWA), Tailwind CSS, Pinia, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode (Dark/Light), Markdown-it + Shiki Syntax Highlighter, Cytoscape.js Knowledge Graph, Lucide Icons
+  - AI Engine: Gemini 3.5 Flash Lite (<5s low latency for scenarios & quizzes), gemini-embedding-001 (768-D vectors), Structured JSON Output, Semantic Term Cache
+  - Background Jobs: BackgroundService with PeriodicTimer for notifications & async PDF ingestion
+  - Notifications: Web Push (VAPID) with auto-detected IANA timezones (primary) + Telegram Bot API (secondary)
 
 rules:
   proposal:

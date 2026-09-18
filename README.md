@@ -22,7 +22,7 @@ TechDaily (Clean Architecture)
 ├── Application    → Pure DI Use-Case Handlers, FluentValidation, Result Pattern, DTOs
 ├── Domain         → Rich Domain Entities, SM-2 Spaced Repetition Invariants, PBKDF2 Password Security
 ├── Infrastructure → PostgreSQL 17 (pgvector, EF Core 10), Gemini 3.5 Flash Lite Client, PdfPig, ReverseMarkdown
-└── Frontend       → Nuxt 4, Vue 3, Pinia, Tailwind CSS, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode, Shiki
+└── Frontend       → Nuxt 3, Vue 3.5, Pinia, Tailwind CSS, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode, Shiki
 ```
 
 | Layer | Technology | Key Responsibilities |
@@ -31,14 +31,14 @@ TechDaily (Clean Architecture)
 | **Data Persistence** | **EF Core 10 + Npgsql** | PostgreSQL 17 (`pgvector`), JSONB (`ToJson()`) for takeaways/quizzes/options, User Bookmarks with Unique Indexes, UserBookPacer |
 | **AI Synthesis Engine** | **Gemini 3.5 Flash Lite API** | Structured Output (JSON Schema), High-Speed Quiz & Challenge Synthesis (<5s), Semantic Term Cache, JIT Look-Ahead Buffer Pre-generation |
 | **Document Ingestion** | **PdfPig + ReverseMarkdown** | Asynchronous Channel-based queue with zero-LOH disk spooling for PDFs up to 300MB (8,000+ pages), native PDF Bookmarks/Outline segmentation, HTML-to-Markdown Web Crawler |
-| **Frontend Web** | **Nuxt 4 + Vue 3** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
+| **Frontend Web** | **Nuxt 3 + Vue 3.5** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
 | **Notifications** | **Web Push (VAPID) + Telegram** | Real-time browser push notifications (VAPID, Service Worker) and Telegram Bot alerts for Morning Curriculum and Streak Preservation with auto-detected IANA timezones |
 
 ---
 
 ## 🌟 Comprehensive Feature Set
 
-> 📖 **Feature Matrix & Specifications:** See [docs/features.md](docs/features.md)
+> 📖 **Feature Specifications & Capabilities:** See [openspec/specs/](openspec/specs/)
 ### 💡 Key Retention & Architecture Highlights
 - **Web Push Notifications (VAPID):** Real-time browser push notifications for Morning Curriculum (08:00) and Streak Preservation (20:00) with automatic IANA timezone detection and Brave browser guidance.
 - **1-Click Flashcard (SM-2) from Reading Highlights:** Transform any highlighted technical passage in `/notes` or `/read/[bookId]` into a spaced repetition card with backend idempotency and deduplication.
@@ -153,11 +153,11 @@ npm --prefix frontend test
 
 | Document | Description |
 |---|---|
-| [**`AGENTS.md`**](file:///home/duycld03/workspace/techdaily/AGENTS.md) | Coding conventions, strict architectural rules, and invariants for AI agents and developers. |
-| [**`docs/domain-rules.md`**](file:///home/duycld03/workspace/techdaily/docs/domain-rules.md) | Business logic, SM-2 algorithm, PBKDF2 parameters, typography rules, and UI constraints. |
-| [**`docs/api-design.md`**](file:///home/duycld03/workspace/techdaily/docs/api-design.md) | Complete REST API endpoint contracts and RFC 7807 problem details specifications. |
-| [**`docs/database-design.md`**](file:///home/duycld03/workspace/techdaily/docs/database-design.md) | Database schema, table definitions, entity relationships, and pgvector types. |
-| [**`openspec/`**](file:///home/duycld03/workspace/techdaily/openspec/) | OpenSpec capabilities, active change proposals, and spec-driven workflow archives. |
+| [**`AGENTS.md`**](AGENTS.md) | Coding conventions, strict architectural rules, and invariants for AI agents and developers. |
+| [**`openspec/specs/`**](openspec/specs/) | Single source of truth for modular capability specifications, requirements, and acceptance criteria. |
+| [**`openspec/changes/`**](openspec/changes/) | Active lifecycle change proposals, delta specs, technical designs, and task checklists. |
+| [**`TechDaily.Api/Endpoints/`**](backend/src/TechDaily.Api/Endpoints/) | Executable Minimal API endpoint contracts with interactive Swagger at `/swagger`. |
+| [**`TechDaily.Domain/Entities/`**](backend/src/TechDaily.Domain/Entities/) | Executable domain models, EF Core migrations, and pgvector schema definitions. |
 
 ---
 
