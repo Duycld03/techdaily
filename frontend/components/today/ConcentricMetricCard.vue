@@ -49,11 +49,11 @@ const retentionPercentage = computed(() => {
 </script>
 
 <template>
-  <div class="glass-card p-3.5 sm:p-4 flex flex-col justify-between group hover:border-brand-500/30 transition-all min-h-0">
+  <div class="glass-card p-3.5 sm:p-4 flex flex-col justify-between group hover:border-white/[0.12] transition-all min-h-0">
     <!-- Header -->
     <div class="flex items-center justify-between gap-3 mb-2.5">
       <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-brand-500/10 dark:bg-brand-500/20 text-brand-500 flex items-center justify-center shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-center shrink-0">
           <BrainCircuit class="w-4 h-4" />
         </div>
         <div>
@@ -68,7 +68,7 @@ const retentionPercentage = computed(() => {
 
       <NuxtLink
         to="/review"
-        class="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-500 flex items-center gap-1 transition-colors"
+        class="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 transition-colors"
       >
         <span>{{ $t('dashboard.view_deck') }}</span>
         <ArrowUpRight class="w-3.5 h-3.5" />
@@ -159,7 +159,7 @@ const retentionPercentage = computed(() => {
     </div>
 
     <!-- Review Due Action Banner -->
-    <div class="mt-2.5 pt-2.5 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
+    <div class="mt-2.5 pt-2.5 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between">
       <div class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
         <Flame class="w-3.5 h-3.5 text-amber-500 shrink-0" />
         <span>{{ dueCards }} {{ $t('dashboard.cards_due') }}</span>
@@ -171,7 +171,7 @@ const retentionPercentage = computed(() => {
           'px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0',
           dueCards > 0
             ? 'bg-brand-600 hover:bg-brand-500 text-white shadow-sm shadow-brand-500/20 active:scale-95'
-            : 'bg-slate-100 dark:bg-canvas-elevated text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+            : 'bg-slate-100 dark:bg-white/[0.04] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-transparent dark:border-white/[0.06]'
         ]"
       >
         <span>{{ dueCards > 0 ? $t('dashboard.review_now') : $t('dashboard.view_deck') }}</span>

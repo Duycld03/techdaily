@@ -18,9 +18,9 @@ export default {
     extend: {
       colors: {
         canvas: {
-          DEFAULT: '#09080e',
-          subtle: '#12101b',
-          elevated: '#1a1726',
+          DEFAULT: '#09090b',
+          subtle: '#121215',
+          elevated: '#18181b',
           border: 'rgba(255, 255, 255, 0.08)'
         },
         brand: {
@@ -29,13 +29,13 @@ export default {
           200: '#ddd6fe',
           300: '#c4b5fd',
           400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
+          500: '#7c3aed',
+          600: '#6d28d9',
+          700: '#5b21b6',
+          800: '#4c1d95',
+          900: '#3b0764',
           950: '#2e1065',
-          glow: 'rgba(139, 92, 246, 0.35)'
+          glow: 'rgba(124, 58, 237, 0.25)'
         },
         streak: {
           amber: '#f59e0b',

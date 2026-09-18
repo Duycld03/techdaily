@@ -17,7 +17,7 @@ const props = withDefaults(
 // Static blip positions mapped relative to 160x160 center (80,80)
 const blips = [
   { cx: 80, cy: 38, r: 2.5, color: '#22d3ee', pulse: true },   // Top (Frontend)
-  { cx: 118, cy: 62, r: 3, color: '#8b5cf6', pulse: false },   // Top-Right (Backend)
+  { cx: 118, cy: 62, r: 3, color: '#7c3aed', pulse: false },   // Top-Right (Backend)
   { cx: 104, cy: 112, r: 2.5, color: '#06b6d4', pulse: true }, // Bottom-Right (Database)
   { cx: 52, cy: 110, r: 3, color: '#a78bfa', pulse: false },   // Bottom-Left (System Design)
   { cx: 42, cy: 65, r: 2, color: '#22d3ee', pulse: false },    // Top-Left (Craft)
@@ -48,14 +48,14 @@ const blips = [
         <defs>
           <!-- Radial glow for radar center -->
           <radialGradient id="radarCenterGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.35" />
+            <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.12" />
             <stop offset="100%" stop-color="#22d3ee" stop-opacity="0" />
           </radialGradient>
 
           <!-- Sweep hand gradient -->
           <linearGradient id="sweepGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.8" />
-            <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.1" />
+            <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.5" />
+            <stop offset="100%" stop-color="#7c3aed" stop-opacity="0.05" />
           </linearGradient>
         </defs>
 
@@ -115,7 +115,7 @@ const blips = [
     <!-- Telemetry Statistics Footer -->
     <div class="grid grid-cols-2 gap-2 w-full mt-1.5 text-center font-mono">
       <div class="p-2 rounded-xl bg-slate-100/60 dark:bg-canvas-subtle border border-slate-200/60 dark:border-white/[0.06]">
-        <div class="text-base font-black text-cyber-400">
+        <div class="text-base font-black text-slate-800 dark:text-white">
           {{ nodeCount }}
         </div>
         <div class="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -124,7 +124,7 @@ const blips = [
       </div>
 
       <div class="p-2 rounded-xl bg-slate-100/60 dark:bg-canvas-subtle border border-slate-200/60 dark:border-white/[0.06]">
-        <div class="text-base font-black text-brand-400">
+        <div class="text-base font-black text-slate-800 dark:text-white">
           {{ edgeCount }}
         </div>
         <div class="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">

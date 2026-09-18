@@ -26,19 +26,19 @@
 }
 @layer components {
   .glass-card {
-    @apply bg-white/80 dark:bg-canvas-subtle/80 backdrop-blur-md border border-slate-200/80 dark:border-white/[0.08] shadow-sm rounded-xl;
+    @apply bg-white/80 dark:bg-canvas-subtle/80 backdrop-blur-md border border-slate-200/80 dark:border-white/[0.06] shadow-sm rounded-xl;
   }
 
   .glass-panel {
-    @apply bg-white/90 dark:bg-canvas-elevated/90 backdrop-blur-lg border border-slate-200 dark:border-white/[0.1] shadow-lg rounded-2xl;
+    @apply bg-white/90 dark:bg-canvas-elevated/90 backdrop-blur-lg border border-slate-200 dark:border-white/[0.08] shadow-lg rounded-2xl;
   }
 
   .hairline-border {
-    @apply border border-slate-200/80 dark:border-white/[0.08];
+    @apply border border-slate-200/80 dark:border-white/[0.06];
   }
 
   .glow-subtle {
-    box-shadow: 0 0 20px -5px rgba(139, 92, 246, 0.25);
+    box-shadow: 0 0 20px -5px rgba(124, 58, 237, 0.15);
   }
 }
 

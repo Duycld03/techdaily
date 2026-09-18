@@ -103,11 +103,11 @@ onMounted(() => {
 <template>
   <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-4 lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden flex flex-col justify-start gap-3.5 sm:gap-4">
     <!-- 1. Welcome & Orientation Banner (Image #1 Inspired) -->
-    <div class="glass-card px-4 py-3 sm:px-5 sm:py-3.5 relative overflow-hidden bg-gradient-to-r from-brand-950/20 via-canvas-subtle to-canvas-subtle border border-white/[0.08] shrink-0">
+    <div class="glass-card px-4 py-3 sm:px-5 sm:py-3.5 relative overflow-hidden border border-slate-200/80 dark:border-white/[0.06] shrink-0">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 relative z-10">
         <div class="space-y-1">
           <div class="flex items-center gap-2">
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-500/10 text-brand-400 border border-brand-500/20">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.08]">
               {{ $t('dashboard.curriculum_day') }} {{ topic?.dayOrder || 1 }} / 30
             </span>
             <span class="text-xs text-slate-500 dark:text-slate-400">
@@ -124,24 +124,22 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Subtle background radial glow -->
-      <div class="absolute -top-12 -right-12 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
-    </div>
+      </div>
 
     <!-- 2. Main Bento Grid (Asymmetric Layout) -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 items-start min-h-0">
       <!-- LEFT 2 COLUMNS: Core Practice Cards -->
       <div class="lg:col-span-2 flex flex-col justify-start gap-3.5 sm:gap-4 min-h-0">
         <!-- Card A: Today's Focus Bento Hero (Image #1 Course Progress Style) -->
-        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-brand-500/30 transition-all min-h-0">
+        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-white/[0.15] transition-all min-h-0">
           <div>
             <div class="flex items-center justify-between gap-3 mb-3">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-brand-500/10 dark:bg-brand-500/20 text-brand-500 flex items-center justify-center shrink-0">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-center shrink-0">
                   <BookOpen class="w-4 h-4" />
                 </div>
                 <div>
-                  <span class="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider">
+                  <span class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     {{ $t('dashboard.active_reading_slice') }}
                   </span>
                   <div class="text-xs text-slate-500 dark:text-slate-400">
@@ -156,7 +154,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-brand-400 transition-colors">
+            <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-brand-300 transition-colors">
               {{ topic?.title || $t('dashboard.loading_topic') }}
             </h2>
 
@@ -170,11 +168,11 @@ onMounted(() => {
                 <span class="text-slate-500 dark:text-slate-400">
                   {{ $t('dashboard.slice_progress') }} ({{ pacer?.currentChunkOrder || 1 }}/{{ pacer?.totalChunks || 30 }})
                 </span>
-                <span class="text-brand-600 dark:text-brand-400 font-bold">{{ slicePercentage }}%</span>
+                <span class="text-slate-700 dark:text-slate-300 font-bold">{{ slicePercentage }}%</span>
               </div>
               <div class="h-2 w-full bg-slate-100 dark:bg-canvas-elevated rounded-full overflow-hidden border border-slate-200/60 dark:border-white/[0.06]">
                 <div
-                  class="h-full bg-gradient-to-r from-brand-500 to-indigo-500 rounded-full transition-all duration-500"
+                  class="h-full bg-gradient-to-r from-brand-600 to-brand-500 rounded-full transition-all duration-500"
                   :style="{ width: `${slicePercentage}%` }"
                 ></div>
               </div>
@@ -182,7 +180,7 @@ onMounted(() => {
           </div>
 
           <!-- Primary Action CTA -->
-          <div class="pt-3 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
+          <div class="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between">
             <span class="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
               {{ $t('dashboard.press_enter_to_continue') }}
             </span>
@@ -190,7 +188,7 @@ onMounted(() => {
             <button
               @click="handleStartReading"
               type="button"
-              class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md shadow-brand-500/25 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
+              class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md shadow-brand-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
             >
               <span>{{ $t('dashboard.continue_reading') }}</span>
               <ArrowRight class="w-4 h-4" />
@@ -199,15 +197,15 @@ onMounted(() => {
         </div>
 
         <!-- Card B: Senior Scenario Challenge Card (Image #2 Inspired) -->
-        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-indigo-500/30 transition-all min-h-0">
+        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-white/[0.12] transition-all min-h-0">
           <div>
             <div class="flex items-center justify-between gap-3 mb-3">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-center shrink-0">
                   <Terminal class="w-4 h-4" />
                 </div>
                 <div>
-                  <span class="text-xs font-bold text-indigo-500 uppercase tracking-wider">
+                  <span class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     {{ $t('today.interview_challenge') }}
                   </span>
                   <div class="text-xs text-slate-500 dark:text-slate-400">
@@ -216,7 +214,7 @@ onMounted(() => {
                 </div>
               </div>
 
-              <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
                 +10 {{ $t('dashboard.points_reward') }}
               </span>
             </div>
@@ -230,11 +228,11 @@ onMounted(() => {
             </p>
           </div>
 
-          <div class="pt-3 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-end">
+          <div class="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-end">
             <button
               @click="handleStartScenario"
               type="button"
-              class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 dark:bg-canvas-elevated hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-800 dark:text-slate-200 font-bold text-xs sm:text-sm border border-slate-200/80 dark:border-white/[0.08] transition-all flex items-center justify-center gap-2 shrink-0"
+              class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.04] hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 font-semibold text-xs sm:text-sm border border-slate-200/80 dark:border-white/[0.06] transition-all flex items-center justify-center gap-2 shrink-0"
             >
               <span>{{ $t('dashboard.solve_challenge') }}</span>
               <ArrowRight class="w-4 h-4 text-slate-400" />
@@ -255,7 +253,7 @@ onMounted(() => {
         />
 
         <!-- Card D: 7-Day Consistency Matrix (Image #1 Inspired) -->
-        <div class="glass-card p-3 sm:p-3.5 flex flex-col justify-between group hover:border-amber-500/30 transition-all shrink-0">
+        <div class="glass-card p-3 sm:p-3.5 flex flex-col justify-between group hover:border-white/[0.12] transition-all shrink-0">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
               <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
@@ -300,7 +298,7 @@ onMounted(() => {
         </div>
 
         <!-- Card E: Knowledge Graph Radar Card (Image #5 Inspired) -->
-        <div class="glass-card p-3 sm:p-3.5 flex flex-col justify-between group hover:border-cyber-500/30 transition-all shrink-0">
+        <div class="glass-card p-3 sm:p-3.5 flex flex-col justify-between group hover:border-white/[0.12] transition-all shrink-0">
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-2">
               <div class="w-7 h-7 rounded-lg bg-cyber-500/10 text-cyber-500 flex items-center justify-center shrink-0">

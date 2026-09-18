@@ -60,7 +60,7 @@ function isLinkActive(linkPath: string): boolean {
 </script>
 
 <template>
-  <aside class="hidden md:flex md:w-60 border-r border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-canvas-subtle/70 backdrop-blur-sm flex-col justify-between p-3.5 shrink-0 transition-colors duration-200 select-none overflow-y-auto">
+  <aside class="hidden md:flex md:w-60 border-r border-slate-200/80 dark:border-white/[0.06] bg-white/95 dark:bg-canvas-subtle/80 backdrop-blur-sm flex-col justify-between p-3.5 shrink-0 transition-colors duration-200 select-none overflow-y-auto">
     <nav class="space-y-4">
       <div v-for="group in navGroups" :key="group.titleKey" class="space-y-0.5">
         <!-- Category Section Header -->
@@ -81,7 +81,7 @@ function isLinkActive(linkPath: string): boolean {
             :class="[
               'flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm transition-all',
               isLinkActive(link.path)
-                ? 'bg-brand-500/10 dark:bg-brand-500/15 text-brand-600 dark:text-brand-300 font-bold border-l-2 border-brand-500 shadow-sm shadow-brand-500/10'
+                ? 'bg-brand-500/10 dark:bg-white/[0.06] text-brand-600 dark:text-white font-semibold border-l-2 border-brand-500 shadow-sm'
                 : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-100 font-medium'
             ]"
           >
