@@ -458,4 +458,49 @@ describe('pages/roadmap.vue', () => {
     expect(milestones[0].slices.length).toBe(4)
     expect(milestones[3].slices.length).toBe(4)
   })
+
+  it('renders continuous vertical timeline spine and chapter node beads in book track', async () => {
+    setupMockStores()
+
+    const wrapper = mount(RoadmapPage, {
+      global: {
+        stubs: {
+          RoadmapMindmapCanvas: RoadmapMindmapCanvasStub,
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+    await flushPromises()
+
+    // Spine container and vertical gradient connector line
+    const spineContainer = wrapper.find('.relative.pl-6')
+    expect(spineContainer.exists()).toBe(true)
+
+    const spineLine = spineContainer.find('.absolute.w-0\\.5')
+    expect(spineLine.exists()).toBe(true)
+    expect(spineLine.classes().some(c => c.includes('from-brand-500'))).toBe(true)
+
+    // Milestone beads for chapters exist
+    const milestoneBeads = wrapper.findAll('.rounded-full.z-10')
+    expect(milestoneBeads.length).toBeGreaterThan(0)
+  })
+
+  it('renders illuminated active telemetry highlights on active slice', async () => {
+    setupMockStores()
+
+    const wrapper = mount(RoadmapPage, {
+      global: {
+        stubs: {
+          RoadmapMindmapCanvas: RoadmapMindmapCanvasStub,
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+    await flushPromises()
+
+    // Active today slice has active telemetry ring & brand styling
+    const activeSlice = wrapper.find('.ring-2.ring-brand-500\\/30')
+    expect(activeSlice.exists()).toBe(true)
+    expect(activeSlice.text()).toContain('roadmap.today')
+  })
 })

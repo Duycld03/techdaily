@@ -522,7 +522,7 @@ function getDifficultyColor(diff: number) {
     <!-- ========================================================================= -->
     <div
       :class="[
-        'p-4 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-brand-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-brand-950 border border-slate-200/90 dark:border-slate-800 text-slate-900 dark:text-white shadow-md dark:shadow-xl relative overflow-visible transition-all duration-300',
+        'p-4 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-brand-50/50 dark:from-canvas-subtle dark:via-canvas dark:to-brand-950/40 border border-slate-200/90 dark:border-white/[0.08] text-slate-900 dark:text-white shadow-md dark:shadow-xl relative overflow-visible transition-all duration-300',
         isTrackMenuOpen ? 'z-40' : 'z-20'
       ]"
     >
@@ -548,7 +548,7 @@ function getDifficultyColor(diff: number) {
                 type="button"
                 data-testid="track-switcher-btn"
                 @click="isTrackMenuOpen = !isTrackMenuOpen"
-                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-700/80 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 transition-all shadow-sm active:scale-95 whitespace-nowrap shrink-0"
+                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-canvas-elevated hover:bg-white dark:hover:bg-white/[0.06] border border-slate-200/90 dark:border-white/[0.08] text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 transition-all shadow-sm active:scale-95 whitespace-nowrap shrink-0"
               >
                 <component
                   :is="isCurriculumSelected ? Compass : BookOpen"
@@ -569,7 +569,7 @@ function getDifficultyColor(diff: number) {
               <div
                 v-if="isTrackMenuOpen"
                 data-testid="track-menu-popover"
-                class="absolute left-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-14rem)] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1"
+                class="absolute left-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-14rem)] overflow-y-auto rounded-2xl bg-white dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1"
               >
                 <!-- In-Progress Document Tracks -->
                 <div
@@ -764,7 +764,7 @@ function getDifficultyColor(diff: number) {
         <div v-else class="space-y-6 sm:space-y-8">
           <!-- Search & Controls Bar -->
           <div
-            class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-200 dark:border-slate-800"
+            class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-slate-100/80 dark:bg-canvas-subtle/80 rounded-2xl border border-slate-200/80 dark:border-white/[0.08]"
           >
             <div class="relative flex-1 max-w-md">
               <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -772,37 +772,58 @@ function getDifficultyColor(diff: number) {
                 v-model="chapterSearch"
                 type="text"
                 :placeholder="$t('roadmap.search_chapters')"
-                class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-brand-500 focus:outline-none transition-colors"
+                class="w-full pl-10 pr-4 py-2 bg-white dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-brand-500 focus:outline-none transition-colors"
               />
             </div>
             <div class="flex items-center gap-2 self-end sm:self-auto">
               <button
                 @click="expandAll"
                 type="button"
-                class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 transition-colors whitespace-nowrap shrink-0"
+                class="px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.04] text-xs font-semibold text-slate-600 dark:text-slate-400 transition-colors whitespace-nowrap shrink-0"
               >
                 {{ $t('roadmap.expand_all') }}
               </button>
               <button
                 @click="collapseAll"
                 type="button"
-                class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-400 transition-colors whitespace-nowrap shrink-0"
+                class="px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.04] text-xs font-semibold text-slate-600 dark:text-slate-400 transition-colors whitespace-nowrap shrink-0"
               >
                 {{ $t('roadmap.collapse_all') }}
               </button>
             </div>
           </div>
 
-          <section
-            v-for="chapter in displayedChapters"
-            :key="chapter.chapterTitle"
-            class="space-y-4 sm:space-y-5"
-          >
-            <!-- Chapter Milestone Header Card (Clickable Accordion) -->
-            <div
-              @click="toggleChapter(chapter.chapterIndex)"
-              class="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm gap-3 sm:gap-4 cursor-pointer hover:border-brand-400 dark:hover:border-slate-700 transition-all select-none"
+          <!-- Continuous Vertical Spine Container -->
+          <div class="relative pl-6 sm:pl-10 space-y-6 sm:space-y-8">
+            <!-- Timeline Spine Line -->
+            <div class="absolute left-2.5 sm:left-4.5 top-5 bottom-5 w-0.5 bg-gradient-to-b from-brand-500/50 via-brand-500/20 to-slate-200/60 dark:to-white/[0.08] pointer-events-none"></div>
+
+            <section
+              v-for="chapter in displayedChapters"
+              :key="chapter.chapterTitle"
+              class="relative space-y-4 sm:space-y-5"
             >
+              <!-- Timeline Milestone Node Bead on Spine -->
+              <div
+                :class="[
+                  'absolute -left-6 sm:-left-10 top-5 -translate-x-1/2 w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all z-10 select-none',
+                  chapter.isCompleted
+                    ? 'bg-emerald-500 text-white ring-4 ring-slate-50 dark:ring-slate-950 shadow-sm'
+                    : chapter.isActive
+                      ? 'bg-brand-600 text-white ring-4 ring-slate-50 dark:ring-slate-950 shadow-md shadow-brand-500/40 animate-pulse'
+                      : 'bg-slate-200 dark:bg-canvas-elevated text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-white/[0.12] ring-4 ring-slate-50 dark:ring-slate-950'
+                ]"
+              >
+                <CheckCircle2 v-if="chapter.isCompleted" class="w-3 h-3" />
+                <Flame v-else-if="chapter.isActive" class="w-3 h-3 text-amber-300" />
+                <span v-else>{{ chapter.chapterIndex }}</span>
+              </div>
+
+              <!-- Chapter Milestone Header Card (Clickable Accordion) -->
+              <div
+                @click="toggleChapter(chapter.chapterIndex)"
+                class="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-canvas-subtle border border-slate-200/90 dark:border-white/[0.08] shadow-sm gap-3 sm:gap-4 cursor-pointer hover:border-brand-500/50 dark:hover:border-white/[0.16] transition-all select-none"
+              >
               <div class="flex items-center gap-3 sm:gap-3.5">
                 <div
                   :class="[
@@ -879,10 +900,10 @@ function getDifficultyColor(diff: number) {
                 :class="[
                   'p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between group relative overflow-hidden select-none',
                   slice.isActiveToday
-                    ? 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500 dark:border-amber-400/80 shadow-md ring-2 ring-amber-500/20'
+                    ? 'bg-brand-500/10 dark:bg-brand-500/15 border-brand-500 dark:border-brand-400 shadow-lg shadow-brand-500/10 ring-2 ring-brand-500/30'
                     : slice.isCompleted
-                      ? 'bg-white dark:bg-slate-900/90 border-emerald-500/30 dark:border-emerald-500/30 hover:border-emerald-500 hover:shadow-sm'
-                      : 'bg-slate-50/70 dark:bg-slate-950/40 border-slate-200/80 dark:border-slate-800/60 hover:border-brand-500 hover:shadow-sm'
+                      ? 'bg-white dark:bg-canvas-subtle border-emerald-500/30 dark:border-emerald-500/30 hover:border-emerald-500 hover:shadow-sm'
+                      : 'bg-slate-50/70 dark:bg-canvas-elevated/40 border-slate-200/80 dark:border-white/[0.06] hover:border-brand-500/40 hover:shadow-sm'
                 ]"
               >
                 <!-- Top Slice Indicator & Badges -->
@@ -975,7 +996,7 @@ function getDifficultyColor(diff: number) {
               </div>
             </div>
           </section>
-
+          </div>
           <!-- Load More Chapters Button -->
           <div v-if="filteredChapters.length > visibleChaptersCount" class="flex justify-center pt-4 pb-6">
             <button
@@ -1005,21 +1026,41 @@ function getDifficultyColor(diff: number) {
 
         <!-- Modules List -->
         <div v-else-if="roadmapStore.roadmapData" class="space-y-8 sm:space-y-10">
-          <section
-            v-for="module in roadmapStore.roadmapData.modules"
-            :key="module.category"
-            class="space-y-4 sm:space-y-5"
-          >
-            <!-- Module Header Card -->
-            <div
-              class="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm gap-3 sm:gap-4"
+          <!-- Continuous Vertical Spine Container -->
+          <div class="relative pl-6 sm:pl-10 space-y-8 sm:space-y-10">
+            <!-- Timeline Spine Line -->
+            <div class="absolute left-2.5 sm:left-4.5 top-5 bottom-5 w-0.5 bg-gradient-to-b from-brand-500/50 via-brand-500/20 to-slate-200/60 dark:to-white/[0.08] pointer-events-none"></div>
+
+            <section
+              v-for="module in roadmapStore.roadmapData.modules"
+              :key="module.category"
+              class="relative space-y-4 sm:space-y-5"
             >
-              <div class="flex items-center gap-3 sm:gap-3.5">
-                <div
-                  class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0"
-                >
-                  <component :is="getModuleIcon(module.category)" class="w-5 h-5 shrink-0" />
-                </div>
+              <!-- Timeline Milestone Node Bead on Spine -->
+              <div
+                :class="[
+                  'absolute -left-6 sm:-left-10 top-5 -translate-x-1/2 w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all z-10 select-none',
+                  module.completedCount === module.totalCount
+                    ? 'bg-emerald-500 text-white ring-4 ring-slate-50 dark:ring-slate-950 shadow-sm'
+                    : module.completedCount > 0
+                      ? 'bg-brand-600 text-white ring-4 ring-slate-50 dark:ring-slate-950 shadow-md shadow-brand-500/40'
+                      : 'bg-slate-200 dark:bg-canvas-elevated text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-white/[0.12] ring-4 ring-slate-50 dark:ring-slate-950'
+                ]"
+              >
+                <CheckCircle2 v-if="module.completedCount === module.totalCount" class="w-3 h-3" />
+                <span v-else>{{ module.category + 1 }}</span>
+              </div>
+
+              <!-- Module Header Card -->
+              <div
+                class="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl bg-white dark:bg-canvas-subtle border border-slate-200/90 dark:border-white/[0.08] shadow-sm gap-3 sm:gap-4"
+              >
+                <div class="flex items-center gap-3 sm:gap-3.5">
+                  <div
+                    class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0"
+                  >
+                    <component :is="getModuleIcon(module.category)" class="w-5 h-5 shrink-0" />
+                  </div>
                 <div>
                   <div class="flex items-center gap-2 flex-wrap">
                     <h2 class="text-sm sm:text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -1060,12 +1101,12 @@ function getDifficultyColor(diff: number) {
                 :class="[
                   'p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between group relative overflow-hidden select-none',
                   day.isActiveToday
-                    ? 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500 dark:border-amber-400/80 shadow-md ring-2 ring-amber-500/20'
+                    ? 'bg-brand-500/10 dark:bg-brand-500/15 border-brand-500 dark:border-brand-400 shadow-lg shadow-brand-500/10 ring-2 ring-brand-500/30'
                     : day.isCompleted
-                      ? 'bg-white dark:bg-slate-900/90 border-emerald-500/30 dark:border-emerald-500/30 hover:border-emerald-500 hover:shadow-sm'
+                      ? 'bg-white dark:bg-canvas-subtle border-emerald-500/30 dark:border-emerald-500/30 hover:border-emerald-500 hover:shadow-sm'
                       : day.isUnlocked
-                        ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-brand-500 hover:shadow-sm'
-                        : 'bg-slate-50/70 dark:bg-slate-950/40 border-slate-200/80 dark:border-slate-800/60 opacity-75 hover:opacity-100'
+                        ? 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] hover:border-brand-500/40 hover:shadow-sm'
+                        : 'bg-slate-50/70 dark:bg-canvas-elevated/40 border-slate-200/80 dark:border-white/[0.06] opacity-75 hover:opacity-100'
                 ]"
               >
                 <!-- Top indicator & Badges -->
@@ -1167,6 +1208,7 @@ function getDifficultyColor(diff: number) {
               </div>
             </div>
           </section>
+          </div>
         </div>
       </template>
     </div>
