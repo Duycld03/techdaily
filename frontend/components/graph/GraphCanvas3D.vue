@@ -122,16 +122,62 @@ function updateGraphData() {
 
 function fitScreen() {
   if (!graphInstance) return
+  if (isAutoRotate.value) {
+    isAutoRotate.value = false
+    stopAutoRotate()
+  }
   graphInstance.zoomToFit(1200, 60)
+}
+
+let autoRotateTimer: ReturnType<typeof setInterval> | null = null
+let currentOrbitAngle = 0
+
+function startAutoRotate() {
+  if (autoRotateTimer || !graphInstance) return
+
+  const camera = graphInstance.camera()
+  if (camera) {
+    const pos = camera.position
+    currentOrbitAngle = Math.atan2(pos.x, pos.z)
+  }
+
+  // Smooth orbital rotation: 40 FPS (25ms interval), ~60s for a full 360-degree revolution
+  const angleDelta = (2 * Math.PI) / 2400
+
+  autoRotateTimer = setInterval(() => {
+    if (!graphInstance) {
+      stopAutoRotate()
+      return
+    }
+
+    const camera = graphInstance.camera()
+    if (!camera) return
+
+    const pos = camera.position
+    const radius = Math.hypot(pos.x, pos.z) || 450
+    currentOrbitAngle += angleDelta
+
+    graphInstance.cameraPosition({
+      x: radius * Math.sin(currentOrbitAngle),
+      y: pos.y,
+      z: radius * Math.cos(currentOrbitAngle)
+    })
+  }, 25)
+}
+
+function stopAutoRotate() {
+  if (autoRotateTimer) {
+    clearInterval(autoRotateTimer)
+    autoRotateTimer = null
+  }
 }
 
 function toggleAutoRotate() {
   isAutoRotate.value = !isAutoRotate.value
-  if (!graphInstance) return
-  const controls = graphInstance.controls()
-  if (controls) {
-    controls.autoRotate = isAutoRotate.value
-    controls.autoRotateSpeed = 0.8
+  if (isAutoRotate.value) {
+    startAutoRotate()
+  } else {
+    stopAutoRotate()
   }
 }
 
@@ -232,6 +278,11 @@ onMounted(async () => {
         if (!node) return
         store.selectNode(node.id)
 
+        // Disarm auto-rotation on node selection to focus camera on selected entity
+        if (isAutoRotate.value) {
+          isAutoRotate.value = false
+          stopAutoRotate()
+        }
         // Smooth camera fly-to on selection
         if (graphInstance && node.x !== undefined) {
           const distance = 90
@@ -260,6 +311,18 @@ onMounted(async () => {
       controls.dampingFactor = 0.1
       controls.maxDistance = 1400
       controls.minDistance = 30
+    }
+
+    // Pause auto-rotation during manual drag interaction and resume if enabled
+    if (controls && typeof controls.addEventListener === 'function') {
+      controls.addEventListener('start', () => {
+        stopAutoRotate()
+      })
+      controls.addEventListener('end', () => {
+        if (isAutoRotate.value) {
+          startAutoRotate()
+        }
+      })
     }
 
     updateGraphData()
@@ -294,7 +357,19 @@ watch(
   }
 )
 
+// Watch for view mode changes (e.g. switching back to 2D view)
+watch(
+  () => store.viewMode,
+  (mode) => {
+    if (mode !== '3d') {
+      isAutoRotate.value = false
+      stopAutoRotate()
+    }
+  }
+)
+
 onBeforeUnmount(() => {
+  stopAutoRotate()
   if (graphInstance) {
     try {
       graphInstance._destructor?.()

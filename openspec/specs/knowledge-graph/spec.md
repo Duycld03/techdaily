@@ -239,7 +239,7 @@ The 3D visualization SHALL represent architectural entities in an interactive sp
 5. **Highlight Nodes:** Rendered as crystalline or accent-colored satellites orbiting source books and topics.
 6. **Relational Edges:** Rendered as glowing 3D vector splines or translucent beams linking interconnected nodes across $(x, y, z)$ space.
 
-The 3D visualization SHALL provide 360-degree OrbitControls supporting rotation around arbitrary axes, smooth pan, pinch-zoom, and a camera reset button. The 3D engine SHALL implement distance-based Level-of-Detail (LOD) label culling:
+The 3D visualization SHALL provide 360-degree OrbitControls supporting rotation around arbitrary axes, smooth pan, pinch-zoom, and a camera reset button. The 3D visualization SHALL provide a functional 360-degree Auto-Rotate mode driven by an active orbital camera trajectory, rotating the camera smoothly around the constellation center at the current altitude and distance, and pausing automatically upon user drag interaction. The 3D engine SHALL implement distance-based Level-of-Detail (LOD) label culling:
 - Text labels for Cards and Highlights SHALL be culled at overview camera distances and SHALL reveal only when the camera zooms close or when the user hovers over/taps the node.
 - Pillar Hub and Topic labels SHALL remain visible across standard orbital distances.
 
@@ -258,6 +258,14 @@ To conserve user device battery and eliminate main-thread lag:
 - **WHEN** the user clicks and drags on the 3D canvas
 - **THEN** the camera rotates smoothly around the orbital focus center at 60 FPS
 - **AND** zooming with the mouse wheel smoothly scales the camera distance along the line of sight.
+
+#### Scenario: 360-degree camera auto-orbit rotation
+- **GIVEN** a user is on `/graph` in `3D Cosmos` mode
+- **WHEN** the user clicks the "Auto Rotate" button in the floating HUD
+- **THEN** the active indicator lights up with an accent highlight
+- **AND** the camera begins continuous circular rotation around the constellation center $(0,0,0)$ along the $(x, z)$ orbital plane at consistent velocity
+- **WHEN** the user clicks the button again
+- **THEN** camera auto-rotation ceases immediately, leaving the camera positioned at its current vantage angle.
 
 #### Scenario: Distance-based Level-of-Detail label culling
 - **WHEN** the camera is positioned at a wide galaxy overview distance

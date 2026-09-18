@@ -10,7 +10,9 @@ const mockControls = {
   maxDistance: 0,
   minDistance: 0,
   autoRotate: false,
-  autoRotateSpeed: 0
+  autoRotateSpeed: 0,
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn()
 }
 
 const mockCamera = {
@@ -109,7 +111,8 @@ describe('GraphCanvas3D.vue', () => {
     expect(mockGraphInstance.graphData).toHaveBeenCalled()
   })
 
-  it('exposes fitScreen and toggleAutoRotate methods', async () => {
+  it('exposes fitScreen and toggleAutoRotate methods and controls camera position', async () => {
+    vi.useFakeTimers()
     createTestStore()
     const wrapper = mount(GraphCanvas3D)
     await flushPromises()
@@ -120,9 +123,66 @@ describe('GraphCanvas3D.vue', () => {
     wrapper.vm.fitScreen()
     expect(mockGraphInstance.zoomToFit).toHaveBeenCalledWith(1200, 60)
 
+    // Toggle auto-rotate on
     wrapper.vm.toggleAutoRotate()
-    expect(mockControls.autoRotate).toBe(true)
-    expect(mockControls.autoRotateSpeed).toBe(0.8)
+    const initialCalls = mockGraphInstance.cameraPosition.mock.calls.length
+
+    // Advance timers by 100ms (4 steps of 25ms interval)
+    vi.advanceTimersByTime(100)
+    expect(mockGraphInstance.cameraPosition.mock.calls.length).toBeGreaterThan(initialCalls)
+    const lastCall = mockGraphInstance.cameraPosition.mock.calls.at(-1)?.[0]
+    expect(lastCall).toHaveProperty('x')
+    expect(lastCall).toHaveProperty('y')
+    expect(lastCall).toHaveProperty('z')
+
+    // Toggle auto-rotate off
+    wrapper.vm.toggleAutoRotate()
+    const callsAfterOff = mockGraphInstance.cameraPosition.mock.calls.length
+    vi.advanceTimersByTime(100)
+    expect(mockGraphInstance.cameraPosition.mock.calls.length).toBe(callsAfterOff)
+
+    vi.useRealTimers()
+  })
+
+  it('halts auto-rotation timer on unmount and when switching viewMode to 2d', async () => {
+    vi.useFakeTimers()
+    const store = createTestStore()
+    const wrapper = mount(GraphCanvas3D)
+    await flushPromises()
+
+    // Start auto-rotate
+    wrapper.vm.toggleAutoRotate()
+    vi.advanceTimersByTime(50)
+    const callsBeforeUnmount = mockGraphInstance.cameraPosition.mock.calls.length
+    expect(callsBeforeUnmount).toBeGreaterThan(0)
+
+    // Unmount
+    wrapper.unmount()
+    vi.advanceTimersByTime(100)
+    expect(mockGraphInstance.cameraPosition.mock.calls.length).toBe(callsBeforeUnmount)
+
+    vi.useRealTimers()
+  })
+
+  it('halts auto-rotation timer when switching viewMode to 2d', async () => {
+    vi.useFakeTimers()
+    const store = createTestStore()
+    store.viewMode = '3d'
+    const wrapper = mount(GraphCanvas3D)
+    await flushPromises()
+
+    wrapper.vm.toggleAutoRotate()
+    vi.advanceTimersByTime(50)
+    const callsBefore = mockGraphInstance.cameraPosition.mock.calls.length
+    expect(callsBefore).toBeGreaterThan(0)
+
+    // Switch viewMode to 2d
+    store.viewMode = '2d'
+    await flushPromises()
+    vi.advanceTimersByTime(100)
+    expect(mockGraphInstance.cameraPosition.mock.calls.length).toBe(callsBefore)
+
+    vi.useRealTimers()
   })
 
   it('renders floating 3D HUD controls with buttons', async () => {
