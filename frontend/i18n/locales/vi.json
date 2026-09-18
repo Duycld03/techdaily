@@ -51,6 +51,7 @@
   },
   "dashboard": {
     "curriculum_day": "Lộ trình Ngày",
+    "active_slice_badge": "Lát cắt {current} / {total}",
     "welcome_back": "Chào mừng trở lại",
     "welcome_subtitle": "Duy trì đà học tập, làm chủ kiến trúc phần mềm Senior và bứt phá sự nghiệp.",
     "ask_ai_tutor": "Hỏi Trợ Lý AI",

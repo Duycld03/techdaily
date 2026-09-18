@@ -155,4 +155,59 @@ describe('HomeBentoDashboard.vue', () => {
 
     expect(wrapper.find('.metric-stub').text()).toContain('20/42 due:5')
   })
+
+  it('renders dynamic slice progress badge and routes to gitbook reader on start reading', async () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = {
+      topic: { id: 'top-1', title: 'ASP.NET Core Architecture', dayOrder: 3 },
+      pacer: { bookId: 'aspnet-doc', currentChunkOrder: 4, totalChunks: 23 },
+      scenario: { title: 'Middleware Pipeline Debugging' }
+    } as any
+
+    const wrapper = mount(HomeBentoDashboard, {
+      global: {
+        stubs: {
+          ConcentricMetricCard: true,
+          DomainConstellationCard: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    // Checks dynamic slice badge
+    expect(wrapper.text()).toContain('Slice 4 / 23')
+    // Find and click Continue Reading button
+    const continueBtn = wrapper.findAll('button').find(b => b.text().includes('dashboard.continue_reading'))
+    expect(continueBtn).toBeDefined()
+    await continueBtn!.trigger('click')
+
+    expect((globalThis as any).navigateTo).toHaveBeenCalledWith({
+      path: '/read/aspnet-doc',
+      query: { slice: '4' }
+    })
+  })
+
+  it('routes to /today when solve challenge is clicked', async () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = {
+      topic: { id: 'top-1', title: 'ASP.NET Core Architecture', dayOrder: 3 },
+      scenario: { title: 'Middleware Pipeline Debugging' }
+    } as any
+
+    const wrapper = mount(HomeBentoDashboard, {
+      global: {
+        stubs: {
+          ConcentricMetricCard: true,
+          DomainConstellationCard: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    const challengeBtn = wrapper.findAll('button').find(b => b.text().includes('dashboard.solve_challenge'))
+    expect(challengeBtn).toBeDefined()
+    await challengeBtn!.trigger('click')
+
+    expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/today')
+  })
 })

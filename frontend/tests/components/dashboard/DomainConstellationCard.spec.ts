@@ -84,4 +84,40 @@ describe('DomainConstellationCard.vue', () => {
     expect(wrapper.text()).toContain('Distributed')
     expect(wrapper.text()).toContain('Database')
   })
+
+  it('renders stationary pulsing vertex aura with animate-pulse without animate-ping', () => {
+    const wrapper = mount(DomainConstellationCard, {
+      global: {
+        stubs: {
+          NuxtLink: true
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+
+    const pulseCircle = wrapper.find('circle.animate-pulse')
+    expect(pulseCircle.exists()).toBe(true)
+    expect(wrapper.find('circle.animate-ping').exists()).toBe(false)
+  })
+
+  it('header link has stable positioning without hover translation jitter', () => {
+    const wrapper = mount(DomainConstellationCard, {
+      global: {
+        stubs: {
+          NuxtLink: {
+            template: '<a :href="to" :class="$attrs.class"><slot /></a>',
+            props: ['to']
+          }
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+
+    const link = wrapper.find('a')
+    expect(link.attributes('class')).not.toContain('group-hover:translate-x-0.5')
+  })
 })

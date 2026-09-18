@@ -51,6 +51,7 @@
   },
   "dashboard": {
     "curriculum_day": "Curriculum Day",
+    "active_slice_badge": "Slice {current} / {total}",
     "welcome_back": "Welcome Back",
     "welcome_subtitle": "Track your daily momentum, master senior architecture patterns, and reach your full potential.",
     "ask_ai_tutor": "Ask AI Explainer",

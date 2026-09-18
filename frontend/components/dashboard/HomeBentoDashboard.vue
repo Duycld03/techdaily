@@ -19,10 +19,18 @@ const emit = defineEmits<{
   (e: 'startReading'): void
   (e: 'startScenario'): void
 }>()
+const { t } = useI18n()
 
 function handleStartReading() {
   emit('startReading')
-  navigateTo('/today')
+  if (pacer.value?.bookId && pacer.value?.currentChunkOrder) {
+    navigateTo({
+      path: `/read/${pacer.value.bookId}`,
+      query: { slice: pacer.value.currentChunkOrder.toString() }
+    })
+  } else {
+    navigateTo('/today')
+  }
 }
 
 function handleStartScenario() {
@@ -43,6 +51,20 @@ const pacer = computed(() => focusStore.data?.pacer)
 const scenario = computed(() => focusStore.data?.scenario)
 const streak = computed(() => focusStore.data?.currentStreak ?? 0)
 const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 2)
+
+const sliceBadgeText = computed(() => {
+  if (pacer.value && pacer.value.totalChunks > 0) {
+    const text = t('dashboard.active_slice_badge', {
+      current: pacer.value.currentChunkOrder,
+      total: pacer.value.totalChunks
+    })
+    if (text === 'dashboard.active_slice_badge') {
+      return `Slice ${pacer.value.currentChunkOrder} / ${pacer.value.totalChunks}`
+    }
+    return text
+  }
+  return `${t('dashboard.curriculum_day')} ${topic.value?.dayOrder || 1}`
+})
 
 const slicePercentage = computed(() => {
   if (!pacer.value || pacer.value.totalChunks <= 0) return 0
@@ -111,7 +133,7 @@ onMounted(() => {
         <div class="space-y-1">
           <div class="flex items-center gap-2">
             <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.08]">
-              {{ $t('dashboard.curriculum_day') }} {{ topic?.dayOrder || 1 }} / 30
+              {{ sliceBadgeText }}
             </span>
             <span class="text-xs text-slate-500 dark:text-slate-400">
               • {{ targetRole }}
@@ -168,7 +190,7 @@ onMounted(() => {
             <div class="space-y-1.5 mb-4">
               <div class="flex items-center justify-between text-xs font-semibold">
                 <span class="text-slate-500 dark:text-slate-400">
-                  {{ $t('dashboard.slice_progress') }} ({{ pacer?.currentChunkOrder || 1 }}/{{ pacer?.totalChunks || 30 }})
+                  {{ $t('dashboard.slice_progress') }} ({{ pacer?.currentChunkOrder || 1 }}/{{ pacer?.totalChunks || 1 }})
                 </span>
                 <span class="text-slate-700 dark:text-slate-300 font-bold">{{ slicePercentage }}%</span>
               </div>

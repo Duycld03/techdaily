@@ -60,7 +60,7 @@ const edges = [
 
       <NuxtLink
         to="/graph"
-        class="text-xs font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-colors group-hover:translate-x-0.5"
+        class="text-xs font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-colors"
       >
         <span>{{ $t('dashboard.open_cosmos') }}</span>
         <Compass class="w-3.5 h-3.5 shrink-0" />
@@ -108,12 +108,12 @@ const edges = [
               v-if="n.pulse"
               :cx="n.x"
               :cy="n.y"
-              r="7"
+              r="8"
               :stroke="n.color"
-              stroke-width="1"
+              stroke-width="1.5"
               fill="none"
-              opacity="0.5"
-              class="animate-ping origin-center"
+              opacity="0.6"
+              class="animate-pulse"
             />
             <circle
               :cx="n.x"
