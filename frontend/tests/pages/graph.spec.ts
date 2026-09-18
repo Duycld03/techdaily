@@ -177,4 +177,28 @@ describe('pages/graph.vue', () => {
     expect(wrapper.find('[data-testid="graph-minimap"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="graph-detail-drawer"]').exists()).toBe(true)
   })
+
+  it('renders cyber telemetry HUD ribbon with live metrics', () => {
+    const store = createTestStore()
+    store.rawData = {
+      nodes: [{ id: 'n1', label: 'Topic 1', category: 0, type: 'topic' } as any],
+      edges: [],
+      stats: { totalNodes: 1, totalEdges: 0, nodeTypeCounts: {}, pillarCounts: {}, masteredCardsCount: 0 }
+    }
+
+    const wrapper = mount(GraphPage, {
+      global: {
+        stubs: {
+          GraphCanvas: GraphCanvasStub,
+          GraphControlBar: GraphControlBarStub,
+          GraphMinimap: GraphMinimapStub,
+          GraphDetailDrawer: GraphDetailDrawerStub
+        }
+      }
+    })
+
+    expect(wrapper.text()).toContain('HUD Live')
+    expect(wrapper.text()).toContain('2D GRAPH')
+    expect(wrapper.text()).toContain('ENGINE:')
+  })
 })

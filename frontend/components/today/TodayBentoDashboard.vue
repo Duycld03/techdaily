@@ -11,7 +11,7 @@ import {
   Compass
 } from 'lucide-vue-next'
 import ConcentricMetricCard from '~/components/today/ConcentricMetricCard.vue'
-
+import CyberRadarWidget from '~/components/today/CyberRadarWidget.vue'
 const emit = defineEmits<{
   (e: 'startReading'): void
   (e: 'startScenario'): void
@@ -301,7 +301,7 @@ onMounted(() => {
 
         <!-- Card E: Knowledge Graph Radar Card (Image #5 Inspired) -->
         <div class="glass-card p-3 sm:p-3.5 flex flex-col justify-between group hover:border-cyber-500/30 transition-all shrink-0">
-          <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center justify-between mb-2">
             <div class="flex items-center gap-2">
               <div class="w-7 h-7 rounded-lg bg-cyber-500/10 text-cyber-500 flex items-center justify-center shrink-0">
                 <Network class="w-4 h-4" />
@@ -313,32 +313,17 @@ onMounted(() => {
 
             <NuxtLink
               to="/graph"
-              class="text-xs font-semibold text-cyber-500 hover:text-cyber-400 flex items-center gap-1"
+              class="text-xs font-semibold text-cyber-500 hover:text-cyber-400 flex items-center gap-1 transition-colors"
             >
               <span>{{ $t('dashboard.open_cosmos') }}</span>
               <Compass class="w-3.5 h-3.5" />
             </NuxtLink>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 text-center my-1">
-            <div class="p-2.5 rounded-xl bg-slate-100/60 dark:bg-canvas-subtle border border-slate-200/60 dark:border-white/[0.06]">
-              <div class="text-lg font-black text-slate-900 dark:text-white">
-                {{ graphStore.graphData?.nodes?.length || 148 }}
-              </div>
-              <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                {{ $t('dashboard.connected_nodes') }}
-              </div>
-            </div>
-
-            <div class="p-2.5 rounded-xl bg-slate-100/60 dark:bg-canvas-subtle border border-slate-200/60 dark:border-white/[0.06]">
-              <div class="text-lg font-black text-slate-900 dark:text-white">
-                {{ graphStore.graphData?.edges?.length || 210 }}
-              </div>
-              <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                {{ $t('dashboard.active_relations') }}
-              </div>
-            </div>
-          </div>
+          <CyberRadarWidget
+            :node-count="graphStore.graphData?.nodes?.length || 148"
+            :edge-count="graphStore.graphData?.edges?.length || 210"
+          />
         </div>
       </div>
     </div>

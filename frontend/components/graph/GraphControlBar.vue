@@ -102,7 +102,7 @@ const hasActiveFilters = computed(() => {
 
 <template>
   <div
-    class="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xl p-3 sm:p-4 space-y-3 transition-all"
+    class="glass-panel p-3 sm:p-4 space-y-3 transition-all glow-subtle border border-slate-200/90 dark:border-white/[0.08]"
   >
     <!-- Top Row: Live Search & Action Buttons -->
     <div class="flex items-center gap-2 sm:gap-3">
@@ -113,7 +113,7 @@ const hasActiveFilters = computed(() => {
           v-model="searchLocal"
           type="text"
           :placeholder="isMobileScreen ? $t('graph.searchPlaceholderShort') : $t('graph.searchPlaceholder')"
-          class="w-full pl-9 pr-9 py-2 bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition-all"
+          class="w-full pl-9 pr-9 py-2 bg-slate-100/80 dark:bg-canvas-subtle border border-slate-200/60 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyber-400/40 focus:border-cyber-400 transition-all"
           @input="onSearchInput"
         />
         <button
@@ -128,13 +128,13 @@ const hasActiveFilters = computed(() => {
         </button>
       </div>
       <!-- 2D / 3D Engine Mode Switcher -->
-      <div class="inline-flex p-0.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/60 dark:border-slate-700/60 shrink-0">
+      <div class="inline-flex p-0.5 rounded-xl bg-slate-100/90 dark:bg-canvas-subtle border border-slate-200/60 dark:border-white/[0.08] shrink-0">
         <button
           type="button"
           :class="[
             'px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5',
             store.viewMode === '2d'
-              ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
+              ? 'bg-white dark:bg-canvas-elevated text-cyber-500 dark:text-cyber-400 shadow-sm border border-transparent dark:border-white/[0.06]'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           ]"
           :title="$t('graph.mode2d')"
@@ -150,7 +150,7 @@ const hasActiveFilters = computed(() => {
           :class="[
             'px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5',
             store.viewMode === '3d'
-              ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
+              ? 'bg-white dark:bg-canvas-elevated text-cyber-500 dark:text-cyber-400 shadow-sm border border-transparent dark:border-white/[0.06]'
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           ]"
           :title="$t('graph.mode3d')"

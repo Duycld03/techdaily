@@ -98,7 +98,7 @@ const masteryItems = [
       v-if="isCollapsed"
       type="button"
       data-testid="legend-expand-btn"
-      class="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-lg text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 text-xs font-semibold transition-all active:scale-95"
+      class="inline-flex items-center gap-2 px-3 py-2 rounded-2xl glass-panel glow-subtle border border-slate-200/90 dark:border-white/[0.08] shadow-lg text-slate-700 dark:text-slate-300 hover:text-brand-500 dark:hover:text-cyber-400 text-xs font-semibold transition-all active:scale-95"
       :title="$t('graph.legend.title')"
       @click="toggleCollapse"
     >
@@ -111,10 +111,10 @@ const masteryItems = [
     <div
       v-else
       data-testid="legend-card"
-      class="w-56 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-xl p-3 space-y-2.5 text-xs text-slate-700 dark:text-slate-300"
+      class="w-56 rounded-2xl glass-panel p-3 space-y-2.5 text-xs text-slate-700 dark:text-slate-300 glow-subtle border border-slate-200/90 dark:border-white/[0.08]"
     >
       <!-- Header with title & collapse button -->
-      <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800/60">
+      <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-white/[0.08]">
         <div class="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white tracking-wide">
           <Layers class="w-3.5 h-3.5 text-brand-500" />
           <span>{{ $t('graph.legend.title') }}</span>
