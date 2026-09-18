@@ -251,9 +251,9 @@ function getOptionLetter(idx: number): string {
 function getOptionClass(idx: number): string {
   if (!quizStore.isCurrentAnswered) {
     if (selectedOptionIndex.value === idx) {
-      return 'border-brand-500 dark:border-brand-400 bg-brand-50/70 dark:bg-brand-950/40 text-brand-900 dark:text-brand-100 ring-2 ring-brand-500/30 shadow-sm'
+      return 'border-brand-500 bg-brand-500/10 text-brand-600 dark:text-white ring-1 ring-brand-500/40 shadow-sm'
     }
-    return 'border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/60 text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
+    return 'border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-white/[0.16] hover:bg-slate-50/70 dark:hover:bg-white/[0.04]'
   }
 
   // Answered state
@@ -261,12 +261,12 @@ function getOptionClass(idx: number): string {
   const isSelectedByMe = idx === (selectedOptionIndex.value ?? currentQ.value?.lastSelectedOptionIndex)
 
   if (isCorrectOption) {
-    return 'border-emerald-500 dark:border-emerald-400 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 ring-2 ring-emerald-500/40'
+    return 'border-emerald-500/60 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-500/30'
   }
   if (isSelectedByMe && !currentSub.value?.isCorrect) {
-    return 'border-rose-500 dark:border-rose-400 bg-rose-50/80 dark:bg-rose-950/40 text-rose-950 dark:text-rose-100 ring-2 ring-rose-500/40'
+    return 'border-rose-500/60 bg-rose-50/80 dark:bg-rose-500/10 text-rose-900 dark:text-rose-300 ring-1 ring-rose-500/30'
   }
-  return 'opacity-50 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 text-slate-500 dark:text-slate-500'
+  return 'opacity-40 border-slate-200/60 dark:border-white/[0.04] bg-slate-50/40 dark:bg-white/[0.01] text-slate-400 dark:text-slate-500'
 }
 
 // Readiness Tier Calculation for Bento Hero Card
@@ -275,18 +275,18 @@ const readinessInfo = computed(() => {
   if (acc >= 75) {
     return {
       labelKey: 'quiz.readiness_ready',
-      badgeClass: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+      badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
     }
   }
   if (acc >= 50) {
     return {
       labelKey: 'quiz.readiness_building',
-      badgeClass: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+      badgeClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
     }
   }
   return {
     labelKey: 'quiz.readiness_starting',
-    badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+    badgeClass: 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08]'
   }
 })
 
@@ -310,27 +310,27 @@ const masteryTierInfo = computed(() => {
   if (rate <= 25) {
     return {
       labelKey: 'review.tier_starting',
-      badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
-      arcColor: 'text-slate-400 dark:text-slate-500'
+      badgeClass: 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08]',
+      arcColor: 'text-slate-300 dark:text-white/[0.12]'
     }
   }
   if (rate <= 50) {
     return {
       labelKey: 'review.tier_building',
-      badgeClass: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      badgeClass: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
       arcColor: 'text-amber-500'
     }
   }
   if (rate <= 75) {
     return {
       labelKey: 'review.tier_solid',
-      badgeClass: 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800',
+      badgeClass: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20',
       arcColor: 'text-brand-500'
     }
   }
   return {
     labelKey: 'review.tier_mastered',
-    badgeClass: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+    badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
     arcColor: 'text-emerald-500'
   }
 })
@@ -365,16 +365,16 @@ function getSeniorityColor(levelId: number) {
 function getTopicBadge(rate: number) {
   if (rate >= 80) {
     return {
-      class: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+      class: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
     }
   }
   if (rate >= 50) {
     return {
-      class: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+      class: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
     }
   }
   return {
-    class: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+    class: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
   }
 }
 
@@ -387,7 +387,7 @@ defineExpose({
 <template>
   <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
     <!-- Header Section -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-white/[0.08] pb-4">
       <div class="flex items-center gap-2.5">
         <div class="p-2 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
           <HelpCircle class="w-6 h-6" />
@@ -398,15 +398,15 @@ defineExpose({
       </div>
 
       <!-- Tab Buttons -->
-      <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shrink-0 overflow-x-auto">
+      <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shrink-0 overflow-x-auto">
         <button
           data-testid="generate-tab-btn"
           @click="quizStore.activeTab = 'generate'"
           :class="[
             'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
             quizStore.activeTab === 'generate'
-              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <Sparkles class="w-4 h-4" />
@@ -414,37 +414,44 @@ defineExpose({
         </button>
 
         <button
-          v-if="quizStore.questions.length > 0"
           data-testid="arena-tab-btn"
           @click="quizStore.activeTab = 'arena'"
+          :disabled="quizStore.questions.length === 0"
           :class="[
             'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
+            quizStore.questions.length === 0 ? 'opacity-40 cursor-not-allowed' : '',
             quizStore.activeTab === 'arena'
-              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
-          <Zap class="w-4 h-4" />
+          <Swords class="w-4 h-4" />
           {{ $t('quiz.tab_arena') }}
+          <span
+            v-if="quizStore.questions.length > 0"
+            class="px-1.5 py-0.5 rounded-md text-xs font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/20"
+          >
+            {{ quizStore.currentIndex + 1 }}/{{ quizStore.questions.length }}
+          </span>
         </button>
 
         <button
           data-testid="review-tab-btn"
-          @click="quizStore.activeTab = 'review'; router.replace({ query: { ...route.query, tab: 'review' } }); quizStore.fetchReviewQueue({ page: 1, pageSize: quizStore.reviewPageSize })"
+          @click="quizStore.activeTab = 'review'; quizStore.fetchReviewQueue()"
           :class="[
             'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
             quizStore.activeTab === 'review'
-              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <RotateCcw class="w-4 h-4" />
-          {{ $t('quiz.tab_review') }}
+          {{ $t('quiz.tab_review_queue') }}
           <span
-            v-if="quizStore.reviewQueueTotal > 0"
-            class="px-1.5 py-0.5 rounded-full text-xs font-black bg-amber-500/20 text-amber-600 dark:text-amber-400"
+            v-if="quizStore.reviewTotalCount > 0"
+            class="px-1.5 py-0.5 rounded-md text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20"
           >
-            {{ quizStore.reviewQueueTotal }}
+            {{ quizStore.reviewTotalCount }}
           </span>
         </button>
 
@@ -454,8 +461,8 @@ defineExpose({
           :class="[
             'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
             quizStore.activeTab === 'stats'
-              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <BarChart3 class="w-4 h-4" />
@@ -466,7 +473,7 @@ defineExpose({
 
     <!-- TAB 1: GENERATE QUIZ -->
     <div v-if="quizStore.activeTab === 'generate'" class="space-y-6">
-      <div class="bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 sm:p-7 shadow-sm space-y-6">
+      <div class="glass-card p-5 sm:p-7 space-y-6">
         <!-- Topic Selection -->
         <div class="space-y-2.5">
           <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
@@ -476,7 +483,7 @@ defineExpose({
             v-model="customTopicInput"
             type="text"
             :placeholder="$t('quiz.topic_placeholder')"
-            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm sm:text-base transition-all"
+            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm sm:text-base transition-all"
             @keyup.enter="handleGenerateQuiz()"
           />
 
@@ -493,8 +500,8 @@ defineExpose({
                 :class="[
                   'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap',
                   customTopicInput === topic
-                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-800/70 hover:bg-brand-50 dark:hover:bg-brand-950/40 text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-400 border-slate-200 dark:border-slate-700/60'
+                    ? 'border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-300 font-bold shadow-sm'
+                    : 'bg-slate-100 dark:bg-white/[0.03] hover:bg-brand-50 dark:hover:bg-white/[0.06] text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-300 border-slate-200 dark:border-white/[0.06]'
                 ]"
               >
                 {{ topic }}
@@ -504,7 +511,7 @@ defineExpose({
         </div>
 
         <!-- Grounded in Book Toggle Card -->
-        <div class="p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 space-y-3">
+        <div class="p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] bg-slate-50/70 dark:bg-white/[0.02] space-y-3">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
               <div class="w-8 h-8 rounded-xl bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
@@ -524,7 +531,7 @@ defineExpose({
               @click="isGrounded = !isGrounded"
               :class="[
                 'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500',
-                isGrounded ? 'bg-brand-600' : 'bg-slate-300 dark:bg-slate-700'
+                isGrounded ? 'bg-brand-600' : 'bg-slate-300 dark:bg-canvas-elevated'
               ]"
             >
               <span
@@ -537,13 +544,13 @@ defineExpose({
           </div>
 
           <!-- Select Book dropdown when Grounded is active -->
-          <div v-if="isGrounded" class="pt-3 border-t border-slate-200/80 dark:border-slate-800/80 space-y-1.5">
+          <div v-if="isGrounded" class="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] space-y-1.5">
             <label class="block text-xs font-bold text-slate-600 dark:text-slate-400">
               {{ $t('quiz.select_book') }}
             </label>
             <select
               v-model="selectedBookId"
-              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
             >
               <option :value="null">{{ $t('quiz.any_book_in_library') }}</option>
               <option
@@ -570,8 +577,8 @@ defineExpose({
               :class="[
                 'p-4 rounded-xl border text-left transition-all relative',
                 selectedLevel === lvl.id
-                  ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-950/40 text-brand-900 dark:text-brand-100 ring-2 ring-brand-500/30'
-                  : 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-950/40 hover:border-slate-300 dark:hover:border-slate-700'
+                  ? 'border-brand-500 bg-brand-500/10 text-brand-900 dark:text-white ring-1 ring-brand-500/30'
+                  : 'border-slate-200 dark:border-white/[0.06] bg-white/60 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/[0.15]'
               ]"
             >
               <div class="flex items-center justify-between mb-1">
@@ -600,7 +607,7 @@ defineExpose({
                 'px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all',
                 selectedCount === 5
                   ? 'border-brand-500 bg-brand-500 text-white shadow-sm'
-                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                  : 'border-slate-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/[0.15]'
               ]"
             >
               {{ $t('quiz.count_5') }}
@@ -611,7 +618,7 @@ defineExpose({
                 'px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all',
                 selectedCount === 10
                   ? 'border-brand-500 bg-brand-500 text-white shadow-sm'
-                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                  : 'border-slate-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/[0.15]'
               ]"
             >
               {{ $t('quiz.count_10') }}
@@ -625,7 +632,7 @@ defineExpose({
             data-testid="generate-quiz-btn"
             @click="handleGenerateQuiz()"
             :disabled="quizStore.isGenerating"
-            class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-base shadow-md shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all"
+            class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-base shadow-md shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all cursor-pointer"
           >
             <Loader2 v-if="quizStore.isGenerating" class="w-5 h-5 animate-spin" />
             <Sparkles v-else class="w-5 h-5" />
@@ -638,7 +645,7 @@ defineExpose({
     <!-- TAB 2: QUIZ ARENA -->
     <div v-if="quizStore.activeTab === 'arena' && currentQ" class="space-y-6">
       <!-- Stepper & Topic Bar -->
-      <div class="bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+      <div class="glass-card p-4 sm:p-5 space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
           <div class="flex items-center gap-2">
             <span class="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
@@ -650,7 +657,7 @@ defineExpose({
           </div>
 
           <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.06]">
               {{ formatSeniorityLevel(currentQ.level).label }}
             </span>
             <span
@@ -664,7 +671,7 @@ defineExpose({
         </div>
 
         <!-- Progress Bar -->
-        <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+        <div class="w-full h-2 bg-slate-100 dark:bg-canvas-elevated rounded-full overflow-hidden">
           <div
             class="h-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-300"
             :style="{ width: `${quizStore.progressPercentage}%` }"
@@ -673,7 +680,7 @@ defineExpose({
       </div>
 
       <!-- Question Card -->
-      <div class="bg-white/95 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-7 shadow-sm space-y-6">
+      <div class="glass-card p-5 sm:p-7 space-y-6">
         <!-- Question Text -->
         <div class="space-y-2">
           <h2 class="text-base sm:text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-relaxed break-words">
@@ -706,10 +713,10 @@ defineExpose({
                       ? 'bg-emerald-600 text-white'
                       : (idx === (selectedOptionIndex ?? currentQ.lastSelectedOptionIndex) && !currentSub?.isCorrect
                           ? 'bg-rose-600 text-white'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'))
+                          : 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.08]'))
                   : (selectedOptionIndex === idx
                       ? 'bg-brand-600 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300')
+                      : 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.08]')
               ]"
             >
               {{ getOptionLetter(idx) }}
@@ -726,7 +733,7 @@ defineExpose({
             data-testid="submit-answer-btn"
             @click="handleSubmitAnswer()"
             :disabled="selectedOptionIndex === null || quizStore.isSubmitting"
-            class="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-md shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
+            class="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-md shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Loader2 v-if="quizStore.isSubmitting" class="w-4 h-4 animate-spin" />
             <span>{{ quizStore.isSubmitting ? $t('quiz.submitting_loader') : $t('quiz.btn_submit_choice') }}</span>
@@ -734,14 +741,14 @@ defineExpose({
         </div>
 
         <!-- Explanation & Feedback (Shown after submitting) -->
-        <div v-if="quizStore.isCurrentAnswered && currentSub" class="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+        <div v-if="quizStore.isCurrentAnswered && currentSub" class="space-y-4 pt-4 border-t border-slate-200/80 dark:border-white/[0.06]">
           <!-- Banner -->
           <div
             :class="[
               'p-4 rounded-xl border flex items-center gap-3',
               currentSub.isCorrect
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950 dark:text-emerald-200'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-200'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
             ]"
           >
             <CheckCircle2 v-if="currentSub.isCorrect" class="w-5 h-5 text-emerald-500 shrink-0" />
@@ -752,7 +759,7 @@ defineExpose({
           </div>
 
           <!-- Deep-dive Markdown -->
-          <div class="bg-slate-50 dark:bg-slate-950/60 rounded-xl p-5 border border-slate-200 dark:border-slate-800/80 space-y-2">
+          <div class="bg-slate-50 dark:bg-canvas-subtle rounded-xl p-5 border border-slate-200/80 dark:border-white/[0.06] space-y-2">
             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               {{ $t('quiz.explanation_header') }}
             </h3>
@@ -767,7 +774,7 @@ defineExpose({
             <button
               @click="handlePrevQuestion()"
               :disabled="quizStore.currentIndex === 0"
-              class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0"
+              class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.04] text-slate-700 dark:text-slate-300 font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 cursor-pointer"
             >
               <ArrowLeft class="w-4 h-4" />
               {{ $t('quiz.btn_prev') }}
@@ -775,7 +782,7 @@ defineExpose({
 
             <button
               @click="handleNextQuestion()"
-              class="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-sm flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
+              class="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-sm flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
             >
               <span>{{ quizStore.currentIndex === quizStore.questions.length - 1 ? $t('quiz.btn_finish') : $t('quiz.btn_next') }}</span>
               <ArrowRight class="w-4 h-4" />
@@ -787,7 +794,7 @@ defineExpose({
 
     <!-- TAB 3: SESSION SUMMARY -->
     <div v-if="quizStore.activeTab === 'summary'" class="space-y-6">
-      <div class="bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-6 sm:p-8 text-center space-y-6 shadow-sm">
+      <div class="glass-card p-6 sm:p-8 text-center space-y-6">
         <div class="inline-flex p-4 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
           <Award class="w-12 h-12" />
         </div>
@@ -802,7 +809,7 @@ defineExpose({
         </div>
 
         <!-- Score Badge -->
-        <div class="inline-block p-6 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+        <div class="inline-block p-6 rounded-2xl bg-slate-50 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.06]">
           <span class="text-3xl sm:text-4xl font-black text-brand-600 dark:text-brand-400">
             {{ quizStore.sessionScore.correct }} / {{ quizStore.sessionScore.total }}
           </span>
@@ -816,7 +823,7 @@ defineExpose({
           <button
             @click="handleGenerateQuiz(quizStore.currentTopic)"
             :disabled="quizStore.isGenerating"
-            class="px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
+            class="px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Loader2 v-if="quizStore.isGenerating" class="w-4 h-4 animate-spin" />
             <Sparkles v-else class="w-4 h-4" />
@@ -827,7 +834,7 @@ defineExpose({
             v-if="quizStore.sessionScore.correct < quizStore.sessionScore.total"
             @click="handleRetryMistakes()"
             :disabled="quizStore.isGenerating"
-            class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0"
+            class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
           >
             <RotateCcw class="w-4 h-4" />
             {{ $t('quiz.btn_retry_mistakes', { count: quizStore.sessionScore.total - quizStore.sessionScore.correct }) }}
@@ -836,14 +843,14 @@ defineExpose({
           <button
             @click="quizStore.resetSession()"
             :disabled="quizStore.isGenerating"
-            class="px-5 py-3 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap shrink-0"
+            class="px-5 py-3 rounded-xl border border-slate-300 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.04] text-slate-700 dark:text-slate-300 font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all whitespace-nowrap shrink-0 cursor-pointer"
           >
             {{ $t('quiz.btn_choose_new') }}
           </button>
         </div>
       </div>
         <!-- Session Mistakes List with Push to SM-2 -->
-        <div v-if="sessionMistakes.length > 0" class="text-left pt-6 border-t border-slate-200 dark:border-slate-800 space-y-3">
+        <div v-if="sessionMistakes.length > 0" class="text-left pt-6 border-t border-slate-200/80 dark:border-white/[0.06] space-y-3">
           <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <AlertCircle class="w-4 h-4 text-rose-500" />
             <span>{{ $t('quiz.mistakes_to_review') }} ({{ sessionMistakes.length }})</span>
@@ -852,7 +859,7 @@ defineExpose({
             <div
               v-for="q in sessionMistakes"
               :key="q.id"
-              class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-2"
+              class="p-4 rounded-xl bg-slate-50 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.06] space-y-2"
             >
               <div class="flex items-center justify-between text-xs">
                 <span class="font-bold text-brand-600 dark:text-brand-400">{{ q.topic }}</span>
@@ -865,9 +872,9 @@ defineExpose({
                 <button
                   @click="handlePushToReview(q.id)"
                   :disabled="pushedQuestionIds.has(q.id) || pushingQuestionId === q.id"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-60"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-60 cursor-pointer"
                   :class="pushedQuestionIds.has(q.id)
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
                     : 'bg-brand-600 hover:bg-brand-500 text-white'"
                 >
                   <Check v-if="pushedQuestionIds.has(q.id)" class="w-3.5 h-3.5" />
@@ -883,7 +890,7 @@ defineExpose({
 
     <!-- TAB 4: MISTAKE REVIEW QUEUE -->
     <div v-if="quizStore.activeTab === 'review'" class="space-y-6">
-      <div v-if="quizStore.reviewQueue.length === 0" class="bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center space-y-4">
+      <div v-if="quizStore.reviewQueue.length === 0" class="glass-card p-8 text-center space-y-4">
         <div class="inline-flex p-4 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
           <CheckCircle2 class="w-10 h-10" />
         </div>
@@ -904,7 +911,7 @@ defineExpose({
           <div class="flex items-center gap-2 flex-wrap">
             <button
               @click="handlePracticeCurrentBatch"
-              class="px-4 py-2 sm:py-2.5 rounded-xl bg-brand-50 dark:bg-brand-950/60 hover:bg-brand-100 dark:hover:bg-brand-900/60 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 font-bold text-xs sm:text-sm shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+              class="px-4 py-2 sm:py-2.5 rounded-xl bg-brand-500/10 hover:bg-brand-500/20 text-brand-700 dark:text-brand-300 border border-brand-500/20 font-bold text-xs sm:text-sm shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 cursor-pointer"
             >
               <RotateCcw class="w-4 h-4" />
               {{ $t('quiz.practice_current_batch', { count: quizStore.reviewQueue.length }) }}
@@ -924,7 +931,7 @@ defineExpose({
           <div
             v-for="q in quizStore.reviewQueue"
             :key="q.id"
-            class="p-5 rounded-2xl bg-white/90 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2 hover:border-slate-300 dark:hover:border-slate-700 transition-all"
+            class="glass-card p-5 space-y-2 hover:border-slate-300 dark:hover:border-white/[0.15] transition-all"
           >
             <div class="flex items-center justify-between text-xs">
               <span class="font-bold text-brand-600 dark:text-brand-400">{{ q.topic }}</span>
@@ -937,9 +944,9 @@ defineExpose({
               <button
                 @click="handlePushToReview(q.id)"
                 :disabled="pushedQuestionIds.has(q.id) || pushingQuestionId === q.id"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-60"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-60 cursor-pointer"
                 :class="pushedQuestionIds.has(q.id)
-                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
                   : 'bg-brand-600 hover:bg-brand-500 text-white'"
               >
                 <Check v-if="pushedQuestionIds.has(q.id)" class="w-3.5 h-3.5" />
@@ -950,7 +957,6 @@ defineExpose({
             </div>
           </div>
         </div>
-
         <!-- Pagination -->
         <BasePagination
           :current-page="quizStore.reviewPage"
@@ -968,10 +974,10 @@ defineExpose({
       <!-- 4-Card Bento Grid Dashboard -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <!-- Bento Card 1: Hero Performance Card -->
-        <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-5">
+        <div class="glass-card p-5 sm:p-6 flex flex-col justify-between space-y-5">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
+              <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
                 <Target class="w-4 h-4" />
               </div>
               <div>
@@ -1014,7 +1020,7 @@ defineExpose({
             <button
               @click="quizStore.activeTab = 'review'"
               :disabled="quizStore.stats.reviewQueueCount === 0"
-              class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:hover:bg-brand-600 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0"
+              class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:hover:bg-brand-600 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
             >
               <RotateCcw class="w-4 h-4" />
               <span>{{ $t('quiz.btn_review_mistakes', { count: quizStore.stats.reviewQueueCount }) }}</span>
@@ -1023,11 +1029,11 @@ defineExpose({
         </div>
 
         <!-- Bento Card 2: Spaced Mastery Gauge Card -->
-        <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+        <div class="glass-card text-slate-900 dark:text-white p-5 sm:p-6 flex flex-col justify-between">
           <!-- Header -->
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
+              <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
                 <Award class="w-4 h-4" />
               </div>
               <div>
@@ -1066,7 +1072,7 @@ defineExpose({
                   stroke="currentColor"
                   stroke-width="10"
                   stroke-linecap="round"
-                  class="text-slate-100 dark:text-slate-800"
+                  class="text-slate-100 dark:text-white/[0.08]"
                 />
 
                 <!-- Foreground Value Arc -->
@@ -1093,10 +1099,10 @@ defineExpose({
         </div>
 
         <!-- Bento Card 3: Seniority Matrix Card -->
-        <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="glass-card p-5 sm:p-6 space-y-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
+              <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
                 <TrendingUp class="w-4 h-4" />
               </div>
               <div>
@@ -1132,7 +1138,7 @@ defineExpose({
                   {{ lvl.accuracyRate }}%
                 </span>
               </div>
-              <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div class="w-full h-2.5 bg-slate-100 dark:bg-canvas-elevated rounded-full overflow-hidden">
                 <div
                   :class="['h-full rounded-full transition-all duration-500', getSeniorityColor(formatSeniorityLevel(lvl.level).id).bar]"
                   :style="{ width: `${lvl.accuracyRate}%` }"
@@ -1143,10 +1149,10 @@ defineExpose({
         </div>
 
         <!-- Bento Card 4: Topic Strengths & Weaknesses Radar Card -->
-        <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="glass-card p-5 sm:p-6 space-y-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
+              <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
                 <BarChart3 class="w-4 h-4" />
               </div>
               <div>
@@ -1165,7 +1171,7 @@ defineExpose({
             <div
               v-for="topic in quizStore.stats.topicBreakdown"
               :key="topic.topic"
-              class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800/80 gap-2"
+              class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-subtle border border-slate-100 dark:border-white/[0.06] gap-2"
             >
               <div class="min-w-0 flex-1">
                 <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">

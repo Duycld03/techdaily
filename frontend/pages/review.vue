@@ -310,25 +310,25 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] p-4 sm:p-6 md:p-10 flex flex-col items-center bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] p-4 sm:p-6 md:p-10 flex flex-col items-center bg-slate-50 dark:bg-canvas transition-colors duration-200">
     <!-- Top-Level Tab Switcher -->
-    <div class="w-full max-w-5xl flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-6 sm:mb-8">
-      <div class="flex items-center gap-2">
+    <div class="w-full max-w-5xl flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] pb-3 mb-6 sm:mb-8">
+      <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shrink-0 overflow-x-auto">
         <!-- Tab 1: Review Session -->
         <button
           @click="activeTab = 'session'"
           :class="[
-            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 border whitespace-nowrap shrink-0',
+            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
             activeTab === 'session'
-              ? 'bg-brand-600 text-white border-transparent shadow-sm'
-              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <Layers class="w-4 h-4" />
           <span>{{ $t('review.tab_session') }}</span>
           <span
             v-if="reviewStore.cards.length > 0"
-            class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white ml-0.5"
+            class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/20 ml-0.5"
           >
             {{ reviewStore.cards.length }}
           </span>
@@ -338,17 +338,17 @@ onUnmounted(() => {
         <button
           @click="activeTab = 'management'"
           :class="[
-            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 border whitespace-nowrap shrink-0',
+            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
             activeTab === 'management'
-              ? 'bg-brand-600 text-white border-transparent shadow-sm'
-              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <Library class="w-4 h-4" />
           <span>{{ $t('review.tab_management') }}</span>
           <span
             v-if="reviewStore.deckStatistics.totalCards > 0"
-            class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 ml-0.5 border border-slate-200 dark:border-slate-700"
+            class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/60 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 ml-0.5 border border-slate-300/40 dark:border-white/[0.08]"
           >
             {{ reviewStore.deckStatistics.totalCards }}
           </span>
@@ -383,8 +383,8 @@ onUnmounted(() => {
       </div>
 
       <!-- Empty / Completed State -->
-      <div v-else class="w-full max-w-xl text-center p-10 sm:p-12 md:p-14 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl animate-in zoom-in-95 duration-200 my-auto space-y-6 sm:space-y-7">
-        <div class="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center mx-auto shadow-sm">
+      <div class="w-full max-w-xl text-center p-10 sm:p-12 md:p-14 rounded-3xl glass-card shadow-xl dark:shadow-2xl animate-in zoom-in-95 duration-200 my-auto space-y-6 sm:space-y-7">
+        <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto shadow-sm">
           <CheckCircle class="w-8 h-8" />
         </div>
         <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -397,14 +397,14 @@ onUnmounted(() => {
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 pt-4 sm:pt-6">
           <button
             @click="activeTab = 'management'"
-            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Library class="w-4 h-4" />
             <span>{{ $t('review.browse_deck_btn') }} ({{ reviewStore.deckStatistics.totalCards }} {{ $t('review.cards_unit') }})</span>
           </button>
           <NuxtLink
             to="/today"
-            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm border border-slate-200 dark:border-slate-800 transition-all shadow-sm whitespace-nowrap shrink-0"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white dark:bg-white/[0.04] hover:bg-slate-50 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm border border-slate-200 dark:border-white/[0.08] transition-all shadow-sm whitespace-nowrap shrink-0"
           >
             <Sparkles class="w-4 h-4 text-brand-500" />
             <span>{{ $t('review.cram_practice_btn') }}</span>
@@ -433,7 +433,7 @@ onUnmounted(() => {
       </div>
 
       <!-- 2. Quick Search & Filter Bar -->
-      <div class="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3.5">
+      <div class="p-4 sm:p-5 glass-card space-y-3.5">
         <!-- Search input with ⌘K -->
         <div class="relative flex items-center">
           <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -441,35 +441,35 @@ onUnmounted(() => {
             ref="searchInputRef"
             v-model="searchQuery"
             type="text"
-            class="w-full pl-10 pr-20 py-2.5 text-xs sm:text-sm rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
+            class="w-full pl-10 pr-20 py-2.5 text-xs sm:text-sm rounded-2xl bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
             :placeholder="$t('review.search_placeholder')"
           />
           <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             <button
               v-if="searchQuery"
               @click="searchQuery = ''"
-              class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full"
+              class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
             >
               <X class="w-4 h-4" />
             </button>
-            <kbd class="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 select-none">
+            <kbd class="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-slate-400 bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] select-none">
               ⌘K
             </kbd>
           </div>
         </div>
 
         <!-- Quick Filter Chips & Advanced Filter Button -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-white/[0.06]">
           <!-- Quick Filter Chips -->
           <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5">
             <button
               type="button"
               @click="setQuickFilter('all')"
               :class="[
-                'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0',
+                'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
                 selectedStatus === null && selectedUrgency === null
                   ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  : 'bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.06] hover:border-white/[0.15]'
               ]"
             >
               {{ $t('review.quick_filter_all') }}
@@ -478,10 +478,10 @@ onUnmounted(() => {
               type="button"
               @click="setQuickFilter('due')"
               :class="[
-                'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0',
+                'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
                 selectedUrgency === 'due'
                   ? 'bg-amber-600 text-white border-transparent shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  : 'bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.06] hover:border-white/[0.15]'
               ]"
             >
               {{ $t('review.quick_filter_due') }}
@@ -490,10 +490,10 @@ onUnmounted(() => {
               type="button"
               @click="setQuickFilter('mastered')"
               :class="[
-                'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0',
+                'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
                 selectedStatus === 2
                   ? 'bg-emerald-600 text-white border-transparent shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  : 'bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.06] hover:border-white/[0.15]'
               ]"
             >
               {{ $t('review.quick_filter_mastered') }}
@@ -504,7 +504,7 @@ onUnmounted(() => {
           <button
             type="button"
             @click="isAdvancedFilterOpen = true"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.06] hover:border-white/[0.15] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
             <SlidersHorizontal class="w-3.5 h-3.5" />
             <span>{{ $t('review.advanced_filter_btn') }}</span>
@@ -548,7 +548,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Empty Deck State -->
-      <div v-else class="text-center py-16 bg-white dark:bg-slate-900/40 rounded-3xl border border-slate-200 dark:border-slate-800/80 p-8 shadow-sm space-y-3">
+      <div v-else class="text-center py-16 glass-card p-8 space-y-3">
         <Layers class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto" />
         <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $t('review.empty_deck') }}</h3>
         <p v-if="searchQuery || selectedStatus !== null || selectedSource !== null || selectedUrgency !== null" class="text-xs text-slate-500 max-w-sm mx-auto">
@@ -566,22 +566,22 @@ onUnmounted(() => {
         v-if="cardToEdit"
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
       >
-        <div class="w-full max-w-2xl p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-          <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div class="w-full max-w-2xl p-6 rounded-3xl glass-panel shadow-2xl space-y-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+          <div class="flex items-center justify-between border-b border-slate-100 dark:border-white/[0.08] pb-3">
             <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Pencil class="w-5 h-5 text-brand-500" />
               <span>{{ $t('review.edit_card') }}</span>
             </h3>
 
             <!-- Mode Switcher: Edit vs Preview -->
-            <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+            <div class="flex items-center gap-1 bg-slate-100 dark:bg-white/[0.06] p-1 rounded-xl text-xs font-semibold">
               <button
                 @click="editActiveTab = 'edit'"
                 :class="[
-                  'px-3 py-1 rounded-lg transition-all',
+                  'px-3 py-1 rounded-lg transition-all cursor-pointer',
                   editActiveTab === 'edit'
-                    ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    ? 'bg-white dark:bg-white/[0.1] text-brand-600 dark:text-brand-300 font-bold shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 ]"
               >
                 {{ $t('review.tab_edit') }}
@@ -589,10 +589,10 @@ onUnmounted(() => {
               <button
                 @click="editActiveTab = 'preview'"
                 :class="[
-                  'px-3 py-1 rounded-lg transition-all',
+                  'px-3 py-1 rounded-lg transition-all cursor-pointer',
                   editActiveTab === 'preview'
-                    ? 'bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-400 shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    ? 'bg-white dark:bg-white/[0.1] text-brand-600 dark:text-brand-300 font-bold shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 ]"
               >
                 {{ $t('review.tab_preview') }}
@@ -609,7 +609,7 @@ onUnmounted(() => {
               <textarea
                 v-model="editFrontMarkdown"
                 rows="4"
-                class="w-full text-xs sm:text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-mono"
+                class="w-full text-xs sm:text-sm bg-slate-50 dark:bg-canvas-subtle border border-slate-300 dark:border-white/[0.08] rounded-xl p-3 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-mono"
                 placeholder="Front prompt markdown..."
               ></textarea>
             </div>
@@ -621,7 +621,7 @@ onUnmounted(() => {
               <textarea
                 v-model="editBackMarkdown"
                 rows="6"
-                class="w-full text-xs sm:text-sm bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-mono"
+                class="w-full text-xs sm:text-sm bg-slate-50 dark:bg-canvas-subtle border border-slate-300 dark:border-white/[0.08] rounded-xl p-3 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-mono"
                 placeholder="Back explanation markdown..."
               ></textarea>
             </div>
@@ -632,7 +632,7 @@ onUnmounted(() => {
             <div class="space-y-1.5">
               <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('review.front_label') }}</div>
               <div
-                class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm prose dark:prose-invert max-w-none"
+                class="p-4 rounded-xl bg-slate-50 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.06] text-xs sm:text-sm prose dark:prose-invert max-w-none"
                 v-html="renderMarkdown(editFrontMarkdown)"
               ></div>
             </div>
@@ -640,14 +640,14 @@ onUnmounted(() => {
             <div class="space-y-1.5">
               <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('review.back_label') }}</div>
               <div
-                class="p-4 rounded-xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 text-xs sm:text-sm prose dark:prose-invert max-w-none"
+                class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs sm:text-sm prose dark:prose-invert max-w-none"
                 v-html="renderMarkdown(editBackMarkdown)"
               ></div>
             </div>
           </div>
 
           <!-- Modal Action Buttons -->
-          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 dark:border-white/[0.08]">
             <button
               type="button"
               @click="closeEditModal"
@@ -676,8 +676,8 @@ onUnmounted(() => {
         v-if="cardToReset"
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
       >
-        <div class="w-full max-w-md p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
-          <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900 flex items-center justify-center">
+        <div class="w-full max-w-md p-6 rounded-3xl glass-panel shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+          <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center">
             <RotateCcw class="w-6 h-6" />
           </div>
 
@@ -718,8 +718,8 @@ onUnmounted(() => {
         v-if="cardToDelete"
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
       >
-        <div class="w-full max-w-md p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
-          <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 flex items-center justify-center">
+        <div class="w-full max-w-md p-6 rounded-3xl glass-panel shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+          <div class="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center">
             <AlertTriangle class="w-6 h-6" />
           </div>
 
