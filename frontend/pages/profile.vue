@@ -131,7 +131,7 @@ async function handlePasswordChange() {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+  <div class="min-h-[calc(100vh-4rem)] bg-slate-50 dark:bg-canvas transition-colors duration-200">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       <!-- Page Header -->
       <div class="space-y-1">
@@ -148,17 +148,17 @@ async function handlePasswordChange() {
         <!-- Left Column (Desktop 2/3 width, Mobile order-2): Settings & Goals Card + Domain Mastery Progress Card -->
         <div class="lg:col-span-2 order-2 lg:order-1 space-y-6">
           <!-- Settings & Goals Card -->
-          <div class="p-5 sm:p-7 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-6 transition-colors duration-200">
+          <div class="glass-card p-5 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-6 transition-colors duration-200">
             <!-- Tabs Switcher -->
-            <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 text-xs sm:text-sm font-bold">
+            <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-canvas-elevated/80 border border-slate-200/80 dark:border-white/[0.08] text-xs sm:text-sm font-bold">
               <button
                 type="button"
                 @click="activeTab = 'personal'"
                 :class="[
                   'min-h-[40px] px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-2 outline-none',
                   activeTab === 'personal'
-                    ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium'
+                    ? 'bg-white dark:bg-canvas-subtle text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium border border-transparent'
                 ]"
               >
                 <User class="w-4 h-4 shrink-0" />
@@ -171,8 +171,8 @@ async function handlePasswordChange() {
                 :class="[
                   'min-h-[40px] px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-2 outline-none',
                   activeTab === 'security'
-                    ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium'
+                    ? 'bg-white dark:bg-canvas-subtle text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium border border-transparent'
                 ]"
               >
                 <Shield class="w-4 h-4 shrink-0" />
@@ -194,7 +194,7 @@ async function handlePasswordChange() {
                       v-model="name"
                       required
                       type="text"
-                      class="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-all"
+                      class="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-canvas-subtle border border-slate-300 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
                     />
                   </div>
                 </div>
@@ -208,7 +208,7 @@ async function handlePasswordChange() {
                     <Briefcase class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <select
                       v-model="targetRole"
-                      class="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-all"
+                      class="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-canvas-subtle border border-slate-300 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
                     >
                       <option v-for="r in roleOptions" :key="r.value" :value="r.value">
                         {{ r.label }}
@@ -232,8 +232,8 @@ async function handlePasswordChange() {
                     :class="[
                       'py-2 rounded-xl text-center border transition-all text-xs sm:text-sm font-bold',
                       dailyGoalMinutes === opt.minutes
-                        ? 'bg-brand-50 dark:bg-brand-950/60 border-brand-500 text-brand-700 dark:text-brand-300 ring-1 ring-brand-500/20'
-                        : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'
+                        ? 'bg-brand-500/15 border-brand-500 text-brand-700 dark:text-brand-300 font-bold shadow-sm ring-1 ring-brand-500/20'
+                        : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-canvas-elevated'
                     ]"
                   >
                     {{ opt.label }}
@@ -246,7 +246,7 @@ async function handlePasswordChange() {
                 <button
                   type="submit"
                   :disabled="profileStore.isUpdating"
-                  class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
                 >
                   <Save v-if="!profileStore.isUpdating" class="w-4 h-4" />
                   <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -260,7 +260,7 @@ async function handlePasswordChange() {
               <!-- Google Connected Banner -->
               <div
                 v-if="profileStore.profile?.isGoogleLinked"
-                class="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-900/40 flex items-center gap-2.5 text-xs text-blue-700 dark:text-blue-300"
+                class="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-500/20 flex items-center gap-2.5 text-xs text-blue-700 dark:text-blue-300"
               >
                 <Shield class="w-4 h-4 shrink-0 text-blue-500" />
                 <span>{{ $t('profile.google_password_hint') }}</span>
@@ -278,7 +278,7 @@ async function handlePasswordChange() {
                     required
                     :type="showCurrentPassword ? 'text' : 'password'"
                     placeholder="••••••••"
-                    class="w-full pl-9 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-all"
+                    class="w-full pl-9 pr-10 py-2.5 bg-white dark:bg-canvas-subtle border border-slate-300 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
                   />
                   <button
                     type="button"
@@ -304,7 +304,7 @@ async function handlePasswordChange() {
                     :type="showNewPassword ? 'text' : 'password'"
                     minlength="6"
                     placeholder="••••••••"
-                    class="w-full pl-9 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-all"
+                    class="w-full pl-9 pr-10 py-2.5 bg-white dark:bg-canvas-subtle border border-slate-300 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
                   />
                   <button
                     type="button"
@@ -318,7 +318,7 @@ async function handlePasswordChange() {
 
                 <!-- Password Strength Bar -->
                 <div v-if="newPassword" class="mt-2 space-y-1">
-                  <div class="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div class="h-1.5 w-full bg-slate-200 dark:bg-white/[0.06] rounded-full overflow-hidden">
                     <div
                       class="h-full transition-all duration-300 rounded-full"
                       :class="pwdAnalysis.color.split(' ')[0]"
@@ -344,7 +344,7 @@ async function handlePasswordChange() {
                     :type="showConfirmPassword ? 'text' : 'password'"
                     minlength="6"
                     placeholder="••••••••"
-                    class="w-full pl-9 pr-10 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none transition-all"
+                    class="w-full pl-9 pr-10 py-2.5 bg-white dark:bg-canvas-subtle border border-slate-300 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
                   />
                   <button
                     type="button"
@@ -365,7 +365,7 @@ async function handlePasswordChange() {
                 <button
                   type="submit"
                   :disabled="profileStore.isUpdating || (confirmPassword !== '' && newPassword !== confirmPassword)"
-                  class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
+                  class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
                 >
                   <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                   <span>{{ profileStore.profile?.hasPassword ? $t('profile.update_password_btn') : $t('profile.set_password_btn') }}</span>

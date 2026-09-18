@@ -154,7 +154,7 @@ async function handleSaveSchedule() {
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+  <div class="max-w-3xl mx-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 bg-slate-50 dark:bg-canvas min-h-[calc(100vh-3.5rem)] transition-colors duration-200">
     <div>
       <h1 class="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5 sm:gap-3">
         <SettingsIcon class="w-6 h-6 sm:w-7 sm:h-7 text-brand-600 dark:text-brand-400" />
@@ -164,12 +164,12 @@ async function handleSaveSchedule() {
     </div>
 
     <!-- Appearance & Language -->
-    <div class="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
+    <div class="glass-card p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-white/[0.08] space-y-4 shadow-sm">
       <h2 class="text-sm sm:text-base font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
         <Globe class="w-4 h-4 text-brand-600 dark:text-brand-400" />
         <span>{{ $t('settings.lang_theme_title') }}</span>
       </h2>
-      <div class="flex items-center justify-between py-3.5 border-b border-slate-100 dark:border-slate-800">
+      <div class="flex items-center justify-between py-3.5 border-b border-slate-100 dark:border-white/[0.06]">
         <div>
           <div class="text-sm sm:text-base md:text-lg font-bold text-slate-900 dark:text-white">{{ $t('settings.interface_lang') }}</div>
           <div class="text-xs sm:text-sm md:text-base text-slate-500">{{ $t('settings.interface_lang_desc') }}</div>
@@ -186,7 +186,7 @@ async function handleSaveSchedule() {
     </div>
 
     <!-- Browser Web Push Notifications -->
-    <div class="p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-5 shadow-sm">
+    <div class="glass-card p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-white/[0.08] space-y-5 shadow-sm">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="space-y-1">
           <h2 class="text-sm sm:text-base font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
@@ -211,7 +211,7 @@ async function handleSaveSchedule() {
             :disabled="isPushLoading"
             type="button"
             class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50"
-            :class="isSubscribed ? 'bg-brand-600' : 'bg-slate-300 dark:bg-slate-700'"
+            :class="isSubscribed ? 'bg-brand-600 dark:bg-brand-500' : 'bg-slate-300 dark:bg-white/[0.12]'"
             role="switch"
             :aria-checked="isSubscribed"
           >
@@ -226,7 +226,7 @@ async function handleSaveSchedule() {
       <!-- Push Active Status / Action Banner -->
       <div
         v-if="isSubscribed"
-        class="p-4 rounded-2xl bg-brand-50/60 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-900/60 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm"
+        class="glass-panel p-4 rounded-2xl border border-brand-200/80 dark:border-brand-500/20 bg-brand-50/50 dark:bg-brand-950/30 flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm"
       >
         <div class="flex items-center gap-2 text-brand-800 dark:text-brand-300 font-semibold">
           <CheckCircle2 class="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0" />
@@ -236,7 +236,7 @@ async function handleSaveSchedule() {
         <button
           @click="handleSendTestPush"
           :disabled="isSendingTest"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-brand-300 dark:border-brand-800 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-slate-800 font-bold transition-all disabled:opacity-50 shadow-sm"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-canvas-elevated border border-brand-300 dark:border-brand-500/30 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-500/10 font-bold transition-all disabled:opacity-50 shadow-sm"
         >
           <Loader2 v-if="isSendingTest" class="w-3.5 h-3.5 animate-spin" />
           <Send v-else class="w-3.5 h-3.5" />
@@ -245,7 +245,7 @@ async function handleSaveSchedule() {
       </div>
 
       <!-- Notification Schedule & Timezone Settings -->
-      <div class="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+      <div class="pt-4 border-t border-slate-100 dark:border-white/[0.06] space-y-4">
         <h3 class="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-2">
           <Clock class="w-4 h-4 text-slate-500" />
           <span>{{ $t('settings.schedule_title') }}</span>
@@ -260,7 +260,7 @@ async function handleSaveSchedule() {
             <input
               type="time"
               v-model="preferredStudyTime"
-              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
             />
             <p class="text-[11px] text-slate-500">{{ $t('settings.preferred_study_time_desc') }}</p>
           </div>
@@ -273,7 +273,7 @@ async function handleSaveSchedule() {
             <input
               type="time"
               v-model="streakAlertTime"
-              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
             />
             <p class="text-[11px] text-slate-500">{{ $t('settings.streak_alert_time_desc') }}</p>
           </div>
@@ -287,7 +287,7 @@ async function handleSaveSchedule() {
           </label>
           <select
             v-model="timeZone"
-            class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500"
+            class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
           >
             <option v-for="tz in commonTimezones" :key="tz.value" :value="tz.value">
               {{ tz.label }}
@@ -301,7 +301,7 @@ async function handleSaveSchedule() {
           <button
             @click="handleSaveSchedule"
             :disabled="isSavingSchedule"
-            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-sm transition-all disabled:opacity-50"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-sm transition-all disabled:opacity-50 active:scale-[0.98]"
           >
             <Loader2 v-if="isSavingSchedule" class="w-4 h-4 animate-spin" />
             <span>{{ $t('settings.btn_save_schedule') }}</span>

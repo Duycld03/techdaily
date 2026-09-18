@@ -35,9 +35,9 @@ const userInitial = computed(() => {
 <template>
   <div class="space-y-6">
     <!-- Engineer Identity Card -->
-    <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm relative overflow-hidden transition-colors duration-200">
+    <div class="glass-card p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm relative overflow-hidden transition-colors duration-200 glow-subtle">
       <!-- Subtle top decorative background accent -->
-      <div class="absolute -top-12 -right-12 w-32 h-32 bg-brand-500/10 dark:bg-brand-500/5 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="absolute -top-12 -right-12 w-32 h-32 bg-brand-500/15 dark:bg-brand-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
       <div class="flex flex-col items-center text-center sm:text-left sm:flex-row sm:items-center gap-5 relative z-10">
         <!-- Large Avatar with Status Dot -->
@@ -47,7 +47,7 @@ const userInitial = computed(() => {
             :src="profile.avatarUrl"
             :alt="profile?.name || 'Engineer'"
             @error="hasAvatarError = true"
-            class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-slate-200 dark:border-slate-700 shadow-sm"
+            class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-slate-200 dark:border-white/[0.12] shadow-sm"
           />
           <div
             v-else
@@ -84,7 +84,7 @@ const userInitial = computed(() => {
             <!-- Account Type Badge -->
             <span
               v-if="profile?.isGoogleLinked"
-              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0"
+              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0"
             >
               <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -96,7 +96,7 @@ const userInitial = computed(() => {
             </span>
             <span
               v-else
-              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0"
+              class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] text-xs font-semibold text-slate-700 dark:text-slate-300 shrink-0"
             >
               <Mail class="w-3 h-3 shrink-0 text-brand-500" />
               <span>{{ $t('profile.standard_account') }}</span>
@@ -113,7 +113,7 @@ const userInitial = computed(() => {
     </div>
 
     <!-- Stacked Milestones Bento Section -->
-    <div class="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4 transition-colors duration-200">
+    <div class="glass-card p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-4 transition-colors duration-200">
       <div class="flex items-center justify-between">
         <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
           <Trophy class="w-4 h-4 text-amber-500" />
@@ -123,7 +123,7 @@ const userInitial = computed(() => {
 
       <div class="space-y-3">
         <!-- 1. Active Streak Milestone Card -->
-        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 space-y-2.5 transition-all hover:border-amber-500/30">
+        <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-amber-500/30">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-500">
               <div class="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
@@ -151,7 +151,7 @@ const userInitial = computed(() => {
         </div>
 
         <!-- 2. Drills Completed Milestone Card -->
-        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 space-y-2 transition-all hover:border-emerald-500/30">
+        <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2 transition-all hover:border-emerald-500/30">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-500">
               <div class="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
@@ -172,7 +172,7 @@ const userInitial = computed(() => {
         </div>
 
         <!-- 3. Quiz Accuracy Milestone Card -->
-        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 space-y-2 transition-all hover:border-violet-500/30">
+        <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2 transition-all hover:border-brand-500/30">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-500">
               <div class="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">

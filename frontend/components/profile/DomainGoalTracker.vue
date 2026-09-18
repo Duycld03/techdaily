@@ -44,10 +44,10 @@ const pillars: PillarConfig[] = [
     defaultTitle: 'Backend Runtime & Concurrency',
     defaultTarget: 8,
     icon: Cpu,
-    barColor: 'bg-violet-500 dark:bg-violet-400',
-    trackColor: 'bg-violet-100 dark:bg-violet-950/50',
+    barColor: 'bg-gradient-to-r from-violet-600 to-violet-500',
+    trackColor: 'bg-slate-100 dark:bg-white/[0.06]',
     textColor: 'text-violet-600 dark:text-violet-400',
-    badgeColor: 'bg-violet-50 dark:bg-violet-950/60 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300'
+    badgeColor: 'bg-violet-50 dark:bg-violet-950/60 border-violet-200 dark:border-violet-800/60 text-violet-700 dark:text-violet-300'
   },
   {
     category: 2, // Category.DatabaseStorage
@@ -56,10 +56,10 @@ const pillars: PillarConfig[] = [
     defaultTitle: 'Data Storage & Persistence',
     defaultTarget: 7,
     icon: Database,
-    barColor: 'bg-sky-500 dark:bg-sky-400',
-    trackColor: 'bg-sky-100 dark:bg-sky-950/50',
+    barColor: 'bg-gradient-to-r from-sky-600 to-sky-500',
+    trackColor: 'bg-slate-100 dark:bg-white/[0.06]',
     textColor: 'text-sky-600 dark:text-sky-400',
-    badgeColor: 'bg-sky-50 dark:bg-sky-950/60 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300'
+    badgeColor: 'bg-sky-50 dark:bg-sky-950/60 border-sky-200 dark:border-sky-800/60 text-sky-700 dark:text-sky-300'
   },
   {
     category: 3, // Category.SystemDesign
@@ -68,10 +68,10 @@ const pillars: PillarConfig[] = [
     defaultTitle: 'Distributed Systems & Architecture',
     defaultTarget: 8,
     icon: Network,
-    barColor: 'bg-emerald-500 dark:bg-emerald-400',
-    trackColor: 'bg-emerald-100 dark:bg-emerald-950/50',
+    barColor: 'bg-gradient-to-r from-emerald-600 to-emerald-500',
+    trackColor: 'bg-slate-100 dark:bg-white/[0.06]',
     textColor: 'text-emerald-600 dark:text-emerald-400',
-    badgeColor: 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
+    badgeColor: 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300'
   },
   {
     category: 0, // Category.FrontendWeb
@@ -80,10 +80,10 @@ const pillars: PillarConfig[] = [
     defaultTitle: 'Frontend & Browser Engineering',
     defaultTarget: 7,
     icon: Layers,
-    barColor: 'bg-amber-500 dark:bg-amber-400',
-    trackColor: 'bg-amber-100 dark:bg-amber-950/50',
+    barColor: 'bg-gradient-to-r from-amber-600 to-amber-500',
+    trackColor: 'bg-slate-100 dark:bg-white/[0.06]',
     textColor: 'text-amber-600 dark:text-amber-400',
-    badgeColor: 'bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300'
+    badgeColor: 'bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300'
   }
 ]
 
@@ -188,7 +188,7 @@ const domainProgressList = computed(() => {
 </script>
 
 <template>
-  <div class="p-6 sm:p-7 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-6 transition-colors duration-200">
+  <div class="glass-card p-6 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-6 transition-colors duration-200">
     <!-- Header -->
     <div class="flex items-start justify-between gap-4">
       <div class="space-y-1">
@@ -207,7 +207,7 @@ const domainProgressList = computed(() => {
       <div
         v-for="domain in domainProgressList"
         :key="domain.category"
-        class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 space-y-3 transition-all hover:border-slate-300 dark:hover:border-slate-700"
+        class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-3 transition-all hover:border-slate-300 dark:hover:border-white/[0.12]"
       >
         <!-- Top Row: Icon + Title + Percentage -->
         <div class="flex items-center justify-between gap-2">
@@ -219,7 +219,7 @@ const domainProgressList = computed(() => {
               <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                 {{ $t(domain.titleKey) }}
               </h4>
-              <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              <p class="text-[11px] font-mono font-medium text-slate-500 dark:text-slate-400">
                 {{ $t('profile.topics_mastered', { mastered: domain.completed, total: domain.total }) }}
               </p>
             </div>
@@ -227,7 +227,7 @@ const domainProgressList = computed(() => {
 
           <!-- Percentage Badge -->
           <div class="text-right shrink-0">
-            <span class="text-sm sm:text-base font-black tracking-tight" :class="domain.textColor">
+            <span class="text-sm sm:text-base font-black font-mono tracking-tight" :class="domain.textColor">
               {{ domain.percentage }}%
             </span>
           </div>

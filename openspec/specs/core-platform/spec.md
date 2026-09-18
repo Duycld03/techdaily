@@ -36,10 +36,11 @@ The User Profile interface SHALL NOT display notification scheduling controls (`
 
 When submitting profile updates from the profile page, the client application SHALL dispatch only personal identity and pace fields (`name`, `targetRole`, `dailyGoalMinutes`) to `PUT /api/v1/user/profile`. The backend API SHALL support partial updates, preserving existing notification schedule and timezone database records when those fields are omitted.
 
-The User Profile interface (`frontend/pages/profile.vue`) SHALL present an Asymmetric 2-Column Engineer Portfolio Dashboard (Desktop 2/3 - 1/3, stacking on mobile):
-1. Left Column (Settings & Goals): Personal info tab (Name, Target Role selector, interactive Daily Goal Pace chips 5m/10m/15m/30m) and Security tab (Current password, New password with dynamic strength bar, Confirm password).
-2. Right Column (Identity & Milestones Widget): Large avatar with status badge, display name, target role badge, account type (Google linked / Standard email). Stacked milestone card: Active Streak with fire icon, longest streak, freeze credits remaining; Total Drills completed; Quiz Accuracy rate.
-3. Domain Mastery Progress Bar (Goal Tracker): Progress bars tracking curriculum domain coverage across four universal, framework-agnostic core engineering pillars:
+The User Profile interface (`frontend/pages/profile.vue`) SHALL present an Asymmetric 2-Column Engineer Portfolio Dashboard (Desktop 2/3 - 1/3, stacking on mobile) adhering to the **Dev-Learning Studio** visual standard:
+1. Root container renders on deep dark canvas (`dark:bg-canvas`, `dark:bg-canvas-subtle`).
+2. Left Column (Settings & Goals): Personal info tab (Name, Target Role selector, interactive Daily Goal Pace chips 5m/10m/15m/30m) and Security tab (Current password, New password with dynamic strength bar, Confirm password), housed within `.glass-card` surfaces with hairline borders (`dark:border-white/[0.08]`).
+3. Right Column (Identity & Milestones Widget, `EngineerProfileHero.vue`): Large avatar with status badge, display name, target role badge, account type (Google linked / Standard email). Stacked milestone card: Active Streak with fire icon, longest streak, freeze credits remaining; Total Drills completed; Quiz Accuracy rate, styled with `.glass-card` surfaces and subtle violet ambient glows.
+4. Domain Mastery Progress Bar (Goal Tracker, `DomainGoalTracker.vue`): Progress bars tracking curriculum domain coverage across four universal, framework-agnostic core engineering pillars, utilizing high-contrast gradient tracks (`from-brand-600 to-brand-500`):
    - **Pillar 1: Backend Runtime & Concurrency** (`profile.domain_backend_runtime`: "Nền Tảng Backend & Runtime" / "Backend Runtime & Concurrency") - tracking runtime mechanisms, memory allocation, async I/O, threads, and concurrency across .NET/CLR, Node.js/NestJS/Express, Go/Goroutines, Java/Spring/JVM, and Python.
    - **Pillar 2: Data Storage & Persistence** (`profile.domain_data_storage`: "Hệ Lưu Trữ & Cơ Sở Dữ Liệu" / "Data Storage & Persistence") - tracking storage engines, query execution, and persistence across PostgreSQL, MongoDB, Redis, MySQL, SQLite, Cassandra, ACID transactions, B-Trees, LSM-Trees, replication, WAL, and indexing.
    - **Pillar 3: Distributed Systems & Architecture** (`profile.domain_system_design`: "Hệ Thống Phân Tán & Thiết Kế" / "Distributed Systems & Architecture") - tracking distributed architecture patterns, microservices, message queues (Kafka, RabbitMQ), CAP theorem, transactional outbox, consensus, idempotency, rate limiting, and observability.
@@ -92,7 +93,7 @@ The Identity widget, milestone statistics, and domain goal tracker SHALL support
 
 #### Scenario: User inspects identity and learning milestones widget
 - **WHEN** user views the right-column identity card
-- **THEN** UI renders the user avatar, account connection badge (Google / Email), active streak with fire icon and freeze credits, total drills completed, and quiz accuracy percentage.
+- **THEN** UI renders the user avatar, account connection badge (Google / Email), active streak with fire icon and freeze credits, total drills completed, and quiz accuracy percentage inside `.glass-card` components with hairline borders.
 
 #### Scenario: User monitors curriculum domain mastery goal progress
 - **WHEN** user views the Domain Mastery Goal Tracker section on `/profile`
@@ -110,6 +111,8 @@ The Identity widget, milestone statistics, and domain goal tracker SHALL support
   - In English: "Backend Runtime & Concurrency", "Data Storage & Persistence", "Distributed Systems & Architecture", "Frontend & Browser Engineering"
   - In Vietnamese: "Nền Tảng Backend & Runtime", "Hệ Lưu Trữ & Cơ Sở Dữ Liệu", "Hệ Thống Phân Tán & Thiết Kế", "Hiệu Năng Frontend & Trình Duyệt"
 - **AND** longer Vietnamese domain titles render without badge clipping, text truncation, or misalignment of progress bar percentages.
+
+---
 
 ### Requirement: Daily Doc Reading Slice
 The system SHALL serve one curated 3–5 minute reading slice per active document series per day (`GET /api/v1/daily/today`) preserving source documentation excerpt language, structured summary, key takeaways, and quick-check questions.
@@ -555,7 +558,11 @@ Application services performing secondary or auxiliary caching operations (such 
 - **THEN** the service logs a structured warning containing the entity identifier, error message, and context for operational observability.
 
 ### Requirement: System Settings, Notification Scheduling & Timezone Configuration
-The Settings interface (`frontend/pages/settings.vue`) SHALL serve as the exclusive single source of truth for notification schedule configuration (`preferredStudyTime`, `streakAlertTime`) and timezone preferences (`timeZone`). 
+The Settings interface (`frontend/pages/settings.vue`) SHALL serve as the exclusive single source of truth for notification schedule configuration (`preferredStudyTime`, `streakAlertTime`) and timezone preferences (`timeZone`), adhering to the **Dev-Learning Studio** visual standard.
+
+The Settings interface SHALL render on an Obsidian Canvas (`dark:bg-canvas`, `dark:bg-canvas-subtle`) and organize controls into `.glass-card` surfaces with hairline borders (`dark:border-white/[0.08]`):
+1. **Appearance & Language**: Interface language switcher (`LocaleSelector.vue`) and color theme toggle (`ThemeToggle.vue`) with Studio hairline elevation.
+2. **Web Push Notifications**: Push activation toggle with Electric Violet active state, push active status banner with subtle violet glow, study schedule time inputs, and IANA timezone selector.
 
 All user modifications to notification reminder timing and timezone detection SHALL occur within the Settings domain and be persisted via `PUT /api/v1/user/profile` or the Web Push subscription flow (`POST /api/v1/notifications/push/subscribe`).
 
@@ -568,8 +575,6 @@ All user modifications to notification reminder timing and timezone detection SH
 - **WHEN** a user enables Web Push notifications in `/settings`
 - **THEN** the client automatically includes the detected or selected IANA timezone identifier in the subscription request
 - **AND** the backend updates `User.TimeZone` and `User.IsPushEnabled = true` simultaneously.
-
----
 
 ### Requirement: Zero-Repo-Footprint Live Production E2E Verification
 The platform verification harness SHALL support running live end-to-end headless browser test suites against the production deployment (`https://techdaily.duckdns.org`) using an ephemeral runner outside the git repository (`/tmp/techdaily-live-e2e.mjs`) leveraging host pre-cached Chromium binaries without committing test scripts, configuration files, or temporary artifacts to the source repository.
