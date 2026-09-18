@@ -276,4 +276,102 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
     await day2Node.trigger('click')
     expect(mockPush).toHaveBeenCalledWith('/today?day=2')
   })
+
+  it('centers view on active milestone when focus active button is clicked', async () => {
+    const wrapper = mount(RoadmapMindmapCanvas, {
+      props: {
+        selectedBook: mockBook,
+        chapterMilestones: mockMilestones,
+        isCurriculumSelected: false,
+        activeBookId: 'book-123',
+        currentChunkOrder: 2
+      }
+    })
+
+    const btnFocus = wrapper.find('[data-testid="btn-focus-active"]')
+    expect(btnFocus.exists()).toBe(true)
+    await btnFocus.trigger('click')
+
+    // Zoom should be at 100%
+    expect(wrapper.text()).toContain('100%')
+  })
+
+  it('enforces auto-accordion behavior when chapter count exceeds 12', async () => {
+    // Generate 15 chapters
+    const fifteenMilestones = Array.from({ length: 15 }, (_, i) => ({
+      chapterTitle: `Chapter ${i + 1}`,
+      chapterIndex: i + 1,
+      isCompleted: false,
+      isActive: i === 0,
+      completedSlicesCount: 0,
+      totalSlicesCount: 1,
+      slices: [
+        {
+          id: `slice-${i + 1}`,
+          chunkOrder: i + 1,
+          sliceTitle: `Topic ${i + 1}`,
+          estimatedReadMinutes: 5,
+          isCompleted: false,
+          isActiveToday: i === 0,
+          isUpcoming: i > 0
+        }
+      ]
+    }))
+
+    const wrapper = mount(RoadmapMindmapCanvas, {
+      props: {
+        selectedBook: mockBook,
+        chapterMilestones: fifteenMilestones,
+        isCurriculumSelected: false,
+        activeBookId: 'book-123',
+        currentChunkOrder: 1
+      }
+    })
+
+    // Initially chapter 1 is active and expanded
+    expect(wrapper.find('[data-testid="slice-node-slice-1"]').exists()).toBe(true)
+
+    // Click chapter 5 to expand -> chapter 1 should auto-collapse!
+    const ch5 = wrapper.find('[data-testid="chapter-node-5"]')
+    await ch5.trigger('click')
+
+    expect(wrapper.find('[data-testid="slice-node-slice-5"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="slice-node-slice-1"]').exists()).toBe(false)
+  })
+
+  it('filters nodes and auto-expands matching chapters on in-canvas search', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(RoadmapMindmapCanvas, {
+      props: {
+        selectedBook: mockBook,
+        chapterMilestones: mockMilestones,
+        isCurriculumSelected: false,
+        activeBookId: 'book-123',
+        currentChunkOrder: 2
+      }
+    })
+
+    const searchInput = wrapper.find('[data-testid="mindmap-search-input"]')
+    expect(searchInput.exists()).toBe(true)
+
+    // Search for "Reliability" which belongs to collapsed chapter 1
+    await searchInput.setValue('Reliability')
+    vi.advanceTimersByTime(200)
+    await wrapper.vm.$nextTick()
+
+    // Chapter 1 should be auto-expanded because its slice matches!
+    const slice1Node = wrapper.find('[data-testid="slice-node-slice-1"]')
+    expect(slice1Node.exists()).toBe(true)
+    expect(slice1Node.classes()).toContain('ring-2')
+
+    // Clear search button should appear
+    const btnClear = wrapper.find('[data-testid="btn-clear-search"]')
+    expect(btnClear.exists()).toBe(true)
+    await btnClear.trigger('click')
+    vi.advanceTimersByTime(200)
+    await wrapper.vm.$nextTick()
+
+    expect((searchInput.element as HTMLInputElement).value).toBe('')
+    vi.useRealTimers()
+  })
 })

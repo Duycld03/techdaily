@@ -249,7 +249,8 @@ function parseSliceTitle(rawTitle?: string) {
     if (prefix.length > 0 && prefix.length <= 45) {
       return {
         moduleName: prefix,
-        sliceTitle: rest || prefix
+        sliceTitle: rest || prefix,
+        hasExplicitPrefix: true
       }
     }
   }
@@ -261,7 +262,37 @@ function parseSliceTitle(rawTitle?: string) {
     if (prefix.length > 0 && prefix.length <= 45) {
       return {
         moduleName: prefix,
-        sliceTitle: rest || prefix
+        sliceTitle: rest || prefix,
+        hasExplicitPrefix: true
+      }
+    }
+  }
+
+  // Check dot delimiter (e.g. "Registry.ClassesRoot Field", "RegistryKey.Handle Property")
+  if (title.includes('.') && !title.includes(' ')) {
+    const parts = title.split('.')
+    const prefix = parts[0].trim()
+    const rest = parts.slice(1).join('.').trim()
+    if (prefix.length > 0 && prefix.length <= 35 && /^[A-Za-z0-9_]+$/.test(prefix)) {
+      return {
+        moduleName: prefix,
+        sliceTitle: rest || prefix,
+        hasExplicitPrefix: true
+      }
+    }
+  } else if (title.includes('.')) {
+    const firstSpace = title.indexOf(' ')
+    const beforeSpace = title.substring(0, firstSpace)
+    if (beforeSpace.includes('.')) {
+      const dotIndex = beforeSpace.indexOf('.')
+      const prefix = beforeSpace.substring(0, dotIndex).trim()
+      const rest = (beforeSpace.substring(dotIndex + 1) + title.substring(firstSpace)).trim()
+      if (prefix.length > 0 && prefix.length <= 35 && /^[A-Za-z0-9_]+$/.test(prefix)) {
+        return {
+          moduleName: prefix,
+          sliceTitle: rest || prefix,
+          hasExplicitPrefix: true
+        }
       }
     }
   }
@@ -269,7 +300,8 @@ function parseSliceTitle(rawTitle?: string) {
   const baseTitle = title.replace(/\s*\((?:Section|Part)\s+\d+\)/gi, '').trim()
   return {
     moduleName: baseTitle || title,
-    sliceTitle: title
+    sliceTitle: title,
+    hasExplicitPrefix: false
   }
 }
 
@@ -282,6 +314,10 @@ const chapterMilestones = computed<ChapterMilestone[]>(() => {
   const list: ChapterMilestone[] = []
   let currentGroupName = ''
   let currentGroupChunks: typeof chunks = []
+  let currentGroupIsStandalone = false
+
+  const shouldClusterStandalone = chunks.length > 8
+  const MAX_STANDALONE_CLUSTER_SIZE = 4
 
   function flushGroup() {
     if (currentGroupChunks.length === 0) return
@@ -310,8 +346,14 @@ const chapterMilestones = computed<ChapterMilestone[]>(() => {
     const isCompleted = completedSlicesCount === totalSlicesCount
     const isActive = slices.some((s) => s.isActiveToday)
 
+    let displayTitle = currentGroupName
+    if (currentGroupIsStandalone && currentGroupChunks.length > 1) {
+      const firstTitle = parseSliceTitle(currentGroupChunks[0].chapterTitle).sliceTitle
+      displayTitle = `${firstTitle} & Related Topics`
+    }
+
     list.push({
-      chapterTitle: currentGroupName,
+      chapterTitle: displayTitle,
       chapterIndex: list.length + 1,
       slices,
       isCompleted,
@@ -321,16 +363,33 @@ const chapterMilestones = computed<ChapterMilestone[]>(() => {
     })
 
     currentGroupChunks = []
+    currentGroupIsStandalone = false
   }
 
   for (const chunk of chunks) {
     const parsed = parseSliceTitle(chunk.chapterTitle)
-    if (parsed.moduleName === currentGroupName && currentGroupChunks.length > 0) {
-      currentGroupChunks.push(chunk)
+    if (parsed.hasExplicitPrefix) {
+      if (parsed.moduleName === currentGroupName && !currentGroupIsStandalone && currentGroupChunks.length > 0) {
+        currentGroupChunks.push(chunk)
+      } else {
+        flushGroup()
+        currentGroupName = parsed.moduleName
+        currentGroupIsStandalone = false
+        currentGroupChunks = [chunk]
+      }
     } else {
-      flushGroup()
-      currentGroupName = parsed.moduleName
-      currentGroupChunks = [chunk]
+      if (
+        shouldClusterStandalone &&
+        currentGroupIsStandalone &&
+        currentGroupChunks.length < MAX_STANDALONE_CLUSTER_SIZE
+      ) {
+        currentGroupChunks.push(chunk)
+      } else {
+        flushGroup()
+        currentGroupName = parsed.moduleName
+        currentGroupIsStandalone = shouldClusterStandalone
+        currentGroupChunks = [chunk]
+      }
     }
   }
 

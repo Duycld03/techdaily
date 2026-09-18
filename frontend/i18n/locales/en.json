@@ -112,7 +112,10 @@
       "review_drill": "Review Drill",
       "start_drill": "Start Today's Drill",
       "chapters_count": "{count} Chapters",
-      "slices_count": "{count} Slices"
+      "slices_count": "{count} Slices",
+      "focus_active": "Focus Active",
+      "search_placeholder": "Search topics in mindmap...",
+      "no_matches": "No topics match search"
     }
   },
   "pacer": {

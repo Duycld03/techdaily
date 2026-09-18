@@ -348,4 +348,75 @@ describe('pages/roadmap.vue', () => {
 
     expect(mockPush).toHaveBeenCalledWith('/today?bookId=book-1&chunkOrder=2')
   })
+
+  it('consolidates standalone delimiter-less chunks into balanced modules for large books', async () => {
+    const focusStore = useDailyFocusStore()
+    const libraryStore = useLibraryStore()
+    setupMockStores()
+
+    // Generate 16 standalone chunks without colons
+    const chunks = Array.from({ length: 16 }, (_, i) => ({
+      id: `standalone-chunk-${i + 1}`,
+      chunkOrder: i + 1,
+      chapterTitle: `Standalone Topic ${i + 1}`,
+      summaryMarkdown: `Summary for topic ${i + 1}`,
+      originalTextMarkdown: '',
+      keyTakeaways: [],
+      estimatedReadMinutes: 5
+    }))
+
+    libraryStore.selectedBook = {
+      id: 'book-large',
+      title: 'Large Architecture Monograph',
+      slug: 'large-arch',
+      sourceType: 1,
+      category: 1,
+      totalChunks: 16,
+      isPublished: true,
+      progressPercentage: 10,
+      createdAt: '2026-01-01',
+      chunks
+    } as unknown as typeof libraryStore.selectedBook
+
+    focusStore.data = {
+      pacer: {
+        bookId: 'book-large',
+        bookTitle: 'Large Architecture Monograph',
+        currentChunkOrder: 1,
+        totalChunks: 16,
+        progressPercentage: 10,
+        hasPrevious: false,
+        hasNext: true,
+        availableBooks: []
+      }
+    } as unknown as typeof focusStore.data
+
+    const wrapper = mount(RoadmapPage, {
+      global: {
+        stubs: {
+          RoadmapMindmapCanvas: RoadmapMindmapCanvasStub,
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+    await flushPromises()
+
+    // 16 standalone chunks clustered by max 4 should yield exactly 4 chapters instead of 16
+    const chapterHeaders = wrapper.findAll('.group\\/chapter, [data-chapter-index]')
+    // Pass to mindmap stub
+    const mindmapStub = wrapper.findComponent({ name: 'RoadmapMindmapCanvas' })
+    expect(mindmapStub.exists()).toBe(false) // In timeline mode
+
+    // Switch to mindmap to inspect passed prop
+    const mindmapTab = wrapper.find('#tab-mindmap')
+    await mindmapTab.trigger('click')
+    await flushPromises()
+
+    const mindmapCanvas = wrapper.findComponent({ name: 'RoadmapMindmapCanvas' })
+    expect(mindmapCanvas.exists()).toBe(true)
+    const milestones = mindmapCanvas.props('chapterMilestones')
+    expect(milestones.length).toBe(4)
+    expect(milestones[0].slices.length).toBe(4)
+    expect(milestones[3].slices.length).toBe(4)
+  })
 })

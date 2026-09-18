@@ -13,7 +13,10 @@ import {
   ChevronRight,
   Flame,
   CheckCircle2,
-  Clock
+  Clock,
+  Target,
+  Search,
+  X
 } from 'lucide-vue-next'
 import {
   computeRoadmapTreeLayout,
@@ -115,9 +118,14 @@ watch(
 )
 
 function toggleChapter(chapterId: string) {
+  const isLargeDocument = treeData.value.chapters.length > 12
+
   if (expandedChapterIds.value.has(chapterId)) {
     expandedChapterIds.value.delete(chapterId)
   } else {
+    if (isLargeDocument) {
+      expandedChapterIds.value.clear()
+    }
     expandedChapterIds.value.add(chapterId)
   }
 }
@@ -132,6 +140,62 @@ function collapseAll() {
   expandedChapterIds.value.clear()
 }
 
+// In-canvas search state & filtering
+const searchQuery = ref('')
+const debouncedSearch = ref('')
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(searchQuery, (newVal) => {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    debouncedSearch.value = newVal.trim().toLowerCase()
+  }, 150)
+})
+
+const matchingNodeIds = computed<Set<string>>(() => {
+  const query = debouncedSearch.value
+  if (!query) return new Set()
+
+  const matches = new Set<string>()
+  for (const ch of treeData.value.chapters) {
+    let chapterMatches = ch.title.toLowerCase().includes(query)
+    for (const sl of ch.slices) {
+      if (
+        sl.title.toLowerCase().includes(query) ||
+        (sl.subtitle && sl.subtitle.toLowerCase().includes(query))
+      ) {
+        matches.add(sl.id)
+        chapterMatches = true
+      }
+    }
+    if (chapterMatches) {
+      matches.add(ch.id)
+    }
+  }
+  return matches
+})
+
+watch(debouncedSearch, (query) => {
+  if (!query) return
+  for (const ch of treeData.value.chapters) {
+    const hasMatchingSlice = ch.slices.some(
+      (s) => s.title.toLowerCase().includes(query) || (s.subtitle && s.subtitle.toLowerCase().includes(query))
+    )
+    if (hasMatchingSlice || ch.title.toLowerCase().includes(query)) {
+      expandedChapterIds.value.add(ch.id)
+    }
+  }
+})
+
+function isNodeDimmed(nodeId: string): boolean {
+  if (!debouncedSearch.value) return false
+  return !matchingNodeIds.value.has(nodeId)
+}
+
+function isNodeHighlighted(nodeId: string): boolean {
+  if (!debouncedSearch.value) return false
+  return matchingNodeIds.value.has(nodeId)
+}
 // Compute tree layout coordinates
 const layout = computed(() => {
   return computeRoadmapTreeLayout(
@@ -147,13 +211,13 @@ function zoomIn() {
 }
 
 function zoomOut() {
-  scale.value = Number(Math.max(0.25, scale.value - 0.15).toFixed(2))
+  scale.value = Number(Math.max(0.15, scale.value - 0.15).toFixed(2))
 }
 
 function handleWheel(e: WheelEvent) {
   e.preventDefault()
   const delta = e.deltaY < 0 ? 0.08 : -0.08
-  scale.value = Number(Math.min(2.0, Math.max(0.25, scale.value + delta)).toFixed(2))
+  scale.value = Number(Math.min(2.0, Math.max(0.15, scale.value + delta)).toFixed(2))
 }
 
 // Canvas drag-to-pan controls
@@ -205,6 +269,47 @@ function onTouchEnd() {
 }
 
 // Fit to screen calculation
+function focusActiveNode() {
+  const clientWidth = containerRef.value?.clientWidth || 1000
+  const clientHeight = containerRef.value?.clientHeight || 600
+
+  // 1. Locate active-today slice
+  const activeSliceNode = layout.value.slices.find((s) => s.data.isActiveToday)
+  if (activeSliceNode) {
+    scale.value = 1.0
+    pan.value = {
+      x: Math.round(clientWidth / 2 - (activeSliceNode.x + activeSliceNode.width / 2) * scale.value),
+      y: Math.round(clientHeight / 2 - (activeSliceNode.y + activeSliceNode.height / 2) * scale.value)
+    }
+    return
+  }
+
+  // 2. Locate active chapter
+  const activeChapterNode = layout.value.chapters.find((c) => c.data.isActive)
+  if (activeChapterNode) {
+    scale.value = 1.0
+    pan.value = {
+      x: Math.round(clientWidth / 2 - (activeChapterNode.x + activeChapterNode.width / 2) * scale.value),
+      y: Math.round(clientHeight / 2 - (activeChapterNode.y + activeChapterNode.height / 2) * scale.value)
+    }
+    return
+  }
+
+  // 3. Fallback: first chapter
+  if (layout.value.chapters.length > 0) {
+    const firstChapter = layout.value.chapters[0]
+    scale.value = 1.0
+    pan.value = {
+      x: Math.round(clientWidth / 2 - (firstChapter.x + firstChapter.width / 2) * scale.value),
+      y: Math.round(clientHeight / 2 - (firstChapter.y + firstChapter.height / 2) * scale.value)
+    }
+    return
+  }
+
+  fitToScreen()
+}
+
+// Fit to screen calculation
 function fitToScreen() {
   const clientWidth = containerRef.value?.clientWidth || 1000
   const clientHeight = containerRef.value?.clientHeight || 600
@@ -214,7 +319,7 @@ function fitToScreen() {
   const availableH = Math.max(100, clientHeight - padding * 2)
   const scaleX = availableW / bb.width
   const scaleY = availableH / bb.height
-  const targetScale = Math.min(Math.max(Math.min(scaleX, scaleY), 0.25), 1.15)
+  const targetScale = Math.min(Math.max(Math.min(scaleX, scaleY), 0.15), 1.15)
   scale.value = Number(targetScale.toFixed(2))
   pan.value = {
     x: Math.round((clientWidth - bb.width * scale.value) / 2 - bb.minX * scale.value),
@@ -223,9 +328,8 @@ function fitToScreen() {
 }
 
 onMounted(() => {
-  fitToScreen()
+  focusActiveNode()
 })
-
 // 1-Click action bridges
 function handleSliceClick(slice: TreeSliceLeaf) {
   if (props.isCurriculumSelected) {
@@ -258,12 +362,48 @@ function handleSliceClick(slice: TreeSliceLeaf) {
     @touchend="onTouchEnd"
     :class="isPanning ? 'cursor-grabbing' : 'cursor-grab'"
   >
+    <!-- Search Bar in Top Left -->
+    <div
+      class="absolute top-3 sm:top-4 left-3 sm:left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-md max-w-[180px] sm:max-w-[240px] md:max-w-xs transition-all"
+      @mousedown.stop
+      @touchstart.stop
+    >
+      <Search class="w-3.5 h-3.5 text-slate-400 shrink-0" />
+      <input
+        v-model="searchQuery"
+        type="text"
+        :placeholder="$t('roadmap.mindmap.search_placeholder')"
+        class="w-full bg-transparent text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none"
+        data-testid="mindmap-search-input"
+      />
+      <button
+        v-if="searchQuery"
+        type="button"
+        @click="searchQuery = ''"
+        class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 shrink-0"
+        data-testid="btn-clear-search"
+      >
+        <X class="w-3 h-3" />
+      </button>
+    </div>
+
     <!-- Floating Toolbar -->
     <div
       class="absolute top-3 sm:top-4 right-3 sm:right-4 z-20 flex items-center gap-1 sm:gap-1.5 p-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-md"
       @mousedown.stop
       @touchstart.stop
     >
+      <button
+        type="button"
+        @click="focusActiveNode"
+        :title="$t('roadmap.mindmap.focus_active')"
+        class="p-1.5 sm:p-2 rounded-xl text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors whitespace-nowrap shrink-0 active:scale-95 flex items-center gap-1"
+        data-testid="btn-focus-active"
+      >
+        <Target class="w-4 h-4" />
+        <span class="hidden lg:inline text-xs font-bold">{{ $t('roadmap.mindmap.focus_active') }}</span>
+      </button>
+      <div class="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-0.5"></div>
       <button
         type="button"
         @click="zoomIn"
@@ -333,6 +473,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
             fill="none"
             :class="[
               'transition-all duration-300',
+              isNodeDimmed(edge.toId) ? 'opacity-20' : 'opacity-100',
               edge.status === 'active_today'
                 ? 'stroke-amber-400 dark:stroke-amber-500 stroke-2'
                 : edge.status === 'completed'
@@ -397,6 +538,8 @@ function handleSliceClick(slice: TreeSliceLeaf) {
             @click="toggleChapter(ch.data.id)"
             :class="[
               'interactive-node w-full h-full p-3 rounded-2xl border transition-all duration-200 cursor-pointer shadow-sm flex items-center justify-between gap-2.5 select-none hover:scale-[1.01] active:scale-98',
+              isNodeDimmed(ch.data.id) ? 'opacity-25' : 'opacity-100',
+              isNodeHighlighted(ch.data.id) ? 'ring-2 ring-brand-500 shadow-md' : '',
               ch.data.isActive
                 ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-400 dark:border-amber-500/80 text-amber-950 dark:text-amber-100 ring-2 ring-amber-500/20'
                 : ch.data.isCompleted
@@ -463,6 +606,8 @@ function handleSliceClick(slice: TreeSliceLeaf) {
             @keydown.space.prevent="handleSliceClick(sl.data)"
             :class="[
               'interactive-node w-full h-full px-3 py-2 rounded-xl border transition-all duration-200 cursor-pointer shadow-sm flex items-center justify-between gap-2 select-none hover:scale-[1.02] active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+              isNodeDimmed(sl.data.id) ? 'opacity-25' : 'opacity-100',
+              isNodeHighlighted(sl.data.id) ? 'ring-2 ring-brand-500 shadow-md' : '',
               sl.data.isActiveToday
                 ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-500 dark:border-amber-400 text-amber-950 dark:text-amber-100 ring-2 ring-amber-500/30'
                 : sl.data.isCompleted

@@ -215,15 +215,30 @@ export function computeRoadmapTreeLayout(
     }
   }
 
-  // Calculate Root Y position: vertically center with respect to first and last chapter
+  // Calculate Root Y position:
+  // For standard/compact trees (<= 6 chapters), center vertically between first and last chapter.
+  // For large trees (> 6 chapters), anchor to the vertical centroid of active/expanded chapters
+  // so the root node stays visually connected to the active study window.
   let rootY = cfg.paddingTop
   if (positionedChapters.length > 0) {
-    const firstChapterCenterY = positionedChapters[0].y + cfg.chapterHeight / 2
-    const lastChapterCenterY = positionedChapters[positionedChapters.length - 1].y + cfg.chapterHeight / 2
-    const rootCenterY = (firstChapterCenterY + lastChapterCenterY) / 2
-    rootY = rootCenterY - cfg.rootHeight / 2
-  }
+    let targetCenterY: number
 
+    const focusedChapters = positionedChapters.filter(
+      (c) => c.data.isActive || expandedChapterIds.has(c.data.id)
+    )
+
+    if (positionedChapters.length > 6 && focusedChapters.length > 0) {
+      targetCenterY =
+        focusedChapters.reduce((sum, c) => sum + (c.y + c.height / 2), 0) / focusedChapters.length
+    } else {
+      const firstChapterCenterY = positionedChapters[0].y + cfg.chapterHeight / 2
+      const lastChapterCenterY = positionedChapters[positionedChapters.length - 1].y + cfg.chapterHeight / 2
+      targetCenterY = (firstChapterCenterY + lastChapterCenterY) / 2
+    }
+
+    const maxAllowedY = Math.max(cfg.paddingTop, currentY - cfg.rootHeight)
+    rootY = Math.max(cfg.paddingTop, Math.min(targetCenterY - cfg.rootHeight / 2, maxAllowedY))
+  }
   const positionedRoot: PositionedNode<TreeRoot> = {
     data: rootData,
     x: cfg.rootX,

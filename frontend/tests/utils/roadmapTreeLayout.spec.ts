@@ -170,6 +170,36 @@ describe('utils/roadmapTreeLayout', () => {
       expect(bb.width).toBe(bb.maxX - bb.minX)
       expect(bb.height).toBe(bb.maxY - bb.minY)
     })
+
+    it('anchors root node near the active chapter rather than the distant global midpoint for 10+ chapters', () => {
+      // Generate 20 chapters where chapter 3 is active
+      const twentyChapters: TreeChapterBranch[] = Array.from({ length: 20 }, (_, i) => ({
+        id: `ch-${i + 1}`,
+        index: i + 1,
+        title: `Chapter ${i + 1}`,
+        totalCount: 2,
+        completedCount: i < 2 ? 2 : 0,
+        isCompleted: i < 2,
+        isActive: i === 2, // Chapter 3 is active
+        slices: []
+      }))
+
+      const expandedIds = new Set<string>(['ch-3'])
+      const result = computeRoadmapTreeLayout(mockRoot, twentyChapters, expandedIds)
+
+      const activeChapter = result.chapters.find(c => c.data.isActive)
+      expect(activeChapter).toBeDefined()
+
+      const firstChapter = result.chapters[0]
+      const lastChapter = result.chapters[19]
+      const globalMidpoint = (firstChapter.y + lastChapter.y) / 2
+
+      // Root Y should be significantly closer to activeChapter than the global midpoint
+      const distToActive = Math.abs(result.root.y - activeChapter!.y)
+      const distToGlobalMidpoint = Math.abs(result.root.y - globalMidpoint)
+
+      expect(distToActive).toBeLessThan(distToGlobalMidpoint)
+    })
   })
 
   describe('convertBookMilestonesToTree', () => {

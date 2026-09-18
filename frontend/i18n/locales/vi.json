@@ -112,7 +112,10 @@
       "review_drill": "Xem lại thử thách",
       "start_drill": "Bắt đầu thử thách hôm nay",
       "chapters_count": "{count} chương",
-      "slices_count": "{count} lát cắt"
+      "slices_count": "{count} lát cắt",
+      "focus_active": "Định vị bài học",
+      "search_placeholder": "Tìm kiếm chủ đề trong sơ đồ...",
+      "no_matches": "Không tìm thấy chủ đề phù hợp"
     }
   },
   "pacer": {
