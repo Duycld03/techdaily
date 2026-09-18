@@ -120,7 +120,9 @@ export const DEFAULT_LAYOUT_CONFIG: Required<TreeLayoutConfig> = {
  * Computes a smooth horizontal cubic Bezier curve path string between two points.
  */
 export function computeBezierPath(x1: number, y1: number, x2: number, y2: number): string {
-  const dx = (x2 - x1) * 0.5
+  const dy = Math.abs(y2 - y1)
+  const curvature = dy <= 400 ? 0.5 : 0.6
+  const dx = (x2 - x1) * curvature
   return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`
 }
 
@@ -216,8 +218,8 @@ export function computeRoadmapTreeLayout(
   }
 
   // Calculate Root Y position:
-  // For standard/compact trees (<= 6 chapters), center vertically between first and last chapter.
-  // For large trees (> 6 chapters), anchor to the vertical centroid of active/expanded chapters
+  // For standard/compact trees (<= 10 chapters), center vertically between first and last chapter.
+  // For large trees (> 10 chapters), anchor to the vertical centroid of active/expanded chapters
   // so the root node stays visually connected to the active study window.
   let rootY = cfg.paddingTop
   if (positionedChapters.length > 0) {
@@ -227,7 +229,7 @@ export function computeRoadmapTreeLayout(
       (c) => c.data.isActive || expandedChapterIds.has(c.data.id)
     )
 
-    if (positionedChapters.length > 6 && focusedChapters.length > 0) {
+    if (positionedChapters.length > 10 && focusedChapters.length > 0) {
       targetCenterY =
         focusedChapters.reduce((sum, c) => sum + (c.y + c.height / 2), 0) / focusedChapters.length
     } else {

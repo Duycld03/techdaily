@@ -12,10 +12,16 @@ import type { CurriculumRoadmapData } from '~/stores/useRoadmapStore'
 
 describe('utils/roadmapTreeLayout', () => {
   describe('computeBezierPath', () => {
-    it('generates a valid horizontal cubic Bezier curve SVG path string', () => {
+    it('generates a valid horizontal cubic Bezier curve SVG path string for dy <= 400', () => {
       const path = computeBezierPath(100, 50, 300, 150)
-      // dx = (300 - 100) * 0.5 = 100 -> cx1 = 200, cx2 = 200
+      // dy = 100 <= 400 -> curvature = 0.5 -> dx = (300 - 100) * 0.5 = 100 -> cx1 = 200, cx2 = 200
       expect(path).toBe('M 100 50 C 200 50, 200 150, 300 150')
+    })
+
+    it('uses expanded curvature for distant vertical separation dy > 400', () => {
+      const path = computeBezierPath(100, 50, 300, 600)
+      // dy = 550 > 400 -> curvature = 0.6 -> dx = 200 * 0.6 = 120 -> cx1 = 220, cx2 = 180
+      expect(path).toBe('M 100 50 C 220 50, 180 600, 300 600')
     })
 
     it('handles zero horizontal distance cleanly', () => {
@@ -171,27 +177,27 @@ describe('utils/roadmapTreeLayout', () => {
       expect(bb.height).toBe(bb.maxY - bb.minY)
     })
 
-    it('anchors root node near the active chapter rather than the distant global midpoint for 10+ chapters', () => {
-      // Generate 20 chapters where chapter 3 is active
-      const twentyChapters: TreeChapterBranch[] = Array.from({ length: 20 }, (_, i) => ({
+    it('anchors root node near the active chapter rather than the distant global midpoint for 30+ chapters', () => {
+      // Generate 35 chapters where chapter 5 is active
+      const thirtyFiveChapters: TreeChapterBranch[] = Array.from({ length: 35 }, (_, i) => ({
         id: `ch-${i + 1}`,
         index: i + 1,
         title: `Chapter ${i + 1}`,
         totalCount: 2,
-        completedCount: i < 2 ? 2 : 0,
-        isCompleted: i < 2,
-        isActive: i === 2, // Chapter 3 is active
+        completedCount: i < 4 ? 2 : 0,
+        isCompleted: i < 4,
+        isActive: i === 4, // Chapter 5 is active
         slices: []
       }))
 
-      const expandedIds = new Set<string>(['ch-3'])
-      const result = computeRoadmapTreeLayout(mockRoot, twentyChapters, expandedIds)
+      const expandedIds = new Set<string>(['ch-5'])
+      const result = computeRoadmapTreeLayout(mockRoot, thirtyFiveChapters, expandedIds)
 
       const activeChapter = result.chapters.find(c => c.data.isActive)
       expect(activeChapter).toBeDefined()
 
       const firstChapter = result.chapters[0]
-      const lastChapter = result.chapters[19]
+      const lastChapter = result.chapters[34]
       const globalMidpoint = (firstChapter.y + lastChapter.y) / 2
 
       // Root Y should be significantly closer to activeChapter than the global midpoint
