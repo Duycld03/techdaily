@@ -240,6 +240,11 @@ On mobile viewports ($< 768\text{px}$):
 - **THEN** the knowledge graph canvas initializes successfully in both 2D and 3D engine modes without console errors
 - **AND** all HUD buttons, visual legend cards, and category filter pills render without horizontal clipping across both English and Vietnamese locales.
 
+#### Scenario: Live smoke test execution and defect resolution
+- **WHEN** the live responsive E2E smoke test is executed against the application runtime
+- **THEN** 100% of assertion checks pass across Desktop, Tablet, and Mobile viewports
+- **AND** visual snapshots confirm zero label collisions, proper HUD elevation, and unclipped legend cards.
+
 ### Requirement: Client-Side WebGL 3D Force-Directed Galaxy Visualization
 The client application SHALL provide an alternative 3D interactive knowledge graph visualization at `/graph` rendered with WebGL (via Three.js / `3d-force-graph`), executing calculations entirely on the client-side GPU without placing computational or memory load on the backend server.
 

@@ -452,6 +452,7 @@
     "resetCamera": "Đặt Lại Góc Nhìn",
     "loading3d": "Đang Tải Đồ Họa 3D WebGL...",
     "searchPlaceholder": "Tìm kiếm khái niệm, sách, ghi chú...",
+    "searchPlaceholderShort": "Tìm kiếm...",
     "hud": {
       "showLabels": "Hiện tất cả nhãn (Soi chi tiết)",
       "hideLabels": "Ẩn bớt nhãn (Ngân hà thoáng đãng)"

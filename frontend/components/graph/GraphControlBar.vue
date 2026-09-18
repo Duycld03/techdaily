@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import {
   Search,
   X,
@@ -20,6 +20,24 @@ const emit = defineEmits<{
 const store = useKnowledgeGraphStore()
 const isExpanded = ref(false)
 
+const isMobileScreen = ref(false)
+
+function checkMobile() {
+  if (typeof window !== 'undefined') {
+    isMobileScreen.value = window.innerWidth < 640
+  }
+}
+
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', checkMobile)
+  }
+})
 const searchLocal = ref(store.searchQuery)
 
 watch(
@@ -94,7 +112,7 @@ const hasActiveFilters = computed(() => {
         <input
           v-model="searchLocal"
           type="text"
-          :placeholder="$t('graph.searchPlaceholder')"
+          :placeholder="isMobileScreen ? $t('graph.searchPlaceholderShort') : $t('graph.searchPlaceholder')"
           class="w-full pl-9 pr-9 py-2 bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/40 focus:border-brand-500 transition-all"
           @input="onSearchInput"
         />
@@ -148,7 +166,7 @@ const hasActiveFilters = computed(() => {
       <!-- Action Button: Fit Screen -->
       <button
         type="button"
-        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-sm"
+        class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-sm"
         :title="$t('graph.fitScreen')"
         @click="$emit('fit-screen')"
       >
@@ -181,7 +199,7 @@ const hasActiveFilters = computed(() => {
     </div>
 
     <!-- Filter Pills Container (Desktop visible, mobile collapsible) -->
-    <div :class="['space-y-2.5 transition-all', isExpanded ? 'block' : 'hidden sm:block']">
+    <div :class="['space-y-2.5 transition-all max-h-[50vh] sm:max-h-none overflow-y-auto sm:overflow-visible pr-0.5', isExpanded ? 'block' : 'hidden sm:block']">
       <!-- Category Pillars Row -->
       <div class="flex flex-wrap items-center gap-1.5">
         <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 whitespace-nowrap shrink-0">
