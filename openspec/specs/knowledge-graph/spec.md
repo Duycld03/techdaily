@@ -235,6 +235,11 @@ On mobile viewports ($< 768\text{px}$):
 - **AND** the browser navigates to `/graph`
 - **AND** the full-height mobile graph canvas initializes.
 
+#### Scenario: Responsive multi-viewport and bilingual smoke verification
+- **WHEN** an automated E2E test runs across Desktop ($1920\times 1080$), Tablet ($768\times 1024$), and Mobile ($375\times 812$) viewports
+- **THEN** the knowledge graph canvas initializes successfully in both 2D and 3D engine modes without console errors
+- **AND** all HUD buttons, visual legend cards, and category filter pills render without horizontal clipping across both English and Vietnamese locales.
+
 ### Requirement: Client-Side WebGL 3D Force-Directed Galaxy Visualization
 The client application SHALL provide an alternative 3D interactive knowledge graph visualization at `/graph` rendered with WebGL (via Three.js / `3d-force-graph`), executing calculations entirely on the client-side GPU without placing computational or memory load on the backend server.
 

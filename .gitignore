@@ -34,6 +34,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .pnpm-store/
+frontend/e2e/screenshots/
+**/screenshots/
 
 # --------------------------------------------------------------------
 # Environment & Secrets (NEVER COMMIT SECRETS)
