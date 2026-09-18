@@ -46,7 +46,7 @@ function onReset() {
 // Category filter pills
 const categoryPills = [
   { id: 'all', key: 'graph.filters.allPillars', defaultLabel: 'All Pillars' },
-  { id: 'BackendDotNet', key: '', defaultLabel: 'Backend (.NET)' },
+  { id: 'BackendRuntime', key: 'graph.filters.backendRuntime', defaultLabel: 'Backend & Runtime' },
   { id: 'DatabaseStorage', key: '', defaultLabel: 'Database & Storage' },
   { id: 'SystemDesign', key: '', defaultLabel: 'Distributed Systems' },
   { id: 'FrontendWeb', key: '', defaultLabel: 'Frontend & Web' },

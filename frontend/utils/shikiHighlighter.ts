@@ -260,7 +260,7 @@ export function detectCodeLanguage(
     return 'bash'
   }
 
-  // 11. Category Fallback (0: FrontendWeb, 1: BackendDotNet, 2: DatabaseStorage, 3: SystemDesign)
+  // 11. Category Fallback (0: FrontendWeb, 1: BackendRuntime, 2: DatabaseStorage, 3: SystemDesign)
   if (category === 0) return 'typescript'
   if (category === 1) return 'csharp'
   if (category === 2) return 'sql'

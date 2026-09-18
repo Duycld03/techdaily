@@ -27,13 +27,13 @@ This document serves as the single source of truth for all implemented, active, 
 ## 🏠 2. Daily Focus Hub (`/today`) & Roadmap (`/roadmap`)
 | Feature | Description | Status | Reference / Spec |
 |---|---|---|---|
-| **Curated Daily Doc Slices** | 3–5 min authoritative excerpts with takeaways and quick-check quizzes | 🟢 DONE | `docs/curriculum-30-days.md` |
+| **Curated Daily Doc Slices** | 3–5 min authoritative excerpts with takeaways and quick-check quizzes across custom books or Starter Pack | 🟢 DONE | `TechDaily.Infrastructure/Data/curriculum-30-days.json` |
 | **Doc Pacer Bar & Book Switcher** | Dynamic reading progress bar on `/today` with 1-click active book switching dropdown | 🟢 DONE | `openspec/changes/doc-pacer-and-async-pdf-ingestion/` |
 | **JIT Look-Ahead Buffer Service** | Background pre-generation pipeline maintaining 3 senior trade-off scenario questions ahead via Gemini 3.5 Flash Lite with 6s timeout fallback | 🟢 DONE | `Application/Interfaces/ILookAheadBufferService.cs` |
 | **Floating AI Term Explainer** | Highlight terms up to 500 chars to get instant Gemini markdown explainer | 🟢 DONE | `TermExplanationCaches` |
 | **Daily Senior Scenario Challenge**| Architecture trade-off drills with instant grading & Principal-level review | 🟢 DONE | `openspec/changes/archive/2026-09-01-multiple-choice-interview-drills/` |
 | **Streak Engine & Freeze Retention**| Automated streak incrementing, longest streak, and monthly freeze credits | 🟢 DONE | `UserLearningStats` |
-| **Dynamic Chapter Roadmap Tree** | Visual chapter milestones and slice progression across 30-Day curriculum or custom active book | 🟢 DONE | `frontend/pages/roadmap.vue` |
+| **Dynamic Chapter Roadmap Tree** | Visual chapter milestones and slice progression across custom active book or Starter Pack demo track | 🟢 DONE | `frontend/pages/roadmap.vue` |
 
 ---
 

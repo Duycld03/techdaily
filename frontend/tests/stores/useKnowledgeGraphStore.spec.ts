@@ -323,4 +323,32 @@ describe('useKnowledgeGraphStore', () => {
     // Constellation edge between topic and pillar remains connected
     expect(store.filteredEdges.map((e) => e.id)).toEqual(['e1'])
   })
+
+  it('supports BackendRuntime category filter matching both new and legacy node payloads', () => {
+    const store = useKnowledgeGraphStore()
+    store.rawData = {
+      nodes: [
+        { id: 'pillar-BackendRuntime', label: 'Backend & Runtime', type: 'pillar', category: 'BackendRuntime' },
+        { id: 'topic_runtime', label: 'Goroutines', type: 'topic', category: 'BackendRuntime' },
+        { id: 'topic_legacy', label: 'CLR GC', type: 'topic', category: 'BackendDotNet' },
+        { id: 'topic_frontend', label: 'DOM', type: 'topic', category: 'FrontendWeb' }
+      ],
+      edges: [],
+      stats: {
+        totalNodes: 4,
+        totalEdges: 0,
+        nodeTypeCounts: {},
+        pillarCounts: {},
+        masteredCardsCount: 0
+      }
+    }
+
+    store.setCategory('BackendRuntime')
+
+    const visibleIds = store.filteredNodes.map((n) => n.id)
+    expect(visibleIds).toContain('pillar-BackendRuntime')
+    expect(visibleIds).toContain('topic_runtime')
+    expect(visibleIds).toContain('topic_legacy')
+    expect(visibleIds).not.toContain('topic_frontend')
+  })
 })

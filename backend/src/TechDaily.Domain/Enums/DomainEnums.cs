@@ -2,10 +2,12 @@ namespace TechDaily.Domain.Enums;
 
 public enum Category
 {
-    FrontendWeb,
-    BackendDotNet,
-    DatabaseStorage,
-    SystemDesign,
+    FrontendWeb = 0,
+    BackendRuntime = 1,
+    [Obsolete("Use BackendRuntime instead.")]
+    BackendDotNet = 1,
+    DatabaseStorage = 2,
+    SystemDesign = 3,
     EngineeringCraft = 4
 }
 

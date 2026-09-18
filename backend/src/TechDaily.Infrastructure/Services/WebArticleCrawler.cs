@@ -416,9 +416,16 @@ public class WebArticleCrawler : IWebArticleCrawler
         if (combined.Contains("aspnet") || combined.Contains("aspnetcore") ||
             combined.Contains("dotnet") || combined.Contains(".net") ||
             combined.Contains("csharp") || combined.Contains("c#") ||
-            combined.Contains("entityframework") || combined.Contains("efcore"))
+            combined.Contains("entityframework") || combined.Contains("efcore") ||
+            combined.Contains("golang") || combined.Contains("rust") ||
+            combined.Contains("spring") || combined.Contains("jvm") ||
+            combined.Contains("concurrency") || combined.Contains("goroutine") ||
+            combined.Contains("multithreading") || combined.Contains("garbage collection") ||
+            combined.Contains("async io") || combined.Contains("kestrel") ||
+            combined.Contains("tokio") || combined.Contains("backend") ||
+            combined.Contains("runtime"))
         {
-            return Category.BackendDotNet;
+            return Category.BackendRuntime;
         }
 
         if (combined.Contains("postgres") || combined.Contains("postgresql") ||
@@ -454,7 +461,7 @@ public class WebArticleCrawler : IWebArticleCrawler
             return Category.FrontendWeb;
         }
 
-        return Category.BackendDotNet;
+        return Category.EngineeringCraft;
     }
 
 

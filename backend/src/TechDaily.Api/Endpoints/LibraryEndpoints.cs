@@ -159,7 +159,7 @@ public static class LibraryEndpoints
 
             var title = form["title"].ToString();
             var categoryStr = form["category"].ToString();
-            var category = Enum.TryParse<Category>(categoryStr, out var cat) ? cat : Category.BackendDotNet;
+            var category = Enum.TryParse<Category>(categoryStr, out var cat) ? cat : Category.BackendRuntime;
             var language = form["language"].ToString();
             if (string.IsNullOrWhiteSpace(language)) language = "en";
 

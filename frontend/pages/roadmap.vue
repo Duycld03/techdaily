@@ -420,7 +420,7 @@ function navigateToDay(dayOrder: number) {
 
 const categoryIcons = [
   Layers, // 0: FrontendWeb
-  Cpu, // 1: BackendDotNet
+  Cpu, // 1: BackendRuntime
   Database, // 2: DatabaseStorage
   Network // 3: SystemDesign
 ]

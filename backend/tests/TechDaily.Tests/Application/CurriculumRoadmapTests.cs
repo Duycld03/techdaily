@@ -42,7 +42,7 @@ public class CurriculumRoadmapTests : IDisposable
             var category = i switch
             {
                 <= 7 => Category.FrontendWeb,
-                <= 15 => Category.BackendDotNet,
+                <= 15 => Category.BackendRuntime,
                 <= 22 => Category.DatabaseStorage,
                 _ => Category.SystemDesign
             };
@@ -75,7 +75,7 @@ public class CurriculumRoadmapTests : IDisposable
         response.Modules[0].Category.Should().Be(Category.FrontendWeb);
         response.Modules[0].Days.Should().HaveCount(7);
 
-        response.Modules[1].Category.Should().Be(Category.BackendDotNet);
+        response.Modules[1].Category.Should().Be(Category.BackendRuntime);
         response.Modules[1].Days.Should().HaveCount(8);
 
         response.Modules[2].Category.Should().Be(Category.DatabaseStorage);

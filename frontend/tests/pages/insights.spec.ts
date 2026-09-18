@@ -72,8 +72,8 @@ vi.mock('~/composables/useApiClient', () => ({
         return {
           categories: [
             { id: 0, key: 'FrontendWeb', labelEn: 'Frontend & Vue', labelVi: 'Frontend & Vue', count: 5 },
-            { id: 1, key: 'BackendDotNet', labelEn: '.NET & C#', labelVi: '.NET & C#', count: 12 },
-            { id: 2, key: 'DatabaseStorage', labelEn: 'Postgres & DB', labelVi: 'Postgres & DB', count: 8 }
+            { id: 1, key: 'BackendRuntime', labelEn: 'Backend & Runtime', labelVi: 'Hệ Thống Backend & Runtime', count: 12 },
+            { id: 2, key: 'DatabaseStorage', labelEn: 'Database & Storage', labelVi: 'Cơ Sở Dữ Liệu & Lưu Trữ', count: 8 }
           ],
           suggestedTopics: {
             0: ['Vue Reactivity', 'Vite SSR'],
@@ -156,10 +156,10 @@ describe('insights.vue (Dedicated View Mode Switcher & Category Filtering)', () 
     const insightsStore = useInsightsStore()
     const fetchFeedSpy = vi.spyOn(insightsStore, 'fetchFeed')
 
-    // Find category button for .NET & C#
-    const dotnetBtn = wrapper.findAll('button').find((b) => b.text().includes('.NET & C#'))
-    expect(dotnetBtn).toBeDefined()
-    await dotnetBtn!.trigger('click')
+    // Find category button for Backend & Runtime
+    const backendBtn = wrapper.findAll('button').find((b) => b.text().includes('Backend & Runtime') || b.text().includes('insights.cat_backend'))
+    expect(backendBtn).toBeDefined()
+    await backendBtn!.trigger('click')
     await flushPromises()
 
     // In explore mode, onlySaved is false
@@ -171,7 +171,7 @@ describe('insights.vue (Dedicated View Mode Switcher & Category Filtering)', () 
     await flushPromises()
 
     // Click category again in saved mode
-    await dotnetBtn!.trigger('click')
+    await backendBtn!.trigger('click')
     await flushPromises()
 
     // In saved mode, onlySaved is true

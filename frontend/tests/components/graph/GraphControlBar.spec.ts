@@ -33,11 +33,11 @@ describe('GraphControlBar.vue', () => {
     const store = createTestStore()
     const wrapper = mount(GraphControlBar)
 
-    const dotnetBtn = wrapper.findAll('button').find((b) => b.text().includes('Backend (.NET)'))
-    expect(dotnetBtn).toBeDefined()
+    const backendBtn = wrapper.findAll('button').find((b) => b.text().includes('Backend & Runtime') || b.text().includes('graph.filters.backendRuntime'))
+    expect(backendBtn).toBeDefined()
 
-    await dotnetBtn!.trigger('click')
-    expect(store.selectedCategory).toBe('BackendDotNet')
+    await backendBtn!.trigger('click')
+    expect(store.selectedCategory).toBe('BackendRuntime')
   })
 
   it('updates node type filter when a type button is clicked', async () => {

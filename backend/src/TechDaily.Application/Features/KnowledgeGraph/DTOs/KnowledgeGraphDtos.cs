@@ -67,6 +67,8 @@ public static class GraphRelationType
     public const string TopicToPillar = "TopicToPillar";
     public const string BookToPillar = "BookToPillar";
     public const string CardToTopic = "CardToTopic";
+    public const string CardToHighlight = "CardToHighlight";
+    public const string CardToPillar = "CardToPillar";
     public const string BookToTopic = "BookToTopic";
     public const string HighlightToBook = "HighlightToBook";
     public const string HighlightToTopic = "HighlightToTopic";

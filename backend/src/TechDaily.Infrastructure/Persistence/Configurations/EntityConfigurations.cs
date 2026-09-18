@@ -2,8 +2,9 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TechDaily.Domain.Entities;
-
+using TechDaily.Domain.Enums;
 namespace TechDaily.Infrastructure.Persistence.Configurations;
 
 internal static class ConfigurationHelpers
@@ -30,6 +31,22 @@ internal static class ConfigurationHelpers
             return new List<string>();
         }
     }
+
+    public static Category ParseCategory(string? v)
+    {
+        if (string.Equals(v, "BackendDotNet", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(v, "DotNet", StringComparison.OrdinalIgnoreCase))
+        {
+            return Category.BackendRuntime;
+        }
+
+        return Enum.TryParse<Category>(v, true, out var cat) ? cat : Category.BackendRuntime;
+    }
+
+    public static readonly ValueConverter<Category, string> CategoryStringConverter = new(
+        v => v.ToString(),
+        v => ParseCategory(v)
+    );
 }
 
 public class UserConfiguration : IEntityTypeConfiguration<User>
@@ -64,7 +81,7 @@ public class TopicConfiguration : IEntityTypeConfiguration<Topic>
         builder.Property(t => t.Slug).HasMaxLength(255).IsRequired();
         builder.HasIndex(t => t.Slug).IsUnique();
         builder.Property(t => t.Title).HasMaxLength(255).IsRequired();
-        builder.Property(t => t.Category).HasConversion<string>().HasMaxLength(50).IsRequired();
+        builder.Property(t => t.Category).HasConversion(ConfigurationHelpers.CategoryStringConverter).HasMaxLength(50).IsRequired();
         builder.Property(t => t.Difficulty).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(t => t.DayOrder).IsRequired();
         builder.HasIndex(t => t.DayOrder);
@@ -122,7 +139,7 @@ public class DocumentBookConfiguration : IEntityTypeConfiguration<DocumentBook>
         builder.Property(b => b.Slug).HasMaxLength(255).IsRequired();
         builder.HasIndex(b => b.Slug).IsUnique();
         builder.Property(b => b.SourceType).HasConversion<string>().HasMaxLength(50).IsRequired();
-        builder.Property(b => b.Category).HasConversion<string>().HasMaxLength(50).IsRequired();
+        builder.Property(b => b.Category).HasConversion(ConfigurationHelpers.CategoryStringConverter).HasMaxLength(50).IsRequired();
 
         builder.Property(b => b.IsFeatured).HasDefaultValue(false);
         builder.HasIndex(b => b.IsFeatured);

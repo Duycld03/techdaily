@@ -70,17 +70,17 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
                 countMap.GetValueOrDefault(Category.FrontendWeb, 0)
             ),
             new(
-                (int)Category.BackendDotNet,
-                "dotnet",
-                ".NET 10 & C# 13",
-                "Nền Tảng .NET & C#",
-                countMap.GetValueOrDefault(Category.BackendDotNet, 0)
+                (int)Category.BackendRuntime,
+                "backend",
+                "Backend & Runtime Systems",
+                "Hệ Thống Backend & Runtime",
+                countMap.GetValueOrDefault(Category.BackendRuntime, 0)
             ),
             new(
                 (int)Category.DatabaseStorage,
                 "database",
-                "PostgreSQL & Database",
-                "Postgres & Cơ Sở Dữ Liệu",
+                "Database & Storage",
+                "Cơ Sở Dữ Liệu & Lưu Trữ",
                 countMap.GetValueOrDefault(Category.DatabaseStorage, 0)
             ),
             new(

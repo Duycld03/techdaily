@@ -18,8 +18,8 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
     private static readonly (string Id, string Label, Category Category, string Subtitle, string Summary)[] CanonicalPillars =
     [
         ("pillar-FrontendWeb", "Frontend & Web", Category.FrontendWeb, "Vue 3, Nuxt 4, Browser Pipeline, Web Vitals", "Modern web architecture, client-side rendering, performance optimization, and browser lifecycle mechanics."),
-        ("pillar-BackendDotNet", "Backend (.NET)", Category.BackendDotNet, ".NET 10, C# 13, Memory Management & GC", "High-performance runtime internals, lock-free concurrency, asynchronous state machines, and microservice primitives."),
-        ("pillar-DatabaseStorage", "Database & Storage", Category.DatabaseStorage, "PostgreSQL 17, Storage Engine, Indexing", "Relational persistence, MVCC internals, write-ahead logging, B-tree/GIN index strategies, and partitioning."),
+        ("pillar-BackendRuntime", "Backend & Runtime", Category.BackendRuntime, "Runtimes, Concurrency, Memory & Async I/O", "High-performance runtime internals, concurrency primitives, asynchronous execution, and service architectures."),
+        ("pillar-DatabaseStorage", "Database & Storage", Category.DatabaseStorage, "Storage Engines, Indexing & Persistence", "Relational persistence, storage engine mechanics, index strategies, transaction isolation, and caching."),
         ("pillar-SystemDesign", "Distributed Systems", Category.SystemDesign, "Event-Driven, Consistency & Fault Tolerance", "Scalable distributed patterns, transactional outbox, idempotency, event sourcing, and resilience engineering."),
         ("pillar-EngineeringCraft", "Engineering Craft", Category.EngineeringCraft, "Architecture, Clean Code, Testing", "Foundational engineering practices, clean architecture, automated testing, and software design principles.")
     ];
@@ -32,9 +32,13 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             if (titleOrSlug.Contains("aspnet") ||
                 titleOrSlug.Contains("dotnet") ||
                 titleOrSlug.Contains("csharp") ||
-                titleOrSlug.Contains("c#"))
+                titleOrSlug.Contains("c#") ||
+                titleOrSlug.Contains("golang") ||
+                titleOrSlug.Contains("rust") ||
+                titleOrSlug.Contains("java") ||
+                titleOrSlug.Contains("python"))
             {
-                return Category.BackendDotNet;
+                return Category.BackendRuntime;
             }
         }
 
@@ -98,7 +102,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
 
         var topicMap = topics.ToDictionary(t => t.Id);
         var bookMap = books.ToDictionary(b => b.Id);
-
+        var highlightMap = highlights.ToDictionary(h => h.Id);
         // 0. Canonical Pillar Hub Nodes: type "pillar"
         foreach (var (id, label, cat, subtitle, summary) in CanonicalPillars)
         {
@@ -191,9 +195,21 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 status = MasteryStatus.Learning;
             }
 
-            string category = card.TopicId.HasValue && topicMap.TryGetValue(card.TopicId.Value, out var linkedTopic)
-                ? linkedTopic.Category.ToString()
-                : Category.EngineeringCraft.ToString();
+            string category;
+            if (card.TopicId.HasValue && topicMap.TryGetValue(card.TopicId.Value, out var linkedTopic))
+            {
+                category = linkedTopic.Category.ToString();
+            }
+            else if (card.SourceHighlightId.HasValue && highlightMap.TryGetValue(card.SourceHighlightId.Value, out var linkedHl))
+            {
+                category = linkedHl.DocumentChunk != null && bookMap.TryGetValue(linkedHl.DocumentChunk.DocumentBookId, out var linkedBook)
+                    ? GetEffectiveBookCategory(linkedBook).ToString()
+                    : Category.EngineeringCraft.ToString();
+            }
+            else
+            {
+                category = Category.EngineeringCraft.ToString();
+            }
 
             string label = !string.IsNullOrWhiteSpace(card.FrontMarkdown)
                 ? (card.FrontMarkdown.Length > 80 ? card.FrontMarkdown[..80].Trim() + "..." : card.FrontMarkdown.Trim())
@@ -271,7 +287,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             var effectiveCategory = GetEffectiveBookCategory(book);
             if (IsMasterCurriculumBook(book))
             {
-                foreach (var cat in new[] { Category.FrontendWeb, Category.BackendDotNet, Category.DatabaseStorage, Category.SystemDesign })
+                foreach (var cat in new[] { Category.FrontendWeb, Category.BackendRuntime, Category.DatabaseStorage, Category.SystemDesign })
                 {
                     edges.Add(new GraphEdgeDto(
                         Id: $"edge-book-{book.Id}-pillar-{cat}",
@@ -296,17 +312,51 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             }
         }
 
-        // 2. CardToTopic: card.TopicId -> topic.Id (relationType = "CardToTopic")
+        // 2. Card Edge Derivation: CardToTopic, CardToHighlight, or CardToPillar (Guarantees degree >= 1 for 100% of cards)
         foreach (var card in cards)
         {
             if (card.TopicId.HasValue && topicMap.ContainsKey(card.TopicId.Value))
             {
                 edges.Add(new GraphEdgeDto(
-                    Id: $"edge-card-{card.Id}-{card.TopicId.Value}",
+                    Id: $"edge-card-{card.Id}-topic-{card.TopicId.Value}",
                     Source: card.Id.ToString(),
                     Target: card.TopicId.Value.ToString(),
                     RelationType: GraphRelationType.CardToTopic,
                     Label: "Topic",
+                    Weight: 1
+                ));
+            }
+            else if (card.SourceHighlightId.HasValue && highlightMap.ContainsKey(card.SourceHighlightId.Value))
+            {
+                edges.Add(new GraphEdgeDto(
+                    Id: $"edge-card-{card.Id}-highlight-{card.SourceHighlightId.Value}",
+                    Source: card.Id.ToString(),
+                    Target: card.SourceHighlightId.Value.ToString(),
+                    RelationType: GraphRelationType.CardToHighlight,
+                    Label: "Highlight",
+                    Weight: 1
+                ));
+            }
+            else
+            {
+                // Fallback to pillar hub (e.g. quiz mistake cards or standalone cards)
+                string targetCategory = Category.EngineeringCraft.ToString();
+                if (card.TopicId.HasValue && topicMap.TryGetValue(card.TopicId.Value, out var t))
+                {
+                    targetCategory = t.Category.ToString();
+                }
+                else if (card.SourceHighlightId.HasValue && highlightMap.TryGetValue(card.SourceHighlightId.Value, out var h)
+                    && h.DocumentChunk != null && bookMap.TryGetValue(h.DocumentChunk.DocumentBookId, out var b))
+                {
+                    targetCategory = GetEffectiveBookCategory(b).ToString();
+                }
+
+                edges.Add(new GraphEdgeDto(
+                    Id: $"edge-card-{card.Id}-pillar-{targetCategory}",
+                    Source: card.Id.ToString(),
+                    Target: $"pillar-{targetCategory}",
+                    RelationType: GraphRelationType.CardToPillar,
+                    Label: "Review",
                     Weight: 1
                 ));
             }
@@ -458,8 +508,8 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             [GraphNodeType.Highlight] = highlights.Count
         };
 
-        var pillarCounts = Enum.GetValues<Category>()
-            .ToDictionary(c => c.ToString(), _ => 0);
+        var pillarCounts = CanonicalPillars
+            .ToDictionary(p => p.Category.ToString(), _ => 0);
 
         foreach (var node in nodes)
         {

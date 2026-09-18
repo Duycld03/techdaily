@@ -112,9 +112,17 @@ function inferCategoryFromContext(title = '', url = '', content = ''): number {
     combined.includes('csharp') ||
     combined.includes('c#') ||
     combined.includes('entityframework') ||
-    combined.includes('efcore')
+    combined.includes('efcore') ||
+    combined.includes('golang') ||
+    combined.includes('rust') ||
+    combined.includes('java') ||
+    combined.includes('spring') ||
+    combined.includes('python') ||
+    combined.includes('concurrency') ||
+    combined.includes('runtime') ||
+    combined.includes('backend')
   ) {
-    return 1 // BackendDotNet
+    return 1 // BackendRuntime
   }
 
   if (

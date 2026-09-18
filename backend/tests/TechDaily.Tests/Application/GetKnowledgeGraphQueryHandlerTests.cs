@@ -565,7 +565,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         var expectedPillars = new[]
         {
             ("pillar-FrontendWeb", "Frontend & Web", "FrontendWeb"),
-            ("pillar-BackendDotNet", "Backend (.NET)", "BackendDotNet"),
+            ("pillar-BackendRuntime", "Backend & Runtime", "BackendRuntime"),
             ("pillar-DatabaseStorage", "Database & Storage", "DatabaseStorage"),
             ("pillar-SystemDesign", "Distributed Systems", "SystemDesign"),
             ("pillar-EngineeringCraft", "Engineering Craft", "EngineeringCraft")
@@ -682,7 +682,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         var technicalPillars = new[]
         {
             "pillar-FrontendWeb",
-            "pillar-BackendDotNet",
+            "pillar-BackendRuntime",
             "pillar-DatabaseStorage",
             "pillar-SystemDesign"
         };
@@ -744,12 +744,12 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
 
         // 1. Check Category correction on aspnetBook
         var aspnetNode = result.Value.Nodes.Single(n => n.Id == aspnetBook.Id.ToString());
-        aspnetNode.Category.Should().Be(Category.BackendDotNet.ToString());
+        aspnetNode.Category.Should().Be(Category.BackendRuntime.ToString());
 
-        // 2. Check BookToPillar for aspnetBook connects to pillar-BackendDotNet, not FrontendWeb
+        // 2. Check BookToPillar for aspnetBook connects to pillar-BackendRuntime, not FrontendWeb
         result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
             && e.Source == aspnetBook.Id.ToString()
-            && e.Target == "pillar-BackendDotNet");
+            && e.Target == "pillar-BackendRuntime");
 
         // 3. No Cartesian blowout: Neither aspnetBook nor cssBook should have BookToTopic edge to vueTopic!
         result.Value.Edges.Should().NotContain(e => e.RelationType == GraphRelationType.BookToTopic
@@ -806,5 +806,98 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToTopic
             && e.Source == book.Id.ToString()
             && e.Target == topic.Id.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_OrphanCards_ShouldDeriveCardToHighlightOrCardToPillarEdges()
+    {
+        // Arrange
+        var user = new User { Id = Guid.NewGuid(), Email = "orphancards@techdaily.local", Name = "Orphan Cards User" };
+        await _db.Users.AddAsync(user);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Pragmatic Architecture",
+            Slug = "pragmatic-arch",
+            Category = Category.EngineeringCraft,
+            IsPublished = true
+        };
+        await _db.DocumentBooks.AddAsync(book);
+
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChapterTitle = "Clean Boundaries",
+            ChunkOrder = 1
+        };
+        await _db.DocumentChunks.AddAsync(chunk);
+
+        var highlight = new UserHighlight
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            DocumentChunkId = chunk.Id,
+            SelectedText = "Dependency Inversion is vital",
+            Note = "Important rule"
+        };
+        await _db.UserHighlights.AddAsync(highlight);
+
+        // Card 1: Created from Highlight (no TopicId)
+        var highlightCard = SpacedRepetitionCard.CreateFromHighlight(
+            user.Id,
+            highlight.Id,
+            "What is DIP?",
+            "Depend upon abstractions"
+        );
+        await _db.SpacedRepetitionCards.AddAsync(highlightCard);
+
+        var question = new QuizQuestion
+        {
+            Id = Guid.NewGuid(),
+            Topic = "System Design",
+            Category = Category.SystemDesign,
+            Level = QuizLevel.Senior,
+            QuestionText = "What is MVCC?",
+            ExplanationMarkdown = "Multi-version concurrency control",
+            Options = new() { "A", "B", "C", "D" },
+            CorrectOptionIndex = 0
+        };
+        await _db.QuizQuestions.AddAsync(question);
+
+        // Card 2: Created from Quiz Mistake (no TopicId, no HighlightId)
+        var quizCard = SpacedRepetitionCard.CreateFromQuizMistake(
+            user.Id,
+            question.Id,
+            "What is MVCC?",
+            "Multi-version concurrency control"
+        );
+        await _db.SpacedRepetitionCards.AddAsync(quizCard);
+
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // 1. highlightCard connects via CardToHighlight
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToHighlight
+            && e.Source == highlightCard.Id.ToString()
+            && e.Target == highlight.Id.ToString());
+
+        // 2. quizCard connects via CardToPillar (EngineeringCraft fallback)
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToPillar
+            && e.Source == quizCard.Id.ToString()
+            && e.Target == "pillar-EngineeringCraft");
+
+        // 3. Both cards have edge degree >= 1 (no orphan cards)
+        var allCardIds = new[] { highlightCard.Id.ToString(), quizCard.Id.ToString() };
+        foreach (var cardId in allCardIds)
+        {
+            result.Value.Edges.Any(e => e.Source == cardId || e.Target == cardId).Should().BeTrue();
+        }
     }
 }

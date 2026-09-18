@@ -493,7 +493,7 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                 Id = topic?.Id ?? chunk?.Id ?? Guid.Empty,
                 Slug = topic?.Slug ?? "doc-slice",
                 Title = topic?.Title ?? chunk?.ChapterTitle ?? "Technical Guide",
-                Category = topic?.Category ?? chunk?.DocumentBook?.Category ?? Category.BackendDotNet,
+                Category = topic?.Category ?? chunk?.DocumentBook?.Category ?? Category.BackendRuntime,
                 Difficulty = topic?.Difficulty ?? question.Difficulty,
                 DayOrder = topic?.DayOrder ?? chunk?.ChunkOrder ?? 1,
                 Summary = topic?.Summary ?? chunk?.SummaryMarkdown ?? string.Empty,

@@ -25,7 +25,7 @@ public static class CurriculumSeeder
                 Title = "30-Day Senior Fullstack Curriculum",
                 Slug = "30-day-senior-curriculum",
                 SourceType = SourceType.MarkdownSeries,
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 TotalChunks = 30,
                 AuthorOrSourceUrl = "https://techdaily.dev/curriculum",
                 IsPublished = true,

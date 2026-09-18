@@ -291,10 +291,13 @@ public class WebArticleCrawlerTests
     [InlineData("Async Await Internals in C#", "https://example.com/csharp")]
     [InlineData("Deep Dive into .NET 10 CLR", "https://example.com/dotnet")]
     [InlineData("Entity Framework Core Performance", "https://example.com/efcore")]
-    public void InferCategoryFromContext_ShouldInferBackendDotNet_ForDotNetAndCSharpKeywords(string title, string url)
+    [InlineData("Concurrency Patterns in Go", "https://golang.org/doc")]
+    [InlineData("Memory Safety in Rust", "https://rust-lang.org/book")]
+    [InlineData("Spring Boot Microservices", "https://spring.io/guides")]
+    public void InferCategoryFromContext_ShouldInferBackendRuntime_ForBackendAndRuntimeKeywords(string title, string url)
     {
         var category = WebArticleCrawler.InferCategoryFromContext(title, url);
-        category.Should().Be(Category.BackendDotNet);
+        category.Should().Be(Category.BackendRuntime);
     }
 
     [Theory]

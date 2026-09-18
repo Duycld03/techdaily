@@ -206,6 +206,8 @@ public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizRes
             return Category.FrontendWeb;
         if (lower.Contains("system") || lower.Contains("distributed") || lower.Contains("microservice") || lower.Contains("kafka") || lower.Contains("docker") || lower.Contains("kubernetes"))
             return Category.SystemDesign;
-        return Category.BackendDotNet;
+        if (lower.Contains("craft") || lower.Contains("clean code") || lower.Contains("testing") || lower.Contains("refactor") || lower.Contains("architecture"))
+            return Category.EngineeringCraft;
+        return Category.BackendRuntime;
     }
 }

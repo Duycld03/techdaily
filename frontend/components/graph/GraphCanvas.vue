@@ -65,7 +65,7 @@ function getStylesheet(dark: boolean): Stylesheet[] {
       }
     },
     {
-      selector: 'node[type = "pillar"][category = "BackendDotNet"], node[type = "pillar"][category = "DotNet"]',
+      selector: 'node[type = "pillar"][category = "BackendRuntime"], node[type = "pillar"][category = "BackendDotNet"], node[type = "pillar"][category = "DotNet"]',
       style: {
         'background-color': '#0284c7',
         'border-color': '#38bdf8'
@@ -104,7 +104,7 @@ function getStylesheet(dark: boolean): Stylesheet[] {
     },
     // Topic colors by pillar: DotNet (#38bdf8), Postgres (#34d399), DistributedSystems (#a78bfa), Frontend (#fbbf24), Craft (#fb7185)
     {
-      selector: 'node[type = "topic"][category = "BackendDotNet"], node[type = "topic"][category = "DotNet"]',
+      selector: 'node[type = "topic"][category = "BackendRuntime"], node[type = "topic"][category = "BackendDotNet"], node[type = "topic"][category = "DotNet"]',
       style: {
         'background-color': '#38bdf8'
       }
@@ -150,7 +150,8 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'shape': 'diamond',
         'width': 26,
         'height': 26,
-        'background-color': '#3b82f6'
+        'background-color': '#3b82f6',
+        'label': ''
       }
     },
     // Colors by card mastery: Learning (#f59e0b), Reviewing (#3b82f6), Mastered (#10b981)
@@ -181,7 +182,16 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'shape': 'hexagon',
         'width': 22,
         'height': 22,
-        'background-color': dark ? '#c4b5fd' : '#8b5cf6'
+        'background-color': dark ? '#c4b5fd' : '#8b5cf6',
+        'label': ''
+      }
+    },
+    // Level-of-Detail: Revealed labels on hover, selection, or zoom-in
+    {
+      selector: 'node[type = "card"]:selected, node[type = "highlight"]:selected, node[type = "card"].label-revealed, node[type = "highlight"].label-revealed',
+      style: {
+        'label': 'data(label)',
+        'z-index': 90
       }
     },
     // Selected node state
@@ -216,7 +226,17 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'line-color': edgeClr
       }
     },
-    // Associative tag edges (dashed)
+    // Card edges to highlight or pillar
+    {
+      selector: 'edge[relationType = "CardToHighlight"], edge[relationType = "CardToPillar"]',
+      style: {
+        'curve-style': 'bezier',
+        'line-style': 'dotted',
+        'width': 1.2,
+        'line-color': edgeClr,
+        'opacity': 0.6
+      }
+    },
     {
       selector: 'edge[relationType = "SharedTag"]',
       style: {
@@ -270,13 +290,13 @@ function runLayout() {
     coolingFactor: 0.95,
     numIter: 300,
     randomize: true,
-    componentSpacing: 120,
+    componentSpacing: 140,
     fit: true,
-    padding: 60,
+    padding: 100,
     nodeRepulsion: () => 500000,
-    idealEdgeLength: () => 120,
+    idealEdgeLength: () => 140,
     edgeElasticity: () => 100,
-    gravity: 80,
+    gravity: 70,
     stop: () => {
       // Simulation freezes completely, drops to 0% CPU idle
     }
@@ -371,7 +391,7 @@ function applySearchHighlights() {
 function fitScreen() {
   if (!cy || cy.nodes().length === 0) return
   cy.animate({
-    fit: { padding: 60 },
+    fit: { padding: 90 },
     duration: 400
   })
 }
@@ -407,6 +427,28 @@ function initCytoscape() {
   cy.on('tap', (evt: EventObject) => {
     if (evt.target === cy) {
       store.selectNode(null)
+    }
+  })
+
+  // LOD: Hover to reveal label on cards and highlights
+  cy.on('mouseover', 'node[type = "card"], node[type = "highlight"]', (evt: EventObject) => {
+    evt.target.addClass('label-revealed')
+  })
+
+  cy.on('mouseout', 'node[type = "card"], node[type = "highlight"]', (evt: EventObject) => {
+    if (!evt.target.selected() && cy && cy.zoom() < 1.1) {
+      evt.target.removeClass('label-revealed')
+    }
+  })
+
+  // Dynamic LOD on zoom: zoom >= 1.1 reveals all leaf labels
+  cy.on('zoom', () => {
+    if (!cy) return
+    const zoom = cy.zoom()
+    if (zoom >= 1.1) {
+      cy.elements('node[type = "card"], node[type = "highlight"]').addClass('label-revealed')
+    } else {
+      cy.elements('node[type = "card"]:unselected, node[type = "highlight"]:unselected').removeClass('label-revealed')
     }
   })
 

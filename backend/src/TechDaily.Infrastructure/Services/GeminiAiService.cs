@@ -103,7 +103,7 @@ Respond strictly in valid JSON adhering to this schema:
   ""benchmarkStats"": ""⚡ Benchmark metric (e.g. 10x faster | 0 B allocated)"",
   ""sourceUrl"": ""https://docs...""
 }}
-Category mapping: 0=FrontendWeb, 1=BackendDotNet, 2=DatabaseStorage, 3=SystemDesign (use 3 for general systems languages like Rust/Go/C++ or distributed systems).
+Category mapping: 0=FrontendWeb, 1=BackendRuntime, 2=DatabaseStorage, 3=SystemDesign, 4=EngineeringCraft.
 No markdown backticks around JSON.";
 
             var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
@@ -222,7 +222,7 @@ No markdown backticks around JSON.";
             var title = root.TryGetProperty("title", out var t) ? t.GetString() ?? "Senior Architecture Insight" : "Senior Architecture Insight";
             var category = root.TryGetProperty("category", out var c) && c.TryGetInt32(out var catInt)
                 ? (Category)catInt
-                : preferredCategory ?? Category.BackendDotNet;
+                : preferredCategory ?? Category.BackendRuntime;
 
             var tags = new List<string>();
             if (root.TryGetProperty("tags", out var tagsElem) && tagsElem.ValueKind == JsonValueKind.Array)

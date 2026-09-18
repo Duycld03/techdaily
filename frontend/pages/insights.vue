@@ -86,7 +86,7 @@ const computedCategories = computed(() => {
   } else {
     list.push(
       { id: 0, label: t('insights.cat_frontend') },
-      { id: 1, label: t('insights.cat_dotnet') },
+      { id: 1, label: t('insights.cat_backend') },
       { id: 2, label: t('insights.cat_database') },
       { id: 3, label: t('insights.cat_system') }
     )

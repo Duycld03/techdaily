@@ -59,8 +59,8 @@ public class GetCurriculumRoadmapHandler : IUseCase<GetCurriculumRoadmapRequest,
         var moduleDefinitions = new List<(Category Category, string Title, string Description, int StartDay, int EndDay)>
         {
             (Category.FrontendWeb, "Frontend & Browser Internals", "Vue 3 Reactivity, Rendering Strategies, Browser Rendering Pipeline, Web Vitals, State Management, WebSockets & Modern Bundlers.", 1, 7),
-            (Category.BackendDotNet, ".NET 10 & C# 13 Internals", "Generational GC & LOH, Span/Memory zero-allocation, Async State Machine, Lock-Free Concurrency, Channels, DI Lifetimes, and Kestrel Pipelines.", 8, 15),
-            (Category.DatabaseStorage, "PostgreSQL 17 Storage Engine", "MVCC & WAL, Isolation Levels & SSI, B-Tree/GIN Indexing, EXPLAIN ANALYZE, PgBouncer, Partitioning, and pgvector HNSW.", 16, 22),
+            (Category.BackendRuntime, "Backend & Runtime Systems", "Generational GC & LOH, Span/Memory zero-allocation, Async State Machine, Lock-Free Concurrency, Channels, DI Lifetimes, and Kestrel Pipelines.", 8, 15),
+            (Category.DatabaseStorage, "Database & Storage Engines", "MVCC & WAL, Isolation Levels & SSI, B-Tree/GIN Indexing, EXPLAIN ANALYZE, PgBouncer, Partitioning, and vector storage.", 16, 22),
             (Category.SystemDesign, "System Design & Distributed Patterns", "Distributed Caching, Transactional Outbox, Idempotency, Rate Limiting, Polly v8 Resilience, OpenTelemetry, and Zero-Trust OAuth 2.0 PKCE.", 23, 30)
         };
 

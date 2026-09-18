@@ -66,12 +66,24 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
       // Category pillar filter
       if (selectedCategory.value && selectedCategory.value.toLowerCase() !== 'all') {
         const selCat = selectedCategory.value.toLowerCase()
+        const isBackend = selCat === 'backendruntime' || selCat === 'backenddotnet' || selCat === 'dotnet'
+        const nodeCat = node.category?.toLowerCase() || ''
+        const isNodeBackend = nodeCat === 'backendruntime' || nodeCat === 'backenddotnet' || nodeCat === 'dotnet'
+
         const isMatchingPillar =
           nodeType === 'pillar' &&
-          (node.category?.toLowerCase() === selCat || node.id?.toLowerCase() === `pillar-${selCat}`)
+          (nodeCat === selCat ||
+           node.id?.toLowerCase() === `pillar-${selCat}` ||
+           (isBackend && (node.id?.toLowerCase() === 'pillar-backendruntime' || node.id?.toLowerCase() === 'pillar-backenddotnet')))
 
-        if (!isMatchingPillar && node.category?.toLowerCase() !== selCat) {
-          return false
+        if (isBackend) {
+          if (!isMatchingPillar && !isNodeBackend) {
+            return false
+          }
+        } else {
+          if (!isMatchingPillar && nodeCat !== selCat) {
+            return false
+          }
         }
       }
 

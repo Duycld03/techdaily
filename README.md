@@ -157,7 +157,7 @@ npm --prefix frontend test
 | [**`docs/domain-rules.md`**](file:///home/duycld03/workspace/techdaily/docs/domain-rules.md) | Business logic, SM-2 algorithm, PBKDF2 parameters, typography rules, and UI constraints. |
 | [**`docs/api-design.md`**](file:///home/duycld03/workspace/techdaily/docs/api-design.md) | Complete REST API endpoint contracts and RFC 7807 problem details specifications. |
 | [**`docs/database-design.md`**](file:///home/duycld03/workspace/techdaily/docs/database-design.md) | Database schema, table definitions, entity relationships, and pgvector types. |
-| [**`docs/curriculum-30-days.md`**](file:///home/duycld03/workspace/techdaily/docs/curriculum-30-days.md) | 30-day curriculum breakdown across 6 senior engineering domains. |
+| [**`openspec/`**](file:///home/duycld03/workspace/techdaily/openspec/) | OpenSpec capabilities, active change proposals, and spec-driven workflow archives. |
 
 ---
 

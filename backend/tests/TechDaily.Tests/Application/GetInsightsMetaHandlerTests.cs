@@ -56,15 +56,15 @@ public class GetInsightsMetaHandlerTests : IDisposable
         cat0.Count.Should().Be(0);
 
         var cat1 = response.Categories.First(c => c.Id == 1);
-        cat1.Key.Should().Be("dotnet");
-        cat1.LabelEn.Should().Be(".NET 10 & C# 13");
-        cat1.LabelVi.Should().Be("Nền Tảng .NET & C#");
+        cat1.Key.Should().Be("backend");
+        cat1.LabelEn.Should().Be("Backend & Runtime Systems");
+        cat1.LabelVi.Should().Be("Hệ Thống Backend & Runtime");
         cat1.Count.Should().Be(0);
 
         var cat2 = response.Categories.First(c => c.Id == 2);
         cat2.Key.Should().Be("database");
-        cat2.LabelEn.Should().Be("PostgreSQL & Database");
-        cat2.LabelVi.Should().Be("Postgres & Cơ Sở Dữ Liệu");
+        cat2.LabelEn.Should().Be("Database & Storage");
+        cat2.LabelVi.Should().Be("Cơ Sở Dữ Liệu & Lưu Trữ");
         cat2.Count.Should().Be(0);
 
         var cat3 = response.Categories.First(c => c.Id == 3);
@@ -96,7 +96,7 @@ public class GetInsightsMetaHandlerTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "insight-1",
                 Title = "Insight 1",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 IsPublished = true
             },
             new TechInsight
@@ -104,7 +104,7 @@ public class GetInsightsMetaHandlerTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "insight-2",
                 Title = "Insight 2",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 IsPublished = true
             },
             new TechInsight
@@ -112,7 +112,7 @@ public class GetInsightsMetaHandlerTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "insight-3",
                 Title = "Unpublished",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 IsPublished = false
             },
             new TechInsight
@@ -132,7 +132,7 @@ public class GetInsightsMetaHandlerTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "topic-1",
                 Title = "Curriculum Topic Alpha",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 DayOrder = 1
             },
             new Topic
@@ -140,7 +140,7 @@ public class GetInsightsMetaHandlerTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "topic-2",
                 Title = "Curriculum Topic Beta",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 DayOrder = 2
             },
             new Topic
@@ -148,7 +148,7 @@ public class GetInsightsMetaHandlerTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "topic-deleted",
                 Title = "Deleted Topic",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 IsDeleted = true,
                 DayOrder = 3
             }
@@ -163,15 +163,15 @@ public class GetInsightsMetaHandlerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         var response = result.Value;
 
-        var dotnetCat = response.Categories.First(c => c.Id == (int)Category.BackendDotNet);
-        dotnetCat.Count.Should().Be(2); // Only the 2 published insights
+        var backendCat = response.Categories.First(c => c.Id == (int)Category.BackendRuntime);
+        backendCat.Count.Should().Be(2); // Only the 2 published insights
 
         var frontendCat = response.Categories.First(c => c.Id == (int)Category.FrontendWeb);
         frontendCat.Count.Should().Be(1);
 
-        // BackendDotNet had 2 topics, so its suggested topics should contain the DB topics and not need defaults
-        response.SuggestedTopics[(int)Category.BackendDotNet].Should().Contain(new[] { "Curriculum Topic Alpha", "Curriculum Topic Beta" });
-        response.SuggestedTopics[(int)Category.BackendDotNet].Should().NotContain("Deleted Topic");
+        // BackendRuntime had 2 topics, so its suggested topics should contain the DB topics and not need defaults
+        response.SuggestedTopics[(int)Category.BackendRuntime].Should().Contain(new[] { "Curriculum Topic Alpha", "Curriculum Topic Beta" });
+        response.SuggestedTopics[(int)Category.BackendRuntime].Should().NotContain("Deleted Topic");
 
         // DatabaseStorage had 0 topics, so should have default topics
         response.SuggestedTopics[(int)Category.DatabaseStorage].Should().Contain("PostgreSQL Index-Only Scan & INCLUDE");
