@@ -21,11 +21,10 @@ interface ConstellationNode {
   x: number
   y: number
   color: string
-  pulse?: boolean
 }
 
 const nodes: ConstellationNode[] = [
-  { id: 'dist', name: 'Distributed', x: 120, y: 22, color: '#8b5cf6', pulse: true },
+  { id: 'dist', name: 'Distributed', x: 120, y: 22, color: '#8b5cf6' },
   { id: 'backend', name: 'Runtime', x: 44, y: 44, color: '#a78bfa' },
   { id: 'db', name: 'Database', x: 196, y: 44, color: '#22d3ee' },
   { id: 'system', name: 'Architecture', x: 72, y: 92, color: '#38bdf8' },
@@ -103,18 +102,6 @@ const edges = [
 
           <!-- Constellation Nodes & Labels -->
           <g v-for="n in nodes" :key="n.id">
-            <!-- Pulsing outer halo for active/primary vertices -->
-            <circle
-              v-if="n.pulse"
-              :cx="n.x"
-              :cy="n.y"
-              r="8"
-              :stroke="n.color"
-              stroke-width="1.5"
-              fill="none"
-              opacity="0.6"
-              class="animate-pulse"
-            />
             <circle
               :cx="n.x"
               :cy="n.y"

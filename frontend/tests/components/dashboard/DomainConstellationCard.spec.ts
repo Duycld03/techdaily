@@ -85,7 +85,7 @@ describe('DomainConstellationCard.vue', () => {
     expect(wrapper.text()).toContain('Database')
   })
 
-  it('renders stationary pulsing vertex aura with animate-pulse without animate-ping', () => {
+  it('renders clean static constellation nodes without any animated pulse or ping halos', () => {
     const wrapper = mount(DomainConstellationCard, {
       global: {
         stubs: {
@@ -97,11 +97,9 @@ describe('DomainConstellationCard.vue', () => {
       }
     })
 
-    const pulseCircle = wrapper.find('circle.animate-pulse')
-    expect(pulseCircle.exists()).toBe(true)
+    expect(wrapper.find('circle.animate-pulse').exists()).toBe(false)
     expect(wrapper.find('circle.animate-ping').exists()).toBe(false)
   })
-
   it('header link has stable positioning without hover translation jitter', () => {
     const wrapper = mount(DomainConstellationCard, {
       global: {

@@ -762,12 +762,12 @@ The root route `/` SHALL host the primary **Home Command Center Dashboard** (`fr
 
 1. **Information Architecture & Contextual AI Restraint:**
    - **Component Organization & Decoupling:** The Home Dashboard component SHALL reside in `frontend/components/dashboard/HomeBentoDashboard.vue`, cleanly decoupled from the reading focus studio components in `frontend/components/today/`.
-   - **Welcome Banner:** Displays personalized greeting (`"Welcome Back, {Name}!"`) and dynamic document progress pill. When an active book pacer exists, the badge SHALL render the real document slice progress (`"Slice {currentChunkOrder} / {totalChunks}"` / `"Lát cắt {currentChunkOrder} / {totalChunks}"`), NEVER hardcoding `/ 30` or assuming fixed-length curriculums. The banner SHALL NOT include an "Ask AI Explainer" button; AI explanation is strictly reserved for in-context reading text selection and scenario problem solving. The banner SHALL NOT display ambient radial blur glows.
-   - **Active Reading Hero:** Displays active curriculum slice title, summary, reading time estimate, progress percentage, and a prominent `"Continue Reading →"` CTA button that navigates directly to the dedicated GitBook reader at that slice (`/read/${bookId}?slice=${currentChunkOrder}`). The category badge SHALL render in neutral slate monospace (`text-slate-400 font-mono text-[11px]`) and icon wrapper SHALL use neutral dark glass (`bg-white/[0.04] text-slate-400`).
+   - **Welcome Banner:** Displays personalized greeting (`"Welcome Back, {Name}!"`) and dynamic document progress pill (`"Slice {currentChunkOrder} / {totalChunks}"` / `"Lát cắt {currentChunkOrder} / {totalChunks}"`). The banner SHALL NOT include an "Ask AI Explainer" button and SHALL NOT display ambient radial blur glows.
+   - **Active Reading Hero:** Displays active curriculum slice title, summary, reading time estimate, progress percentage, and a prominent `"Continue Reading →"` CTA button that navigates directly to the dedicated GitBook reader at that slice (`/read/${bookId}?slice=${currentChunkOrder}`).
    - **Scenario Challenge Card:** Displays the architectural interview scenario teaser, score reward (`+10 Points`), and a `"Solve Challenge →"` CTA button navigating directly to the Focus Studio scenario challenge (`/today?tab=challenge`).
    - **Active Recall & Concentric Metrics:** Renders dual concentric SVG rings for daily study pace and SM-2 retention health, constrained in height to prevent stretching.
    - **7-Day Consistency Matrix:** Renders weekly completion dots and active streak flames with freeze credit indicators.
-   - **Domain Knowledge Constellation:** Renders an engineering-grade constellation widget (`frontend/components/dashboard/DomainConstellationCard.vue`) displaying 5 core engineering pillars, connected vector paths, live node and relation counts, and a direct link to the 3D Cosmos (`/graph`). The SVG vertices SHALL use centered opacity pulse animations (`animate-pulse`) rather than uncentered scaling transforms (`animate-ping`), and the card header link SHALL NOT shift horizontally on card body hover.
+   - **Domain Knowledge Constellation:** Renders an engineering-grade constellation widget (`frontend/components/dashboard/DomainConstellationCard.vue`) displaying 5 core engineering pillars, connected vector paths, live node and relation counts, and a direct link to the 3D Cosmos (`/graph`). The SVG vertices SHALL render as clean, static circular nodes without animated pulsing rings, flashing aura effects, or scaling transforms (`animate-pulse`, `animate-ping`), providing a stable, distraction-free visual presentation. The card header link SHALL NOT shift horizontally on card body hover.
 
 2. **Crash-Free Lifecycle & Store Hardening:**
    - When querying Spaced Repetition deck stats, the component SHALL safely invoke valid `useReviewStore` methods (`fetchDeckCards({ pageSize: 1 })` or `fetchReviewDeck()`) and read counts from `deckStatistics` and `totalCardsDue` with defensive fallbacks, NEVER calling non-existent methods or throwing unhandled synchronous exceptions.
@@ -810,7 +810,7 @@ The root route `/` SHALL host the primary **Home Command Center Dashboard** (`fr
 
 #### Scenario: User inspects the Domain Knowledge Constellation card
 - **WHEN** user views Card E on the Home Dashboard
-- **THEN** the card renders a clean SVG constellation displaying 5 engineering pillar vertices without off-center bubble scaling
+- **THEN** the card renders a clean SVG constellation displaying 5 engineering pillar vertices as static nodes without animated pulsing halos or flashing effects
 - **AND** the "Open 3D Cosmos" header link remains stable in position when hovering anywhere on the card.
 
 #### Scenario: Store data is initially empty or loading
