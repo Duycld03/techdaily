@@ -123,9 +123,7 @@ onMounted(() => {
           </p>
         </div>
       </div>
-
-      </div>
-
+    </div>
     <!-- 2. Main Bento Grid (Asymmetric Layout) -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 items-start min-h-0">
       <!-- LEFT 2 COLUMNS: Core Practice Cards -->
