@@ -438,10 +438,10 @@ watch(locale, (newLocale) => {
             :key="chunk.id || chunk.chunkOrder"
             @click="jumpToSlice(chunk.chunkOrder)"
             :class="[
-              'w-full text-left px-3 py-2.5 rounded-xl text-xs transition-all flex items-center justify-between gap-2 group',
+              'w-full text-left px-3 py-2.5 rounded-xl text-xs transition-colors border-l-2 flex items-center justify-between gap-2 group',
               chunk.chunkOrder === focusStore.data?.pacer?.currentChunkOrder
-                ? 'bg-brand-500/10 border-l-2 border-brand-500 text-brand-400 font-bold shadow-sm'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.04]'
+                ? 'bg-brand-500/10 border-brand-500 text-brand-400 font-bold shadow-sm'
+                : 'border-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.04]'
             ]"
           >
             <div class="flex items-center gap-2 min-w-0">

@@ -318,10 +318,10 @@ onUnmounted(() => {
         <button
           @click="activeTab = 'session'"
           :class="[
-            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
+            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-colors border inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
             activeTab === 'session'
-              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <Layers class="w-4 h-4" />
@@ -338,10 +338,10 @@ onUnmounted(() => {
         <button
           @click="activeTab = 'management'"
           :class="[
-            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
+            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-colors border inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
             activeTab === 'management'
-              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <Library class="w-4 h-4" />

@@ -719,13 +719,13 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
    - The palette SHALL support keyboard navigation (`ArrowDown`, `ArrowUp`, `Enter` to navigate, `Escape` to dismiss) and touch tap on mobile devices.
    - When opened, the palette SHALL focus the search input automatically and prevent background page scrolling.
 
-4. **Modernized Application Shell & Navigation:**
-   - The topbar (`AppNavbar.vue` or header in `default.vue`) SHALL feature:
+4. **Modernized Application Shell & Navigation (Zero-Shift Transitions):**
+   - The topbar (`AppHeader.vue`) SHALL feature:
      - Prominent TechDaily monogram/logo with subtle glowing dot indicator.
      - Centered `⌘K Quick Jump` pill trigger button displaying localized placeholder and `⌘K` keyboard badge on desktop viewports.
      - Interactive streak pill displaying the user's active streak count with an amber glow flame icon.
-     - Locale switcher (EN / VI) and user profile ring.
-   - The navigation sidebar SHALL display sleek icon rail geometry, smooth collapsible state transitions, and a subtle neutral glass highlight (`bg-white/[0.06] text-white border-l-2 border-brand-500`) for the active route.
+     - Locale switcher (`LocaleSelector.vue`) with smooth `transition-colors` and user profile ring.
+   - The navigation sidebar (`AppSidebar.vue`) links SHALL maintain a constant 2px left border geometry across both active and inactive states (`border-l-2 border-transparent` when inactive; `border-l-2 border-brand-500` when active) and constrain animations to `transition-colors`, eliminating horizontal layout shifting and border collapse flicker when navigating between routes.
 
 #### Scenario: User opens application in dark mode with new design tokens
 - **WHEN** a user visits any page in dark mode
@@ -754,8 +754,6 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 - **WHEN** a user views the application on a mobile screen ($< 640\text{px}$)
 - **THEN** the topbar renders a compact search icon trigger button
 - **WHEN** tapped, it opens the full-screen or centered Command Palette.
-
----
 
 ### Requirement: Home Command Center Dashboard & Zero-Scroll Desktop Layout
 The root route `/` SHALL host the primary **Home Command Center Dashboard** (`frontend/pages/index.vue`), presenting an executive overview of daily momentum, active reading slice, scenario drill, retention metrics, 7-day consistency, and knowledge cosmos connectivity with clean visual decluttering:

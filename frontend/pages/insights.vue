@@ -243,10 +243,10 @@ function getCategoryBadge(cat: number) {
       <button
         @click="switchViewMode('explore')"
         :class="[
-          'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0',
+          'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors inline-flex items-center gap-2 whitespace-nowrap shrink-0 border',
           viewMode === 'explore'
-            ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 border border-slate-200/80 dark:border-white/[0.12] shadow-sm'
-            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 border-slate-200/80 dark:border-white/[0.12] shadow-sm'
+            : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
         ]"
       >
         <Sparkles class="w-4 h-4 text-brand-500" />
@@ -255,10 +255,10 @@ function getCategoryBadge(cat: number) {
       <button
         @click="switchViewMode('saved')"
         :class="[
-          'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0',
+          'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors inline-flex items-center gap-2 whitespace-nowrap shrink-0 border',
           viewMode === 'saved'
-            ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 border border-slate-200/80 dark:border-white/[0.12] shadow-sm'
-            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 border-slate-200/80 dark:border-white/[0.12] shadow-sm'
+            : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
         ]"
       >
         <BookmarkCheck class="w-4 h-4 text-brand-500" />

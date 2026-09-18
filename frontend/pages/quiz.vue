@@ -403,10 +403,10 @@ defineExpose({
           data-testid="generate-tab-btn"
           @click="quizStore.activeTab = 'generate'"
           :class="[
-            'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
+            'px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors border whitespace-nowrap shrink-0 flex items-center gap-1.5',
             quizStore.activeTab === 'generate'
-              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <Sparkles class="w-4 h-4" />
@@ -418,11 +418,11 @@ defineExpose({
           @click="quizStore.activeTab = 'arena'"
           :disabled="quizStore.questions.length === 0"
           :class="[
-            'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
+            'px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors border whitespace-nowrap shrink-0 flex items-center gap-1.5',
             quizStore.questions.length === 0 ? 'opacity-40 cursor-not-allowed' : '',
             quizStore.activeTab === 'arena'
-              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <Swords class="w-4 h-4" />
@@ -439,10 +439,10 @@ defineExpose({
           data-testid="review-tab-btn"
           @click="quizStore.activeTab = 'review'; quizStore.fetchReviewQueue()"
           :class="[
-            'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
+            'px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors border whitespace-nowrap shrink-0 flex items-center gap-1.5',
             quizStore.activeTab === 'review'
-              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <RotateCcw class="w-4 h-4" />
@@ -459,10 +459,10 @@ defineExpose({
           data-testid="stats-tab-btn"
           @click="quizStore.activeTab = 'stats'; quizStore.fetchStats()"
           :class="[
-            'px-3.5 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5',
+            'px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors border whitespace-nowrap shrink-0 flex items-center gap-1.5',
             quizStore.activeTab === 'stats'
-              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
+              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
           <BarChart3 class="w-4 h-4" />
