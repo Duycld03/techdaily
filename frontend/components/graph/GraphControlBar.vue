@@ -7,7 +7,9 @@ import {
   RotateCcw,
   SlidersHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Network,
+  Globe
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
 
@@ -105,6 +107,41 @@ const hasActiveFilters = computed(() => {
           @click="clearSearch"
         >
           <X class="w-3.5 h-3.5" />
+        </button>
+      </div>
+      <!-- 2D / 3D Engine Mode Switcher -->
+      <div class="inline-flex p-0.5 rounded-xl bg-slate-100/90 dark:bg-slate-800/90 border border-slate-200/60 dark:border-slate-700/60 shrink-0">
+        <button
+          type="button"
+          :class="[
+            'px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5',
+            store.viewMode === '2d'
+              ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+          ]"
+          :title="$t('graph.mode2d')"
+          :aria-label="$t('graph.mode2d')"
+          @click="store.setViewMode('2d')"
+        >
+          <Network class="w-3.5 h-3.5" />
+          <span class="hidden sm:inline">{{ $t('graph.mode2d') }}</span>
+          <span class="sm:hidden">2D</span>
+        </button>
+        <button
+          type="button"
+          :class="[
+            'px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5',
+            store.viewMode === '3d'
+              ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 shadow-sm'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+          ]"
+          :title="$t('graph.mode3d')"
+          :aria-label="$t('graph.mode3d')"
+          @click="store.setViewMode('3d')"
+        >
+          <Globe class="w-3.5 h-3.5" />
+          <span class="hidden sm:inline">{{ $t('graph.mode3d') }}</span>
+          <span class="sm:hidden">3D</span>
         </button>
       </div>
 

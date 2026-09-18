@@ -97,4 +97,21 @@ describe('GraphControlBar.vue', () => {
     expect(store.selectedCategory).toBe('all')
     expect(store.searchQuery).toBe('')
   })
+
+  it('switches between 2D and 3D viewMode when engine switcher buttons are clicked', async () => {
+    const store = createTestStore()
+    const wrapper = mount(GraphControlBar)
+
+    expect(store.viewMode).toBe('2d')
+
+    const btn3D = wrapper.findAll('button').find((b) => b.text().includes('3D'))
+    expect(btn3D).toBeDefined()
+    await btn3D!.trigger('click')
+    expect(store.viewMode).toBe('3d')
+
+    const btn2D = wrapper.findAll('button').find((b) => b.text().includes('2D'))
+    expect(btn2D).toBeDefined()
+    await btn2D!.trigger('click')
+    expect(store.viewMode).toBe('2d')
+  })
 })

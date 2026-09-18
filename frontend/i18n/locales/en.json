@@ -446,6 +446,11 @@
     "subtitle": "Interactive mental map of engineering concepts, reading highlights, and flashcard retention",
     "fitScreen": "Fit to Screen",
     "resetFilters": "Reset Filters",
+    "mode2d": "2D Map",
+    "mode3d": "3D Cosmos",
+    "autoRotate": "Auto Rotate",
+    "resetCamera": "Reset Camera",
+    "loading3d": "Loading 3D WebGL Engine...",
     "searchPlaceholder": "Search concepts, books, notes...",
     "filters": {
       "pillars": "Engineering Pillars",

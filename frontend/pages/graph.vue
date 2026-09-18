@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, defineAsyncComponent } from 'vue'
 import type { Core } from 'cytoscape'
 import {
   Network,
@@ -13,8 +13,11 @@ import GraphControlBar from '~/components/graph/GraphControlBar.vue'
 import GraphMinimap from '~/components/graph/GraphMinimap.vue'
 import GraphDetailDrawer from '~/components/graph/GraphDetailDrawer.vue'
 
+const GraphCanvas3D = defineAsyncComponent(() => import('~/components/graph/GraphCanvas3D.vue'))
+
 const store = useKnowledgeGraphStore()
 const canvasRef = ref<InstanceType<typeof GraphCanvas> | null>(null)
+const canvas3DRef = ref<{ fitScreen: () => void } | null>(null)
 const cyInstance = ref<Core | null>(null)
 
 function onCyReady(cy: Core) {
@@ -22,7 +25,11 @@ function onCyReady(cy: Core) {
 }
 
 function handleFitScreen() {
-  canvasRef.value?.fitScreen()
+  if (store.viewMode === '3d') {
+    canvas3DRef.value?.fitScreen()
+  } else {
+    canvasRef.value?.fitScreen()
+  }
 }
 
 onMounted(() => {
@@ -107,17 +114,32 @@ onMounted(() => {
 
     <!-- 2D Cytoscape Canvas -->
     <GraphCanvas
+      v-if="store.viewMode === '2d'"
       ref="canvasRef"
       class="w-full h-full"
       @cy-ready="onCyReady"
     />
 
-    <!-- Locator Minimap (Bottom Right) -->
+    <!-- 3D WebGL Galaxy Canvas (Lazy Loaded, ClientOnly) -->
+    <ClientOnly v-else>
+      <GraphCanvas3D
+        ref="canvas3DRef"
+        class="w-full h-full"
+      />
+      <template #fallback>
+        <div class="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-950 text-slate-400">
+          <Loader2 class="w-8 h-8 animate-spin text-brand-500" />
+          <span class="text-xs sm:text-sm font-medium">{{ $t('graph.loading3d') }}</span>
+        </div>
+      </template>
+    </ClientOnly>
+
+    <!-- Locator Minimap (Bottom Right, 2D Only) -->
     <GraphMinimap
+      v-if="store.viewMode === '2d'"
       :cy="cyInstance"
       class="absolute bottom-4 right-4 z-20 hidden sm:block"
     />
-
     <!-- Slide-Over / Bottom-Sheet Detail Drawer -->
     <GraphDetailDrawer />
   </div>

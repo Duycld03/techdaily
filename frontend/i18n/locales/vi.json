@@ -446,6 +446,11 @@
     "subtitle": "Bản đồ tư duy tương tác kết nối các khái niệm kỹ thuật, ghi chú nổi bật và độ ghi nhớ flashcard",
     "fitScreen": "Vừa Khung Hình",
     "resetFilters": "Đặt Lại Bộ Lọc",
+    "mode2d": "2D Sơ Đồ",
+    "mode3d": "3D Vũ Trụ",
+    "autoRotate": "Tự Động Xoay",
+    "resetCamera": "Đặt Lại Góc Nhìn",
+    "loading3d": "Đang Tải Đồ Họa 3D WebGL...",
     "searchPlaceholder": "Tìm kiếm khái niệm, sách, ghi chú...",
     "filters": {
       "pillars": "Trụ Cột Kỹ Thuật",

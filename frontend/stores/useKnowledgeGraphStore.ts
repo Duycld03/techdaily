@@ -51,7 +51,11 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
   const isLoading = ref<boolean>(false)
   const error = ref<string | null>(null)
   const selectedNodeId = ref<string | null>(null)
-
+  const VIEW_MODE_KEY = 'techdaily_graph_view_mode'
+  const initialViewMode = typeof window !== 'undefined'
+    ? ((localStorage.getItem(VIEW_MODE_KEY) as '2d' | '3d') || '2d')
+    : '2d'
+  const viewMode = ref<'2d' | '3d'>(initialViewMode === '3d' ? '3d' : '2d')
   const searchQuery = ref<string>('')
   const selectedCategory = ref<string>('all')
   const selectedNodeType = ref<string>('all')
@@ -203,6 +207,16 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
   function setSearchQuery(query: string) {
     searchQuery.value = query
   }
+  function setViewMode(mode: '2d' | '3d') {
+    viewMode.value = mode
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(VIEW_MODE_KEY, mode)
+      } catch {
+        // ignore localStorage errors
+      }
+    }
+  }
 
   function resetFilters() {
     selectedCategory.value = 'all'
@@ -221,6 +235,7 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     selectedCategory,
     selectedNodeType,
     selectedMastery,
+    viewMode,
     filteredNodes,
     filteredEdges,
     selectedNode,
@@ -234,6 +249,7 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     setNodeType,
     setMastery,
     setSearchQuery,
+    setViewMode,
     resetFilters
   }
 })
