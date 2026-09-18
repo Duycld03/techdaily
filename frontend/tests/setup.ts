@@ -1,8 +1,8 @@
+import { ref } from 'vue'
 import { vi } from 'vitest'
 import { config } from '@vue/test-utils'
 import { useApiError } from '~/composables/useApiError'
 import { useToast } from '~/composables/useToast'
-
 config.global.mocks = {
   ...config.global.mocks,
   $t: (key: string, params?: Record<string, unknown>) => {
@@ -71,7 +71,6 @@ const mockCookies = new Map<string, any>()
 const mockStates = new Map<string, unknown>()
 Reflect.set(globalThis, 'useState', (key: string, init?: () => unknown) => {
   if (!mockStates.has(key)) {
-    const { ref } = require('vue')
     mockStates.set(key, ref(init ? init() : undefined))
   }
   return mockStates.get(key)
