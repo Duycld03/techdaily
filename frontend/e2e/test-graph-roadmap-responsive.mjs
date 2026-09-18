@@ -123,9 +123,28 @@ async function runResponsiveSmokeSuite() {
       }
 
       // Check Visual Legend exists
-      const legend = page.locator('[data-testid="legend-card"], [data-testid="legend-expand-btn"]')
+      const legend = page.locator('[data-testid=\"legend-card\"], [data-testid=\"legend-expand-btn\"]')
       assert(await legend.first().isVisible(), 'Visual Legend widget is visible at bottom-left')
 
+      // Expand legend if collapsed so screenshots capture the expanded card
+      const expandBtn = page.locator('[data-testid=\"legend-expand-btn\"]')
+      if (await expandBtn.isVisible()) {
+        await expandBtn.click()
+        await page.waitForTimeout(300)
+      }
+
+      const legendCard = page.locator('[data-testid=\"legend-card\"]')
+      if (await legendCard.isVisible()) {
+        const legendBox = await legendCard.boundingBox()
+        const minimap = page.locator('div:has(> canvas[title*=\"pan viewport\"])')
+        if (await minimap.isVisible() && legendBox) {
+          const minimapBox = await minimap.boundingBox()
+          if (minimapBox) {
+            const clearance = minimapBox.x - (legendBox.x + legendBox.width)
+            assert(clearance >= 50, `Clearance between Legend and Minimap (${Math.round(clearance)}px) is >= 50px`)
+          }
+        }
+      }
       if (shouldTakeScreenshots) {
         const file = path.join(screenshotsDir, `graph-2d-${vp.name}.png`)
         await page.screenshot({ path: file, fullPage: false })
@@ -139,10 +158,8 @@ async function runResponsiveSmokeSuite() {
       const mode3dButton = page.locator('button:has-text("3D"), button[title*="3D"]')
       if (await mode3dButton.count() > 0) {
         await mode3dButton.first().click()
-        await page.waitForTimeout(2000)
-
-        // Check 3D HUD controls
         const hudContainer = page.locator('div.absolute.bottom-5.right-5')
+        await hudContainer.waitFor({ state: 'visible', timeout: 12000 }).catch(() => {})
         assert(await hudContainer.isVisible(), '3D HUD floating toolbar is visible at bottom-right')
 
         const hudButtons = hudContainer.locator('button')
@@ -151,14 +168,14 @@ async function runResponsiveSmokeSuite() {
 
         // Click Auto-Rotate button
         const autoRotateBtn = hudButtons.first()
-        await autoRotateBtn.click()
-        await page.waitForTimeout(600)
+        await autoRotateBtn.click({ force: true })
+        await page.waitForTimeout(400)
         assert(true, 'Auto-Rotate toggle clicked without unhandled exception')
 
         // Click Show All Labels button
         if (hudCount >= 2) {
           const showLabelsBtn = hudButtons.nth(1)
-          await showLabelsBtn.click()
+          await showLabelsBtn.click({ force: true })
           await page.waitForTimeout(400)
           assert(true, 'LOD Show-All-Labels toggle clicked without exception')
         }

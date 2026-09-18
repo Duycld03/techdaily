@@ -19,7 +19,7 @@ function getInitialCollapsedState(): boolean {
     if (saved !== null) {
       return saved === 'true'
     }
-    return window.innerWidth < 640
+    return window.innerWidth < 1024
   } catch {
     return false
   }
@@ -111,7 +111,7 @@ const masteryItems = [
     <div
       v-else
       data-testid="legend-card"
-      class="w-56 sm:w-60 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-xl p-3 space-y-2.5 text-xs text-slate-700 dark:text-slate-300"
+      class="w-56 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 shadow-xl p-3 space-y-2.5 text-xs text-slate-700 dark:text-slate-300"
     >
       <!-- Header with title & collapse button -->
       <div class="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800/60">
@@ -135,13 +135,13 @@ const masteryItems = [
         <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
           {{ $t('graph.legend.entities') }}
         </div>
-        <div class="grid grid-cols-2 gap-1">
+        <div class="flex flex-col gap-1">
           <div
             v-for="item in entityItems"
             :key="item.type"
             :data-testid="`legend-item-${item.type}`"
             :class="[
-              'flex items-center gap-2 px-2 py-1 rounded-lg cursor-pointer transition-all',
+              'flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all',
               store.hoveredLegendType === item.type
                 ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-bold'
                 : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
@@ -150,24 +150,23 @@ const masteryItems = [
             @mouseleave="onHover(null)"
           >
             <div :class="[item.color, item.shape, 'shrink-0']" />
-            <span class="truncate text-[11px]">{{ $t(item.labelKey) }}</span>
+            <span class="text-xs font-medium">{{ $t(item.labelKey) }}</span>
           </div>
         </div>
       </div>
-
       <!-- Flashcard Mastery Status Key -->
       <div class="space-y-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/60">
         <div class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
           <Sparkles class="w-3 h-3 text-amber-500" />
           <span>{{ $t('graph.legend.sm2Status') }}</span>
         </div>
-        <div class="flex items-center justify-between gap-1 px-1">
+        <div class="flex flex-col gap-1">
           <div
             v-for="item in masteryItems"
             :key="item.type"
             :data-testid="`legend-item-${item.type}`"
             :class="[
-              'flex items-center gap-1.5 px-1.5 py-1 rounded-lg cursor-pointer transition-all',
+              'flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all',
               store.hoveredLegendType === item.type
                 ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-bold'
                 : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
@@ -176,7 +175,7 @@ const masteryItems = [
             @mouseleave="onHover(null)"
           >
             <div :class="[item.color, item.shape, 'shrink-0']" />
-            <span class="text-[10px] whitespace-nowrap">{{ $t(item.labelKey) }}</span>
+            <span class="text-xs font-medium">{{ $t(item.labelKey) }}</span>
           </div>
         </div>
       </div>
