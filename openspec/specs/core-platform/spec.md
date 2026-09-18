@@ -767,7 +767,7 @@ The root route `/` SHALL host the primary **Home Command Center Dashboard** (`fr
    - **Knowledge Graph Radar:** Displays connected concept counts and active relation counts with a direct link to the 3D Cosmos (`/graph`).
 
 2. **Zero-Scroll Single-Screen Desktop Layout Invariant:**
-   - On desktop screens ($\ge 1024\text{px}$), the dashboard container SHALL fit entirely within the viewport (`h-[calc(100vh-3.5rem)]`) using `overflow-hidden` so that all 5 cards are visible above the fold with zero required scrolling.
+   - On desktop screens ($\ge 1024\text{px}$), the dashboard container and column flexboxes SHALL be top-aligned (`justify-start`) with consistent, snug vertical gaps (`gap-3.5 sm:gap-4`), preventing cards from scattering or dispersing to the vertical extremes on tall displays while fitting entirely within the viewport (`h-[calc(100vh-3.5rem)]`) with zero required scrolling.
    - On mobile ($< 640\text{px}$) and tablet ($640\text{px} - 1023\text{px}$) viewports, the layout SHALL transition to a natural vertically scrollable stack.
 
 3. **Global Navigation Alignment:**

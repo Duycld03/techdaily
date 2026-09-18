@@ -101,7 +101,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-4 lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden flex flex-col justify-between space-y-3 sm:space-y-4">
+  <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-4 lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden flex flex-col justify-start gap-3.5 sm:gap-4">
     <!-- 1. Welcome & Orientation Banner (Image #1 Inspired) -->
     <div class="glass-card px-4 py-3 sm:px-5 sm:py-3.5 relative overflow-hidden bg-gradient-to-r from-brand-950/20 via-canvas-subtle to-canvas-subtle border border-white/[0.08] shrink-0">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 relative z-10">
@@ -129,11 +129,11 @@ onMounted(() => {
     </div>
 
     <!-- 2. Main Bento Grid (Asymmetric Layout) -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 flex-1 min-h-0 lg:overflow-hidden">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 items-start min-h-0">
       <!-- LEFT 2 COLUMNS: Core Practice Cards -->
-      <div class="lg:col-span-2 flex flex-col justify-between gap-3.5 sm:gap-4 min-h-0">
+      <div class="lg:col-span-2 flex flex-col justify-start gap-3.5 sm:gap-4 min-h-0">
         <!-- Card A: Today's Focus Bento Hero (Image #1 Course Progress Style) -->
-        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-brand-500/30 transition-all flex-1 min-h-0">
+        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-brand-500/30 transition-all min-h-0">
           <div>
             <div class="flex items-center justify-between gap-3 mb-3">
               <div class="flex items-center gap-2">
@@ -199,7 +199,7 @@ onMounted(() => {
         </div>
 
         <!-- Card B: Senior Scenario Challenge Card (Image #2 Inspired) -->
-        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-indigo-500/30 transition-all flex-1 min-h-0">
+        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-indigo-500/30 transition-all min-h-0">
           <div>
             <div class="flex items-center justify-between gap-3 mb-3">
               <div class="flex items-center gap-2">
@@ -244,7 +244,7 @@ onMounted(() => {
       </div>
 
       <!-- RIGHT 1 COLUMN: Retention, Consistency & Graph Telemetry -->
-      <div class="flex flex-col justify-between gap-3.5 sm:gap-4 min-h-0">
+      <div class="flex flex-col justify-start gap-3.5 sm:gap-4 min-h-0">
         <!-- Card C: Concentric Rings Metric Card (Image #3 Inspired) -->
         <ConcentricMetricCard
           :actual-minutes="actualMinutes"
