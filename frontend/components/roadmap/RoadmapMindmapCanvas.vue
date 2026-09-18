@@ -392,7 +392,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
   >
     <!-- Search Bar in Top Left -->
     <div
-      class="absolute top-3 sm:top-4 left-3 sm:left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-md max-w-[180px] sm:max-w-[240px] md:max-w-xs transition-all"
+      class="absolute top-3 sm:top-4 left-3 sm:left-4 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-md max-w-[180px] sm:max-w-[240px] md:max-w-xs transition-all"
       @mousedown.stop
       @touchstart.stop
       @wheel.stop
@@ -418,7 +418,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
 
     <!-- Floating Toolbar -->
     <div
-      class="absolute top-3 sm:top-4 right-3 sm:right-4 z-20 flex items-center gap-1 sm:gap-1.5 p-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-md"
+      class="absolute top-3 sm:top-4 right-3 sm:right-4 z-10 flex items-center gap-1 sm:gap-1.5 p-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-md"
       @mousedown.stop
       @touchstart.stop
       @wheel.stop

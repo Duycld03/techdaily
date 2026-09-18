@@ -314,6 +314,10 @@ describe('pages/roadmap.vue', () => {
     // Open track switcher dropdown
     await wrapper.find('[data-testid="track-switcher-btn"]').trigger('click')
 
+    // Banner card should elevate to z-40 when track menu is open
+    expect(bannerCard.classes()).toContain('z-40')
+    expect(bannerCard.classes()).not.toContain('z-20')
+
     const popover = wrapper.find('[data-testid="track-menu-popover"]')
     expect(popover.exists()).toBe(true)
     expect(popover.classes()).toContain('z-50')
