@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   ZoomIn,
@@ -223,11 +223,16 @@ function handleWheel(e: WheelEvent) {
 // Canvas drag-to-pan controls
 function startPan(e: MouseEvent) {
   const target = e.target as HTMLElement | null
-  if (target?.closest('.interactive-node')) return
+  if (target?.closest('.interactive-node') || target?.closest('button') || target?.closest('input')) return
+  e.preventDefault()
   isPanning.value = true
   dragStart.value = {
     x: e.clientX - pan.value.x,
     y: e.clientY - pan.value.y
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', endPan)
   }
 }
 
@@ -241,17 +246,26 @@ function onMouseMove(e: MouseEvent) {
 
 function endPan() {
   isPanning.value = false
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', endPan)
+  }
 }
 
 // Touch gesture pan support
 function onTouchStart(e: TouchEvent) {
   if (e.touches.length === 1) {
     const target = e.target as HTMLElement | null
-    if (target?.closest('.interactive-node')) return
+    if (target?.closest('.interactive-node') || target?.closest('button') || target?.closest('input')) return
     isPanning.value = true
     dragStart.value = {
       x: e.touches[0].clientX - pan.value.x,
       y: e.touches[0].clientY - pan.value.y
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('touchmove', onTouchMove, { passive: false })
+      window.addEventListener('touchend', onTouchEnd)
+      window.addEventListener('touchcancel', onTouchEnd)
     }
   }
 }
@@ -266,8 +280,22 @@ function onTouchMove(e: TouchEvent) {
 
 function onTouchEnd() {
   isPanning.value = false
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('touchmove', onTouchMove)
+    window.removeEventListener('touchend', onTouchEnd)
+    window.removeEventListener('touchcancel', onTouchEnd)
+  }
 }
 
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', endPan)
+    window.removeEventListener('touchmove', onTouchMove)
+    window.removeEventListener('touchend', onTouchEnd)
+    window.removeEventListener('touchcancel', onTouchEnd)
+  }
+})
 // Fit to screen calculation
 function focusActiveNode() {
   const clientWidth = containerRef.value?.clientWidth || 1000
@@ -473,7 +501,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
             :d="edge.path"
             fill="none"
             :class="[
-              'transition-all duration-300',
+              isPanning ? 'transition-none' : 'transition-all duration-300',
               isNodeDimmed(edge.toId) ? 'opacity-20' : 'opacity-100',
               edge.status === 'active_today'
                 ? 'stroke-amber-400 dark:stroke-amber-500 stroke-2'

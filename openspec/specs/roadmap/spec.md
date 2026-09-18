@@ -51,6 +51,8 @@ The system SHALL provide an interactive, client-side hierarchical tree mindmap v
 
 For documents with large chapter counts (greater than 12 chapters), the mindmap SHALL employ scalable layout heuristics including windowed root node anchoring, smart single-chapter auto-accordion expansion, and default viewport centering focused directly on the user's active chapter and today's slice at 100% scale (`scale = 1.0`). The canvas SHALL provide an in-toolbar search input that dynamically highlights matching nodes and auto-expands relevant branches without triggering full-document layout blowout.
 
+Canvas panning and dragging interactions SHALL capture mouse and touch events globally on `window` upon pointerdown to prevent sticky dragging cursor states when moving outside the container boundary, suppress native drag-selection hitches via `preventDefault()`, and disable visual CSS transitions during active drag for zero-latency 1:1 pointer tracking.
+
 #### Scenario: Mindmap tree rendering from active track
 - **GIVEN** an active book pacer or curriculum track is loaded
 - **WHEN** user activates the `mindmap` view
@@ -95,6 +97,14 @@ For documents with large chapter counts (greater than 12 chapters), the mindmap 
 - **WHEN** the user clears the search input
 - **THEN** all nodes return to standard opacity and the previous expansion state is restored.
 
+#### Scenario: Smooth window-level pan capture and cursor release guarantee
+- **GIVEN** the user initiates a drag-to-pan gesture on the canvas background
+- **WHEN** the mouse button is pressed down (`mousedown`)
+- **THEN** native browser drag-selection is prevented, the cursor transitions to `cursor-grabbing`, and pointer tracking listeners are attached to `window`
+- **WHEN** the user drags the mouse outside the canvas boundary and releases the mouse button anywhere on the screen
+- **THEN** the `mouseup` event on `window` successfully fires, `isPanning` resets to `false`, and the cursor immediately returns to `cursor-grab` without requiring any subsequent corrective click
+- **AND** during the active drag, SVG edges and transform layers disable CSS transitions for jitter-free 1:1 movement.
+
 #### Scenario: 1-click bridge action from slice leaf node
 - **GIVEN** a slice leaf node is rendered on the mindmap
 - **WHEN** user clicks an active-today slice leaf node
@@ -121,6 +131,8 @@ For documents with large chapter counts (greater than 12 chapters), the mindmap 
 ### Requirement: Active Track Synchronization & Switcher
 The `/roadmap` page SHALL present a single, cohesive timeline view directly synchronized with the user's active learning track on `/today` (Active Book Pacer or 30-Day Senior Curriculum). The page SHALL provide a unified header containing an integrated Track Switcher dropdown that displays the active track, allows switching between in-progress library books, viewing the 30-day curriculum, and linking directly to `/library`. The page SHALL render chapter milestones and slices with search filtering and provide direct 1-click action bridges to `/today` and `/read/[bookId]`.
 
+The Track Switcher dropdown popover SHALL render fully without box-model clipping or truncation by parent containers, cleanly floating above subsequent page controls and ensuring 100% visibility of all in-progress books, curriculum options, and library action links.
+
 #### Scenario: Active book pacer on /today reflected on /roadmap
 - **GIVEN** an authenticated user has an active document book pacer configured on `/today`
 - **WHEN** user navigates to `/roadmap`
@@ -131,6 +143,12 @@ The `/roadmap` page SHALL present a single, cohesive timeline view directly sync
 - **THEN** the application displays a popover menu listing the active track with an `Active` badge, other in-progress library books with progress bars, the 30-Day Senior Curriculum track option, and a link to browse `/library`
 - **WHEN** user selects an alternative document book from the dropdown
 - **THEN** the roadmap view immediately transitions to display the selected book's chapter milestones and slices, and synchronizes the active book pacer on `/today`.
+
+#### Scenario: Unclipped dropdown popover rendering
+- **GIVEN** an authenticated user is on `/roadmap` with an active learning track
+- **WHEN** the user clicks the Track Switcher dropdown button to open the track popover menu
+- **THEN** the dropdown popover menu SHALL NOT be clipped by the header banner's boundary or overflow constraints
+- **AND** all in-progress book tracks, the 30-Day Curriculum option, and the "+ Browse Library" action link SHALL be fully visible and interactable above subsequent page sections.
 
 #### Scenario: 30-day curriculum fallback
 - **WHEN** a user with no active book pacer visits `/roadmap` or selects the 30-Day Senior Curriculum track from the dropdown

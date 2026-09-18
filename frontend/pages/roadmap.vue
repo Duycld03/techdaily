@@ -521,9 +521,12 @@ function getDifficultyColor(diff: number) {
     <!-- UNIFIED HEADER BANNER WITH SYNCHRONIZED TRACK SWITCHER                     -->
     <!-- ========================================================================= -->
     <div
-      class="p-4 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-brand-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-brand-950 border border-slate-200/90 dark:border-slate-800 text-slate-900 dark:text-white shadow-md dark:shadow-xl relative overflow-hidden transition-all duration-300"
+      class="p-4 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-50/80 via-white to-brand-50/50 dark:from-slate-900 dark:via-slate-900 dark:to-brand-950 border border-slate-200/90 dark:border-slate-800 text-slate-900 dark:text-white shadow-md dark:shadow-xl relative overflow-visible z-20 transition-all duration-300"
     >
-      <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <!-- Isolated decorative background with overflow containment -->
+      <div class="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl"></div>
+      </div>
 
       <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 sm:gap-6">
         <div class="space-y-3 max-w-2xl">
@@ -537,7 +540,7 @@ function getDifficultyColor(diff: number) {
             </div>
 
             <!-- Track Switcher Dropdown Menu -->
-            <div ref="trackMenuRef" class="relative">
+            <div ref="trackMenuRef" class="relative z-30">
               <button
                 type="button"
                 data-testid="track-switcher-btn"
@@ -563,7 +566,7 @@ function getDifficultyColor(diff: number) {
               <div
                 v-if="isTrackMenuOpen"
                 data-testid="track-menu-popover"
-                class="absolute left-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1"
+                class="absolute left-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-14rem)] overflow-y-auto rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1"
               >
                 <!-- In-Progress Document Tracks -->
                 <div

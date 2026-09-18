@@ -374,4 +374,60 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
     expect((searchInput.element as HTMLInputElement).value).toBe('')
     vi.useRealTimers()
   })
+
+  it('captures mouse pan events on window and releases panning when mouseup is fired on window', async () => {
+    const wrapper = mount(RoadmapMindmapCanvas, {
+      props: {
+        selectedBook: mockBook,
+        chapterMilestones: mockMilestones,
+        isCurriculumSelected: false,
+        activeBookId: 'book-123',
+        currentChunkOrder: 2
+      }
+    })
+
+    const container = wrapper.find('.relative.w-full')
+    expect(container.classes()).toContain('cursor-grab')
+
+    // mousedown initiates pan
+    await container.trigger('mousedown', { clientX: 100, clientY: 100 })
+    expect(container.classes()).toContain('cursor-grabbing')
+
+    // mousemove on window updates pan position
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 150, clientY: 160 }))
+    await wrapper.vm.$nextTick()
+
+    // mouseup on window outside container terminates pan
+    window.dispatchEvent(new MouseEvent('mouseup'))
+    await wrapper.vm.$nextTick()
+
+    expect(container.classes()).toContain('cursor-grab')
+    expect(container.classes()).not.toContain('cursor-grabbing')
+  })
+
+  it('suppresses transitions on SVG bezier edges while panning', async () => {
+    const wrapper = mount(RoadmapMindmapCanvas, {
+      props: {
+        selectedBook: mockBook,
+        chapterMilestones: mockMilestones,
+        isCurriculumSelected: false,
+        activeBookId: 'book-123',
+        currentChunkOrder: 2
+      }
+    })
+
+    const container = wrapper.find('.relative.w-full')
+    const edgePath = wrapper.find('.edges-layer path')
+    expect(edgePath.classes()).toContain('transition-all')
+    expect(edgePath.classes()).not.toContain('transition-none')
+
+    // mousedown initiates pan -> transition-none should be applied
+    await container.trigger('mousedown', { clientX: 100, clientY: 100 })
+    expect(edgePath.classes()).toContain('transition-none')
+
+    // mouseup terminates pan -> transition-all restored
+    window.dispatchEvent(new MouseEvent('mouseup'))
+    await wrapper.vm.$nextTick()
+    expect(edgePath.classes()).toContain('transition-all')
+  })
 })

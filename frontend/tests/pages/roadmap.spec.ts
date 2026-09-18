@@ -291,6 +291,41 @@ describe('pages/roadmap.vue', () => {
     expect(wrapper.text()).toContain('Frontend & Web Core')
   })
 
+  it('renders unclipped track switcher popover with overflow-visible banner container and elevated z-index', async () => {
+    setupMockStores()
+
+    const wrapper = mount(RoadmapPage, {
+      global: {
+        stubs: {
+          RoadmapMindmapCanvas: RoadmapMindmapCanvasStub,
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+    await flushPromises()
+
+    // Banner card container should have overflow-visible and z-20
+    const bannerCard = wrapper.find('.rounded-3xl.bg-gradient-to-br')
+    expect(bannerCard.exists()).toBe(true)
+    expect(bannerCard.classes()).toContain('overflow-visible')
+    expect(bannerCard.classes()).toContain('z-20')
+    expect(bannerCard.classes()).not.toContain('overflow-hidden')
+
+    // Open track switcher dropdown
+    await wrapper.find('[data-testid="track-switcher-btn"]').trigger('click')
+
+    const popover = wrapper.find('[data-testid="track-menu-popover"]')
+    expect(popover.exists()).toBe(true)
+    expect(popover.classes()).toContain('z-50')
+    expect(popover.classes()).toContain('overflow-y-auto')
+
+    // All elements must be rendered inside the popover
+    expect(wrapper.find('[data-testid="track-book-option-book-1"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="track-book-option-book-2"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="track-curriculum-option"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="track-browse-library-link"]').exists()).toBe(true)
+  })
+
   it('renders RoadmapViewSwitcher and toggles between timeline and mindmap views', async () => {
     setupMockStores()
 
