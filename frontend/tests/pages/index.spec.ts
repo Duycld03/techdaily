@@ -17,7 +17,7 @@ describe('pages/index.vue', () => {
     mount(IndexPage, {
       global: {
         stubs: {
-          TodayBentoDashboard: {
+          HomeBentoDashboard: {
             template: '<div class="bento-dashboard-stub">Dashboard Loaded</div>'
           }
         },
@@ -30,7 +30,7 @@ describe('pages/index.vue', () => {
     expect(fetchSpy).toHaveBeenCalled()
   })
 
-  it('renders TodayBentoDashboard component when data exists', async () => {
+  it('renders HomeBentoDashboard component when data exists', async () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
       topic: {
@@ -45,7 +45,7 @@ describe('pages/index.vue', () => {
     const wrapper = mount(IndexPage, {
       global: {
         stubs: {
-          TodayBentoDashboard: {
+          HomeBentoDashboard: {
             template: '<div class="bento-dashboard-stub">Dashboard Content</div>'
           }
         },
@@ -68,7 +68,7 @@ describe('pages/index.vue', () => {
     const wrapper = mount(IndexPage, {
       global: {
         stubs: {
-          TodayBentoDashboard: true
+          HomeBentoDashboard: true
         },
         mocks: {
           $t: (key: string) => key

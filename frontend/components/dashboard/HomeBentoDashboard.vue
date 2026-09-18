@@ -6,12 +6,15 @@ import {
   ArrowRight,
   Flame,
   Shield,
-  Network,
-  Clock,
-  Compass
+  Clock
 } from 'lucide-vue-next'
 import ConcentricMetricCard from '~/components/today/ConcentricMetricCard.vue'
-import CyberRadarWidget from '~/components/today/CyberRadarWidget.vue'
+import DomainConstellationCard from '~/components/dashboard/DomainConstellationCard.vue'
+import { useAuthStore } from '~/stores/useAuthStore'
+import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
+import { useReviewStore } from '~/stores/useReviewStore'
+import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
+
 const emit = defineEmits<{
   (e: 'startReading'): void
   (e: 'startScenario'): void
@@ -33,7 +36,7 @@ const reviewStore = useReviewStore()
 const graphStore = useKnowledgeGraphStore()
 
 const userName = computed(() => authStore.user?.name?.split(' ')[0] || 'Engineer')
-const targetRole = computed(() => authStore.user?.targetRole || 'Senior Software Engineer')
+const targetRole = computed(() => (authStore.user as any)?.targetRole || 'Senior Software Engineer')
 
 const topic = computed(() => focusStore.data?.topic)
 const pacer = computed(() => focusStore.data?.pacer)
@@ -55,15 +58,15 @@ const actualMinutes = computed(() => {
 })
 
 const dailyGoalMinutes = computed(() => {
-  return authStore.user?.dailyGoalMinutes || 10
+  return (authStore.user as any)?.dailyGoalMinutes || 10
 })
 
 // Spaced Repetition stats from reviewStore
 const reviewStats = computed(() => {
-  const forecast = reviewStore.forecast
-  const total = forecast?.totalCards ?? 0
-  const mastered = forecast?.cardsByMastery?.Mastered ?? 0
-  const due = reviewStore.dueCardsCount || (forecast?.totalDueToday ?? 0)
+  const stats = reviewStore.deckStatistics
+  const total = stats?.totalCards ?? 0
+  const mastered = stats?.masteredCount ?? 0
+  const due = reviewStore.totalCardsDue || 0
   return {
     total,
     mastered,
@@ -90,11 +93,11 @@ const weekDays = computed(() => {
 })
 
 onMounted(() => {
-  // Lazily load review forecast & graph stats if not already in store cache
-  if (!reviewStore.forecast) {
-    reviewStore.fetchForecast().catch(() => {})
+  // Defensively load review deck statistics & graph data without crashing if methods are uninitialized
+  if (!reviewStore.deckStatistics?.totalCards && typeof reviewStore.fetchDeckCards === 'function') {
+    reviewStore.fetchDeckCards({ pageSize: 1 }).catch(() => {})
   }
-  if (!graphStore.graphData) {
+  if (!graphStore.rawData && typeof graphStore.fetchGraph === 'function') {
     graphStore.fetchGraph().catch(() => {})
   }
 })
@@ -124,11 +127,12 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
     <!-- 2. Main Bento Grid (Asymmetric Layout) -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 items-start min-h-0">
       <!-- LEFT 2 COLUMNS: Core Practice Cards -->
       <div class="lg:col-span-2 flex flex-col justify-start gap-3.5 sm:gap-4 min-h-0">
-        <!-- Card A: Today's Focus Bento Hero (Image #1 Course Progress Style) -->
+        <!-- Card A: Today's Focus Bento Hero (Course Progress Style) -->
         <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-white/[0.15] transition-all min-h-0">
           <div>
             <div class="flex items-center justify-between gap-3 mb-3">
@@ -194,7 +198,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Card B: Senior Scenario Challenge Card (Image #2 Inspired) -->
+        <!-- Card B: Senior Scenario Challenge Card -->
         <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-white/[0.12] transition-all min-h-0">
           <div>
             <div class="flex items-center justify-between gap-3 mb-3">
@@ -239,9 +243,9 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- RIGHT 1 COLUMN: Retention, Consistency & Graph Telemetry -->
+      <!-- RIGHT 1 COLUMN: Retention, Consistency & Domain Constellation -->
       <div class="flex flex-col justify-start gap-3.5 sm:gap-4 min-h-0">
-        <!-- Card C: Concentric Rings Metric Card (Image #3 Inspired) -->
+        <!-- Card C: Concentric Rings Metric Card (Daily Goal Pace & SM-2 Retention) -->
         <ConcentricMetricCard
           :actual-minutes="actualMinutes"
           :goal-minutes="dailyGoalMinutes"
@@ -250,7 +254,7 @@ onMounted(() => {
           :due-cards="reviewStats.due"
         />
 
-        <!-- Card D: 7-Day Consistency Matrix (Image #1 Inspired) -->
+        <!-- Card D: 7-Day Consistency Matrix -->
         <div class="glass-card p-3 sm:p-3.5 flex flex-col justify-between group hover:border-white/[0.12] transition-all shrink-0">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
@@ -295,32 +299,11 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Card E: Knowledge Graph Radar Card (Image #5 Inspired) -->
-        <div class="glass-card p-3 sm:p-3.5 flex flex-col justify-between group hover:border-white/[0.12] transition-all shrink-0">
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-              <div class="w-7 h-7 rounded-lg bg-cyber-500/10 text-cyber-500 flex items-center justify-center shrink-0">
-                <Network class="w-4 h-4" />
-              </div>
-              <span class="text-xs font-bold text-slate-800 dark:text-slate-200">
-                {{ $t('dashboard.knowledge_radar') }}
-              </span>
-            </div>
-
-            <NuxtLink
-              to="/graph"
-              class="text-xs font-semibold text-cyber-500 hover:text-cyber-400 flex items-center gap-1 transition-colors"
-            >
-              <span>{{ $t('dashboard.open_cosmos') }}</span>
-              <Compass class="w-3.5 h-3.5" />
-            </NuxtLink>
-          </div>
-
-          <CyberRadarWidget
-            :node-count="graphStore.graphData?.nodes?.length || 148"
-            :edge-count="graphStore.graphData?.edges?.length || 210"
-          />
-        </div>
+        <!-- Card E: Domain Knowledge Constellation (Modernized from CyberRadar) -->
+        <DomainConstellationCard
+          :node-count="graphStore.rawData?.nodes?.length || 148"
+          :edge-count="graphStore.rawData?.edges?.length || 210"
+        />
       </div>
     </div>
   </div>

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
-import TodayBentoDashboard from '~/components/today/TodayBentoDashboard.vue'
+import HomeBentoDashboard from '~/components/dashboard/HomeBentoDashboard.vue'
 const focusStore = useDailyFocusStore()
 const { locale } = useI18n()
 
 onMounted(async () => {
   if (!focusStore.data) {
-    await focusStore.fetchTodayFocus(undefined, undefined, locale.value)
+    await focusStore.fetchTodayFocus({ locale: locale.value })
   }
 })
 </script>
@@ -31,7 +31,7 @@ onMounted(async () => {
 
     <!-- Main Bento Dashboard -->
     <div v-else class="flex-1 overflow-y-auto lg:overflow-hidden">
-      <TodayBentoDashboard />
+      <HomeBentoDashboard />
     </div>
   </div>
 </template>
