@@ -620,7 +620,7 @@ async function handleHighlightAndNote() {
 
 <template>
   <div
-    class="h-screen flex flex-col overflow-hidden bg-white dark:bg-slate-950 transition-colors duration-200"
+    class="h-dvh flex flex-col overflow-hidden bg-white dark:bg-slate-950 transition-colors duration-200"
   >
     <!-- Top Sticky Reader Navigation Bar -->
     <header

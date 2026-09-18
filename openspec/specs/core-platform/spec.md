@@ -727,6 +727,27 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
      - Locale switcher (`LocaleSelector.vue`) with smooth `transition-colors` and user profile ring.
    - The navigation sidebar (`AppSidebar.vue`) links SHALL maintain a constant 2px left border geometry across both active and inactive states (`border-l-2 border-transparent` when inactive; `border-l-2 border-brand-500` when active) and constrain animations to `transition-colors`, eliminating horizontal layout shifting and border collapse flicker when navigating between routes.
 
+5. **Viewport Scrollbar Track Stability**:
+   - The root `html` container SHALL declare `scrollbar-gutter: stable`, reserving space for the vertical scrollbar track at all times.
+   - When dialogs, drawers, or command palettes lock body scrolling via `overflow: hidden`, the underlying page content SHALL remain anchored in place without horizontal layout shifting (CLS) or jumping.
+
+6. **Keyboard Accessibility & Focus Ring Standards (WCAG 2.1 AA)**:
+   - Interactive elements (`button`, `a`, `input`, `textarea`, `select`, `[tabindex]`) SHALL provide prominent, high-contrast visual focus rings when navigated via keyboard (`:focus-visible`).
+   - The keyboard focus ring SHALL utilize Electric Violet (`outline: 2px solid #8b5cf6; outline-offset: 2px;`) across both light and dark themes.
+   - Pointer or touch click interactions SHALL NOT produce persistent sticky focus outlines, enforced via `:focus:not(:focus-visible) { outline: none; }`.
+
+7. **Mobile Dynamic Viewport Height Standards**:
+   - Full-height reading views, studio workspaces, and viewports SHALL employ dynamic viewport height units (`h-dvh` or `min-h-[100dvh]`) rather than static `h-screen` (`100vh`), preventing viewport clipping and overflow underneath mobile browser dynamic chrome (e.g. iOS Safari bottom address bar and Android navigation bars).
+
+8. **Semantic Overlay Z-Index Stacking Hierarchy**:
+   - Overlay and floating layers SHALL adhere to a deterministic, semantic z-index scale:
+     - Global Toast Notifications: `z-[9999]`
+     - Global Command Palette (`⌘K`): `z-60`
+     - Full-screen Modals and Teleported Drawers: `z-50`
+     - Contextual Popovers, Tooltips, and Floating Menus: `z-40`
+     - Sticky Header and Top Navigation Bars: `z-30`
+     - In-Page Floating Action Bars and Canvas Controls: `z-10`
+
 #### Scenario: User opens application in dark mode with new design tokens
 - **WHEN** a user visits any page in dark mode
 - **THEN** the body background is rendered with neutral dark obsidian `#09090b`
@@ -754,6 +775,27 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 - **WHEN** a user views the application on a mobile screen ($< 640\text{px}$)
 - **THEN** the topbar renders a compact search icon trigger button
 - **WHEN** tapped, it opens the full-screen or centered Command Palette.
+
+#### Scenario: Modal locks body scroll without layout shift
+- **WHEN** a user opens a modal, drawer, or the Command Palette (`Cmd+K`) on a desktop screen with a visible scrollbar
+- **AND** the application sets `document.body.style.overflow = 'hidden'`
+- **THEN** the root `html` retains its stable scrollbar gutter
+- **AND** centered page containers (e.g., `max-w-6xl mx-auto`) experience zero horizontal layout shift ($0\text{px}$ shift).
+
+#### Scenario: Keyboard user tabs through interactive elements
+- **WHEN** a user navigates interactive buttons or links using the `Tab` key
+- **THEN** each active element displays an Electric Violet 2px focus ring with 2px offset (`:focus-visible`)
+- **WHEN** the user clicks an element with a mouse or tap pointer
+- **THEN** no persistent outline or box-shadow ring remains visible.
+
+#### Scenario: Mobile reader renders on dynamic viewport
+- **WHEN** a user opens the reader view (`/read/[bookId]`) on a mobile browser with dynamic address bars (e.g. iOS Safari)
+- **THEN** the reader container scales to dynamic viewport height (`h-dvh`)
+- **AND** the top navigation bar and bottom pagination footer remain fully visible within the active screen area without being concealed by the browser UI.
+
+#### Scenario: Layer stacking order across simultaneous overlays
+- **WHEN** a toast notification fires while the Command Palette and a contextual popover are visible
+- **THEN** the Toast (`z-[9999]`) renders above the Command Palette (`z-60`), which renders above any standard modal or drawer (`z-50`), preventing visual collision or z-index clipping.
 
 ### Requirement: Home Command Center Dashboard & Zero-Scroll Desktop Layout
 The root route `/` SHALL host the primary **Home Command Center Dashboard** (`frontend/pages/index.vue`), presenting an executive overview of daily momentum, active reading slice, scenario drill, retention metrics, 7-day consistency, and knowledge cosmos connectivity with clean visual decluttering:
