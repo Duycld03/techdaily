@@ -20,15 +20,14 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // Logged-in users cannot visit /login
   if (isGuestOnly && hasToken) {
-    return navigateTo('/today')
+    return navigateTo('/')
   }
 
   // Unauthenticated visitors cannot access protected pages (both on SSR and Client)
   if (isAuthRequired && !hasToken) {
-    const targetRedirect = to.fullPath === '/' ? '/today' : to.fullPath
     return navigateTo({
       path: '/login',
-      query: { redirect: targetRedirect }
+      query: { redirect: to.fullPath }
     })
   }
 })

@@ -19,12 +19,11 @@ const props = withDefaults(
   }
 )
 
-const outerRadius = 54
-const outerCircumference = 2 * Math.PI * outerRadius // ~339.29
+const outerRadius = 46
+const outerCircumference = 2 * Math.PI * outerRadius // ~289.03
 
-const innerRadius = 40
-const innerCircumference = 2 * Math.PI * innerRadius // ~251.33
-
+const innerRadius = 34
+const innerCircumference = 2 * Math.PI * innerRadius // ~213.63
 const paceProgress = computed(() => {
   if (props.goalMinutes <= 0) return 0
   return Math.min(1, Math.max(0, props.actualMinutes / props.goalMinutes))
@@ -50,9 +49,9 @@ const retentionPercentage = computed(() => {
 </script>
 
 <template>
-  <div class="glass-card p-4 sm:p-5 flex flex-col justify-between h-full group hover:border-brand-500/30 transition-all">
+  <div class="glass-card p-3.5 sm:p-4 flex flex-col justify-between group hover:border-brand-500/30 transition-all min-h-0">
     <!-- Header -->
-    <div class="flex items-center justify-between gap-3 mb-4">
+    <div class="flex items-center justify-between gap-3 mb-2.5">
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-lg bg-brand-500/10 dark:bg-brand-500/20 text-brand-500 flex items-center justify-center shrink-0">
           <BrainCircuit class="w-4 h-4" />
@@ -77,25 +76,25 @@ const retentionPercentage = computed(() => {
     </div>
 
     <!-- Main Concentric Rings and Readout -->
-    <div class="flex flex-col sm:flex-row items-center justify-around gap-4 my-2">
+    <div class="flex flex-col sm:flex-row items-center justify-around gap-3 my-1">
       <!-- SVG Rings -->
-      <div class="relative w-36 h-36 flex items-center justify-center shrink-0">
-        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
+      <div class="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center shrink-0">
+        <svg class="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
           <!-- Outer Ring Track -->
           <circle
-            cx="70"
-            cy="70"
+            cx="60"
+            cy="60"
             :r="outerRadius"
             class="stroke-slate-200/80 dark:stroke-white/10 fill-none"
-            stroke-width="8"
+            stroke-width="7"
           />
           <!-- Outer Ring Progress (Daily Goal Pace) -->
           <circle
-            cx="70"
-            cy="70"
+            cx="60"
+            cy="60"
             :r="outerRadius"
             class="stroke-brand-500 fill-none transition-all duration-700 ease-out"
-            stroke-width="8"
+            stroke-width="7"
             stroke-linecap="round"
             :stroke-dasharray="outerCircumference"
             :stroke-dashoffset="outerDashoffset"
@@ -103,19 +102,19 @@ const retentionPercentage = computed(() => {
 
           <!-- Inner Ring Track -->
           <circle
-            cx="70"
-            cy="70"
+            cx="60"
+            cy="60"
             :r="innerRadius"
             class="stroke-slate-200/80 dark:stroke-white/10 fill-none"
-            stroke-width="7"
+            stroke-width="6"
           />
           <!-- Inner Ring Progress (SM-2 Retention Health) -->
           <circle
-            cx="70"
-            cy="70"
+            cx="60"
+            cy="60"
             :r="innerRadius"
             class="stroke-cyber-500 fill-none transition-all duration-700 ease-out"
-            stroke-width="7"
+            stroke-width="6"
             stroke-linecap="round"
             :stroke-dasharray="innerCircumference"
             :stroke-dashoffset="innerDashoffset"
@@ -124,17 +123,17 @@ const retentionPercentage = computed(() => {
 
         <!-- Central Numeric Display -->
         <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+          <span class="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
             {{ retentionPercentage }}%
           </span>
-          <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-1">
+          <span class="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">
             {{ $t('dashboard.retention') }}
           </span>
         </div>
       </div>
 
       <!-- Legend & Numeric Breakdown -->
-      <div class="flex flex-col gap-2.5 w-full sm:w-auto text-xs">
+      <div class="flex flex-col gap-2 w-full sm:w-auto text-xs">
         <!-- Daily Goal Pace Row -->
         <div class="flex items-center justify-between gap-3 p-2 rounded-lg bg-slate-100/60 dark:bg-canvas-subtle border border-slate-200/60 dark:border-white/[0.06]">
           <div class="flex items-center gap-2">
@@ -160,7 +159,7 @@ const retentionPercentage = computed(() => {
     </div>
 
     <!-- Review Due Action Banner -->
-    <div class="mt-4 pt-3 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
+    <div class="mt-2.5 pt-2.5 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
       <div class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
         <Flame class="w-3.5 h-3.5 text-amber-500 shrink-0" />
         <span>{{ dueCards }} {{ $t('dashboard.cards_due') }}</span>

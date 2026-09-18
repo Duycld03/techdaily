@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import {
-  Sparkles,
   BookOpen,
   Terminal,
   ArrowRight,
@@ -16,8 +15,17 @@ import ConcentricMetricCard from '~/components/today/ConcentricMetricCard.vue'
 const emit = defineEmits<{
   (e: 'startReading'): void
   (e: 'startScenario'): void
-  (e: 'openAiExplainer'): void
 }>()
+
+function handleStartReading() {
+  emit('startReading')
+  navigateTo('/today')
+}
+
+function handleStartScenario() {
+  emit('startScenario')
+  navigateTo('/today')
+}
 
 const authStore = useAuthStore()
 const focusStore = useDailyFocusStore()
@@ -93,11 +101,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+  <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-4 lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden flex flex-col justify-between space-y-3 sm:space-y-4">
     <!-- 1. Welcome & Orientation Banner (Image #1 Inspired) -->
-    <div class="glass-card p-5 sm:p-7 relative overflow-hidden bg-gradient-to-r from-brand-950/20 via-canvas-subtle to-canvas-subtle border border-white/[0.08]">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
-        <div class="space-y-1.5">
+    <div class="glass-card px-4 py-3 sm:px-5 sm:py-3.5 relative overflow-hidden bg-gradient-to-r from-brand-950/20 via-canvas-subtle to-canvas-subtle border border-white/[0.08] shrink-0">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 relative z-10">
+        <div class="space-y-1">
           <div class="flex items-center gap-2">
             <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand-500/10 text-brand-400 border border-brand-500/20">
               {{ $t('dashboard.curriculum_day') }} {{ topic?.dayOrder || 1 }} / 30
@@ -107,23 +115,13 @@ onMounted(() => {
             </span>
           </div>
 
-          <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <h1 class="text-lg sm:text-xl lg:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             {{ $t('dashboard.welcome_back') }}, {{ userName }}! 👋
           </h1>
-          <p class="text-sm text-slate-600 dark:text-slate-300 max-w-2xl">
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-2xl">
             {{ $t('dashboard.welcome_subtitle') }}
           </p>
         </div>
-
-        <!-- Ask AI Explainer Trigger Button -->
-        <button
-          @click="emit('openAiExplainer')"
-          type="button"
-          class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all hover:scale-[1.02] active:scale-95 shrink-0"
-        >
-          <Sparkles class="w-4 h-4 text-amber-300 animate-pulse" />
-          <span>{{ $t('dashboard.ask_ai_tutor') }}</span>
-        </button>
       </div>
 
       <!-- Subtle background radial glow -->
@@ -131,11 +129,11 @@ onMounted(() => {
     </div>
 
     <!-- 2. Main Bento Grid (Asymmetric Layout) -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4 flex-1 min-h-0 lg:overflow-hidden">
       <!-- LEFT 2 COLUMNS: Core Practice Cards -->
-      <div class="lg:col-span-2 space-y-5">
+      <div class="lg:col-span-2 flex flex-col justify-between gap-3.5 sm:gap-4 min-h-0">
         <!-- Card A: Today's Focus Bento Hero (Image #1 Course Progress Style) -->
-        <div class="glass-card p-5 sm:p-6 flex flex-col justify-between group hover:border-brand-500/30 transition-all">
+        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-brand-500/30 transition-all flex-1 min-h-0">
           <div>
             <div class="flex items-center justify-between gap-3 mb-3">
               <div class="flex items-center gap-2">
@@ -190,7 +188,7 @@ onMounted(() => {
             </span>
 
             <button
-              @click="emit('startReading')"
+              @click="handleStartReading"
               type="button"
               class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md shadow-brand-500/25 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
             >
@@ -201,7 +199,7 @@ onMounted(() => {
         </div>
 
         <!-- Card B: Senior Scenario Challenge Card (Image #2 Inspired) -->
-        <div class="glass-card p-5 sm:p-6 flex flex-col justify-between group hover:border-indigo-500/30 transition-all">
+        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-indigo-500/30 transition-all flex-1 min-h-0">
           <div>
             <div class="flex items-center justify-between gap-3 mb-3">
               <div class="flex items-center gap-2">
@@ -234,7 +232,7 @@ onMounted(() => {
 
           <div class="pt-3 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-end">
             <button
-              @click="emit('startScenario')"
+              @click="handleStartScenario"
               type="button"
               class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 dark:bg-canvas-elevated hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-800 dark:text-slate-200 font-bold text-xs sm:text-sm border border-slate-200/80 dark:border-white/[0.08] transition-all flex items-center justify-center gap-2 shrink-0"
             >
@@ -246,7 +244,7 @@ onMounted(() => {
       </div>
 
       <!-- RIGHT 1 COLUMN: Retention, Consistency & Graph Telemetry -->
-      <div class="space-y-5">
+      <div class="flex flex-col justify-between gap-3.5 sm:gap-4 min-h-0">
         <!-- Card C: Concentric Rings Metric Card (Image #3 Inspired) -->
         <ConcentricMetricCard
           :actual-minutes="actualMinutes"
@@ -257,7 +255,7 @@ onMounted(() => {
         />
 
         <!-- Card D: 7-Day Consistency Matrix (Image #1 Inspired) -->
-        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-amber-500/30 transition-all">
+        <div class="glass-card p-3 sm:p-3.5 flex flex-col justify-between group hover:border-amber-500/30 transition-all shrink-0">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
               <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
@@ -302,7 +300,7 @@ onMounted(() => {
         </div>
 
         <!-- Card E: Knowledge Graph Radar Card (Image #5 Inspired) -->
-        <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-cyber-500/30 transition-all">
+        <div class="glass-card p-3 sm:p-3.5 flex flex-col justify-between group hover:border-cyber-500/30 transition-all shrink-0">
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
               <div class="w-7 h-7 rounded-lg bg-cyber-500/10 text-cyber-500 flex items-center justify-center shrink-0">
