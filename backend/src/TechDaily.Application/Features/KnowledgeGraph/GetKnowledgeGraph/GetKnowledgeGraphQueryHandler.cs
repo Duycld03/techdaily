@@ -3,6 +3,7 @@ using TechDaily.Application.Common;
 using TechDaily.Application.Features.KnowledgeGraph.DTOs;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Enums;
+using TechDaily.Domain.Entities;
 
 namespace TechDaily.Application.Features.KnowledgeGraph.GetKnowledgeGraph;
 
@@ -13,6 +14,50 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
     public GetKnowledgeGraphQueryHandler(ITechDailyDbContext dbContext)
     {
         _dbContext = dbContext;
+    }
+    private static readonly (string Id, string Label, Category Category, string Subtitle, string Summary)[] CanonicalPillars =
+    [
+        ("pillar-FrontendWeb", "Frontend & Web", Category.FrontendWeb, "Vue 3, Nuxt 4, Browser Pipeline, Web Vitals", "Modern web architecture, client-side rendering, performance optimization, and browser lifecycle mechanics."),
+        ("pillar-BackendDotNet", "Backend (.NET)", Category.BackendDotNet, ".NET 10, C# 13, Memory Management & GC", "High-performance runtime internals, lock-free concurrency, asynchronous state machines, and microservice primitives."),
+        ("pillar-DatabaseStorage", "Database & Storage", Category.DatabaseStorage, "PostgreSQL 17, Storage Engine, Indexing", "Relational persistence, MVCC internals, write-ahead logging, B-tree/GIN index strategies, and partitioning."),
+        ("pillar-SystemDesign", "Distributed Systems", Category.SystemDesign, "Event-Driven, Consistency & Fault Tolerance", "Scalable distributed patterns, transactional outbox, idempotency, event sourcing, and resilience engineering."),
+        ("pillar-EngineeringCraft", "Engineering Craft", Category.EngineeringCraft, "Architecture, Clean Code, Testing", "Foundational engineering practices, clean architecture, automated testing, and software design principles.")
+    ];
+
+    private static Category GetEffectiveBookCategory(DocumentBook book)
+    {
+        if (book.Category == Category.FrontendWeb)
+        {
+            var titleOrSlug = $"{book.Title} {book.Slug}".ToLowerInvariant();
+            if (titleOrSlug.Contains("aspnet") ||
+                titleOrSlug.Contains("dotnet") ||
+                titleOrSlug.Contains("csharp") ||
+                titleOrSlug.Contains("c#"))
+            {
+                return Category.BackendDotNet;
+            }
+        }
+
+        return book.Category;
+    }
+
+    private static bool IsMasterCurriculumBook(DocumentBook book)
+    {
+        return string.Equals(book.Slug, "30-day-senior-curriculum", StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrEmpty(book.Title) && (
+                book.Title.Contains("30-Day", StringComparison.OrdinalIgnoreCase) ||
+                book.Title.Contains("Curriculum", StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static bool MatchesTopic(string? text, string topicTitle, string topicSlug)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        var slugSpaced = topicSlug.Replace("-", " ");
+        return text.Contains(topicTitle, StringComparison.OrdinalIgnoreCase)
+            || text.Contains(topicSlug, StringComparison.OrdinalIgnoreCase)
+            || text.Contains(slugSpaced, StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<Result<KnowledgeGraphResponse>> ExecuteAsync(
@@ -31,6 +76,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
 
         var books = await _dbContext.DocumentBooks
             .AsNoTracking()
+            .Include(b => b.Chunks)
             .Where(b => b.IsPublished && !b.IsDeleted)
             .ToListAsync(cancellationToken);
 
@@ -52,6 +98,30 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
 
         var topicMap = topics.ToDictionary(t => t.Id);
         var bookMap = books.ToDictionary(b => b.Id);
+
+        // 0. Canonical Pillar Hub Nodes: type "pillar"
+        foreach (var (id, label, cat, subtitle, summary) in CanonicalPillars)
+        {
+            nodes.Add(new GraphNodeDto(
+                Id: id,
+                Label: label,
+                Type: GraphNodeType.Pillar,
+                Category: cat.ToString(),
+                Subtitle: subtitle,
+                DayOrder: null,
+                Summary: summary,
+                Difficulty: null,
+                Status: null,
+                IntervalDays: null,
+                EaseFactor: null,
+                RepetitionCount: null,
+                DocumentChunkId: null,
+                BookId: null,
+                Tags: null,
+                CreatedAt: null,
+                EmbleUrl: null
+            ));
+        }
 
         // 1. Topic Nodes: type "topic", category from Topic.Category.ToString(), dayOrder, summary
         foreach (var topic in topics)
@@ -77,14 +147,15 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             ));
         }
 
-        // 2. Book Nodes: type "book", category from Book.Category.ToString(), subtitle author/source
+        // 2. Book Nodes: type "book", category from effective book category, subtitle author/source
         foreach (var book in books)
         {
+            var effectiveCategory = GetEffectiveBookCategory(book);
             nodes.Add(new GraphNodeDto(
                 Id: book.Id.ToString(),
                 Label: book.Title,
                 Type: GraphNodeType.Book,
-                Category: book.Category.ToString(),
+                Category: effectiveCategory.ToString(),
                 Subtitle: book.AuthorOrSourceUrl,
                 DayOrder: null,
                 Summary: null,
@@ -156,7 +227,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             var label = rawText.Length > 80 ? rawText[..80].Trim() + "..." : rawText;
 
             string category = highlight.DocumentChunk != null && bookMap.TryGetValue(highlight.DocumentChunk.DocumentBookId, out var linkedBook)
-                ? linkedBook.Category.ToString()
+                ? GetEffectiveBookCategory(linkedBook).ToString()
                 : Category.EngineeringCraft.ToString();
 
             nodes.Add(new GraphNodeDto(
@@ -181,7 +252,51 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
         }
 
         // Edge Derivation:
-        // 1. CardToTopic: card.TopicId -> topic.Id (relationType = "CardToTopic")
+        // 0. TopicToPillar: topic.Id -> pillar-{topic.Category} (guarantees degree >= 1 for 100% of topics)
+        foreach (var topic in topics)
+        {
+            edges.Add(new GraphEdgeDto(
+                Id: $"edge-topic-{topic.Id}-pillar-{topic.Category}",
+                Source: topic.Id.ToString(),
+                Target: $"pillar-{topic.Category}",
+                RelationType: GraphRelationType.TopicToPillar,
+                Label: "Pillar",
+                Weight: 2
+            ));
+        }
+
+        // 1. BookToPillar: book.Id -> pillar-{category}
+        foreach (var book in books)
+        {
+            var effectiveCategory = GetEffectiveBookCategory(book);
+            if (IsMasterCurriculumBook(book))
+            {
+                foreach (var cat in new[] { Category.FrontendWeb, Category.BackendDotNet, Category.DatabaseStorage, Category.SystemDesign })
+                {
+                    edges.Add(new GraphEdgeDto(
+                        Id: $"edge-book-{book.Id}-pillar-{cat}",
+                        Source: book.Id.ToString(),
+                        Target: $"pillar-{cat}",
+                        RelationType: GraphRelationType.BookToPillar,
+                        Label: "Curriculum",
+                        Weight: 2
+                    ));
+                }
+            }
+            else
+            {
+                edges.Add(new GraphEdgeDto(
+                    Id: $"edge-book-{book.Id}-pillar-{effectiveCategory}",
+                    Source: book.Id.ToString(),
+                    Target: $"pillar-{effectiveCategory}",
+                    RelationType: GraphRelationType.BookToPillar,
+                    Label: "Library",
+                    Weight: 2
+                ));
+            }
+        }
+
+        // 2. CardToTopic: card.TopicId -> topic.Id (relationType = "CardToTopic")
         foreach (var card in cards)
         {
             if (card.TopicId.HasValue && topicMap.ContainsKey(card.TopicId.Value))
@@ -197,19 +312,38 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             }
         }
 
-        // 2. BookToTopic: book.Category == topic.Category (connect book to related topics in same category)
+        // 3. BookToTopic: refined matching (NO naive Cartesian product)
         foreach (var book in books)
         {
+            var isMaster = IsMasterCurriculumBook(book);
             foreach (var topic in topics)
             {
-                if (book.Category == topic.Category)
+                bool isMatch = isMaster
+                    || MatchesTopic(book.Title, topic.Title, topic.Slug)
+                    || MatchesTopic(book.Slug, topic.Title, topic.Slug);
+
+                if (!isMatch && book.Chunks != null && book.Chunks.Count > 0)
+                {
+                    foreach (var chunk in book.Chunks)
+                    {
+                        if (MatchesTopic(chunk.ChapterTitle, topic.Title, topic.Slug)
+                            || MatchesTopic(chunk.OriginalTextMarkdown, topic.Title, topic.Slug)
+                            || (!string.IsNullOrWhiteSpace(chunk.ChapterTitle) && chunk.ChapterTitle.Length >= 4 && topic.Title.Contains(chunk.ChapterTitle, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            isMatch = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isMatch)
                 {
                     edges.Add(new GraphEdgeDto(
                         Id: $"edge-book-{book.Id}-topic-{topic.Id}",
                         Source: book.Id.ToString(),
                         Target: topic.Id.ToString(),
                         RelationType: GraphRelationType.BookToTopic,
-                        Label: book.Category.ToString(),
+                        Label: topic.Category.ToString(),
                         Weight: 1
                     ));
                 }
@@ -317,6 +451,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
         // Compute stats
         var nodeTypeCounts = new Dictionary<string, int>
         {
+            [GraphNodeType.Pillar] = CanonicalPillars.Length,
             [GraphNodeType.Topic] = topics.Count,
             [GraphNodeType.Book] = books.Count,
             [GraphNodeType.Card] = cards.Count,

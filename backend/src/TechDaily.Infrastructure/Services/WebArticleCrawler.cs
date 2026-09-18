@@ -6,6 +6,7 @@ using HtmlAgilityPack;
 using ReverseMarkdown;
 using TechDaily.Application.Interfaces;
 using TechDaily.Application.Common;
+using TechDaily.Domain.Enums;
 
 namespace TechDaily.Infrastructure.Services;
 
@@ -408,6 +409,54 @@ public class WebArticleCrawler : IWebArticleCrawler
     }
 
     public static void ValidateSafeUrl(string url) => UrlSecurityValidator.ValidateSafeUrl(url);
+    public static Category InferCategoryFromContext(string title, string url, string? content = null)
+    {
+        var combined = $"{title} {url} {content}".ToLowerInvariant();
+
+        if (combined.Contains("aspnet") || combined.Contains("aspnetcore") ||
+            combined.Contains("dotnet") || combined.Contains(".net") ||
+            combined.Contains("csharp") || combined.Contains("c#") ||
+            combined.Contains("entityframework") || combined.Contains("efcore"))
+        {
+            return Category.BackendDotNet;
+        }
+
+        if (combined.Contains("postgres") || combined.Contains("postgresql") ||
+            combined.Contains("redis") || combined.Contains("mysql") ||
+            combined.Contains("mongodb") || combined.Contains("database") ||
+            combined.Contains("sql") || combined.Contains("storage engine"))
+        {
+            return Category.DatabaseStorage;
+        }
+
+        if (combined.Contains("system design") || combined.Contains("distributed") ||
+            combined.Contains("microservice") || combined.Contains("kafka") ||
+            combined.Contains("kubernetes") || combined.Contains("docker") ||
+            combined.Contains("outbox") || combined.Contains("event sourcing"))
+        {
+            return Category.SystemDesign;
+        }
+
+        if (combined.Contains("atomic habits") || combined.Contains("deep work") ||
+            combined.Contains("pragmatic") || combined.Contains("mindset") ||
+            combined.Contains("productivity") || combined.Contains("leadership") ||
+            combined.Contains("soft skills"))
+        {
+            return Category.EngineeringCraft;
+        }
+
+        if (combined.Contains("vue") || combined.Contains("react") ||
+            combined.Contains("angular") || combined.Contains("frontend") ||
+            combined.Contains("browser") || combined.Contains("css") ||
+            combined.Contains("html") || combined.Contains("dom") ||
+            combined.Contains("javascript") || combined.Contains("typescript"))
+        {
+            return Category.FrontendWeb;
+        }
+
+        return Category.BackendDotNet;
+    }
+
 
     private static CrawlArticleResult CreatePdfFallbackResult(string pageTitle, string detectedPdfUrl, string sourceUrl)
     {

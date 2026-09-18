@@ -101,6 +101,78 @@ function getCategoryLabel(category: number | string | undefined | null): string 
   }
 }
 
+function inferCategoryFromContext(title = '', url = '', content = ''): number {
+  const combined = `${title} ${url} ${content}`.toLowerCase()
+
+  if (
+    combined.includes('aspnet') ||
+    combined.includes('aspnetcore') ||
+    combined.includes('dotnet') ||
+    combined.includes('.net') ||
+    combined.includes('csharp') ||
+    combined.includes('c#') ||
+    combined.includes('entityframework') ||
+    combined.includes('efcore')
+  ) {
+    return 1 // BackendDotNet
+  }
+
+  if (
+    combined.includes('postgres') ||
+    combined.includes('postgresql') ||
+    combined.includes('redis') ||
+    combined.includes('mysql') ||
+    combined.includes('mongodb') ||
+    combined.includes('database') ||
+    combined.includes('storage engine') ||
+    combined.includes('sql')
+  ) {
+    return 2 // DatabaseStorage
+  }
+
+  if (
+    combined.includes('system design') ||
+    combined.includes('distributed') ||
+    combined.includes('microservice') ||
+    combined.includes('kafka') ||
+    combined.includes('kubernetes') ||
+    combined.includes('docker') ||
+    combined.includes('outbox') ||
+    combined.includes('event sourcing')
+  ) {
+    return 3 // SystemDesign
+  }
+
+  if (
+    combined.includes('atomic habits') ||
+    combined.includes('deep work') ||
+    combined.includes('pragmatic') ||
+    combined.includes('mindset') ||
+    combined.includes('productivity') ||
+    combined.includes('leadership') ||
+    combined.includes('soft skills')
+  ) {
+    return 4 // EngineeringCraft
+  }
+
+  if (
+    combined.includes('vue') ||
+    combined.includes('react') ||
+    combined.includes('angular') ||
+    combined.includes('frontend') ||
+    combined.includes('browser') ||
+    combined.includes('css') ||
+    combined.includes('html') ||
+    combined.includes('dom') ||
+    combined.includes('javascript') ||
+    combined.includes('typescript')
+  ) {
+    return 0 // FrontendWeb
+  }
+
+  return 0
+}
+
 function getStatusMessage(book: any): string {
   const msg = book?.statusMessage
   if (!msg) {
@@ -323,6 +395,13 @@ function selectPdf(file: File) {
   if (!pdfTitle.value) {
     pdfTitle.value = file.name.replace(/\.pdf$/i, '')
   }
+  const inferredPdfCat = inferCategoryFromContext(pdfTitle.value, file.name)
+  if (inferredPdfCat !== 0) {
+    pdfCategory.value = inferredPdfCat
+  }
+  if (importCategory.value === 0 && inferredPdfCat !== 0) {
+    importCategory.value = inferredPdfCat
+  }
 }
 
 async function handlePdfUpload() {
@@ -395,6 +474,12 @@ async function handleCrawlUrl() {
   isPdfDetected.value = false
   detectedPdfUrl.value = null
 
+  // Pre-infer category from crawl URL input to avoid defaulting blindly to 0
+  const preInferred = inferCategoryFromContext('', crawlUrlInput.value)
+  if (preInferred !== 0) {
+    importCategory.value = preInferred
+  }
+
   try {
     const result = await libraryStore.crawlUrl(crawlUrlInput.value)
     importTitle.value = result.title
@@ -402,6 +487,13 @@ async function handleCrawlUrl() {
     importContent.value = result.markdownContent
     crawlSuccess.value = true
 
+    // Auto-infer category from crawled metadata (title, URL, markdown body)
+    const inferred = inferCategoryFromContext(
+      result.title,
+      result.sourceUrl || crawlUrlInput.value,
+      result.markdownContent
+    )
+    importCategory.value = inferred
     if (result.isPdfDetected) {
       isPdfDetected.value = true
       detectedPdfUrl.value = result.detectedPdfUrl || null

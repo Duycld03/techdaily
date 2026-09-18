@@ -250,4 +250,77 @@ describe('useKnowledgeGraphStore', () => {
     expect(store.filteredNodes).toHaveLength(6)
     expect(store.filteredEdges).toHaveLength(4)
   })
+
+  it('keeps matching pillar node visible alongside its connected topics when filtering by category', () => {
+    const store = useKnowledgeGraphStore()
+    store.rawData = {
+      nodes: [
+        { id: 'pillar-BackendDotNet', label: 'Backend (.NET)', type: 'pillar', category: 'BackendDotNet' },
+        { id: 'pillar-FrontendWeb', label: 'Frontend & Web', type: 'pillar', category: 'FrontendWeb' },
+        { id: 'topic_dotnet', label: 'CLR GC', type: 'topic', category: 'BackendDotNet' },
+        { id: 'topic_frontend', label: 'DOM Tree', type: 'topic', category: 'FrontendWeb' },
+        { id: 'card_dotnet', label: 'Gen 2 GC', type: 'card', category: 'BackendDotNet' }
+      ],
+      edges: [
+        { id: 'e1', source: 'topic_dotnet', target: 'pillar-BackendDotNet', relationType: 'TopicToPillar' },
+        { id: 'e2', source: 'topic_frontend', target: 'pillar-FrontendWeb', relationType: 'TopicToPillar' }
+      ],
+      stats: {
+        totalNodes: 5,
+        totalEdges: 2,
+        nodeTypeCounts: { pillar: 2, topic: 2, card: 1 },
+        pillarCounts: {},
+        masteredCardsCount: 0
+      }
+    }
+
+    store.setCategory('BackendDotNet')
+
+    const visibleIds = store.filteredNodes.map((n) => n.id)
+    // Pillar node matching category remains visible alongside its topics & cards
+    expect(visibleIds).toContain('pillar-BackendDotNet')
+    expect(visibleIds).toContain('topic_dotnet')
+    expect(visibleIds).toContain('card_dotnet')
+    // Unrelated pillar and topics are excluded
+    expect(visibleIds).not.toContain('pillar-FrontendWeb')
+    expect(visibleIds).not.toContain('topic_frontend')
+
+    // Filtered edges keep TopicToPillar edge for the active constellation
+    expect(store.filteredEdges.map((e) => e.id)).toEqual(['e1'])
+  })
+
+  it('includes pillar nodes as hubs when filtering by nodeType topic', () => {
+    const store = useKnowledgeGraphStore()
+    store.rawData = {
+      nodes: [
+        { id: 'pillar-BackendDotNet', label: 'Backend (.NET)', type: 'pillar', category: 'BackendDotNet' },
+        { id: 'topic_dotnet', label: 'CLR GC', type: 'topic', category: 'BackendDotNet' },
+        { id: 'card_dotnet', label: 'Gen 2 GC', type: 'card', category: 'BackendDotNet' },
+        { id: 'book_dotnet', label: 'CLR via C#', type: 'book', category: 'BackendDotNet' }
+      ],
+      edges: [
+        { id: 'e1', source: 'topic_dotnet', target: 'pillar-BackendDotNet', relationType: 'TopicToPillar' }
+      ],
+      stats: {
+        totalNodes: 4,
+        totalEdges: 1,
+        nodeTypeCounts: { pillar: 1, topic: 1, card: 1, book: 1 },
+        pillarCounts: {},
+        masteredCardsCount: 0
+      }
+    }
+
+    store.setNodeType('topic')
+
+    const visibleIds = store.filteredNodes.map((n) => n.id)
+    // Includes both topic and pillar hubs
+    expect(visibleIds).toContain('topic_dotnet')
+    expect(visibleIds).toContain('pillar-BackendDotNet')
+    // Cards and books excluded
+    expect(visibleIds).not.toContain('card_dotnet')
+    expect(visibleIds).not.toContain('book_dotnet')
+
+    // Constellation edge between topic and pillar remains connected
+    expect(store.filteredEdges.map((e) => e.id)).toEqual(['e1'])
+  })
 })

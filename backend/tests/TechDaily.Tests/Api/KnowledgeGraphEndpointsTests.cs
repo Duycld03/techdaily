@@ -116,8 +116,8 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
             var book = new DocumentBook
             {
                 Id = Guid.NewGuid(),
-                Title = "Under the Hood of .NET Memory Management",
-                Slug = "dotnet-mem",
+                Title = "Under the Hood of CLR Generational GC",
+                Slug = "clr-gc-book",
                 Category = Category.BackendDotNet,
                 IsPublished = true
             };
@@ -135,9 +135,13 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var payload = await response.Content.ReadFromJsonAsync<KnowledgeGraphResponse>();
         payload.Should().NotBeNull();
-        payload!.Nodes.Should().HaveCount(2);
+        payload!.Nodes.Should().HaveCount(7);
+        payload.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar);
+        payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar);
+        payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar);
         payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToTopic);
-        payload.Stats.TotalNodes.Should().Be(2);
+        payload.Stats.TotalNodes.Should().Be(7);
+        payload.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(5);
     }
 
     public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>

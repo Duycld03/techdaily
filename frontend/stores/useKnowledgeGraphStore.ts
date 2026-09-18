@@ -61,16 +61,28 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     if (!rawData.value?.nodes) return []
 
     return rawData.value.nodes.filter((node) => {
+      const nodeType = node.type?.toLowerCase()
+
       // Category pillar filter
       if (selectedCategory.value && selectedCategory.value.toLowerCase() !== 'all') {
-        if (node.category?.toLowerCase() !== selectedCategory.value.toLowerCase()) {
+        const selCat = selectedCategory.value.toLowerCase()
+        const isMatchingPillar =
+          nodeType === 'pillar' &&
+          (node.category?.toLowerCase() === selCat || node.id?.toLowerCase() === `pillar-${selCat}`)
+
+        if (!isMatchingPillar && node.category?.toLowerCase() !== selCat) {
           return false
         }
       }
 
-      // Node type filter
+      // Node type filter: if 'topic' is selected, include 'pillar' nodes as the hubs
       if (selectedNodeType.value && selectedNodeType.value.toLowerCase() !== 'all') {
-        if (node.type?.toLowerCase() !== selectedNodeType.value.toLowerCase()) {
+        const selType = selectedNodeType.value.toLowerCase()
+        if (selType === 'topic') {
+          if (nodeType !== 'topic' && nodeType !== 'pillar') {
+            return false
+          }
+        } else if (nodeType !== selType) {
           return false
         }
       }

@@ -41,6 +41,57 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'transition-duration': 0.25
       }
     },
+    // Pillar nodes (Architectural Hubs)
+    {
+      selector: 'node[type = "pillar"]',
+      style: {
+        'shape': 'ellipse',
+        'width': 54,
+        'height': 54,
+        'border-width': 3.5,
+        'border-color': activeClr,
+        'font-size': 12,
+        'font-weight': 'bold',
+        'color': textClr,
+        'z-index': 10
+      }
+    },
+    // Pillar node colors by category with glowing accent borders
+    {
+      selector: 'node[type = "pillar"][category = "FrontendWeb"], node[type = "pillar"][category = "Frontend"]',
+      style: {
+        'background-color': '#f59e0b',
+        'border-color': '#fbbf24'
+      }
+    },
+    {
+      selector: 'node[type = "pillar"][category = "BackendDotNet"], node[type = "pillar"][category = "DotNet"]',
+      style: {
+        'background-color': '#0284c7',
+        'border-color': '#38bdf8'
+      }
+    },
+    {
+      selector: 'node[type = "pillar"][category = "DatabaseStorage"], node[type = "pillar"][category = "Postgres"]',
+      style: {
+        'background-color': '#10b981',
+        'border-color': '#34d399'
+      }
+    },
+    {
+      selector: 'node[type = "pillar"][category = "SystemDesign"], node[type = "pillar"][category = "DistributedSystems"]',
+      style: {
+        'background-color': '#8b5cf6',
+        'border-color': '#a78bfa'
+      }
+    },
+    {
+      selector: 'node[type = "pillar"][category = "EngineeringCraft"], node[type = "pillar"][category = "Craft"]',
+      style: {
+        'background-color': '#ec4899',
+        'border-color': '#f472b6'
+      }
+    },
     // Topic nodes (default fallback)
     {
       selector: 'node[type = "topic"]',
@@ -155,6 +206,16 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'transition-duration': 0.25
       }
     },
+    // Constellation edges linking curriculum topics and library books to parent pillar hubs
+    {
+      selector: 'edge[relationType = "TopicToPillar"], edge[relationType = "BookToPillar"], edge[relationType = "topictopillar"], edge[relationType = "booktopillar"]',
+      style: {
+        'curve-style': 'bezier',
+        'opacity': 0.85,
+        'width': 2.0,
+        'line-color': edgeClr
+      }
+    },
     // Associative tag edges (dashed)
     {
       selector: 'edge[relationType = "SharedTag"]',
@@ -208,11 +269,12 @@ function runLayout() {
     animationDuration: 1000,
     coolingFactor: 0.95,
     numIter: 300,
-    randomize: false,
+    randomize: true,
+    componentSpacing: 120,
     fit: true,
     padding: 60,
-    nodeRepulsion: () => 450000,
-    idealEdgeLength: () => 90,
+    nodeRepulsion: () => 500000,
+    idealEdgeLength: () => 120,
     edgeElasticity: () => 100,
     gravity: 80,
     stop: () => {

@@ -26,6 +26,7 @@ describe('GraphCanvas.vue', () => {
       scale: vi.fn(),
       rotate: vi.fn(),
       arc: vi.fn(),
+      arcTo: vi.fn(),
       fill: vi.fn(),
       measureText: vi.fn(() => ({ width: 0 })),
       transform: vi.fn(),
@@ -94,5 +95,45 @@ describe('GraphCanvas.vue', () => {
 
     wrapper.unmount()
     expect(destroySpy).toHaveBeenCalled()
+  })
+
+  it('adds pillar nodes and TopicToPillar/BookToPillar edges to Cytoscape instance', () => {
+    setActivePinia(createPinia())
+    const store = useKnowledgeGraphStore()
+    store.rawData = {
+      nodes: [
+        { id: 'pillar-BackendDotNet', label: 'Backend (.NET)', type: 'pillar', category: 'BackendDotNet' },
+        { id: 'topic_1', label: 'CLR GC', type: 'topic', category: 'BackendDotNet' },
+        { id: 'book_1', label: 'CLR via C#', type: 'book', category: 'BackendDotNet' }
+      ],
+      edges: [
+        { id: 'edge_1', source: 'topic_1', target: 'pillar-BackendDotNet', relationType: 'TopicToPillar' },
+        { id: 'edge_2', source: 'book_1', target: 'pillar-BackendDotNet', relationType: 'BookToPillar' }
+      ],
+      stats: {
+        totalNodes: 3,
+        totalEdges: 2,
+        nodeTypeCounts: { pillar: 1, topic: 1, book: 1 },
+        pillarCounts: {},
+        masteredCardsCount: 0
+      }
+    }
+
+    const wrapper = mount(GraphCanvas)
+    const cy = wrapper.vm.cy()
+    expect(cy).toBeDefined()
+
+    const pillarNode = cy.getElementById('pillar-BackendDotNet')
+    expect(pillarNode.length).toBe(1)
+    expect(pillarNode.data('type')).toBe('pillar')
+    expect(pillarNode.data('category')).toBe('BackendDotNet')
+
+    const topicToPillarEdge = cy.getElementById('edge_1')
+    expect(topicToPillarEdge.length).toBe(1)
+    expect(topicToPillarEdge.data('relationType')).toBe('TopicToPillar')
+
+    const bookToPillarEdge = cy.getElementById('edge_2')
+    expect(bookToPillarEdge.length).toBe(1)
+    expect(bookToPillarEdge.data('relationType')).toBe('BookToPillar')
   })
 })

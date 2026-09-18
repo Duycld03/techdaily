@@ -48,6 +48,7 @@ public sealed record KnowledgeGraphResponse(
 
 public static class GraphNodeType
 {
+    public const string Pillar = "pillar";
     public const string Topic = "topic";
     public const string Book = "book";
     public const string Card = "card";
@@ -64,6 +65,7 @@ public static class MasteryStatus
 public static class GraphRelationType
 {
     public const string TopicToPillar = "TopicToPillar";
+    public const string BookToPillar = "BookToPillar";
     public const string CardToTopic = "CardToTopic";
     public const string BookToTopic = "BookToTopic";
     public const string HighlightToBook = "HighlightToBook";

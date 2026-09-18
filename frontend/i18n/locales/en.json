@@ -475,7 +475,10 @@
       "readSlices": "Read Slices",
       "reviewFlashcard": "Review Flashcard",
       "readChapter": "Read Chapter",
-      "viewInNotes": "View in Notes"
+      "viewInNotes": "View in Notes",
+      "filterToPillar": "Filter to this Pillar",
+      "connectedTopics": "Connected Topics",
+      "connectedBooks": "Connected Books"
     },
     "empty": {
       "title": "No Nodes Match Filters",

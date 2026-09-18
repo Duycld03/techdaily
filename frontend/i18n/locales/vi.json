@@ -475,7 +475,10 @@
       "readSlices": "Đọc Nội Dung",
       "reviewFlashcard": "Ôn Flashcard",
       "readChapter": "Đọc Chương Này",
-      "viewInNotes": "Xem Trong Ghi Chú"
+      "viewInNotes": "Xem Trong Ghi Chú",
+      "filterToPillar": "Lọc Theo Trụ Cột Này",
+      "connectedTopics": "Chủ Đề Liên Kết",
+      "connectedBooks": "Sách Liên Kết"
     },
     "empty": {
       "title": "Không Có Nút Nào Phù Hợp Bộ Lọc",

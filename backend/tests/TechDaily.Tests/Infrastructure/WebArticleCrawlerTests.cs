@@ -1,5 +1,6 @@
 using FluentAssertions;
 using TechDaily.Infrastructure.Services;
+using TechDaily.Domain.Enums;
 using Xunit;
 
 namespace TechDaily.Tests.Infrastructure;
@@ -282,5 +283,56 @@ public class WebArticleCrawlerTests
         var act = async () => await crawler.CrawlUrlAsync("https://example.com/viewer");
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*private or loopback*");
+    }
+
+    [Theory]
+    [InlineData("Routing in ASP.NET Core", "https://learn.microsoft.com/aspnet/core/routing")]
+    [InlineData("ASP.NET Core Minimal APIs", "https://example.com/api")]
+    [InlineData("Async Await Internals in C#", "https://example.com/csharp")]
+    [InlineData("Deep Dive into .NET 10 CLR", "https://example.com/dotnet")]
+    [InlineData("Entity Framework Core Performance", "https://example.com/efcore")]
+    public void InferCategoryFromContext_ShouldInferBackendDotNet_ForDotNetAndCSharpKeywords(string title, string url)
+    {
+        var category = WebArticleCrawler.InferCategoryFromContext(title, url);
+        category.Should().Be(Category.BackendDotNet);
+    }
+
+    [Theory]
+    [InlineData("PostgreSQL 17 MVCC Internals", "https://example.com/postgres")]
+    [InlineData("Redis Cache Invalidation Strategies", "https://example.com/redis")]
+    [InlineData("B-Tree vs LSM-Tree Storage Engines", "https://example.com/storage-engine")]
+    public void InferCategoryFromContext_ShouldInferDatabaseStorage_ForDatabaseKeywords(string title, string url)
+    {
+        var category = WebArticleCrawler.InferCategoryFromContext(title, url);
+        category.Should().Be(Category.DatabaseStorage);
+    }
+
+    [Theory]
+    [InlineData("Designing Distributed Systems", "https://example.com/system-design")]
+    [InlineData("Kafka Event Sourcing Architecture", "https://example.com/kafka")]
+    [InlineData("Transactional Outbox Pattern in Microservices", "https://example.com/outbox")]
+    public void InferCategoryFromContext_ShouldInferSystemDesign_ForDistributedKeywords(string title, string url)
+    {
+        var category = WebArticleCrawler.InferCategoryFromContext(title, url);
+        category.Should().Be(Category.SystemDesign);
+    }
+
+    [Theory]
+    [InlineData("Vue 3 Reactivity and Composition API", "https://vuejs.org/guide")]
+    [InlineData("Browser Rendering Pipeline and Web Vitals", "https://example.com/browser-vitals")]
+    [InlineData("Modern CSS Grid Architecture", "https://example.com/css")]
+    public void InferCategoryFromContext_ShouldInferFrontendWeb_ForFrontendKeywords(string title, string url)
+    {
+        var category = WebArticleCrawler.InferCategoryFromContext(title, url);
+        category.Should().Be(Category.FrontendWeb);
+    }
+
+    [Theory]
+    [InlineData("Pragmatic Programmer Mindset", "https://example.com/mindset")]
+    [InlineData("Deep Work and Engineering Productivity", "https://example.com/productivity")]
+    public void InferCategoryFromContext_ShouldInferEngineeringCraft_ForCraftKeywords(string title, string url)
+    {
+        var category = WebArticleCrawler.InferCategoryFromContext(title, url);
+        category.Should().Be(Category.EngineeringCraft);
     }
 }

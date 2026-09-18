@@ -63,6 +63,18 @@ const mockPost = vi.fn(async (url: string, body: Record<string, unknown>) => {
       message: 'Queued'
     }
   }
+  if (url.includes('/api/v1/library/import')) {
+    return {
+      book: {
+        id: 'book-imported-1',
+        title: body.title,
+        category: body.category,
+        totalChunks: 1,
+        isPublished: true,
+        createdAt: '2026-09-01T00:00:00Z'
+      }
+    }
+  }
   return {}
 })
 const mockPostRaw = vi.fn(async (_url: string, _body: FormData) => {
@@ -553,5 +565,62 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(badgeContainer.exists()).toBe(true)
     expect(badgeContainer.classes()).toContain('mt-auto')
     expect(badgeContainer.classes()).toContain('pt-3')
+  })
+
+  it('automatically infers Category.BackendDotNet (1) during URL crawl when URL or title contains aspnet or dotnet', async () => {
+    const wrapper = mount(LibraryPage, {
+      global: {
+        stubs: {
+          NuxtLink: true,
+          Teleport: true
+        }
+      }
+    })
+
+    // Open import modal
+    const importBtn = wrapper.find('button.bg-brand-600')
+    await importBtn.trigger('click')
+    await flushPromises()
+
+    // Switch to URL Crawler tab (Tab 3)
+    const tabButtons = wrapper.findAll('button')
+    const urlTabBtn = tabButtons.find((b) => b.text().includes('library.tab_url'))
+    expect(urlTabBtn).toBeDefined()
+    await urlTabBtn!.trigger('click')
+    await flushPromises()
+
+    // Input URL with aspnetcore
+    const urlInput = wrapper.find('input[type="url"]')
+    await urlInput.setValue('https://learn.microsoft.com/aspnet/core/overview')
+
+    // Click fetch content button
+    const fetchBtn = wrapper.findAll('button').find((b) => b.text().includes('library.fetch_url_btn'))
+    expect(fetchBtn).toBeDefined()
+    await fetchBtn!.trigger('click')
+    await flushPromises()
+
+    // Switch back to Markdown tab to inspect and submit import
+    const mdTabBtn = tabButtons.find((b) => b.text().includes('library.tab_markdown'))
+    expect(mdTabBtn).toBeDefined()
+    await mdTabBtn!.trigger('click')
+    await flushPromises()
+
+    // Verify the category select element is auto-set to 1 (BackendDotNet)
+    const select = wrapper.find('select')
+    expect(select.exists()).toBe(true)
+    expect((select.element as HTMLSelectElement).value).toBe('1')
+
+    // Submit the markdown form
+    const form = wrapper.find('form')
+    expect(form.exists()).toBe(true)
+    await form.trigger('submit')
+    await flushPromises()
+    // Verify importDocument was called with inferred category 1 (BackendDotNet) instead of 0 (FrontendWeb)
+    expect(mockPost).toHaveBeenCalledWith(
+      '/api/v1/library/import',
+      expect.objectContaining({
+        category: 1
+      })
+    )
   })
 })

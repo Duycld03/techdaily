@@ -87,7 +87,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         {
             Id = Guid.NewGuid(),
             DocumentBookId = book.Id,
-            ChapterTitle = "Storage and Retrieval",
+            ChapterTitle = "PostgreSQL MVCC Mechanics",
             ChunkOrder = 1,
             OriginalTextMarkdown = "LSM-Tree and B-Tree storage."
         };
@@ -117,12 +117,14 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeTrue();
         var response = result.Value;
-
+        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar);
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Topic && n.Id == topic.Id.ToString());
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Book && n.Id == book.Id.ToString());
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Card && n.Id == card.Id.ToString());
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Highlight && n.Id == highlight.Id.ToString());
 
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar);
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar);
         response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToTopic
             && e.Source == card.Id.ToString()
             && e.Target == topic.Id.ToString());
@@ -139,7 +141,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             && e.Source == highlight.Id.ToString()
             && e.Target == topic.Id.ToString());
 
-        response.Stats.TotalNodes.Should().Be(4);
+        response.Stats.TotalNodes.Should().Be(9);
+        response.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(5);
         response.Stats.NodeTypeCounts[GraphNodeType.Topic].Should().Be(1);
         response.Stats.NodeTypeCounts[GraphNodeType.Book].Should().Be(1);
         response.Stats.NodeTypeCounts[GraphNodeType.Card].Should().Be(1);
@@ -413,15 +416,19 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         var response = result.Value;
 
-        response.Nodes.Should().HaveCount(2);
+        response.Nodes.Should().HaveCount(7);
+        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar);
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Topic);
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Book);
         response.Nodes.Should().NotContain(n => n.Type == GraphNodeType.Card);
         response.Nodes.Should().NotContain(n => n.Type == GraphNodeType.Highlight);
 
-        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToTopic);
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar);
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar);
+        response.Edges.Should().NotContain(e => e.RelationType == GraphRelationType.BookToTopic);
 
-        response.Stats.TotalNodes.Should().Be(2);
+        response.Stats.TotalNodes.Should().Be(7);
+        response.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(5);
         response.Stats.NodeTypeCounts[GraphNodeType.Topic].Should().Be(1);
         response.Stats.NodeTypeCounts[GraphNodeType.Book].Should().Be(1);
         response.Stats.NodeTypeCounts[GraphNodeType.Card].Should().Be(0);
@@ -537,5 +544,267 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         bookNodes.Should().Contain(n => n.Id == publishedBook.Id.ToString());
         bookNodes.Should().NotContain(n => n.Id == unpublishedBook.Id.ToString());
         bookNodes.Should().NotContain(n => n.Id == deletedBook.Id.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldReturnExactlyFivePillarNodes_WithCorrectMetadata()
+    {
+        // Arrange
+        var user = new User { Id = Guid.NewGuid(), Email = "pillar@techdaily.local", Name = "Pillar User" };
+        await _db.Users.AddAsync(user);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var pillars = result.Value.Nodes.Where(n => n.Type == GraphNodeType.Pillar).ToList();
+        pillars.Should().HaveCount(5);
+
+        var expectedPillars = new[]
+        {
+            ("pillar-FrontendWeb", "Frontend & Web", "FrontendWeb"),
+            ("pillar-BackendDotNet", "Backend (.NET)", "BackendDotNet"),
+            ("pillar-DatabaseStorage", "Database & Storage", "DatabaseStorage"),
+            ("pillar-SystemDesign", "Distributed Systems", "SystemDesign"),
+            ("pillar-EngineeringCraft", "Engineering Craft", "EngineeringCraft")
+        };
+
+        foreach (var (id, label, category) in expectedPillars)
+        {
+            var pillar = pillars.SingleOrDefault(p => p.Id == id);
+            pillar.Should().NotBeNull();
+            pillar!.Label.Should().Be(label);
+            pillar.Category.Should().Be(category);
+            pillar.Subtitle.Should().NotBeNullOrWhiteSpace();
+            pillar.Summary.Should().NotBeNullOrWhiteSpace();
+        }
+
+        result.Value.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(5);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TopicToPillar_EveryTopicShouldConnectToItsPillarWithZeroOrphans()
+    {
+        // Arrange
+        var user = new User { Id = Guid.NewGuid(), Email = "orphans@techdaily.local", Name = "Zero Orphans" };
+        await _db.Users.AddAsync(user);
+
+        var topic1 = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Topic Frontend",
+            Slug = "topic-frontend",
+            Category = Category.FrontendWeb,
+            DayOrder = 1
+        };
+        var topic2 = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Topic Backend",
+            Slug = "topic-backend",
+            Category = Category.BackendDotNet,
+            DayOrder = 2
+        };
+        var topic3 = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Topic DB",
+            Slug = "topic-db",
+            Category = Category.DatabaseStorage,
+            DayOrder = 3
+        };
+        var topic4 = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Topic System Design",
+            Slug = "topic-sysdesign",
+            Category = Category.SystemDesign,
+            DayOrder = 4
+        };
+        var topic5 = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Topic Craft",
+            Slug = "topic-craft",
+            Category = Category.EngineeringCraft,
+            DayOrder = 5
+        };
+        await _db.Topics.AddRangeAsync(topic1, topic2, topic3, topic4, topic5);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var edges = result.Value.Edges;
+
+        var allTopics = new[] { topic1, topic2, topic3, topic4, topic5 };
+        foreach (var t in allTopics)
+        {
+            edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar
+                && e.Source == t.Id.ToString()
+                && e.Target == $"pillar-{t.Category}");
+
+            // Zero orphans invariant: degree >= 1
+            var degree = edges.Count(e => e.Source == t.Id.ToString() || e.Target == t.Id.ToString());
+            degree.Should().BeGreaterThanOrEqualTo(1);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MasterCurriculumBook_ShouldConnectToAllFourTechnicalPillars()
+    {
+        // Arrange
+        var user = new User { Id = Guid.NewGuid(), Email = "curriculum@techdaily.local", Name = "Curriculum User" };
+        await _db.Users.AddAsync(user);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "30-Day Senior Engineer Curriculum",
+            Slug = "30-day-senior-curriculum",
+            Category = Category.FrontendWeb,
+            IsPublished = true
+        };
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var edges = result.Value.Edges;
+
+        var technicalPillars = new[]
+        {
+            "pillar-FrontendWeb",
+            "pillar-BackendDotNet",
+            "pillar-DatabaseStorage",
+            "pillar-SystemDesign"
+        };
+
+        foreach (var pillarId in technicalPillars)
+        {
+            edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
+                && e.Source == book.Id.ToString()
+                && e.Target == pillarId);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CartesianBlowoutPrevention_AndCategoryCorrection()
+    {
+        // Arrange
+        var user = new User { Id = Guid.NewGuid(), Email = "cartesian@techdaily.local", Name = "Cartesian User" };
+        await _db.Users.AddAsync(user);
+
+        var vueTopic = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Vue 3 Composition API & Reactivity",
+            Slug = "vue-3-reactivity",
+            Category = Category.FrontendWeb,
+            DayOrder = 1
+        };
+        await _db.Topics.AddAsync(vueTopic);
+
+        // Book incorrectly saved with Category.FrontendWeb in DB, but is an ASP.NET book
+        var aspnetBook = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "ASP.NET Core Web APIs",
+            Slug = "aspnet-core-10.0",
+            Category = Category.FrontendWeb, // Needs auto-correction to BackendDotNet!
+            IsPublished = true
+        };
+        await _db.DocumentBooks.AddAsync(aspnetBook);
+
+        // Another Frontend book that does NOT mention Vue
+        var cssBook = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "CSS Grid & Flexbox",
+            Slug = "css-grid-flexbox",
+            Category = Category.FrontendWeb,
+            IsPublished = true
+        };
+        await _db.DocumentBooks.AddAsync(cssBook);
+
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // 1. Check Category correction on aspnetBook
+        var aspnetNode = result.Value.Nodes.Single(n => n.Id == aspnetBook.Id.ToString());
+        aspnetNode.Category.Should().Be(Category.BackendDotNet.ToString());
+
+        // 2. Check BookToPillar for aspnetBook connects to pillar-BackendDotNet, not FrontendWeb
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
+            && e.Source == aspnetBook.Id.ToString()
+            && e.Target == "pillar-BackendDotNet");
+
+        // 3. No Cartesian blowout: Neither aspnetBook nor cssBook should have BookToTopic edge to vueTopic!
+        result.Value.Edges.Should().NotContain(e => e.RelationType == GraphRelationType.BookToTopic
+            && e.Source == aspnetBook.Id.ToString()
+            && e.Target == vueTopic.Id.ToString());
+
+        result.Value.Edges.Should().NotContain(e => e.RelationType == GraphRelationType.BookToTopic
+            && e.Source == cssBook.Id.ToString()
+            && e.Target == vueTopic.Id.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_BookToTopic_ShouldConnectWhenChunkMatchesTopic()
+    {
+        // Arrange
+        var user = new User { Id = Guid.NewGuid(), Email = "chunkmatch@techdaily.local", Name = "Chunk User" };
+        await _db.Users.AddAsync(user);
+
+        var topic = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "PostgreSQL Indexing & B-Trees",
+            Slug = "postgresql-indexing",
+            Category = Category.DatabaseStorage,
+            DayOrder = 15
+        };
+        await _db.Topics.AddAsync(topic);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Database Internals",
+            Slug = "db-internals-deep",
+            Category = Category.DatabaseStorage,
+            IsPublished = true
+        };
+        await _db.DocumentBooks.AddAsync(book);
+
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChapterTitle = "PostgreSQL Indexing & B-Trees",
+            ChunkOrder = 1
+        };
+        await _db.DocumentChunks.AddAsync(chunk);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToTopic
+            && e.Source == book.Id.ToString()
+            && e.Target == topic.Id.ToString());
     }
 }

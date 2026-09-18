@@ -49,6 +49,15 @@ const mockHighlightNode: GraphNode = {
   tags: ['mvcc', 'concurrency', 'postgres']
 }
 
+const mockPillarNode: GraphNode = {
+  id: 'pillar-BackendDotNet',
+  label: 'Backend (.NET)',
+  type: 'pillar',
+  category: 'BackendDotNet',
+  subtitle: '.NET Runtime, CLR, Concurrency & Async I/O',
+  summary: 'Core architectural pillar for .NET backend development and high-throughput services.'
+}
+
 const NuxtLinkStub = {
   name: 'NuxtLink',
   props: ['to'],
@@ -60,8 +69,11 @@ describe('GraphDetailDrawer.vue', () => {
     setActivePinia(createPinia())
     const store = useKnowledgeGraphStore()
     store.rawData = {
-      nodes: [mockTopicNode, mockBookNode, mockCardNode, mockHighlightNode],
-      edges: [],
+      nodes: [mockTopicNode, mockBookNode, mockCardNode, mockHighlightNode, mockPillarNode],
+      edges: [
+        { id: 'edge_pillar_topic', source: 'topic_1', target: 'pillar-BackendDotNet', relationType: 'TopicToPillar' },
+        { id: 'edge_pillar_book', source: 'book_1', target: 'pillar-BackendDotNet', relationType: 'BookToPillar' }
+      ],
       stats: {
         totalNodes: 4,
         totalEdges: 0,
@@ -229,6 +241,45 @@ describe('GraphDetailDrawer.vue', () => {
     expect(closeBtn.exists()).toBe(true)
 
     await closeBtn.trigger('click')
+    expect(store.selectedNodeId).toBeNull()
+  })
+
+  it('renders pillar node metadata, domain summary, metrics, and filter action with whitespace-nowrap shrink-0', async () => {
+    const store = createTestStore()
+    store.selectNode('pillar-BackendDotNet')
+    const wrapper = mount(GraphDetailDrawer, {
+      global: {
+        stubs: { NuxtLink: NuxtLinkStub }
+      }
+    })
+
+    expect(wrapper.find('aside').exists()).toBe(true)
+    // Title, subtitle, and summary
+    expect(wrapper.text()).toContain('Backend (.NET)')
+    expect(wrapper.text()).toContain('.NET Runtime, CLR, Concurrency & Async I/O')
+    expect(wrapper.text()).toContain('Core architectural pillar for .NET backend development and high-throughput services.')
+    // Category badge
+    expect(wrapper.text()).toContain('BackendDotNet')
+
+    // Connected metrics
+    const topicsCount = wrapper.find('[data-test="pillar-topics-count"]')
+    expect(topicsCount.exists()).toBe(true)
+    expect(topicsCount.text()).toBe('1')
+
+    const booksCount = wrapper.find('[data-test="pillar-books-count"]')
+    expect(booksCount.exists()).toBe(true)
+    expect(booksCount.text()).toBe('1')
+
+    // Filter action button
+    const filterBtn = wrapper.find('[data-test="filter-to-pillar"]')
+    expect(filterBtn.exists()).toBe(true)
+    expect(filterBtn.classes()).toContain('whitespace-nowrap')
+    expect(filterBtn.classes()).toContain('shrink-0')
+
+    // Clicking the filter button sets category in store and closes drawer
+    const setCategorySpy = vi.spyOn(store, 'setCategory')
+    await filterBtn.trigger('click')
+    expect(setCategorySpy).toHaveBeenCalledWith('BackendDotNet')
     expect(store.selectedNodeId).toBeNull()
   })
 })

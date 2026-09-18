@@ -11,7 +11,9 @@ import {
   Clock,
   Sparkles,
   ExternalLink,
-  Tag
+  Tag,
+  Landmark,
+  Filter
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore, type GraphNode } from '~/stores/useKnowledgeGraphStore'
 
@@ -85,6 +87,52 @@ const highlightNotesRoute = computed(() => {
   }
   return '/notes'
 })
+
+// Connected entities for architectural pillar nodes
+const connectedTopicsCount = computed(() => {
+  if (!node.value || nodeType.value !== 'pillar') return 0
+  const nodeId = node.value.id
+  const edges = store.rawData?.edges || []
+  const edgeCount = edges.filter(
+    (e) => (e.target === nodeId || e.source === nodeId) &&
+      (e.relationType?.toLowerCase() === 'topictopillar' ||
+       store.rawData?.nodes?.some(n => (n.id === e.source || n.id === e.target) && n.id !== nodeId && n.type?.toLowerCase() === 'topic'))
+  ).length
+  if (edgeCount > 0) return edgeCount
+
+  if (node.value.category && store.rawData?.nodes) {
+    return store.rawData.nodes.filter(
+      (n) => n.id !== nodeId && n.type?.toLowerCase() === 'topic' && n.category?.toLowerCase() === node.value?.category?.toLowerCase()
+    ).length
+  }
+  return 0
+})
+
+const connectedBooksCount = computed(() => {
+  if (!node.value || nodeType.value !== 'pillar') return 0
+  const nodeId = node.value.id
+  const edges = store.rawData?.edges || []
+  const edgeCount = edges.filter(
+    (e) => (e.target === nodeId || e.source === nodeId) &&
+      (e.relationType?.toLowerCase() === 'booktopillar' ||
+       store.rawData?.nodes?.some(n => (n.id === e.source || n.id === e.target) && n.id !== nodeId && n.type?.toLowerCase() === 'book'))
+  ).length
+  if (edgeCount > 0) return edgeCount
+
+  if (node.value.category && store.rawData?.nodes) {
+    return store.rawData.nodes.filter(
+      (n) => n.id !== nodeId && n.type?.toLowerCase() === 'book' && n.category?.toLowerCase() === node.value?.category?.toLowerCase()
+    ).length
+  }
+  return 0
+})
+
+function filterToThisPillar() {
+  if (node.value?.category) {
+    store.setCategory(node.value.category)
+  }
+  close()
+}
 
 // Estimated next review calculation for card
 const formattedNextReview = computed(() => {
@@ -163,6 +211,7 @@ function getMasteryBadgeClass(status?: string | null): string {
             <BookOpen v-else-if="nodeType === 'book'" class="w-3.5 h-3.5 text-slate-500 shrink-0" />
             <Layers v-else-if="nodeType === 'card'" class="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <Highlighter v-else-if="nodeType === 'highlight'" class="w-3.5 h-3.5 text-violet-500 shrink-0" />
+            <Landmark v-else-if="nodeType === 'pillar'" class="w-3.5 h-3.5 text-brand-500 shrink-0" />
             <Sparkles v-else class="w-3.5 h-3.5 text-brand-500 shrink-0" />
             <span class="capitalize whitespace-nowrap shrink-0">{{ node?.type }}</span>
           </span>
@@ -231,6 +280,43 @@ function getMasteryBadgeClass(status?: string | null): string {
           >
             <span>Curriculum Day {{ node.dayOrder }}</span>
           </p>
+        </div>
+
+        <!-- Pillar Section: Domain Summary & Metrics -->
+        <div v-if="nodeType === 'pillar'" class="space-y-3">
+          <div v-if="node?.summary" class="space-y-1.5">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              {{ $t('graph.drawer.takeaways') }}
+            </h4>
+            <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
+              {{ node.summary }}
+            </p>
+          </div>
+
+          <!-- Pillar Metrics: Connected Topics & Books -->
+          <div class="space-y-1.5">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              {{ $t('graph.drawer.metrics') }}
+            </h4>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800">
+                <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">
+                  {{ $t('graph.drawer.connectedTopics') }}
+                </span>
+                <span class="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block" data-test="pillar-topics-count">
+                  {{ connectedTopicsCount }}
+                </span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800">
+                <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">
+                  {{ $t('graph.drawer.connectedBooks') }}
+                </span>
+                <span class="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block" data-test="pillar-books-count">
+                  {{ connectedBooksCount }}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Topic Section: Key Takeaways -->
@@ -405,6 +491,19 @@ function getMasteryBadgeClass(status?: string | null): string {
             <BookOpen class="w-4 h-4 shrink-0" />
             <span class="whitespace-nowrap shrink-0">{{ $t('graph.drawer.readChapter') }}</span>
           </NuxtLink>
+        </template>
+
+        <!-- Pillar Actions -->
+        <template v-else-if="nodeType === 'pillar'">
+          <button
+            type="button"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0"
+            data-test="filter-to-pillar"
+            @click="filterToThisPillar"
+          >
+            <Filter class="w-4 h-4 shrink-0" />
+            <span class="whitespace-nowrap shrink-0">{{ $t('graph.drawer.filterToPillar') }}</span>
+          </button>
         </template>
       </div>
     </aside>
