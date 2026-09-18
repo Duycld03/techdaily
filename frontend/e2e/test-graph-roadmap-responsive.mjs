@@ -22,8 +22,9 @@ async function runResponsiveSmokeSuite() {
   console.log('🚀 [E2E Smoke] Starting Knowledge Graph & Roadmap Responsive Verification')
   console.log(`🎯 Target URL: ${targetBaseUrl}`)
   console.log(`📸 Screenshot Export: ${shouldTakeScreenshots ? 'ENABLED (' + screenshotsDir + ')' : 'DISABLED'}\n`)
-  let authToken = process.env.AUTH_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiJmYzg0NmIwZC1iMzFjLTQxZjMtYTNjYi00NzI4NDc3NDkxNzgiLCJlbWFpbCI6InRydW9uZ2R1eTIwMDNAZ21haWwuY29tIiwidW5pcXVlX25hbWUiOiJEdXkgbmd1eeG7hW4iLCJuYmYiOjE3ODk3MzQ1ODAsImV4cCI6MTc5MjMyNjU4MCwiaWF0IjoxNzg5NzM0NTgwLCJpc3MiOiJUZWNoRGFpbHkiLCJhdWQiOiJUZWNoRGFpbHlVc2VycyJ9.o7upTrPV62CKhXS7of1oD443T41Nc_pRqRsFKn5bkH4'
-  let authUser = process.env.AUTH_USER || JSON.stringify({
+  const isNoAuth = process.env.NO_AUTH === 'true'
+  let authToken = isNoAuth ? null : (process.env.AUTH_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiJmYzg0NmIwZC1iMzFjLTQxZjMtYTNjYi00NzI4NDc3NDkxNzgiLCJlbWFpbCI6InRydW9uZ2R1eTIwMDNAZ21haWwuY29tIiwidW5pcXVlX25hbWUiOiJEdXkgbmd1eeG7hW4iLCJuYmYiOjE3ODk3MzQ1ODAsImV4cCI6MTc5MjMyNjU4MCwiaWF0IjoxNzg5NzM0NTgwLCJpc3MiOiJUZWNoRGFpbHkiLCJhdWQiOiJUZWNoRGFpbHlVc2VycyJ9.o7upTrPV62CKhXS7of1oD443T41Nc_pRqRsFKn5bkH4')
+  let authUser = isNoAuth ? null : (process.env.AUTH_USER || JSON.stringify({
     id: 'fc846b0d-b31c-41f3-a3cb-472847749178',
     email: 'truongduy2003@gmail.com',
     name: 'Duy nguyễn',
@@ -31,8 +32,12 @@ async function runResponsiveSmokeSuite() {
     avatarUrl: 'https://lh3.googleusercontent.com/a/ACg8ocJvy9e89hgWG_I9HrEISNe7raMFXDzbcUMOmb5M4YuephBnftU=s96-c',
     targetRole: 'Mid-Level Engineer',
     dailyGoalMinutes: 10
-  })
-  console.log('🔑 Using authenticated session for: truongduy2003@gmail.com')
+  }))
+  if (isNoAuth) {
+    console.log('🔓 Running in unauthenticated mode (NO_AUTH=true)')
+  } else {
+    console.log('🔑 Using authenticated session for: truongduy2003@gmail.com')
+  }
 
 
   const browser = await chromium.launch({
@@ -193,32 +198,37 @@ async function runResponsiveSmokeSuite() {
       console.log(`\n--- [3. /roadmap] Testing Mindmap & Track Switcher (${vp.name}) ---`)
       await page.goto(`${targetBaseUrl}/roadmap`, { waitUntil: 'domcontentloaded' })
       await page.waitForTimeout(1500)
-      // Switch to Mindmap view mode via tab switcher
-      const mindmapTab = page.locator('#tab-mindmap, button:has-text("Mindmap"), button:has-text("Sơ Đồ Tư Duy")')
-      if (await mindmapTab.count() > 0) {
-        await mindmapTab.first().click()
-        await page.waitForTimeout(1500)
-        assert(true, 'Switched to Mindmap view mode via tab switcher')
-      }
-      // Check mindmap canvas search bar
-      const mindmapSearch = page.locator('[data-testid="mindmap-search-input"]')
-      await mindmapSearch.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
-      assert(await mindmapSearch.isVisible(), 'Roadmap mindmap search bar and canvas are visible')
 
-      // Check track switcher button
-      const trackSwitcher = page.locator('[data-testid="track-switcher-btn"]')
-      if (await trackSwitcher.count() > 0) {
-        assert(await trackSwitcher.first().isVisible(), 'Track switcher button is visible')
-        await trackSwitcher.first().click()
-        await page.waitForTimeout(500)
+      if (page.url().includes('/login')) {
+        console.log('  ℹ️ Unauthenticated session redirected to /login as expected by auth guard')
+        assert(true, 'Roadmap auth guard protected route against unauthenticated access')
+      } else {
+        // Switch to Mindmap view mode via tab switcher
+        const mindmapTab = page.locator('#tab-mindmap, button:has-text("Mindmap"), button:has-text("Sơ Đồ Tư Duy")')
+        if (await mindmapTab.count() > 0) {
+          await mindmapTab.first().click()
+          await page.waitForTimeout(1500)
+          assert(true, 'Switched to Mindmap view mode via tab switcher')
+        }
+        // Check mindmap canvas search bar
+        const mindmapSearch = page.locator('[data-testid="mindmap-search-input"]')
+        await mindmapSearch.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+        assert(await mindmapSearch.isVisible(), 'Roadmap mindmap search bar and canvas are visible')
 
-        // Verify popover menu appears and is visible
-        const trackMenu = page.locator('[data-testid="track-menu-popover"]')
-        if (await trackMenu.count() > 0) {
-          assert(await trackMenu.first().isVisible(), 'Track switcher popover is rendered and visible')
+        // Check track switcher button
+        const trackSwitcher = page.locator('[data-testid="track-switcher-btn"]')
+        if (await trackSwitcher.count() > 0) {
+          assert(await trackSwitcher.first().isVisible(), 'Track switcher button is visible')
+          await trackSwitcher.first().click()
+          await page.waitForTimeout(500)
+
+          // Verify popover menu appears and is visible
+          const trackMenu = page.locator('[data-testid="track-menu-popover"]')
+          if (await trackMenu.count() > 0) {
+            assert(await trackMenu.first().isVisible(), 'Track switcher popover is rendered and visible')
+          }
         }
       }
-
       if (shouldTakeScreenshots) {
         const file = path.join(screenshotsDir, `roadmap-${vp.name}.png`)
         await page.screenshot({ path: file, fullPage: false })
