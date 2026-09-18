@@ -40,13 +40,13 @@ const tierInfo = computed(() => {
   if (rate <= 75) {
     return {
       labelKey: 'review.tier_solid',
-      badgeClass: 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800',
+      badgeClass: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20',
       arcColor: 'text-brand-500'
     }
   }
   return {
     labelKey: 'review.tier_mastered',
-    badgeClass: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+      badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
     arcColor: 'text-emerald-500'
   }
 })
@@ -54,12 +54,12 @@ const tierInfo = computed(() => {
 
 <template>
   <div
-    class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-5 sm:p-6 shadow-sm flex flex-col justify-between h-full min-h-[200px]"
+    class="rounded-3xl glass-card text-slate-900 dark:text-white p-5 sm:p-6 shadow-sm flex flex-col justify-between h-full min-h-[200px]"
   >
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-xl bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center">
+        <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
           <Award class="w-4 h-4" />
         </div>
         <div>
@@ -98,7 +98,7 @@ const tierInfo = computed(() => {
             stroke="currentColor"
             stroke-width="10"
             stroke-linecap="round"
-            class="text-slate-100 dark:text-slate-800"
+            class="text-slate-100 dark:text-white/[0.08]"
           />
 
           <!-- Foreground Value Arc -->

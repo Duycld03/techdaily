@@ -71,12 +71,12 @@ function getBarHeightPercent(count: number): number {
 
 <template>
   <div
-    class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-5 sm:p-6 shadow-sm flex flex-col justify-between h-full min-h-[200px]"
+    class="rounded-3xl glass-card text-slate-900 dark:text-white p-5 sm:p-6 shadow-sm flex flex-col justify-between h-full min-h-[200px]"
   >
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200/60 dark:border-purple-800/60 flex items-center justify-center">
+        <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
           <Calendar class="w-4 h-4" />
         </div>
         <div>
@@ -120,8 +120,8 @@ function getBarHeightPercent(count: number): number {
                 day.isToday
                   ? 'bg-gradient-to-t from-brand-600 to-indigo-500 shadow-sm shadow-brand-500/20'
                   : day.count > 0
-                    ? 'bg-slate-200 dark:bg-slate-700 group-hover:bg-brand-400 dark:group-hover:bg-brand-500'
-                    : 'bg-slate-100 dark:bg-slate-800/60 border-t border-dashed border-slate-300 dark:border-slate-700'
+                    ? 'bg-slate-200 dark:bg-white/[0.12] group-hover:bg-brand-400 dark:group-hover:bg-brand-500'
+                    : 'bg-slate-100 dark:bg-white/[0.04] border-t border-dashed border-slate-300 dark:border-white/[0.1]'
               ]"
             ></div>
           </div>

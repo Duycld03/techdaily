@@ -108,12 +108,12 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] flex items-center justify-center p-3.5 sm:p-6 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
-    <div class="w-full max-w-md p-5 sm:p-10 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl space-y-5 sm:space-y-6 animate-in zoom-in-95 duration-200">
+  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] flex items-center justify-center p-3.5 sm:p-6 bg-slate-50 dark:bg-canvas transition-colors duration-200">
+    <div class="w-full max-w-md p-5 sm:p-10 rounded-3xl glass-panel shadow-2xl space-y-5 sm:space-y-6 animate-in zoom-in-95 duration-200">
       <!-- Brand Header -->
       <div class="text-center">
-        <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center mx-auto mb-3.5 sm:mb-4 shadow-lg shadow-brand-500/20">
-          <BookOpen class="w-6 h-6 sm:w-7 sm:h-7 text-slate-950 font-bold" />
+        <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center mx-auto mb-3.5 sm:mb-4 shadow-lg shadow-brand-500/20">
+          <BookOpen class="w-6 h-6 sm:w-7 sm:h-7" />
         </div>
         <h1 class="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
           {{ authMode === 'login' ? $t('auth.welcome_title') : $t('auth.register_title') }}
@@ -124,14 +124,14 @@ async function handleSubmit() {
       </div>
 
       <!-- Mode Switcher Tabs -->
-      <div class="flex p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-sm md:text-base font-semibold">
+      <div class="flex p-1.5 rounded-2xl bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-sm md:text-base font-semibold">
         <button
           type="button"
           @click="authMode = 'login'"
           :class="[
-            'flex-1 py-2.5 rounded-xl transition-all outline-none focus:outline-none',
+            'flex-1 py-2.5 rounded-xl transition-all outline-none focus:outline-none cursor-pointer',
             authMode === 'login'
-              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium'
           ]"
         >
@@ -141,9 +141,9 @@ async function handleSubmit() {
           type="button"
           @click="authMode = 'register'"
           :class="[
-            'flex-1 py-2.5 rounded-xl transition-all outline-none focus:outline-none',
+            'flex-1 py-2.5 rounded-xl transition-all outline-none focus:outline-none cursor-pointer',
             authMode === 'register'
-              ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border border-transparent dark:border-white/[0.06]'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-medium'
           ]"
         >
@@ -160,7 +160,7 @@ async function handleSubmit() {
             <input
               v-model="name"
               type="text"
-              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -174,7 +174,7 @@ async function handleSubmit() {
               required
               type="email"
               placeholder="you@example.com"
-              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -189,7 +189,7 @@ async function handleSubmit() {
               type="password"
               minlength="6"
               placeholder="••••••••"
-              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none transition-colors"
+              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-brand-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -197,7 +197,7 @@ async function handleSubmit() {
         <button
           type="submit"
           :disabled="isLoading"
-          class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm md:text-base shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+          class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm md:text-base shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
         >
           <span v-if="isLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
           <span>{{ authMode === 'login' ? $t('auth.submit_sign_in') : $t('auth.submit_register') }}</span>
@@ -208,10 +208,9 @@ async function handleSubmit() {
       <!-- Google OAuth Sign-In Divider -->
       <div class="space-y-4">
         <div class="relative flex items-center justify-center">
-          <div class="w-full border-t border-slate-200 dark:border-slate-800"></div>
-          <span class="px-3 bg-white dark:bg-slate-900 text-xs sm:text-sm text-slate-500 font-semibold uppercase">{{ $t('auth.or_continue_with') }}</span>
+          <div class="w-full border-t border-slate-200 dark:border-white/[0.08]"></div>
+          <span class="px-3 bg-white dark:bg-canvas-elevated text-xs sm:text-sm text-slate-500 font-semibold uppercase">{{ $t('auth.or_continue_with') }}</span>
         </div>
-
         <!-- Google OAuth Button Container -->
         <div class="flex flex-col items-center justify-center min-h-[44px]">
           <div ref="googleBtnContainer" class="flex justify-center"></div>

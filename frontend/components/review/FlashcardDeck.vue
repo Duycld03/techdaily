@@ -36,17 +36,17 @@ function handleGrade(score: number) {
         <Layers class="w-4 h-4" />
         <span>Card 1 of {{ remainingCount }}</span>
       </span>
-      <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-mono text-xs shadow-sm">
+      <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 font-mono text-xs shadow-sm">
         EF: {{ card.easeFactor.toFixed(2) }} • Interval: {{ card.intervalDays }}d
       </span>
     </div>
 
     <!-- Active Card Box -->
-    <div class="w-full min-h-[320px] sm:min-h-[380px] p-5 sm:p-8 rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-2xl flex flex-col justify-between transition-all">
+    <div class="w-full min-h-[320px] sm:min-h-[380px] p-5 sm:p-8 rounded-2xl sm:rounded-3xl glass-card shadow-xl dark:shadow-2xl flex flex-col justify-between transition-all">
       <!-- Front Content -->
       <div>
         <div class="flex items-center gap-2 mb-3.5 sm:mb-4">
-          <span class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-xl bg-brand-100 dark:bg-brand-950/80 border border-brand-200 dark:border-brand-800/60 text-brand-800 dark:text-brand-300 text-xs font-bold">
+          <span class="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/20 text-xs font-bold">
             Senior Core
           </span>
           <span class="text-xs text-slate-500 font-mono">Repetition #{{ card.repetitionCount }}</span>
@@ -56,12 +56,12 @@ function handleGrade(score: number) {
           {{ card.topicTitle }}
         </h2>
 
-        <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-950/60 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80">
+        <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-canvas-subtle p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.06]">
           {{ card.topicSummary }}
         </p>
 
         <!-- Flipped Answer Content -->
-        <div v-if="isFlipped" class="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200">
+        <div v-if="isFlipped" class="mt-6 pt-6 border-t border-slate-200/80 dark:border-white/[0.06] animate-in fade-in zoom-in-95 duration-200">
           <div class="text-xs sm:text-sm font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 mb-2.5 flex items-center gap-1.5">
             <Sparkles class="w-4 h-4" />
             <span>Deep Dive Explanation:</span>
@@ -74,7 +74,7 @@ function handleGrade(score: number) {
       <div v-if="!isFlipped" class="mt-8 flex justify-center">
         <button
           @click="isFlipped = true"
-          class="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-slate-800 dark:bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition-all shadow-lg active:scale-[0.98]"
+          class="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-white dark:bg-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.12] text-slate-900 dark:text-white font-bold text-sm border border-slate-200 dark:border-white/[0.1] transition-all shadow-lg active:scale-[0.98] cursor-pointer"
         >
           <Eye class="w-4 h-4" />
           <span>{{ $t('review.show_answer') }}</span>
