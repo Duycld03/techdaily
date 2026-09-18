@@ -452,6 +452,23 @@
     "resetCamera": "Đặt Lại Góc Nhìn",
     "loading3d": "Đang Tải Đồ Họa 3D WebGL...",
     "searchPlaceholder": "Tìm kiếm khái niệm, sách, ghi chú...",
+    "hud": {
+      "showLabels": "Hiện tất cả nhãn (Soi chi tiết)",
+      "hideLabels": "Ẩn bớt nhãn (Ngân hà thoáng đãng)"
+    },
+    "legend": {
+      "title": "Bảng Chú Thích",
+      "collapse": "Thu gọn chú thích",
+      "entities": "Phân Cấp Thực Thể",
+      "pillar": "Trụ Cột Kỹ Thuật",
+      "topic": "Chủ Đề Kiến Thức",
+      "book": "Sách Kỹ Thuật",
+      "highlight": "Ghi Chú Cá Nhân",
+      "sm2Status": "Mức Độ Ghi Nhớ SM-2",
+      "learning": "Đang Học (<6d)",
+      "reviewing": "Ôn Tập (6-20d)",
+      "mastered": "Thành Thạo (≥21d)"
+    },
     "filters": {
       "pillars": "Trụ Cột Kỹ Thuật",
       "nodeTypes": "Loại Nút",

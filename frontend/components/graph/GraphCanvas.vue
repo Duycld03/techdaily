@@ -267,6 +267,19 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'border-color': activeClr,
         'z-index': 99
       }
+    },
+    // Interactive visual legend dimming classes
+    {
+      selector: 'node.legend-dimmed',
+      style: {
+        'opacity': 0.15
+      }
+    },
+    {
+      selector: 'edge.legend-dimmed',
+      style: {
+        'opacity': 0.05
+      }
     }
   ]
 }
@@ -490,6 +503,47 @@ watch(
   () => store.searchQuery,
   () => {
     applySearchHighlights()
+  }
+)
+
+function matchesLegendType(nodeData: any, legendType: string): boolean {
+  const nodeType = (nodeData.type || '').toLowerCase()
+  const status = (nodeData.status || 'learning').toLowerCase()
+
+  if (legendType === 'pillar') return nodeType === 'pillar'
+  if (legendType === 'topic') return nodeType === 'topic'
+  if (legendType === 'book') return nodeType === 'book'
+  if (legendType === 'highlight') return nodeType === 'highlight'
+  if (legendType === 'card') return nodeType === 'card'
+  if (legendType === 'learning') return nodeType === 'card' && status === 'learning'
+  if (legendType === 'reviewing') return nodeType === 'card' && status === 'reviewing'
+  if (legendType === 'mastered') return nodeType === 'card' && status === 'mastered'
+  return true
+}
+
+// Watch legend hover changes for interactive visual dimming
+watch(
+  () => store.hoveredLegendType,
+  (type) => {
+    if (!cy) return
+    if (!type) {
+      cy.batch(() => {
+        cy?.nodes().removeClass('legend-dimmed')
+        cy?.edges().removeClass('legend-dimmed')
+      })
+      return
+    }
+    cy.batch(() => {
+      cy?.nodes().forEach((node) => {
+        const d = node.data()
+        if (matchesLegendType(d, type)) {
+          node.removeClass('legend-dimmed')
+        } else {
+          node.addClass('legend-dimmed')
+        }
+      })
+      cy?.edges().addClass('legend-dimmed')
+    })
   }
 )
 

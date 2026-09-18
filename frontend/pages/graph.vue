@@ -140,6 +140,11 @@ onMounted(() => {
       :cy="cyInstance"
       class="absolute bottom-4 right-4 z-20 hidden sm:block"
     />
+
+    <!-- Interactive Visual Graph Legend (Bottom Left, 2D & 3D) -->
+    <div class="absolute bottom-5 left-5 z-20 pointer-events-none">
+      <GraphLegend />
+    </div>
     <!-- Slide-Over / Bottom-Sheet Detail Drawer -->
     <GraphDetailDrawer />
   </div>

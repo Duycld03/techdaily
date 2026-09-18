@@ -49,6 +49,7 @@ const mockGraphInstance = {
   cameraPosition: vi.fn().mockReturnThis(),
   zoomToFit: vi.fn().mockReturnThis(),
   graphData: vi.fn().mockReturnThis(),
+  refresh: vi.fn().mockReturnThis(),
   _destructor: vi.fn()
 }
 
@@ -185,13 +186,57 @@ describe('GraphCanvas3D.vue', () => {
     vi.useRealTimers()
   })
 
-  it('renders floating 3D HUD controls with buttons', async () => {
+  it('renders floating 3D HUD controls with 5 buttons', async () => {
     createTestStore()
     const wrapper = mount(GraphCanvas3D)
     await flushPromises()
 
     const hudButtons = wrapper.findAll('div.absolute.bottom-5.right-5 button')
-    expect(hudButtons.length).toBe(4) // AutoRotate, FitScreen, ZoomIn, ZoomOut
+    expect(hudButtons.length).toBe(5) // AutoRotate, ShowAllLabels (LOD), FitScreen, ZoomIn, ZoomOut
+  })
+
+  it('toggles showAllLabels and culls non-pillar labels via LOD at overview distance', async () => {
+    createTestStore()
+    const wrapper = mount(GraphCanvas3D)
+    await flushPromises()
+
+    expect(typeof wrapper.vm.toggleAllLabels).toBe('function')
+    expect(wrapper.vm.showAllLabels).toBe(false)
+
+    // Capture the callback passed to nodeThreeObject
+    const nodeThreeObjectFn = mockGraphInstance.nodeThreeObject.mock.calls[0][0]
+    expect(typeof nodeThreeObjectFn).toBe('function')
+
+    // Pillar node always has billboard label
+    const pillarNode = { id: 'p1', type: 'pillar', label: 'Backend' }
+    const pillarSprite = nodeThreeObjectFn(pillarNode)
+    expect(pillarSprite).not.toBeNull()
+
+    // Topic node has NO label by default (culled at overview)
+    const topicNode = { id: 't1', type: 'topic', label: 'C#' }
+    const topicSpriteDefault = nodeThreeObjectFn(topicNode)
+    expect(topicSpriteDefault).toBeNull()
+
+    // Toggle showAllLabels on
+    wrapper.vm.toggleAllLabels()
+    expect(wrapper.vm.showAllLabels).toBe(true)
+    expect(mockGraphInstance.refresh).toHaveBeenCalled()
+
+    // Topic node now HAS label
+    const topicSpriteAfterToggle = nodeThreeObjectFn(topicNode)
+    expect(topicSpriteAfterToggle).not.toBeNull()
+  })
+
+  it('reacts to store.hoveredLegendType by refreshing 3D graph', async () => {
+    const store = createTestStore()
+    mount(GraphCanvas3D)
+    await flushPromises()
+
+    mockGraphInstance.refresh.mockClear()
+    store.setHoveredLegendType('pillar')
+    await flushPromises()
+
+    expect(mockGraphInstance.refresh).toHaveBeenCalled()
   })
 
   it('cleans up graph instance on unmount', async () => {

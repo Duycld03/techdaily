@@ -452,6 +452,23 @@
     "resetCamera": "Reset Camera",
     "loading3d": "Loading 3D WebGL Engine...",
     "searchPlaceholder": "Search concepts, books, notes...",
+    "hud": {
+      "showLabels": "Show all labels (Full Inspection)",
+      "hideLabels": "Hide topic labels (Clean Cosmos)"
+    },
+    "legend": {
+      "title": "Visual Legend",
+      "collapse": "Collapse legend",
+      "entities": "Entity Hierarchy",
+      "pillar": "Pillar Hub",
+      "topic": "Curriculum Topic",
+      "book": "Tech Book",
+      "highlight": "Personal Note",
+      "sm2Status": "Flashcard Retention",
+      "learning": "Learning (<6d)",
+      "reviewing": "Reviewing (6-20d)",
+      "mastered": "Mastered (≥21d)"
+    },
     "filters": {
       "pillars": "Engineering Pillars",
       "nodeTypes": "Node Types",

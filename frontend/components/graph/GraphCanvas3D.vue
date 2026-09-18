@@ -5,7 +5,8 @@ import {
   Compass,
   ZoomIn,
   ZoomOut,
-  Maximize2
+  Maximize2,
+  Type
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore, type GraphNode, type GraphEdge } from '~/stores/useKnowledgeGraphStore'
 
@@ -21,6 +22,14 @@ const containerRef = ref<HTMLDivElement | null>(null)
 let graphInstance: any = null
 const isAutoRotate = ref(false)
 const hoveredNode = ref<GraphNode | null>(null)
+const showAllLabels = ref(false)
+
+function toggleAllLabels() {
+  showAllLabels.value = !showAllLabels.value
+  if (graphInstance) {
+    graphInstance.refresh()
+  }
+}
 
 // Category Colors matching 2D palette
 function getCategoryColor(category?: string | null): string {
@@ -51,13 +60,53 @@ function getNodeVal(node: GraphNode): number {
   return 4 // highlight
 }
 
-// Node color resolver
-function getNodeColor(node: GraphNode): string {
+function matchesLegendType(node: GraphNode, legendType: string): boolean {
+  const nodeType = (node.type || '').toLowerCase()
+  const status = (node.status || 'learning').toLowerCase()
+
+  if (legendType === 'pillar') return nodeType === 'pillar'
+  if (legendType === 'topic') return nodeType === 'topic'
+  if (legendType === 'book') return nodeType === 'book'
+  if (legendType === 'highlight') return nodeType === 'highlight'
+  if (legendType === 'card') return nodeType === 'card'
+  if (legendType === 'learning') return nodeType === 'card' && status === 'learning'
+  if (legendType === 'reviewing') return nodeType === 'card' && status === 'reviewing'
+  if (legendType === 'mastered') return nodeType === 'card' && status === 'mastered'
+  return true
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  if (hex.startsWith('rgba')) {
+    return hex.replace(/[\d.]+\)$/, `${alpha})`)
+  }
+  if (!hex.startsWith('#') || hex.length < 7) {
+    return hex
+  }
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+function getBaseNodeColor(node: GraphNode): string {
   const type = (node.type || '').toLowerCase()
   if (type === 'card') return getCardStatusColor(node.status)
   if (type === 'highlight') return '#06b6d4'
   if (type === 'book') return '#6366f1'
   return getCategoryColor(node.category)
+}
+
+// Node color resolver with interactive legend hover dimming
+function getNodeColor(node: GraphNode): string {
+  const baseColor = getBaseNodeColor(node)
+  const hoveredLegend = store.hoveredLegendType
+  if (hoveredLegend) {
+    const matches = matchesLegendType(node, hoveredLegend)
+    if (!matches) {
+      return hexToRgba(baseColor, 0.15)
+    }
+  }
+  return baseColor
 }
 
 function isEdgeConnectedToNode(edge: any, targetNodeId: string | null): boolean {
@@ -236,18 +285,20 @@ onMounted(async () => {
         const isSelected = store.selectedNodeId === node.id
         const isHovered = hoveredNode.value?.id === node.id
 
-        // Level of Detail: Pillars & Books always show label; Topics show label at normal range; Cards/Highlights show on hover/select
-        if (!isPillar && !isBook && !isTopic && !isSelected && !isHovered) {
+        // Level of Detail (LOD) Decluttering:
+        // Restrict billboard text labels strictly to Pillar Hubs at overview distance.
+        // Reveal non-pillar labels only when showAllLabels is toggled on, or upon hover/selection.
+        if (!isPillar && !showAllLabels.value && !isSelected && !isHovered) {
           return null
         }
 
         const sprite = new SpriteText(node.label || node.id)
         sprite.color = isDark.value ? '#ffffff' : '#0f172a'
         sprite.textHeight = isPillar ? 7 : (isBook ? 5.5 : 4)
-        sprite.backgroundColor = isDark.value ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)'
+        sprite.backgroundColor = isDark.value ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)'
         sprite.padding = [1.5, 3]
         sprite.borderRadius = 4
-        sprite.position.y = isPillar ? 20 : (isBook ? 14 : 10)
+        sprite.position.y = isPillar ? 22 : (isBook ? 15 : 11)
         return sprite
       })
       .linkSource('source')
@@ -368,6 +419,16 @@ watch(
   }
 )
 
+// Watch for interactive visual legend hover dimming
+watch(
+  () => store.hoveredLegendType,
+  () => {
+    if (graphInstance) {
+      graphInstance.refresh()
+    }
+  }
+)
+
 onBeforeUnmount(() => {
   stopAutoRotate()
   if (graphInstance) {
@@ -382,7 +443,9 @@ onBeforeUnmount(() => {
 
 defineExpose({
   fitScreen,
-  toggleAutoRotate
+  toggleAutoRotate,
+  toggleAllLabels,
+  showAllLabels
 })
 </script>
 
@@ -407,6 +470,22 @@ defineExpose({
         @click="toggleAutoRotate"
       >
         <Compass class="w-4 h-4" :class="{ 'animate-spin': isAutoRotate }" />
+      </button>
+
+      <!-- Show All Labels / LOD Toggle (Clean Cosmos vs Full Inspection) -->
+      <button
+        type="button"
+        :class="[
+          'p-2.5 rounded-xl shadow-lg border backdrop-blur-md transition-all active:scale-95 flex items-center justify-center',
+          showAllLabels
+            ? 'bg-brand-500 text-white border-brand-400 shadow-brand-500/20'
+            : 'bg-white/85 dark:bg-slate-900/85 text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800'
+        ]"
+        :title="showAllLabels ? $t('graph.hud.hideLabels') : $t('graph.hud.showLabels')"
+        :aria-label="showAllLabels ? $t('graph.hud.hideLabels') : $t('graph.hud.showLabels')"
+        @click="toggleAllLabels"
+      >
+        <Type class="w-4 h-4" />
       </button>
 
       <!-- Fit Screen / Reset Camera -->

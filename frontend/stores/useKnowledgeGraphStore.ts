@@ -60,6 +60,7 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
   const selectedCategory = ref<string>('all')
   const selectedNodeType = ref<string>('all')
   const selectedMastery = ref<string>('all')
+  const hoveredLegendType = ref<string | null>(null)
 
   const filteredNodes = computed<GraphNode[]>(() => {
     if (!rawData.value?.nodes) return []
@@ -226,6 +227,10 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     selectedNodeId.value = null
   }
 
+  function setHoveredLegendType(type: string | null) {
+    hoveredLegendType.value = type
+  }
+
   return {
     rawData,
     isLoading,
@@ -250,6 +255,8 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     setMastery,
     setSearchQuery,
     setViewMode,
-    resetFilters
+    resetFilters,
+    hoveredLegendType,
+    setHoveredLegendType,
   }
 })
