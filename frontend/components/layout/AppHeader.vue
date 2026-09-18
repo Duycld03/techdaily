@@ -13,7 +13,8 @@ import {
   Layers,
   Highlighter,
   Network,
-  Settings
+  Settings,
+  Search
 } from 'lucide-vue-next'
 import StreakBadge from '~/components/common/StreakBadge.vue'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
@@ -23,6 +24,8 @@ const route = useRoute()
 const authStore = useAuthStore()
 const focusStore = useDailyFocusStore()
 const isMobileNavOpen = ref(false)
+const commandPalette = useCommandPalette()
+
 
 const currentStreak = computed(() => focusStore.data?.currentStreak ?? 0)
 const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 2)
@@ -107,13 +110,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <header class="h-14 sm:h-15 border-b border-slate-200 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/80 backdrop-blur sticky top-0 z-40 px-3 sm:px-6 flex items-center justify-between transition-colors duration-200">
+  <header class="h-14 sm:h-15 border-b border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-canvas/80 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 flex items-center justify-between transition-colors duration-200">
     <!-- Brand & Mobile Hamburger -->
     <div class="flex items-center gap-2 sm:gap-4 shrink-0">
       <!-- Mobile Menu Button -->
       <button
         @click="isMobileNavOpen = true"
-        class="md:hidden p-1.5 sm:p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        class="md:hidden p-1.5 sm:p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors"
         title="Open Navigation Menu"
         aria-label="Open Navigation Menu"
       >
@@ -121,16 +124,45 @@ onUnmounted(() => {
       </button>
 
       <NuxtLink to="/today" class="flex items-center gap-2 font-bold tracking-tight hover:opacity-90 transition-opacity">
-        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
-          <BookOpen class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950 font-bold" />
+        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-400 flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
+          <BookOpen class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white font-bold" />
         </div>
         <span class="hidden sm:inline text-base sm:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-brand-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">TechDaily</span>
       </NuxtLink>
 
-      <span v-if="focusStore.data?.topic" class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
+      <!-- Mobile Quick Search Trigger -->
+      <button
+        @click="commandPalette.open()"
+        class="sm:hidden p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors"
+        :title="$t('command_palette.trigger_placeholder_short')"
+        aria-label="Open Command Palette"
+      >
+        <Search class="w-4 h-4" />
+      </button>
+
+      <span v-if="focusStore.data?.topic" class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-slate-200">
         <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
         Day {{ focusStore.data.topic.dayOrder }} / 30
       </span>
+    </div>
+
+    <!-- Centered ⌘K Quick Jump Trigger (Desktop & Tablet) -->
+    <div class="hidden sm:flex items-center flex-1 max-w-md mx-3 lg:mx-8">
+      <button
+        @click="commandPalette.open()"
+        type="button"
+        class="w-full flex items-center justify-between gap-3 px-3.5 py-1.5 rounded-xl text-xs text-slate-500 dark:text-slate-400 bg-slate-100/90 dark:bg-canvas-subtle hover:bg-slate-200/70 dark:hover:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] transition-all shadow-sm group"
+        :title="$t('command_palette.trigger_placeholder')"
+        aria-label="Open Command Palette"
+      >
+        <span class="flex items-center gap-2 truncate">
+          <Search class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover:text-brand-500 transition-colors shrink-0" />
+          <span class="truncate">{{ $t('command_palette.trigger_placeholder') }}</span>
+        </span>
+        <kbd class="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/[0.08] shrink-0">
+          ⌘K
+        </kbd>
+      </button>
     </div>
 
     <!-- Header Actions -->

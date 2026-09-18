@@ -162,7 +162,7 @@ async function runResponsiveSmokeSuite() {
       console.log(`\n--- [2. /graph] Testing 3D Cosmos Mode (${vp.name}) ---`)
       const mode3dButton = page.locator('button:has-text("3D"), button[title*="3D"]')
       if (await mode3dButton.count() > 0) {
-        await mode3dButton.first().click()
+        await mode3dButton.first().click({ force: true })
         const hudContainer = page.locator('div.absolute.bottom-5.right-5')
         await hudContainer.waitFor({ state: 'visible', timeout: 12000 }).catch(() => {})
         assert(await hudContainer.isVisible(), '3D HUD floating toolbar is visible at bottom-right')

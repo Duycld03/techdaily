@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue'
 import AppHeader from '~/components/layout/AppHeader.vue'
 import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppToastContainer from '~/components/common/AppToastContainer.vue'
-
+import AppCommandPalette from '~/components/app/AppCommandPalette.vue'
 const route = useRoute()
 const authStore = useAuthStore()
 
@@ -15,8 +15,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
+  <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-canvas text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
     <AppHeader v-if="!isReaderMode" />
+    <AppCommandPalette />
     <AppToastContainer />
     <div class="flex-1 flex overflow-hidden">
       <AppSidebar v-if="!isReaderMode" />

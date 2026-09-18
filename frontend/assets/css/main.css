@@ -9,7 +9,7 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased font-sans transition-colors duration-200 selection:bg-brand-500/30 selection:text-brand-500 dark:selection:text-brand-300;
+    @apply bg-slate-50 text-slate-900 dark:bg-canvas dark:text-slate-100 antialiased font-sans transition-colors duration-200 selection:bg-brand-500/30 selection:text-brand-600 dark:selection:text-brand-300;
   }
 
   /* Prevent sticky focus outlines/borders on mouse/touch clicks while preserving keyboard accessibility */
@@ -24,6 +24,24 @@
     -webkit-tap-highlight-color: transparent !important;
   }
 }
+@layer components {
+  .glass-card {
+    @apply bg-white/80 dark:bg-canvas-subtle/80 backdrop-blur-md border border-slate-200/80 dark:border-white/[0.08] shadow-sm rounded-xl;
+  }
+
+  .glass-panel {
+    @apply bg-white/90 dark:bg-canvas-elevated/90 backdrop-blur-lg border border-slate-200 dark:border-white/[0.1] shadow-lg rounded-2xl;
+  }
+
+  .hairline-border {
+    @apply border border-slate-200/80 dark:border-white/[0.08];
+  }
+
+  .glow-subtle {
+    box-shadow: 0 0 20px -5px rgba(139, 92, 246, 0.25);
+  }
+}
+
 
 /* Custom scrollbars for reader & code panes */
 ::-webkit-scrollbar {
@@ -36,7 +54,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-800 rounded hover:bg-slate-400 dark:hover:bg-slate-700;
+  @apply bg-slate-300 dark:bg-white/10 rounded hover:bg-slate-400 dark:hover:bg-white/20;
 }
 
 /* Markdown render styling with enhanced typography & dual theme */

@@ -68,3 +68,11 @@ const mockCookies = new Map<string, any>()
   }
   return mockCookies.get(name)
 }
+const mockStates = new Map<string, unknown>()
+Reflect.set(globalThis, 'useState', (key: string, init?: () => unknown) => {
+  if (!mockStates.has(key)) {
+    const { ref } = require('vue')
+    mockStates.set(key, ref(init ? init() : undefined))
+  }
+  return mockStates.get(key)
+})

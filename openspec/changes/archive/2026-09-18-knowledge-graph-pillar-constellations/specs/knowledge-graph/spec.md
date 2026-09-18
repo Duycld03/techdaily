@@ -42,6 +42,16 @@ The query execution SHALL execute in a single consolidated read transaction usin
 - **AND** the `edges` array contains topic-to-pillar and book-to-topic edges
 - **AND** the `card` and `highlight` node collections are empty arrays without causing null reference errors.
 
+#### Scenario: Flashcard created from highlight links to highlight node
+- **WHEN** an authenticated user has a flashcard created from a reading highlight (`SourceType = Highlight` and `SourceHighlightId != null`)
+- **THEN** the backend graph projection derives an edge with `relationType: "CardToHighlight"` connecting `card.Id` to `card.SourceHighlightId`
+- **AND** the card node is positioned relative to its source highlight cluster.
+
+#### Scenario: Flashcard with no linked topic or highlight links to pillar hub
+- **WHEN** an authenticated user has a flashcard with `TopicId == null` and `SourceHighlightId == null` (e.g. quiz mistake card)
+- **THEN** the backend graph projection derives an edge with `relationType: "CardToPillar"` connecting `card.Id` to `pillar-{card.Category}`
+- **AND** the card node does not become an isolated degree-0 node.
+
 #### Scenario: Shared tag associative edge generation
 - **WHEN** an authenticated user has two highlights that both contain the tag `"mvcc"`
 - **THEN** the backend graph projection derives a bidirectional or directed edge between the two highlight nodes with `relationType: "SharedTag"` and `label: "mvcc"`.
@@ -98,6 +108,16 @@ The canvas SHALL support smooth mouse and touch pan, zoom (bounded between 0.2x 
 - **THEN** the canvas initializes Cytoscape.js with the user's nodes and edges
 - **AND** the force layout animates node positions into natural clusters
 - **AND** the physics simulation settles and completely stops within 1.5 seconds.
+
+#### Scenario: Level-of-Detail label decluttering at overview zoom
+- **WHEN** the user views the graph canvas at default overview zoom ($zoom < 1.1\times$)
+- **THEN** text labels for Card (diamond) and Highlight (hexagon) nodes are hidden to avoid label collision
+- **AND** text labels for Pillar hubs, Books, and Topics remain legible.
+
+#### Scenario: Card label reveals on hover or selection
+- **WHEN** the user hovers over or taps a Card node whose label is hidden
+- **THEN** the canvas immediately reveals the Card node's label and highlights its connecting edge
+- **AND** closing or unselecting restores the clean overview state.
 
 #### Scenario: Viewport pan and zoom controls
 - **WHEN** a user scrolls the mouse wheel or pinches the touch screen on the canvas
