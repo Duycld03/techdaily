@@ -134,7 +134,7 @@ async function handleOptionSubmit() {
 
   <div
     v-else
-    class="h-full flex flex-col bg-white dark:bg-slate-900/60 p-4 sm:p-6 md:p-9 overflow-y-auto space-y-5 sm:space-y-6 transition-colors duration-200"
+    class="h-full flex flex-col bg-slate-50/50 dark:bg-canvas-subtle/40 p-4 sm:p-6 md:p-8 overflow-y-auto space-y-5 sm:space-y-6 transition-colors duration-200"
   >
     <!-- Header -->
     <div class="space-y-2.5 sm:space-y-3">
@@ -148,7 +148,7 @@ async function handleOptionSubmit() {
 
         <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <span
-            class="px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60"
+            class="px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-brand-500/10 text-brand-400 border border-brand-500/20"
           >
             Senior Drill
           </span>
@@ -198,7 +198,7 @@ async function handleOptionSubmit() {
               !isReviewed && selectedOption === index
                 ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-950 dark:text-brand-100 ring-2 ring-brand-500/30 shadow-sm'
                 : !isReviewed
-                  ? 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 text-slate-800 dark:text-slate-200 hover:border-brand-300 dark:hover:border-slate-700 hover:bg-white dark:hover:bg-slate-800/50 cursor-pointer'
+                  ? 'border-slate-200 dark:border-white/[0.08] bg-white dark:bg-canvas-elevated text-slate-800 dark:text-slate-200 hover:border-brand-500/40 dark:hover:border-brand-500/40 hover:bg-slate-50 dark:hover:bg-white/[0.04] cursor-pointer'
                   : isReviewed && index === question.correctOptionIndex
                     ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-950 dark:text-emerald-100 font-semibold ring-2 ring-emerald-500/30'
                     : isReviewed &&
@@ -215,7 +215,7 @@ async function handleOptionSubmit() {
                 !isReviewed && selectedOption === index
                   ? 'bg-brand-600 text-white'
                   : !isReviewed
-                    ? 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 group-hover:border-brand-400'
+                    ? 'bg-slate-100 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 group-hover:border-brand-500/40'
                     : isReviewed && index === question.correctOptionIndex
                       ? 'bg-emerald-600 text-white'
                       : isReviewed &&
@@ -348,7 +348,7 @@ async function handleOptionSubmit() {
         <!-- Architectural Deep-Dive Explanation Card -->
         <div
           v-if="question.explanationMarkdown"
-          class="p-5 sm:p-6 rounded-3xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3"
+        class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] shadow-sm space-y-3"
         >
           <div
             class="flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400"

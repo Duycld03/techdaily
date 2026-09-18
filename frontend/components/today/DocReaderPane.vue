@@ -217,7 +217,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-full bg-white/60 dark:bg-slate-950/40 overflow-y-auto p-4 sm:p-6 md:p-9 transition-colors duration-200 min-w-0 max-w-full" @mouseup="handleMouseUp">
+  <div class="h-full bg-white dark:bg-canvas overflow-y-auto p-4 sm:p-6 md:p-8 transition-colors duration-200 min-w-0 max-w-full" @mouseup="handleMouseUp">
     <!-- Header info -->
     <div class="mb-5 sm:mb-6">
       <div class="flex items-center justify-between gap-2 mb-2">
@@ -239,7 +239,7 @@ onUnmounted(() => {
               'px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap',
               isTypographyOpen
                 ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'bg-slate-100 dark:bg-canvas-elevated text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/[0.08] hover:bg-slate-200 dark:hover:bg-white/[0.06]'
             ]"
             :title="$t('reader.typography_settings')"
           >
@@ -249,7 +249,7 @@ onUnmounted(() => {
           <!-- Typography Popover Dropdown (click-outside dismissed) -->
           <div
             v-if="isTypographyOpen"
-            class="absolute right-0 mt-2 w-80 sm:w-84 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl z-50 space-y-4 text-xs select-none"
+            class="absolute right-0 mt-2 w-80 sm:w-84 p-4 bg-white dark:bg-canvas-elevated rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-2xl z-50 space-y-4 text-xs select-none"
           >
             <!-- Section 1: Font Size -->
             <div class="space-y-2">
@@ -259,12 +259,12 @@ onUnmounted(() => {
                   {{ fontScalePercentages[typography.fontSize] }}
                 </span>
               </div>
-              <div class="flex items-center justify-between gap-2 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+            <div class="flex items-center justify-between gap-2 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.04]">
                 <button
                   type="button"
                   @click="decreaseFontSize"
                   :disabled="!canDecreaseFontSize"
-                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm whitespace-nowrap shrink-0"
+                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm whitespace-nowrap shrink-0"
                   title="Smaller Font"
                 >
                   <span class="text-xs font-bold">A</span>
@@ -286,7 +286,7 @@ onUnmounted(() => {
                   type="button"
                   @click="increaseFontSize"
                   :disabled="!canIncreaseFontSize"
-                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm whitespace-nowrap shrink-0"
+                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm whitespace-nowrap shrink-0"
                   title="Larger Font"
                 >
                   <span class="text-sm font-black">A</span>
@@ -298,14 +298,14 @@ onUnmounted(() => {
             <!-- Section 2: Font Family -->
             <div class="space-y-2">
               <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.font_family') }}</span>
-              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+            <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.04]">
                 <button
                   type="button"
                   @click="typography.fontFamily = 'sans'"
                   class="py-2 px-2 rounded-lg font-sans font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
                   :class="[
                     typography.fontFamily === 'sans'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
@@ -317,7 +317,7 @@ onUnmounted(() => {
                   class="py-2 px-2 rounded-lg font-serif font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
                   :class="[
                     typography.fontFamily === 'serif'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
@@ -329,7 +329,7 @@ onUnmounted(() => {
                   class="py-2 px-2 rounded-lg font-mono font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
                   :class="[
                     typography.fontFamily === 'mono'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
@@ -341,14 +341,14 @@ onUnmounted(() => {
             <!-- Section 3: Line Spacing -->
             <div class="space-y-2">
               <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.line_spacing') }}</span>
-              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+            <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.04]">
                 <button
                   type="button"
                   @click="typography.lineSpacing = 'normal'"
                   class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
                   :class="[
                     typography.lineSpacing === 'normal'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
@@ -360,7 +360,7 @@ onUnmounted(() => {
                   class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
                   :class="[
                     typography.lineSpacing === 'relaxed'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
@@ -372,7 +372,7 @@ onUnmounted(() => {
                   class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate whitespace-nowrap shrink-0"
                   :class="[
                     typography.lineSpacing === 'loose'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
@@ -388,7 +388,7 @@ onUnmounted(() => {
         {{ topic.title }}
       </h1>
 
-      <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80 font-normal">
+      <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-canvas-subtle/80 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] font-normal">
         {{ cleanSummary }}
       </p>
 
@@ -397,7 +397,7 @@ onUnmounted(() => {
         <span
           v-for="(takeaway, i) in documentChunk.keyTakeaways"
           :key="i"
-          class="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 shadow-sm"
+          class="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-canvas-elevated text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08] shadow-sm"
         >
           <Tag class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 shrink-0" />
           <span>{{ takeaway }}</span>
@@ -405,7 +405,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="w-full h-px bg-slate-200 dark:bg-slate-800/80 mb-5 sm:mb-6"></div>
+    <div class="w-full h-px bg-slate-200/80 dark:bg-white/[0.08] mb-5 sm:mb-6"></div>
 
     <!-- Reading Content (Rendered Architectural Deep Dive) -->
     <div
