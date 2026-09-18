@@ -70,6 +70,7 @@ Thumbs.db
 AGENTS.md
 CLAUDE.md
 .agents/
+.omp/
 .gemini/
 .claude/
 .cursor/
