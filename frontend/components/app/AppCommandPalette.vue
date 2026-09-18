@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useCommandPalette } from '~/composables/useCommandPalette'
 import {
   Search,
+  LayoutGrid,
   Target,
   Map,
   HelpCircle,
@@ -36,13 +37,22 @@ interface CommandItem {
 
 const commandItems: CommandItem[] = [
   {
+    id: 'dashboard',
+    titleKey: 'command_palette.action_dashboard',
+    descKey: 'command_palette.action_dashboard_desc',
+    path: '/',
+    icon: LayoutGrid,
+    category: 'practice',
+    keywords: ['dashboard', 'home', 'overview', 'trang chu', 'tong quan', 'metrics']
+  },
+  {
     id: 'today',
     titleKey: 'command_palette.action_today',
     descKey: 'command_palette.action_today_desc',
     path: '/today',
     icon: Target,
     category: 'practice',
-    keywords: ['today', 'slice', 'reading', 'focus', 'daily', 'bai doc', 'hom nay']
+    keywords: ['today', 'studio', 'slice', 'reading', 'focus', 'daily', 'bai doc', 'hom nay']
   },
   {
     id: 'roadmap',

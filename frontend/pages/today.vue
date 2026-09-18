@@ -10,15 +10,10 @@ import {
   ChevronDown,
   ArrowUpRight,
   BookMarked,
-  Sparkles,
-  LayoutGrid,
-  Columns
+  Sparkles
 } from "lucide-vue-next";
 import DocReaderPane from "~/components/today/DocReaderPane.vue";
 import InterviewChallengePane from "~/components/today/InterviewChallengePane.vue";
-import TodayBentoDashboard from "~/components/today/TodayBentoDashboard.vue";
-import TermExplainerModal from "~/components/today/TermExplainerModal.vue";
-import { useTodayViewMode } from "~/composables/useTodayViewMode";
 
 const route = useRoute();
 const router = useRouter();
@@ -31,24 +26,6 @@ const currentDayOrder = ref<number>(1);
 const isBookMenuOpen = ref(false);
 const bookMenuRef = ref<HTMLElement | null>(null);
 
-const { viewMode, setViewMode } = useTodayViewMode();
-const isExplainerOpen = ref(false);
-const explainerTerm = ref("Software Architecture");
-
-function handleStartReading() {
-  setViewMode("split");
-  activeMobileTab.value = "reader";
-}
-
-function handleStartScenario() {
-  setViewMode("split");
-  activeMobileTab.value = "challenge";
-}
-
-function handleOpenAiExplainer() {
-  explainerTerm.value = focusStore.data?.topic?.title || "Software Architecture";
-  isExplainerOpen.value = true;
-}
 
 function handleClickOutside(event: MouseEvent) {
   if (bookMenuRef.value && !bookMenuRef.value.contains(event.target as Node)) {
@@ -405,40 +382,6 @@ function resetToScheduledDay() {
         </button>
       </template>
 
-      <!-- Right End: View Mode Switcher (Bento vs Split) -->
-      <div class="inline-flex items-center p-0.5 sm:p-1 rounded-xl bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-xs font-bold shrink-0 ml-1 sm:ml-2">
-        <button
-          @click="setViewMode('bento')"
-          type="button"
-          :class="[
-            'flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg transition-all',
-            viewMode === 'bento'
-              ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200/60 dark:border-white/[0.08]'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          ]"
-          title="Bento Dashboard"
-          aria-label="Bento Dashboard"
-        >
-          <LayoutGrid class="w-3.5 h-3.5" />
-          <span class="hidden md:inline">{{ $t('dashboard.view_bento') }}</span>
-        </button>
-
-        <button
-          @click="setViewMode('split')"
-          type="button"
-          :class="[
-            'flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg transition-all',
-            viewMode === 'split'
-              ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border border-slate-200/60 dark:border-white/[0.08]'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-          ]"
-          title="Focus Studio"
-          aria-label="Focus Studio"
-        >
-          <Columns class="w-3.5 h-3.5" />
-          <span class="hidden md:inline">{{ $t('dashboard.view_split') }}</span>
-        </button>
-      </div>
     </div>
 
     <!-- Loading State -->
@@ -484,17 +427,6 @@ function resetToScheduledDay() {
       </div>
     </div>
 
-    <!-- Main Content: Bento Dashboard Mode -->
-    <div
-      v-else-if="focusStore.data && viewMode === 'bento'"
-      class="flex-1 overflow-y-auto"
-    >
-      <TodayBentoDashboard
-        @start-reading="handleStartReading"
-        @start-scenario="handleStartScenario"
-        @open-ai-explainer="handleOpenAiExplainer"
-      />
-    </div>
 
     <!-- Main Dual-Pane Content (Split-Pane Mode) -->
     <div
@@ -567,12 +499,5 @@ function resetToScheduledDay() {
       </div>
     </div>
 
-    <!-- Teleported Term Explainer Modal for Bento Ask AI CTA -->
-    <TermExplainerModal
-      v-if="isExplainerOpen"
-      :term="explainerTerm"
-      :category="focusStore.data?.topic?.category || 'General'"
-      @close="isExplainerOpen = false"
-    />
   </div>
 </template>

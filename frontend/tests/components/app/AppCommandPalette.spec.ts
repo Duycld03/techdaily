@@ -8,6 +8,8 @@ vi.stubGlobal('useRouter', () => ({
   push: mockPush
 }))
 const translations: Record<string, string> = {
+  'command_palette.action_dashboard': 'Command Center Dashboard',
+  'command_palette.action_dashboard_desc': 'Overview of daily momentum, active recall pace, and learning milestones',
   'command_palette.action_today': "Today's Reading Slice",
   'command_palette.action_today_desc': 'Resume your active reading slice and daily practice',
   'command_palette.action_roadmap': 'Architecture Roadmap & Mindmap',
@@ -89,8 +91,10 @@ describe('AppCommandPalette.vue', () => {
 
     expect(wrapper.text()).toContain('Knowledge Graph 2D / 3D')
     expect(wrapper.text()).not.toContain('Spaced Repetition Flashcards')
-  })
 
+    await input.setValue('dashboard')
+    expect(wrapper.text()).toContain('Command Center Dashboard')
+  })
   it('navigates to destination and closes palette on click', async () => {
     const { isOpen, open } = useCommandPalette()
     open()
