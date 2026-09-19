@@ -204,9 +204,9 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     // Standard studio container max-w-6xl
     expect(wrapper.find('.max-w-6xl').exists()).toBe(true)
 
-    // Balanced 50/50 Bento Grid
+    // Balanced 50/50 Bento Grid with top alignment
     expect(wrapper.find('.lg\\:grid-cols-2').exists()).toBe(true)
-
+    expect(wrapper.find('.items-start').exists()).toBe(true)
     // Generate CTA button
     const generateBtn = wrapper.find('[data-testid="generate-quiz-btn"]')
     expect(generateBtn.exists()).toBe(true)
@@ -223,8 +223,12 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     expect(wrapper.text()).toContain('quiz.count_5')
     expect(wrapper.text()).toContain('quiz.count_10')
 
-    // Topic input
+    // Topic input and safe fallback population
     const topicInput = wrapper.find('input[type="text"]')
     expect(topicInput.exists()).toBe(true)
+
+    await generateBtn.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect((topicInput.element as HTMLInputElement).value).not.toBe('')
   })
 })

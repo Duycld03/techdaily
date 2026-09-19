@@ -246,9 +246,13 @@ function handleSelectOption(index: number) {
 
 async function handleGenerateQuiz(topic?: string) {
   if (quizStore.isGenerating) return
-  const chosenTopic = topic || customTopicInput.value || quickTopics[0]
+  const fallbackTopic = (computedQuickTopics.value && computedQuickTopics.value[0]) || 'Technical Architecture'
+  const chosenTopic = topic || customTopicInput.value || fallbackTopic
   if (!chosenTopic.trim()) return
 
+  if (!customTopicInput.value) {
+    customTopicInput.value = chosenTopic.trim()
+  }
   selectedOptionIndex.value = null
   await quizStore.generateQuiz(
     chosenTopic.trim(),
@@ -523,9 +527,9 @@ defineExpose({
     </div>
 
     <!-- TAB 1: GENERATE QUIZ (BENTO STUDIO) -->
-    <div v-if="quizStore.activeTab === 'generate'" class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+    <div v-if="quizStore.activeTab === 'generate'" class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <!-- LEFT BENTO: Topic & Context Hub -->
-      <div class="glass-card p-5 sm:p-7 space-y-6 flex flex-col justify-between">
+      <div class="glass-card p-5 sm:p-7 space-y-6">
         <div class="space-y-6">
           <!-- Topic Selection -->
           <div class="space-y-2.5">
@@ -614,7 +618,7 @@ defineExpose({
       </div>
 
       <!-- RIGHT BENTO: Seniority & Generation Controls -->
-      <div class="glass-card p-5 sm:p-7 space-y-6 flex flex-col justify-between">
+      <div class="glass-card p-5 sm:p-7 space-y-6">
         <div class="space-y-6">
           <!-- Level Picker (Purely Typographic, 2x2 Grid, No Emojis/Icons) -->
           <div class="space-y-2.5">
@@ -691,7 +695,7 @@ defineExpose({
         </div>
 
         <!-- Generate Button -->
-        <div class="pt-4">
+        <div class="pt-2">
           <button
             data-testid="generate-quiz-btn"
             @click="handleGenerateQuiz()"
