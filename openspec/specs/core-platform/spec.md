@@ -784,6 +784,20 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
      - Sticky Header and Top Navigation Bars: `z-30`
      - In-Page Floating Action Bars and Canvas Controls: `z-10`
 
+11. **Clean Engineering Iconography Standard**:
+    - The application iconography SHALL standardize on `lucide-vue-next` following clean engineering aesthetics:
+      - **Stroke Width**: Icons on navigation bars, Bento cards, action buttons, and input controls SHALL enforce a sleek 1.5px stroke weight (`:stroke-width="1.5"`), replacing clunky default 2px lines.
+      - **3-Tier Sizing**: Micro metadata and inline tags SHALL use `w-3.5 h-3.5` (14px); interactive controls, inputs, and tabs SHALL use `w-4 h-4` (16px); feature tiles and studio section headers SHALL use `w-5 h-5` (20px).
+      - **Standardized Icon Tile Container**: Feature cards and section banners SHALL house prominent icons within a standard glass tile container (`p-2.5 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-600 dark:text-brand-400 shrink-0`).
+      - **Semantic Purpose**: The `Sparkles` icon SHALL NOT be used as a generic loading spinner or catch-all decoration. Loading states SHALL use dedicated `Loader2 class="animate-spin"`. Navigation and insights features SHALL use purposeful domain icons (e.g. `Compass` for Insights).
+      - **Unified Palette**: Secondary metadata icons SHALL use neutral slate tones (`text-slate-400 dark:text-slate-500`), avoiding disparate rainbow icon fills across single cards.
+
+12. **Native Form Controls & Color-Scheme Alignment**:
+    - The application root (`html.dark`, `.dark`) and native input controls (`input[type="time"]`, `input[type="date"]`, `input[type="datetime-local"]`) SHALL declare `color-scheme: dark;` when operating in dark mode, ensuring that native browser popup dialogs and User-Agent Shadow DOM pickers render with dark background surfaces and high-contrast text.
+    - Light mode (`html:not(.dark)`) SHALL declare `color-scheme: light;`.
+    - Native calendar and clock picker indicators (`::-webkit-calendar-picker-indicator`) SHALL render with high contrast, brand accent styling, and `cursor: pointer` in dark mode.
+    - All workspace loading states SHALL utilize dedicated `Loader2` spinners (`class="animate-spin"`) with 1.5px stroke weight, eliminating decorative sparkle animations for loading processes.
+
 13. **Studio Time Picker Architecture (`AppTimePicker.vue`)**:
     - The application SHALL provide a dedicated `AppTimePicker.vue` component to replace unstyled native temporal inputs (`<input type="time">`) across user settings and schedule configurations.
     - The time picker trigger SHALL display the formatted time value (`08:00 AM`) with a 1.5px stroke `Clock` icon and high-contrast studio hairline border.
@@ -882,6 +896,20 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 - **THEN** default OS/browser appearance is suppressed (`appearance: none`)
 - **AND** a custom theme-calibrated SVG dropdown chevron renders on the right side without colliding with option text
 - **AND** dropdown `<option>` items render with crisp contrast in both Light Mode (`#ffffff` background) and Dark Mode (`#18181b` canvas-elevated background).
+
+#### Scenario: Icons render with refined 1.5px stroke weight and semantic loading spinners
+- **WHEN** a user navigates between studio workspaces (Today, Quiz, Insights, Library, Reader)
+- **THEN** interactive icons render with a sleek 1.5px stroke weight
+- **AND** loading states display dedicated `Loader2` spinners without using spinning sparkle icons.
+
+#### Scenario: User opens native time picker in dark mode
+- **WHEN** a user clicks on a native time input control (such as preferred study time in `/settings`) while the application is in dark mode
+- **THEN** the native browser dropdown picker renders in dark theme with dark canvas background and high-contrast text
+- **AND** the picker does not flash a stark white (`#ffffff`) background.
+
+#### Scenario: Daily focus workspace renders clean engineering loading state
+- **WHEN** a user visits the daily focus workspace (`/today`) while daily topics are loading
+- **THEN** the loading container displays a `Loader2` spinner with 1.5px stroke weight rather than a spinning sparkle icon.
 
 
 #### Scenario: User opens custom AppTimePicker dropdown in dark mode

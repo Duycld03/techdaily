@@ -69,12 +69,6 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
       - **Semantic Purpose**: The `Sparkles` icon SHALL NOT be used as a generic loading spinner or catch-all decoration. Loading states SHALL use dedicated `Loader2 class="animate-spin"`. Navigation and insights features SHALL use purposeful domain icons (e.g. `Compass` for Insights).
       - **Unified Palette**: Secondary metadata icons SHALL use neutral slate tones (`text-slate-400 dark:text-slate-500`), avoiding disparate rainbow icon fills across single cards.
 
-12. **Native Form Controls & Color-Scheme Alignment**:
-    - The application root (`html.dark`, `.dark`) and native input controls (`input[type="time"]`, `input[type="date"]`, `input[type="datetime-local"]`) SHALL declare `color-scheme: dark;` when operating in dark mode, ensuring that native browser popup dialogs and User-Agent Shadow DOM pickers render with dark background surfaces and high-contrast text.
-    - Light mode (`html:not(.dark)`) SHALL declare `color-scheme: light;`.
-    - Native calendar and clock picker indicators (`::-webkit-calendar-picker-indicator`) SHALL render with high contrast, brand accent styling, and `cursor: pointer` in dark mode.
-    - All workspace loading states SHALL utilize dedicated `Loader2` spinners (`class="animate-spin"`) with 1.5px stroke weight, eliminating decorative sparkle animations for loading processes.
-
 #### Scenario: User opens application in dark mode with new design tokens
 - **WHEN** a user visits any page in dark mode
 - **THEN** the body background is rendered with neutral dark obsidian `#09090b`
@@ -181,3 +175,18 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 #### Scenario: Daily focus workspace renders clean engineering loading state
 - **WHEN** a user visits the daily focus workspace (`/today`) while daily topics are loading
 - **THEN** the loading container displays a `Loader2` spinner with 1.5px stroke weight rather than a spinning sparkle icon.
+
+#### Scenario: User opens custom AppTimePicker dropdown in dark mode
+- **WHEN** user clicks the time picker trigger for preferred study time on `/settings`
+- **THEN** a floating glassmorphic popover opens anchored to the trigger button
+- **AND** the popover renders with studio dark elevation (`dark:bg-canvas-elevated`, `border-white/[0.08]`, `backdrop-blur-md`) without using unstyled OS browser dialogs.
+
+#### Scenario: User selects study time via column selection
+- **WHEN** user selects hour `08`, minute `00`, and period `AM` in the time picker popover
+- **THEN** the active selections highlight in Deep Iris Violet (`bg-brand-600 text-white`)
+- **AND** the component emits `update:modelValue` with `'08:00'`
+- **AND** the trigger button immediately updates to display `08:00 AM`.
+
+#### Scenario: User dismisses AppTimePicker via outside click or Escape
+- **WHEN** the time picker popover is open and the user clicks outside or presses `Escape`
+- **THEN** the popover smoothly closes without modifying the unconfirmed time value.
