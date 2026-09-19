@@ -778,11 +778,17 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
    - Overlay and floating layers SHALL adhere to a deterministic, semantic z-index scale:
      - Global Toast Notifications: `z-[9999]`
      - Global Command Palette (`⌘K`): `z-60`
-     - Floating Dropdown Popovers (`AppSelect.vue`): `z-[60]`
+     - Floating Dropdown Popovers (`AppSelect.vue`, `AppTimePicker.vue`): `z-[60]`
      - Full-screen Modals and Teleported Drawers: `z-50`
      - Contextual Tooltips and In-Page Menus: `z-40`
      - Sticky Header and Top Navigation Bars: `z-30`
      - In-Page Floating Action Bars and Canvas Controls: `z-10`
+
+13. **Studio Time Picker Architecture (`AppTimePicker.vue`)**:
+    - The application SHALL provide a dedicated `AppTimePicker.vue` component to replace unstyled native temporal inputs (`<input type="time">`) across user settings and schedule configurations.
+    - The time picker trigger SHALL display the formatted time value (`08:00 AM`) with a 1.5px stroke `Clock` icon and high-contrast studio hairline border.
+    - The time picker dropdown SHALL render via `<Teleport to="body">` with fixed positioning, collision-aware auto-flip, and glassmorphic elevation (`dark:bg-canvas-elevated`, `backdrop-blur-md`, `border-white/[0.08]`).
+    - The picker popover SHALL feature column selection for hours, minutes, and AM/PM periods with a balanced compact layout, and bind via two-way `v-model` using `HH:mm` format.
 
 #### Scenario: User opens application in dark mode with new design tokens
 - **WHEN** a user visits any page in dark mode
@@ -877,6 +883,21 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 - **AND** a custom theme-calibrated SVG dropdown chevron renders on the right side without colliding with option text
 - **AND** dropdown `<option>` items render with crisp contrast in both Light Mode (`#ffffff` background) and Dark Mode (`#18181b` canvas-elevated background).
 
+
+#### Scenario: User opens custom AppTimePicker dropdown in dark mode
+- **WHEN** user clicks the time picker trigger for preferred study time on `/settings`
+- **THEN** a floating glassmorphic popover opens anchored to the trigger button
+- **AND** the popover renders with studio dark elevation (`dark:bg-canvas-elevated`, `border-white/[0.08]`, `backdrop-blur-md`) without using unstyled OS browser dialogs.
+
+#### Scenario: User selects study time via column selection
+- **WHEN** user selects hour `08`, minute `00`, and period `AM` in the time picker popover
+- **THEN** the active selections highlight in Deep Iris Violet (`bg-brand-600 text-white`)
+- **AND** the component emits `update:modelValue` with `'08:00'`
+- **AND** the trigger button immediately updates to display `08:00 AM`.
+
+#### Scenario: User dismisses AppTimePicker via outside click or Escape
+- **WHEN** the time picker popover is open and the user clicks outside or presses `Escape`
+- **THEN** the popover smoothly closes without modifying the unconfirmed time value.
 ---
 
 ### Requirement: Home Command Center Dashboard & Zero-Scroll Desktop Layout

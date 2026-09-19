@@ -79,7 +79,7 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
     - The application SHALL provide a dedicated `AppTimePicker.vue` component to replace unstyled native temporal inputs (`<input type="time">`) across user settings and schedule configurations.
     - The time picker trigger SHALL display the formatted time value (`08:00 AM`) with a 1.5px stroke `Clock` icon and high-contrast studio hairline border.
     - The time picker dropdown SHALL render via `<Teleport to="body">` with fixed positioning, collision-aware auto-flip, and glassmorphic elevation (`dark:bg-canvas-elevated`, `backdrop-blur-md`, `border-white/[0.08]`).
-    - The picker popover SHALL feature column selection for hours, minutes, and AM/PM periods, alongside 1-click quick schedule presets (`07:00 AM`, `08:00 AM`, `08:00 PM`, `09:00 PM`), and bind via two-way `v-model` using `HH:mm` format.
+    - The picker popover SHALL feature column selection for hours, minutes, and AM/PM periods with a balanced compact layout, and bind via two-way `v-model` using `HH:mm` format.
 
 #### Scenario: User opens application in dark mode with new design tokens
 - **WHEN** a user visits any page in dark mode
@@ -184,8 +184,8 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 - **THEN** a floating glassmorphic popover opens anchored to the trigger button
 - **AND** the popover renders with studio dark elevation (`dark:bg-canvas-elevated`, `border-white/[0.08]`, `backdrop-blur-md`) without using unstyled OS browser dialogs.
 
-#### Scenario: User selects study time via quick preset or columns
-- **WHEN** user clicks the `08:00 AM` preset chip or selects hour `08`, minute `00`, and period `AM`
+#### Scenario: User selects study time via column selection
+- **WHEN** user selects hour `08`, minute `00`, and period `AM` in the time picker popover
 - **THEN** the active selections highlight in Deep Iris Violet (`bg-brand-600 text-white`)
 - **AND** the component emits `update:modelValue` with `'08:00'`
 - **AND** the trigger button immediately updates to display `08:00 AM`.
