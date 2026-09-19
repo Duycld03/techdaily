@@ -50,7 +50,7 @@ public class DeleteReviewCardHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Topic for Card",
             Slug = "topic-for-card",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Difficulty = Difficulty.Senior
         };
         await _db.Topics.AddAsync(topic);

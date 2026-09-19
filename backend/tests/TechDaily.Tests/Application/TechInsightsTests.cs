@@ -45,7 +45,7 @@ public class TechInsightsTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "dotnet-span-split",
                 Title = "Span Split Optimization",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 Tags = new() { "csharp", "dotnet", "memory" },
                 SummaryMarkdown = "Summary 1",
                 ProblemSnippet = "Problem 1",
@@ -79,7 +79,7 @@ public class TechInsightsTests : IDisposable
         allResult.Value.TotalCount.Should().Be(2);
 
         // Act 2: Filter by Category
-        var dotnetResult = await handler.ExecuteAsync(new GetInsightsFeedRequest(Category: Category.BackendDotNet));
+        var dotnetResult = await handler.ExecuteAsync(new GetInsightsFeedRequest(Category: Category.BackendRuntime));
         dotnetResult.IsSuccess.Should().BeTrue();
         dotnetResult.Value.Insights.Should().HaveCount(1);
         dotnetResult.Value.Insights[0].Slug.Should().Be("dotnet-span-split");
@@ -107,7 +107,7 @@ public class TechInsightsTests : IDisposable
             Id = Guid.NewGuid(),
             Slug = "dotnet-channels",
             Title = "Dotnet Channels",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Tags = new() { "channels", "concurrency" },
             SummaryMarkdown = "Summary",
             ProblemSnippet = "Problem",
@@ -162,7 +162,7 @@ public class TechInsightsTests : IDisposable
             Id = Guid.NewGuid(),
             Slug = "card-1",
             Title = "Card 1",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Tags = new() { "csharp" },
             SummaryMarkdown = "Summary",
             ProblemSnippet = "Problem",
@@ -222,7 +222,7 @@ public class TechInsightsTests : IDisposable
             Id = Guid.NewGuid(),
             Slug = "existing-1",
             Title = "Existing Insight One",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             IsPublished = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -231,7 +231,7 @@ public class TechInsightsTests : IDisposable
             Id = Guid.NewGuid(),
             Slug = "existing-2",
             Title = "Existing Insight Two",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             IsPublished = true,
             CreatedAt = DateTime.UtcNow.AddMinutes(-5)
         };
@@ -247,7 +247,7 @@ public class TechInsightsTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "new-generated-slug",
                 Title = "Fresh Unique Insight",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 SummaryMarkdown = "Summary",
                 ProblemSnippet = "Problem",
                 SolutionSnippet = "Solution",
@@ -261,7 +261,7 @@ public class TechInsightsTests : IDisposable
         var handler = new TechDaily.Application.Features.Insights.GenerateInsight.GenerateInsightHandler(_db, fakeGenerator);
 
         // Act
-        var request = new GenerateInsightRequest(PreferredCategory: Category.BackendDotNet, PreferredTopic: "về asp.net");
+        var request = new GenerateInsightRequest(PreferredCategory: Category.BackendRuntime, PreferredTopic: "về asp.net");
         var result = await handler.ExecuteAsync(request);
 
         // Assert
@@ -285,7 +285,7 @@ public class TechInsightsTests : IDisposable
         var service = new TechDaily.Infrastructure.Services.GeminiAiService(new System.Net.Http.HttpClient(), config, logger);
 
         // Act - Call with "asp.net"
-        var result1 = await service.GenerateInsightAsync(Category.BackendDotNet, "về asp.net", locale: "vi");
+        var result1 = await service.GenerateInsightAsync(Category.BackendRuntime, "về asp.net", locale: "vi");
 
         // Assert
         result1.IsSuccess.Should().BeFalse();
@@ -318,13 +318,13 @@ public class TechInsightsTests : IDisposable
         var service = new TechDaily.Infrastructure.Services.GeminiAiService(new HttpClient(), config, logger);
 
         // Generate #1
-        var result1 = await service.GenerateInsightAsync(Category.BackendDotNet, "về asp.net", locale: "vi");
+        var result1 = await service.GenerateInsightAsync(Category.BackendRuntime, "về asp.net", locale: "vi");
         result1.IsSuccess.Should().BeTrue();
         result1.Value.Title.Should().NotBeNullOrWhiteSpace();
 
         // Generate #2 avoiding #1
         var result2 = await service.GenerateInsightAsync(
-            Category.BackendDotNet,
+            Category.BackendRuntime,
             "về asp.net",
             existingTitlesToAvoid: new List<string> { result1.Value.Title },
             locale: "vi");

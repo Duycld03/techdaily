@@ -46,7 +46,7 @@ public class GetBooksHandlerTests : IDisposable
             {
                 Title = $"Book {i:D2}",
                 Slug = $"book-{i:D2}",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 IsPublished = true,
                 CreatedAt = DateTimeOffset.UtcNow.AddMinutes(i)
             });
@@ -77,7 +77,7 @@ public class GetBooksHandlerTests : IDisposable
             {
                 Title = $"Book {i:D2}",
                 Slug = $"book-{i:D2}",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 IsPublished = true,
                 CreatedAt = DateTimeOffset.UtcNow.AddMinutes(i)
             });
@@ -101,7 +101,7 @@ public class GetBooksHandlerTests : IDisposable
     {
         // Arrange
         _db.DocumentBooks.AddRange(
-            new DocumentBook { Title = "DotNet Book", Slug = "dotnet-book", Category = Category.BackendDotNet, IsPublished = true },
+            new DocumentBook { Title = "DotNet Book", Slug = "dotnet-book", Category = Category.BackendRuntime, IsPublished = true },
             new DocumentBook { Title = "Frontend Book", Slug = "frontend-book", Category = Category.FrontendWeb, IsPublished = true },
             new DocumentBook { Title = "System Design Book", Slug = "system-design-book", Category = Category.SystemDesign, IsPublished = true }
         );
@@ -145,9 +145,9 @@ public class GetBooksHandlerTests : IDisposable
     {
         // Arrange
         _db.DocumentBooks.AddRange(
-            new DocumentBook { Title = "Published Book", Slug = "pub", Category = Category.BackendDotNet, IsPublished = true, IsDeleted = false },
-            new DocumentBook { Title = "Unpublished Book", Slug = "unpub", Category = Category.BackendDotNet, IsPublished = false, IsDeleted = false },
-            new DocumentBook { Title = "Deleted Book", Slug = "del", Category = Category.BackendDotNet, IsPublished = true, IsDeleted = true }
+            new DocumentBook { Title = "Published Book", Slug = "pub", Category = Category.BackendRuntime, IsPublished = true, IsDeleted = false },
+            new DocumentBook { Title = "Unpublished Book", Slug = "unpub", Category = Category.BackendRuntime, IsPublished = false, IsDeleted = false },
+            new DocumentBook { Title = "Deleted Book", Slug = "del", Category = Category.BackendRuntime, IsPublished = true, IsDeleted = true }
         );
         await _db.SaveChangesAsync();
 

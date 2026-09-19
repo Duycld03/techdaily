@@ -72,8 +72,8 @@ describe('pages/roadmap.vue', () => {
       }
     } as unknown as typeof focusStore.data
 
-    vi.spyOn(focusStore, 'fetchTodayFocus').mockResolvedValue({} as unknown as typeof focusStore.data)
-    vi.spyOn(focusStore, 'switchBook').mockResolvedValue(true)
+    vi.spyOn(focusStore, 'fetchTodayFocus').mockResolvedValue(focusStore.data ?? undefined)
+    vi.spyOn(focusStore, 'switchBook').mockResolvedValue(focusStore.data!.pacer!)
 
     // Mock libraryStore
     libraryStore.selectedBook = {
@@ -108,7 +108,7 @@ describe('pages/roadmap.vue', () => {
       ]
     } as unknown as typeof libraryStore.selectedBook
 
-    vi.spyOn(libraryStore, 'fetchBookById').mockResolvedValue({} as unknown as typeof libraryStore.selectedBook)
+    vi.spyOn(libraryStore, 'fetchBookById').mockResolvedValue(libraryStore.selectedBook!)
 
     // Mock roadmapStore
     roadmapStore.roadmapData = {

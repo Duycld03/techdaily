@@ -81,7 +81,7 @@ public class CurateSliceHandlerTests : IDisposable
             Id = bookId,
             Title = "ASP.NET Core Guide",
             Slug = "aspnet-core-guide",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             SourceType = SourceType.PdfBook,
             TotalChunks = 1
         };
@@ -133,7 +133,7 @@ public class CurateSliceHandlerTests : IDisposable
             Id = bookId,
             Title = "ASP.NET Core Guide",
             Slug = "aspnet-core-guide-" + Guid.NewGuid(),
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             SourceType = SourceType.PdfBook,
             TotalChunks = 1
         };
@@ -176,7 +176,7 @@ public class CurateSliceHandlerTests : IDisposable
             Id = bookId,
             Title = "ASP.NET Core Concurrency",
             Slug = "aspnet-core-concurrency-" + Guid.NewGuid(),
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             SourceType = SourceType.PdfBook,
             TotalChunks = 1
         };

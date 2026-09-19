@@ -162,7 +162,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Memory Allocations",
             Slug = "memory-allocations",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Difficulty = Difficulty.Intermediate,
             DayOrder = 2
         };
@@ -173,7 +173,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "CLR via C#",
             Slug = "clr-via-csharp",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             IsPublished = true
         };
         await _db.DocumentBooks.AddAsync(book);
@@ -448,7 +448,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Garbage Collection & LOH",
             Slug = "garbage-collection-loh",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Difficulty = Difficulty.Senior,
             DayOrder = 3
         };
@@ -459,7 +459,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Pro .NET Memory Management",
             Slug = "pro-dotnet-memory",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             IsPublished = true
         };
         await _db.DocumentBooks.AddAsync(book);
@@ -506,7 +506,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Published Book",
             Slug = "pub-book",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             IsPublished = true,
             IsDeleted = false
         };
@@ -516,7 +516,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Draft Book",
             Slug = "draft-book",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             IsPublished = false,
             IsDeleted = false
         };
@@ -526,7 +526,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Deleted Book",
             Slug = "deleted-book",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             IsPublished = true,
             IsDeleted = true
         };
@@ -604,7 +604,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Topic Backend",
             Slug = "topic-backend",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             DayOrder = 2
         };
         var topic3 = new Topic
@@ -718,7 +718,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "ASP.NET Core Web APIs",
             Slug = "aspnet-core-10.0",
-            Category = Category.FrontendWeb, // Needs auto-correction to BackendDotNet!
+            Category = Category.FrontendWeb, // Needs auto-correction to BackendRuntime!
             IsPublished = true
         };
         await _db.DocumentBooks.AddAsync(aspnetBook);

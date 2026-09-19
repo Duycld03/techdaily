@@ -117,7 +117,7 @@ public class ImportRemotePdfHandlerTests : IDisposable
         var request = new ImportRemotePdfRequest(
             PdfUrl: internalUrl,
             Title: "Restricted Document",
-            Category: Category.BackendDotNet
+            Category: Category.BackendRuntime
         );
 
         // Act

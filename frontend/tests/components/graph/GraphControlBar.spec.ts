@@ -30,7 +30,8 @@ describe('GraphControlBar.vue', () => {
 
     // All 6 category pills render with whitespace-nowrap shrink-0
     const pillarRow = flexWrapContainers[0]
-    const pillarButtons = pillarRow.findAll('button')
+    expect(pillarRow).toBeDefined()
+    const pillarButtons = pillarRow!.findAll('button')
     expect(pillarButtons.length).toBe(6)
     pillarButtons.forEach((btn) => {
       expect(btn.classes()).toContain('whitespace-nowrap')

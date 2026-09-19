@@ -371,7 +371,7 @@ Leave the browser open with the Counter page loaded.
             Title = "ASP.NET Core 10 Architecture Guide",
             Slug = "aspnet-core-10-architecture-guide",
             SourceType = TechDaily.Domain.Enums.SourceType.PdfBook,
-            Category = TechDaily.Domain.Enums.Category.BackendDotNet,
+            Category = TechDaily.Domain.Enums.Category.BackendRuntime,
             AuthorOrSourceUrl = "Microsoft Learn ASP.NET Core 10",
             TotalChunks = result.Slices.Count,
             IsPublished = true,

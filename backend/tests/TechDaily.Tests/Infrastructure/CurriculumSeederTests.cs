@@ -53,7 +53,7 @@ public class CurriculumSeederTests
 
         // Group 2: .NET 10 Internals (Days 8 - 15)
         items.Where(x => x.topic.DayOrder >= 8 && x.topic.DayOrder <= 15)
-            .Should().OnlyContain(x => x.topic.Category == Category.BackendDotNet);
+            .Should().OnlyContain(x => x.topic.Category == Category.BackendRuntime);
 
         // Group 3: Database & Storage (Days 16 - 22)
         items.Where(x => x.topic.DayOrder >= 16 && x.topic.DayOrder <= 22)

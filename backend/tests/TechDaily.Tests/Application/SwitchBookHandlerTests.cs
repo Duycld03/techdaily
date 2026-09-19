@@ -119,7 +119,7 @@ public class SwitchBookHandlerTests : IDisposable
         {
             Title = "Processing Book",
             Slug = "processing-book",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Status = ProcessingStatus.Processing
         };
         await _db.DocumentBooks.AddAsync(book);

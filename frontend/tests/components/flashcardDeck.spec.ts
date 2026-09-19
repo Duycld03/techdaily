@@ -183,19 +183,19 @@ describe('Sm2GradingButtons.vue', () => {
     const buttons = wrapper.findAll('button')
 
     // Again -> Score 1
-    await buttons[0].trigger('click')
+    await buttons[0]!.trigger('click')
     expect(wrapper.emitted('grade')![0]).toEqual([1])
 
     // Hard -> Score 3
-    await buttons[1].trigger('click')
+    await buttons[1]!.trigger('click')
     expect(wrapper.emitted('grade')![1]).toEqual([3])
 
     // Good -> Score 4
-    await buttons[2].trigger('click')
+    await buttons[2]!.trigger('click')
     expect(wrapper.emitted('grade')![2]).toEqual([4])
 
     // Easy -> Score 5
-    await buttons[3].trigger('click')
+    await buttons[3]!.trigger('click')
     expect(wrapper.emitted('grade')![3]).toEqual([5])
   })
 })

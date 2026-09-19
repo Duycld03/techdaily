@@ -171,8 +171,9 @@ export function computeRoadmapTreeLayout(
       const sliceStartY = currentY + (branchHeight - totalSlicesHeight) / 2
       for (let j = 0; j < sliceCount; j++) {
         const slice = chapter.slices[j]
-        const sliceY = sliceStartY + j * (cfg.sliceHeight + cfg.sliceGapY)
+        if (!slice) continue
 
+        const sliceY = sliceStartY + j * (cfg.sliceHeight + cfg.sliceGapY)
         const positionedSlice: PositionedNode<TreeSliceLeaf> = {
           data: slice,
           x: cfg.sliceX,
@@ -233,9 +234,15 @@ export function computeRoadmapTreeLayout(
       targetCenterY =
         focusedChapters.reduce((sum, c) => sum + (c.y + c.height / 2), 0) / focusedChapters.length
     } else {
-      const firstChapterCenterY = positionedChapters[0].y + cfg.chapterHeight / 2
-      const lastChapterCenterY = positionedChapters[positionedChapters.length - 1].y + cfg.chapterHeight / 2
-      targetCenterY = (firstChapterCenterY + lastChapterCenterY) / 2
+      const firstChapter = positionedChapters[0]
+      const lastChapter = positionedChapters[positionedChapters.length - 1]
+      if (firstChapter && lastChapter) {
+        const firstChapterCenterY = firstChapter.y + cfg.chapterHeight / 2
+        const lastChapterCenterY = lastChapter.y + cfg.chapterHeight / 2
+        targetCenterY = (firstChapterCenterY + lastChapterCenterY) / 2
+      } else {
+        targetCenterY = cfg.paddingTop
+      }
     }
 
     const maxAllowedY = Math.max(cfg.paddingTop, currentY - cfg.rootHeight)

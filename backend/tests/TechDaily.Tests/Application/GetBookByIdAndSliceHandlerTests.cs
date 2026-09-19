@@ -42,7 +42,7 @@ public class GetBookByIdAndSliceHandlerTests : IDisposable
         {
             Title = "ASP.NET Core Architecture",
             Slug = "aspnet-core-architecture",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Status = ProcessingStatus.Ready,
             TotalChunks = 2
         };

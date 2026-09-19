@@ -204,7 +204,7 @@ describe('GraphCanvas3D.vue', () => {
     expect(wrapper.vm.showAllLabels).toBe(false)
 
     // Capture the callback passed to nodeThreeObject
-    const nodeThreeObjectFn = mockGraphInstance.nodeThreeObject.mock.calls[0][0]
+    const nodeThreeObjectFn = mockGraphInstance.nodeThreeObject.mock.calls[0]?.[0]
     expect(typeof nodeThreeObjectFn).toBe('function')
 
     // Pillar node always has billboard label

@@ -62,7 +62,7 @@ public class InterviewQuizTests : IDisposable
         // Arrange
         var user = await CreateTestUserAsync();
         var handler = new GenerateQuizHandler(_db, _fakeGenerator, new GenerateQuizValidator());
-        var request = new GenerateQuizRequest(user.Id, ".NET Memory", Category.BackendDotNet, QuizLevel.Senior, 5);
+        var request = new GenerateQuizRequest(user.Id, ".NET Memory", Category.BackendRuntime, QuizLevel.Senior, 5);
 
         // Act
         var result = await handler.ExecuteAsync(request);
@@ -136,7 +136,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "c#",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Level = QuizLevel.Junior,
             QuestionText = "Old Question 1",
             Options = new() { "A", "B", "C", "D" },
@@ -155,7 +155,7 @@ public class InterviewQuizTests : IDisposable
         await _db.SaveChangesAsync();
 
         var handler = new GenerateQuizHandler(_db, _fakeGenerator, new GenerateQuizValidator());
-        var request = new GenerateQuizRequest(user.Id, "về c#", Category.BackendDotNet, QuizLevel.Junior, 1);
+        var request = new GenerateQuizRequest(user.Id, "về c#", Category.BackendRuntime, QuizLevel.Junior, 1);
 
         // Act
         var result = await handler.ExecuteAsync(request);
@@ -236,7 +236,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "c#",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Level = QuizLevel.Junior,
             QuestionText = "Prior Attempted Question",
             Options = new() { "Option A", "Option B", "Option C", "Option D" },
@@ -260,7 +260,7 @@ public class InterviewQuizTests : IDisposable
         // Simulate fallback fill returning the existing question
         var emptyGenerator = new FakeQuizGeneratorService(new List<QuizQuestion>());
         var handler = new GenerateQuizHandler(_db, emptyGenerator, new GenerateQuizValidator());
-        var request = new GenerateQuizRequest(user.Id, "c#", Category.BackendDotNet, QuizLevel.Junior, 1);
+        var request = new GenerateQuizRequest(user.Id, "c#", Category.BackendRuntime, QuizLevel.Junior, 1);
 
         // Act
         var result = await handler.ExecuteAsync(request);
@@ -355,7 +355,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "C# GC",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Level = QuizLevel.Senior,
             QuestionText = "GC question 1",
             Options = new() { "A", "B", "C", "D" },
@@ -366,7 +366,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "C# GC",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Level = QuizLevel.Senior,
             QuestionText = "GC question 2",
             Options = new() { "A", "B", "C", "D" },
@@ -490,7 +490,7 @@ public class InterviewQuizTests : IDisposable
         var service = new TechDaily.Infrastructure.Services.GeminiAiService(httpClient, fakeConfig, logger);
 
         // Act
-        var result = await service.GenerateQuestionsAsync("asp.net", Category.BackendDotNet, QuizLevel.Junior, 1, new());
+        var result = await service.GenerateQuestionsAsync("asp.net", Category.BackendRuntime, QuizLevel.Junior, 1, new());
 
         // Assert
         result.IsSuccess.Should().BeTrue();

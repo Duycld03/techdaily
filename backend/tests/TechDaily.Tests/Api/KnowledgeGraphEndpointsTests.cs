@@ -108,7 +108,7 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
                 Id = Guid.NewGuid(),
                 Title = "CLR Generational GC",
                 Slug = "clr-gc",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 Difficulty = Difficulty.Senior,
                 DayOrder = 4,
                 Summary = "Generational garbage collection"
@@ -118,7 +118,7 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
                 Id = Guid.NewGuid(),
                 Title = "Under the Hood of CLR Generational GC",
                 Slug = "clr-gc-book",
-                Category = Category.BackendDotNet,
+                Category = Category.BackendRuntime,
                 IsPublished = true
             };
 

@@ -188,7 +188,15 @@ describe('SettingsPage Timezone Auto-Persist', () => {
     await flushPromises()
 
     const profileStore = useProfileStore()
-    const updateSpy = vi.spyOn(profileStore, 'updateProfile').mockResolvedValueOnce(undefined as unknown as void)
+    const updateSpy = vi.spyOn(profileStore, 'updateProfile').mockResolvedValueOnce({
+      id: 'user-1',
+      email: 'test@example.com',
+      name: 'Test User',
+      preferredLocale: 'en',
+      targetRole: 'Fullstack',
+      dailyGoalMinutes: 30,
+      timeZone: 'Asia/Tokyo'
+    })
 
     const appSelect = wrapper.findComponent(AppSelect)
     expect(appSelect.exists()).toBe(true)

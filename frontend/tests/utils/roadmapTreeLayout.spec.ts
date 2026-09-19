@@ -122,12 +122,12 @@ describe('utils/roadmapTreeLayout', () => {
 
       // Root to Chapter edges only (2 edges)
       expect(result.edges).toHaveLength(2)
-      expect(result.edges[0].toId).toBe('ch-1')
-      expect(result.edges[1].toId).toBe('ch-2')
+      expect(result.edges[0]?.toId).toBe('ch-1')
+      expect(result.edges[1]?.toId).toBe('ch-2')
 
       // Chapter Y positions
-      const ch1 = result.chapters[0]
-      const ch2 = result.chapters[1]
+      const ch1 = result.chapters[0]!
+      const ch2 = result.chapters[1]!
       expect(ch1.y).toBe(DEFAULT_LAYOUT_CONFIG.paddingTop)
       expect(ch2.y).toBe(ch1.y + DEFAULT_LAYOUT_CONFIG.chapterHeight + DEFAULT_LAYOUT_CONFIG.chapterGapY)
 
@@ -145,25 +145,27 @@ describe('utils/roadmapTreeLayout', () => {
       expect(result.chapters).toHaveLength(2)
       // ch-1 has 2 slices
       expect(result.slices).toHaveLength(2)
-      expect(result.slices[0].data.id).toBe('slice-1')
-      expect(result.slices[1].data.id).toBe('slice-2')
+      const slice1 = result.slices[0]!
+      const slice2 = result.slices[1]!
+      expect(slice1.data.id).toBe('slice-1')
+      expect(slice2.data.id).toBe('slice-2')
 
       // Slices horizontal position
-      expect(result.slices[0].x).toBe(DEFAULT_LAYOUT_CONFIG.sliceX)
-      expect(result.slices[1].x).toBe(DEFAULT_LAYOUT_CONFIG.sliceX)
+      expect(slice1.x).toBe(DEFAULT_LAYOUT_CONFIG.sliceX)
+      expect(slice2.x).toBe(DEFAULT_LAYOUT_CONFIG.sliceX)
 
       // Edges: 2 from root to chapters, 2 from ch-1 to slices
       expect(result.edges).toHaveLength(4)
       const sliceEdges = result.edges.filter(e => e.fromId === 'ch-1')
       expect(sliceEdges).toHaveLength(2)
-      expect(sliceEdges[0].toId).toBe('slice-1')
-      expect(sliceEdges[1].toId).toBe('slice-2')
+      expect(sliceEdges[0]?.toId).toBe('slice-1')
+      expect(sliceEdges[1]?.toId).toBe('slice-2')
 
       // Subsequent chapter ch-2 is pushed down by ch-1's branch height
       const sliceCount = 2
       const totalSlicesHeight = sliceCount * DEFAULT_LAYOUT_CONFIG.sliceHeight + (sliceCount - 1) * DEFAULT_LAYOUT_CONFIG.sliceGapY
       const branchHeight = Math.max(DEFAULT_LAYOUT_CONFIG.chapterHeight, totalSlicesHeight)
-      expect(result.chapters[1].y).toBeGreaterThanOrEqual(DEFAULT_LAYOUT_CONFIG.paddingTop + branchHeight)
+      expect(result.chapters[1]?.y).toBeGreaterThanOrEqual(DEFAULT_LAYOUT_CONFIG.paddingTop + branchHeight)
     })
 
     it('calculates bounding box encompassing all positioned nodes', () => {
@@ -172,7 +174,8 @@ describe('utils/roadmapTreeLayout', () => {
 
       const bb = result.boundingBox
       expect(bb.minX).toBeLessThanOrEqual(result.root.x)
-      expect(bb.maxX).toBeGreaterThanOrEqual(result.slices[0].x + result.slices[0].width)
+      const firstSlice = result.slices[0]!
+      expect(bb.maxX).toBeGreaterThanOrEqual(firstSlice.x + firstSlice.width)
       expect(bb.width).toBe(bb.maxX - bb.minX)
       expect(bb.height).toBe(bb.maxY - bb.minY)
     })
@@ -196,8 +199,8 @@ describe('utils/roadmapTreeLayout', () => {
       const activeChapter = result.chapters.find(c => c.data.isActive)
       expect(activeChapter).toBeDefined()
 
-      const firstChapter = result.chapters[0]
-      const lastChapter = result.chapters[34]
+      const firstChapter = result.chapters[0]!
+      const lastChapter = result.chapters[34]!
       const globalMidpoint = (firstChapter.y + lastChapter.y) / 2
 
       // Root Y should be significantly closer to activeChapter than the global midpoint
@@ -259,13 +262,14 @@ describe('utils/roadmapTreeLayout', () => {
       expect(root.trackType).toBe('book')
 
       expect(chapters).toHaveLength(1)
-      expect(chapters[0].id).toBe('1')
-      expect(chapters[0].title).toBe('Chapter 1: Storage')
-      expect(chapters[0].isActive).toBe(true)
+      const firstChapter = chapters[0]!
+      expect(firstChapter.id).toBe('1')
+      expect(firstChapter.title).toBe('Chapter 1: Storage')
+      expect(firstChapter.isActive).toBe(true)
 
-      expect(chapters[0].slices).toHaveLength(2)
-      expect(chapters[0].slices[0].status).toBe('completed')
-      expect(chapters[0].slices[1].status).toBe('active_today')
+      expect(firstChapter.slices).toHaveLength(2)
+      expect(firstChapter.slices[0]?.status).toBe('completed')
+      expect(firstChapter.slices[1]?.status).toBe('active_today')
     })
   })
 
@@ -323,13 +327,14 @@ describe('utils/roadmapTreeLayout', () => {
       expect(root.trackType).toBe('curriculum')
 
       expect(chapters).toHaveLength(1)
-      expect(chapters[0].id).toBe('0')
-      expect(chapters[0].title).toBe('Frontend & Architecture')
-      expect(chapters[0].isActive).toBe(true)
+      const firstChapter = chapters[0]!
+      expect(firstChapter.id).toBe('0')
+      expect(firstChapter.title).toBe('Frontend & Architecture')
+      expect(firstChapter.isActive).toBe(true)
 
-      expect(chapters[0].slices).toHaveLength(2)
-      expect(chapters[0].slices[0].status).toBe('completed')
-      expect(chapters[0].slices[1].status).toBe('active_today')
+      expect(firstChapter.slices).toHaveLength(2)
+      expect(firstChapter.slices[0]?.status).toBe('completed')
+      expect(firstChapter.slices[1]?.status).toBe('active_today')
     })
   })
 })

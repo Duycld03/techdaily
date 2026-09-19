@@ -45,7 +45,7 @@ const mockInsights = [
 ]
 
 let feedMock = [...mockInsights]
-let bookmarkedFeedMock = [mockInsights[1]]
+let bookmarkedFeedMock = [mockInsights[1]!]
 
 vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
@@ -96,7 +96,7 @@ describe('insights.vue (Dedicated View Mode Switcher & Category Filtering)', () 
   beforeEach(() => {
     setActivePinia(createPinia())
     feedMock = [...mockInsights]
-    bookmarkedFeedMock = [mockInsights[1]]
+    bookmarkedFeedMock = [mockInsights[1]!]
   })
 
   it('renders View Mode Switcher with Explore and Saved (N) buttons', async () => {
@@ -213,7 +213,7 @@ describe('insights.vue (Dedicated View Mode Switcher & Category Filtering)', () 
   it('parses multi-metric benchmarkStats, strips leading emojis, and renders individual chips', async () => {
     feedMock = [
       {
-        ...mockInsights[0],
+        ...mockInsights[0]!,
         benchmarkStats: '⚡ Latency: 4.2ms -> 0.3ms (14x faster) | 🔥 Heap Fetches: 15k -> 0'
       }
     ]

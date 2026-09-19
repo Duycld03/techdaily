@@ -49,7 +49,7 @@ public class DailyFocusHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Slug = "dotnet-gc",
             Title = "Garbage Collection",
-            Category = Category.BackendDotNet,
+            Category = Category.BackendRuntime,
             Difficulty = Difficulty.Senior,
             DayOrder = 1,
             Summary = "GC internals"
@@ -96,7 +96,7 @@ public class DailyFocusHandlerTests : IDisposable
         var topicId = Guid.NewGuid();
         var questionId = Guid.NewGuid();
 
-        var topic = new Topic { Id = topicId, Title = "GC", Slug = "gc", Category = Category.BackendDotNet, Difficulty = Difficulty.Senior, DayOrder = 1 };
+        var topic = new Topic { Id = topicId, Title = "GC", Slug = "gc", Category = Category.BackendRuntime, Difficulty = Difficulty.Senior, DayOrder = 1 };
         var question = new InterviewQuestion
         {
             Id = questionId,
@@ -147,7 +147,7 @@ public class DailyFocusHandlerTests : IDisposable
         var topicId = Guid.NewGuid();
         var questionId = Guid.NewGuid();
 
-        var topic = new Topic { Id = topicId, Title = "GC", Slug = "gc", Category = Category.BackendDotNet, Difficulty = Difficulty.Senior, DayOrder = 1 };
+        var topic = new Topic { Id = topicId, Title = "GC", Slug = "gc", Category = Category.BackendRuntime, Difficulty = Difficulty.Senior, DayOrder = 1 };
         var question = new InterviewQuestion
         {
             Id = questionId,
@@ -200,7 +200,7 @@ public class DailyFocusHandlerTests : IDisposable
         var topicId = Guid.NewGuid();
         var questionId = Guid.NewGuid();
 
-        var topic = new Topic { Id = topicId, Title = "GC", Slug = "gc", Category = Category.BackendDotNet, Difficulty = Difficulty.Senior, DayOrder = 1 };
+        var topic = new Topic { Id = topicId, Title = "GC", Slug = "gc", Category = Category.BackendRuntime, Difficulty = Difficulty.Senior, DayOrder = 1 };
         var question = new InterviewQuestion
         {
             Id = questionId,
