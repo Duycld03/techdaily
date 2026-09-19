@@ -115,26 +115,7 @@ const computedQuickTopics = computed(() => {
     })
   }
 
-  // 2. Prioritize target role specialization if set in profile
-  const role = profileStore.profile?.targetRole?.toLowerCase() || ''
-  if (role.includes('backend') || role.includes('.net') || role.includes('c#')) {
-    const backendTopics = ['.NET 10 Runtime & Memory', 'PostgreSQL MVCC & Indexing', 'Distributed Systems & Raft']
-    backendTopics.forEach((t) => {
-      if (!list.includes(t)) list.push(t)
-    })
-  } else if (role.includes('frontend') || role.includes('react') || role.includes('web')) {
-    const feTopics = ['React 19 Concurrency', 'CSS Engine & Layout Performance', 'Web Vitals & Browser Runtime']
-    feTopics.forEach((t) => {
-      if (!list.includes(t)) list.push(t)
-    })
-  } else if (role.includes('devops') || role.includes('cloud') || role.includes('infra')) {
-    const devopsTopics = ['Kubernetes Scheduling & Pods', 'Docker Storage Drivers', 'Linux Kernel & cgroups']
-    devopsTopics.forEach((t) => {
-      if (!list.includes(t)) list.push(t)
-    })
-  }
-
-  // 3. Fallback to foundational senior engineering topics
+  // 2. Fallback to foundational senior engineering topics
   const fallbacks = [
     'PostgreSQL MVCC & Indexing',
     'Distributed Consensus & Raft',
