@@ -9,6 +9,15 @@
     scrollbar-gutter: stable;
   }
 
+  html.dark,
+  .dark {
+    color-scheme: dark;
+  }
+
+  html:not(.dark) {
+    color-scheme: light;
+  }
+
   body {
     @apply bg-slate-50 text-slate-900 dark:bg-canvas dark:text-slate-100 antialiased font-sans transition-colors duration-200 selection:bg-brand-500/30 selection:text-brand-600 dark:selection:text-brand-300;
   }
@@ -56,6 +65,41 @@
   .dark select option {
     background-color: #18181b;
     color: #f8fafc;
+  }
+
+  /* Universal temporal form input normalization (type="time", "date", "datetime-local") */
+  input[type="time"],
+  input[type="date"],
+  input[type="datetime-local"] {
+    color-scheme: light;
+  }
+
+  .dark input[type="time"],
+  .dark input[type="date"],
+  .dark input[type="datetime-local"] {
+    color-scheme: dark;
+  }
+
+  /* WebKit calendar & clock picker indicator contrast & cursor affordance */
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+  }
+
+  input[type="time"]:hover::-webkit-calendar-picker-indicator,
+  input[type="date"]:hover::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+  }
+
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.85) brightness(1.2);
+    cursor: pointer;
   }
 }
 @layer components {
