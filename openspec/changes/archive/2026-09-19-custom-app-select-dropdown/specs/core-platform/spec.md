@@ -18,7 +18,9 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 
 3. **Global Command Palette Navigation (`AppCommandPalette.vue`):**
    - The application shell SHALL include a global Command Palette modal accessible via keyboard shortcut (`Cmd+K` on macOS, `Ctrl+K` on Windows/Linux) or by clicking the topbar search input.
-   - The palette SHALL support real-time fuzzy filtering of navigation destinations across core platform capabilities.
+   - The palette SHALL support real-time fuzzy filtering of navigation destinations across core platform capabilities: Today's Reading Slice (`/`), Spaced Repetition Review (`/review`), Interview Quiz (`/quiz`), Architecture Knowledge Graph (`/graph`), Architecture Roadmap (`/roadmap`), Document Library (`/library`), Highlight Notes (`/notes`), and Settings (`/settings`).
+   - The palette SHALL support keyboard navigation (`ArrowDown`, `ArrowUp`, `Enter` to navigate, `Escape` to dismiss) and touch tap on mobile devices.
+   - When opened, the palette SHALL focus the search input automatically and prevent background page scrolling.
 
 4. **Modernized Application Shell & Navigation (Zero-Shift Transitions):**
    - The topbar (`AppHeader.vue`) SHALL feature:
@@ -28,39 +30,41 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
      - Locale switcher (`LocaleSelector.vue`) with smooth `transition-colors` and user profile ring.
    - The navigation sidebar (`AppSidebar.vue`) links SHALL maintain a constant 2px left border geometry across both active and inactive states (`border-l-2 border-transparent` when inactive; `border-l-2 border-brand-500` when active) and constrain animations to `transition-colors`, eliminating horizontal layout shifting and border collapse flicker when navigating between routes.
 
-5. **Universal Zero-Shift Segmented Controls & Tab Switchers:**
-   - All segmented view switchers, tab bars, and mode toggles (`RoadmapViewSwitcher.vue`, `review.vue`, `quiz.vue`, `library.vue`, `profile.vue`) SHALL maintain a constant 1px border geometry across both active and inactive states (`border border-transparent` when inactive; `border border-slate-200/80 dark:border-white/[0.12]` or `dark:border-white/[0.06]` when active).
-   - Inactive buttons in segmented controls SHALL pre-allocate `border border-transparent`, and transitions SHALL be strictly restricted to `transition-colors` (duration 150ms).
-   - The system SHALL NEVER apply `transition-all` to segmented controls or tab switchers where border appearance or padding could be animated, completely eliminating the 1px twitch, flicker, and layout jump when switching views (e.g., between "Dạng Dòng Thời Gian" and "Dạng Sơ Đồ Tư Duy" in the roadmap).
-
-6. **Floating Dropdown Isolation & Auto-Flip Collision Prevention:**
-   - Floating dropdown popovers (`AppSelect.vue`) SHALL render via `<Teleport to="body">` with fixed positioning calculated from trigger bounding rect coordinates, rendering outside parent scroll containers (`overflow-y-auto`, `overflow: hidden`, `max-h-[90vh]`).
-   - The dropdown popover SHALL NOT expand the scrollable height (`scrollHeight`) of its parent container or modal, preventing modal dialogs (`library.vue`) and page views (`settings.vue`) from spawning sudden vertical scrollbars or causing horizontal content jumps.
-   - The dropdown popover SHALL automatically detect vertical viewport clearance: when the available space between the trigger bottom and the viewport bottom is insufficient (< 260px) and there is more space above, the popover SHALL flip upwards above the trigger, eliminating bottom clipping and viewport overflow.
-   - When open, the floating popover SHALL update coordinates on window `scroll` (capture mode) and dismiss seamlessly on click-outside and `Escape`.
-
-7. **Viewport & Modal Scrollbar Track Stability**:
+5. **Viewport Scrollbar Track Stability**:
    - The root `html` container SHALL declare `scrollbar-gutter: stable`, reserving space for the vertical scrollbar track at all times.
-   - Scrollable modal dialog bodies and drawers (`overflow-y-auto`) SHALL include `scrollbar-gutter: stable`, ensuring that internal content additions or tab transitions do not produce horizontal layout shifts or jarring content reflows.
+   - When dialogs, drawers, or command palettes lock body scrolling via `overflow: hidden`, the underlying page content SHALL remain anchored in place without horizontal layout shifting (CLS) or jumping.
 
-8. **Keyboard Accessibility & Focus Ring Standards (WCAG 2.1 AA)**:
+6. **Keyboard Accessibility & Focus Ring Standards (WCAG 2.1 AA)**:
    - Interactive elements (`button`, `a`, `input`, `textarea`, `select`, `[tabindex]`) SHALL provide prominent, high-contrast visual focus rings when navigated via keyboard (`:focus-visible`).
    - The keyboard focus ring SHALL utilize Electric Violet (`outline: 2px solid #8b5cf6; outline-offset: 2px;`) across both light and dark themes.
    - Pointer or touch click interactions SHALL NOT produce persistent sticky focus outlines, enforced via `:focus:not(:focus-visible) { outline: none; }`.
 
-9. **Mobile Dynamic Viewport Height Standards**:
-   - Full-height reading views, studio workspaces, and viewports SHALL employ dynamic viewport height units (`h-dvh` or `min-h-[100dvh]`) rather than static `h-screen` (`100vh`), preventing viewport clipping and overflow underneath mobile browser dynamic chrome.
+7. **Mobile Dynamic Viewport Height Standards**:
+   - Full-height reading views, studio workspaces, and viewports SHALL employ dynamic viewport height units (`h-dvh` or `min-h-[100dvh]`) rather than static `h-screen` (`100vh`), preventing viewport clipping and overflow underneath mobile browser dynamic chrome (e.g. iOS Safari bottom address bar and Android navigation bars).
 
-10. **Semantic Overlay Z-Index Stacking Hierarchy**:
+8. **Semantic Overlay Z-Index Stacking Hierarchy**:
    - Overlay and floating layers SHALL adhere to a deterministic, semantic z-index scale:
      - Global Toast Notifications: `z-[9999]`
      - Global Command Palette (`⌘K`): `z-60`
-     - Floating Dropdown Popovers (`AppSelect.vue`): `z-[60]`
      - Full-screen Modals and Teleported Drawers: `z-50`
-     - Contextual Tooltips and In-Page Menus: `z-40`
+     - Contextual Popovers, Tooltips, and Floating Menus: `z-40`
      - Sticky Header and Top Navigation Bars: `z-30`
      - In-Page Floating Action Bars and Canvas Controls: `z-10`
 
+9. **Universal Custom Dropdown Architecture (`AppSelect.vue`)**:
+   - Form selection dropdowns across the application SHALL be powered by a unified, accessible custom component (`frontend/components/common/AppSelect.vue`), superseding native HTML `<select>` elements to prevent OS-level unstyled popup menus across Chromium, Firefox, and WebKit on Linux, Windows, and macOS.
+   - The custom select component SHALL support:
+     - Full keyboard navigation (`ArrowDown`, `ArrowUp`, `Enter`, `Space`, `Escape`, `Tab`) and ARIA roles (`role="combobox"`, `role="listbox"`, `role="option"`).
+     - Glassmorphic floating popover with hairline borders (`dark:border-white/[0.08]`), `dark:bg-canvas-elevated`, rounded-2xl geometry, and slim scrollbar.
+     - Option items with rounded-xl geometry, subtle hover highlights, Deep Iris Violet active state (`dark:text-brand-300 dark:bg-brand-950/40`), and trailing checkmarks.
+     - Optional leading icon slots (`Briefcase`, `Globe`, `BookOpen`).
+
+
+10. **Universal Code Block & Terminal Surface Standard**:
+   - All code snippets—rendered via Markdown fences (`useMarkdownRenderer.ts`) or standalone components (`ShikiCodeBlock.vue`)—SHALL adhere to the Dev-Learning Studio terminal card standard:
+     - Outer container rendered on neutral obsidian `dark:bg-canvas-subtle` (`#121215`) with hairline borders `dark:border-white/[0.08]` and `rounded-2xl` geometry.
+     - Glassmorphic top header bar (`bg-slate-100/80 dark:bg-canvas-elevated/80 backdrop-blur-md`) featuring three traffic-light dots (`#ff5f56`, `#ffbd2e`, `#27c93f`), Deep Iris Violet language badge (`text-brand-400`), and a translucent interactive Copy button.
+     - Neutral syntax theme (`vitesse-dark` or `github-dark-default`) with `background-color: transparent !important` and italicized comments.
 #### Scenario: User opens application in dark mode with new design tokens
 - **WHEN** a user visits any page in dark mode
 - **THEN** the body background is rendered with neutral dark obsidian `#09090b`
@@ -110,48 +114,30 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 - **WHEN** a toast notification fires while the Command Palette and a contextual popover are visible
 - **THEN** the Toast (`z-[9999]`) renders above the Command Palette (`z-60`), which renders above any standard modal or drawer (`z-50`), preventing visual collision or z-index clipping.
 
-#### Scenario: User opens custom dropdown inside an overflow-y-auto modal
-- **WHEN** user clicks an `AppSelect` dropdown inside the document import modal (`library.vue`)
-- **THEN** the options listbox is teleported to `document.body` with fixed viewport coordinates directly aligned with the trigger button
-- **AND** the modal's `scrollHeight` does not expand and no new vertical scrollbar is spawned
-- **AND** the options listbox is completely visible above the modal overlay without being clipped by the modal's bottom border.
+#### Scenario: User opens custom AppSelect dropdown in dark mode
+- **WHEN** user clicks or taps the custom `AppSelect` trigger on `/profile`, `/settings`, `/quiz`, or `/library`
+- **THEN** a floating listbox popover smoothly opens anchored below the trigger
+- **AND** the popover renders with studio glass-panel elevation (`dark:bg-canvas-elevated`, `dark:border-white/[0.08]`, `shadow-2xl`)
+- **AND** options render as styled studio cards without delegating rendering to the host operating system window manager.
 
-#### Scenario: User opens dropdown near the bottom of the viewport
-- **WHEN** user clicks the timezone `AppSelect` near the bottom of `settings.vue` where bottom clearance is less than 260px
-- **THEN** the popover automatically flips upwards above the trigger button
-- **AND** the page does not expand downwards or trigger a browser scrollbar jump.
+#### Scenario: User navigates and selects option via keyboard
+- **WHEN** the `AppSelect` dropdown is focused and user presses `ArrowDown` or `ArrowUp`
+- **THEN** visual highlight moves sequentially between options with `:focus-visible` studio tokens
+- **WHEN** user presses `Enter` or `Space` on an option
+- **THEN** the value is updated via `v-model`, the active selection shows a checkmark indicator, and the dropdown closes.
 
-#### Scenario: User switches views in Roadmap view switcher
-- **WHEN** user clicks between "Dạng Dòng Thời Gian" (Timeline) and "Dạng Sơ Đồ Tư Duy" (Mindmap)
-- **THEN** both buttons maintain identical 1px border geometry (`border border-transparent` when inactive, `border dark:border-white/[0.06]` when active)
-- **AND** color transitions occur via `transition-colors` without any 1px layout twitch, geometry shift, or visual flicker.
+#### Scenario: User dismisses AppSelect dropdown via Escape or outside click
+- **WHEN** the `AppSelect` dropdown is open and the user presses `Escape` or clicks anywhere outside the component
+- **THEN** the dropdown closes immediately and returns focus cleanly to the trigger button.
 
----
+#### Scenario: Universal code block terminal surface consistency across routes
+- **WHEN** a user views a code block in the GitBook reader (`/read/[bookId]`), daily focus reader (`/today`), or interview scenario challenge
+- **THEN** the code block renders inside a `dark:bg-canvas-subtle` container with `dark:border-white/[0.08]` hairline border
+- **AND** displays the glassmorphic terminal header with traffic-light window dots, Deep Iris Violet language telemetry, and glassmorphic copy button
+- **AND** syntax highlighting renders on a transparent background matching the container obsidian canvas.
 
-### Requirement: System Settings, Notification Scheduling & Timezone Configuration
-The Settings interface (`frontend/pages/settings.vue`) SHALL serve as the exclusive single source of truth for notification schedule configuration (`preferredStudyTime`, `streakAlertTime`) and timezone preferences (`timeZone`), adhering to the **Dev-Learning Studio** visual standard.
-
-The Settings interface SHALL render on an Obsidian Canvas (`dark:bg-canvas`, `dark:bg-canvas-subtle`) and organize controls into `.glass-card` surfaces with hairline borders (`dark:border-white/[0.08]`):
-1. **Appearance & Language**: Interface language switcher (`LocaleSelector.vue`) and color theme toggle (`ThemeToggle.vue`) with Studio hairline elevation.
-2. **Web Push Notifications**: Push activation toggle with Electric Violet active state, push active status banner with subtle violet glow, study schedule time inputs, and IANA timezone selector.
-
-The timezone options list SHALL be reactive and deduplicated, automatically incorporating the user's detected local timezone or saved profile timezone.
-
-When the user selects a new timezone in `/settings`, the client SHALL automatically persist the selection to the backend (`PUT /api/v1/user/profile`), guaranteeing immediate server-side persistence matching the auto-save behavior of interface language and theme settings.
-
-All user modifications to notification reminder timing and timezone detection SHALL occur within the Settings domain and be persisted via `PUT /api/v1/user/profile` or the Web Push subscription flow (`POST /api/v1/notifications/push/subscribe`).
-
-#### Scenario: User configures study schedule and timezone in `/settings`
-- **WHEN** an authenticated user adjusts their preferred study time, streak alert time, or timezone in `/settings` and clicks "Save Schedule"
-- **THEN** the client dispatches `PUT /api/v1/user/profile` containing `{ preferredStudyTime, streakAlertTime, timeZone }`
-- **AND** the server updates these preferences in PostgreSQL and returns `200 OK`.
-
-#### Scenario: User updates Web Push subscription with timezone synchronization
-- **WHEN** a user enables Web Push notifications in `/settings`
-- **THEN** the client automatically includes the detected or selected IANA timezone identifier in the subscription request
-- **AND** the backend updates `User.TimeZone` and `User.IsPushEnabled = true` simultaneously.
-
-#### Scenario: User selects a new timezone from the dropdown
-- **WHEN** a user changes the timezone in `frontend/pages/settings.vue` via `AppSelect`
-- **THEN** the client immediately updates `timeZone.value` and automatically persists `{ timeZone }` to `PUT /api/v1/user/profile`
-- **AND** displays a success toast confirmation to the user.
+#### Scenario: Universal form select styling across themes
+- **WHEN** a user views or interacts with any `<select>` input control across the application (e.g., target role in `/profile`, book selector in `/quiz`, timezone in `/settings`, or category in `/library`)
+- **THEN** default OS/browser appearance is suppressed (`appearance: none`)
+- **AND** a custom theme-calibrated SVG dropdown chevron renders on the right side without colliding with option text
+- **AND** dropdown `<option>` items render with crisp contrast in both Light Mode (`#ffffff` background) and Dark Mode (`#18181b` canvas-elevated background).

@@ -35,12 +35,16 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 8. **Semantic Overlay Z-Index Stacking Hierarchy**:
    - Overlay and floating layers SHALL adhere to a deterministic, semantic z-index scale.
 
-9. **Universal Code Block & Terminal Surface Standard**:
+9. **Universal Form Select & Dropdown Styling Standards**:
+   - All `<select>` form controls across the application SHALL suppress native operating system and browser default styling (`appearance: none; -webkit-appearance: none; -moz-appearance: none;`).
+   - All `<select>` controls SHALL feature an embedded SVG chevron dropdown indicator positioned at `right 0.75rem center` with `no-repeat` geometry, adequate right padding (`padding-right: 2.5rem`), and pointer cursor (`cursor: pointer`).
+   - All `<option>` items across all browsers SHALL render with theme-calibrated backgrounds and high-contrast text (`bg-white text-slate-900` in light mode; `bg-[#18181b] text-slate-100` in dark mode).
+
+10. **Universal Code Block & Terminal Surface Standard**:
    - All code snippets—rendered via Markdown fences (`useMarkdownRenderer.ts`) or standalone components (`ShikiCodeBlock.vue`)—SHALL adhere to the Dev-Learning Studio terminal card standard:
      - Outer container rendered on neutral obsidian `dark:bg-canvas-subtle` (`#121215`) with hairline borders `dark:border-white/[0.08]` and `rounded-2xl` geometry.
      - Glassmorphic top header bar (`bg-slate-100/80 dark:bg-canvas-elevated/80 backdrop-blur-md`) featuring three traffic-light dots (`#ff5f56`, `#ffbd2e`, `#27c93f`), Deep Iris Violet language badge (`text-brand-400`), and a translucent interactive Copy button.
      - Neutral syntax theme (`vitesse-dark` or `github-dark-default`) with `background-color: transparent !important` and italicized comments.
-
 #### Scenario: User opens application in dark mode with new design tokens
 - **WHEN** a user visits any page in dark mode
 - **THEN** the body background is rendered with neutral dark obsidian `#09090b`
@@ -95,3 +99,9 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 - **THEN** the code block renders inside a `dark:bg-canvas-subtle` container with `dark:border-white/[0.08]` hairline border
 - **AND** displays the glassmorphic terminal header with traffic-light window dots, Deep Iris Violet language telemetry, and glassmorphic copy button
 - **AND** syntax highlighting renders on a transparent background matching the container obsidian canvas.
+
+#### Scenario: Universal form select styling across themes
+- **WHEN** a user views or interacts with any `<select>` input control across the application (e.g., target role in `/profile`, book selector in `/quiz`, timezone in `/settings`, or category in `/library`)
+- **THEN** default OS/browser appearance is suppressed (`appearance: none`)
+- **AND** a custom theme-calibrated SVG dropdown chevron renders on the right side without colliding with option text
+- **AND** dropdown `<option>` items render with crisp contrast in both Light Mode (`#ffffff` background) and Dark Mode (`#18181b` canvas-elevated background).

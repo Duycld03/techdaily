@@ -32,6 +32,8 @@ The system SHALL allow users to click any unlocked or completed day node on the 
 ### Requirement: Roadmap Dual-View Switcher
 The system SHALL provide a dual-view switcher on the `/roadmap` page allowing users to toggle between a linear milestone timeline view (`timeline`) and an interactive hierarchical tree mindmap view (`mindmap`). The active view mode SHALL be stored in `localStorage` under key `techdaily_roadmap_view_mode` and restored upon subsequent page visits, defaulting to `timeline` when no prior preference exists. All switcher buttons and badges SHALL enforce `whitespace-nowrap shrink-0` to prevent text wrapping across both English and Vietnamese locales.
 
+The dual-view switcher container SHALL adhere to the Dev-Learning Studio design system, rendering as a sleek glassmorphic segmented container (`.glass-panel`) with neutral obsidian tokens (`bg-slate-100 dark:bg-canvas-subtle/80`, `border-slate-200/80 dark:border-white/[0.08]`), and active tab buttons elevated with `dark:bg-canvas-elevated` and subtle hairline border treatments, completely eliminating legacy slate-800 and slate-900 surfaces.
+
 #### Scenario: User toggles between timeline and mindmap views
 - **GIVEN** a user is on `/roadmap` in the default `timeline` view
 - **WHEN** user clicks the `Mindmap View` button on the dual-view switcher
@@ -46,12 +48,22 @@ The system SHALL provide a dual-view switcher on the `/roadmap` page allowing us
 - **WHEN** user views the roadmap dual-view switcher on any viewport size
 - **THEN** both switch buttons enforce `whitespace-nowrap shrink-0` and responsive gap layout, preventing text truncation or wrapping across English and Vietnamese locales.
 
+#### Scenario: Glassmorphic studio segmented styling across themes
+- **WHEN** user views the dual-view switcher on `/roadmap` in dark mode
+- **THEN** the switcher container background renders with `dark:bg-canvas-subtle/80` and border `dark:border-white/[0.08]`
+- **AND** the active view tab renders with `dark:bg-canvas-elevated` and electric violet text `dark:text-brand-400`
+- **AND** the inactive tab displays `dark:text-slate-400 hover:dark:text-white` without visual clipping.
+
+---
+
 ### Requirement: Hierarchical Mindmap Interactive View
 The system SHALL provide an interactive, client-side hierarchical tree mindmap visualization on `/roadmap` when `mindmap` view mode is active. The mindmap SHALL render the active book or curriculum as a root node, chapters or modules as intermediate expandable and collapsible branches, and slices or daily challenges as leaf nodes. Each leaf node SHALL visually indicate completion state (`completed`, `active_today`, `upcoming`) and provide a 1-click action bridge to `/today` or `/read/[bookId]`. The view SHALL provide controls for zoom in, zoom out, pan, fit to screen, and batch expand and collapse all branches, operating with zero backend API overhead.
 
 For documents with large chapter counts (greater than 12 chapters), the mindmap SHALL employ scalable layout heuristics including windowed root node anchoring, smart single-chapter auto-accordion expansion, and default viewport centering focused directly on the user's active chapter and today's slice at 100% scale (`scale = 1.0`). The canvas SHALL provide an in-toolbar search input that dynamically highlights matching nodes and auto-expands relevant branches without triggering full-document layout blowout.
 
 Canvas panning and dragging interactions SHALL capture mouse and touch events globally on `window` upon pointerdown to prevent sticky dragging cursor states when moving outside the container boundary, suppress native drag-selection hitches via `preventDefault()`, and disable visual CSS transitions during active drag for zero-latency 1:1 pointer tracking.
+
+The mindmap viewport and controls SHALL strictly employ the Dev-Learning Studio design language: the canvas container SHALL utilize neutral obsidian background `dark:bg-canvas` with translucent hairline borders `dark:border-white/[0.08]`; floating search and toolbar controls SHALL render as glassmorphic panels (`.glass-panel`); chapter branch and slice leaf cards SHALL utilize `dark:bg-canvas-subtle` and `dark:bg-canvas-elevated` with translucent hairline borders, eliminating all legacy `dark:bg-slate-900`, `dark:bg-slate-950`, and `dark:border-slate-800` styling.
 
 #### Scenario: Mindmap tree rendering from active track
 - **GIVEN** an active book pacer or curriculum track is loaded
@@ -128,6 +140,14 @@ Canvas panning and dragging interactions SHALL capture mouse and touch events gl
 - **WHEN** user interacts with the mindmap (toggling branches, panning, zooming)
 - **THEN** all layout calculations and rendering execute 100% in the client browser without issuing backend network requests.
 
+#### Scenario: Obsidian studio canvas surface and glassmorphic control styling
+- **WHEN** the mindmap view is mounted in dark mode
+- **THEN** the canvas viewport renders on neutral obsidian `dark:bg-canvas` with translucent hairline borders `dark:border-white/[0.08]`
+- **AND** floating search bar and control toolbar render with translucent backdrop-blur `.glass-panel` styling
+- **AND** chapter branch cards and slice leaf cards render on `dark:bg-canvas-subtle` and `dark:bg-canvas-elevated`, with active nodes illuminated by amber and violet accent rings.
+
+---
+
 ### Requirement: Active Track Synchronization & Switcher
 The `/roadmap` page SHALL present a single, cohesive timeline view directly synchronized with the user's active learning track on `/today` (Active Book Pacer or 30-Day Senior Curriculum). The page SHALL provide a unified header containing an integrated Track Switcher dropdown that displays the active track, allows switching between in-progress library books, viewing the 30-day curriculum, and linking directly to `/library`. The page SHALL render chapter milestones and slices with search filtering and provide direct 1-click action bridges to `/today` and `/read/[bookId]`.
 
@@ -170,6 +190,8 @@ The Track Switcher dropdown popover SHALL render fully without box-model clippin
 The `/roadmap` timeline view SHALL render an illuminated continuous vertical timeline spine connecting sequential milestones (chapters, days, and slices). The spine SHALL visually connect module and chapter milestone cards to daily slice nodes with subtle progress gradients and connector indicators.
 
 Today's active learning milestone (active day or active chunk slice) SHALL be visually accented along the spine with an active telemetry treatment including an amber flame or electric violet pulsing ring, glowing status pill, and a direct 1-click launch button to start or resume today's session.
+
+All timeline milestone surfaces, accordion cards, slice items, progress tracks, and status badges SHALL strictly employ the Dev-Learning Studio design language (`dark:bg-canvas-subtle`, `dark:bg-canvas-elevated`, `dark:border-white/[0.08]`), eliminating all legacy `dark:bg-slate-800`, `dark:bg-slate-900`, and `dark:border-slate-700` styling.
 
 #### Scenario: Visual connector spine rendering
 - **WHEN** user views the `/roadmap` page in `timeline` view mode

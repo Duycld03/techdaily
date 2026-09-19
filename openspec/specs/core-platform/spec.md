@@ -36,33 +36,32 @@ The User Profile interface SHALL NOT display notification scheduling controls (`
 
 When submitting profile updates from the profile page, the client application SHALL dispatch only personal identity and pace fields (`name`, `targetRole`, `dailyGoalMinutes`) to `PUT /api/v1/user/profile`. The backend API SHALL support partial updates, preserving existing notification schedule and timezone database records when those fields are omitted.
 
-The User Profile interface (`frontend/pages/profile.vue`) SHALL present an executive **Senior Engineer Career Portfolio & Passport** adhering to the **Dev-Learning Studio** visual standard:
-1. **Root Container**: Renders on deep dark canvas (`dark:bg-canvas`, `dark:bg-canvas-subtle`) with `scrollbar-gutter: stable` and responsive spacing.
-2. **Top Full-Width Engineer Identity Passport**: A prominent `.glass-card` banner spanning the top of the profile page featuring:
+The User Profile interface (`frontend/pages/profile.vue`) SHALL present an executive **3-Tier Bento Dashboard** adhering to the **Dev-Learning Studio** visual standard:
+1. **Root Container**: Renders on deep dark canvas (`dark:bg-canvas`, `dark:bg-canvas-subtle`) with `scrollbar-gutter: stable` and responsive spacing, utilizing a dedicated, non-duplicated page subtitle (`profile.subtitle`).
+2. **Tier 1 (Top Full-Width Engineer Identity Passport)**: A prominent `.glass-card` banner spanning full width across the top featuring:
    - Large avatar with status indicator badge.
    - Engineer display name, email address, and membership tenure (`Member since: <date>`).
    - Badges for Target Role (e.g. `Senior Engineer`), Account Connection (Google Linked / Standard Email), and Personal Best Record (`Longest Streak: <days>` trophy badge).
-3. **Left Column (Account & Security Hub)**:
-   - Houses the settings and credentials forms inside a dedicated `.glass-card` with clean tab switching:
+3. **Tier 2 (Full-Width Milestones Telemetry Strip)**: A prominent horizontal 4-column bento telemetry strip (`grid-cols-2 lg:grid-cols-4 gap-4`) sitting immediately beneath the identity passport:
+   - *Cell 1 - Architecture Drills*: Total senior scenario drills completed and average score (`{totalDrillsCompleted}` completed, `{averageScore}/10`).
+   - *Cell 2 - Interview Quiz Accuracy*: Accuracy percentage (`{accuracyRate}%`) and mastered concepts ratio (`{masteredCount}/{totalAnswered}`), utilizing concise, non-truncated copy across all locales (e.g. "Độ chính xác Quiz" in Vietnamese).
+   - *Cell 3 - Memory Vault (Spaced Repetition)*: Total technical concepts active in the SM-2 review deck (`{totalCardsInDeck}`).
+   - *Cell 4 - Architecture Source Highlights*: Total highlighted code and architectural quotes saved (`{totalHighlightsSaved}`).
+4. **Tier 3 (Balanced 2-Column Split)**: A balanced 50/50 grid on desktop (`lg:grid-cols-2 gap-6 items-start`):
+   - *Left Column (Account & Security Hub)*: Houses the settings and credentials forms inside a dedicated `.glass-card` (~360px height) with clean tab switching:
      - *Personal Info Tab*: Full Name input, Target Role selector, interactive Daily Goal Pace chips (`5m`, `10m`, `15m`, `30m`).
      - *Security Tab*: Current password verification, new password with dynamic strength bar, confirm password matching, and Google account hint banner.
-4. **Right Column (Cumulative Milestones & Domain Mastery Portfolio)**:
-   - **4-Cell Cumulative Achievement Bento Grid**: Replaces redundant active daily streak with four authentic long-term senior engineering telemetry cards:
-     - *Architecture Drills*: Total senior scenario drills completed and average score (`{totalDrillsCompleted}` completed, `{averageScore}/10`).
-     - *Interview Quiz Accuracy*: Accuracy percentage (`{accuracyRate}%`) and mastered concepts ratio (`{masteredCount}/{totalAnswered}`).
-     - *Memory Vault (Spaced Repetition)*: Total technical concepts active in the SM-2 review deck (`{totalCardsInDeck}`).
-     - *Architecture Source Highlights*: Total highlighted code and architectural quotes saved (`{totalHighlightsSaved}`).
-   - **Domain Mastery Progress Bar (Goal Tracker)**: Categorized visual progress bars tracking curriculum domain coverage across four universal, framework-agnostic core engineering pillars, utilizing high-contrast gradient tracks:
-     - **Pillar 1: Backend Runtime & Concurrency** (`profile.domain_backend_runtime`: "Nền Tảng Backend & Runtime" / "Backend Runtime & Concurrency") - tracking runtime mechanisms, memory allocation, async I/O, threads, and concurrency across .NET/CLR, Node.js/NestJS/Express, Go/Goroutines, Java/Spring/JVM, and Python.
-     - **Pillar 2: Data Storage & Persistence** (`profile.domain_data_storage`: "Hệ Lưu Trữ & Cơ Sở Dữ Liệu" / "Data Storage & Persistence") - tracking storage engines, query execution, and persistence across PostgreSQL, MongoDB, Redis, MySQL, SQLite, Cassandra, ACID transactions, B-Trees, LSM-Trees, replication, WAL, and indexing.
-     - **Pillar 3: Distributed Systems & Architecture** (`profile.domain_system_design`: "Hệ Thống Phân Tán & Thiết Kế" / "Distributed Systems & Architecture") - tracking distributed architecture patterns, microservices, message queues (Kafka, RabbitMQ), CAP theorem, transactional outbox, consensus, idempotency, rate limiting, and observability.
-     - **Pillar 4: Frontend & Browser Engineering** (`profile.domain_frontend`: "Hiệu Năng Frontend & Trình Duyệt" / "Frontend & Browser Engineering") - tracking browser execution, rendering pipelines, critical rendering path, DOM, Vue, React, TypeScript, JavaScript, Web Vitals, and SSR/hydration.
+   - *Right Column (Domain Mastery Goal Tracker)*: Houses `DomainGoalTracker.vue` (~380px height), presenting curriculum domain coverage across four universal, framework-agnostic core engineering pillars with compact padding and high-contrast gradient tracks:
+     - **Pillar 1: Backend Runtime & Concurrency** (`profile.domain_backend_runtime`: "Nền Tảng Backend & Runtime" / "Backend Runtime & Concurrency").
+     - **Pillar 2: Data Storage & Persistence** (`profile.domain_data_storage`: "Hệ Lưu Trữ & Cơ Sở Dữ Liệu" / "Data Storage & Persistence").
+     - **Pillar 3: Distributed Systems & Architecture** (`profile.domain_system_design`: "Hệ Thống Phân Tán & Thiết Kế" / "Distributed Systems & Architecture").
+     - **Pillar 4: Frontend & Browser Engineering** (`profile.domain_frontend`: "Hiệu Năng Frontend & Trình Duyệt" / "Frontend & Browser Engineering").
 
 The Domain Mastery Goal Tracker component SHALL evaluate and aggregate topic mastery dynamically across multi-stack keywords via `matchCategory(keyOrTopic: string)`, ensuring book chapters, drills, and quiz attempts in any modern stack map seamlessly into the appropriate universal pillar.
 
-The Engineer Portfolio Dashboard SHALL adapt responsively across Desktop (≥ 1024px, top full-width passport + 2-column grid) and Mobile (< 1024px, vertically stacked layout) viewports without horizontal scrolling or layout overlap.
+The Engineer Portfolio Dashboard SHALL adapt responsively across Desktop (≥ 1024px, 3-tier layout with balanced 50/50 lower columns) and Mobile (< 1024px, vertically stacked layout with Identity Passport -> 2x2 Milestones Strip -> Domain Mastery -> Account Settings) without horizontal scrolling or layout overlap.
 
-The Identity passport, milestone statistics, and domain goal tracker SHALL support bilingual rendering in both English and Vietnamese, ensuring that universal engineering pillar titles render cleanly without text truncation, badge clipping, or broken progress bar labels.
+The Identity passport, milestone statistics, and domain goal tracker SHALL support bilingual rendering in both English and Vietnamese, ensuring that milestone metric titles, domain pillar names, and subtitles render cleanly without text truncation, badge clipping, or broken progress bar labels.
 
 #### Scenario: Unauthenticated request to user profile
 - **WHEN** unauthenticated client calls `GET /api/v1/user/profile`
@@ -99,18 +98,22 @@ The Identity passport, milestone statistics, and domain goal tracker SHALL suppo
 
 #### Scenario: Desktop 2-column vs mobile single-column stacked responsive layout
 - **WHEN** authenticated user accesses `/profile` on a desktop viewport ($\ge 1024\text{px}$)
-- **THEN** the layout renders a full-width top identity passport followed by a 2-column grid with Account & Security Hub on the left and Cumulative Milestones & Domain Mastery on the right
+- **THEN** the layout renders a 3-tier executive structure: Tier 1 full-width Identity Passport, Tier 2 full-width 4-column Milestones Telemetry Strip, and Tier 3 balanced 50/50 2-column grid with Account & Security Hub on the left (~360px) and Domain Mastery Goal Tracker on the right (~380px), eliminating empty vertical void space
 - **WHEN** user accesses `/profile` on a mobile viewport ($< 1024\text{px}$)
-- **THEN** the layout stacks into a single vertical column with the Identity passport at the top followed by the Cumulative Milestones, Domain Mastery tracker, and Account settings form, maintaining touch-friendly targets and zero horizontal overflow.
+- **THEN** the layout stacks into a single vertical stream with the Identity Passport at the top, followed by the 2x2 Milestones Strip, Domain Mastery tracker, and Account settings form, maintaining touch-friendly targets and zero horizontal overflow.
 
 #### Scenario: User inspects identity and learning milestones widget
 - **WHEN** user views the profile page
-- **THEN** UI renders the top identity passport with user avatar, account connection badge (Google / Email), membership tenure, and all-time longest streak badge
-- **AND** the milestones bento renders 4 cumulative cards: total drills completed with average score, quiz accuracy rate, SM-2 cards in deck, and total highlights saved inside `.glass-card` components with hairline borders.
+- **THEN** UI renders the full-width 4-column milestones telemetry strip displaying:
+  - Architecture Drills completed with average score
+  - Interview Quiz accuracy percentage and mastered topics count with non-truncated concise title ("Độ chính xác Quiz" / "Quiz Accuracy")
+  - Spaced Repetition Memory Vault active card count
+  - Architecture Highlights saved count
+- **AND** all 4 cells render in individual `.glass-card` surfaces with hairline borders and distinct semantic accent badges.
 
 #### Scenario: User monitors curriculum domain mastery goal progress
 - **WHEN** user views the Domain Mastery Goal Tracker section on `/profile`
-- **THEN** UI displays categorized visual progress bars for each of the 4 universal engineering pillars:
+- **THEN** UI displays categorized visual progress bars for each of the 4 universal engineering pillars with compact vertical padding:
   - Backend Runtime & Concurrency (aggregating .NET, Node.js, Go, Java, Python runtime topics)
   - Data Storage & Persistence (aggregating PostgreSQL, MongoDB, Redis, MySQL, ACID, indexing topics)
   - Distributed Systems & Architecture (aggregating microservices, Kafka, outbox, system design topics)
@@ -119,12 +122,9 @@ The Identity passport, milestone statistics, and domain goal tracker SHALL suppo
 
 #### Scenario: Bilingual visual verification for identity widget, milestone stats, and domain goal tracker
 - **WHEN** user toggles between English (`en`) and Vietnamese (`vi`) on the `/profile` page
-- **THEN** all copy across the Identity passport, cumulative milestone cards (drills completed, quiz accuracy, memory vault, highlights saved), and domain goal tracker updates dynamically
-- **AND** universal pillar titles render with exact localized strings:
-  - In English: "Backend Runtime & Concurrency", "Data Storage & Persistence", "Distributed Systems & Architecture", "Frontend & Browser Engineering"
-  - In Vietnamese: "Nền Tảng Backend & Runtime", "Hệ Lưu Trữ & Cơ Sở Dữ Liệu", "Hệ Thống Phân Tán & Thiết Kế", "Hiệu Năng Frontend & Trình Duyệt"
-- **AND** longer Vietnamese domain titles render without badge clipping, text truncation, or misalignment of progress bar percentages.
----
+- **THEN** all copy across the Identity passport, milestones telemetry strip (drills completed, quiz accuracy, memory vault, highlights saved), and domain goal tracker updates dynamically
+- **AND** the quiz accuracy card label in Vietnamese renders as "Độ chính xác Quiz" without ellipsis truncation or badge clipping
+- **AND** the page header subtitle renders "Quản lý hồ sơ kỹ sư, năng lực chuyên môn và bảo mật tài khoản" in Vietnamese and "Manage your senior engineer profile, career telemetry, and security credentials" in English, without duplicating the domain mastery subtitle.
 
 ### Requirement: Daily Doc Reading Slice
 The system SHALL serve one curated 3–5 minute reading slice per active document series per day (`GET /api/v1/daily/today`) preserving source documentation excerpt language, structured summary, key takeaways, and quick-check questions.
@@ -576,6 +576,10 @@ The Settings interface SHALL render on an Obsidian Canvas (`dark:bg-canvas`, `da
 1. **Appearance & Language**: Interface language switcher (`LocaleSelector.vue`) and color theme toggle (`ThemeToggle.vue`) with Studio hairline elevation.
 2. **Web Push Notifications**: Push activation toggle with Electric Violet active state, push active status banner with subtle violet glow, study schedule time inputs, and IANA timezone selector.
 
+The timezone options list SHALL be reactive and deduplicated, automatically incorporating the user's detected local timezone or saved profile timezone.
+
+When the user selects a new timezone in `/settings`, the client SHALL automatically persist the selection to the backend (`PUT /api/v1/user/profile`), guaranteeing immediate server-side persistence matching the auto-save behavior of interface language and theme settings.
+
 All user modifications to notification reminder timing and timezone detection SHALL occur within the Settings domain and be persisted via `PUT /api/v1/user/profile` or the Web Push subscription flow (`POST /api/v1/notifications/push/subscribe`).
 
 #### Scenario: User configures study schedule and timezone in `/settings`
@@ -587,6 +591,11 @@ All user modifications to notification reminder timing and timezone detection SH
 - **WHEN** a user enables Web Push notifications in `/settings`
 - **THEN** the client automatically includes the detected or selected IANA timezone identifier in the subscription request
 - **AND** the backend updates `User.TimeZone` and `User.IsPushEnabled = true` simultaneously.
+
+#### Scenario: User selects a new timezone from the dropdown
+- **WHEN** a user changes the timezone in `frontend/pages/settings.vue` via `AppSelect`
+- **THEN** the client immediately updates `timeZone.value` and automatically persists `{ timeZone }` to `PUT /api/v1/user/profile`
+- **AND** displays a success toast confirmation to the user.
 
 ### Requirement: Zero-Repo-Footprint Live Production E2E Verification
 The platform verification harness SHALL support running live end-to-end headless browser test suites against the production deployment (`https://techdaily.duckdns.org`) using an ephemeral runner outside the git repository (`/tmp/techdaily-live-e2e.mjs`) leveraging host pre-cached Chromium binaries without committing test scripts, configuration files, or temporary artifacts to the source repository.
@@ -732,9 +741,7 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 
 3. **Global Command Palette Navigation (`AppCommandPalette.vue`):**
    - The application shell SHALL include a global Command Palette modal accessible via keyboard shortcut (`Cmd+K` on macOS, `Ctrl+K` on Windows/Linux) or by clicking the topbar search input.
-   - The palette SHALL support real-time fuzzy filtering of navigation destinations across core platform capabilities: Today's Reading Slice (`/`), Spaced Repetition Review (`/review`), Interview Quiz (`/quiz`), Architecture Knowledge Graph (`/graph`), Architecture Roadmap (`/roadmap`), Document Library (`/library`), Highlight Notes (`/notes`), and Settings (`/settings`).
-   - The palette SHALL support keyboard navigation (`ArrowDown`, `ArrowUp`, `Enter` to navigate, `Escape` to dismiss) and touch tap on mobile devices.
-   - When opened, the palette SHALL focus the search input automatically and prevent background page scrolling.
+   - The palette SHALL support real-time fuzzy filtering of navigation destinations across core platform capabilities.
 
 4. **Modernized Application Shell & Navigation (Zero-Shift Transitions):**
    - The topbar (`AppHeader.vue`) SHALL feature:
@@ -744,24 +751,36 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
      - Locale switcher (`LocaleSelector.vue`) with smooth `transition-colors` and user profile ring.
    - The navigation sidebar (`AppSidebar.vue`) links SHALL maintain a constant 2px left border geometry across both active and inactive states (`border-l-2 border-transparent` when inactive; `border-l-2 border-brand-500` when active) and constrain animations to `transition-colors`, eliminating horizontal layout shifting and border collapse flicker when navigating between routes.
 
-5. **Viewport Scrollbar Track Stability**:
-   - The root `html` container SHALL declare `scrollbar-gutter: stable`, reserving space for the vertical scrollbar track at all times.
-   - When dialogs, drawers, or command palettes lock body scrolling via `overflow: hidden`, the underlying page content SHALL remain anchored in place without horizontal layout shifting (CLS) or jumping.
+5. **Universal Zero-Shift Segmented Controls & Tab Switchers:**
+   - All segmented view switchers, tab bars, and mode toggles (`RoadmapViewSwitcher.vue`, `review.vue`, `quiz.vue`, `library.vue`, `profile.vue`) SHALL maintain a constant 1px border geometry across both active and inactive states (`border border-transparent` when inactive; `border border-slate-200/80 dark:border-white/[0.12]` or `dark:border-white/[0.06]` when active).
+   - Inactive buttons in segmented controls SHALL pre-allocate `border border-transparent`, and transitions SHALL be strictly restricted to `transition-colors` (duration 150ms).
+   - The system SHALL NEVER apply `transition-all` to segmented controls or tab switchers where border appearance or padding could be animated, completely eliminating the 1px twitch, flicker, and layout jump when switching views (e.g., between "Dạng Dòng Thời Gian" and "Dạng Sơ Đồ Tư Duy" in the roadmap).
 
-6. **Keyboard Accessibility & Focus Ring Standards (WCAG 2.1 AA)**:
+6. **Floating Dropdown Isolation & Auto-Flip Collision Prevention:**
+   - Floating dropdown popovers (`AppSelect.vue`) SHALL render via `<Teleport to="body">` with fixed positioning calculated from trigger bounding rect coordinates, rendering outside parent scroll containers (`overflow-y-auto`, `overflow: hidden`, `max-h-[90vh]`).
+   - The dropdown popover SHALL NOT expand the scrollable height (`scrollHeight`) of its parent container or modal, preventing modal dialogs (`library.vue`) and page views (`settings.vue`) from spawning sudden vertical scrollbars or causing horizontal content jumps.
+   - The dropdown popover SHALL automatically detect vertical viewport clearance: when the available space between the trigger bottom and the viewport bottom is insufficient (< 260px) and there is more space above, the popover SHALL flip upwards above the trigger, eliminating bottom clipping and viewport overflow.
+   - When open, the floating popover SHALL update coordinates on window `scroll` (capture mode) and dismiss seamlessly on click-outside and `Escape`.
+
+7. **Viewport & Modal Scrollbar Track Stability**:
+   - The root `html` container SHALL declare `scrollbar-gutter: stable`, reserving space for the vertical scrollbar track at all times.
+   - Scrollable modal dialog bodies and drawers (`overflow-y-auto`) SHALL include `scrollbar-gutter: stable`, ensuring that internal content additions or tab transitions do not produce horizontal layout shifts or jarring content reflows.
+
+8. **Keyboard Accessibility & Focus Ring Standards (WCAG 2.1 AA)**:
    - Interactive elements (`button`, `a`, `input`, `textarea`, `select`, `[tabindex]`) SHALL provide prominent, high-contrast visual focus rings when navigated via keyboard (`:focus-visible`).
    - The keyboard focus ring SHALL utilize Electric Violet (`outline: 2px solid #8b5cf6; outline-offset: 2px;`) across both light and dark themes.
    - Pointer or touch click interactions SHALL NOT produce persistent sticky focus outlines, enforced via `:focus:not(:focus-visible) { outline: none; }`.
 
-7. **Mobile Dynamic Viewport Height Standards**:
-   - Full-height reading views, studio workspaces, and viewports SHALL employ dynamic viewport height units (`h-dvh` or `min-h-[100dvh]`) rather than static `h-screen` (`100vh`), preventing viewport clipping and overflow underneath mobile browser dynamic chrome (e.g. iOS Safari bottom address bar and Android navigation bars).
+9. **Mobile Dynamic Viewport Height Standards**:
+   - Full-height reading views, studio workspaces, and viewports SHALL employ dynamic viewport height units (`h-dvh` or `min-h-[100dvh]`) rather than static `h-screen` (`100vh`), preventing viewport clipping and overflow underneath mobile browser dynamic chrome.
 
-8. **Semantic Overlay Z-Index Stacking Hierarchy**:
+10. **Semantic Overlay Z-Index Stacking Hierarchy**:
    - Overlay and floating layers SHALL adhere to a deterministic, semantic z-index scale:
      - Global Toast Notifications: `z-[9999]`
      - Global Command Palette (`⌘K`): `z-60`
+     - Floating Dropdown Popovers (`AppSelect.vue`): `z-[60]`
      - Full-screen Modals and Teleported Drawers: `z-50`
-     - Contextual Popovers, Tooltips, and Floating Menus: `z-40`
+     - Contextual Tooltips and In-Page Menus: `z-40`
      - Sticky Header and Top Navigation Bars: `z-30`
      - In-Page Floating Action Bars and Canvas Controls: `z-10`
 
@@ -813,6 +832,52 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 #### Scenario: Layer stacking order across simultaneous overlays
 - **WHEN** a toast notification fires while the Command Palette and a contextual popover are visible
 - **THEN** the Toast (`z-[9999]`) renders above the Command Palette (`z-60`), which renders above any standard modal or drawer (`z-50`), preventing visual collision or z-index clipping.
+
+#### Scenario: User opens custom dropdown inside an overflow-y-auto modal
+- **WHEN** user clicks an `AppSelect` dropdown inside the document import modal (`library.vue`)
+- **THEN** the options listbox is teleported to `document.body` with fixed viewport coordinates directly aligned with the trigger button
+- **AND** the modal's `scrollHeight` does not expand and no new vertical scrollbar is spawned
+- **AND** the options listbox is completely visible above the modal overlay without being clipped by the modal's bottom border.
+
+#### Scenario: User opens dropdown near the bottom of the viewport
+- **WHEN** user clicks the timezone `AppSelect` near the bottom of `settings.vue` where bottom clearance is less than 260px
+- **THEN** the popover automatically flips upwards above the trigger button
+- **AND** the page does not expand downwards or trigger a browser scrollbar jump.
+
+#### Scenario: User switches views in Roadmap view switcher
+- **WHEN** user clicks between "Dạng Dòng Thời Gian" (Timeline) and "Dạng Sơ Đồ Tư Duy" (Mindmap)
+- **THEN** both buttons maintain identical 1px border geometry (`border border-transparent` when inactive, `border dark:border-white/[0.06]` when active)
+- **AND** color transitions occur via `transition-colors` without any 1px layout twitch, geometry shift, or visual flicker.
+
+#### Scenario: User opens custom AppSelect dropdown in dark mode
+- **WHEN** user clicks or taps the custom `AppSelect` trigger on `/profile`, `/settings`, `/quiz`, or `/library`
+- **THEN** a floating listbox popover smoothly opens anchored below the trigger
+- **AND** the popover renders with studio glass-panel elevation (`dark:bg-canvas-elevated`, `dark:border-white/[0.08]`, `shadow-2xl`)
+- **AND** options render as styled studio cards without delegating rendering to the host operating system window manager.
+
+#### Scenario: User navigates and selects option via keyboard
+- **WHEN** the `AppSelect` dropdown is focused and user presses `ArrowDown` or `ArrowUp`
+- **THEN** visual highlight moves sequentially between options with `:focus-visible` studio tokens
+- **WHEN** user presses `Enter` or `Space` on an option
+- **THEN** the value is updated via `v-model`, the active selection shows a checkmark indicator, and the dropdown closes.
+
+#### Scenario: User dismisses AppSelect dropdown via Escape or outside click
+- **WHEN** the `AppSelect` dropdown is open and the user presses `Escape` or clicks anywhere outside the component
+- **THEN** the dropdown closes immediately and returns focus cleanly to the trigger button.
+
+#### Scenario: Universal code block terminal surface consistency across routes
+- **WHEN** a user views a code block in the GitBook reader (`/read/[bookId]`), daily focus reader (`/today`), or interview scenario challenge
+- **THEN** the code block renders inside a `dark:bg-canvas-subtle` container with `dark:border-white/[0.08]` hairline border
+- **AND** displays the glassmorphic terminal header with traffic-light window dots, Deep Iris Violet language telemetry, and glassmorphic copy button
+- **AND** syntax highlighting renders on a transparent background matching the container obsidian canvas.
+
+#### Scenario: Universal form select styling across themes
+- **WHEN** a user views or interacts with any `<select>` input control across the application (e.g., target role in `/profile`, book selector in `/quiz`, timezone in `/settings`, or category in `/library`)
+- **THEN** default OS/browser appearance is suppressed (`appearance: none`)
+- **AND** a custom theme-calibrated SVG dropdown chevron renders on the right side without colliding with option text
+- **AND** dropdown `<option>` items render with crisp contrast in both Light Mode (`#ffffff` background) and Dark Mode (`#18181b` canvas-elevated background).
+
+---
 
 ### Requirement: Home Command Center Dashboard & Zero-Scroll Desktop Layout
 The root route `/` SHALL host the primary **Home Command Center Dashboard** (`frontend/pages/index.vue`), presenting an executive overview of daily momentum, active reading slice, scenario drill, retention metrics, 7-day consistency, and knowledge cosmos connectivity with clean visual decluttering:

@@ -104,7 +104,7 @@ The canvas SHALL visually differentiate node types and retention status:
   - Mastered: Emerald (`#10b981`)
 - **Highlight Nodes:** Hexagonal or compact accent nodes representing personal notes.
 
-The canvas stylesheet SHALL dynamically synchronize with `@nuxtjs/color-mode`, updating node fills, borders, labels, and edge opacities when the user switches between dark and light themes without requiring a page reload.
+The canvas viewport wrapper SHALL render on neutral dark obsidian `#09090b` (`dark:bg-canvas`), completely eliminating legacy `dark:bg-slate-950`. In dark mode, node borders and connecting edges SHALL employ translucent hairline styling `#27272a`. The canvas stylesheet SHALL dynamically synchronize with `@nuxtjs/color-mode`, updating node fills, borders, labels, and edge opacities when the user switches between dark and light themes without requiring a page reload.
 
 The canvas SHALL support smooth mouse and touch pan, zoom (bounded between 0.2x and 3.0x), box selection, drag repositioning, and double-click / button-triggered viewport fitting.
 
@@ -145,6 +145,13 @@ The canvas SHALL support smooth mouse and touch pan, zoom (bounded between 0.2x 
 - **THEN** the topics belonging to those categories remain anchored to their respective Pillar Hub via `TopicToPillar` edges
 - **AND** the CoSE simulation settles without stacking unconnected nodes into a horizontal line at the viewport perimeter.
 
+#### Scenario: Obsidian 2D canvas background and hairline border styling
+- **WHEN** the 2D canvas renders in dark mode
+- **THEN** the canvas container background renders with neutral obsidian `#09090b` (`dark:bg-canvas`)
+- **AND** node borders and edges in dark mode utilize `#27272a` hairline styling rather than legacy opaque slate colors.
+
+---
+
 ### Requirement: Multi-Dimensional Graph Filtering & Live Search
 The knowledge graph view SHALL include a floating glassmorphic control bar (`GraphControlBar.vue`) positioned above the canvas, providing real-time client-side filtering across multiple dimensions and engine modes without triggering backend network requests:
 1. **Engine Mode Switcher (2D / 3D):** A prominent dual-button toggle allowing the user to seamlessly switch between the **2D Planar Canvas** (Cytoscape.js) and the **3D WebGL Cosmos** (`3d-force-graph` / Three.js). The active mode SHALL persist in `localStorage` under key `techdaily_graph_view_mode`.
@@ -153,6 +160,8 @@ The knowledge graph view SHALL include a floating glassmorphic control bar (`Gra
 4. **Mastery Status Filter:** Dropdown or pill selector to filter flashcard nodes by SM-2 status (`All`, `Learning`, `Reviewing`, `Mastered`).
 5. **Live Search Input:** Text input that dynamically matches node titles, tags, and summary keywords. Matching nodes SHALL remain fully opaque and highlighted, while non-matching nodes SHALL fade to 15% opacity with edges dimmed in both 2D and 3D modes.
 6. **Reset Filters CTA:** A button to immediately reset all filters, search inputs, and node opacities back to the default global view.
+
+All control bar action buttons, mode switches, and filter chips SHALL utilize `.glass-panel`, `dark:bg-canvas-subtle`, `dark:bg-canvas-elevated`, and `dark:border-white/[0.08]`, completely eliminating legacy `dark:bg-slate-800`, `dark:bg-slate-900`, and `dark:border-slate-700`.
 
 #### Scenario: Switching between 2D and 3D view modes
 - **WHEN** the user clicks the "3D Cosmos" mode button in `GraphControlBar.vue`
@@ -188,8 +197,12 @@ The knowledge graph view SHALL include a floating glassmorphic control bar (`Gra
 - **AND** each pill resolves its translated label rather than falling back to raw untranslated English strings
 - **AND** on viewports narrower than the combined pill width, the container wraps naturally into multiple clean rows.
 
+---
+
 ### Requirement: Node Detail Slide-Over Drawer & 1-Click Action Bridges
 Selecting any node on the graph canvas SHALL open a responsive slide-over drawer (`GraphDetailDrawer.vue`) on desktop ($\ge 768\text{px}$) or bottom sheet on mobile ($< 768\text{px}$) displaying contextual details and 1-click action bridges into the corresponding platform feature.
+
+The drawer container and internal metrics/takeaways containers SHALL utilize `dark:bg-canvas-subtle` and `dark:bg-canvas-elevated` with translucent hairline borders `dark:border-white/[0.08]`, completely eliminating legacy `dark:bg-slate-800` and `dark:bg-slate-900`.
 
 The detail drawer SHALL present:
 1. **Node Header:** Node type badge with icon, pillar category tag, node title, and creation/review timestamp.
@@ -230,8 +243,6 @@ The drawer SHALL support closing via an explicit close button, pressing the `Esc
 - **THEN** the drawer smoothly transitions off-screen
 - **AND** the active node selection on the canvas is cleared.
 
----
-
 ### Requirement: Application Navigation & Mobile Responsive Placement
 The knowledge graph SHALL be accessible as a first-class navigation item under the **"Knowledge"** navigation section (`nav.group_knowledge`) across both desktop and mobile layouts.
 
@@ -271,6 +282,8 @@ On mobile viewports ($< 768\text{px}$):
 
 ### Requirement: Client-Side WebGL 3D Force-Directed Galaxy Visualization
 The client application SHALL provide an alternative 3D interactive knowledge graph visualization at `/graph` rendered with WebGL (via Three.js / `3d-force-graph`), executing calculations entirely on the client-side GPU without placing computational or memory load on the backend server.
+
+The 3D WebGL cosmos canvas background SHALL strictly render with neutral dark obsidian `#09090b` in dark mode, completely eliminating bluish slate backgrounds (`#020617`). 3D sprite billboard label backgrounds in dark mode SHALL utilize elevated obsidian `rgba(18, 18, 21, 0.85)` (`dark:bg-canvas-elevated`), eliminating legacy slate boxes (`rgba(15, 23, 42, 0.85)`).
 
 The 3D visualization SHALL represent architectural entities in an interactive spherical cosmos:
 1. **Pillar Hub Nodes:** Rendered as glowing primary celestial bodies with large radii and pillar-specific emissive glow colors.
@@ -327,6 +340,13 @@ To conserve user device battery and eliminate main-thread lag:
 #### Scenario: Render-on-demand battery preservation
 - **WHEN** the 3D layout has settled and the user is not actively rotating or zooming the camera
 - **THEN** the WebGL frame loop halts active re-renders until interaction resumes, consuming negligible CPU and GPU cycles when idle.
+
+#### Scenario: Obsidian 3D galaxy canvas background and elevated billboard styling
+- **WHEN** the 3D canvas renders in dark mode
+- **THEN** the WebGL renderer background renders with `#09090b` matching the studio obsidian shell
+- **AND** sprite text billboard labels utilize elevated background `rgba(18, 18, 21, 0.85)` with hairline borders.
+
+---
 
 ### Requirement: Interactive Visual Graph Legend & Entity Guide
 The knowledge graph view SHALL feature a floating, collapsible visual legend panel (`GraphLegend.vue`) positioned in the bottom-left viewport corner (`bottom-5 left-5`), providing an intuitive visual key for all node geometries, relative scales, category colors, and SM-2 retention metrics across both 2D and 3D view modes.
