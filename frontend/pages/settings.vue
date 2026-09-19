@@ -12,6 +12,7 @@ import {
 } from 'lucide-vue-next'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
+import AppSelect from '~/components/common/AppSelect.vue'
 import { useProfileStore } from '~/stores/useProfileStore'
 import { useWebPush } from '~/composables/useWebPush'
 import { ApiError } from '~/composables/useApiClient'
@@ -37,7 +38,7 @@ const timeZone = ref('UTC')
 const isSavingSchedule = ref(false)
 const isSendingTest = ref(false)
 
-const commonTimezones = [
+const defaultTimezones = [
   { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
   { value: 'Asia/Ho_Chi_Minh', label: 'Asia/Ho_Chi_Minh (UTC+7)' },
   { value: 'Asia/Tokyo', label: 'Asia/Tokyo (UTC+9)' },
@@ -50,16 +51,21 @@ const commonTimezones = [
   { value: 'America/Los_Angeles', label: 'America/Los_Angeles (UTC-8 / PDT)' }
 ]
 
+const commonTimezones = ref([...defaultTimezones])
+
+function registerTimezone(tz: string, labelSuffix: string) {
+  if (!tz) return
+  if (!commonTimezones.value.some(item => item.value === tz)) {
+    commonTimezones.value.unshift({ value: tz, label: `${tz} (${labelSuffix})` })
+  }
+}
 onMounted(async () => {
   // Auto-detect browser timezone
   try {
     const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone
     if (detectedTz) {
       timeZone.value = detectedTz
-      // Add detected to common list if missing
-      if (!commonTimezones.some(tz => tz.value === detectedTz)) {
-        commonTimezones.unshift({ value: detectedTz, label: `${detectedTz} (Local)` })
-      }
+      registerTimezone(detectedTz, 'Local')
     }
   } catch {
     // fallback to UTC
@@ -76,12 +82,7 @@ onMounted(async () => {
     }
     if (profileStore.profile.timeZone) {
       timeZone.value = profileStore.profile.timeZone
-      if (!commonTimezones.some(tz => tz.value === profileStore.profile!.timeZone)) {
-        commonTimezones.unshift({
-          value: profileStore.profile.timeZone,
-          label: `${profileStore.profile.timeZone} (Saved)`
-        })
-      }
+      registerTimezone(profileStore.profile.timeZone, 'Saved')
     }
   }
 
@@ -132,6 +133,17 @@ async function handleSendTestPush() {
     }
   } finally {
     isSendingTest.value = false
+  }
+}
+
+async function handleTimezoneChange(newTz: string | number) {
+  const tzStr = String(newTz)
+  timeZone.value = tzStr
+  try {
+    await profileStore.updateProfile({ timeZone: tzStr })
+    toast.success(t('settings.schedule_saved_success'))
+  } catch (err: unknown) {
+    toast.error(formatError(err, 'settings.schedule_saved_failed'))
   }
 }
 
@@ -285,14 +297,13 @@ async function handleSaveSchedule() {
             <Compass class="w-3.5 h-3.5 text-slate-500" />
             <span>{{ $t('settings.timezone_label') }}</span>
           </label>
-          <select
-            v-model="timeZone"
-            class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
-          >
-            <option v-for="tz in commonTimezones" :key="tz.value" :value="tz.value">
-              {{ tz.label }}
-            </option>
-          </select>
+          <AppSelect
+            :model-value="timeZone"
+            :options="commonTimezones"
+            :icon="Globe"
+            :aria-label="$t('settings.timezone_label')"
+            @update:model-value="handleTimezoneChange"
+          />
           <p class="text-[11px] text-slate-500">{{ $t('settings.timezone_desc') }}</p>
         </div>
 

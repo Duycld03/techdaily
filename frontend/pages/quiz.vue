@@ -48,6 +48,7 @@ import { useAuthStore } from '~/stores/useAuthStore'
 import { useProfileStore } from '~/stores/useProfileStore'
 import { useLibraryStore } from '~/stores/useLibraryStore'
 import BasePagination from '~/components/common/BasePagination.vue'
+import AppSelect from '~/components/common/AppSelect.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 
 const route = useRoute()
@@ -77,7 +78,7 @@ async function handlePushToReview(questionId: string) {
     pushedQuestionIds.value.add(questionId)
     toast.success(t('quiz.toast_pushed_to_sm2'))
   } catch (err: any) {
-    toast.error(err.message || 'Failed to push to SM-2 Deck.')
+    toast.error(err.message || t('quiz.toast_push_sm2_failed'))
   } finally {
     pushingQuestionId.value = null
   }
@@ -97,7 +98,10 @@ const selectedLevel = ref(3) // 3 = Senior
 const selectedCount = ref(5)
 const isGrounded = ref(false)
 const selectedBookId = ref<string | null>(null)
-
+const groundedBookOptions = computed(() => [
+  { value: '', label: t('quiz.any_book_in_library') },
+  ...(libraryStore.books || []).map(b => ({ value: b.id, label: b.title }))
+])
 const quickTopics = [
   '.NET 10 Internals & Memory',
   'PostgreSQL MVCC & Indexing',
@@ -548,19 +552,12 @@ defineExpose({
             <label class="block text-xs font-bold text-slate-600 dark:text-slate-400">
               {{ $t('quiz.select_book') }}
             </label>
-            <select
+            <AppSelect
               v-model="selectedBookId"
-              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"
-            >
-              <option :value="null">{{ $t('quiz.any_book_in_library') }}</option>
-              <option
-                v-for="b in libraryStore.books"
-                :key="b.id"
-                :value="b.id"
-              >
-                {{ b.title }}
-              </option>
-            </select>
+              :options="groundedBookOptions"
+              :icon="BookOpen"
+              :aria-label="$t('quiz.select_book')"
+            />
           </div>
         </div>
 
@@ -814,7 +811,7 @@ defineExpose({
             {{ quizStore.sessionScore.correct }} / {{ quizStore.sessionScore.total }}
           </span>
           <p class="text-sm font-bold text-slate-500 mt-1">
-            {{ quizStore.sessionScore.percentage }}% Accuracy
+            {{ quizStore.sessionScore.percentage }}% {{ $t('quiz.stats_accuracy') }}
           </p>
         </div>
 
@@ -863,7 +860,7 @@ defineExpose({
             >
               <div class="flex items-center justify-between text-xs">
                 <span class="font-bold text-brand-600 dark:text-brand-400">{{ q.topic }}</span>
-                <span class="text-rose-500 font-semibold">Incorrect</span>
+                <span class="text-rose-500 font-semibold">{{ $t('quiz.incorrect_badge') }}</span>
               </div>
               <p class="text-sm font-bold text-slate-900 dark:text-white">
                 {{ q.questionText }}
@@ -935,7 +932,7 @@ defineExpose({
           >
             <div class="flex items-center justify-between text-xs">
               <span class="font-bold text-brand-600 dark:text-brand-400">{{ q.topic }}</span>
-              <span class="text-rose-500 font-semibold">{{ q.incorrectCount }} incorrect attempts</span>
+              <span class="text-rose-500 font-semibold">{{ $t('quiz.incorrect_attempts', { count: q.incorrectCount }) }}</span>
             </div>
             <p class="text-sm sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2">
               {{ q.questionText }}

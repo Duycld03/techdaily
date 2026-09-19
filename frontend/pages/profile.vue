@@ -12,6 +12,7 @@ import {
 import EngineerIdentityPassport from '~/components/profile/EngineerIdentityPassport.vue'
 import EngineerMilestonesCard from '~/components/profile/EngineerMilestonesCard.vue'
 import DomainGoalTracker from '~/components/profile/DomainGoalTracker.vue'
+import AppSelect from '~/components/common/AppSelect.vue'
 import { useApiError } from '~/composables/useApiError'
 import { useProfileStore } from '~/stores/useProfileStore'
 import { useInterviewQuizStore } from '~/stores/useInterviewQuizStore'
@@ -120,7 +121,10 @@ async function handlePasswordChange() {
   }
 
   try {
-    await profileStore.changePassword(currentPassword.value, newPassword.value)
+    const currentPwd = profileStore.profile?.hasPassword
+      ? currentPassword.value
+      : null
+    await profileStore.changePassword(currentPwd, newPassword.value)
     toast.success(t('profile.password_set_success'))
     currentPassword.value = ''
     newPassword.value = ''
@@ -140,17 +144,23 @@ async function handlePasswordChange() {
           {{ $t('profile.title') }}
         </h1>
         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-          {{ $t('profile.domain_mastery_subtitle') }}
+          {{ $t('profile.subtitle') }}
         </p>
       </div>
 
-      <!-- Top Full-Width Engineer Identity Passport Banner -->
+      <!-- Tier 1: Top Full-Width Engineer Identity Passport Banner -->
       <EngineerIdentityPassport
         :profile="profileStore.profile"
         :stats="profileStore.stats"
       />
 
-      <!-- Executive 2-Column Balanced Grid -->
+      <!-- Tier 2: Full-Width 4-Column Milestones Telemetry Strip -->
+      <EngineerMilestonesCard
+        :stats="profileStore.stats"
+        :quizStats="quizStore.stats"
+      />
+
+      <!-- Tier 3: Executive 2-Column Balanced Lower Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <!-- Left Column (Desktop 50%, Mobile order-2): Account & Security Hub -->
         <div class="order-2 lg:order-1 space-y-6">
@@ -210,17 +220,12 @@ async function handlePasswordChange() {
                   <label class="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">
                     {{ $t('profile.target_role') }}
                   </label>
-                  <div class="relative">
-                    <Briefcase class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <select
-                      v-model="targetRole"
-                      class="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-canvas-subtle border border-slate-300 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
-                    >
-                      <option v-for="r in roleOptions" :key="r.value" :value="r.value">
-                        {{ r.label }}
-                      </option>
-                    </select>
-                  </div>
+                  <AppSelect
+                    v-model="targetRole"
+                    :options="roleOptions"
+                    :icon="Briefcase"
+                    :aria-label="$t('profile.target_role')"
+                  />
                 </div>
               </div>
 
@@ -265,7 +270,7 @@ async function handlePasswordChange() {
             <form v-else @submit.prevent="handlePasswordChange" class="space-y-4">
               <!-- Google Connected Banner -->
               <div
-                v-if="profileStore.profile?.isGoogleLinked"
+                v-if="profileStore.profile?.isGoogleLinked && !profileStore.profile?.hasPassword"
                 class="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-500/20 flex items-center gap-2.5 text-xs text-blue-700 dark:text-blue-300"
               >
                 <Shield class="w-4 h-4 shrink-0 text-blue-500" />
@@ -382,15 +387,8 @@ async function handlePasswordChange() {
 
         </div>
 
-        <!-- Right Column (Desktop 50%, Mobile order-1): Milestones & Domain Mastery -->
+        <!-- Right Column (Desktop 50%, Mobile order-1): Domain Mastery Goal Tracker -->
         <div class="order-1 lg:order-2 space-y-6">
-          <!-- 4-Cell Cumulative Achievement Bento Grid -->
-          <EngineerMilestonesCard
-            :stats="profileStore.stats"
-            :quizStats="quizStore.stats"
-          />
-
-          <!-- Domain Mastery Progress Card -->
           <DomainGoalTracker :topic-breakdown="quizStore.stats?.topicBreakdown" />
         </div>
       </div>

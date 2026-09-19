@@ -188,7 +188,7 @@ const domainProgressList = computed(() => {
 </script>
 
 <template>
-  <div class="glass-card p-6 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-6 transition-colors duration-200">
+  <div class="glass-card p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-4 transition-colors duration-200">
     <!-- Header -->
     <div class="flex items-start justify-between gap-4">
       <div class="space-y-1">
@@ -203,16 +203,16 @@ const domainProgressList = computed(() => {
     </div>
 
     <!-- 4 Pillars Progress Grid -->
-    <div class="grid grid-cols-1 gap-4">
+    <div class="grid grid-cols-1 gap-2.5 sm:gap-3">
       <div
         v-for="domain in domainProgressList"
         :key="domain.category"
-        class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-3 transition-all hover:border-slate-300 dark:hover:border-white/[0.12]"
+        class="p-3 sm:p-3.5 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2 transition-all hover:border-slate-300 dark:hover:border-white/[0.12]"
       >
         <!-- Top Row: Icon + Title + Percentage -->
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border" :class="domain.badgeColor">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border" :class="domain.badgeColor">
               <component :is="domain.icon" class="w-4 h-4" />
             </div>
             <div class="min-w-0">
@@ -234,7 +234,7 @@ const domainProgressList = computed(() => {
         </div>
 
         <!-- Progress Bar with rounded corners -->
-        <div class="h-2.5 w-full rounded-full overflow-hidden" :class="domain.trackColor">
+        <div class="h-2 w-full rounded-full overflow-hidden" :class="domain.trackColor">
           <div
             class="h-full rounded-full transition-all duration-500 ease-out"
             :class="domain.barColor"

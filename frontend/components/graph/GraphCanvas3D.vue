@@ -266,7 +266,7 @@ onMounted(async () => {
     const SpriteTextModule = await import('three-spritetext')
     const SpriteText = SpriteTextModule.default
 
-    const bgClr = isDark.value ? '#020617' : '#f8fafc'
+    const bgClr = isDark.value ? '#09090b' : '#f8fafc'
 
     graphInstance = ForceGraph3D()(containerRef.value)
       .backgroundColor(bgClr)
@@ -295,7 +295,7 @@ onMounted(async () => {
         const sprite = new SpriteText(node.label || node.id)
         sprite.color = isDark.value ? '#ffffff' : '#0f172a'
         sprite.textHeight = isPillar ? 7 : (isBook ? 5.5 : 4)
-        sprite.backgroundColor = isDark.value ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)'
+        sprite.backgroundColor = isDark.value ? 'rgba(18, 18, 21, 0.85)' : 'rgba(255, 255, 255, 0.85)'
         sprite.padding = [1.5, 3]
         sprite.borderRadius = 4
         sprite.position.y = isPillar ? 22 : (isBook ? 15 : 11)
@@ -404,7 +404,7 @@ watch(
   isDark,
   (dark) => {
     if (!graphInstance) return
-    graphInstance.backgroundColor(dark ? '#020617' : '#f8fafc')
+    graphInstance.backgroundColor(dark ? '#09090b' : '#f8fafc')
   }
 )
 
@@ -463,7 +463,7 @@ defineExpose({
           'p-2.5 rounded-xl shadow-lg border backdrop-blur-md transition-all active:scale-95 flex items-center justify-center',
           isAutoRotate
             ? 'bg-brand-500 text-white border-brand-400 shadow-brand-500/20'
-            : 'bg-white/85 dark:bg-slate-900/85 text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800'
+            : 'bg-white/80 dark:bg-canvas-elevated/80 text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.1]'
         ]"
         :title="$t('graph.autoRotate')"
         :aria-label="$t('graph.autoRotate')"
@@ -479,7 +479,7 @@ defineExpose({
           'p-2.5 rounded-xl shadow-lg border backdrop-blur-md transition-all active:scale-95 flex items-center justify-center',
           showAllLabels
             ? 'bg-brand-500 text-white border-brand-400 shadow-brand-500/20'
-            : 'bg-white/85 dark:bg-slate-900/85 text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800'
+            : 'bg-white/80 dark:bg-canvas-elevated/80 text-slate-700 dark:text-slate-200 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.1]'
         ]"
         :title="showAllLabels ? $t('graph.hud.hideLabels') : $t('graph.hud.showLabels')"
         :aria-label="showAllLabels ? $t('graph.hud.hideLabels') : $t('graph.hud.showLabels')"
@@ -491,7 +491,7 @@ defineExpose({
       <!-- Fit Screen / Reset Camera -->
       <button
         type="button"
-        class="p-2.5 rounded-xl bg-white/85 dark:bg-slate-900/85 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-800/80 shadow-lg backdrop-blur-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center"
+        class="p-2.5 rounded-xl bg-white/80 dark:bg-canvas-elevated/80 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/[0.08] shadow-lg backdrop-blur-md hover:bg-slate-100 dark:hover:bg-white/[0.1] transition-all active:scale-95 flex items-center justify-center"
         :title="$t('graph.resetCamera')"
         :aria-label="$t('graph.resetCamera')"
         @click="fitScreen"
@@ -502,7 +502,7 @@ defineExpose({
       <!-- Zoom In -->
       <button
         type="button"
-        class="p-2.5 rounded-xl bg-white/85 dark:bg-slate-900/85 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-800/80 shadow-lg backdrop-blur-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center"
+        class="p-2.5 rounded-xl bg-white/80 dark:bg-canvas-elevated/80 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/[0.08] shadow-lg backdrop-blur-md hover:bg-slate-100 dark:hover:bg-white/[0.1] transition-all active:scale-95 flex items-center justify-center"
         title="Zoom in"
         aria-label="Zoom in"
         @click="zoomIn"
@@ -513,7 +513,7 @@ defineExpose({
       <!-- Zoom Out -->
       <button
         type="button"
-        class="p-2.5 rounded-xl bg-white/85 dark:bg-slate-900/85 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-800/80 shadow-lg backdrop-blur-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center"
+        class="p-2.5 rounded-xl bg-white/80 dark:bg-canvas-elevated/80 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/[0.08] shadow-lg backdrop-blur-md hover:bg-slate-100 dark:hover:bg-white/[0.1] transition-all active:scale-95 flex items-center justify-center"
         title="Zoom out"
         aria-label="Zoom out"
         @click="zoomOut"

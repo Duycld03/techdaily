@@ -122,7 +122,7 @@ const masteryItems = [
         <button
           type="button"
           data-testid="legend-collapse-btn"
-          class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors"
           :title="$t('graph.legend.collapse')"
           @click="toggleCollapse"
         >
@@ -144,7 +144,7 @@ const masteryItems = [
               'flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all',
               store.hoveredLegendType === item.type
                 ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-bold'
-                : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+                : 'hover:bg-slate-100/80 dark:hover:bg-white/[0.06]'
             ]"
             @mouseenter="onHover(item.type)"
             @mouseleave="onHover(null)"
@@ -155,7 +155,7 @@ const masteryItems = [
         </div>
       </div>
       <!-- Flashcard Mastery Status Key -->
-      <div class="space-y-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800/60">
+      <div class="space-y-1.5 pt-1.5 border-t border-slate-100 dark:border-white/[0.06]">
         <div class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
           <Sparkles class="w-3 h-3 text-amber-500" />
           <span>{{ $t('graph.legend.sm2Status') }}</span>
@@ -169,7 +169,7 @@ const masteryItems = [
               'flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all',
               store.hoveredLegendType === item.type
                 ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-bold'
-                : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+                : 'hover:bg-slate-100/80 dark:hover:bg-white/[0.06]'
             ]"
             @mouseenter="onHover(item.type)"
             @mouseleave="onHover(null)"

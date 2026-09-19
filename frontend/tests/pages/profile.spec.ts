@@ -65,7 +65,7 @@ vi.mock('~/composables/useApiClient', () => ({
   })
 }))
 
-describe('profile.vue (Asymmetric 2-Column Bento Dashboard)', () => {
+describe('profile.vue (3-Tier Bento Dashboard)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     const authStore = useAuthStore()
@@ -78,7 +78,7 @@ describe('profile.vue (Asymmetric 2-Column Bento Dashboard)', () => {
     }
   })
 
-  it('mounts the asymmetric 2-column layout and loads profile & quiz stats', async () => {
+  it('mounts the 3-tier bento dashboard layout and loads profile & quiz stats', async () => {
     const wrapper = mount(ProfilePage, {
       global: {
         stubs: {
@@ -90,9 +90,9 @@ describe('profile.vue (Asymmetric 2-Column Bento Dashboard)', () => {
 
     await flushPromises()
 
-    // Title
+    // Title & Subtitle
     expect(wrapper.text()).toContain('profile.title')
-
+    expect(wrapper.text()).toContain('profile.subtitle')
     // Identity Passport & Milestones
     expect(wrapper.text()).toContain('Taylor TechLead')
     expect(wrapper.text()).toContain('staff.dev@techdaily.dev')
@@ -126,6 +126,58 @@ describe('profile.vue (Asymmetric 2-Column Bento Dashboard)', () => {
     expect(wrapper.text()).toContain('profile.current_password')
     expect(wrapper.text()).toContain('profile.new_password')
     expect(wrapper.text()).toContain('profile.confirm_password')
+  })
+
+  it('omits current password input and shows tip banner for Google-linked accounts with hasPassword: false', async () => {
+    const wrapper = mount(ProfilePage)
+    await flushPromises()
+
+    const profileStore = useProfileStore()
+    if (profileStore.profile) {
+      profileStore.profile.isGoogleLinked = true
+      profileStore.profile.hasPassword = false
+    }
+    await wrapper.vm.$nextTick()
+
+    // Switch to security tab
+    const tabButtons = wrapper.findAll('button[type="button"]')
+    const securityTabBtn = tabButtons.find(b => b.text().includes('profile.tab_security'))
+    expect(securityTabBtn).toBeDefined()
+    await securityTabBtn!.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    // Current password input is omitted and tip banner is shown
+    expect(wrapper.text()).not.toContain('profile.current_password')
+    expect(wrapper.text()).toContain('profile.google_password_hint')
+    expect(wrapper.text()).toContain('profile.new_password')
+    expect(wrapper.text()).toContain('profile.confirm_password')
+    expect(wrapper.text()).toContain('profile.set_password_btn')
+  })
+
+  it('shows current password input and hides tip banner for Google-linked accounts with hasPassword: true', async () => {
+    const wrapper = mount(ProfilePage)
+    await flushPromises()
+
+    const profileStore = useProfileStore()
+    if (profileStore.profile) {
+      profileStore.profile.isGoogleLinked = true
+      profileStore.profile.hasPassword = true
+    }
+    await wrapper.vm.$nextTick()
+
+    // Switch to security tab
+    const tabButtons = wrapper.findAll('button[type="button"]')
+    const securityTabBtn = tabButtons.find(b => b.text().includes('profile.tab_security'))
+    expect(securityTabBtn).toBeDefined()
+    await securityTabBtn!.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    // Current password input is shown and tip banner is hidden
+    expect(wrapper.text()).toContain('profile.current_password')
+    expect(wrapper.text()).not.toContain('profile.google_password_hint')
+    expect(wrapper.text()).toContain('profile.new_password')
+    expect(wrapper.text()).toContain('profile.confirm_password')
+    expect(wrapper.text()).toContain('profile.update_password_btn')
   })
 
   it('updates daily goal pace chips when clicked', async () => {

@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import SettingsPage from '~/pages/settings.vue'
+import AppSelect from '~/components/common/AppSelect.vue'
+import { useProfileStore } from '~/stores/useProfileStore'
 import { useToast } from '~/composables/useToast'
 import { ApiError } from '~/composables/useApiClient'
 import { ref } from 'vue'
@@ -162,5 +164,42 @@ describe('SettingsPage handleSendTestPush', () => {
     expect(lastToast).toBeDefined()
     expect(lastToast?.type).toBe('error')
     expect(lastToast?.message).toBe('api_errors.PUSH_DELIVERY_FAILED')
+  })
+})
+
+describe('SettingsPage Timezone Auto-Persist', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    const toast = useToast()
+    toast.toasts.value = []
+  })
+
+  it('automatically persists timezone to profileStore on selection change', async () => {
+    const wrapper = mount(SettingsPage, {
+      global: {
+        stubs: {
+          ThemeToggle: true,
+          LocaleSelector: true,
+          AppSelect: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const profileStore = useProfileStore()
+    const updateSpy = vi.spyOn(profileStore, 'updateProfile').mockResolvedValueOnce(undefined as unknown as void)
+
+    const appSelect = wrapper.findComponent(AppSelect)
+    expect(appSelect.exists()).toBe(true)
+
+    await appSelect.vm.$emit('update:modelValue', 'Asia/Tokyo')
+    await flushPromises()
+
+    expect(updateSpy).toHaveBeenCalledWith({ timeZone: 'Asia/Tokyo' })
+    const toast = useToast()
+    const lastToast = toast.toasts.value[toast.toasts.value.length - 1]
+    expect(lastToast).toBeDefined()
+    expect(lastToast?.type).toBe('success')
   })
 })

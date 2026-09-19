@@ -1,6 +1,6 @@
 import { createHighlighter, type Highlighter } from 'shiki'
 
-export const CODE_THEME = 'one-dark-pro'
+export const CODE_THEME = 'vitesse-dark'
 
 export const SUPPORTED_LANGS = [
   'csharp',

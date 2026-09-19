@@ -1280,7 +1280,7 @@ async function handleHighlightAndNote() {
 
           <!-- Markdown Body -->
           <article
-            class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:text-emerald-600 dark:prose-code:text-emerald-400 prose-code:bg-slate-100 dark:prose-code:bg-slate-800/80 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-blockquote:not-italic prose-blockquote:before:content-none prose-blockquote:after:content-none prose-p:my-4 transition-all duration-150"
+            class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:px-2 prose-code:py-0.5 prose-code:rounded-lg prose-code:text-xs prose-code:sm:text-sm prose-code:bg-slate-100 prose-code:text-slate-800 prose-code:border prose-code:border-slate-200/90 dark:prose-code:bg-canvas-elevated dark:prose-code:text-brand-300 dark:prose-code:border-white/[0.08] prose-code:font-medium prose-code:before:content-none prose-code:after:content-none prose-blockquote:not-italic prose-blockquote:before:content-none prose-blockquote:after:content-none prose-p:my-4 transition-all duration-150"
             :class="[fontFamilyClass]"
             :style="{
               fontSize: fontSizePx,

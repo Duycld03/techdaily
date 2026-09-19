@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
+import { BookOpen, CheckCircle2 } from 'lucide-vue-next'
 import LibraryPage from '~/pages/library.vue'
+import AppSelect from '~/components/common/AppSelect.vue'
 import { useLibraryStore, type Book } from '~/stores/useLibraryStore'
 
 const mockBooks = [
@@ -606,9 +608,9 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     await flushPromises()
 
     // Verify the category select element is auto-set to 1 (BackendDotNet)
-    const select = wrapper.find('select')
+    const select = wrapper.findComponent(AppSelect)
     expect(select.exists()).toBe(true)
-    expect((select.element as HTMLSelectElement).value).toBe('1')
+    expect(select.props('modelValue')).toBe(1)
 
     // Submit the markdown form
     const form = wrapper.find('form')
@@ -622,5 +624,61 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
         category: 1
       })
     )
+  })
+
+  it('renders unread ready book cards with neutral Obsidian BookOpen badge and no emerald styling classes', async () => {
+    mockGet.mockResolvedValueOnce({
+      books: [
+        {
+          id: 'book-ready-1',
+          title: 'Designing Data-Intensive Applications',
+          slug: 'ddia',
+          sourceType: 0,
+          category: 2,
+          totalChunks: 12,
+          isPublished: true,
+          createdAt: '2026-09-01T00:00:00Z',
+          status: 'Ready'
+        }
+      ]
+    })
+
+    const wrapper = mount(LibraryPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' },
+          Teleport: true
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+
+    await flushPromises()
+
+    // Find the ready badge
+    const badge = wrapper.find('.grid > div div.mt-auto.pt-3 > div')
+    expect(badge.exists()).toBe(true)
+    expect(badge.text()).toContain('library.ready_to_read')
+
+    // Must use neutral Obsidian studio tokens
+    expect(badge.classes()).toContain('bg-slate-100')
+    expect(badge.classes()).toContain('dark:bg-canvas-subtle')
+    expect(badge.classes()).toContain('border-slate-200/80')
+    expect(badge.classes()).toContain('dark:border-white/[0.08]')
+    expect(badge.classes()).toContain('text-slate-600')
+    expect(badge.classes()).toContain('dark:text-slate-400')
+
+    // Must NOT have any emerald green styling
+    expect(badge.classes()).not.toContain('bg-emerald-50')
+    expect(badge.classes()).not.toContain('dark:bg-emerald-500/10')
+    expect(badge.classes()).not.toContain('text-emerald-700')
+    expect(badge.classes()).not.toContain('dark:text-emerald-400')
+    expect(badge.classes()).not.toContain('border-emerald-200/80')
+
+    // Must render BookOpen icon, not CheckCircle2
+    expect(badge.findComponent(BookOpen).exists()).toBe(true)
+    expect(badge.findComponent(CheckCircle2).exists()).toBe(false)
   })
 })

@@ -79,11 +79,11 @@ function copyText() {
     @click.self="emit('close')"
   >
     <div
-      class="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-7 overflow-hidden animate-in fade-in zoom-in-95 duration-200 space-y-4 transition-colors"
+      class="w-full max-w-lg bg-white dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] rounded-3xl shadow-2xl p-6 sm:p-7 overflow-hidden animate-in fade-in zoom-in-95 duration-200 space-y-4 transition-colors"
     >
       <!-- Header -->
       <div
-        class="flex items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800"
+        class="flex items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-white/[0.06]"
       >
         <div class="flex items-center gap-3 min-w-0 flex-1">
           <div
@@ -116,7 +116,7 @@ function copyText() {
         </div>
         <button
           @click="emit('close')"
-          class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+          class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors shrink-0"
           :aria-label="$t('common.close') || 'Close'"
         >
           <X class="w-5 h-5" />
@@ -158,7 +158,7 @@ function copyText() {
         <!-- Success Explanation -->
         <div v-else-if="explanation" class="space-y-3">
           <div
-            class="prose prose-slate dark:prose-invert max-w-none text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-slate-950/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80"
+            class="prose prose-slate dark:prose-invert max-w-none text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-canvas-subtle p-5 rounded-2xl border border-slate-200 dark:border-white/[0.08]"
             v-html="renderedExplanation"
           />
         </div>
@@ -166,13 +166,13 @@ function copyText() {
 
       <!-- Footer -->
       <div
-        class="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500"
+        class="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-white/[0.06] text-xs text-slate-500"
       >
         <span class="font-medium">{{ $t('reader.term_explainer_powered_by') }}</span>
         <button
           @click="copyText"
           :disabled="!explanation || !!errorMessage"
-          class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          class="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.12] border border-transparent dark:border-white/[0.08] text-slate-700 dark:text-slate-200 font-semibold text-xs transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Check v-if="copied" class="w-3.5 h-3.5 text-emerald-500" />
           <Copy v-else class="w-3.5 h-3.5" />

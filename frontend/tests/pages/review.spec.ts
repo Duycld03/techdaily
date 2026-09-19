@@ -127,7 +127,9 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
 
     // Initially on Tab 1 (Review Session)
     expect(wrapper.findComponent({ name: 'FlashcardDeck' }).exists()).toBe(true)
-
+    // Mutual exclusivity invariant: completion hero card must NOT render while cards are due
+    expect(wrapper.text()).not.toContain('review.no_cards')
+    expect(wrapper.text()).not.toContain('review.no_cards_desc')
     // Switch to Tab 2
     const buttons = wrapper.findAll('button')
     const deckTabBtn = buttons.find((b) => b.text().includes('review.tab_management'))

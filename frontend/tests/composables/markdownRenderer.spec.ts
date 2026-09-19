@@ -14,8 +14,8 @@ describe('useMarkdownRenderer & shikiHighlighter', () => {
     await getShikiHighlighter()
   })
 
-  it('standardizes on one-dark-pro theme and includes all target languages', () => {
-    expect(CODE_THEME).toBe('one-dark-pro')
+  it('standardizes on vitesse-dark theme and includes all target languages', () => {
+    expect(CODE_THEME).toBe('vitesse-dark')
     expect(SUPPORTED_LANGS).toContain('typescript')
     expect(SUPPORTED_LANGS).toContain('csharp')
     expect(SUPPORTED_LANGS).toContain('javascript')
@@ -54,7 +54,7 @@ describe('useMarkdownRenderer & shikiHighlighter', () => {
     expect(formatLanguageLabel('plaintext')).toBe('Output')
   })
 
-  it('highlights TypeScript code fence with one-dark-pro and macOS 3-dot window header', () => {
+  it('highlights TypeScript code fence with vitesse-dark and macOS 3-dot window header', () => {
     const { render } = useMarkdownRenderer()
     const tsMarkdown = `
 \`\`\`ts
@@ -67,25 +67,24 @@ async function toggleFavorite(itemId: string) {
 `
     const html = render(tsMarkdown)
 
-    // Verify container styling matches /insights
+    // Verify container styling matches Dev-Learning Studio
     expect(html).toContain('code-block-wrapper')
-    expect(html).toContain('bg-slate-900')
-    expect(html).toContain('border-slate-800')
+    expect(html).toContain('dark:bg-canvas-subtle')
+    expect(html).toContain('dark:border-white/[0.08]')
 
     // Verify 3-dot macOS window buttons
-    expect(html).toContain('bg-rose-500/80')
-    expect(html).toContain('bg-amber-500/80')
-    expect(html).toContain('bg-emerald-500/80')
-
+    expect(html).toContain('bg-[#ff5f56]')
+    expect(html).toContain('bg-[#ffbd2e]')
+    expect(html).toContain('bg-[#27c93f]')
     // Verify TypeScript label
     expect(html).toContain('TypeScript')
 
-    // Verify Shiki one-dark-pro highlighting output
-    expect(html).toContain('shiki one-dark-pro')
+    // Verify Shiki vitesse-dark highlighting output
+    expect(html).toContain('shiki vitesse-dark')
     expect(html).toContain('queryClient')
   })
 
-  it('highlights C# code fence with matching one-dark-pro theme and C# / .NET 10 header', () => {
+  it('highlights C# code fence with matching vitesse-dark theme and C# / .NET 10 header', () => {
     const { render } = useMarkdownRenderer()
     const csharpMarkdown = `
 \`\`\`csharp
@@ -100,8 +99,8 @@ public ValueTask<string> GetCachedDataAsync(string key) {
     const html = render(csharpMarkdown)
 
     expect(html).toContain('C# / .NET 10')
-    expect(html).toContain('shiki one-dark-pro')
-    expect(html).toContain('bg-rose-500/80')
+    expect(html).toContain('shiki vitesse-dark')
+    expect(html).toContain('bg-[#ff5f56]')
     expect(html).toContain('GetCachedDataAsync')
   })
 

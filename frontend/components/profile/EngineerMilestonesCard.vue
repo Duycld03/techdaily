@@ -21,7 +21,7 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <div class="glass-card p-6 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-5 transition-colors duration-200">
+  <div class="glass-card p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-4 transition-colors duration-200">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
@@ -30,8 +30,8 @@ withDefaults(defineProps<Props>(), {
       </h3>
     </div>
 
-    <!-- 4-Cell Cumulative Bento Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+    <!-- 4-Cell Full-Width Telemetry Bento Strip -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
       <!-- 1. Architecture Drills Completed -->
       <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-violet-500/30">
         <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">

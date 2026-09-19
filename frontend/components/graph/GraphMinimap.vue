@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-2xl shadow-xl p-2.5 space-y-1.5 select-none"
+    class="glass-panel p-2.5 space-y-1.5 select-none rounded-2xl border border-slate-200/90 dark:border-white/[0.08] dark:bg-canvas-subtle"
   >
     <div class="flex items-center justify-between px-1">
       <span class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -185,7 +185,7 @@ onBeforeUnmount(() => {
       ref="canvasRef"
       width="160"
       height="100"
-      class="rounded-xl bg-slate-100/90 dark:bg-slate-950/90 cursor-pointer block border border-slate-200/50 dark:border-slate-800/50"
+      class="rounded-xl bg-slate-100/90 dark:bg-canvas cursor-pointer block border border-slate-200/50 dark:border-white/[0.08]"
       title="Click to pan viewport"
       @click="onCanvasClick"
     />

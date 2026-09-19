@@ -237,6 +237,7 @@ The `/library` page SHALL serve as the technical document catalog, displaying bo
    - Document cards in the library grid SHALL render as `.glass-card` containers with translucent hairline borders (`border-white/[0.08]`), elevating on hover (`hover:border-white/[0.16]`).
    - In-progress reading progress bars SHALL use Iris Violet gradient fills (`bg-gradient-to-r from-brand-600 to-brand-500`) over subtle dark track backgrounds (`dark:bg-canvas-elevated`).
    - Bookmark resume badges SHALL display translucent brand accents (`bg-brand-500/10 text-brand-400 border border-brand-500/20`).
+   - Ready to read status badges SHALL render as neutral studio badges (`bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400` with `BookOpen` icon), eliminating out-of-place emerald green styling to preserve semantic color hierarchy.
    - Action buttons on book cards (Resume, Read, Delete, Export) SHALL use glass styling without legacy hardcoded background colors.
 
 3. **Import Modal Modernization:**
@@ -252,6 +253,12 @@ The `/library` page SHALL serve as the technical document catalog, displaying bo
 - **THEN** ready books display "Ready" status and clean metadata
 - **AND** cards render as `.glass-card` elements over a dark canvas with hairline borders
 - **AND** do not display the ongoing background curation progress bar once initial slices are ready.
+
+#### Scenario: User views unread document card status badge
+- **WHEN** user views a ready document card on `/library` that has no active bookmark
+- **THEN** the card displays a neutral studio badge ("Ready to Read" / "Sẵn sàng đọc") with `BookOpen` icon
+- **AND** the badge renders with neutral background (`bg-slate-100 dark:bg-canvas-subtle`), hairline border (`border-slate-200/80 dark:border-white/[0.08]`), and muted text (`text-slate-600 dark:text-slate-400`)
+- **AND** no green or emerald styling (`bg-emerald-50`, `text-emerald-700`, `border-emerald-200`) is applied to the status badge.
 
 ### Requirement: Ingestion Progress Reporting & UI Status Indication
 The library system SHALL expose real-time curation progress through `GET /api/v1/library/books/{id}/status`, and the Library UI (`library.vue`) SHALL render a dynamic progress bar and active step message while Tier 2 AI curation is ongoing.

@@ -78,7 +78,7 @@ onMounted(() => {
     <!-- Loading State Overlay -->
     <div
       v-if="store.isLoading"
-      class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-sm space-y-3"
+      class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-50/80 dark:bg-canvas/80 backdrop-blur-sm space-y-3"
     >
       <div class="relative flex items-center justify-center">
         <div class="w-16 h-16 rounded-2xl bg-brand-500/10 border border-brand-500/20 animate-pulse" />
@@ -88,11 +88,10 @@ onMounted(() => {
         {{ $t('graph.loading') }}
       </p>
     </div>
-
     <!-- Error State Overlay -->
     <div
       v-else-if="store.error"
-      class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-50/95 dark:bg-slate-950/95 p-6 text-center space-y-3"
+      class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-50/95 dark:bg-canvas/95 p-6 text-center space-y-3"
     >
       <div class="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
         <AlertTriangle class="w-6 h-6" />
@@ -119,9 +118,9 @@ onMounted(() => {
       class="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center space-y-3 pointer-events-none"
     >
       <div
-        class="pointer-events-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md shadow-2xl flex flex-col items-center space-y-3"
+        class="pointer-events-auto glass-panel p-6 sm:p-8 max-w-md shadow-2xl flex flex-col items-center space-y-3 border border-slate-200/90 dark:border-white/[0.08] dark:bg-canvas-subtle"
       >
-        <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+        <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-center text-slate-400 dark:text-slate-300">
           <Network class="w-6 h-6" />
         </div>
         <h3 class="text-base font-bold text-slate-900 dark:text-white">
@@ -132,7 +131,7 @@ onMounted(() => {
         </p>
         <button
           type="button"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all active:scale-95 whitespace-nowrap shrink-0"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.12] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold transition-all active:scale-95 whitespace-nowrap shrink-0"
           @click="store.resetFilters()"
         >
           <RotateCcw class="w-4 h-4 shrink-0" />
@@ -156,7 +155,7 @@ onMounted(() => {
         class="w-full h-full"
       />
       <template #fallback>
-        <div class="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-950 text-slate-400">
+        <div class="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-50 dark:bg-canvas text-slate-400">
           <Loader2 class="w-8 h-8 animate-spin text-brand-500" />
           <span class="text-xs sm:text-sm font-medium">{{ $t('graph.loading3d') }}</span>
         </div>

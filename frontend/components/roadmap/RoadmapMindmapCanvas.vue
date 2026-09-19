@@ -379,7 +379,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
 <template>
   <div
     ref="containerRef"
-    class="relative w-full h-[620px] sm:h-[720px] rounded-3xl bg-slate-50/80 dark:bg-slate-950/70 border border-slate-200/90 dark:border-slate-800 overflow-hidden select-none transition-colors"
+    class="relative w-full h-[620px] sm:h-[720px] rounded-3xl bg-slate-50/80 dark:bg-canvas border border-slate-200/90 dark:border-white/[0.08] overflow-hidden select-none transition-colors"
     @wheel="handleWheel"
     @mousedown="startPan"
     @mousemove="onMouseMove"
@@ -392,7 +392,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
   >
     <!-- Search Bar in Top Left -->
     <div
-      class="absolute top-3 sm:top-4 left-3 sm:left-4 z-10 flex items-center gap-1.5 px-3 py-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-md max-w-[180px] sm:max-w-[240px] md:max-w-xs transition-all"
+      class="absolute top-3 sm:top-4 left-3 sm:left-4 z-10 flex items-center gap-1.5 px-3 py-1.5 glass-panel dark:bg-canvas-subtle/90 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-white/[0.08] shadow-md max-w-[180px] sm:max-w-[240px] md:max-w-xs transition-all"
       @mousedown.stop
       @touchstart.stop
       @wheel.stop
@@ -418,7 +418,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
 
     <!-- Floating Toolbar -->
     <div
-      class="absolute top-3 sm:top-4 right-3 sm:right-4 z-10 flex items-center gap-1 sm:gap-1.5 p-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-md"
+      class="absolute top-3 sm:top-4 right-3 sm:right-4 z-10 flex items-center gap-1 sm:gap-1.5 p-1.5 glass-panel dark:bg-canvas-subtle/90 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-white/[0.08] shadow-md"
       @mousedown.stop
       @touchstart.stop
       @wheel.stop
@@ -432,12 +432,12 @@ function handleSliceClick(slice: TreeSliceLeaf) {
         <Target class="w-4 h-4" />
         <span class="hidden lg:inline text-xs font-bold">{{ $t('roadmap.mindmap.focus_active') }}</span>
       </button>
-      <div class="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-0.5"></div>
+      <div class="w-px h-4 bg-slate-200 dark:bg-white/10 mx-0.5"></div>
       <button
         type="button"
         @click="zoomIn"
         :title="$t('roadmap.mindmap.zoom_in')"
-        class="p-1.5 sm:p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0 active:scale-95"
+        class="p-1.5 sm:p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors whitespace-nowrap shrink-0 active:scale-95"
         data-testid="btn-zoom-in"
       >
         <ZoomIn class="w-4 h-4" />
@@ -446,7 +446,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
         type="button"
         @click="zoomOut"
         :title="$t('roadmap.mindmap.zoom_out')"
-        class="p-1.5 sm:p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0 active:scale-95"
+        class="p-1.5 sm:p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors whitespace-nowrap shrink-0 active:scale-95"
         data-testid="btn-zoom-out"
       >
         <ZoomOut class="w-4 h-4" />
@@ -454,22 +454,22 @@ function handleSliceClick(slice: TreeSliceLeaf) {
       <span class="text-xs font-mono font-bold text-slate-500 dark:text-slate-400 px-1 whitespace-nowrap shrink-0">
         {{ Math.round(scale * 100) }}%
       </span>
-      <div class="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-0.5"></div>
+      <div class="w-px h-4 bg-slate-200 dark:bg-white/10 mx-0.5"></div>
       <button
         type="button"
         @click="fitToScreen"
         :title="$t('roadmap.mindmap.fit_screen')"
-        class="p-1.5 sm:p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0 active:scale-95"
+        class="p-1.5 sm:p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors whitespace-nowrap shrink-0 active:scale-95"
         data-testid="btn-fit-screen"
       >
         <Maximize2 class="w-4 h-4" />
       </button>
-      <div class="w-px h-4 bg-slate-200 dark:bg-slate-800 mx-0.5"></div>
+      <div class="w-px h-4 bg-slate-200 dark:bg-white/10 mx-0.5"></div>
       <button
         type="button"
         @click="expandAll"
         :title="$t('roadmap.mindmap.expand_all')"
-        class="px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1 active:scale-95"
+        class="px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors whitespace-nowrap shrink-0 flex items-center gap-1 active:scale-95"
         data-testid="btn-expand-all"
       >
         <ChevronsDownUp class="w-3.5 h-3.5 shrink-0" />
@@ -479,7 +479,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
         type="button"
         @click="collapseAll"
         :title="$t('roadmap.mindmap.collapse_all')"
-        class="px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1 active:scale-95"
+        class="px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.08] transition-colors whitespace-nowrap shrink-0 flex items-center gap-1 active:scale-95"
         data-testid="btn-collapse-all"
       >
         <ChevronsUpDown class="w-3.5 h-3.5 shrink-0" />
@@ -507,7 +507,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
                 ? 'stroke-amber-400 dark:stroke-amber-500 stroke-2'
                 : edge.status === 'completed'
                   ? 'stroke-emerald-400 dark:stroke-emerald-500/70 stroke-2'
-                  : 'stroke-slate-300 dark:stroke-slate-700 stroke-1.5'
+                  : 'stroke-slate-300 dark:stroke-zinc-700 stroke-1.5'
             ]"
           />
         </g>
@@ -523,7 +523,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
         >
           <div
             data-testid="root-node"
-            class="interactive-node w-full h-full p-3.5 rounded-2xl bg-gradient-to-br from-indigo-50/90 via-white to-brand-50/70 dark:from-slate-900 dark:via-slate-900 dark:to-brand-950 border-2 border-brand-500/40 dark:border-brand-500/50 shadow-md flex flex-col justify-between"
+            class="interactive-node w-full h-full p-3.5 rounded-2xl bg-gradient-to-br from-indigo-50/90 via-white to-brand-50/70 dark:from-canvas-subtle dark:via-canvas-subtle dark:to-brand-950/40 border-2 border-brand-500/40 dark:border-brand-500/50 shadow-md flex flex-col justify-between"
           >
             <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-2 min-w-0">
@@ -573,7 +573,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
                 ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-400 dark:border-amber-500/80 text-amber-950 dark:text-amber-100 ring-2 ring-amber-500/20'
                 : ch.data.isCompleted
                   ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-400/60 dark:border-emerald-700/60 text-emerald-950 dark:text-emerald-100'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-brand-400 dark:hover:border-slate-700'
+                  : 'bg-white dark:bg-canvas-subtle border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-slate-200 hover:border-brand-400 dark:hover:border-brand-500/40'
             ]"
           >
             <div class="flex items-center gap-2.5 min-w-0">
@@ -584,7 +584,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
                     ? 'bg-amber-500 text-slate-950'
                     : ch.data.isCompleted
                       ? 'bg-emerald-500 text-white'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      : 'bg-slate-100 dark:bg-canvas-elevated text-slate-600 dark:text-slate-300 border border-transparent dark:border-white/[0.06]'
                 ]"
               >
                 <span>{{ ch.data.index }}</span>
@@ -641,7 +641,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
                 ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-500 dark:border-amber-400 text-amber-950 dark:text-amber-100 ring-2 ring-amber-500/30'
                 : sl.data.isCompleted
                   ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-400/50 dark:border-emerald-700/60 text-emerald-950 dark:text-emerald-100'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-brand-400 dark:hover:border-slate-700'
+                  : 'bg-white dark:bg-canvas-subtle border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:border-brand-400 dark:hover:border-brand-500/40'
             ]"
           >
             <div class="flex items-center gap-2 min-w-0">
@@ -675,7 +675,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
                     ? 'bg-amber-500 text-slate-950'
                     : sl.data.isCompleted
                       ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      : 'bg-slate-100 dark:bg-canvas-elevated text-slate-500 dark:text-slate-400 border border-transparent dark:border-white/[0.06]'
                 ]"
               >
                 {{ sl.data.isActiveToday ? $t('roadmap.mindmap.start_drill') : (sl.data.isCompleted ? $t('roadmap.completed') : $t('roadmap.ready')) }}

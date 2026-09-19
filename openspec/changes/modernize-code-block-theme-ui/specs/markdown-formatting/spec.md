@@ -1,0 +1,38 @@
+# Spec Delta: Markdown Formatting
+
+## MODIFIED Requirements
+
+### Requirement: Isolated Code Block Container Styling
+The Markdown renderer MUST wrap code blocks in dedicated, isolated container classes that prevent style leakage or collision with standalone code highlighting components. Rendered code blocks SHALL guarantee minimum horizontal padding of at least 16px (`1rem`) on mobile viewports (<640px) and 20px (`1.25rem` to `1.5rem`) on desktop screens (≥640px) regardless of asynchronous route chunk loading order or CSS injection sequence.
+
+Rendered code block containers and headers SHALL strictly adhere to the Dev-Learning Studio design language across both Markdown-rendered surfaces and standalone code blocks:
+1. **Container Styling:** Code blocks SHALL render in a rounded container (`rounded-2xl`) with translucent hairline borders (`border-slate-200/80 dark:border-white/[0.08]`), deep neutral obsidian canvas (`dark:bg-canvas-subtle` / `#121215`), and studio drop shadow (`shadow-lg dark:shadow-2xl`).
+2. **Studio Header Bar:** The header bar SHALL render as a glassmorphic top rail (`bg-slate-100/80 dark:bg-canvas-elevated/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.06]`) featuring:
+   - Three macOS traffic-light window controls (Red `#ff5f56`, Amber `#ffbd2e`, Green `#27c93f`).
+   - A high-tech monospace language indicator styled with studio brand accents (`text-brand-600 dark:text-brand-400 font-bold uppercase tracking-widest`).
+   - A translucent glassmorphic Copy button (`bg-white/80 dark:bg-white/[0.06] hover:bg-white dark:hover:bg-white/[0.12] border border-slate-200/80 dark:border-white/[0.08]`) that provides copy icon and "Copied!" confirmation feedback.
+3. **Syntax Highlighting Theme:** Syntax highlighting SHALL render against a transparent code container background (`bg-transparent`) using a modern neutral obsidian theme (`vitesse-dark` or `github-dark-default`), seamlessly inheriting the obsidian canvas background without nested color boxes, and SHALL format code comments with italic styling (`font-style: italic`).
+
+#### Scenario: Unscoped external styles do not override markdown code block padding
+- **WHEN** route preloading or an external component injects zero-padding styles into `<head>`
+- **THEN** markdown code blocks within reading slices, today pane, and explanations retain their horizontal padding and remain visually aligned under the header window controls.
+
+#### Scenario: Asynchronous syntax highlighter readiness updates rendered code blocks
+- **WHEN** the client-side syntax highlighter completes asynchronous initialization
+- **THEN** all active markdown panes (including reader slices, drill explanations, and term explainer dialogs) automatically re-render to display syntax-highlighted code.
+
+#### Scenario: Dev-Learning Studio obsidian terminal window styling
+- **WHEN** a code block is rendered in dark mode
+- **THEN** the container renders on neutral obsidian `dark:bg-canvas-subtle` with hairline border `dark:border-white/[0.08]`
+- **AND** the top header displays traffic-light circular dots (`#ff5f56`, `#ffbd2e`, `#27c93f`) alongside the uppercase language label.
+
+#### Scenario: Neutral syntax highlighting with transparent canvas background and italic comments
+- **WHEN** syntax highlighting is applied to a code fence
+- **THEN** the `<pre>` and `<code>` elements have transparent backgrounds without introducing nested gray or blue boxes
+- **AND** the syntax highlighter uses a neutral dark theme (`vitesse-dark` or `github-dark-default`)
+- **AND** code comments render in italic font style for enhanced readability.
+
+#### Scenario: Interactive glassmorphic copy button feedback
+- **WHEN** the user clicks the "Copy" button on a code block header
+- **THEN** the code content is copied to the system clipboard
+- **AND** the button temporarily displays a green checkmark with "Copied!" text before returning to the default state.

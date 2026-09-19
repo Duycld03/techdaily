@@ -417,8 +417,8 @@ onUnmounted(() => {
     ></div>
 
     <!-- Authoritative Source Excerpt (if distinct) -->
-    <div v-if="renderedChunkHtml" class="mt-6 p-4 sm:p-5 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-2">
-      <div class="flex items-center gap-2 text-xs font-bold tracking-wider text-emerald-700 dark:text-emerald-400">
+    <div v-if="renderedChunkHtml" class="mt-6 p-4 sm:p-5 rounded-2xl glass-panel dark:bg-canvas-subtle/80 border border-slate-200/80 dark:border-white/[0.08] space-y-2">
+      <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
         <BookOpen class="w-3.5 h-3.5" />
         <span>{{ $t('today.source_context') }}</span>
       </div>

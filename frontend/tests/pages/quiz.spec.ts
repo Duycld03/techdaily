@@ -175,6 +175,7 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     await wrapper.vm.$nextTick()
     await flushPromises()
 
+    expect(wrapper.text()).toContain('quiz.tab_review_queue')
     expect(wrapper.text()).toContain('quiz.practice_current_batch')
     expect(wrapper.text()).toContain('quiz.practice_all_mistakes')
     expect(wrapper.find('nav').exists()).toBe(true)

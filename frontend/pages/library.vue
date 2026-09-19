@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb } from 'lucide-vue-next'
 import BasePagination from '~/components/common/BasePagination.vue'
+import AppSelect from '~/components/common/AppSelect.vue'
 import { useApiError } from '~/composables/useApiError'
 import { useLibraryStore } from '~/stores/useLibraryStore'
 const { t, locale } = useI18n()
@@ -69,6 +70,13 @@ const categories = computed(() => [
   { id: 4, label: t('library.categories.craft') }
 ])
 
+const formCategoryOptions = computed(() => [
+  { value: 0, label: t('library.categories.frontend') },
+  { value: 1, label: t('library.categories.backend') },
+  { value: 2, label: t('library.categories.database') },
+  { value: 3, label: t('library.categories.system_design') },
+  { value: 4, label: t('library.categories.craft') }
+])
 function getCategoryLabel(category: number | string | undefined | null): string {
   if (category === undefined || category === null) {
     return t('library.categories.craft')
@@ -651,8 +659,8 @@ async function confirmDeleteBook() {
               <span>{{ $t('library.resumes_at', { slice: bookmarks[book.id] }) }}</span>
             </div>
             <!-- Ready Badge if no bookmark -->
-            <div v-else-if="book.status === 'Ready' || (book.status as any) === 2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/80 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm font-semibold">
-              <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
+            <div v-else-if="book.status === 'Ready' || (book.status as unknown as number) === 2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 text-xs sm:text-sm font-semibold">
+              <BookOpen class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
               <span>{{ $t('library.ready_to_read') }}</span>
             </div>
 
@@ -718,7 +726,7 @@ async function confirmDeleteBook() {
     <!-- Import Document Modal (Teleported to Body) -->
     <Teleport to="body">
       <div v-if="isImportModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in" @click.self="isImportModalOpen = false">
-        <div class="w-full max-w-2xl glass-panel border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-2xl p-5 sm:p-8 md:p-9 space-y-5 sm:space-y-6 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+        <div class="w-full max-w-2xl glass-panel border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-2xl p-5 sm:p-8 md:p-9 space-y-5 sm:space-y-6 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto [scrollbar-gutter:stable]">
           <div class="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-white/[0.08] gap-2">
             <div class="min-w-0">
               <h3 class="text-base sm:text-xl font-bold text-slate-900 dark:text-white truncate">{{ $t('library.import_modal_title') }}</h3>
@@ -790,16 +798,11 @@ async function confirmDeleteBook() {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
-                <select
+                <AppSelect
                   v-model="importCategory"
-                  class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
-                >
-                  <option :value="0">{{ $t('library.categories.frontend') }}</option>
-                  <option :value="1">{{ $t('library.categories.backend') }}</option>
-                  <option :value="2">{{ $t('library.categories.database') }}</option>
-                  <option :value="3">{{ $t('library.categories.system_design') }}</option>
-                  <option :value="4">{{ $t('library.categories.craft') }}</option>
-                </select>
+                  :options="formCategoryOptions"
+                  :aria-label="$t('library.category_label')"
+                />
               </div>
 
               <div>
@@ -940,16 +943,11 @@ async function confirmDeleteBook() {
 
               <div>
                 <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
-                <select
+                <AppSelect
                   v-model="pdfCategory"
-                  class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
-                >
-                  <option :value="0">{{ $t('library.categories.frontend') }}</option>
-                  <option :value="1">{{ $t('library.categories.backend') }}</option>
-                  <option :value="2">{{ $t('library.categories.database') }}</option>
-                  <option :value="3">{{ $t('library.categories.system_design') }}</option>
-                  <option :value="4">{{ $t('library.categories.craft') }}</option>
-                </select>
+                  :options="formCategoryOptions"
+                  :aria-label="$t('library.category_label')"
+                />
               </div>
             </div>
 
@@ -1007,16 +1005,11 @@ async function confirmDeleteBook() {
             <!-- Category Selector for URL import -->
             <div>
               <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
-              <select
+              <AppSelect
                 v-model="importCategory"
-                class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none"
-              >
-                <option :value="0">{{ $t('library.categories.frontend') }}</option>
-                <option :value="1">{{ $t('library.categories.backend') }}</option>
-                <option :value="2">{{ $t('library.categories.database') }}</option>
-                <option :value="3">{{ $t('library.categories.system_design') }}</option>
-                <option :value="4">{{ $t('library.categories.craft') }}</option>
-              </select>
+                :options="formCategoryOptions"
+                :aria-label="$t('library.category_label')"
+              />
               <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
                 <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
                 <span>{{ $t('library.verbatim_category_hint') }}</span>

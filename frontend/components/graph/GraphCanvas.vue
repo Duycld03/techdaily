@@ -16,8 +16,8 @@ let cy: Core | null = null
 
 function getStylesheet(dark: boolean): Stylesheet[] {
   const textClr = dark ? '#f8fafc' : '#0f172a'
-  const borderClr = dark ? '#334155' : '#cbd5e1'
-  const edgeClr = dark ? '#334155' : '#cbd5e1'
+  const borderClr = dark ? '#27272a' : '#cbd5e1'
+  const edgeClr = dark ? '#27272a' : '#cbd5e1'
   const activeClr = '#38bdf8'
 
   return [
@@ -576,7 +576,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="relative w-full h-full overflow-hidden select-none bg-slate-50 dark:bg-slate-950">
+  <div class="relative w-full h-full overflow-hidden select-none bg-slate-50 dark:bg-canvas">
     <!-- Subtle architectural dot grid background -->
     <div
       class="absolute inset-0 pointer-events-none opacity-40 dark:opacity-25"

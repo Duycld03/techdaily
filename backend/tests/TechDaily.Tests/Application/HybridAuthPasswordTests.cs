@@ -97,4 +97,41 @@ public class HybridAuthPasswordTests : IDisposable
         var updatedUser = await _db.Users.FindAsync(user.Id);
         PasswordHasher.VerifyPassword(newPassword, updatedUser!.PasswordHash!).Should().BeTrue();
     }
+
+    [Fact]
+    public async Task GoogleUser_WithExistingPassword_VerifiesCurrentPasswordBeforeUpdating()
+    {
+        // Arrange - Google user who previously set an email password
+        var existingPassword = "PreviousOldPassword123!";
+        var googleUser = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "google.linked@example.com",
+            Name = "Google Linked Developer",
+            GoogleSubjectId = "google-sub-987654",
+            PasswordHash = PasswordHasher.HashPassword(existingPassword),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _db.Users.Add(googleUser);
+        await _db.SaveChangesAsync();
+
+        // Act & Assert - Invalid or missing current password fails verification
+        var isWrongPasswordValid = PasswordHasher.VerifyPassword("WrongPassword!", googleUser.PasswordHash!);
+        isWrongPasswordValid.Should().BeFalse();
+
+        // Correct current password succeeds
+        var isCorrectPasswordValid = PasswordHasher.VerifyPassword(existingPassword, googleUser.PasswordHash!);
+        isCorrectPasswordValid.Should().BeTrue();
+
+        var newPassword = "UpdatedGooglePassword456!";
+        googleUser.PasswordHash = PasswordHasher.HashPassword(newPassword);
+        googleUser.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var updatedUser = await _db.Users.FirstOrDefaultAsync(u => u.Id == googleUser.Id);
+        updatedUser.Should().NotBeNull();
+        PasswordHasher.VerifyPassword(newPassword, updatedUser!.PasswordHash!).Should().BeTrue();
+        PasswordHasher.VerifyPassword(existingPassword, updatedUser.PasswordHash!).Should().BeFalse();
+    }
 }

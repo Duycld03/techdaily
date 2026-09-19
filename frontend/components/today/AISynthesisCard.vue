@@ -35,7 +35,7 @@ function handleRetry() {
 </script>
 
 <template>
-  <div class="h-full flex flex-col justify-between p-4 sm:p-6 md:p-8 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-sm relative overflow-hidden">
+  <div class="h-full flex flex-col justify-between p-4 sm:p-6 md:p-8 glass-panel dark:bg-canvas-subtle border border-slate-200/90 dark:border-white/[0.08] rounded-3xl shadow-sm relative overflow-hidden">
     <!-- Ambient Background Glow -->
     <div class="absolute -top-16 -right-16 w-48 h-48 bg-brand-500/10 dark:bg-brand-500/20 rounded-full blur-3xl pointer-events-none animate-pulse"></div>
 
@@ -66,9 +66,9 @@ function handleRetry() {
 
         <!-- Skeleton Question Lines -->
         <div class="space-y-2 pt-2">
-          <div class="h-4 sm:h-5 bg-slate-200 dark:bg-slate-800 rounded-lg w-11/12 animate-pulse"></div>
-          <div class="h-4 sm:h-5 bg-slate-200 dark:bg-slate-800 rounded-lg w-4/5 animate-pulse" style="animation-delay: 150ms;"></div>
-          <div class="h-4 sm:h-5 bg-slate-200 dark:bg-slate-800 rounded-lg w-2/3 animate-pulse" style="animation-delay: 300ms;"></div>
+          <div class="h-4 sm:h-5 bg-slate-200 dark:bg-white/[0.06] rounded-lg w-11/12 animate-pulse"></div>
+          <div class="h-4 sm:h-5 bg-slate-200 dark:bg-white/[0.06] rounded-lg w-4/5 animate-pulse" style="animation-delay: 150ms;"></div>
+          <div class="h-4 sm:h-5 bg-slate-200 dark:bg-white/[0.06] rounded-lg w-2/3 animate-pulse" style="animation-delay: 300ms;"></div>
         </div>
       </div>
 
@@ -101,16 +101,16 @@ function handleRetry() {
       <div
         v-for="i in 4"
         :key="i"
-        class="h-12 sm:h-14 rounded-2xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800/80 p-3.5 flex items-center gap-3 animate-pulse"
+        class="h-12 sm:h-14 rounded-2xl bg-slate-100 dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] p-3.5 flex items-center gap-3 animate-pulse"
         :style="{ animationDelay: `${i * 120}ms` }"
       >
-        <div class="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 shrink-0"></div>
-        <div class="h-3.5 bg-slate-200 dark:bg-slate-700 rounded-md w-3/4"></div>
+        <div class="w-6 h-6 rounded-lg bg-slate-200 dark:bg-white/[0.08] shrink-0"></div>
+        <div class="h-3.5 bg-slate-200 dark:bg-white/[0.08] rounded-md w-3/4"></div>
       </div>
     </div>
 
     <!-- Bottom Footer State -->
-    <div class="pt-4 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
+    <div class="pt-4 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
       <div class="flex items-center gap-1.5 font-medium">
         <Cpu class="w-3.5 h-3.5 text-brand-500" />
         <span>Gemini 3.5 Flash-Lite</span>

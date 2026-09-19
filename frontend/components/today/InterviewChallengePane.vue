@@ -157,8 +157,8 @@ async function handleOptionSubmit() {
             :class="[
               'px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border',
               isCorrect
-                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
+                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
             ]"
           >
             <CheckCircle2 v-if="isCorrect" class="w-3.5 h-3.5" />
@@ -200,36 +200,36 @@ async function handleOptionSubmit() {
                 : !isReviewed
                   ? 'border-slate-200 dark:border-white/[0.08] bg-white dark:bg-canvas-elevated text-slate-800 dark:text-slate-200 hover:border-brand-500/40 dark:hover:border-brand-500/40 hover:bg-slate-50 dark:hover:bg-white/[0.04] cursor-pointer'
                   : isReviewed && index === question.correctOptionIndex
-                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/15 text-emerald-950 dark:text-emerald-100 font-semibold ring-2 ring-emerald-500/30'
+                    ? 'border-emerald-500 dark:border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-950 dark:text-emerald-100 font-semibold ring-2 ring-emerald-500/20'
                     : isReviewed &&
                         selectedOption === index &&
                         index !== question.correctOptionIndex
-                      ? 'border-rose-500 bg-rose-50 dark:bg-rose-500/15 text-rose-950 dark:text-rose-100 ring-2 ring-rose-500/30'
-                      : 'border-slate-200/60 dark:border-slate-800/60 bg-slate-50/30 dark:bg-slate-950/20 text-slate-500 dark:text-slate-400 opacity-60',
+                      ? 'border-rose-500 dark:border-rose-500/40 bg-rose-50/80 dark:bg-rose-500/10 text-rose-950 dark:text-rose-100 ring-2 ring-rose-500/20'
+                      : 'border-slate-200/60 dark:border-white/[0.04] bg-slate-50/30 dark:bg-canvas-subtle/30 text-slate-500 dark:text-slate-400 opacity-60',
             ]"
           >
             <!-- Option Letter Badge -->
             <div
               :class="[
-                'w-6.5 h-6.5 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 transition-colors duration-200 mt-0.5 sm:mt-0',
+                'w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center font-bold text-sm sm:text-base shrink-0 transition-colors duration-200 mt-0.5 sm:mt-0',
                 !isReviewed && selectedOption === index
                   ? 'bg-brand-600 text-white'
                   : !isReviewed
                     ? 'bg-slate-100 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 group-hover:border-brand-500/40'
                     : isReviewed && index === question.correctOptionIndex
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-emerald-600 text-white shadow-sm'
                       : isReviewed &&
                           selectedOption === index &&
                           index !== question.correctOptionIndex
-                        ? 'bg-rose-600 text-white'
-                        : 'bg-slate-200 dark:bg-slate-800 text-slate-400',
+                        ? 'bg-rose-600 text-white shadow-sm'
+                        : 'bg-slate-200 dark:bg-canvas-elevated text-slate-400 border border-transparent dark:border-white/[0.06]',
               ]"
             >
               {{ optionLetters[index] || index + 1 }}
             </div>
 
             <!-- Option Text -->
-            <div class="flex-1 min-w-0 break-words pt-0.5 leading-relaxed">
+            <div class="flex-1 min-w-0 break-words pt-0.5 leading-relaxed text-sm sm:text-base md:text-lg">
               {{ option }}
             </div>
 
@@ -312,8 +312,8 @@ async function handleOptionSubmit() {
           :class="[
             'p-4 sm:p-5 rounded-2xl border flex items-start gap-3.5',
             isCorrect
-              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-950 dark:text-emerald-200'
-              : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-950 dark:text-amber-200',
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-200'
+              : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-500/30 text-amber-950 dark:text-amber-200',
           ]"
         >
           <CheckCircle2

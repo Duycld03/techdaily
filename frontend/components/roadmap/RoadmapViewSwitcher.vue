@@ -37,7 +37,7 @@ function handleKeydown(event: KeyboardEvent) {
   <div
     role="tablist"
     :aria-label="$t('roadmap.view_mode_label') || 'Roadmap view mode'"
-    class="inline-flex items-center p-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-inner w-fit select-none"
+    class="inline-flex items-center p-1.5 glass-panel dark:bg-canvas-subtle/80 border border-slate-200/90 dark:border-white/[0.08] rounded-2xl shadow-inner w-fit select-none"
     @keydown="handleKeydown"
   >
     <button
@@ -50,10 +50,10 @@ function handleKeydown(event: KeyboardEvent) {
       :tabindex="modelValue === 'timeline' ? 0 : -1"
       @click="selectView('timeline')"
       :class="[
-        'inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+        'inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors duration-150 border border-transparent whitespace-nowrap shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 cursor-pointer',
         modelValue === 'timeline'
-          ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm'
-          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border-slate-200/80 dark:border-white/[0.06]'
+          : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
       ]"
     >
       <ListOrdered class="w-4 h-4 shrink-0" />
@@ -70,10 +70,10 @@ function handleKeydown(event: KeyboardEvent) {
       :tabindex="modelValue === 'mindmap' ? 0 : -1"
       @click="selectView('mindmap')"
       :class="[
-        'inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500',
+        'inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors duration-150 border border-transparent whitespace-nowrap shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 cursor-pointer',
         modelValue === 'mindmap'
-          ? 'bg-white dark:bg-slate-800 text-brand-600 dark:text-brand-400 shadow-sm'
-          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border-slate-200/80 dark:border-white/[0.06]'
+          : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
       ]"
     >
       <GitFork class="w-4 h-4 shrink-0" />

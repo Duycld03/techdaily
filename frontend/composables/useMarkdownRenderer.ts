@@ -84,16 +84,16 @@ export function useMarkdownRenderer() {
             span.textContent = "Copied!";
             if (svg) {
               svg.innerHTML = '<polyline points="20 6 9 17 4 12"></polyline>';
-              svg.classList.remove("text-slate-400");
-              svg.classList.add("text-emerald-400");
+              svg.classList.remove("text-slate-400", "text-slate-500");
+              svg.classList.add("text-emerald-500", "dark:text-emerald-400");
             }
             setTimeout(() => {
               span.textContent = old;
               if (svg) {
                 svg.innerHTML =
                   '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>';
-                svg.classList.remove("text-emerald-400");
-                svg.classList.add("text-slate-400");
+                svg.classList.remove("text-emerald-500", "dark:text-emerald-400");
+                svg.classList.add("text-slate-500", "dark:text-slate-400");
               }
             }, 2000);
           }
@@ -212,28 +212,28 @@ export function useMarkdownRenderer() {
 
       if (!highlightedHtml) {
         const escaped = md.utils.escapeHtml(code.trimEnd());
-        highlightedHtml = `<pre class="shiki one-dark-pro font-mono text-sm sm:text-[14.5px] p-4 sm:p-5 overflow-x-auto max-w-full text-slate-200"><code>${escaped}</code></pre>`;
+        highlightedHtml = `<pre class="shiki vitesse-dark font-mono text-sm sm:text-[14.5px] p-4 sm:p-5 overflow-x-auto max-w-full text-slate-800 dark:text-slate-200"><code>${escaped}</code></pre>`;
       }
 
       const encodedCode = encodeURIComponent(code.trimEnd());
 
       return `
-        <div class="code-block-wrapper relative group my-6 sm:my-8 rounded-2xl overflow-hidden border border-slate-800 bg-slate-900 shadow-lg max-w-full w-full min-w-0 font-mono text-sm sm:text-[14.5px]">
-          <div class="flex items-center justify-between px-4 sm:px-5 py-2.5 bg-slate-950/80 border-b border-slate-800/80 text-xs text-slate-400 select-none">
+        <div class="code-block-wrapper relative group my-6 sm:my-8 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/90 dark:bg-canvas-subtle shadow-lg dark:shadow-2xl max-w-full w-full min-w-0 font-mono text-sm sm:text-[14.5px]">
+          <div class="flex items-center justify-between px-4 sm:px-5 py-2.5 bg-slate-100/80 dark:bg-canvas-elevated/80 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.06] text-xs select-none">
             <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
-              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
-              <span class="ml-2 font-mono uppercase tracking-wider text-xs text-slate-400 font-semibold">${langDisplay}</span>
+              <span class="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></span>
+              <span class="ml-2.5 font-mono uppercase tracking-widest text-[11px] sm:text-xs text-brand-600 dark:text-brand-400 font-bold">${langDisplay}</span>
             </div>
             <button
               type="button"
-              class="copy-code-btn flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition-all active:scale-95 cursor-pointer"
+              class="copy-code-btn flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/80 dark:bg-white/[0.06] hover:bg-white dark:hover:bg-white/[0.12] border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer"
               data-code="${encodedCode}"
               onclick="window.__copyCode && window.__copyCode(this)"
               title="Copy Code"
             >
-              <svg class="copy-icon w-3.5 h-3.5 text-slate-400 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              <svg class="copy-icon w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
               <span class="text-xs font-medium">Copy</span>
             </button>
           </div>

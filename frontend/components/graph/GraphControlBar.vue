@@ -166,7 +166,7 @@ const hasActiveFilters = computed(() => {
       <!-- Action Button: Fit Screen -->
       <button
         type="button"
-        class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60 transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-sm"
+        class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 dark:bg-canvas-subtle hover:bg-slate-200 dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-white/[0.08] transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-sm"
         :title="$t('graph.fitScreen')"
         @click="$emit('fit-screen')"
       >
@@ -189,7 +189,7 @@ const hasActiveFilters = computed(() => {
       <!-- Mobile Expand/Collapse Toggle -->
       <button
         type="button"
-        class="sm:hidden inline-flex items-center justify-center p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0"
+        class="sm:hidden inline-flex items-center justify-center p-2 rounded-xl bg-slate-100 dark:bg-canvas-subtle hover:bg-slate-200 dark:hover:bg-canvas-elevated text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08] shrink-0"
         :aria-expanded="isExpanded"
         aria-label="Toggle filters"
         @click="isExpanded = !isExpanded"
@@ -213,7 +213,7 @@ const hasActiveFilters = computed(() => {
             'px-2.5 py-1 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0',
             store.selectedCategory.toLowerCase() === pill.id.toLowerCase()
               ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm font-semibold'
-              : 'bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+              : 'bg-slate-100/80 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-canvas-elevated border border-transparent dark:border-white/[0.04]'
           ]"
           @click="store.setCategory(pill.id)"
         >
@@ -222,7 +222,7 @@ const hasActiveFilters = computed(() => {
       </div>
 
       <!-- Secondary Row: Node Types & Flashcard Mastery -->
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 border-t border-slate-100 dark:border-white/[0.06]">
         <!-- Node Type Toggles -->
         <div class="flex flex-wrap items-center gap-1.5">
           <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 whitespace-nowrap shrink-0">
@@ -236,7 +236,7 @@ const hasActiveFilters = computed(() => {
               'px-2.5 py-1 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0',
               store.selectedNodeType.toLowerCase() === nt.id.toLowerCase()
                 ? 'bg-brand-600 text-white shadow-sm font-semibold'
-                : 'bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+                : 'bg-slate-100/80 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-canvas-elevated border border-transparent dark:border-white/[0.04]'
             ]"
             @click="store.setNodeType(nt.id)"
           >
@@ -260,7 +260,7 @@ const hasActiveFilters = computed(() => {
               'px-2.5 py-1 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0',
               store.selectedMastery.toLowerCase() === m.id.toLowerCase()
                 ? 'bg-emerald-600 text-white shadow-sm font-semibold'
-                : 'bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+                : 'bg-slate-100/80 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-canvas-elevated border border-transparent dark:border-white/[0.04]'
             ]"
             @click="store.setMastery(m.id)"
           >
