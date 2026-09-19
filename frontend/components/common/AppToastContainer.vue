@@ -21,7 +21,7 @@ const { toasts, remove } = useToast()
         :class="[
           'pointer-events-auto flex items-start gap-3 p-4 rounded-2xl shadow-2xl border backdrop-blur-md transition-all duration-200',
           toast.type === 'success'
-            ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-100 shadow-emerald-950/40'
+            ? 'bg-brand-950/90 border-brand-500/50 text-brand-100 shadow-brand-950/40'
             : toast.type === 'error'
               ? 'bg-rose-950/90 border-rose-500/50 text-rose-100 shadow-rose-950/40'
               : toast.type === 'warning'
@@ -30,7 +30,7 @@ const { toasts, remove } = useToast()
         ]"
       >
         <div class="shrink-0 mt-0.5">
-          <CheckCircle2 v-if="toast.type === 'success'" class="w-5 h-5 text-emerald-400" />
+          <CheckCircle2 v-if="toast.type === 'success'" class="w-5 h-5 text-brand-400" />
           <AlertCircle v-else-if="toast.type === 'error'" class="w-5 h-5 text-rose-400" />
           <AlertTriangle v-else-if="toast.type === 'warning'" class="w-5 h-5 text-amber-400" />
           <Info v-else class="w-5 h-5 text-brand-400" />

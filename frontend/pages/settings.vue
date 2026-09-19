@@ -8,7 +8,8 @@ import {
   Clock,
   Compass,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Send
 } from 'lucide-vue-next'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
@@ -248,7 +249,7 @@ async function handleSaveSchedule() {
         <button
           @click="handleSendTestPush"
           :disabled="isSendingTest"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-canvas-elevated border border-brand-300 dark:border-brand-500/30 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-500/10 font-bold transition-all disabled:opacity-50 shadow-sm"
+          class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white dark:bg-canvas-elevated border border-brand-300 dark:border-brand-500/30 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-500/10 font-bold transition-all disabled:opacity-50 shadow-sm whitespace-nowrap shrink-0"
         >
           <Loader2 v-if="isSendingTest" class="w-3.5 h-3.5 animate-spin" />
           <Send v-else class="w-3.5 h-3.5" />
