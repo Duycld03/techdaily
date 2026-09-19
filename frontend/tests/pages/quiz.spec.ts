@@ -181,4 +181,43 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     expect(wrapper.find('nav').exists()).toBe(true)
     expect(wrapper.find('nav').attributes('role')).toBe('navigation')
   })
+
+  it('renders 2-column Bento Generation Studio with clean typographic levels and segmented count pills', async () => {
+    const wrapper = mount(QuizPage, {
+      global: {
+        stubs: {
+          ShikiCodeBlock: true,
+          Teleport: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const quizStore = useInterviewQuizStore()
+    quizStore.activeTab = 'generate'
+    await wrapper.vm.$nextTick()
+
+    // Studio Header & Subtitle
+    expect(wrapper.text()).toContain('quiz.title')
+    expect(wrapper.text()).toContain('quiz.subtitle')
+
+    // Generate CTA button
+    const generateBtn = wrapper.find('[data-testid="generate-quiz-btn"]')
+    expect(generateBtn.exists()).toBe(true)
+    expect(generateBtn.text()).toContain('quiz.btn_generate')
+
+    // Seniority levels (4 typographic cards)
+    expect(wrapper.text()).toContain('quiz.level_fresher')
+    expect(wrapper.text()).toContain('quiz.level_junior')
+    expect(wrapper.text()).toContain('quiz.level_middle')
+    expect(wrapper.text()).toContain('quiz.level_senior')
+
+    // Segmented question count pills
+    expect(wrapper.text()).toContain('quiz.count_5')
+    expect(wrapper.text()).toContain('quiz.count_10')
+
+    // Topic input
+    const topicInput = wrapper.find('input[type="text"]')
+    expect(topicInput.exists()).toBe(true)
+  })
 })

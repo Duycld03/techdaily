@@ -40,7 +40,8 @@ import {
   TrendingUp,
   Target,
   Check,
-  AlertCircle
+  AlertCircle,
+  Swords
 } from 'lucide-vue-next'
 import { useReviewStore } from '~/stores/useReviewStore'
 import { useInterviewQuizStore, type QuizQuestion } from '~/stores/useInterviewQuizStore'
@@ -392,13 +393,18 @@ defineExpose({
   <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
     <!-- Header Section -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-white/[0.08] pb-4">
-      <div class="flex items-center gap-2.5">
-        <div class="p-2 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
-          <HelpCircle class="w-6 h-6" />
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
+          <HelpCircle class="w-5 h-5 sm:w-6 sm:h-6" />
         </div>
-        <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-          {{ $t('quiz.title') }}
-        </h1>
+        <div class="space-y-0.5">
+          <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+            {{ $t('quiz.title') }}
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+            {{ $t('quiz.subtitle') }}
+          </p>
+        </div>
       </div>
 
       <!-- Tab Buttons -->
@@ -475,9 +481,10 @@ defineExpose({
       </div>
     </div>
 
-    <!-- TAB 1: GENERATE QUIZ -->
-    <div v-if="quizStore.activeTab === 'generate'" class="space-y-6">
-      <div class="glass-card p-5 sm:p-7 space-y-6">
+    <!-- TAB 1: GENERATE QUIZ (BENTO STUDIO) -->
+    <div v-if="quizStore.activeTab === 'generate'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- LEFT BENTO: Topic & Context Hub (7 cols) -->
+      <div class="lg:col-span-7 glass-card p-5 sm:p-7 space-y-6">
         <!-- Topic Selection -->
         <div class="space-y-2.5">
           <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
@@ -487,12 +494,12 @@ defineExpose({
             v-model="customTopicInput"
             type="text"
             :placeholder="$t('quiz.topic_placeholder')"
-            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm sm:text-base transition-all"
+            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm sm:text-base transition-all shadow-sm"
             @keyup.enter="handleGenerateQuiz()"
           />
 
           <!-- Quick Topic Chips -->
-          <div class="space-y-1.5 pt-1">
+          <div class="space-y-2 pt-1">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               {{ $t('quiz.quick_topics') }}
             </span>
@@ -502,7 +509,7 @@ defineExpose({
                 :key="topic"
                 @click="customTopicInput = topic"
                 :class="[
-                  'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap',
+                  'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap shrink-0',
                   customTopicInput === topic
                     ? 'border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-300 font-bold shadow-sm'
                     : 'bg-slate-100 dark:bg-white/[0.03] hover:bg-brand-50 dark:hover:bg-white/[0.06] text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-300 border-slate-200 dark:border-white/[0.06]'
@@ -560,51 +567,54 @@ defineExpose({
             />
           </div>
         </div>
+      </div>
 
-        <!-- Level Picker -->
+      <!-- RIGHT BENTO: Seniority & Generation Controls (5 cols) -->
+      <div class="lg:col-span-5 glass-card p-5 sm:p-7 space-y-6">
+        <!-- Level Picker (Purely Typographic, No Emojis, No Icons) -->
         <div class="space-y-2.5">
           <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
             {{ $t('quiz.level_label') }}
           </label>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5">
             <button
               v-for="lvl in seniorityLevels"
               :key="lvl.id"
               @click="selectedLevel = lvl.id"
               :class="[
-                'p-4 rounded-xl border text-left transition-all relative',
+                'p-3.5 sm:p-4 rounded-xl border text-left transition-all relative',
                 selectedLevel === lvl.id
-                  ? 'border-brand-500 bg-brand-500/10 text-brand-900 dark:text-white ring-1 ring-brand-500/30'
-                  : 'border-slate-200 dark:border-white/[0.06] bg-white/60 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/[0.15]'
+                  ? 'border-brand-500 bg-brand-500/10 text-brand-900 dark:text-white ring-1 ring-brand-500/30 shadow-sm'
+                  : 'border-slate-200/80 dark:border-white/[0.06] bg-white/60 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/[0.15]'
               ]"
             >
               <div class="flex items-center justify-between mb-1">
-                <span class="font-bold text-sm sm:text-base">{{ $t(`quiz.${lvl.key}`) }}</span>
+                <span class="font-bold text-sm sm:text-base text-slate-900 dark:text-white">{{ $t(`quiz.${lvl.key}`) }}</span>
                 <span
                   v-if="selectedLevel === lvl.id"
-                  class="w-2 h-2 rounded-full bg-brand-500"
+                  class="w-2 h-2 rounded-full bg-brand-500 shrink-0"
                 ></span>
               </div>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
+              <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
                 {{ lvl.desc }}
               </p>
             </button>
           </div>
         </div>
 
-        <!-- Question Count -->
+        <!-- Question Count (Segmented Pill Container) -->
         <div class="space-y-2.5">
           <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
             {{ $t('quiz.count_label') }}
           </label>
-          <div class="flex gap-3">
+          <div class="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08]">
             <button
               @click="selectedCount = 5"
               :class="[
-                'px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all',
+                'flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center whitespace-nowrap',
                 selectedCount === 5
-                  ? 'border-brand-500 bg-brand-500 text-white shadow-sm'
-                  : 'border-slate-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/[0.15]'
+                  ? 'bg-brand-600 text-white font-bold shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
               {{ $t('quiz.count_5') }}
@@ -612,10 +622,10 @@ defineExpose({
             <button
               @click="selectedCount = 10"
               :class="[
-                'px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all',
+                'flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center whitespace-nowrap',
                 selectedCount === 10
-                  ? 'border-brand-500 bg-brand-500 text-white shadow-sm'
-                  : 'border-slate-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/[0.15]'
+                  ? 'bg-brand-600 text-white font-bold shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
               {{ $t('quiz.count_10') }}
@@ -624,15 +634,15 @@ defineExpose({
         </div>
 
         <!-- Generate Button -->
-        <div class="pt-3">
+        <div class="pt-2">
           <button
             data-testid="generate-quiz-btn"
             @click="handleGenerateQuiz()"
             :disabled="quizStore.isGenerating"
-            class="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-base shadow-md shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+            class="w-full px-6 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-md shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all cursor-pointer whitespace-nowrap shrink-0"
           >
-            <Loader2 v-if="quizStore.isGenerating" class="w-5 h-5 animate-spin" />
-            <Sparkles v-else class="w-5 h-5" />
+            <Loader2 v-if="quizStore.isGenerating" class="w-5 h-5 animate-spin shrink-0" />
+            <Sparkles v-else class="w-5 h-5 shrink-0" />
             <span>{{ quizStore.isGenerating ? $t('quiz.generating_loader') : $t('quiz.btn_generate') }}</span>
           </button>
         </div>
