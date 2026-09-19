@@ -23,6 +23,7 @@ The system SHALL maintain a standalone `TechInsight` catalog decoupled from libr
    - Technical insight cards SHALL render as `.glass-card` containers with hairline borders (`border-white/[0.08]`).
    - Code blocks (problematic vs idiomatic solution) SHALL render in high-contrast obsidian panels (`bg-black/40 border-white/[0.06]`) with syntax highlighting.
    - Tailored Saved empty state SHALL render in a `.glass-card` container with Iris Violet action CTA.
+   - Benchmark telemetry metrics SHALL be parsed and rendered as individual, compact metric chips with leading emoji deduplication and responsive alignment.
 
 4. **On-Demand AI Synthesis Modal:**
    - The AI generation modal SHALL render with `.glass-panel` elevation, dark glass input fields, and Iris Violet generate CTA.
@@ -35,6 +36,17 @@ The system SHALL maintain a standalone `TechInsight` catalog decoupled from libr
 - **WHEN** user visits `/insights` and clicks "Next Insight ➔" or presses Space/ArrowRight
 - **THEN** the card reader smoothly transitions to the next technical insight with syntax-highlighted code blocks and category badges
 - **AND** the category filter row renders exclusively pure-text category chips (`[ Tất Cả Chủ Đề ]` and dynamic category names) while the dedicated View Mode Switcher independently displays the active view mode.
+
+#### Scenario: Structured benchmark telemetry metric chips
+- **WHEN** an insight card renders with benchmark telemetry statistics (`benchmarkStats` containing single or pipe-delimited multiple metrics)
+- **THEN** the frontend parses and renders each metric as an individual, self-contained compact chip with a single Lucide `<Zap>` icon
+- **AND** any leading raw emojis (`⚡`, `🔥`, `🚀`) in the data string are stripped to eliminate duplicate side-by-side icon rendering
+- **AND** each metric chip renders with Dev-Learning Studio brand violet tokens (`bg-brand-50/80 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-300`).
+
+#### Scenario: Responsive card header layout and telemetry placement
+- **WHEN** user views an insight card on any screen width (mobile, tablet, or desktop)
+- **THEN** the top header row cleanly separates topic taxonomy badges on the left from the bookmark interaction button on the right
+- **AND** benchmark telemetry chips wrap gracefully without pushing the bookmark button out of view or compressing the card title.
 
 #### Scenario: Client requests insights metadata and dynamic topic suggestions
 - **WHEN** client sends `GET /api/v1/insights/meta`

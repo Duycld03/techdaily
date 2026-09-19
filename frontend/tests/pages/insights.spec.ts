@@ -209,4 +209,29 @@ describe('insights.vue (Dedicated View Mode Switcher & Category Filtering)', () 
     const insightsStore = useInsightsStore()
     expect(insightsStore.onlyBookmarked).toBe(false)
   })
+
+  it('parses multi-metric benchmarkStats, strips leading emojis, and renders individual chips', async () => {
+    feedMock = [
+      {
+        ...mockInsights[0],
+        benchmarkStats: '⚡ Latency: 4.2ms -> 0.3ms (14x faster) | 🔥 Heap Fetches: 15k -> 0'
+      }
+    ]
+
+    const wrapper = mount(InsightsPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' },
+          Teleport: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const text = wrapper.text()
+    expect(text).toContain('Latency: 4.2ms -> 0.3ms (14x faster)')
+    expect(text).toContain('Heap Fetches: 15k -> 0')
+    expect(text).not.toContain('⚡')
+    expect(text).not.toContain('🔥')
+  })
 })

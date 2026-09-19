@@ -48,6 +48,15 @@ const renderedUnderTheHoodHtml = computed(() => {
   return renderMarkdown(insightsStore.currentInsight?.underTheHoodMarkdown)
 })
 
+const parsedBenchmarkStats = computed<string[]>(() => {
+  const raw = insightsStore.currentInsight?.benchmarkStats
+  if (!raw) return []
+  return raw
+    .split('|')
+    .map(item => item.trim().replace(/^[\s⚡🔥🚀]+/, '').trim())
+    .filter(item => item.length > 0)
+})
+
 const isGenerateModalOpen = ref(false)
 const customTopicInput = ref('')
 const activeCodeTab = ref<'solution' | 'problem'>('solution')
@@ -329,8 +338,8 @@ function getCategoryBadge(cat: number) {
     >
       <!-- Card Top Header -->
       <div class="p-4 sm:p-7 md:p-8 border-b border-slate-100 dark:border-white/[0.06] space-y-3.5 sm:space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
-          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
             <span :class="['px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold border shrink-0', getCategoryBadge(insightsStore.currentInsight.category).color]">
               {{ getCategoryBadge(insightsStore.currentInsight.category).text }}
             </span>
@@ -344,13 +353,7 @@ function getCategoryBadge(cat: number) {
             </span>
           </div>
 
-          <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
-            <!-- Benchmark Badge -->
-            <div class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl bg-brand-50 dark:bg-brand-950/50 border border-brand-200 dark:border-brand-800/80 text-brand-700 dark:text-brand-400 text-xs sm:text-sm font-bold break-words min-w-0 max-w-full">
-              <Zap class="w-3.5 h-3.5 fill-brand-500 text-brand-500 shrink-0" />
-              <span class="truncate sm:whitespace-normal">{{ insightsStore.currentInsight.benchmarkStats }}</span>
-            </div>
-
+          <div class="flex items-center gap-2 shrink-0">
             <!-- Bookmark Button -->
             <button
               @click="handleToggleBookmark(insightsStore.currentInsight.id)"
@@ -373,6 +376,17 @@ function getCategoryBadge(cat: number) {
           {{ insightsStore.currentInsight.title }}
         </h2>
 
+        <!-- Benchmark Telemetry Chips Row -->
+        <div v-if="parsedBenchmarkStats.length" class="flex flex-wrap items-center gap-2 pt-0.5">
+          <div
+            v-for="(stat, idx) in parsedBenchmarkStats"
+            :key="idx"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-brand-50/80 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-300 text-xs sm:text-sm font-semibold shadow-sm"
+          >
+            <Zap class="w-3.5 h-3.5 fill-brand-500 text-brand-500 shrink-0" />
+            <span>{{ stat }}</span>
+          </div>
+        </div>
         <div
           class="prose dark:prose-invert max-w-none text-sm md:text-lg text-slate-700 dark:text-slate-200 leading-relaxed font-normal"
           v-html="renderedSummaryHtml"
