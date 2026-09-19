@@ -6,7 +6,7 @@ Provides an immersive technical reading experience with chapter table of content
 ## Requirements
 
 ### Requirement: Dedicated Reading Route
-The system SHALL provide a dedicated reader page at `/read/[bookId]` with query parameter `?slice={chunkOrder}`, navigating from book cards in `/library`. The reading route SHALL render in a standalone distraction-free immersion mode that hides the global application header and global navigation sidebar, providing an integrated reader header containing back navigation, slice progress, chapter drawer toggle, novel-style typography settings toggle (`Aa`), theme toggle, and 1-click quiz launcher.
+The system SHALL provide a dedicated reader page at `/read/[bookId]` with query parameter `?slice={chunkOrder}`, navigating from book cards in `/library`. The reading route SHALL render in a standalone distraction-free immersion mode that hides the global application header and global navigation sidebar, providing an integrated reader header containing back navigation, slice progress, chapter drawer toggle, novel-style typography settings toggle (`Aa`), theme toggle, and 1-click quiz launcher. The reader page shell, sticky header, popovers, and backdrop elements SHALL render with Dev-Learning Studio obsidian canvas tokens (`dark:bg-canvas`, `dark:bg-canvas-subtle`, `dark:bg-canvas-elevated`) and hairline translucent borders (`border-slate-200/80 dark:border-white/[0.08]`), replacing legacy slate-900/950 backgrounds. The 1-Click Quiz Chapter button SHALL use system primary brand tokens (`bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-400 hover:bg-brand-100 dark:hover:bg-brand-500/20`) instead of hardcoded purple utility classes.
 
 #### Scenario: User opens a book from the library
 - **GIVEN** an authenticated or guest user browsing `/library`
@@ -18,10 +18,16 @@ The system SHALL provide a dedicated reader page at `/read/[bookId]` with query 
 - **WHEN** user views `/read/[bookId]`
 - **THEN** reader header displays a single compact top bar with back arrow, truncated book title with slice indicator, table of contents button, typography toggle (`Aa`), and theme toggle without vertical header duplication.
 
+#### Scenario: Dev-Learning Studio theme styling on reader shell
+- **GIVEN** user views `/read/[bookId]` in dark mode
+- **WHEN** the reader page and header render
+- **THEN** the root container renders with `dark:bg-canvas` (`#09090b`)
+- **AND** the top header renders with `dark:bg-canvas/90` with hairline border `dark:border-white/[0.08]`
+- **AND** the 1-Click Quiz button renders with primary brand tokens (`bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400`) instead of hardcoded purple tokens.
 ---
 
 ### Requirement: Table of Contents & Chapter Sidebar
-The reader SHALL include a Table of Contents displaying all slices/chapters with estimated reading time, order, and completion indicators. On desktop (≥768px), the TOC SHALL render as a collapsible left sidebar. On mobile (<768px), the TOC SHALL render as an off-canvas slide-over drawer with backdrop blur, closing automatically upon chapter selection.
+The reader SHALL include a Table of Contents displaying all slices/chapters with estimated reading time, order, and completion indicators. On desktop (≥768px), the TOC SHALL render as a collapsible left sidebar styled with Dev-Learning Studio obsidian subtle background (`dark:bg-canvas-subtle/70`) and hairline border (`dark:border-white/[0.08]`). On mobile (<768px), the TOC SHALL render as an off-canvas slide-over drawer with backdrop blur and obsidian elevated canvas styling (`dark:bg-canvas-subtle`), closing automatically upon chapter selection. Completed slices across both desktop sidebar and mobile drawer SHALL render completion checkmark indicators in system primary brand tokens (`text-brand-600 dark:text-brand-400`) instead of legacy emerald green.
 
 #### Scenario: User selects a chapter from table of contents
 - **WHEN** user clicks or taps a chapter item in the table of contents
@@ -31,10 +37,14 @@ The reader SHALL include a Table of Contents displaying all slices/chapters with
 - **WHEN** user opens mobile TOC drawer and taps any chapter item
 - **THEN** reader switches to selected slice, closes the drawer immediately, and resets scroll position to the top.
 
+#### Scenario: Table of Contents completed slice visual encoding
+- **WHEN** a slice has been completed by the user
+- **THEN** the TOC item displays a checkmark icon in primary brand color (`text-brand-600 dark:text-brand-400`)
+- **AND** no legacy emerald green (`text-emerald-500`) is rendered on completed slice indicators.
 ---
 
 ### Requirement: Seamless Next / Previous Slice Navigation
-At the bottom of each slice, the reader SHALL render a balanced, symmetrical two-card navigation component (`Previous Slice` card on the left and `Next Slice` / `Return to Library` card on the right) on desktop and a thumb-friendly responsive layout on mobile, while supporting keyboard shortcuts (`Shift + ArrowRight` / `Shift + ArrowLeft`). Each navigation card SHALL feature an uppercase section label and a truncated chapter title, avoiding asymmetric inline button stretching or text wrapping across both English and Vietnamese locales.
+At the bottom of each slice, the reader SHALL render a balanced, symmetrical two-card navigation component (`Previous Slice` card on the left and `Next Slice` / `Return to Library` card on the right) on desktop and a thumb-friendly responsive layout on mobile, while supporting keyboard shortcuts (`Shift + ArrowRight` / `Shift + ArrowLeft`). Each navigation card SHALL feature an uppercase section label and a truncated chapter title, avoiding asymmetric inline button stretching or text wrapping across both English and Vietnamese locales (`whitespace-nowrap shrink-0`). All navigation cards SHALL adopt Dev-Learning Studio glass-card styling (`.glass-card` / hairline border `dark:border-white/[0.08]`). The final slice completion card ("Return to Library") SHALL render in system primary brand tokens (`border-brand-500/30 dark:border-brand-500/20`, `bg-brand-50/30 dark:bg-brand-500/10`, `text-brand-600 dark:text-brand-400`) instead of legacy emerald styling.
 
 #### Scenario: User navigates to next slice via button
 - **WHEN** user clicks or taps "Next Slice" card at the bottom of a chapter
@@ -56,6 +66,13 @@ At the bottom of each slice, the reader SHALL render a balanced, symmetrical two
 - **WHEN** user reaches bottom of slice on a mobile viewport
 - **THEN** navigation cards stack cleanly with the primary Next action card accessible at full width.
 
+#### Scenario: Final slice completion card styling
+- **WHEN** user reaches the final slice of a book
+- **THEN** the right navigation card renders the "Return to Library" completion card using system primary brand tokens (`border-brand-500/30`, `bg-brand-50/30 dark:bg-brand-500/10`, `text-brand-600 dark:text-brand-400`)
+- **AND** no emerald green (`emerald-500`, `bg-emerald-50`, `text-emerald-600`) tokens are applied.
+
+---
+
 ### Requirement: Reading Progress Bar & Statistics
 The top navigation bar SHALL display a persistent progress bar showing percentage of slices completed (e.g. `Slice 3 of 12 (25%)`).
 
@@ -75,7 +92,7 @@ The system SHALL automatically record the user's latest read slice for each book
 ---
 
 ### Requirement: Scoped Floating Mini-Toolbar & Active Recall Quiz
-The reader floating selection toolbar SHALL render exactly 3 streamlined action buttons: `Explain with Gemini`, `Highlight/Note`, and `Copy`. The direct flashcard creation button SHALL be removed from the reader selection tooltip to protect reading immersion and avoid premature card generation. The `Highlight/Note` action SHALL unify text highlighting and note-taking into a single continuous action: clicking the button immediately creates and persists a highlight record (`POST /api/v1/notes/highlights`), while smoothly opening an attached reflection popover where users can optionally add personal reflection notes and technical tags.
+The reader floating selection toolbar SHALL render exactly 3 streamlined action buttons: `Explain with Gemini`, `Highlight/Note`, and `Copy`. The direct flashcard creation button SHALL be removed from the reader selection tooltip to protect reading immersion and avoid premature card generation. The `Highlight/Note` action SHALL unify text highlighting and note-taking into a single continuous action: clicking the button immediately creates and persists a highlight record (`POST /api/v1/notes/highlights`), while smoothly opening an attached reflection popover where users can optionally add personal reflection notes and technical tags. The floating toolbar container and attached note popover SHALL render with Dev-Learning Studio elevated obsidian panels (`bg-slate-900/95 dark:bg-canvas-elevated/95 backdrop-blur-xl border border-slate-700/80 dark:border-white/[0.12] shadow-2xl rounded-2xl`). Text input fields in the note popover SHALL use elevated studio styling (`dark:bg-canvas-subtle dark:border-white/[0.10] focus:ring-brand-500/40 focus:border-brand-500`).
 
 #### Scenario: User highlights text in reader pane
 - **WHEN** user selects text (2 to 500 characters) inside the reader markdown container
@@ -99,8 +116,15 @@ The reader floating selection toolbar SHALL render exactly 3 streamlined action 
 - **WHEN** user clicks `Explain with Gemini`
 - **THEN** floating toolbar closes and opens the Gemini Term Explainer modal populated with selected text and surrounding context.
 
+#### Scenario: Floating toolbar and reflection popover obsidian styling
+- **WHEN** the floating selection toolbar or note popover renders
+- **THEN** container styles use elevated obsidian tokens (`dark:bg-canvas-elevated/95`, `dark:border-white/[0.12]`)
+- **AND** quote preview renders with a primary brand border indicator (`border-brand-500`).
+
+---
+
 ### Requirement: Sanitized Markdown Rendering and Code Block Copying
-The reader SHALL sanitize markdown rendering by suppressing duplicate first-line headings that match the active slice chapter title, formatting inline code (`code:not(pre code)`) with Dev-Learning Studio tokens (neutral pill in light mode with `bg-slate-100 text-slate-800 border-slate-200/90`, and Obsidian pill in dark mode with `dark:bg-canvas-elevated dark:text-brand-300 dark:border-white/[0.08] font-medium`, eliminating legacy green/emerald styling across both `/read/[bookId]` and `/today`), parsing technical alert callouts (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) into distinct semantic callout boxes with dedicated icons without decorative quotation marks, and providing reliable one-click copy buttons on all code fences without throwing unhandled exceptions.
+The reader SHALL sanitize markdown rendering by suppressing duplicate first-line headings that match the active slice chapter title, formatting inline code (`code:not(pre code)`) with Dev-Learning Studio tokens (neutral pill in light mode with `bg-slate-100 text-slate-800 border-slate-200/90`, and Obsidian pill in dark mode with `dark:bg-canvas-elevated dark:text-brand-300 dark:border-white/[0.08] font-medium`, eliminating legacy green/emerald styling across both `/read/[bookId]` and `/today`), formatting markdown links with system primary brand tokens (`prose-a:text-brand-600 dark:prose-a:text-brand-400 hover:prose-a:underline` instead of legacy `prose-a:text-emerald-500`), parsing technical alert callouts (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`) into distinct semantic callout boxes with dedicated icons without decorative quotation marks, and providing reliable one-click copy buttons on all code fences without throwing unhandled clipboard exceptions.
 
 #### Scenario: Slice title duplication avoidance
 - **WHEN** a markdown slice starts with a heading tag matching the slice's chapter title
@@ -137,6 +161,13 @@ The reader SHALL sanitize markdown rendering by suppressing duplicate first-line
 #### Scenario: Inline code contrast in light mode
 - **WHEN** user views reading content in light mode on either `/today` or `/read/[bookId]`
 - **THEN** inline code elements render with clean neutral slate styling (`bg-slate-100 text-slate-800 border-slate-200`) providing WCAG 2.1 AA compliant contrast.
+
+#### Scenario: Markdown hyperlink primary brand styling
+- **WHEN** reader renders hyperlinks inside the technical article body
+- **THEN** links render in primary brand accent (`prose-a:text-brand-600 dark:prose-a:text-brand-400`)
+- **AND** no legacy emerald green (`prose-a:text-emerald-500`) is applied to article links.
+
+---
 
 ### Requirement: Document Relative Link Resolution
 During technical article crawling and import, the crawler SHALL resolve all relative anchor hyperlinks (`<a href="...">`) and images (`<img src="...">`) against the document's canonical source URL into absolute URLs, with the exception of same-page fragment bookmarks (`#...`).
