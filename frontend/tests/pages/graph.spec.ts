@@ -178,7 +178,7 @@ describe('pages/graph.vue', () => {
     expect(wrapper.find('[data-testid="graph-detail-drawer"]').exists()).toBe(true)
   })
 
-  it('renders cyber telemetry HUD ribbon with live metrics', () => {
+  it('maintains a clean canvas studio without redundant telemetry HUD ribbon', () => {
     const store = createTestStore()
     store.rawData = {
       nodes: [{ id: 'n1', label: 'Topic 1', category: 0, type: 'topic' } as any],
@@ -197,8 +197,6 @@ describe('pages/graph.vue', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('HUD Live')
-    expect(wrapper.text()).toContain('2D GRAPH')
-    expect(wrapper.text()).toContain('ENGINE:')
+    expect(wrapper.text()).not.toContain('HUD Live')
   })
 })

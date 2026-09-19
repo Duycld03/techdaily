@@ -67,12 +67,12 @@ const statusBadge = computed(() => {
     case 1:
       return {
         labelKey: 'review.status_reviewing',
-        classes: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20'
+        classes: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
       }
     case 2:
       return {
         labelKey: 'review.status_mastered',
-        classes: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+        classes: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20'
       }
     default:
       return {
@@ -170,7 +170,7 @@ const statusBadge = computed(() => {
         class="w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50/50 dark:hover:bg-brand-500/10 transition-all cursor-pointer"
       >
         <span class="flex items-center gap-1.5">
-          <FileText class="w-3.5 h-3.5 text-emerald-500" />
+          <FileText class="w-3.5 h-3.5 text-brand-500" />
           <span>{{ isExpanded ? $t('review.hide_answer') : $t('review.show_answer') }}</span>
         </span>
         <ChevronDown
@@ -184,7 +184,7 @@ const statusBadge = computed(() => {
       <!-- Collapsible Back Markdown Container -->
       <div
         v-if="isExpanded"
-        class="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-xs sm:text-sm text-slate-900 dark:text-slate-100 leading-relaxed font-sans prose dark:prose-invert max-w-none break-words animate-in fade-in duration-150"
+        class="p-3.5 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-xs sm:text-sm text-slate-900 dark:text-slate-100 leading-relaxed font-sans prose dark:prose-invert max-w-none break-words animate-in fade-in duration-150"
         v-html="renderedBack"
       ></div>
     </div>

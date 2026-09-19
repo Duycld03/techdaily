@@ -17,7 +17,7 @@ function getNodeColor(category?: string, type?: string, status?: string): string
   if (t === 'book') return '#94a3b8'
   if (t === 'card') {
     const s = status?.toLowerCase()
-    if (s === 'mastered') return '#10b981'
+    if (s === 'mastered') return '#7c3aed'
     if (s === 'learning') return '#f59e0b'
     return '#3b82f6'
   }
@@ -25,7 +25,7 @@ function getNodeColor(category?: string, type?: string, status?: string): string
 
   const cat = category?.toLowerCase() || ''
   if (cat.includes('dotnet') || cat.includes('backend')) return '#38bdf8'
-  if (cat.includes('postgres') || cat.includes('database') || cat.includes('storage')) return '#34d399'
+  if (cat.includes('postgres') || cat.includes('database') || cat.includes('storage')) return '#22d3ee'
   if (cat.includes('system') || cat.includes('distributed')) return '#a78bfa'
   if (cat.includes('frontend') || cat.includes('web')) return '#fbbf24'
   if (cat.includes('craft')) return '#fb7185'
@@ -179,7 +179,7 @@ onBeforeUnmount(() => {
         <Compass class="w-3.5 h-3.5 text-brand-500" />
         Minimap
       </span>
-      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
     </div>
     <canvas
       ref="canvasRef"

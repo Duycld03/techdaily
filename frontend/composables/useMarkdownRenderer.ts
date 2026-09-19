@@ -199,10 +199,14 @@ export function useMarkdownRenderer() {
 
       const highlighter = getHighlighterSync();
       let highlightedHtml = "";
-      if (highlighter && SUPPORTED_LANGS.includes(targetLang)) {
+      let shikiLang = targetLang;
+      if (shikiLang === 'vue' && !code.includes('<template') && !code.includes('<script')) {
+        shikiLang = 'typescript';
+      }
+      if (highlighter && SUPPORTED_LANGS.includes(shikiLang)) {
         try {
           highlightedHtml = highlighter.codeToHtml(code.trimEnd(), {
-            lang: targetLang,
+            lang: shikiLang,
             theme: CODE_THEME,
           });
         } catch {

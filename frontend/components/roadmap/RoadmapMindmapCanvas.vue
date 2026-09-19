@@ -486,7 +486,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
               edge.status === 'active_today'
                 ? 'stroke-amber-400 dark:stroke-amber-500 stroke-2'
                 : edge.status === 'completed'
-                  ? 'stroke-emerald-400 dark:stroke-emerald-500/70 stroke-2'
+                  ? 'stroke-brand-500 dark:stroke-brand-400 stroke-2'
                   : 'stroke-slate-300 dark:stroke-zinc-700 stroke-1.5'
             ]"
           />
@@ -552,7 +552,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
               ch.data.isActive
                 ? 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-400 dark:border-amber-500/80 text-amber-950 dark:text-amber-100 ring-2 ring-amber-500/20'
                 : ch.data.isCompleted
-                  ? 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-400/60 dark:border-emerald-700/60 text-emerald-950 dark:text-emerald-100'
+                  ? 'bg-brand-50/80 dark:bg-brand-950/40 border-brand-400/60 dark:border-brand-600/60 text-brand-950 dark:text-brand-100'
                   : 'bg-white dark:bg-canvas-subtle border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-slate-200 hover:border-brand-400 dark:hover:border-brand-500/40'
             ]"
           >
@@ -563,7 +563,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
                   ch.data.isActive
                     ? 'bg-amber-500 text-slate-950'
                     : ch.data.isCompleted
-                      ? 'bg-emerald-500 text-white'
+                      ? 'bg-brand-600 text-white'
                       : 'bg-slate-100 dark:bg-canvas-elevated text-slate-600 dark:text-slate-300 border border-transparent dark:border-white/[0.06]'
                 ]"
               >
@@ -620,7 +620,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
               sl.data.isActiveToday
                 ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-500 dark:border-amber-400 text-amber-950 dark:text-amber-100 ring-2 ring-amber-500/30'
                 : sl.data.isCompleted
-                  ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-400/50 dark:border-emerald-700/60 text-emerald-950 dark:text-emerald-100'
+                  ? 'bg-brand-50/90 dark:bg-brand-950/40 border-brand-400/50 dark:border-brand-600/60 text-brand-950 dark:text-brand-100'
                   : 'bg-white dark:bg-canvas-subtle border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:border-brand-400 dark:hover:border-brand-500/40'
             ]"
           >
@@ -632,7 +632,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
                   sl.data.isActiveToday
                     ? 'text-amber-500 animate-pulse'
                     : sl.data.isCompleted
-                      ? 'text-emerald-500'
+                      ? 'text-brand-500'
                       : 'text-slate-400'
                 ]"
               />
@@ -654,7 +654,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
                   sl.data.isActiveToday
                     ? 'bg-amber-500 text-slate-950'
                     : sl.data.isCompleted
-                      ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                      ? 'bg-brand-500/20 text-brand-700 dark:text-brand-300'
                       : 'bg-slate-100 dark:bg-canvas-elevated text-slate-500 dark:text-slate-400 border border-transparent dark:border-white/[0.06]'
                 ]"
               >

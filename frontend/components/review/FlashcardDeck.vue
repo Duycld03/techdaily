@@ -37,7 +37,7 @@ const categoryMeta = computed(() => {
     case 2:
       return {
         label: 'Database & Storage',
-        badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
+        badgeClass: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20'
       }
     case 3:
       return {

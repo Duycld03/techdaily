@@ -35,7 +35,7 @@ function toggleAllLabels() {
 function getCategoryColor(category?: string | null): string {
   const cat = (category || '').toLowerCase()
   if (cat === 'backendruntime' || cat === 'backenddotnet' || cat === 'dotnet') return '#0284c7' // Sky
-  if (cat === 'databasestorage' || cat === 'database') return '#059669' // Emerald
+  if (cat === 'databasestorage' || cat === 'database') return '#0891b2' // Cyan
   if (cat === 'systemdesign') return '#7c3aed' // Purple
   if (cat === 'frontendweb' || cat === 'frontend') return '#f59e0b' // Amber
   if (cat === 'engineeringcraft') return '#e11d48' // Rose
@@ -45,7 +45,7 @@ function getCategoryColor(category?: string | null): string {
 // Card SM-2 Status Colors
 function getCardStatusColor(status?: string | null): string {
   const s = (status || '').toLowerCase()
-  if (s === 'mastered') return '#10b981'
+  if (s === 'mastered') return '#7c3aed'
   if (s === 'reviewing') return '#3b82f6'
   return '#f59e0b' // Learning
 }
@@ -128,7 +128,7 @@ function getTooltipHtml(node: GraphNode): string {
 
   let extra = ''
   if (node.type === 'card') {
-    extra = `<div style="font-size: 11px; margin-top: 4px; color: #10b981;">Interval: ${node.intervalDays ?? 1}d • EF: ${(node.easeFactor ?? 2.5).toFixed(2)}</div>`
+    extra = `<div style="font-size: 11px; margin-top: 4px; color: #a78bfa;">Interval: ${node.intervalDays ?? 1}d • EF: ${(node.easeFactor ?? 2.5).toFixed(2)}</div>`
   } else if (node.type === 'topic' && node.difficulty) {
     extra = `<div style="font-size: 11px; margin-top: 4px; color: #38bdf8;">Difficulty: ${node.difficulty} • Day ${node.dayOrder ?? 1}</div>`
   } else if (node.type === 'highlight' && node.tags?.length) {

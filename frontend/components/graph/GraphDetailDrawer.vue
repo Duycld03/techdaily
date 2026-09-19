@@ -146,7 +146,7 @@ function getCategoryBadgeClass(category?: string | null): string {
     return 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20'
   }
   if (cat.includes('postgres') || cat.includes('database') || cat.includes('storage')) {
-    return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+    return 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20'
   }
   if (cat.includes('system') || cat.includes('distributed')) {
     return 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20'
@@ -164,7 +164,7 @@ function getCategoryBadgeClass(category?: string | null): string {
 function getMasteryBadgeClass(status?: string | null): string {
   const s = status?.toLowerCase()
   if (s === 'mastered') {
-    return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+    return 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-500/30'
   }
   if (s === 'learning') {
     return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'

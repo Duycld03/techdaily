@@ -265,7 +265,7 @@ function getOptionClass(idx: number): string {
   const isSelectedByMe = idx === (selectedOptionIndex.value ?? currentQ.value?.lastSelectedOptionIndex)
 
   if (isCorrectOption) {
-    return 'border-emerald-500/60 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-900 dark:text-emerald-300 ring-1 ring-emerald-500/30'
+    return 'border-brand-500/60 bg-brand-50/80 dark:bg-brand-500/10 text-brand-900 dark:text-brand-300 ring-1 ring-brand-500/30'
   }
   if (isSelectedByMe && !currentSub.value?.isCorrect) {
     return 'border-rose-500/60 bg-rose-50/80 dark:bg-rose-500/10 text-rose-900 dark:text-rose-300 ring-1 ring-rose-500/30'
@@ -279,7 +279,7 @@ const readinessInfo = computed(() => {
   if (acc >= 75) {
     return {
       labelKey: 'quiz.readiness_ready',
-      badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+      badgeClass: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20'
     }
   }
   if (acc >= 50) {
@@ -328,14 +328,14 @@ const masteryTierInfo = computed(() => {
   if (rate <= 75) {
     return {
       labelKey: 'review.tier_solid',
-      badgeClass: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20',
-      arcColor: 'text-brand-500'
+      badgeClass: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20',
+      arcColor: 'text-sky-500'
     }
   }
   return {
     labelKey: 'review.tier_mastered',
-    badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
-    arcColor: 'text-emerald-500'
+    badgeClass: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20',
+    arcColor: 'text-brand-500'
   }
 })
 
@@ -344,8 +344,8 @@ function getSeniorityColor(levelId: number) {
   switch (levelId) {
     case 0:
       return {
-        bar: 'bg-emerald-500',
-        text: 'text-emerald-600 dark:text-emerald-400'
+        bar: 'bg-brand-500',
+        text: 'text-brand-600 dark:text-brand-400'
       }
     case 1:
       return {
@@ -369,7 +369,7 @@ function getSeniorityColor(levelId: number) {
 function getTopicBadge(rate: number) {
   if (rate >= 80) {
     return {
-      class: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+      class: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20'
     }
   }
   if (rate >= 50) {
@@ -659,7 +659,7 @@ defineExpose({
             </span>
             <span
               v-if="currentQ.isMastered"
-              class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/30 flex items-center gap-1"
             >
               <CheckCircle2 class="w-3.5 h-3.5" />
               Mastered
@@ -707,7 +707,7 @@ defineExpose({
               :class="[
                 quizStore.isCurrentAnswered
                   ? (idx === currentSub?.correctOptionIndex
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-brand-600 text-white'
                       : (idx === (selectedOptionIndex ?? currentQ.lastSelectedOptionIndex) && !currentSub?.isCorrect
                           ? 'bg-rose-600 text-white'
                           : 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.08]'))
@@ -744,11 +744,11 @@ defineExpose({
             :class="[
               'p-4 rounded-xl border flex items-center gap-3',
               currentSub.isCorrect
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                ? 'bg-brand-500/10 border-brand-500/30 text-brand-700 dark:text-brand-300'
                 : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
             ]"
           >
-            <CheckCircle2 v-if="currentSub.isCorrect" class="w-5 h-5 text-emerald-500 shrink-0" />
+            <CheckCircle2 v-if="currentSub.isCorrect" class="w-5 h-5 text-brand-500 shrink-0" />
             <XCircle v-else class="w-5 h-5 text-rose-500 shrink-0" />
             <span class="font-bold text-sm sm:text-base">
               {{ currentSub.isCorrect ? $t('quiz.correct_banner') : $t('quiz.incorrect_banner') }}
@@ -871,7 +871,7 @@ defineExpose({
                   :disabled="pushedQuestionIds.has(q.id) || pushingQuestionId === q.id"
                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-60 cursor-pointer"
                   :class="pushedQuestionIds.has(q.id)
-                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
+                    ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-500/20'
                     : 'bg-brand-600 hover:bg-brand-500 text-white'"
                 >
                   <Check v-if="pushedQuestionIds.has(q.id)" class="w-3.5 h-3.5" />
@@ -888,7 +888,7 @@ defineExpose({
     <!-- TAB 4: MISTAKE REVIEW QUEUE -->
     <div v-if="quizStore.activeTab === 'review'" class="space-y-6">
       <div v-if="quizStore.reviewQueue.length === 0" class="glass-card p-8 text-center space-y-4">
-        <div class="inline-flex p-4 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+        <div class="inline-flex p-4 rounded-full bg-brand-500/10 text-brand-500 border border-brand-500/20">
           <CheckCircle2 class="w-10 h-10" />
         </div>
         <h3 class="text-lg font-bold text-slate-900 dark:text-white">
@@ -943,7 +943,7 @@ defineExpose({
                 :disabled="pushedQuestionIds.has(q.id) || pushingQuestionId === q.id"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-60 cursor-pointer"
                 :class="pushedQuestionIds.has(q.id)
-                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
+                  ? 'bg-brand-50 dark:bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-500/20'
                   : 'bg-brand-600 hover:bg-brand-500 text-white'"
               >
                 <Check v-if="pushedQuestionIds.has(q.id)" class="w-3.5 h-3.5" />

@@ -255,7 +255,7 @@ const hasActiveFilters = computed(() => {
             :class="[
               'px-2.5 py-1 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0',
               store.selectedMastery.toLowerCase() === m.id.toLowerCase()
-                ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                ? 'bg-brand-600 text-white shadow-sm font-semibold'
                 : 'bg-slate-100/80 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-canvas-elevated border border-transparent dark:border-white/[0.04]'
             ]"
             @click="store.setMastery(m.id)"

@@ -18,6 +18,10 @@ export const SUPPORTED_LANGS = [
   'python',
   'markdown',
   'dockerfile',
+  'diff',
+  'nginx',
+  'powershell',
+  'xml',
   'text'
 ]
 
@@ -100,7 +104,16 @@ export function normalizeLanguage(lang?: string): string {
     terminal: 'text',
     log: 'text',
     logs: 'text',
-    none: 'text'
+    none: 'text',
+    diff: 'diff',
+    patch: 'diff',
+    nginx: 'nginx',
+    conf: 'nginx',
+    powershell: 'powershell',
+    ps: 'powershell',
+    pwsh: 'powershell',
+    xml: 'xml',
+    svg: 'xml'
   }
   return aliases[l] || l
 }
@@ -142,6 +155,14 @@ export function formatLanguageLabel(lang: string): string {
       return 'Markdown'
     case 'dockerfile':
       return 'Dockerfile'
+    case 'diff':
+      return 'Diff'
+    case 'nginx':
+      return 'Nginx'
+    case 'powershell':
+      return 'PowerShell'
+    case 'xml':
+      return 'XML'
     default:
       return (normalized || 'code').toUpperCase()
   }
@@ -279,8 +300,10 @@ export async function highlightCode(
   try {
     const highlighter = await getShikiHighlighter()
     const normalizedLang = normalizeLanguage(lang)
-    const targetLang = SUPPORTED_LANGS.includes(normalizedLang) ? normalizedLang : 'csharp'
-
+    let targetLang = SUPPORTED_LANGS.includes(normalizedLang) ? normalizedLang : 'csharp'
+    if (targetLang === 'vue' && !code.includes('<template') && !code.includes('<script')) {
+      targetLang = 'typescript'
+    }
     return highlighter.codeToHtml(code.trimEnd(), {
       lang: targetLang,
       theme

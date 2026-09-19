@@ -36,7 +36,7 @@ const bookmarkedCount = computed(() => insightsStore.bookmarkedInsights.length)
 
 function renderMarkdown(raw: string | undefined | null): string {
   if (!raw) return ''
-  const clean = raw.replace(/\\n/g, '\n')
+  const clean = raw.replace(/\\n/g, '\n').replace(/\\`/g, '`')
   return md.render(clean)
 }
 
@@ -189,7 +189,7 @@ function getCategoryBadge(cat: number) {
     case 2:
       return { text: 'PostgreSQL 17 Engine', color: 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' }
     case 3:
-      return { text: 'System Design & Distributed', color: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' }
+      return { text: 'System Design & Distributed', color: 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' }
     default:
       return { text: 'Core Architecture', color: 'bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800' }
   }
@@ -346,8 +346,8 @@ function getCategoryBadge(cat: number) {
 
           <div class="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
             <!-- Benchmark Badge -->
-            <div class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm font-bold break-words min-w-0 max-w-full">
-              <Zap class="w-3.5 h-3.5 fill-emerald-500 text-emerald-500 shrink-0" />
+            <div class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-xl bg-brand-50 dark:bg-brand-950/50 border border-brand-200 dark:border-brand-800/80 text-brand-700 dark:text-brand-400 text-xs sm:text-sm font-bold break-words min-w-0 max-w-full">
+              <Zap class="w-3.5 h-3.5 fill-brand-500 text-brand-500 shrink-0" />
               <span class="truncate sm:whitespace-normal">{{ insightsStore.currentInsight.benchmarkStats }}</span>
             </div>
 
@@ -388,11 +388,11 @@ function getCategoryBadge(cat: number) {
               :class="[
                 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all',
                 activeCodeTab === 'solution'
-                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                  ? 'bg-brand-500/15 text-brand-700 dark:text-brand-300 border border-brand-500/30'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               ]"
             >
-              <CheckCircle2 class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500" />
+              <CheckCircle2 class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-500" />
               <span>{{ $t('insights.solution_tab') }}</span>
             </button>
 

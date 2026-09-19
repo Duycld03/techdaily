@@ -123,7 +123,7 @@ onUnmounted(() => {
         <Menu class="w-5 h-5" />
       </button>
 
-      <NuxtLink to="/today" class="flex items-center gap-2 font-bold tracking-tight hover:opacity-90 transition-opacity">
+      <NuxtLink to="/" class="flex items-center gap-2 font-bold tracking-tight hover:opacity-90 transition-opacity">
         <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-400 flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
           <BookOpen class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white font-bold" />
         </div>

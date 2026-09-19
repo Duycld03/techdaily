@@ -704,7 +704,7 @@ function getDifficultyColor(diff: number) {
           class="w-full h-2.5 bg-slate-200/80 dark:bg-canvas-subtle rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-white/[0.08]"
         >
           <div
-            class="h-full bg-gradient-to-r from-brand-500 to-emerald-400 rounded-full transition-all duration-500 shadow-sm"
+            class="h-full bg-gradient-to-r from-brand-600 via-brand-500 to-brand-400 rounded-full transition-all duration-500 shadow-sm"
             :style="{ width: `${metricProgressPercentage}%` }"
           ></div>
         </div>
@@ -801,7 +801,7 @@ function getDifficultyColor(diff: number) {
                 :class="[
                   'absolute -left-6 sm:-left-10 top-5 -translate-x-1/2 w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all z-10 select-none',
                   chapter.isCompleted
-                    ? 'bg-emerald-500 text-white ring-4 ring-slate-50 dark:ring-canvas shadow-sm'
+                    ? 'bg-brand-600 text-white ring-4 ring-slate-50 dark:ring-canvas shadow-sm'
                     : chapter.isActive
                       ? 'bg-brand-600 text-white ring-4 ring-slate-50 dark:ring-canvas shadow-md shadow-brand-500/40 animate-pulse'
                       : 'bg-slate-200 dark:bg-canvas-elevated text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-white/[0.12] ring-4 ring-slate-50 dark:ring-canvas'
@@ -822,7 +822,7 @@ function getDifficultyColor(diff: number) {
                   :class="[
                     'w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 transition-colors',
                     chapter.isCompleted
-                      ? 'bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400'
+                      ? 'bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400'
                       : chapter.isActive
                         ? 'bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400'
                         : 'bg-slate-100 dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-300'
@@ -895,7 +895,7 @@ function getDifficultyColor(diff: number) {
                   slice.isActiveToday
                     ? 'bg-brand-500/10 dark:bg-brand-500/15 border-brand-500 dark:border-brand-400 shadow-lg shadow-brand-500/10 ring-2 ring-brand-500/30'
                     : slice.isCompleted
-                      ? 'bg-white dark:bg-canvas-subtle border-emerald-500/30 dark:border-emerald-500/30 hover:border-emerald-500 hover:shadow-sm'
+                      ? 'bg-white dark:bg-canvas-subtle border-brand-500/40 dark:border-brand-500/40 hover:border-brand-500 hover:shadow-sm'
                       : 'bg-slate-50/70 dark:bg-canvas-elevated/40 border-slate-200/80 dark:border-white/[0.06] hover:border-brand-500/40 hover:shadow-sm'
                 ]"
               >
@@ -908,7 +908,7 @@ function getDifficultyColor(diff: number) {
                         slice.isActiveToday
                           ? 'bg-amber-500 text-white shadow-sm'
                           : slice.isCompleted
-                            ? 'bg-emerald-500 text-white'
+                            ? 'bg-brand-600 text-white'
                             : 'bg-slate-200 dark:bg-canvas-elevated text-slate-700 dark:text-slate-300'
                       ]"
                     >
@@ -933,9 +933,9 @@ function getDifficultyColor(diff: number) {
                     </span>
                     <span
                       v-else-if="slice.isCompleted"
-                      class="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 whitespace-nowrap shrink-0"
+                      class="flex items-center gap-1 text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 px-2.5 py-0.5 rounded-full border border-brand-200 dark:border-brand-800 whitespace-nowrap shrink-0"
                     >
-                      <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <CheckCircle2 class="w-3.5 h-3.5 text-brand-500 shrink-0" />
                       <span>Pass</span>
                     </span>
                     <span
@@ -970,7 +970,7 @@ function getDifficultyColor(diff: number) {
                       slice.isActiveToday
                         ? 'text-amber-600 dark:text-amber-400 font-bold'
                         : slice.isCompleted
-                          ? 'text-emerald-600 dark:text-emerald-400'
+                          ? 'text-brand-600 dark:text-brand-400'
                           : 'text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400'
                     ]"
                   >
@@ -1034,7 +1034,7 @@ function getDifficultyColor(diff: number) {
                 :class="[
                   'absolute -left-6 sm:-left-10 top-5 -translate-x-1/2 w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all z-10 select-none',
                   module.completedCount === module.totalCount
-                    ? 'bg-emerald-500 text-white ring-4 ring-slate-50 dark:ring-canvas shadow-sm'
+                    ? 'bg-brand-600 text-white ring-4 ring-slate-50 dark:ring-canvas shadow-sm'
                     : module.completedCount > 0
                       ? 'bg-brand-600 text-white ring-4 ring-slate-50 dark:ring-canvas shadow-md shadow-brand-500/40'
                       : 'bg-slate-200 dark:bg-canvas-elevated text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-white/[0.12] ring-4 ring-slate-50 dark:ring-canvas'
@@ -1096,7 +1096,7 @@ function getDifficultyColor(diff: number) {
                   day.isActiveToday
                     ? 'bg-brand-500/10 dark:bg-brand-500/15 border-brand-500 dark:border-brand-400 shadow-lg shadow-brand-500/10 ring-2 ring-brand-500/30'
                     : day.isCompleted
-                      ? 'bg-white dark:bg-canvas-subtle border-emerald-500/30 dark:border-emerald-500/30 hover:border-emerald-500 hover:shadow-sm'
+                      ? 'bg-white dark:bg-canvas-subtle border-brand-500/40 dark:border-brand-500/40 hover:border-brand-500 hover:shadow-sm'
                       : day.isUnlocked
                         ? 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] hover:border-brand-500/40 hover:shadow-sm'
                         : 'bg-slate-50/70 dark:bg-canvas-elevated/40 border-slate-200/80 dark:border-white/[0.06] opacity-75 hover:opacity-100'
@@ -1111,7 +1111,7 @@ function getDifficultyColor(diff: number) {
                         day.isActiveToday
                           ? 'bg-amber-500 text-white shadow-sm'
                           : day.isCompleted
-                            ? 'bg-emerald-500 text-white'
+                            ? 'bg-brand-600 text-white'
                             : 'bg-slate-200 dark:bg-canvas-elevated text-slate-700 dark:text-slate-300'
                       ]"
                     >
@@ -1139,9 +1139,9 @@ function getDifficultyColor(diff: number) {
                     </span>
                     <span
                       v-else-if="day.isCompleted"
-                      class="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 whitespace-nowrap shrink-0"
+                      class="flex items-center gap-1 text-xs font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-950/60 px-2.5 py-0.5 rounded-full border border-brand-200 dark:border-brand-800 whitespace-nowrap shrink-0"
                     >
-                      <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <CheckCircle2 class="w-3.5 h-3.5 text-brand-500 shrink-0" />
                       <span>{{ day.drillScore !== null ? `+${day.drillScore}` : 'Pass' }}</span>
                     </span>
                     <span
@@ -1182,7 +1182,7 @@ function getDifficultyColor(diff: number) {
                       day.isActiveToday
                         ? 'text-amber-600 dark:text-amber-400 font-bold'
                         : day.isCompleted
-                          ? 'text-emerald-600 dark:text-emerald-400'
+                          ? 'text-brand-600 dark:text-brand-400'
                           : 'text-slate-500 dark:text-slate-400 group-hover:text-brand-600 dark:group-hover:text-brand-400'
                     ]"
                   >

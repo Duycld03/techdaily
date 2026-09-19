@@ -33,9 +33,6 @@ services:
 
   backend:
     image: ghcr.io/duycld03/techdaily-backend:latest
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
     container_name: techdaily_backend_prod
     restart: always
     environment:
@@ -54,9 +51,6 @@ services:
 
   frontend:
     image: ghcr.io/duycld03/techdaily-frontend:latest
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
     container_name: techdaily_frontend_prod
     restart: always
     environment:

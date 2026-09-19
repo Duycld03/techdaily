@@ -384,7 +384,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
 
       <!-- Empty / Completed State -->
       <div v-else class="w-full max-w-xl text-center p-10 sm:p-12 md:p-14 rounded-3xl glass-card shadow-xl dark:shadow-2xl animate-in zoom-in-95 duration-200 my-auto space-y-6 sm:space-y-7">
-        <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto shadow-sm">
+        <div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center mx-auto shadow-sm">
           <CheckCircle class="w-8 h-8" />
         </div>
         <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -492,7 +492,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
               :class="[
                 'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
                 selectedStatus === 2
-                  ? 'bg-emerald-600 text-white border-transparent shadow-sm'
+                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
                   : 'bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.06] hover:border-white/[0.15]'
               ]"
             >
@@ -640,7 +640,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
             <div class="space-y-1.5">
               <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('review.back_label') }}</div>
               <div
-                class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs sm:text-sm prose dark:prose-invert max-w-none"
+                class="p-4 rounded-xl bg-brand-500/10 border border-brand-500/20 text-xs sm:text-sm prose dark:prose-invert max-w-none"
                 v-html="renderMarkdown(editBackMarkdown)"
               ></div>
             </div>

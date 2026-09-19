@@ -40,14 +40,14 @@ const tierInfo = computed(() => {
   if (rate <= 75) {
     return {
       labelKey: 'review.tier_solid',
-      badgeClass: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20',
-      arcColor: 'text-brand-500'
+      badgeClass: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20',
+      arcColor: 'text-sky-500'
     }
   }
   return {
     labelKey: 'review.tier_mastered',
-      badgeClass: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
-    arcColor: 'text-emerald-500'
+    badgeClass: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20',
+    arcColor: 'text-brand-500'
   }
 })
 </script>

@@ -22,6 +22,10 @@ describe('useMarkdownRenderer & shikiHighlighter', () => {
     expect(SUPPORTED_LANGS).toContain('sql')
     expect(SUPPORTED_LANGS).toContain('dockerfile')
     expect(SUPPORTED_LANGS).toContain('markdown')
+    expect(SUPPORTED_LANGS).toContain('diff')
+    expect(SUPPORTED_LANGS).toContain('nginx')
+    expect(SUPPORTED_LANGS).toContain('powershell')
+    expect(SUPPORTED_LANGS).toContain('xml')
   })
 
   it('normalizes language aliases correctly', () => {
@@ -41,6 +45,11 @@ describe('useMarkdownRenderer & shikiHighlighter', () => {
     expect(normalizeLanguage('plaintext')).toBe('text')
     expect(normalizeLanguage('output')).toBe('text')
     expect(normalizeLanguage('console')).toBe('text')
+    expect(normalizeLanguage('pwsh')).toBe('powershell')
+    expect(normalizeLanguage('ps')).toBe('powershell')
+    expect(normalizeLanguage('patch')).toBe('diff')
+    expect(normalizeLanguage('conf')).toBe('nginx')
+    expect(normalizeLanguage('svg')).toBe('xml')
   })
 
   it('formats display labels consistently with insights page', () => {
@@ -280,5 +289,47 @@ async function toggleFavorite(itemId: string) {
     const output = render(input)
     expect(output).toContain('<p>First paragraph with some text.</p>')
     expect(output).toContain('<p>Second paragraph following double newline.</p>')
+  })
+
+  it('highlights headless Vue composition api scripts using typescript grammar', () => {
+    const { render } = useMarkdownRenderer()
+    const vueScriptMarkdown = `
+\`\`\`vue
+// Senior pattern: shallowRef with immutable replacement
+const telemetryData = shallowRef<TelemetryItem[]>([]);
+socket.on('telemetry', (batch) => {
+  telemetryData.value = Object.freeze(batch);
+});
+\`\`\`
+`
+    const html = render(vueScriptMarkdown)
+    expect(html).toContain('Vue 3 / SFC')
+    // Verify syntax highlighting has tokenized keywords (e.g. const)
+    expect(html).toContain('color:#CB7676') // vitesse-dark keyword color for 'const'
+  })
+
+  it('highlights diff and nginx code fences properly', () => {
+    const { render } = useMarkdownRenderer()
+    const diffMarkdown = `
+\`\`\`diff
++ added line
+- removed line
+\`\`\`
+`
+    const diffHtml = render(diffMarkdown)
+    expect(diffHtml).toContain('Diff')
+    expect(diffHtml).toContain('added line')
+
+    const nginxMarkdown = `
+\`\`\`nginx
+server {
+  listen 80;
+  server_name localhost;
+}
+\`\`\`
+`
+    const nginxHtml = render(nginxMarkdown)
+    expect(nginxHtml).toContain('Nginx')
+    expect(nginxHtml).toContain('listen')
   })
 })

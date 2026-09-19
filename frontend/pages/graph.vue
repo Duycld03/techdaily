@@ -46,34 +46,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Cyber Neon Telemetry HUD Ribbon (Desktop Top-Right) -->
-    <div class="absolute top-18 sm:top-20 right-3 sm:right-4 z-20 pointer-events-none hidden md:block">
-      <div class="pointer-events-auto glass-panel px-3.5 py-2 flex items-center gap-3 text-xs font-mono select-none glow-subtle border border-slate-200/90 dark:border-white/[0.08]">
-        <!-- Status dot -->
-        <div class="flex items-center gap-1.5 shrink-0">
-          <span class="w-2 h-2 rounded-full bg-cyber-400 animate-ping" />
-          <span class="font-bold text-cyber-500 dark:text-cyber-400 uppercase tracking-wider text-[11px]">HUD Live</span>
-        </div>
-
-        <div class="h-3 w-px bg-slate-300 dark:bg-white/10" />
-
-        <!-- Nodes & Edges Counters -->
-        <div class="flex items-center gap-2">
-          <span class="text-slate-500 dark:text-slate-400 text-[11px]">N:</span>
-          <span class="font-bold text-slate-800 dark:text-white">{{ store.filteredNodes.length }}</span>
-          <span class="text-slate-500 dark:text-slate-400 text-[11px]">E:</span>
-          <span class="font-bold text-brand-500 dark:text-brand-400">{{ store.filteredEdges.length }}</span>
-        </div>
-
-        <div class="h-3 w-px bg-slate-300 dark:bg-white/10" />
-
-        <!-- Engine Mode -->
-        <div class="flex items-center gap-1 text-[11px] font-bold">
-          <span class="text-slate-500 dark:text-slate-400">ENGINE:</span>
-          <span class="text-cyber-500 dark:text-cyber-400">{{ store.viewMode === '3d' ? '3D COSMOS' : '2D GRAPH' }}</span>
-        </div>
-      </div>
-    </div>
 
     <!-- Loading State Overlay -->
     <div

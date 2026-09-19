@@ -157,7 +157,7 @@ async function handleOptionSubmit() {
             :class="[
               'px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border',
               isCorrect
-                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
+                ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-500/30'
                 : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
             ]"
           >
@@ -200,7 +200,7 @@ async function handleOptionSubmit() {
                 : !isReviewed
                   ? 'border-slate-200 dark:border-white/[0.08] bg-white dark:bg-canvas-elevated text-slate-800 dark:text-slate-200 hover:border-brand-500/40 dark:hover:border-brand-500/40 hover:bg-slate-50 dark:hover:bg-white/[0.04] cursor-pointer'
                   : isReviewed && index === question.correctOptionIndex
-                    ? 'border-emerald-500 dark:border-emerald-500/40 bg-emerald-50/80 dark:bg-emerald-500/10 text-emerald-950 dark:text-emerald-100 font-semibold ring-2 ring-emerald-500/20'
+                    ? 'border-brand-500 dark:border-brand-500/40 bg-brand-50/80 dark:bg-brand-500/10 text-brand-950 dark:text-brand-100 font-semibold ring-2 ring-brand-500/20'
                     : isReviewed &&
                         selectedOption === index &&
                         index !== question.correctOptionIndex
@@ -217,7 +217,7 @@ async function handleOptionSubmit() {
                   : !isReviewed
                     ? 'bg-slate-100 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 group-hover:border-brand-500/40'
                     : isReviewed && index === question.correctOptionIndex
-                      ? 'bg-emerald-600 text-white shadow-sm'
+                      ? 'bg-brand-600 text-white shadow-sm'
                       : isReviewed &&
                           selectedOption === index &&
                           index !== question.correctOptionIndex
@@ -240,7 +240,7 @@ async function handleOptionSubmit() {
             >
               <span
                 v-if="index === question.correctOptionIndex"
-                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-sm whitespace-nowrap shrink-0"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-600 text-white shadow-sm whitespace-nowrap shrink-0"
               >
                 <Check class="w-3.5 h-3.5" />
                 <span>{{ $t("today.optimal_choice") }}</span>
@@ -312,13 +312,13 @@ async function handleOptionSubmit() {
           :class="[
             'p-4 sm:p-5 rounded-2xl border flex items-start gap-3.5',
             isCorrect
-              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-200'
+              ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-200 dark:border-brand-500/30 text-brand-950 dark:text-brand-200'
               : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-500/30 text-amber-950 dark:text-amber-200',
           ]"
         >
           <CheckCircle2
             v-if="isCorrect"
-            class="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"
+            class="w-6 h-6 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5"
           />
           <AlertCircle
             v-else

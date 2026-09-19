@@ -85,7 +85,7 @@ const masteryItems = [
   {
     type: 'mastered',
     labelKey: 'graph.legend.mastered',
-    color: 'bg-emerald-500',
+    color: 'bg-brand-500',
     shape: 'rounded-full w-2 h-2'
   }
 ]

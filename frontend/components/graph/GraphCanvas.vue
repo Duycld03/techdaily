@@ -75,8 +75,8 @@ function getStylesheet(dark: boolean): Stylesheet[] {
     {
       selector: 'node[type = "pillar"][category = "DatabaseStorage"], node[type = "pillar"][category = "Postgres"]',
       style: {
-        'background-color': '#10b981',
-        'border-color': '#34d399'
+        'background-color': '#0891b2',
+        'border-color': '#22d3ee'
       }
     },
     {
@@ -155,7 +155,7 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'label': ''
       }
     },
-    // Colors by card mastery: Learning (#f59e0b), Reviewing (#3b82f6), Mastered (#10b981)
+    // Colors by card mastery: Learning (#f59e0b), Reviewing (#3b82f6), Mastered (#7c3aed)
     {
       selector: 'node[type = "card"][status = "Learning"], node[type = "card"][status = "learning"]',
       style: {
@@ -171,7 +171,8 @@ function getStylesheet(dark: boolean): Stylesheet[] {
     {
       selector: 'node[type = "card"][status = "Mastered"], node[type = "card"][status = "mastered"]',
       style: {
-        'background-color': '#10b981',
+        'background-color': '#7c3aed',
+        'border-color': '#c4b5fd',
         'width': 28,
         'height': 28
       }

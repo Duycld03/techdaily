@@ -57,13 +57,13 @@ const emit = defineEmits<{
       @click="emit('grade', 5)"
       :disabled="disabled"
       type="button"
-      class="group relative flex flex-col items-center justify-center p-3 sm:p-3.5 rounded-2xl border border-emerald-200/80 dark:border-emerald-500/30 bg-emerald-50/80 dark:bg-emerald-500/10 hover:bg-emerald-100/90 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-emerald-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+      class="group relative flex flex-col items-center justify-center p-3 sm:p-3.5 rounded-2xl border border-brand-200/80 dark:border-brand-500/30 bg-brand-50/80 dark:bg-brand-500/10 hover:bg-brand-100/90 dark:hover:bg-brand-500/20 text-brand-700 dark:text-brand-300 font-semibold transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-brand-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
     >
       <div class="flex items-center gap-1.5">
         <span class="font-bold text-sm sm:text-base tracking-tight">{{ $t('review.grade_easy') }}</span>
-        <kbd class="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-200/60 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40 dark:border-emerald-500/30">4</kbd>
+        <kbd class="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-brand-200/60 dark:bg-brand-500/20 text-brand-700 dark:text-brand-300 border border-brand-300/40 dark:border-brand-500/30">4</kbd>
       </div>
-      <span class="text-xs text-emerald-600 dark:text-emerald-400/80 mt-1">{{ $t('review.grade_easy_desc') }}</span>
+      <span class="text-xs text-brand-600 dark:text-brand-400/80 mt-1">{{ $t('review.grade_easy_desc') }}</span>
     </button>
   </div>
 </template>
