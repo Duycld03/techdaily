@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import { onClickOutside, useEventListener } from '@vueuse/core'
-import { BookOpen, Clock, Tag, Sparkles, Copy, Check, Highlighter } from 'lucide-vue-next'
+import { BookOpen, Clock, Tag, Sparkles, Copy, Check, Highlighter, Cpu } from 'lucide-vue-next'
 import type { Topic, DocumentChunk } from '~/stores/useDailyFocusStore'
 import { useNotesStore } from '~/stores/useNotesStore'
 import { useToast } from '~/composables/useToast'
@@ -424,7 +424,7 @@ onUnmounted(() => {
     <!-- Benchmark Snippet (if available) -->
     <div v-if="topic.benchmarkSnippet" class="mt-6 p-4 sm:p-5 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs sm:text-sm text-brand-700 dark:text-brand-300 shadow-sm">
       <div class="text-slate-700 dark:text-slate-400 font-bold mb-2 font-sans flex items-center gap-1.5">
-        <Sparkles class="w-4 h-4 text-brand-600 dark:text-brand-400" />
+        <Cpu class="w-4 h-4 text-brand-600 dark:text-brand-400" :stroke-width="1.5" />
         <span>Performance Benchmark Context:</span>
       </div>
       <pre class="overflow-x-auto p-0 m-0 bg-transparent border-0">{{ topic.benchmarkSnippet }}</pre>

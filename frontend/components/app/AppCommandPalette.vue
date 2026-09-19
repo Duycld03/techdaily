@@ -9,7 +9,7 @@ import {
   Map,
   HelpCircle,
   Layers,
-  Sparkles,
+  Compass,
   BookOpen,
   Highlighter,
   Network,
@@ -87,7 +87,7 @@ const commandItems: CommandItem[] = [
     titleKey: 'nav.insights',
     descKey: 'command_palette.action_graph_desc',
     path: '/insights',
-    icon: Sparkles,
+    icon: Compass,
     category: 'knowledge',
     keywords: ['insights', 'radar', 'stats', 'thong ke']
   },

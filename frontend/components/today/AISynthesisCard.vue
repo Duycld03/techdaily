@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
-import { Sparkles, RefreshCw, AlertCircle, Cpu } from 'lucide-vue-next'
+import { Loader2, RefreshCw, AlertCircle, Cpu } from 'lucide-vue-next'
 
 const props = defineProps<{
   chapterTitle?: string
@@ -38,7 +38,7 @@ function handleRetry() {
     <div class="space-y-4">
       <div class="flex items-center justify-between gap-3">
         <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 text-xs sm:text-sm font-bold tracking-wide">
-          <Sparkles class="w-4 h-4 animate-spin text-brand-600 dark:text-brand-400" style="animation-duration: 3s;" />
+          <Loader2 class="w-4 h-4 animate-spin text-brand-600 dark:text-brand-400" :stroke-width="1.5" />
           <span class="whitespace-nowrap shrink-0">{{ $t('pacer.ai_synthesis_badge') }}</span>
         </div>
 

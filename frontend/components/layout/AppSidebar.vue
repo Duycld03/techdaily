@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { LayoutGrid, Target, Map, Sparkles, HelpCircle, Layers, BookOpen, Highlighter, Network, User, Settings } from 'lucide-vue-next'
+import { LayoutGrid, Target, Map, Compass, HelpCircle, Layers, BookOpen, Highlighter, Network, User, Settings } from 'lucide-vue-next'
 
 const route = useRoute()
 
@@ -26,7 +26,7 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'nav.group_knowledge',
     links: [
-      { name: 'nav.insights', path: '/insights', icon: Sparkles },
+      { name: 'nav.insights', path: '/insights', icon: Compass },
       { name: 'nav.library', path: '/library', icon: BookOpen },
       { name: 'nav.notes', path: '/notes', icon: Highlighter },
       { name: 'nav.graph', path: '/graph', icon: Network }
@@ -93,6 +93,7 @@ function isLinkActive(linkPath: string): boolean {
                   ? 'text-brand-600 dark:text-brand-400'
                   : 'text-slate-400 dark:text-slate-500'
               ]"
+              :stroke-width="1.5"
             />
             <span class="whitespace-nowrap">{{ $t(link.name) }}</span>
           </a>
