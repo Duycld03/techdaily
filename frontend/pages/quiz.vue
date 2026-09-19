@@ -593,15 +593,20 @@ defineExpose({
             </div>
             <button
               type="button"
+              role="switch"
+              :aria-checked="isGrounded"
+              :aria-label="$t('quiz.grounded_toggle')"
               @click="isGrounded = !isGrounded"
               :class="[
-                'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500',
-                isGrounded ? 'bg-brand-600' : 'bg-slate-300 dark:bg-canvas-elevated'
+                'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-500',
+                isGrounded
+                  ? 'bg-brand-600 border-brand-600'
+                  : 'bg-slate-300 border-slate-300 dark:bg-white/[0.12] dark:border-white/20'
               ]"
             >
               <span
                 :class="[
-                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                  'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
                   isGrounded ? 'translate-x-5' : 'translate-x-0'
                 ]"
               />
