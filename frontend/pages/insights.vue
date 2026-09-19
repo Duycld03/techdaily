@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import {
   Sparkles,
   Shuffle,
@@ -106,11 +107,6 @@ onMounted(async () => {
     insightsStore.fetchMetadata(),
     insightsStore.fetchBookmarkedInsights()
   ])
-  window.addEventListener('keydown', handleKeyDown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
 })
 
 function handleKeyDown(e: KeyboardEvent) {
@@ -131,6 +127,8 @@ function handleKeyDown(e: KeyboardEvent) {
     }
   }
 }
+
+useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handleKeyDown)
 
 async function switchViewMode(mode: 'explore' | 'saved') {
   if (mode === 'saved') {

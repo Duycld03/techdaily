@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import {
   Search,
   X,
@@ -30,14 +31,9 @@ function checkMobile() {
 
 onMounted(() => {
   checkMobile()
-  window.addEventListener('resize', checkMobile)
 })
 
-onUnmounted(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('resize', checkMobile)
-  }
-})
+useEventListener(typeof window !== 'undefined' ? window : null, 'resize', checkMobile)
 const searchLocal = ref(store.searchQuery)
 
 watch(

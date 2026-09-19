@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import { Highlighter, Trash2, BookOpen, AlertTriangle, Zap, Search, Sparkles, X, Pencil, Check } from 'lucide-vue-next'
 import BasePagination from '~/components/common/BasePagination.vue'
 import { useNotesStore, type Highlight } from '~/stores/useNotesStore'
@@ -157,19 +158,19 @@ async function handleLoadMore() {
   }
 }
 
-let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+const debouncedSyncSearch = useDebounceFn((newVal: string) => {
+  router.replace({
+    query: {
+      ...route.query,
+      search: newVal.trim() ? newVal.trim() : undefined,
+      page: undefined
+    }
+  })
+  loadNotes(1, false)
+}, 300)
+
 watch(highlightSearchQuery, (newVal) => {
-  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
-  searchDebounceTimer = setTimeout(() => {
-    router.replace({
-      query: {
-        ...route.query,
-        search: newVal.trim() ? newVal.trim() : undefined,
-        page: undefined
-      }
-    })
-    loadNotes(1, false)
-  }, 300)
+  debouncedSyncSearch(newVal)
 })
 
 defineExpose({

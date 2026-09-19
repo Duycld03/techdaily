@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { onClickOutside, useEventListener, useTimeoutFn } from "@vueuse/core";
 import {
   BookOpen,
   ArrowLeft,
@@ -84,15 +85,13 @@ const {
 const isTypographyOpen = ref(false);
 const typographyDropdownRef = ref<HTMLElement | null>(null);
 
-function handleTypographyClickOutside(event: MouseEvent) {
-  if (
-    isTypographyOpen.value &&
-    typographyDropdownRef.value &&
-    !typographyDropdownRef.value.contains(event.target as Node)
-  ) {
+onClickOutside(typographyDropdownRef, () => {
+  if (isTypographyOpen.value) {
     isTypographyOpen.value = false;
   }
-}
+});
+
+useEventListener(typeof window !== "undefined" ? window : null, "keydown", handleKeyDown);
 
 function cancelNotePopover() {
   isNotePopoverOpen.value = false;
@@ -297,34 +296,18 @@ onMounted(async () => {
     // handled by store
   }
 
-  if (import.meta.client) {
-    window.addEventListener('click', handleTypographyClickOutside);
-  }
 
-  // Attach global keyboard listener for Shift + Left/Right and Escape
-  window.addEventListener("keydown", handleKeyDown);
 });
 
 const isCuratingCurrentSlice = ref(false);
 const curationError = ref<string | null>(null);
 const isViewingRawTemporarily = ref(false);
 const prefetchedChunkOrders = ref<Set<number>>(new Set());
-let prefetchTimeoutId: ReturnType<typeof setTimeout> | null = null;
-
-function cancelPendingPrefetch() {
-  if (prefetchTimeoutId) {
-    clearTimeout(prefetchTimeoutId);
-    prefetchTimeoutId = null;
-  }
-}
-
-function scheduleLookaheadPrefetch(delayMs = 2500) {
-  cancelPendingPrefetch();
-  prefetchTimeoutId = setTimeout(() => {
-    prefetchTimeoutId = null;
-    triggerLookaheadPrefetch();
-  }, delayMs);
-}
+const { start: scheduleLookaheadPrefetch, stop: cancelPendingPrefetch } = useTimeoutFn(
+  triggerLookaheadPrefetch,
+  2500,
+  { immediate: false }
+);
 
 async function checkAndCurateSlice() {
   const chunk = currentChunk.value;
@@ -441,10 +424,7 @@ onUnmounted(() => {
     clearTimeout(selectionDebounceTimer);
     selectionDebounceTimer = null;
   }
-  window.removeEventListener("keydown", handleKeyDown);
-  if (import.meta.client) {
-    window.removeEventListener('click', handleTypographyClickOutside)
-  }
+
 });
 
 function handleKeyDown(e: KeyboardEvent) {

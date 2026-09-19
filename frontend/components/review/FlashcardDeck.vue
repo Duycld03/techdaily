@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import { Layers, Eye, EyeOff, Sparkles, BookOpen, HelpCircle } from 'lucide-vue-next'
 import type { ReviewCard } from '~/stores/useReviewStore'
 import Sm2GradingButtons from '~/components/review/Sm2GradingButtons.vue'
@@ -135,17 +136,7 @@ function handleKeyDown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
-  if (typeof window !== 'undefined') {
-    window.addEventListener('keydown', handleKeyDown)
-  }
-})
-
-onUnmounted(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('keydown', handleKeyDown)
-  }
-})
+useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handleKeyDown)
 </script>
 
 <template>

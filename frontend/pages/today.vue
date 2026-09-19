@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, computed } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
+import { onClickOutside, useTimeoutFn } from "@vueuse/core";
 import {
   BookOpen,
   Terminal,
@@ -35,28 +36,17 @@ const isChallengeDockOpen = ref(true);
 
 const chunks = computed(() => libraryStore.selectedBook?.chunks || []);
 
-function handleClickOutside(event: MouseEvent) {
-  if (bookMenuRef.value && !bookMenuRef.value.contains(event.target as Node)) {
+onClickOutside(bookMenuRef, () => {
+  if (isBookMenuOpen.value) {
     isBookMenuOpen.value = false;
   }
-}
+});
 
-let nextDayPrefetchTimer: ReturnType<typeof setTimeout> | null = null;
-
-function cancelPendingNextDayPrefetch() {
-  if (nextDayPrefetchTimer) {
-    clearTimeout(nextDayPrefetchTimer);
-    nextDayPrefetchTimer = null;
-  }
-}
-
-function scheduleNextDayPrefetch(delayMs = 2500) {
-  cancelPendingNextDayPrefetch();
-  nextDayPrefetchTimer = setTimeout(() => {
-    nextDayPrefetchTimer = null;
-    triggerNextDayPrefetch();
-  }, delayMs);
-}
+const { start: scheduleNextDayPrefetch, stop: cancelPendingNextDayPrefetch } = useTimeoutFn(
+  triggerNextDayPrefetch,
+  2500,
+  { immediate: false }
+);
 
 function triggerNextDayPrefetch() {
   if (!focusStore.data?.pacer) return;
@@ -131,7 +121,7 @@ async function handleSwitchBook(bookId: string) {
 }
 
 onMounted(async () => {
-  document.addEventListener("click", handleClickOutside);
+
   const queryChunk = route.query.chunkOrder
     ? parseInt(route.query.chunkOrder as string, 10)
     : undefined;
@@ -148,10 +138,7 @@ onMounted(async () => {
   scheduleNextDayPrefetch();
 });
 
-onUnmounted(() => {
-  cancelPendingNextDayPrefetch();
-  document.removeEventListener("click", handleClickOutside);
-});
+
 
 watch(locale, (newLocale) => {
   cancelPendingNextDayPrefetch();

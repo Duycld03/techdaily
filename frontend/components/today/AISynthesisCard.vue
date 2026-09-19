@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
+import { useIntervalFn } from '@vueuse/core'
 import { Sparkles, RefreshCw, AlertCircle, Cpu } from 'lucide-vue-next'
 
 const props = defineProps<{
@@ -12,24 +13,18 @@ const emit = defineEmits<{
 
 const elapsedSeconds = ref(0)
 const isTimedOut = ref(false)
-let timer: ReturnType<typeof setInterval> | null = null
 
-onMounted(() => {
-  timer = setInterval(() => {
-    elapsedSeconds.value++
-    if (elapsedSeconds.value >= 6) {
-      isTimedOut.value = true
-    }
-  }, 1000)
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
+const { pause, resume } = useIntervalFn(() => {
+  elapsedSeconds.value++
+  if (elapsedSeconds.value >= 6) {
+    isTimedOut.value = true
+  }
+}, 1000)
 
 function handleRetry() {
   elapsedSeconds.value = 0
   isTimedOut.value = false
+  resume()
   emit('retry')
 }
 </script>

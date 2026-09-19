@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
+import { onClickOutside, useEventListener } from '@vueuse/core'
 import { BookOpen, Clock, Tag, Sparkles, Copy, Check, Highlighter } from 'lucide-vue-next'
 import type { Topic, DocumentChunk } from '~/stores/useDailyFocusStore'
 import { useNotesStore } from '~/stores/useNotesStore'
@@ -40,6 +41,15 @@ function handleKeyDown(e: KeyboardEvent) {
     isTypographyOpen.value = false
   }
 }
+
+onClickOutside(typographyDropdownRef, () => {
+  if (isTypographyOpen.value) {
+    isTypographyOpen.value = false
+  }
+})
+
+useEventListener(typeof document !== 'undefined' ? document : null, 'click', handleDocumentClick)
+useEventListener(typeof document !== 'undefined' ? document : null, 'keydown', handleKeyDown)
 
 const cleanSummary = computed(() => {
   if (!props.topic.summary) return ''
@@ -153,13 +163,6 @@ function handleDocumentClick(e: MouseEvent) {
   if (!target.closest('.floating-selection-menu') && !target.closest('.doc-reader-content')) {
     floatingMenu.value.visible = false
   }
-  if (
-    isTypographyOpen.value &&
-    typographyDropdownRef.value &&
-    !typographyDropdownRef.value.contains(target)
-  ) {
-    isTypographyOpen.value = false
-  }
 }
 
 function triggerExplainWithAi() {
@@ -201,18 +204,11 @@ async function handleHighlightSelection() {
   }
 }
 
-onMounted(() => {
-  document.addEventListener('click', handleDocumentClick)
-  document.addEventListener('keydown', handleKeyDown)
-})
-
 onUnmounted(() => {
   if (selectionDebounceTimer) {
     clearTimeout(selectionDebounceTimer)
     selectionDebounceTimer = null
   }
-  document.removeEventListener('click', handleDocumentClick)
-  document.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 

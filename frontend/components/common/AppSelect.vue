@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, type Component } from 'vue'
+import { ref, computed, nextTick, type Component } from 'vue'
+import { onClickOutside, useEventListener } from '@vueuse/core'
 import { ChevronDown, Check } from 'lucide-vue-next'
 
 export interface SelectOption<T = string | number> {
@@ -87,10 +88,7 @@ function openDropdown() {
   isOpen.value = true
   const selectedIdx = props.options.findIndex(opt => String(opt.value) === String(props.modelValue))
   highlightedIndex.value = selectedIdx >= 0 ? selectedIdx : 0
-  if (typeof window !== 'undefined') {
-    window.addEventListener('scroll', handleScroll, true)
-    window.addEventListener('resize', updateFloatingPosition)
-  }
+
   nextTick(() => {
     updateFloatingPosition()
     scrollHighlightedIntoView()
@@ -101,10 +99,7 @@ function closeDropdown(returnFocus = true) {
   if (!isOpen.value) return
   isOpen.value = false
   highlightedIndex.value = -1
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('scroll', handleScroll, true)
-    window.removeEventListener('resize', updateFloatingPosition)
-  }
+
   if (returnFocus) {
     triggerRef.value?.focus()
   }
@@ -220,25 +215,24 @@ function moveHighlight(direction: number) {
   })
 }
 
-function handleClickOutside(event: MouseEvent) {
+onClickOutside(listboxRef, () => {
+  if (isOpen.value) closeDropdown(false)
+}, { ignore: [triggerRef] })
+
+useEventListener(typeof window !== 'undefined' ? window : null, 'scroll', handleScroll, { capture: true, passive: true })
+useEventListener(typeof window !== 'undefined' ? window : null, 'resize', () => {
+  if (isOpen.value) {
+    updateFloatingPosition()
+  }
+}, { passive: true })
+
+useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (event: MouseEvent) => {
   if (!isOpen.value) return
   const target = event.target as Node
   const isInsideTrigger = triggerRef.value?.contains(target)
   const isInsideListbox = listboxRef.value?.contains(target)
   if (!isInsideTrigger && !isInsideListbox) {
     closeDropdown(false)
-  }
-}
-
-onMounted(() => {
-  if (typeof window !== 'undefined') {
-    window.addEventListener('mousedown', handleClickOutside)
-  }
-})
-
-onUnmounted(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('mousedown', handleClickOutside)
   }
 })
 </script>

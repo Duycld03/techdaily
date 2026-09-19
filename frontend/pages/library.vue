@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useIntervalFn } from '@vueuse/core'
 import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb } from 'lucide-vue-next'
 import BasePagination from '~/components/common/BasePagination.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
@@ -47,7 +48,7 @@ const isUploadingPdf = ref(false)
 const isProcessingPdf = ref(false)
 const pdfProgress = ref(0)
 const pdfStatusMessage = ref('')
-let pollInterval: ReturnType<typeof setInterval> | null = null
+const pollingBookId = ref<string | null>(null)
 
 // Tab 3: URL Crawler state
 const crawlUrlInput = ref('')
@@ -247,34 +248,71 @@ function getStatusMessage(book: any): string {
   return msg
 }
 
-let backgroundPollTimer: ReturnType<typeof setInterval> | null = null
+const { pause: stopBackgroundPolling, resume: startBackgroundPolling } = useIntervalFn(
+  async () => {
+    await libraryStore.fetchBooks({
+      category: selectedCategory.value,
+      search: searchQuery.value,
+      page: libraryStore.currentPage,
+      pageSize: libraryStore.pageSize
+    })
+    const stillActive = libraryStore.books.some(
+      b => b.status === 'Processing' || (b.status as any) === 1
+    )
+    if (!stillActive) {
+      stopBackgroundPolling()
+    }
+  },
+  2500,
+  { immediate: false }
+)
 
 function checkBackgroundPolling() {
-  if (backgroundPollTimer) {
-    clearInterval(backgroundPollTimer)
-    backgroundPollTimer = null
-  }
+  stopBackgroundPolling()
   const hasInProgressBook = libraryStore.books.some(
     b => b.status === 'Processing' || (b.status as any) === 1
   )
   if (hasInProgressBook) {
-    backgroundPollTimer = setInterval(async () => {
-      await libraryStore.fetchBooks({
-        category: selectedCategory.value,
-        search: searchQuery.value,
-        page: libraryStore.currentPage,
-        pageSize: libraryStore.pageSize
-      })
-      const stillActive = libraryStore.books.some(
-        b => b.status === 'Processing' || (b.status as any) === 1
-      )
-      if (!stillActive && backgroundPollTimer) {
-        clearInterval(backgroundPollTimer)
-        backgroundPollTimer = null
-      }
-    }, 2500)
+    startBackgroundPolling()
   }
 }
+
+const { pause: stopPdfPolling, resume: startPdfPolling } = useIntervalFn(
+  async () => {
+    if (!pollingBookId.value) {
+      stopPdfPolling()
+      return
+    }
+    try {
+      const status = await libraryStore.getBookStatus(pollingBookId.value)
+      pdfProgress.value = Math.max(5, status.progressPercentage)
+      if (status.statusMessage) {
+        pdfStatusMessage.value = status.statusMessage
+      }
+
+      if (status.status === 'Ready' || (status.status as any) === 2 || status.statusMessage === 'Ready' || status.progressPercentage === 100) {
+        stopPdfPolling()
+        pollingBookId.value = null
+        isProcessingPdf.value = false
+        pdfProgress.value = 100
+        toast.success(t('library.toast_upload_success'))
+        isImportModalOpen.value = false
+        pdfFile.value = null
+        pdfTitle.value = ''
+        await libraryStore.fetchBooks(selectedCategory.value ?? undefined, searchQuery.value)
+      } else if (status.status === 'Failed' || (status.status as any) === 3) {
+        stopPdfPolling()
+        pollingBookId.value = null
+        isProcessingPdf.value = false
+        toast.error(status.errorMessage || t('library.processing_failed'))
+      }
+    } catch {
+      // keep polling
+    }
+  },
+  1500,
+  { immediate: false }
+)
 
 onMounted(async () => {
   const queryPage = route.query.page ? parseInt(route.query.page as string, 10) : 1
@@ -292,16 +330,7 @@ onMounted(async () => {
   checkBackgroundPolling()
   loadBookmarks()
 })
-onUnmounted(() => {
-  if (pollInterval) {
-    clearInterval(pollInterval)
-    pollInterval = null
-  }
-  if (backgroundPollTimer) {
-    clearInterval(backgroundPollTimer)
-    backgroundPollTimer = null
-  }
-})
+
 
 function loadBookmarks() {
   if (typeof window === 'undefined') return
@@ -438,34 +467,8 @@ async function handlePdfUpload() {
     isUploadingPdf.value = false
 
     if (book?.id) {
-      pollInterval = setInterval(async () => {
-        try {
-          const status = await libraryStore.getBookStatus(book.id)
-          pdfProgress.value = Math.max(5, status.progressPercentage)
-          if (status.statusMessage) {
-            pdfStatusMessage.value = status.statusMessage
-          }
-
-          if (status.status === 'Ready' || (status.status as any) === 2 || status.statusMessage === 'Ready' || status.progressPercentage === 100) {
-            if (pollInterval) clearInterval(pollInterval)
-            pollInterval = null
-            isProcessingPdf.value = false
-            pdfProgress.value = 100
-            toast.success(t('library.toast_upload_success'))
-            isImportModalOpen.value = false
-            pdfFile.value = null
-            pdfTitle.value = ''
-            await libraryStore.fetchBooks(selectedCategory.value ?? undefined, searchQuery.value)
-          } else if (status.status === 'Failed' || (status.status as any) === 3) {
-            if (pollInterval) clearInterval(pollInterval)
-            pollInterval = null
-            isProcessingPdf.value = false
-            toast.error(status.errorMessage || t('library.processing_failed'))
-          }
-        } catch {
-          // keep polling
-        }
-      }, 1500)
+      pollingBookId.value = book.id
+      startPdfPolling()
     } else {
       toast.success(t('library.toast_upload_success'))
       pdfFile.value = null
@@ -474,8 +477,8 @@ async function handlePdfUpload() {
       isProcessingPdf.value = false
     }
   } catch (err: any) {
-    if (pollInterval) clearInterval(pollInterval)
-    pollInterval = null
+    stopPdfPolling()
+    pollingBookId.value = null
     isProcessingPdf.value = false
     toast.error(formatError(err, 'library.toast_upload_failed'))
   } finally {

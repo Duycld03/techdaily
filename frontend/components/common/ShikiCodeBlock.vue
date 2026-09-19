@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
+import { useTimeoutFn } from "@vueuse/core";
 import { Copy, Check } from "lucide-vue-next";
 import {
   highlightCode,
@@ -55,15 +56,18 @@ watch(
 );
 
 const copied = ref(false);
+const { start: startResetTimer } = useTimeoutFn(() => {
+  copied.value = false;
+}, 2000, { immediate: false });
 
 async function copyCode() {
   if (!props.code) return;
   try {
-    await navigator.clipboard.writeText(props.code);
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(props.code);
+    }
     copied.value = true;
-    setTimeout(() => {
-      copied.value = false;
-    }, 2000);
+    startResetTimer();
   } catch {
     // Fallback
   }

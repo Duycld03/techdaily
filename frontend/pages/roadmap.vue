@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
+import { onClickOutside } from '@vueuse/core'
 import { useRouter, useRoute } from 'vue-router'
 import {
   Map as MapIcon,
@@ -51,17 +52,13 @@ async function loadBookDetails(bookId: string) {
   }
 }
 
-function onDocumentClick(e: MouseEvent) {
-  const target = e.target as Node | null
-  if (trackMenuRef.value && target && !trackMenuRef.value.contains(target)) {
+onClickOutside(trackMenuRef, () => {
+  if (isTrackMenuOpen.value) {
     isTrackMenuOpen.value = false
   }
-}
+})
 
 onMounted(async () => {
-  if (typeof window !== 'undefined') {
-    window.addEventListener('click', onDocumentClick)
-  }
 
   await Promise.all([
     roadmapStore.fetchRoadmap(),
@@ -84,11 +81,7 @@ onMounted(async () => {
   }
 })
 
-onUnmounted(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('click', onDocumentClick)
-  }
-})
+
 
 watch(
   () => focusStore.data?.pacer?.bookId,

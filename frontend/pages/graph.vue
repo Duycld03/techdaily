@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, defineAsyncComponent } from 'vue'
+import { ref, shallowRef, onMounted, defineAsyncComponent } from 'vue'
 import type { Core } from 'cytoscape'
 import {
   Network,
@@ -18,7 +18,7 @@ const GraphCanvas3D = defineAsyncComponent(() => import('~/components/graph/Grap
 const store = useKnowledgeGraphStore()
 const canvasRef = ref<InstanceType<typeof GraphCanvas> | null>(null)
 const canvas3DRef = ref<{ fitScreen: () => void } | null>(null)
-const cyInstance = ref<Core | null>(null)
+const cyInstance = shallowRef<Core | null>(null)
 
 function onCyReady(cy: Core) {
   cyInstance.value = cy

@@ -18,7 +18,8 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@nuxtjs/color-mode',
     '@nuxtjs/i18n',
-    '@pinia/nuxt'
+    '@pinia/nuxt',
+    '@vueuse/nuxt'
   ],
 
   colorMode: {

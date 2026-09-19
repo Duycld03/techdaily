@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useIntervalFn } from '@vueuse/core'
 import { BookOpen, Lock, Mail, User, ArrowRight } from 'lucide-vue-next'
 import { useApiError } from '~/composables/useApiError'
 
@@ -34,37 +35,41 @@ watch(() => authStore.isLoggedIn, (loggedIn) => {
   }
 })
 
+let googleInitAttempts = 0
+const { pause: stopGooglePoll, resume: startGooglePoll } = useIntervalFn(() => {
+  googleInitAttempts++
+  if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
+    stopGooglePoll()
+    try {
+      ;(window as any).google.accounts.id.initialize({
+        client_id: config.public.googleClientId,
+        callback: handleGoogleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true
+      })
+      const btnContainer = googleBtnContainer.value || document.getElementById('google-signin-btn')
+      if (btnContainer) {
+        ;(window as any).google.accounts.id.renderButton(btnContainer, {
+          theme: colorMode.value === 'dark' ? 'filled_black' : 'outline',
+          size: 'large',
+          width: '100%',
+          text: 'continue_with',
+          shape: 'rectangular',
+          logo_alignment: 'left'
+        })
+      }
+    } catch (e) {
+      console.warn('Google Sign-In initialization:', e)
+    }
+  } else if (googleInitAttempts >= 50) {
+    stopGooglePoll()
+  }
+}, 200, { immediate: false })
+
 function initGoogleButton() {
   if (typeof window === 'undefined') return
-
-  const interval = setInterval(() => {
-    if ((window as any).google?.accounts?.id) {
-      clearInterval(interval)
-      try {
-        ;(window as any).google.accounts.id.initialize({
-          client_id: config.public.googleClientId,
-          callback: handleGoogleCredentialResponse,
-          auto_select: false,
-          cancel_on_tap_outside: true
-        })
-        const btnContainer = googleBtnContainer.value || document.getElementById('google-signin-btn')
-        if (btnContainer) {
-          ;(window as any).google.accounts.id.renderButton(btnContainer, {
-            theme: colorMode.value === 'dark' ? 'filled_black' : 'outline',
-            size: 'large',
-            width: '100%',
-            text: 'continue_with',
-            shape: 'rectangular',
-            logo_alignment: 'left'
-          })
-        }
-      } catch (e) {
-        console.warn('Google Sign-In initialization:', e)
-      }
-    }
-  }, 200)
-
-  setTimeout(() => clearInterval(interval), 10000)
+  googleInitAttempts = 0
+  startGooglePoll()
 }
 
 async function handleGoogleCredentialResponse(response: any) {

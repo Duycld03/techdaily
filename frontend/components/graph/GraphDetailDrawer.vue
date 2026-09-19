@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount } from 'vue'
+import { computed } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import {
   X,
   BookOpen,
@@ -32,13 +33,7 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
-  window.addEventListener('keydown', onKeydown)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onKeydown)
-})
+useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', onKeydown)
 
 // Node type detection
 const nodeType = computed(() => node.value?.type?.toLowerCase() || '')

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import { useCommandPalette } from '~/composables/useCommandPalette'
 import {
   Search,
@@ -218,18 +219,11 @@ watch(filteredItems, () => {
   selectedIndex.value = 0
 })
 
-onMounted(() => {
-  if (typeof window !== 'undefined') {
-    window.addEventListener('keydown', handleKeydown)
-  }
-})
+useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handleKeydown)
 
 onUnmounted(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('keydown', handleKeydown)
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = ''
-    }
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = ''
   }
 })
 </script>

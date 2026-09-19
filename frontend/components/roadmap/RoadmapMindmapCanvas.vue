@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useEventListener, useDebounceFn } from '@vueuse/core'
 import { useRouter } from 'vue-router'
 import {
   ZoomIn,
@@ -143,13 +144,12 @@ function collapseAll() {
 // In-canvas search state & filtering
 const searchQuery = ref('')
 const debouncedSearch = ref('')
-let searchTimeout: ReturnType<typeof setTimeout> | null = null
+const applyDebouncedSearch = useDebounceFn((newVal: string) => {
+  debouncedSearch.value = newVal.trim().toLowerCase()
+}, 150)
 
 watch(searchQuery, (newVal) => {
-  if (searchTimeout) clearTimeout(searchTimeout)
-  searchTimeout = setTimeout(() => {
-    debouncedSearch.value = newVal.trim().toLowerCase()
-  }, 150)
+  applyDebouncedSearch(newVal)
 })
 
 const matchingNodeIds = computed<Set<string>>(() => {
@@ -230,10 +230,6 @@ function startPan(e: MouseEvent) {
     x: e.clientX - pan.value.x,
     y: e.clientY - pan.value.y
   }
-  if (typeof window !== 'undefined') {
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', endPan)
-  }
 }
 
 function onMouseMove(e: MouseEvent) {
@@ -246,10 +242,6 @@ function onMouseMove(e: MouseEvent) {
 
 function endPan() {
   isPanning.value = false
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('mousemove', onMouseMove)
-    window.removeEventListener('mouseup', endPan)
-  }
 }
 
 // Touch gesture pan support
@@ -261,11 +253,6 @@ function onTouchStart(e: TouchEvent) {
     dragStart.value = {
       x: e.touches[0].clientX - pan.value.x,
       y: e.touches[0].clientY - pan.value.y
-    }
-    if (typeof window !== 'undefined') {
-      window.addEventListener('touchmove', onTouchMove, { passive: false })
-      window.addEventListener('touchend', onTouchEnd)
-      window.addEventListener('touchcancel', onTouchEnd)
     }
   }
 }
@@ -280,22 +267,15 @@ function onTouchMove(e: TouchEvent) {
 
 function onTouchEnd() {
   isPanning.value = false
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('touchmove', onTouchMove)
-    window.removeEventListener('touchend', onTouchEnd)
-    window.removeEventListener('touchcancel', onTouchEnd)
-  }
 }
 
-onBeforeUnmount(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('mousemove', onMouseMove)
-    window.removeEventListener('mouseup', endPan)
-    window.removeEventListener('touchmove', onTouchMove)
-    window.removeEventListener('touchend', onTouchEnd)
-    window.removeEventListener('touchcancel', onTouchEnd)
-  }
-})
+const windowTarget = typeof window !== 'undefined' ? window : null
+useEventListener(windowTarget, 'mousemove', onMouseMove)
+useEventListener(windowTarget, 'mouseup', endPan)
+useEventListener(windowTarget, 'touchmove', onTouchMove, { passive: false })
+useEventListener(windowTarget, 'touchend', onTouchEnd)
+useEventListener(windowTarget, 'touchcancel', onTouchEnd)
+
 // Fit to screen calculation
 function focusActiveNode() {
   const clientWidth = containerRef.value?.clientWidth || 1000

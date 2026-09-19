@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import cytoscape, { type Core, type EventObject, type Stylesheet, type CoseLayoutOptions } from 'cytoscape'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
 
@@ -471,11 +472,11 @@ function initCytoscape() {
 
 onMounted(() => {
   initCytoscape()
-  window.addEventListener('resize', handleResize)
 })
 
+useEventListener(typeof window !== 'undefined' ? window : null, 'resize', handleResize)
+
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize)
   if (cy) {
     cy.destroy()
     cy = null

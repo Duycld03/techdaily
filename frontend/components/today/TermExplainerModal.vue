@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useTimeoutFn } from "@vueuse/core";
 import { Sparkles, X, Check, Copy, AlertCircle, RotateCcw } from "lucide-vue-next";
 
 const props = withDefaults(
@@ -32,7 +33,9 @@ const errorMessage = ref<string | null>(null);
 const isFromCache = ref(false);
 const isLoading = ref(false);
 const copied = ref(false);
-
+const { start: startResetTimer } = useTimeoutFn(() => {
+  copied.value = false;
+}, 2000, { immediate: false });
 const renderedExplanation = computed(() => {
   const _ = isHighlighterReady.value;
   if (!explanation.value) return "";
@@ -64,15 +67,16 @@ onMounted(() => {
   loadExplanation();
 });
 
-function copyText() {
+async function copyText() {
   if (explanation.value && !errorMessage.value) {
-    navigator.clipboard.writeText(explanation.value);
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(explanation.value);
+    }
     copied.value = true;
-    setTimeout(() => (copied.value = false), 2000);
+    startResetTimer();
   }
 }
 </script>
-
 <template>
   <div
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"

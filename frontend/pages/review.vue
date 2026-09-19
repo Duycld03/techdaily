@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useEventListener, useDebounceFn } from '@vueuse/core'
 import {
   CheckCircle,
   Sparkles,
@@ -117,12 +118,12 @@ function onDeckPageChange(newPage: number) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }
-let searchTimer: ReturnType<typeof setTimeout> | null = null
+const debouncedFetchDeck = useDebounceFn(() => {
+  fetchDeck(1)
+}, 300)
+
 watch(searchQuery, () => {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    fetchDeck(1)
-  }, 300)
+  debouncedFetchDeck()
 })
 
 function setQuickFilter(filter: 'all' | 'due' | 'mastered') {
@@ -293,7 +294,7 @@ async function confirmDeleteCard() {
 }
 
 onMounted(() => {
-  window.addEventListener('keydown', handleKeydown)
+
   reviewStore.fetchReviewDeck()
 
   if (route.query.tab === 'management') {
@@ -304,9 +305,8 @@ onMounted(() => {
   fetchDeck(initialPage)
 })
 
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
+
+useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handleKeydown)
 </script>
 
 <template>

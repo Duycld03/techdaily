@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Scalar.AspNetCore;
 using TechDaily.Api.Endpoints;
 using TechDaily.Api.Middleware;
 using TechDaily.Application;
@@ -119,38 +120,26 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
+builder.Services.AddOpenApi(options =>
 {
-    options.SwaggerDoc("v1", new()
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
     {
-        Title = "TechDaily API",
-        Version = "v1",
-        Description = "Daily Senior Engineering & Interview Drill Platform API"
-    });
+        document.Info.Title = "TechDaily API";
+        document.Info.Version = "v1";
+        document.Info.Description = "Daily Senior Engineering & Interview Drill Platform API";
 
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
+        var scheme = new OpenApiSecurityScheme
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "JWT Authorization header using the Bearer scheme. Enter your token below:"
+        };
+
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes.Add("Bearer", scheme);
+
+        return Task.CompletedTask;
     });
 });
 
@@ -294,8 +283,16 @@ app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "TechDaily API v1"));
+    app.MapOpenApi();
+    app.MapScalarApiReference(options =>
+    {
+        options.WithTitle("TechDaily API")
+               .WithTheme(ScalarTheme.Moon)
+               .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+    });
+
+    app.MapGet("/swagger", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
+    app.MapGet("/swagger/index.html", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
 }
 
 app.UseCors("AllowFrontend");
