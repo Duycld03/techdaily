@@ -261,13 +261,13 @@ The `/quiz` route SHALL implement the **Dev-Learning Studio** visual language an
    - The page header SHALL feature a clean, minimalist studio presentation with an icon tile (`p-2.5 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-600 dark:text-brand-400`), high-contrast title (`quiz.title`), and localized subtitle.
    - The header SHALL strictly omit decorative pulse halos, glowing badge rings, or distracting gradient background overlays.
 
-3. **Stable Top-Aligned 50/50 Bento Generation Studio**:
-   - When the `generate` tab is active, the generator interface SHALL render as an equal 50/50 2-column Bento grid on desktop viewports with top alignment (`grid grid-cols-1 lg:grid-cols-2 gap-6 items-start`):
-     - **Topic & Context Hub (Column 1 - 50% width)**: A `.glass-card` container housing the custom topic text input, context-aware quick topic chips, and the grounded-in-book toggle card with `AppSelect` book dropdown.
+3. **Stable Dynamic-Aligned 50/50 Bento Generation Studio with Initial Equal Height**:
+   - When the `generate` tab is active, the generator interface SHALL render as an equal 50/50 2-column Bento grid on desktop viewports (`grid grid-cols-1 lg:grid-cols-2 gap-6`):
+     - **Topic & Context Hub (Column 1 - 50% width)**: A `.glass-card` container organized with flex column distribution (`flex flex-col justify-between`), housing the custom topic text input and context-aware quick topic chips at the top, and anchoring the grounded-in-book toggle card with `AppSelect` book dropdown at the bottom.
      - **Seniority & Action Hub (Column 2 - 50% width)**: A `.glass-card` container organizing the $2 \times 2$ seniority level cards, 3-tier question count segmented pills, and primary generation trigger button.
-   - Toggling the book-grounded mode (`isGrounded`) and expanding the book selector dropdown SHALL expand only the Topic & Context Hub vertically and SHALL NOT force vertical stretching or downward displacement of the primary generation button in the sibling Action Hub.
+   - **Initial Equal Height Baseline**: When "Luyện Đề Theo Sách" is in its default unselected state (`!isGrounded`), the grid SHALL apply `items-stretch` so both Bento cards share the exact same top and bottom baseline (`ngang nhau`).
+   - **Single-Side Downward Expansion**: Toggling the book-grounded mode (`isGrounded`) SHALL switch grid alignment to `items-start`, expanding only the Topic & Context Hub vertically and never forcing vertical stretching or downward displacement of the primary generation button in the sibling Action Hub.
    - On mobile and tablet viewports (<1024px), the layout SHALL gracefully stack into a single column with consistent vertical rhythm.
-
 4. **Context-Aware Dynamic Topic Suggestions & Safe Fallback**:
    - The suggested topic chips SHALL dynamically prioritize and adapt to user learning context rather than remaining hardcoded to static strings:
      - Prioritize active/uploaded book topics from `libraryStore.books` when books exist in the user's library.
@@ -318,6 +318,10 @@ The `/quiz` route SHALL implement the **Dev-Learning Studio** visual language an
 - **WHEN** user navigates to `/quiz` with the `generate` tab active on a desktop screen (>=1024px)
 - **THEN** the interface renders an equal 50/50 2-column Bento Grid separating topic/source configuration on the left from seniority/action controls on the right
 - **AND** both columns render with balanced vertical height within a `max-w-6xl` studio container.
+#### Scenario: Equal card height in initial unselected state
+- **WHEN** user views the quiz generation interface with "Luyện đề theo sách" in its default unselected state
+- **THEN** both the Topic & Context card and the Seniority & Action card render with identical top and bottom baselines via `items-stretch`
+- **AND** the book toggle card sits anchored at the bottom edge of the left card matching the right card's bottom edge.
 
 #### Scenario: User toggles book-grounded generation mode without button displacement
 - **WHEN** user toggles "Luyện đề theo sách" (`isGrounded`) on a desktop screen (>=1024px)
