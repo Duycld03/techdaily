@@ -64,4 +64,44 @@ describe('ConcentricMetricCard.vue', () => {
     expect(wrapper.text()).toContain('100%')
     expect(wrapper.text()).not.toContain('NaN')
   })
+
+  it('renders exactly one review deck navigation link in the footer without duplicate header link', () => {
+    const wrapper = mount(ConcentricMetricCard, {
+      props: {
+        dueCards: 0
+      },
+      global: {
+        stubs: {
+          NuxtLink: {
+            template: '<a :href="to" class="nuxt-link-stub"><slot /></a>',
+            props: ['to']
+          }
+        }
+      }
+    })
+
+    const links = wrapper.findAll('a[href="/review"]')
+    expect(links.length).toBe(1)
+    expect(links[0]?.text()).toContain('dashboard.view_deck')
+  })
+
+  it('renders review_now action button in footer when cards are due', () => {
+    const wrapper = mount(ConcentricMetricCard, {
+      props: {
+        dueCards: 5
+      },
+      global: {
+        stubs: {
+          NuxtLink: {
+            template: '<a :href="to" class="nuxt-link-stub"><slot /></a>',
+            props: ['to']
+          }
+        }
+      }
+    })
+
+    const links = wrapper.findAll('a[href="/review"]')
+    expect(links.length).toBe(1)
+    expect(links[0]?.text()).toContain('dashboard.review_now')
+  })
 })

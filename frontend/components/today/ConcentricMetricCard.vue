@@ -65,14 +65,6 @@ const retentionPercentage = computed(() => {
           </p>
         </div>
       </div>
-
-      <NuxtLink
-        to="/review"
-        class="text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 transition-colors"
-      >
-        <span>{{ $t('dashboard.view_deck') }}</span>
-        <ArrowUpRight class="w-3.5 h-3.5" />
-      </NuxtLink>
     </div>
 
     <!-- Main Concentric Rings and Readout -->
