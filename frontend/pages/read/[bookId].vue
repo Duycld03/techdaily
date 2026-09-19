@@ -249,6 +249,14 @@ const renderedMarkdown = computed(() => {
     }
   }
 
+  // Key Takeaways deduplication: suppress trailing Key Takeaways section if structured takeaways are displayed in the callout
+  if (hasValidTakeaways.value) {
+    text = text.replace(
+      /\s*#{1,4}\s+Key\s+Takeaways\s*(?:\r?\n\s*[-*+]\s+[^\r\n]+)*\s*$/i,
+      ""
+    );
+  }
+
   return renderMarkdown(text, book.value?.authorOrSourceUrl);
 });
 
@@ -729,7 +737,7 @@ async function handleHighlightAndNote() {
                   @click="decreaseFontSize"
                   :disabled="!canDecreaseFontSize"
                   class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm"
-                  title="Smaller Font"
+                  :title="$t('reader.font_smaller')"
                 >
                   <span class="text-xs font-bold">A</span>
                   <span class="text-[10px] font-mono">−</span>
@@ -751,7 +759,7 @@ async function handleHighlightAndNote() {
                   @click="increaseFontSize"
                   :disabled="!canIncreaseFontSize"
                   class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm"
-                  title="Larger Font"
+                  :title="$t('reader.font_larger')"
                 >
                   <span class="text-sm font-black">A</span>
                   <span class="text-[10px] font-mono">+</span>
@@ -773,7 +781,7 @@ async function handleHighlightAndNote() {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
-                  Sans
+                  {{ $t('reader.font_sans') }}
                 </button>
                 <button
                   type="button"
@@ -785,7 +793,7 @@ async function handleHighlightAndNote() {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
-                  Serif
+                  {{ $t('reader.font_serif') }}
                 </button>
                 <button
                   type="button"
@@ -797,7 +805,7 @@ async function handleHighlightAndNote() {
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
-                  Mono
+                  {{ $t('reader.font_mono') }}
                 </button>
               </div>
             </div>
@@ -916,7 +924,7 @@ async function handleHighlightAndNote() {
             @click="goToPrevSlice"
             :disabled="activeChunkIndex <= 0"
             class="p-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            title="Previous Slice (Shift + ←)"
+            :title="$t('reader.prev_slice_hint')"
           >
             <ChevronLeft class="w-4 h-4" />
           </button>
@@ -924,7 +932,7 @@ async function handleHighlightAndNote() {
             @click="goToNextSlice"
             :disabled="activeChunkIndex >= totalChunks - 1"
             class="p-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            title="Next Slice (Shift + →)"
+            :title="$t('reader.next_slice_hint')"
           >
             <ChevronRight class="w-4 h-4" />
           </button>
@@ -1030,7 +1038,7 @@ async function handleHighlightAndNote() {
               <button
                 @click="isMobileTocOpen = false"
                 class="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors"
-                aria-label="Close contents"
+                :aria-label="$t('reader.close_toc')"
               >
                 <X class="w-5 h-5" />
               </button>
@@ -1105,7 +1113,7 @@ async function handleHighlightAndNote() {
           <div
             class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin"
           ></div>
-          <span class="text-sm">Loading document chapter...</span>
+          <span class="text-sm">{{ $t("reader.loading_chapter") }}</span>
         </div>
 
         <!-- JIT Curating State (Current Slice is uncurated & actively being formatted by AI) -->
@@ -1218,6 +1226,7 @@ async function handleHighlightAndNote() {
               <span
                 class="px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20"
               >
+                {{
                   $t("reader.slice_badge", {
                     current: currentChunk.chunkOrder,
                     total: totalChunks,
@@ -1257,12 +1266,12 @@ async function handleHighlightAndNote() {
           <!-- Key Takeaways Callout -->
           <div
             v-if="hasValidTakeaways"
-            class="p-4 sm:p-6 rounded-3xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-500/20 space-y-3"
+            class="p-4 sm:p-6 rounded-3xl bg-brand-50/50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 space-y-3"
           >
             <div
-              class="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider"
+              class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-900 dark:text-brand-300 uppercase tracking-wider"
             >
-              <Sparkles class="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <Sparkles class="w-4 h-4 text-brand-600 dark:text-brand-400" />
               <span>{{ $t("reader.key_takeaways") }}</span>
             </div>
             <ul class="space-y-2">
@@ -1272,7 +1281,7 @@ async function handleHighlightAndNote() {
                 class="text-sm md:text-lg text-slate-700 dark:text-slate-300 flex items-start gap-2.5 leading-relaxed"
               >
                 <span
-                  class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 shrink-0"
+                  class="w-1.5 h-1.5 rounded-full bg-brand-500 mt-2 shrink-0"
                 ></span>
                 <span>{{ takeaway }}</span>
               </li>

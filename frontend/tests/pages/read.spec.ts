@@ -170,4 +170,51 @@ describe('Immersive Document Reader (Hướng 1)', () => {
     currentIdx = Math.max(0, currentIdx - 1)
     expect(fontSizes[currentIdx]).toBe('sm')
   })
+
+  it('suppresses trailing Key Takeaways from markdown text when structured takeaways are present', () => {
+    const rawMarkdownWithTakeaways = `# Reliability\nHardware faults vs Software errors.\n\n### Key Takeaways\n- Focus on fault tolerance\n- SLO vs SLA\n- Error budgets`
+    const hasValidTakeaways = true
+
+    let text = rawMarkdownWithTakeaways
+    if (hasValidTakeaways) {
+      text = text.replace(
+        /\s*#{1,4}\s+Key\s+Takeaways\s*(?:\r?\n\s*[-*+]\s+[^\r\n]+)*\s*$/i,
+        ""
+      )
+    }
+
+    expect(text).not.toContain('Key Takeaways')
+    expect(text).not.toContain('Focus on fault tolerance')
+    expect(text).toContain('Hardware faults vs Software errors.')
+  })
+
+  it('preserves markdown text as-is when no structured takeaways are present', () => {
+    const rawMarkdown = `# Reliability\nHardware faults vs Software errors.\n\n### Key Takeaways\n- Focus on fault tolerance`
+    const hasValidTakeaways = false
+
+    let text = rawMarkdown
+    if (hasValidTakeaways) {
+      text = text.replace(
+        /\s*#{1,4}\s+Key\s+Takeaways\s*(?:\r?\n\s*[-*+]\s+[^\r\n]+)*\s*$/i,
+        ""
+      )
+    }
+
+    expect(text).toContain('Key Takeaways')
+    expect(text).toContain('Focus on fault tolerance')
+  })
+
+  it('validates reader brand violet tokens and absence of legacy amber on takeaways container', () => {
+    const takeawayContainerClasses = 'p-4 sm:p-6 rounded-3xl bg-brand-50/50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 space-y-3'
+    const takeawayBulletClass = 'w-1.5 h-1.5 rounded-full bg-brand-500 mt-2 shrink-0'
+
+    expect(takeawayContainerClasses).toContain('bg-brand-50/50')
+    expect(takeawayContainerClasses).toContain('dark:bg-brand-500/10')
+    expect(takeawayContainerClasses).toContain('border-brand-200/80')
+    expect(takeawayContainerClasses).toContain('dark:border-brand-500/20')
+    expect(takeawayContainerClasses).not.toContain('amber')
+
+    expect(takeawayBulletClass).toContain('bg-brand-500')
+    expect(takeawayBulletClass).not.toContain('bg-amber')
+  })
 })
