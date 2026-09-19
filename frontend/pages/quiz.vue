@@ -527,9 +527,15 @@ defineExpose({
     </div>
 
     <!-- TAB 1: GENERATE QUIZ (BENTO STUDIO) -->
-    <div v-if="quizStore.activeTab === 'generate'" class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+    <div
+      v-if="quizStore.activeTab === 'generate'"
+      :class="[
+        'grid grid-cols-1 lg:grid-cols-2 gap-6',
+        isGrounded ? 'items-start' : 'items-stretch'
+      ]"
+    >
       <!-- LEFT BENTO: Topic & Context Hub -->
-      <div class="glass-card p-5 sm:p-7 space-y-6">
+      <div class="glass-card p-5 sm:p-7 space-y-6 flex flex-col justify-between">
         <div class="space-y-6">
           <!-- Topic Selection -->
           <div class="space-y-2.5">

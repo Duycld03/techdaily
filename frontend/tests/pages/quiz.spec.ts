@@ -204,9 +204,11 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     // Standard studio container max-w-6xl
     expect(wrapper.find('.max-w-6xl').exists()).toBe(true)
 
-    // Balanced 50/50 Bento Grid with top alignment
+    // Balanced 50/50 Bento Grid with dynamic alignment (items-stretch when unselected)
     expect(wrapper.find('.lg\\:grid-cols-2').exists()).toBe(true)
-    expect(wrapper.find('.items-start').exists()).toBe(true)
+    expect(wrapper.find('.items-stretch').exists()).toBe(true)
+    expect(wrapper.find('.justify-between').exists()).toBe(true)
+
     // Generate CTA button
     const generateBtn = wrapper.find('[data-testid="generate-quiz-btn"]')
     expect(generateBtn.exists()).toBe(true)
