@@ -10,7 +10,7 @@ import {
   ChevronDown,
   ArrowUpRight,
   BookMarked,
-  Sparkles,
+  Loader2,
   List,
   Clock,
   X
@@ -336,8 +336,9 @@ watch(locale, (newLocale) => {
       <div
         class="w-12 h-12 rounded-2xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/60 flex items-center justify-center shadow-sm mb-4"
       >
-        <Sparkles
+        <Loader2
           class="w-6 h-6 text-brand-600 dark:text-brand-400 animate-spin"
+          :stroke-width="1.5"
         />
       </div>
       <p
