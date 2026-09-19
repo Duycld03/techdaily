@@ -34,12 +34,12 @@ const estimatedMinutes = computed(() => {
     <div class="relative z-10 space-y-2">
       <div class="flex items-center justify-between">
         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/15 text-white/95 backdrop-blur-sm border border-white/10">
-          <Sparkles class="w-3.5 h-3.5 text-amber-300" />
+          <Sparkles class="w-3.5 h-3.5 text-amber-300" :stroke-width="1.5" />
           <span>{{ $t('review.cards_due') }}</span>
         </span>
 
         <span v-if="dueCount > 0" class="inline-flex items-center gap-1 text-xs text-white/80 font-medium">
-          <Clock class="w-3.5 h-3.5" />
+          <Clock class="w-3.5 h-3.5" :stroke-width="1.5" />
           <span>~{{ estimatedMinutes }} {{ $t('roadmap.days') ? 'min' : 'min' }}</span>
         </span>
       </div>
@@ -68,7 +68,7 @@ const estimatedMinutes = computed(() => {
         @click="emit('startReview')"
         class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white text-brand-700 hover:bg-slate-50 active:scale-[0.99] font-bold text-xs sm:text-sm transition-all shadow-md shadow-black/10 hover:shadow-lg disabled:opacity-50 cursor-pointer"
       >
-        <Zap class="w-4 h-4 text-amber-500 fill-amber-500" />
+        <Zap class="w-4 h-4 text-brand-600 fill-brand-600 dark:text-brand-500 dark:fill-brand-500" :stroke-width="1.5" />
         <span>{{ $t('review.start_review_btn') }}</span>
       </button>
     </div>

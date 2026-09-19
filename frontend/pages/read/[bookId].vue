@@ -1129,8 +1129,9 @@ async function handleHighlightAndNote() {
           <div
             class="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 flex items-center justify-center shadow-sm"
           >
-            <Sparkles
+            <Loader2
               class="w-7 h-7 text-brand-600 dark:text-brand-400 animate-spin"
+              :stroke-width="1.5"
             />
           </div>
           <div class="space-y-2">
@@ -1271,7 +1272,7 @@ async function handleHighlightAndNote() {
             <div
               class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-900 dark:text-brand-300 uppercase tracking-wider"
             >
-              <Sparkles class="w-4 h-4 text-brand-600 dark:text-brand-400" />
+              <CheckCircle2 class="w-4 h-4 text-brand-600 dark:text-brand-400" :stroke-width="1.5" />
               <span>{{ $t("reader.key_takeaways") }}</span>
             </div>
             <ul class="space-y-2">

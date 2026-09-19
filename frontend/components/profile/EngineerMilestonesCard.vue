@@ -25,7 +25,7 @@ withDefaults(defineProps<Props>(), {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-        <Trophy class="w-5 h-5 text-amber-500 shrink-0" />
+        <Trophy class="w-5 h-5 text-amber-500 shrink-0" :stroke-width="1.5" />
         <span>{{ $t('profile.milestones_title') }}</span>
       </h3>
     </div>
@@ -33,10 +33,10 @@ withDefaults(defineProps<Props>(), {
     <!-- 4-Cell Full-Width Telemetry Bento Strip -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
       <!-- 1. Architecture Drills Completed -->
-      <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-violet-500/30">
-        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
-          <div class="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
-            <Target class="w-4 h-4 text-violet-500" />
+      <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-brand-500/30">
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+          <div class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-center shrink-0">
+            <Target class="w-4 h-4 text-brand-600 dark:text-brand-400" :stroke-width="1.5" />
           </div>
           <span class="truncate">{{ $t('profile.drills_completed') }}</span>
         </div>
@@ -52,10 +52,10 @@ withDefaults(defineProps<Props>(), {
       </div>
 
       <!-- 2. Interview Quiz Accuracy -->
-      <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-emerald-500/30">
-        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-          <div class="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-            <CheckCircle2 class="w-4 h-4 text-emerald-500" />
+      <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-brand-500/30">
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+          <div class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-center shrink-0">
+            <CheckCircle2 class="w-4 h-4 text-brand-600 dark:text-brand-400" :stroke-width="1.5" />
           </div>
           <span class="truncate">{{ $t('profile.quiz_accuracy') }}</span>
         </div>
@@ -71,10 +71,10 @@ withDefaults(defineProps<Props>(), {
       </div>
 
       <!-- 3. Memory Vault (SM-2 Spaced Repetition) -->
-      <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-sky-500/30">
-        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
-          <div class="w-7 h-7 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0">
-            <Layers class="w-4 h-4 text-sky-500" />
+      <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-brand-500/30">
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+          <div class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-center shrink-0">
+            <Layers class="w-4 h-4 text-brand-600 dark:text-brand-400" :stroke-width="1.5" />
           </div>
           <span class="truncate">{{ $t('profile.memory_vault') }}</span>
         </div>
@@ -90,10 +90,10 @@ withDefaults(defineProps<Props>(), {
       </div>
 
       <!-- 4. Architecture Source Highlights -->
-      <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-amber-500/30">
-        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-          <div class="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-            <Bookmark class="w-4 h-4 text-amber-500" />
+      <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-brand-500/30">
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+          <div class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-center shrink-0">
+            <Bookmark class="w-4 h-4 text-brand-600 dark:text-brand-400" :stroke-width="1.5" />
           </div>
           <span class="truncate">{{ $t('profile.highlights_vault') }}</span>
         </div>

@@ -421,7 +421,7 @@ defineExpose({
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-white/[0.08] pb-4">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
-          <HelpCircle class="w-5 h-5 sm:w-6 sm:h-6" />
+          <HelpCircle class="w-5 h-5 sm:w-6 sm:h-6" :stroke-width="1.5" />
         </div>
         <div class="space-y-0.5">
           <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -445,7 +445,7 @@ defineExpose({
               : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
-          <Sparkles class="w-4 h-4" />
+          <Sparkles class="w-4 h-4" :stroke-width="1.5" />
           {{ $t('quiz.tab_generate') }}
         </button>
 
@@ -461,7 +461,7 @@ defineExpose({
               : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
-          <Swords class="w-4 h-4" />
+          <Swords class="w-4 h-4" :stroke-width="1.5" />
           {{ $t('quiz.tab_arena') }}
           <span
             v-if="quizStore.questions.length > 0"
@@ -481,7 +481,7 @@ defineExpose({
               : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
-          <RotateCcw class="w-4 h-4" />
+          <RotateCcw class="w-4 h-4" :stroke-width="1.5" />
           {{ $t('quiz.tab_review_queue') }}
           <span
             v-if="quizStore.reviewTotalCount > 0"
@@ -501,7 +501,7 @@ defineExpose({
               : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
           ]"
         >
-          <BarChart3 class="w-4 h-4" />
+          <BarChart3 class="w-4 h-4" :stroke-width="1.5" />
           {{ $t('quiz.tab_stats') }}
         </button>
       </div>
@@ -561,7 +561,7 @@ defineExpose({
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
               <div class="w-8 h-8 rounded-xl bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
-                <BookOpen class="w-4 h-4" />
+                <BookOpen class="w-4 h-4" :stroke-width="1.5" />
               </div>
               <div>
                 <span class="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
@@ -694,8 +694,8 @@ defineExpose({
             :disabled="quizStore.isGenerating"
             class="w-full px-6 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-md shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all cursor-pointer whitespace-nowrap shrink-0"
           >
-            <Loader2 v-if="quizStore.isGenerating" class="w-5 h-5 animate-spin shrink-0" />
-            <Sparkles v-else class="w-5 h-5 shrink-0" />
+            <Loader2 v-if="quizStore.isGenerating" class="w-5 h-5 animate-spin shrink-0" :stroke-width="1.5" />
+            <Sparkles v-else class="w-5 h-5 shrink-0" :stroke-width="1.5" />
             <span>{{ quizStore.isGenerating ? $t('quiz.generating_loader') : $t('quiz.btn_generate') }}</span>
           </button>
         </div>
@@ -724,7 +724,7 @@ defineExpose({
               v-if="currentQ.isMastered"
               class="px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/30 flex items-center gap-1"
             >
-              <CheckCircle2 class="w-3.5 h-3.5" />
+              <CheckCircle2 class="w-3.5 h-3.5" :stroke-width="1.5" />
               Mastered
             </span>
           </div>
@@ -811,8 +811,8 @@ defineExpose({
                 : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
             ]"
           >
-            <CheckCircle2 v-if="currentSub.isCorrect" class="w-5 h-5 text-brand-500 shrink-0" />
-            <XCircle v-else class="w-5 h-5 text-rose-500 shrink-0" />
+            <CheckCircle2 v-if="currentSub.isCorrect" class="w-5 h-5 text-brand-500 shrink-0" :stroke-width="1.5" />
+            <XCircle v-else class="w-5 h-5 text-rose-500 shrink-0" :stroke-width="1.5" />
             <span class="font-bold text-sm sm:text-base">
               {{ currentSub.isCorrect ? $t('quiz.correct_banner') : $t('quiz.incorrect_banner') }}
             </span>
@@ -836,7 +836,7 @@ defineExpose({
               :disabled="quizStore.currentIndex === 0"
               class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.04] text-slate-700 dark:text-slate-300 font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <ArrowLeft class="w-4 h-4" />
+              <ArrowLeft class="w-4 h-4" :stroke-width="1.5" />
               {{ $t('quiz.btn_prev') }}
             </button>
 
@@ -845,7 +845,7 @@ defineExpose({
               class="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-sm flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
             >
               <span>{{ quizStore.currentIndex === quizStore.questions.length - 1 ? $t('quiz.btn_finish') : $t('quiz.btn_next') }}</span>
-              <ArrowRight class="w-4 h-4" />
+              <ArrowRight class="w-4 h-4" :stroke-width="1.5" />
             </button>
           </div>
         </div>
@@ -856,7 +856,7 @@ defineExpose({
     <div v-if="quizStore.activeTab === 'summary'" class="space-y-6">
       <div class="glass-card p-6 sm:p-8 text-center space-y-6">
         <div class="inline-flex p-4 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
-          <Award class="w-12 h-12" />
+          <Award class="w-12 h-12" :stroke-width="1.5" />
         </div>
 
         <div class="space-y-2">
@@ -885,8 +885,8 @@ defineExpose({
             :disabled="quizStore.isGenerating"
             class="px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <Loader2 v-if="quizStore.isGenerating" class="w-4 h-4 animate-spin" />
-            <Sparkles v-else class="w-4 h-4" />
+            <Loader2 v-if="quizStore.isGenerating" class="w-4 h-4 animate-spin" :stroke-width="1.5" />
+            <Sparkles v-else class="w-4 h-4" :stroke-width="1.5" />
             <span>{{ quizStore.isGenerating ? $t('quiz.generating_loader') : $t('quiz.btn_generate_more') }}</span>
           </button>
 
@@ -896,7 +896,7 @@ defineExpose({
             :disabled="quizStore.isGenerating"
             class="px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <RotateCcw class="w-4 h-4" />
+            <RotateCcw class="w-4 h-4" :stroke-width="1.5" />
             {{ $t('quiz.btn_retry_mistakes', { count: quizStore.sessionScore.total - quizStore.sessionScore.correct }) }}
           </button>
 
@@ -912,7 +912,7 @@ defineExpose({
         <!-- Session Mistakes List with Push to SM-2 -->
         <div v-if="sessionMistakes.length > 0" class="text-left pt-6 border-t border-slate-200/80 dark:border-white/[0.06] space-y-3">
           <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <AlertCircle class="w-4 h-4 text-rose-500" />
+            <AlertCircle class="w-4 h-4 text-rose-500" :stroke-width="1.5" />
             <span>{{ $t('quiz.mistakes_to_review') }} ({{ sessionMistakes.length }})</span>
           </h3>
           <div class="space-y-3">
@@ -1038,7 +1038,7 @@ defineExpose({
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
-                <Target class="w-4 h-4" />
+                <Target class="w-4 h-4" :stroke-width="1.5" />
               </div>
               <div>
                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -1094,7 +1094,7 @@ defineExpose({
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
-                <Award class="w-4 h-4" />
+                <Award class="w-4 h-4" :stroke-width="1.5" />
               </div>
               <div>
                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -1163,7 +1163,7 @@ defineExpose({
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
-                <TrendingUp class="w-4 h-4" />
+                <TrendingUp class="w-4 h-4" :stroke-width="1.5" />
               </div>
               <div>
                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -1213,7 +1213,7 @@ defineExpose({
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
-                <BarChart3 class="w-4 h-4" />
+                <BarChart3 class="w-4 h-4" :stroke-width="1.5" />
               </div>
               <div>
                 <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">

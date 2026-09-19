@@ -8,7 +8,7 @@ import {
   X,
   Target,
   Map,
-  Sparkles,
+  Compass,
   HelpCircle,
   Layers,
   Highlighter,
@@ -52,7 +52,7 @@ const navGroups: NavGroup[] = [
   {
     titleKey: 'nav.group_knowledge',
     links: [
-      { name: 'nav.insights', path: '/insights', icon: Sparkles },
+      { name: 'nav.insights', path: '/insights', icon: Compass },
       { name: 'nav.library', path: '/library', icon: BookOpen },
         { name: 'nav.notes', path: '/notes', icon: Highlighter },
       { name: 'nav.graph', path: '/graph', icon: Network }
@@ -120,12 +120,12 @@ onUnmounted(() => {
         title="Open Navigation Menu"
         aria-label="Open Navigation Menu"
       >
-        <Menu class="w-5 h-5" />
+        <Menu class="w-5 h-5" :stroke-width="1.5" />
       </button>
 
       <NuxtLink to="/" class="flex items-center gap-2 font-bold tracking-tight hover:opacity-90 transition-opacity">
         <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-400 flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
-          <BookOpen class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white font-bold" />
+          <BookOpen class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white font-bold" :stroke-width="1.5" />
         </div>
         <span class="hidden sm:inline text-base sm:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-brand-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">TechDaily</span>
       </NuxtLink>
@@ -137,7 +137,7 @@ onUnmounted(() => {
         :title="$t('command_palette.trigger_placeholder_short')"
         aria-label="Open Command Palette"
       >
-        <Search class="w-4 h-4" />
+        <Search class="w-4 h-4" :stroke-width="1.5" />
       </button>
 
       <span v-if="focusStore.data?.topic" class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-slate-200">
@@ -161,7 +161,7 @@ onUnmounted(() => {
         aria-label="Open Command Palette"
       >
         <span class="flex items-center gap-2 truncate">
-          <Search class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover:text-brand-500 transition-colors shrink-0" />
+          <Search class="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 group-hover:text-brand-500 transition-colors shrink-0" :stroke-width="1.5" />
           <span class="truncate">{{ $t('command_palette.trigger_placeholder') }}</span>
         </span>
         <kbd class="hidden md:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-white/10 border border-slate-200 dark:border-white/[0.08] shrink-0">
@@ -196,7 +196,7 @@ onUnmounted(() => {
           class="hidden sm:inline-flex p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
           title="Sign Out"
         >
-          <LogOut class="w-4 h-4" />
+          <LogOut class="w-4 h-4" :stroke-width="1.5" />
         </button>
       </div>
 
@@ -221,7 +221,7 @@ onUnmounted(() => {
           <div class="shrink-0 flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
             <div class="flex items-center gap-3 font-bold tracking-tight">
               <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-md shrink-0">
-                <BookOpen class="w-5 h-5 text-slate-950 font-bold" />
+                <BookOpen class="w-5 h-5 text-slate-950 font-bold" :stroke-width="1.5" />
               </div>
               <span class="text-base font-black text-slate-900 dark:text-white">TechDaily Menu</span>
             </div>
@@ -230,7 +230,7 @@ onUnmounted(() => {
               class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white"
               aria-label="Close menu"
             >
-              <X class="w-5 h-5" />
+              <X class="w-5 h-5" :stroke-width="1.5" />
             </button>
           </div>
 
@@ -266,6 +266,7 @@ onUnmounted(() => {
                         'w-4 h-4 transition-colors shrink-0',
                         isLinkActive(link.path) ? 'text-brand-600 dark:text-brand-400' : 'text-slate-400 dark:text-slate-500'
                       ]"
+                      :stroke-width="1.5"
                     />
                     <span>{{ $t(link.name) }}</span>
                   </a>

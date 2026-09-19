@@ -142,7 +142,7 @@ async function handleOptionSubmit() {
         <div
           class="flex items-center gap-2 text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 uppercase tracking-wider"
         >
-          <Terminal class="w-4 h-4 shrink-0" />
+          <Terminal class="w-4 h-4 shrink-0" :stroke-width="1.5" />
           <span>{{ $t("today.scenario_challenge") }}</span>
         </div>
 
@@ -161,8 +161,8 @@ async function handleOptionSubmit() {
                 : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
             ]"
           >
-            <CheckCircle2 v-if="isCorrect" class="w-3.5 h-3.5" />
-            <AlertCircle v-else class="w-3.5 h-3.5" />
+            <CheckCircle2 v-if="isCorrect" class="w-3.5 h-3.5" :stroke-width="1.5" />
+            <AlertCircle v-else class="w-3.5 h-3.5" :stroke-width="1.5" />
             <span>{{ isCorrect ? "+10 Pts" : "0 Pts" }}</span>
           </span>
         </div>
@@ -242,7 +242,7 @@ async function handleOptionSubmit() {
                 v-if="index === question.correctOptionIndex"
                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-600 text-white shadow-sm whitespace-nowrap shrink-0"
               >
-                <Check class="w-3.5 h-3.5" />
+                <Check class="w-3.5 h-3.5" :stroke-width="1.5" />
                 <span>{{ $t("today.optimal_choice") }}</span>
               </span>
               <span
@@ -252,7 +252,7 @@ async function handleOptionSubmit() {
                 "
                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-sm whitespace-nowrap shrink-0"
               >
-                <XCircle class="w-3.5 h-3.5" />
+                <XCircle class="w-3.5 h-3.5" :stroke-width="1.5" />
                 <span>{{ $t("today.your_choice") }}</span>
               </span>
             </div>
@@ -268,7 +268,7 @@ async function handleOptionSubmit() {
         <div
           class="flex items-center gap-2.5 text-amber-900 dark:text-amber-200 font-semibold"
         >
-          <Lock class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+          <Lock class="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" :stroke-width="1.5" />
           <span>{{ $t("today.signin_banner_title") }}</span>
         </div>
         <NuxtLink
@@ -291,7 +291,7 @@ async function handleOptionSubmit() {
             v-if="focusStore.isSubmitting"
             class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
           ></span>
-          <ArrowRight v-else class="w-4 h-4" />
+          <ArrowRight v-else class="w-4 h-4" :stroke-width="1.5" />
           <span>
             {{
               focusStore.isSubmitting
@@ -319,10 +319,12 @@ async function handleOptionSubmit() {
           <CheckCircle2
             v-if="isCorrect"
             class="w-6 h-6 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5"
+            :stroke-width="1.5"
           />
           <AlertCircle
             v-else
             class="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
+            :stroke-width="1.5"
           />
 
           <div class="space-y-1">
@@ -353,7 +355,7 @@ async function handleOptionSubmit() {
           <div
             class="flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400"
           >
-            <Sparkles class="w-4 h-4" />
+            <Sparkles class="w-4 h-4" :stroke-width="1.5" />
             <span>{{ $t("today.correct_explanation_header") }}</span>
           </div>
 
