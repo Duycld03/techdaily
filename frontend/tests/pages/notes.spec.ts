@@ -4,6 +4,8 @@ import { setActivePinia, createPinia } from 'pinia'
 import { Check } from 'lucide-vue-next'
 import NotesPage from '~/pages/notes.vue'
 import { useNotesStore } from '~/stores/useNotesStore'
+import { useReviewStore } from '~/stores/useReviewStore'
+import { useApiClient } from '~/composables/useApiClient'
 
 const defaultHighlights = [
   {
@@ -135,7 +137,91 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     expect(sm2Btn.exists()).toBe(true)
     expect(sm2Btn.text()).toContain('notes.in_sm2')
     expect(sm2Btn.attributes('disabled')).toBeDefined()
-    expect(sm2Btn.findComponent(Check).exists() || sm2Btn.find('svg.text-emerald-500').exists()).toBe(true)
+    expect(sm2Btn.findComponent(Check).exists() || sm2Btn.find('svg.text-brand-500').exists()).toBe(true)
+    expect(sm2Btn.classes()).toContain('border-brand-500/30')
+  })
+
+  it('renders flashcard button in brand violet and converts to In SM-2 on click without reference error', async () => {
+    currentHighlights = [
+      {
+        id: 'h-convert-sm2',
+        documentChunkId: 'c-3',
+        chapterTitle: 'Chapter 3: Storage',
+        bookTitle: 'DDIA',
+        selectedText: 'B-Trees break a database down into fixed-size blocks or pages.',
+        note: 'Traditional DB architecture',
+        tags: ['storage', 'btree'],
+        createdAt: '2026-08-31T12:00:00Z',
+        hasFlashcard: false
+      }
+    ]
+
+    const wrapper = mount(NotesPage, {
+      global: {
+        stubs: {
+          NuxtLink: true,
+          Teleport: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const sm2Btn = wrapper.find('button[title="notes.create_flashcard"]')
+    expect(sm2Btn.exists()).toBe(true)
+    expect(sm2Btn.classes()).toContain('text-brand-700')
+    expect(sm2Btn.classes()).toContain('border-brand-200/80')
+
+    // Click to create flashcard
+    await sm2Btn.trigger('click')
+    await flushPromises()
+
+    // Should have transitioned to In SM-2 state with brand-500/15 classes
+    const updatedBtn = wrapper.find('button[title="notes.in_sm2"]')
+    expect(updatedBtn.exists()).toBe(true)
+    expect(updatedBtn.attributes('disabled')).toBeDefined()
+    expect(updatedBtn.classes()).toContain('border-brand-500/30')
+  })
+
+  it('retains unconverted flashcard button and does not enter In SM-2 state when flashcard synthesis fails', async () => {
+    const reviewStore = useReviewStore()
+    vi.spyOn(reviewStore, 'createCardFromHighlight').mockRejectedValueOnce(new Error('AI synthesis timeout'))
+
+    currentHighlights = [
+      {
+        id: 'h-fail-sm2',
+        documentChunkId: 'c-4',
+        chapterTitle: 'Chapter 4: Encoding',
+        bookTitle: 'DDIA',
+        selectedText: 'Protocol Buffers use field tags instead of field names.',
+        note: 'Binary encoding',
+        tags: ['protobuf'],
+        createdAt: '2026-08-31T13:00:00Z',
+        hasFlashcard: false
+      }
+    ]
+
+    const wrapper = mount(NotesPage, {
+      global: {
+        stubs: {
+          NuxtLink: true,
+          Teleport: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const sm2Btn = wrapper.find('button[title="notes.create_flashcard"]')
+    expect(sm2Btn.exists()).toBe(true)
+
+    // Click to create flashcard, which fails
+    await sm2Btn.trigger('click')
+    await flushPromises()
+
+    // Button should still remain unconverted and interactive for retry
+    const retryBtn = wrapper.find('button[title="notes.create_flashcard"]')
+    expect(retryBtn.exists()).toBe(true)
+    expect(retryBtn.attributes('disabled')).toBeUndefined()
+    expect(wrapper.find('button[title="notes.in_sm2"]').exists()).toBe(false)
   })
 
   it('extracts unique tags, counts them, and renders horizontal tag chip bar', async () => {

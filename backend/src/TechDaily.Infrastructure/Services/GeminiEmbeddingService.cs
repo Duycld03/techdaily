@@ -23,8 +23,14 @@ public class GeminiEmbeddingService : IEmbeddingService
     {
         _httpClient = httpClient;
         _logger = logger;
-        _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
-        _model = configuration["Gemini:EmbeddingModel"] ?? "gemini-embedding-001";
+        _apiKey = configuration["Gemini:ApiKey"]
+               ?? configuration["GEMINI_API_KEY"]
+               ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY")
+               ?? string.Empty;
+        _model = configuration["Gemini:EmbeddingModel"]
+              ?? configuration["GEMINI_EMBEDDING_MODEL"]
+              ?? Environment.GetEnvironmentVariable("GEMINI_EMBEDDING_MODEL")
+              ?? "gemini-embedding-001";
         _useOfflineMock = configuration.GetValue<bool>("Gemini:UseOfflineMock");
     }
 

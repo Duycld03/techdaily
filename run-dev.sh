@@ -13,6 +13,14 @@ echo "=========================================================="
 # Clean up any lingering processes on ports 5000 and 3000
 fuser -k 5000/tcp 3000/tcp 2>/dev/null || true
 
+# Load environment variables from .env if present
+if [ -f .env ]; then
+  echo "🔑 Loading environment variables from .env..."
+  set -a
+  source .env
+  set +a
+fi
+
 # 1. Check if database container is running
 if ! docker ps --format '{{.Names}}' | grep -q 'techdaily_postgres'; then
   echo "📦 Starting PostgreSQL 17 (pgvector) container..."

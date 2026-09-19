@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using TechDaily.Application.Common;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
-
 namespace TechDaily.Application.Features.Review.CreateCardFromHighlight;
 
 public record CreateCardFromHighlightRequest(Guid HighlightId, Guid UserId, string Locale = "en");
@@ -27,13 +27,16 @@ public class CreateCardFromHighlightHandler : IUseCase<CreateCardFromHighlightRe
 {
     private readonly ITechDailyDbContext _dbContext;
     private readonly IGeminiAiService _geminiAiService;
+    private readonly ILogger<CreateCardFromHighlightHandler>? _logger;
 
     public CreateCardFromHighlightHandler(
         ITechDailyDbContext dbContext,
-        IGeminiAiService geminiAiService)
+        IGeminiAiService geminiAiService,
+        ILogger<CreateCardFromHighlightHandler>? logger = null)
     {
         _dbContext = dbContext;
         _geminiAiService = geminiAiService;
+        _logger = logger;
     }
 
     public async Task<Result<CreateCardFromHighlightResponse>> ExecuteAsync(
@@ -69,9 +72,10 @@ public class CreateCardFromHighlightHandler : IUseCase<CreateCardFromHighlightRe
             request.Locale,
             cancellationToken);
 
-        if (!cardResult.IsSuccess)
+        if (!cardResult.IsSuccess || string.IsNullOrWhiteSpace(cardResult.Value.Front) || string.IsNullOrWhiteSpace(cardResult.Value.Back))
         {
-            return Result<CreateCardFromHighlightResponse>.Failure(cardResult.Error);
+            _logger?.LogWarning("AI recall synthesis failed: {Error} for highlight {HighlightId}.", cardResult.Error?.Message ?? "Unknown", highlight.Id);
+            return Result<CreateCardFromHighlightResponse>.Failure(cardResult.Error ?? Error.Custom("AiService.RecallFailed", "Active recall synthesis failed."));
         }
 
         var (front, back) = cardResult.Value;

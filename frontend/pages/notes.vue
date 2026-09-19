@@ -13,6 +13,7 @@ const route = useRoute()
 const router = useRouter()
 const { formatError } = useApiError()
 const notesStore = useNotesStore()
+const reviewStore = useReviewStore()
 const toast = useToast()
 const creatingCardHighlightId = ref<string | null>(null)
 const createdCardHighlightIds = ref<Set<string>>(new Set())
@@ -376,12 +377,12 @@ async function confirmDeleteHighlight() {
                 :disabled="creatingCardHighlightId === item.id || createdCardHighlightIds.has(item.id)"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 disabled:opacity-60"
                 :class="createdCardHighlightIds.has(item.id)
-                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                  : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border-amber-200 dark:border-amber-800/60'"
+                  ? 'bg-brand-500/15 text-brand-600 dark:text-brand-400 border-brand-500/30'
+                  : 'bg-brand-50/70 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 hover:bg-brand-100/80 dark:hover:bg-brand-500/20 border-brand-200/80 dark:border-brand-500/20'"
                 :title="createdCardHighlightIds.has(item.id) ? $t('notes.in_sm2') : $t('notes.create_flashcard')"
               >
-                <Check v-if="createdCardHighlightIds.has(item.id)" class="w-3.5 h-3.5 text-emerald-500" />
-                <Zap v-else class="w-3.5 h-3.5 text-amber-500" />
+                <Check v-if="createdCardHighlightIds.has(item.id)" class="w-3.5 h-3.5 text-brand-500" />
+                <Zap v-else class="w-3.5 h-3.5 text-brand-500" />
                 <span class="hidden sm:inline">{{
                   createdCardHighlightIds.has(item.id)
                     ? $t('notes.in_sm2')
