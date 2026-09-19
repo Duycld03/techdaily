@@ -261,19 +261,20 @@ The `/quiz` route SHALL implement the **Dev-Learning Studio** visual language an
    - The page header SHALL feature a clean, minimalist studio presentation with an icon tile (`p-2.5 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-600 dark:text-brand-400`), high-contrast title (`quiz.title`), and localized subtitle.
    - The header SHALL strictly omit decorative pulse halos, glowing badge rings, or distracting gradient background overlays.
 
-3. **Balanced 50/50 Bento Generation Studio**:
-   - When the `generate` tab is active, the generator interface SHALL render as a balanced, height-symmetric 2-column Bento grid on desktop viewports (`grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch`):
+3. **Stable Top-Aligned 50/50 Bento Generation Studio**:
+   - When the `generate` tab is active, the generator interface SHALL render as an equal 50/50 2-column Bento grid on desktop viewports with top alignment (`grid grid-cols-1 lg:grid-cols-2 gap-6 items-start`):
      - **Topic & Context Hub (Column 1 - 50% width)**: A `.glass-card` container housing the custom topic text input, context-aware quick topic chips, and the grounded-in-book toggle card with `AppSelect` book dropdown.
      - **Seniority & Action Hub (Column 2 - 50% width)**: A `.glass-card` container organizing the $2 \times 2$ seniority level cards, 3-tier question count segmented pills, and primary generation trigger button.
+   - Toggling the book-grounded mode (`isGrounded`) and expanding the book selector dropdown SHALL expand only the Topic & Context Hub vertically and SHALL NOT force vertical stretching or downward displacement of the primary generation button in the sibling Action Hub.
    - On mobile and tablet viewports (<1024px), the layout SHALL gracefully stack into a single column with consistent vertical rhythm.
 
-4. **Context-Aware Dynamic Topic Suggestions**:
+4. **Context-Aware Dynamic Topic Suggestions & Safe Fallback**:
    - The suggested topic chips SHALL dynamically prioritize and adapt to user learning context rather than remaining hardcoded to static strings:
      - Prioritize active/uploaded book topics from `libraryStore.books` when books exist in the user's library.
      - Adapt suggested engineering concepts to the user's career role target (`profileStore.profile.targetRole`).
      - Fall back to core foundational engineering pillars (Runtime Internals, Concurrency, Database MVCC, Distributed Systems).
+   - When triggering quiz generation with an empty topic input, the generator SHALL safely fall back to the first available computed quick topic suggestion or a reliable default engineering topic, without throwing runtime reference errors.
    - Topic chips SHALL enforce `whitespace-nowrap shrink-0` with horizontal wrapping to maintain neat presentation.
-
 5. **Minimalist Typographic Seniority Level Matrix ($2 \times 2$ Grid)**:
    - The 4 seniority tiers (`Fresher / Entry`, `Junior`, `Mid-Level`, `Senior / Staff`) SHALL render in an ergonomic $2 \times 2$ matrix (`grid grid-cols-1 sm:grid-cols-2 gap-3`) to equalize vertical height between the two studio columns.
    - The level cards SHALL strictly prohibit decorative emojis, icon badges, and graphical embellishments to maintain a calm, professional engineering aesthetic.
@@ -318,6 +319,15 @@ The `/quiz` route SHALL implement the **Dev-Learning Studio** visual language an
 - **THEN** the interface renders an equal 50/50 2-column Bento Grid separating topic/source configuration on the left from seniority/action controls on the right
 - **AND** both columns render with balanced vertical height within a `max-w-6xl` studio container.
 
+#### Scenario: User toggles book-grounded generation mode without button displacement
+- **WHEN** user toggles "Luyện đề theo sách" (`isGrounded`) on a desktop screen (>=1024px)
+- **THEN** the book selection dropdown renders within the Topic & Context card
+- **AND** the primary generation button in the Seniority & Action card maintains its stable vertical position without shifting downward.
+
+#### Scenario: Safe topic fallback when generating quiz without explicit input
+- **WHEN** user clicks the generation button without typing a custom topic
+- **THEN** the generation handler resolves the topic from the first computed topic suggestion or default topic
+- **AND** initiates quiz generation without throwing a `ReferenceError`.
 #### Scenario: Context-aware topic suggestions reflect active learning context
 - **WHEN** an authenticated user has active technical books in `/library` or a target career role in `/profile`
 - **THEN** the suggested topic chips dynamically display relevant topics from the user's library and role
