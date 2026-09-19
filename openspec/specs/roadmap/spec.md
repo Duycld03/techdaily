@@ -16,7 +16,7 @@ The 30-day curriculum track SHALL be explicitly designated in the user interface
 
 #### Scenario: User navigates roadmap visual skill tree on frontend
 - **WHEN** user visits `/roadmap`
-- **THEN** the application renders an interactive skill tree displaying completed nodes in green, current day highlighted in gold, and upcoming nodes in locked state with overall module completion percentages.
+- **THEN** the application renders an interactive skill tree displaying completed nodes in primary brand violet (`bg-brand-600` / `text-brand-400`), current day highlighted in gold, and upcoming nodes in locked state with overall module completion percentages.
 
 #### Scenario: 30-day curriculum fallback
 - **WHEN** user has no active document book pacer or explicitly selects the 30-day senior curriculum track in the track switcher dropdown
@@ -57,7 +57,7 @@ The dual-view switcher container SHALL adhere to the Dev-Learning Studio design 
 ---
 
 ### Requirement: Hierarchical Mindmap Interactive View
-The system SHALL provide an interactive, client-side hierarchical tree mindmap visualization on `/roadmap` when `mindmap` view mode is active. The mindmap SHALL render the active book or curriculum as a root node, chapters or modules as intermediate expandable and collapsible branches, and slices or daily challenges as leaf nodes. Each leaf node SHALL visually indicate completion state (`completed`, `active_today`, `upcoming`) and provide a 1-click action bridge to `/today` or `/read/[bookId]`. The view SHALL provide controls for zoom in, zoom out, pan, fit to screen, and batch expand and collapse all branches, operating with zero backend API overhead.
+The system SHALL provide an interactive, client-side hierarchical tree mindmap visualization on `/roadmap` when `mindmap` view mode is active. The mindmap SHALL render the active book or curriculum as a root node, chapters or modules as intermediate expandable and collapsible branches, and slices or daily challenges as leaf nodes. Each leaf node SHALL visually indicate completion state (`completed`, `active_today`, `upcoming`) and provide a 1-click action bridge to `/today` or `/read/[bookId]`. The view SHALL provide controls for zoom in, zoom out, pan, fit to screen, and batch expand and collapse all branches, operating with zero backend API overhead. Completed chapter branch nodes, slice leaf nodes, check indicators, and connecting SVG edges SHALL strictly render in primary brand violet tokens (`stroke-brand-500 dark:stroke-brand-400`, `bg-brand-600 text-white`, `border-brand-400/60`, `text-brand-500`), completely replacing disparate emerald green styling.
 
 For documents with large chapter counts (greater than 12 chapters), the mindmap SHALL employ scalable layout heuristics including windowed root node anchoring, smart single-chapter auto-accordion expansion, and default viewport centering focused directly on the user's active chapter and today's slice at 100% scale (`scale = 1.0`). The canvas SHALL provide an in-toolbar search input that dynamically highlights matching nodes and auto-expands relevant branches without triggering full-document layout blowout.
 
@@ -70,6 +70,11 @@ The mindmap viewport and controls SHALL strictly employ the Dev-Learning Studio 
 - **WHEN** user activates the `mindmap` view
 - **THEN** the canvas renders a root node containing the track title and completion badge, connecting via visual bezier curve edges to chapter branch nodes, which branch into individual slice leaf nodes.
 
+
+#### Scenario: Completed nodes render with primary brand violet styling
+- **GIVEN** a chapter or slice has been completed by the user
+- **WHEN** the user inspects the mindmap canvas
+- **THEN** completed slice leaf cards, chapter branch badges, check icons, and connected bezier edges render with primary brand violet styling (`stroke-brand-500`, `bg-brand-500/20`, `text-brand-500`, `border-brand-400/60`) instead of emerald green.
 #### Scenario: Large document chapter grouping and de-fragmentation
 - **GIVEN** an active book contains more than 15 document chunks whose titles lack explicit delimiter prefixes (such as colons or hyphens)
 - **WHEN** the roadmap transforms chunks into chapter milestones
@@ -187,7 +192,7 @@ The Track Switcher dropdown popover SHALL render fully without box-model clippin
 - **THEN** the application navigates to `/today?bookId={bookId}&chunkOrder={chunkOrder}` for scenario challenge review or `/read/{bookId}?slice={chunkOrder}` for full-text reading.
 
 ### Requirement: Continuous Milestone Timeline Spine & Active Telemetry
-The `/roadmap` timeline view SHALL render an illuminated continuous vertical timeline spine connecting sequential milestones (chapters, days, and slices). The spine SHALL visually connect module and chapter milestone cards to daily slice nodes with subtle progress gradients and connector indicators.
+The `/roadmap` timeline view SHALL render an illuminated continuous vertical timeline spine connecting sequential milestones (chapters, days, and slices). The spine SHALL visually connect module and chapter milestone cards to daily slice nodes with subtle progress gradients and connector indicators. Completed chapter nodes, completed day milestones, completed slice cards, and progress bar fills SHALL strictly render in primary brand violet tokens (`bg-brand-600`, `text-brand-400`, `border-brand-500/30`, `from-brand-600 to-brand-400`), completely eliminating emerald green styling.
 
 Today's active learning milestone (active day or active chunk slice) SHALL be visually accented along the spine with an active telemetry treatment including an amber flame or electric violet pulsing ring, glowing status pill, and a direct 1-click launch button to start or resume today's session.
 
@@ -196,6 +201,10 @@ All timeline milestone surfaces, accordion cards, slice items, progress tracks, 
 #### Scenario: Visual connector spine rendering
 - **WHEN** user views the `/roadmap` page in `timeline` view mode
 - **THEN** chapter headers and daily slice nodes are vertically interconnected by a continuous visual connector spine indicating sequential progression.
+
+#### Scenario: Completed timeline milestones render with primary brand violet
+- **WHEN** a user inspects completed chapters, days, or slices on the `/roadmap` timeline
+- **THEN** the completed node circles render with `bg-brand-600 text-white`, completed badges render with primary brand violet accents, and milestone progress bars render with primary violet gradients rather than emerald green.
 
 #### Scenario: Active milestone node telemetry
 - **WHEN** an active day or active document slice exists for today

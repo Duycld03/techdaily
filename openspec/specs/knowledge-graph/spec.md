@@ -93,7 +93,7 @@ The canvas SHALL visually differentiate node types and retention status:
 - **Pillar Hub Nodes:** Prominent circular nodes ($56\times 56\text{px}$) with thick glowing borders ($3\text{px}$), bold typography ($13\text{px}$ font weight 700), and color-coded backgrounds matching their respective domain palette.
 - **Topic Nodes:** Elliptical nodes ($36\times 36\text{px}$) color-coded by their engineering pillar:
   - Backend Runtime: Cyan/Sky (`#0284c7` / `#38bdf8`)
-  - Data Storage: Emerald (`#059669` / `#34d399`)
+  - Data Storage: Cyan/Teal (`#0891b2` / `#22d3ee`)
   - Distributed Systems: Violet/Purple (`#7c3aed` / `#a78bfa`)
   - Frontend Engineering: Amber/Orange (`#d97706` / `#fbbf24`)
   - Engineering Craft: Rose (`#e11d48` / `#fb7185`)
@@ -101,7 +101,7 @@ The canvas SHALL visually differentiate node types and retention status:
 - **Card Nodes:** Diamond-shaped nodes color-coded by SM-2 retention status:
   - Learning: Amber (`#f59e0b`)
   - Reviewing: Blue (`#3b82f6`)
-  - Mastered: Emerald (`#10b981`)
+  - Mastered: Primary Brand Violet (`#7c3aed` fill with `#c4b5fd` border)
 - **Highlight Nodes:** Hexagonal or compact accent nodes representing personal notes.
 
 The canvas viewport wrapper SHALL render on neutral dark obsidian `#09090b` (`dark:bg-canvas`), completely eliminating legacy `dark:bg-slate-950`. In dark mode, node borders and connecting edges SHALL employ translucent hairline styling `#27272a`. The canvas stylesheet SHALL dynamically synchronize with `@nuxtjs/color-mode`, updating node fills, borders, labels, and edge opacities when the user switches between dark and light themes without requiring a page reload.
@@ -157,7 +157,7 @@ The knowledge graph view SHALL include a floating glassmorphic control bar (`Gra
 1. **Engine Mode Switcher (2D / 3D):** A prominent dual-button toggle allowing the user to seamlessly switch between the **2D Planar Canvas** (Cytoscape.js) and the **3D WebGL Cosmos** (`3d-force-graph` / Three.js). The active mode SHALL persist in `localStorage` under key `techdaily_graph_view_mode`.
 2. **Pillar Category Filter:** Filter chips allowing the user to view all nodes or isolate a specific pillar (`All`, `Backend Runtime`, `Data Storage`, `Distributed Systems`, `Frontend Engineering`, `Engineering Craft`). The filter container SHALL employ a responsive wrapping layout (`flex-wrap gap-1.5`) without hidden scrollbars or box-model clipping across both English and Vietnamese locales, ensuring that all 6 pill options remain 100% visible and discoverable. All category pills SHALL resolve explicit localization keys without falling back to raw untranslated strings.
 3. **Node Type Toggles:** Toggle buttons to show or hide specific node types (`Topics`, `Books`, `Flashcards`, `Highlights`).
-4. **Mastery Status Filter:** Dropdown or pill selector to filter flashcard nodes by SM-2 status (`All`, `Learning`, `Reviewing`, `Mastered`).
+4. **Mastery Status Filter:** Dropdown or pill selector to filter flashcard nodes by SM-2 status (`All`, `Learning`, `Reviewing`, `Mastered`). When `Mastered` is selected, the active indicator SHALL display primary brand violet styling (`bg-brand-600 text-white`) instead of emerald green.
 5. **Live Search Input:** Text input that dynamically matches node titles, tags, and summary keywords. Matching nodes SHALL remain fully opaque and highlighted, while non-matching nodes SHALL fade to 15% opacity with edges dimmed in both 2D and 3D modes.
 6. **Reset Filters CTA:** A button to immediately reset all filters, search inputs, and node opacities back to the default global view.
 
@@ -289,7 +289,7 @@ The 3D visualization SHALL represent architectural entities in an interactive sp
 1. **Pillar Hub Nodes:** Rendered as glowing primary celestial bodies with large radii and pillar-specific emissive glow colors.
 2. **Topic Nodes:** Rendered as medium planetary spheres color-coded by their parent engineering pillar category.
 3. **Book Nodes:** Rendered as textured or emblem-accented spherical bodies orbiting their parent pillar hubs.
-4. **Card Nodes:** Rendered as compact glowing spheres color-coded by SM-2 retention status (Learning: amber, Reviewing: blue, Mastered: emerald).
+4. **Card Nodes:** Rendered as compact glowing spheres color-coded by SM-2 retention status (Learning: amber `#f59e0b`, Reviewing: blue `#3b82f6`, Mastered: primary brand violet `#7c3aed`).
 5. **Highlight Nodes:** Rendered as crystalline or accent-colored satellites orbiting source books and topics.
 6. **Relational Edges:** Rendered as glowing 3D vector splines or translucent beams linking interconnected nodes across $(x, y, z)$ space.
 

@@ -19,9 +19,10 @@ The system SHALL maintain a standalone `TechInsight` catalog decoupled from libr
    - Switcher button animations SHALL be constrained to `transition-colors`, preventing `border-width` collapse, default preflight gray color flashing, or subpixel jitter when switching view modes.
    - Category filter chips SHALL render with subtle dark glass styling (`bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08]`), highlighting the active topic chip cleanly.
 
-3. **Glass Insight Card Reader:**
+3. **Glass Insight Card Reader & Solution Tab Active Tokens:**
    - Technical insight cards SHALL render as `.glass-card` containers with hairline borders (`border-white/[0.08]`).
    - Code blocks (problematic vs idiomatic solution) SHALL render in high-contrast obsidian panels (`bg-black/40 border-white/[0.06]`) with syntax highlighting.
+   - The Solution code tab active state and Benchmark telemetry stats badge SHALL strictly utilize primary brand violet styling (`bg-brand-500/15 text-brand-700 dark:text-brand-300 border-brand-500/30`, `text-brand-500`, `fill-brand-500`), completely eliminating disparate emerald green styling.
    - Tailored Saved empty state SHALL render in a `.glass-card` container with Iris Violet action CTA.
    - Benchmark telemetry metrics SHALL be parsed and rendered as individual, compact metric chips with leading emoji deduplication and responsive alignment.
 

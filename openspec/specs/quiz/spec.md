@@ -264,7 +264,8 @@ The `/quiz` route SHALL implement the **Dev-Learning Studio** visual language an
 3. **Arena Question & Option Cards:**
    - Multiple-choice option cards (A, B, C, D) SHALL present neutral dark glass surfaces in unselected states (`border-white/[0.06] bg-white/[0.03] text-slate-200 hover:border-white/[0.15] hover:bg-white/[0.06]`).
    - Selected options SHALL highlight cleanly with Deep Iris Violet (`border-brand-500 bg-brand-500/10 text-white ring-1 ring-brand-500/30`).
-   - Answered states SHALL use calibrated emerald (`border-emerald-500/80 bg-emerald-500/10 text-emerald-300`) for correct options and rose (`border-rose-500/80 bg-rose-500/10 text-rose-300`) for incorrect choices without heavy opaque backgrounds.
+   - Answered states SHALL use calibrated primary brand violet (`border-brand-500/80 bg-brand-500/10 text-brand-700 dark:text-brand-300`) for correct options and rose (`border-rose-500/80 bg-rose-500/10 text-rose-300`) for incorrect choices without heavy opaque backgrounds.
+   - Mastered questions, correct choice banners, and review queue completed empty states SHALL display primary brand styling (`text-brand-600 dark:text-brand-400`, `bg-brand-500/10`, `border-brand-500/30`), completely replacing disparate emerald green accents.
 
 4. **Explanation & Markdown Presentation:**
    - The post-answer explanation container SHALL use `.glass-card` with clean typography and Shiki code block integration.
@@ -285,6 +286,11 @@ The `/quiz` route SHALL implement the **Dev-Learning Studio** visual language an
 - **WHEN** user clicks an option card (A, B, C, or D) before submitting
 - **THEN** the option card highlights with Deep Iris Violet borders and subtle violet tint
 - **AND** does not display harsh opaque colors or visual noise.
+
+#### Scenario: User submits correct option in arena
+- **WHEN** user submits the correct answer to a multiple-choice question in the arena
+- **THEN** the correct option highlights with primary brand violet styling (`border-brand-500/80 bg-brand-500/10 text-brand-700 dark:text-brand-300`)
+- **AND** the result feedback banner renders with primary brand accents instead of emerald green.
 
 #### Scenario: Bilingual localization of review queue tab and mistake indicators
 - **WHEN** user views `/quiz` in Vietnamese mode (`vi`)
