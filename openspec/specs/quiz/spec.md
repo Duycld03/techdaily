@@ -269,10 +269,9 @@ The `/quiz` route SHALL implement the **Dev-Learning Studio** visual language an
    - **Single-Side Downward Expansion**: Toggling the book-grounded mode (`isGrounded`) SHALL switch grid alignment to `items-start`, expanding only the Topic & Context Hub vertically and never forcing vertical stretching or downward displacement of the primary generation button in the sibling Action Hub.
    - On mobile and tablet viewports (<1024px), the layout SHALL gracefully stack into a single column with consistent vertical rhythm.
 4. **Context-Aware Dynamic Topic Suggestions & Safe Fallback**:
-   - The suggested topic chips SHALL dynamically prioritize and adapt to user learning context rather than remaining hardcoded to static strings:
+   - The suggested topic chips SHALL dynamically prioritize user learning context and technology-agnostic engineering fundamentals:
      - Prioritize active/uploaded book topics from `libraryStore.books` when books exist in the user's library.
-     - Adapt suggested engineering concepts to the user's career role target (`profileStore.profile.targetRole`).
-     - Fall back to core foundational engineering pillars (Runtime Internals, Concurrency, Database MVCC, Distributed Systems).
+     - Fall back to foundational, technology-agnostic senior architectural pillars (System Design, Database Indexing, Distributed Consensus, Caching Strategies, API Design, Concurrency Models, Containers & Cloud Infrastructure), strictly avoiding version-pinned or single-framework dependencies.
    - When triggering quiz generation with an empty topic input, the generator SHALL safely fall back to the first available computed quick topic suggestion or a reliable default engineering topic, without throwing runtime reference errors.
    - Topic chips SHALL enforce `whitespace-nowrap shrink-0` with horizontal wrapping to maintain neat presentation.
 5. **Minimalist Typographic Seniority Level Matrix ($2 \times 2$ Grid)**:

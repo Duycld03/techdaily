@@ -777,7 +777,7 @@
     "tab_review_queue": "Review Queue",
     "tab_stats": "Stats",
     "topic_label": "Topic",
-    "topic_placeholder": "e.g., .NET 10 Memory, PostgreSQL MVCC, React Concurrency...",
+    "topic_placeholder": "e.g., System Design, Database Indexing, Distributed Consensus...",
     "level_label": "Level",
     "level_fresher": "Fresher",
     "level_junior": "Junior",

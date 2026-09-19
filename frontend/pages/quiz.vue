@@ -115,15 +115,15 @@ const computedQuickTopics = computed(() => {
     })
   }
 
-  // 2. Fallback to foundational senior engineering topics
+  // 2. Fallback to foundational technology-agnostic senior engineering pillars
   const fallbacks = [
-    'PostgreSQL MVCC & Indexing',
-    'Distributed Consensus & Raft',
-    'Redis Caching & Lock Strategies',
-    'Docker & Kubernetes Architecture',
-    '.NET 10 Internals & Memory',
-    'React 19 Concurrency & Server Components',
-    'Go Routines, Channels & Memory Model'
+    'System Design & High Availability',
+    'Database Indexing & Query Optimization',
+    'Distributed Systems & Consensus',
+    'Caching Strategies & Invalidation',
+    'API Design & Microservices Patterns',
+    'Concurrency & Multithreading Models',
+    'Containers & Cloud Infrastructure'
   ]
   for (const item of fallbacks) {
     if (list.length >= 7) break

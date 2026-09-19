@@ -777,7 +777,7 @@
     "tab_review_queue": "Ôn Tập",
     "tab_stats": "Thống Kê",
     "topic_label": "Chủ Đề",
-    "topic_placeholder": "Ví dụ: .NET 10 Memory, PostgreSQL MVCC, React Concurrency...",
+    "topic_placeholder": "Ví dụ: System Design, Database Indexing, Distributed Consensus...",
     "level_label": "Cấp Bậc",
     "level_fresher": "Fresher",
     "level_junior": "Junior",
