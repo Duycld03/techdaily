@@ -693,7 +693,12 @@
     "timezone_label": "Múi Giờ Của Bạn",
     "timezone_desc": "Được dùng để lên lịch thông báo chính xác theo giờ địa phương",
     "btn_save_schedule": "Lưu Tùy Chọn Lịch Thông Báo",
-    "schedule_saved_success": "Đã cập nhật lịch thông báo thành công!"
+    "schedule_saved_success": "Đã cập nhật lịch thông báo thành công!",
+    "quick_presets": "Gợi Ý Nhanh",
+    "time_hour": "Giờ",
+    "time_minute": "Phút",
+    "time_period": "Buổi",
+    "btn_done": "Xong"
   },
   "insights": {
     "badge": "Khám Phá Hàng Ngày",

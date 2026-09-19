@@ -693,7 +693,12 @@
     "timezone_label": "Your Timezone",
     "timezone_desc": "Used to schedule notifications accurately in your local time",
     "btn_save_schedule": "Save Schedule Preferences",
-    "schedule_saved_success": "Notification schedule updated successfully!"
+    "schedule_saved_success": "Notification schedule updated successfully!",
+    "quick_presets": "Quick Presets",
+    "time_hour": "Hour",
+    "time_minute": "Minute",
+    "time_period": "Period",
+    "btn_done": "Done"
   },
   "insights": {
     "badge": "Daily Insights Feed",
