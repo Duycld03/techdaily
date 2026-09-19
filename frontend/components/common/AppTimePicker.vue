@@ -34,12 +34,6 @@ const isFlipped = ref(false)
 
 const minuteOptions = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
 
-const quickPresets = [
-  { label: '07:00 AM', value: '07:00' },
-  { label: '08:00 AM', value: '08:00' },
-  { label: '08:00 PM', value: '20:00' },
-  { label: '09:00 PM', value: '21:00' }
-]
 
 function parseTimeTo12h(timeStr: string | null | undefined) {
   const safeStr = timeStr && timeStr.includes(':') ? timeStr : '08:00'
@@ -131,11 +125,6 @@ function setPeriod(p: 'AM' | 'PM') {
   emit('change', new24)
 }
 
-function selectPreset(val: string) {
-  emit('update:modelValue', val)
-  emit('change', val)
-  closeDropdown()
-}
 
 function handleScroll(event: Event) {
   if (!isOpen.value) return
@@ -219,32 +208,8 @@ if (typeof window !== 'undefined') {
           class="glass-panel dark:bg-canvas-elevated border border-slate-200/90 dark:border-white/[0.08] shadow-2xl rounded-2xl p-3.5 backdrop-blur-md space-y-3 outline-none"
           data-testid="app-time-picker-popover"
         >
-          <!-- Quick Presets -->
-          <div class="space-y-1.5">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1">
-              {{ $t('settings.quick_presets') || 'Quick Presets' }}
-            </div>
-            <div class="grid grid-cols-2 gap-1.5">
-              <button
-                v-for="preset in quickPresets"
-                :key="preset.value"
-                type="button"
-                @click="selectPreset(preset.value)"
-                :class="[
-                  'px-2 py-1.5 rounded-lg text-xs font-semibold font-mono transition-all text-center',
-                  modelValue === preset.value
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 hover:bg-brand-500/10 hover:text-brand-600 dark:hover:text-brand-400 border border-slate-200/60 dark:border-white/[0.04]'
-                ]"
-                :data-testid="`time-preset-${preset.value}`"
-              >
-                {{ preset.label }}
-              </button>
-            </div>
-          </div>
-
           <!-- 3 Columns (Hours, Minutes, Period) -->
-          <div class="border-t border-slate-200/60 dark:border-white/[0.06] pt-2">
+          <div>
             <div class="grid grid-cols-3 gap-2">
               <!-- Hours Column -->
               <div class="space-y-1">

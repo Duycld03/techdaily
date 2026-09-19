@@ -79,20 +79,16 @@ describe('AppTimePicker.vue', () => {
     expect(wrapper.find('[data-testid="app-time-picker-popover"]').exists()).toBe(false)
   })
 
-  it('emits updated 24h time when quick preset is clicked', async () => {
+  it('closes popover when Done button is clicked', async () => {
     const wrapper = defaultMount({ modelValue: '08:00' })
 
     await wrapper.find('[data-testid="app-time-picker-trigger"]').trigger('click')
+    expect(wrapper.find('[data-testid="app-time-picker-popover"]').exists()).toBe(true)
 
-    const eveningPreset = wrapper.find('[data-testid="time-preset-20:00"]')
-    expect(eveningPreset.exists()).toBe(true)
+    const doneBtn = wrapper.find('[data-testid="time-picker-done-btn"]')
+    expect(doneBtn.exists()).toBe(true)
+    await doneBtn.trigger('click')
 
-    await eveningPreset.trigger('click')
-
-    expect(wrapper.emitted('update:modelValue')).toBeTruthy()
-    expect(wrapper.emitted('update:modelValue')![0]).toEqual(['20:00'])
-    expect(wrapper.emitted('change')![0]).toEqual(['20:00'])
-    // Should close popover on preset click
     expect(wrapper.find('[data-testid="app-time-picker-popover"]').exists()).toBe(false)
   })
 

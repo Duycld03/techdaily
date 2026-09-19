@@ -5,7 +5,7 @@
 - [x] 1.1 Create `frontend/components/common/AppTimePicker.vue` with 12h/24h parsing and formatting helpers, trigger button with `Clock` icon, and `v-model` binding.
 - [x] 1.2 Implement the teleported floating popover in `AppTimePicker.vue` with fixed bounding rect positioning, auto-flip collision detection, and glassmorphic elevation (`glass-panel dark:bg-canvas-elevated border-white/[0.08] backdrop-blur-md`).
 - [x] 1.3 Add 3-column scrollable selection strips (Hours `01-12`, Minutes `00-55` step 5, and Period `AM/PM` toggle) with studio Deep Iris Violet active pill styling.
-- [x] 1.4 Add 1-click quick schedule preset chips (`07:00 AM`, `08:00 AM`, `08:00 PM`, `09:00 PM`) and outside-click/Escape dismissal logic.
+- [x] 1.4 Add outside-click/Escape dismissal, Done confirmation button, and focus trap logic.
 
 ## 2. Frontend: Settings View Integration
 
