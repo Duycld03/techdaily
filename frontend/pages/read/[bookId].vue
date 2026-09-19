@@ -600,17 +600,17 @@ async function handleHighlightAndNote() {
 
 <template>
   <div
-    class="h-dvh flex flex-col overflow-hidden bg-white dark:bg-slate-950 transition-colors duration-200"
+    class="h-dvh flex flex-col overflow-hidden bg-slate-50 dark:bg-canvas text-slate-900 dark:text-slate-100 transition-colors duration-200"
   >
     <!-- Top Sticky Reader Navigation Bar -->
     <header
-      class="h-14 sm:h-15 px-3 sm:px-6 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 backdrop-blur flex items-center justify-between shrink-0 gap-2 sm:gap-4 z-20"
+      class="h-14 sm:h-15 px-3 sm:px-6 border-b border-slate-200/80 dark:border-white/[0.08] bg-white/90 dark:bg-canvas/90 backdrop-blur-md flex items-center justify-between shrink-0 gap-2 sm:gap-4 z-20"
     >
       <!-- Left: Back to Library & TOC Toggle -->
       <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
         <NuxtLink
           to="/library"
-          class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+          class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors shrink-0"
           :title="$t('reader.return_library')"
         >
           <ArrowLeft class="w-4 h-4 shrink-0" />
@@ -623,8 +623,8 @@ async function handleHighlightAndNote() {
           :class="[
             'hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-semibold transition-colors shrink-0',
             isTocOpen
-              ? 'border-brand-300 dark:border-brand-800 bg-brand-50 dark:bg-brand-950/40 text-brand-700 dark:text-brand-400 font-bold'
-              : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800',
+              ? 'border-brand-300 dark:border-brand-500/30 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-bold'
+              : 'border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated',
           ]"
           :title="isTocOpen ? $t('reader.close_toc') : $t('reader.open_toc')"
         >
@@ -635,7 +635,7 @@ async function handleHighlightAndNote() {
         <!-- Mobile TOC Drawer Button -->
         <button
           @click="isMobileTocOpen = true"
-          class="md:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+          class="md:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors shrink-0"
           :title="$t('reader.open_toc')"
         >
           <List class="w-3.5 h-3.5 shrink-0" />
@@ -686,7 +686,7 @@ async function handleHighlightAndNote() {
               grounded: 'true',
             },
           }"
-          class="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-xs font-bold transition-colors shrink-0"
+          class="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-400 hover:bg-brand-100 dark:hover:bg-brand-500/20 text-xs font-bold transition-colors shrink-0"
           :title="$t('reader.quiz_chapter_btn')"
         >
           <HelpCircle class="w-3.5 h-3.5 shrink-0" />
@@ -694,19 +694,6 @@ async function handleHighlightAndNote() {
             $t("reader.quiz_chapter_btn")
           }}</span>
         </NuxtLink>
-        <!-- Export Obsidian / Markdown Action -->
-        <button
-          v-if="book"
-          @click="handleExportMarkdown"
-          :disabled="isExportingMarkdown"
-          class="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold transition-colors shrink-0 disabled:opacity-50"
-          :title="$t('reader.export_obsidian')"
-        >
-          <Download class="w-3.5 h-3.5 shrink-0" />
-          <span class="hidden md:inline">{{
-            isExportingMarkdown ? $t("reader.exporting") : $t("reader.export_obsidian")
-          }}</span>
-        </button>
 
         <!-- Novel-Style Typography Popover -->
         <div ref="typographyDropdownRef" class="relative">
@@ -716,7 +703,7 @@ async function handleHighlightAndNote() {
               'px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 shrink-0',
               isTypographyOpen
                 ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                : 'bg-white dark:bg-canvas-subtle text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-canvas-elevated'
             ]"
             :title="$t('reader.typography_settings')"
           >
@@ -726,7 +713,7 @@ async function handleHighlightAndNote() {
           <!-- Typography Popover Dropdown (click-outside dismissed) -->
           <div
             v-if="isTypographyOpen"
-            class="absolute right-0 mt-2 w-80 sm:w-84 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl z-50 space-y-4 text-xs select-none"
+            class="absolute right-0 mt-2 w-80 sm:w-84 p-4 bg-white/95 dark:bg-canvas-elevated/95 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-2xl z-50 space-y-4 text-xs select-none"
           >
             <!-- Section 1: Font Size -->
             <div class="space-y-2">
@@ -736,12 +723,12 @@ async function handleHighlightAndNote() {
                   {{ fontScalePercentages[typography.fontSize] }}
                 </span>
               </div>
-              <div class="flex items-center justify-between gap-2 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div class="flex items-center justify-between gap-2 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.06]">
                 <button
                   type="button"
                   @click="decreaseFontSize"
                   :disabled="!canDecreaseFontSize"
-                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm"
+                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm"
                   title="Smaller Font"
                 >
                   <span class="text-xs font-bold">A</span>
@@ -763,7 +750,7 @@ async function handleHighlightAndNote() {
                   type="button"
                   @click="increaseFontSize"
                   :disabled="!canIncreaseFontSize"
-                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm"
+                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm"
                   title="Larger Font"
                 >
                   <span class="text-sm font-black">A</span>
@@ -775,15 +762,15 @@ async function handleHighlightAndNote() {
             <!-- Section 2: Font Family -->
             <div class="space-y-2">
               <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.font_family') }}</span>
-              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.06]">
                 <button
                   type="button"
                   @click="typography.fontFamily = 'sans'"
                   class="py-2 px-2 rounded-lg font-sans font-medium text-xs transition-all text-center truncate"
                   :class="[
                     typography.fontFamily === 'sans'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
                   Sans
@@ -794,8 +781,8 @@ async function handleHighlightAndNote() {
                   class="py-2 px-2 rounded-lg font-serif font-medium text-xs transition-all text-center truncate"
                   :class="[
                     typography.fontFamily === 'serif'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
                   Serif
@@ -806,8 +793,8 @@ async function handleHighlightAndNote() {
                   class="py-2 px-2 rounded-lg font-mono font-medium text-xs transition-all text-center truncate"
                   :class="[
                     typography.fontFamily === 'mono'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
                   Mono
@@ -818,15 +805,15 @@ async function handleHighlightAndNote() {
             <!-- Section 3: Line Spacing -->
             <div class="space-y-2">
               <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.line_spacing') }}</span>
-              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.06]">
                 <button
                   type="button"
                   @click="typography.lineSpacing = 'normal'"
                   class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
                   :class="[
                     typography.lineSpacing === 'normal'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
                   {{ $t('reader.spacing_normal') }}
@@ -837,8 +824,8 @@ async function handleHighlightAndNote() {
                   class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
                   :class="[
                     typography.lineSpacing === 'relaxed'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
                   {{ $t('reader.spacing_relaxed') }}
@@ -849,8 +836,8 @@ async function handleHighlightAndNote() {
                   class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
                   :class="[
                     typography.lineSpacing === 'loose'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
                   {{ $t('reader.spacing_loose') }}
@@ -861,15 +848,15 @@ async function handleHighlightAndNote() {
             <!-- Section 4: Reading Column Width -->
             <div class="space-y-2">
               <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.reading_width') }}</span>
-              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.06]">
                 <button
                   type="button"
                   @click="typography.readingWidth = 'standard'"
                   class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
                   :class="[
                     typography.readingWidth === 'standard'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
                   {{ $t('reader.width_standard') }}
@@ -880,8 +867,8 @@ async function handleHighlightAndNote() {
                   class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
                   :class="[
                     typography.readingWidth === 'wide'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
                   {{ $t('reader.width_wide') }}
@@ -892,8 +879,8 @@ async function handleHighlightAndNote() {
                   class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
                   :class="[
                     typography.readingWidth === 'full'
-                      ? 'bg-white dark:bg-slate-700 text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
                   ]"
                 >
                   {{ $t('reader.width_full') }}
@@ -909,7 +896,7 @@ async function handleHighlightAndNote() {
         <!-- Progress Bar (Desktop) -->
         <div class="hidden lg:flex items-center gap-2">
           <div
-            class="w-20 xl:w-28 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden"
+            class="w-20 xl:w-28 h-2 rounded-full bg-slate-200/80 dark:bg-canvas-subtle border border-slate-300/40 dark:border-white/[0.06] overflow-hidden"
           >
             <div
               class="h-full bg-brand-500 rounded-full transition-all duration-300"
@@ -928,7 +915,7 @@ async function handleHighlightAndNote() {
           <button
             @click="goToPrevSlice"
             :disabled="activeChunkIndex <= 0"
-            class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            class="p-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="Previous Slice (Shift + ←)"
           >
             <ChevronLeft class="w-4 h-4" />
@@ -936,7 +923,7 @@ async function handleHighlightAndNote() {
           <button
             @click="goToNextSlice"
             :disabled="activeChunkIndex >= totalChunks - 1"
-            class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            class="p-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="Next Slice (Shift + →)"
           >
             <ChevronRight class="w-4 h-4" />
@@ -950,10 +937,10 @@ async function handleHighlightAndNote() {
       <!-- Desktop Table of Contents Sidebar (Collapsible) -->
       <aside
         v-if="isTocOpen"
-        class="hidden md:flex w-72 lg:w-80 border-r border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 flex-col shrink-0 overflow-y-auto"
+        class="hidden md:flex w-72 lg:w-80 border-r border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-canvas-subtle/70 flex-col shrink-0 overflow-y-auto"
       >
         <div
-          class="p-4 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between"
+          class="p-4 border-b border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between"
         >
           <div
             class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
@@ -979,17 +966,17 @@ async function handleHighlightAndNote() {
             :class="[
               'w-full text-left p-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-start gap-2.5',
               activeChunkIndex === idx
-                ? 'bg-brand-500/10 dark:bg-brand-500/20 text-brand-900 dark:text-brand-300 font-bold border-l-4 border-brand-500 shadow-sm'
-                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 border-l-4 border-transparent',
+                ? 'bg-brand-500/10 dark:bg-brand-500/15 text-brand-900 dark:text-brand-300 font-bold border-l-4 border-brand-500 shadow-sm'
+                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated/60 border-l-4 border-transparent',
             ]"
           >
             <CheckCircle2
               v-if="completedSlices.has(chunk.chunkOrder)"
-              class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"
+              class="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5"
             />
             <span
               v-else
-              class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-700 flex items-center justify-center text-xs text-slate-500 shrink-0 mt-0.5"
+              class="w-4 h-4 rounded-full border border-slate-300 dark:border-white/[0.12] flex items-center justify-center text-xs text-slate-500 dark:text-slate-400 shrink-0 mt-0.5"
             >
               {{ chunk.chunkOrder }}
             </span>
@@ -1009,11 +996,11 @@ async function handleHighlightAndNote() {
             </div>
           </button>
         </div>
-        <div class="p-3 border-t border-slate-200 dark:border-slate-800/80 mt-auto">
+        <div class="p-3 border-t border-slate-200/80 dark:border-white/[0.06] mt-auto">
           <button
             @click="handleExportMarkdown"
             :disabled="isExportingMarkdown"
-            class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-200/70 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors disabled:opacity-50"
+            class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-200/70 dark:bg-canvas-elevated hover:bg-slate-300 dark:hover:bg-canvas-subtle border border-transparent dark:border-white/[0.06] text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors disabled:opacity-50"
           >
             <Download class="w-3.5 h-3.5" />
             <span>{{ isExportingMarkdown ? $t("reader.exporting") : $t("reader.export_obsidian") }}</span>
@@ -1029,10 +1016,10 @@ async function handleHighlightAndNote() {
           @click.self="isMobileTocOpen = false"
         >
           <div
-            class="w-4/5 max-w-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-white h-full flex flex-col shadow-2xl border-r border-slate-200 dark:border-slate-800 animate-in slide-in-from-left"
+            class="w-4/5 max-w-xs bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white h-full flex flex-col shadow-2xl border-r border-slate-200/80 dark:border-white/[0.08] animate-in slide-in-from-left"
           >
             <div
-              class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between"
+              class="p-4 border-b border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between"
             >
               <div
                 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white"
@@ -1042,7 +1029,7 @@ async function handleHighlightAndNote() {
               </div>
               <button
                 @click="isMobileTocOpen = false"
-                class="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors"
                 aria-label="Close contents"
               >
                 <X class="w-5 h-5" />
@@ -1060,17 +1047,17 @@ async function handleHighlightAndNote() {
                 :class="[
                   'w-full text-left p-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-start gap-2.5',
                   activeChunkIndex === idx
-                    ? 'bg-brand-500/10 dark:bg-brand-500/20 text-brand-900 dark:text-brand-300 font-bold border-l-4 border-brand-500 shadow-sm'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 border-l-4 border-transparent',
+                    ? 'bg-brand-500/10 dark:bg-brand-500/15 text-brand-900 dark:text-brand-300 font-bold border-l-4 border-brand-500 shadow-sm'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated/60 border-l-4 border-transparent',
                 ]"
               >
                 <CheckCircle2
                   v-if="completedSlices.has(chunk.chunkOrder)"
-                  class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5"
+                  class="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5"
                 />
                 <span
                   v-else
-                  class="w-4 h-4 rounded-full border border-slate-300 dark:border-slate-700 flex items-center justify-center text-xs text-slate-500 shrink-0 mt-0.5"
+                  class="w-4 h-4 rounded-full border border-slate-300 dark:border-white/[0.12] flex items-center justify-center text-xs text-slate-500 dark:text-slate-400 shrink-0 mt-0.5"
                 >
                   {{ chunk.chunkOrder }}
                 </span>
@@ -1090,11 +1077,11 @@ async function handleHighlightAndNote() {
                 </div>
               </button>
             </div>
-            <div class="p-3 border-t border-slate-200 dark:border-slate-800/80">
+            <div class="p-3 border-t border-slate-200/80 dark:border-white/[0.06]">
               <button
                 @click="handleExportMarkdown"
                 :disabled="isExportingMarkdown"
-                class="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors disabled:opacity-50"
+                class="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-canvas-elevated hover:bg-slate-200 dark:hover:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.06] text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors disabled:opacity-50"
               >
                 <Download class="w-3.5 h-3.5" />
                 <span>{{ isExportingMarkdown ? $t("reader.exporting") : $t("reader.export_obsidian") }}</span>
@@ -1132,7 +1119,7 @@ async function handleHighlightAndNote() {
           class="py-24 flex flex-col items-center justify-center text-center space-y-4 max-w-md mx-auto my-auto"
         >
           <div
-            class="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/60 flex items-center justify-center shadow-sm"
+            class="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 flex items-center justify-center shadow-sm"
           >
             <Sparkles
               class="w-7 h-7 text-brand-600 dark:text-brand-400 animate-spin"
@@ -1163,7 +1150,7 @@ async function handleHighlightAndNote() {
           class="py-20 flex flex-col items-center justify-center text-center space-y-5 max-w-md mx-auto my-auto"
         >
           <div
-            class="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center shadow-sm"
+            class="w-14 h-14 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-500/20 flex items-center justify-center shadow-sm"
           >
             <AlertCircle class="w-7 h-7 text-amber-600 dark:text-amber-400" />
           </div>
@@ -1189,13 +1176,12 @@ async function handleHighlightAndNote() {
             </button>
             <button
               @click="handleViewRawTemporarily"
-              class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold transition-all active:scale-95 whitespace-nowrap shrink-0"
+              class="px-4 py-2.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-300 text-xs sm:text-sm font-semibold transition-all active:scale-95 whitespace-nowrap shrink-0"
             >
               <span>{{ $t("reader.view_raw_temporary") }}</span>
             </button>
           </div>
         </div>
-
         <!-- Article Content Card -->
         <div
           v-else-if="currentChunk"
@@ -1205,7 +1191,7 @@ async function handleHighlightAndNote() {
           <!-- Ephemeral Raw Text Fallback Amber Banner -->
           <div
             v-if="isViewingRawTemporarily"
-            class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 flex items-center justify-between gap-3 text-xs sm:text-sm text-amber-800 dark:text-amber-300 shadow-sm"
+            class="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-500/20 flex items-center justify-between gap-3 text-xs sm:text-sm text-amber-800 dark:text-amber-300 shadow-sm"
           >
             <div class="flex items-center gap-2.5 min-w-0">
               <AlertTriangle
@@ -1224,15 +1210,14 @@ async function handleHighlightAndNote() {
           </div>
           <!-- Chapter Meta Header -->
           <div
-            class="space-y-3 sm:space-y-4 pb-5 sm:pb-6 border-b border-slate-200 dark:border-slate-800/80"
+            class="space-y-3 sm:space-y-4 pb-5 sm:pb-6 border-b border-slate-200/80 dark:border-white/[0.08]"
           >
             <div
               class="flex items-center gap-2 sm:gap-3 text-xs font-bold text-brand-700 dark:text-brand-400 uppercase tracking-wider"
             >
               <span
-                class="px-2.5 py-1 rounded-lg bg-brand-100 dark:bg-brand-950/70 border border-brand-200 dark:border-brand-800"
+                class="px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20"
               >
-                {{
                   $t("reader.slice_badge", {
                     current: currentChunk.chunkOrder,
                     total: totalChunks,
@@ -1260,7 +1245,7 @@ async function handleHighlightAndNote() {
 
           <!-- Markdown Body -->
           <article
-            class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-emerald-500 hover:prose-a:underline prose-code:font-mono prose-code:px-2 prose-code:py-0.5 prose-code:rounded-lg prose-code:text-xs prose-code:sm:text-sm prose-code:bg-slate-100 prose-code:text-slate-800 prose-code:border prose-code:border-slate-200/90 dark:prose-code:bg-canvas-elevated dark:prose-code:text-brand-300 dark:prose-code:border-white/[0.08] prose-code:font-medium prose-code:before:content-none prose-code:after:content-none prose-blockquote:not-italic prose-blockquote:before:content-none prose-blockquote:after:content-none prose-p:my-4 transition-all duration-150"
+            class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-brand-600 dark:prose-a:text-brand-400 hover:prose-a:underline prose-code:font-mono prose-code:px-2 prose-code:py-0.5 prose-code:rounded-lg prose-code:text-xs prose-code:sm:text-sm prose-code:bg-slate-100 prose-code:text-slate-800 prose-code:border prose-code:border-slate-200/90 dark:prose-code:bg-canvas-elevated dark:prose-code:text-brand-300 dark:prose-code:border-white/[0.08] prose-code:font-medium prose-code:before:content-none prose-code:after:content-none prose-blockquote:not-italic prose-blockquote:before:content-none prose-blockquote:after:content-none prose-p:my-4 transition-all duration-150"
             :class="[fontFamilyClass]"
             :style="{
               fontSize: fontSizePx,
@@ -1272,7 +1257,7 @@ async function handleHighlightAndNote() {
           <!-- Key Takeaways Callout -->
           <div
             v-if="hasValidTakeaways"
-            class="p-4 sm:p-6 rounded-3xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 space-y-3"
+            class="p-4 sm:p-6 rounded-3xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-500/20 space-y-3"
           >
             <div
               class="flex items-center gap-2 text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider"
@@ -1296,7 +1281,7 @@ async function handleHighlightAndNote() {
 
           <!-- Bottom Symmetrical Navigation Cards & Progress Footer -->
           <div
-            class="pt-6 mt-8 sm:mt-12 border-t border-slate-200 dark:border-slate-800/80 space-y-3"
+            class="pt-6 mt-8 sm:mt-12 border-t border-slate-200/80 dark:border-white/[0.08] space-y-3"
           >
             <!-- Progress Meta Bar -->
             <div
@@ -1326,7 +1311,7 @@ async function handleHighlightAndNote() {
               <button
                 v-if="prevChunk"
                 @click="goToPrevSlice"
-                class="group flex flex-col items-start p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 transition-all text-left shadow-sm hover:shadow-md active:scale-[0.99] min-w-0"
+                class="glass-card group flex flex-col items-start p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.16] hover:bg-slate-50 dark:hover:bg-canvas-elevated transition-all text-left shadow-sm hover:shadow-md active:scale-[0.99] min-w-0"
                 :title="prevChunk.chapterTitle"
               >
                 <div
@@ -1351,7 +1336,7 @@ async function handleHighlightAndNote() {
                 v-if="activeChunkIndex < totalChunks - 1"
                 @click="goToNextSlice"
                 :class="[
-                  'group flex flex-col items-end p-4 sm:p-5 rounded-2xl border border-brand-500/30 dark:border-brand-500/20 bg-brand-50/30 dark:bg-brand-950/20 hover:bg-brand-50/60 dark:hover:bg-brand-950/40 hover:border-brand-500/60 dark:hover:border-brand-500/50 transition-all text-right shadow-sm hover:shadow-md active:scale-[0.99] min-w-0',
+                  'group flex flex-col items-end p-4 sm:p-5 rounded-2xl border border-brand-500/30 dark:border-brand-500/20 bg-brand-50/30 dark:bg-brand-500/10 hover:bg-brand-50/60 dark:hover:bg-brand-500/20 hover:border-brand-500/60 dark:hover:border-brand-500/40 transition-all text-right shadow-sm hover:shadow-md active:scale-[0.99] min-w-0',
                   { 'sm:col-start-2': !prevChunk },
                 ]"
                 :title="nextChunk?.chapterTitle"
@@ -1378,20 +1363,20 @@ async function handleHighlightAndNote() {
                 v-else
                 to="/library"
                 :class="[
-                  'group flex flex-col items-end p-4 sm:p-5 rounded-2xl border border-emerald-500/30 dark:border-emerald-500/20 bg-emerald-50/30 dark:bg-emerald-950/20 hover:bg-emerald-50/60 dark:hover:bg-emerald-950/40 hover:border-emerald-500/60 dark:hover:border-emerald-500/50 transition-all text-right shadow-sm hover:shadow-md active:scale-[0.99] min-w-0',
+                  'group flex flex-col items-end p-4 sm:p-5 rounded-2xl border border-brand-500/30 dark:border-brand-500/20 bg-brand-50/30 dark:bg-brand-500/10 hover:bg-brand-50/60 dark:hover:bg-brand-500/20 hover:border-brand-500/60 dark:hover:border-brand-500/40 transition-all text-right shadow-sm hover:shadow-md active:scale-[0.99] min-w-0',
                   { 'sm:col-start-2': !prevChunk },
                 ]"
               >
                 <div
-                  class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 transition-colors"
+                  class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 transition-colors"
                 >
                   <span class="whitespace-nowrap shrink-0">{{
                     $t("reader.completed_card_label")
                   }}</span>
-                  <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  <CheckCircle2 class="w-3.5 h-3.5 text-brand-500 shrink-0" />
                 </div>
                 <div
-                  class="w-full text-sm sm:text-base font-bold text-emerald-900 dark:text-emerald-200 group-hover:underline truncate mt-1.5 transition-colors"
+                  class="w-full text-sm sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:underline truncate mt-1.5 transition-colors"
                 >
                   {{ $t("reader.return_library") }}
                 </div>
@@ -1407,7 +1392,7 @@ async function handleHighlightAndNote() {
       <div
         v-if="floatingToolbar.visible"
         @mousedown.stop
-        class="fixed z-50 -translate-x-1/2 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-slate-900 dark:bg-slate-800 text-white shadow-2xl border border-slate-700 animate-in fade-in zoom-in-95 duration-150"
+        class="fixed z-50 -translate-x-1/2 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-slate-900/95 dark:bg-canvas-elevated/95 backdrop-blur-xl text-white shadow-2xl border border-slate-700/80 dark:border-white/[0.12] animate-in fade-in zoom-in-95 duration-150"
         :style="{
           left: `${floatingToolbar.x}px`,
           top: `${floatingToolbar.y}px`,
@@ -1454,7 +1439,7 @@ async function handleHighlightAndNote() {
         <!-- Expandable Note Popover -->
         <div
           v-if="isNotePopoverOpen"
-          class="w-72 sm:w-80 p-3 bg-slate-950/95 rounded-xl border border-slate-700 text-left flex flex-col gap-2.5 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150"
+          class="w-72 sm:w-80 p-3 bg-slate-950/95 dark:bg-canvas-elevated/95 backdrop-blur-xl rounded-2xl border border-slate-700/80 dark:border-white/[0.12] text-left flex flex-col gap-2.5 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150"
         >
           <!-- Quote preview -->
           <div class="text-[11px] text-slate-400 italic line-clamp-2 border-l-2 border-brand-500 pl-2">
@@ -1465,8 +1450,7 @@ async function handleHighlightAndNote() {
           <textarea
             v-model="noteText"
             rows="3"
-            class="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 resize-none"
-            :placeholder="$t('reader.note_placeholder')"
+            class="w-full text-xs bg-slate-900 dark:bg-canvas-subtle border border-slate-700 dark:border-white/[0.10] rounded-lg p-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500/50 focus:border-brand-500 resize-none"
             autofocus
           ></textarea>
 
@@ -1474,16 +1458,15 @@ async function handleHighlightAndNote() {
           <input
             v-model="tagInput"
             type="text"
-            class="w-full text-xs bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-            :placeholder="$t('reader.tags_placeholder')"
+            class="w-full text-xs bg-slate-900 dark:bg-canvas-subtle border border-slate-700 dark:border-white/[0.10] rounded-lg px-2 py-1.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500/50 focus:border-brand-500"
             @keydown.enter.prevent="handleSaveNote"
           />
 
           <!-- Action buttons -->
-          <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-800">
+          <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-800 dark:border-white/[0.08]">
             <button
               @click="cancelNotePopover"
-              class="px-2.5 py-1 text-xs text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              class="px-2.5 py-1 text-xs text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 dark:hover:bg-canvas-subtle transition-colors"
             >
               {{ $t("reader.cancel") }}
             </button>
