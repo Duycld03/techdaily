@@ -638,7 +638,12 @@
     "freeze_credits_badge": "Còn {count} lượt đóng băng",
     "quiz_accuracy": "Độ chính xác trắc nghiệm",
     "status_active": "Hoạt động",
-    "settings_and_goals": "Cài đặt & Mục tiêu"
+    "settings_and_goals": "Cài đặt & Mục tiêu",
+    "memory_vault": "Kho Trí Nhớ SM-2",
+    "memory_vault_desc": "Khái niệm ghi nhớ chủ động",
+    "highlights_vault": "Trích Đoạn Kiến Trúc",
+    "highlights_vault_desc": "Trích dẫn & phân tích đã lưu",
+    "member_since": "Gia nhập từ {date}"
   },
   "settings": {
     "title": "Cài Đặt",

@@ -9,7 +9,8 @@ import {
   EyeOff,
   Lock
 } from 'lucide-vue-next'
-import EngineerProfileHero from '~/components/profile/EngineerProfileHero.vue'
+import EngineerIdentityPassport from '~/components/profile/EngineerIdentityPassport.vue'
+import EngineerMilestonesCard from '~/components/profile/EngineerMilestonesCard.vue'
 import DomainGoalTracker from '~/components/profile/DomainGoalTracker.vue'
 import { useApiError } from '~/composables/useApiError'
 import { useProfileStore } from '~/stores/useProfileStore'
@@ -143,11 +144,16 @@ async function handlePasswordChange() {
         </p>
       </div>
 
-      <!-- Asymmetric 2-Column Bento Grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <!-- Left Column (Desktop 2/3 width, Mobile order-2): Settings & Goals Card + Domain Mastery Progress Card -->
-        <div class="lg:col-span-2 order-2 lg:order-1 space-y-6">
-          <!-- Settings & Goals Card -->
+      <!-- Top Full-Width Engineer Identity Passport Banner -->
+      <EngineerIdentityPassport
+        :profile="profileStore.profile"
+        :stats="profileStore.stats"
+      />
+
+      <!-- Executive 2-Column Balanced Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <!-- Left Column (Desktop 50%, Mobile order-2): Account & Security Hub -->
+        <div class="order-2 lg:order-1 space-y-6">
           <div class="glass-card p-5 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-6 transition-colors duration-200">
             <!-- Tabs Switcher -->
             <div class="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-canvas-elevated/80 border border-slate-200/80 dark:border-white/[0.08] text-xs sm:text-sm font-bold">
@@ -374,17 +380,18 @@ async function handlePasswordChange() {
             </form>
           </div>
 
-          <!-- Domain Mastery Progress Card -->
-          <DomainGoalTracker :topic-breakdown="quizStore.stats?.topicBreakdown" />
         </div>
 
-        <!-- Right Column (Desktop 1/3 width, Mobile order-1): Engineer Identity & Milestones Widget -->
-        <div class="lg:col-span-1 order-1 lg:order-2 space-y-6">
-          <EngineerProfileHero
-            :profile="profileStore.profile"
+        <!-- Right Column (Desktop 50%, Mobile order-1): Milestones & Domain Mastery -->
+        <div class="order-1 lg:order-2 space-y-6">
+          <!-- 4-Cell Cumulative Achievement Bento Grid -->
+          <EngineerMilestonesCard
             :stats="profileStore.stats"
             :quizStats="quizStore.stats"
           />
+
+          <!-- Domain Mastery Progress Card -->
+          <DomainGoalTracker :topic-breakdown="quizStore.stats?.topicBreakdown" />
         </div>
       </div>
     </div>

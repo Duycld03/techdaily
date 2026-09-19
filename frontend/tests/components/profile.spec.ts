@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import EngineerProfileHero from '~/components/profile/EngineerProfileHero.vue'
+import EngineerIdentityPassport from '~/components/profile/EngineerIdentityPassport.vue'
+import EngineerMilestonesCard from '~/components/profile/EngineerMilestonesCard.vue'
 import DomainGoalTracker from '~/components/profile/DomainGoalTracker.vue'
 import type { UserProfile, UserLearningStats } from '~/stores/useProfileStore'
 import type { QuizStats } from '~/stores/useInterviewQuizStore'
 
-describe('EngineerProfileHero.vue', () => {
+describe('EngineerIdentityPassport.vue', () => {
   const mockProfile: UserProfile = {
     id: 'user-123',
     email: 'architect@techdaily.dev',
@@ -29,21 +30,11 @@ describe('EngineerProfileHero.vue', () => {
     memberSince: '2026-01-01'
   }
 
-  const mockQuizStats: QuizStats = {
-    totalAnswered: 50,
-    masteredCount: 42,
-    reviewQueueCount: 8,
-    accuracyRate: 84,
-    levelBreakdown: [],
-    topicBreakdown: []
-  }
-
-  it('renders user details, badges, and milestones with full data', () => {
-    const wrapper = mount(EngineerProfileHero, {
+  it('renders user details, badges, and tenure with full data', () => {
+    const wrapper = mount(EngineerIdentityPassport, {
       props: {
         profile: mockProfile,
-        stats: mockStats,
-        quizStats: mockQuizStats
+        stats: mockStats
       }
     })
 
@@ -52,13 +43,8 @@ describe('EngineerProfileHero.vue', () => {
     expect(wrapper.text()).toContain('architect@techdaily.dev')
     expect(wrapper.text()).toContain('Principal Architect')
     expect(wrapper.text()).toContain('profile.google_linked')
-
-    // Milestones Bento assertions
-    expect(wrapper.text()).toContain('12') // Current streak
-    expect(wrapper.text()).toContain('48') // Drills completed
-    expect(wrapper.text()).toContain('84%') // Quiz accuracy
-    expect(wrapper.text()).toContain('9.2/10') // Average score
-
+    expect(wrapper.text()).toContain('profile.longest_streak_record')
+    expect(wrapper.text()).toContain('profile.member_since')
     // Check avatar image
     const img = wrapper.find('img')
     expect(img.exists()).toBe(true)
@@ -73,11 +59,10 @@ describe('EngineerProfileHero.vue', () => {
       isGoogleLinked: false
     }
 
-    const wrapper = mount(EngineerProfileHero, {
+    const wrapper = mount(EngineerIdentityPassport, {
       props: {
         profile: standardProfile,
-        stats: mockStats,
-        quizStats: mockQuizStats
+        stats: mockStats
       }
     })
 
@@ -87,16 +72,67 @@ describe('EngineerProfileHero.vue', () => {
   })
 
   it('handles null props gracefully without crashing', () => {
-    const wrapper = mount(EngineerProfileHero, {
+    const wrapper = mount(EngineerIdentityPassport, {
       props: {
         profile: null,
-        stats: null,
-        quizStats: null
+        stats: null
       }
     })
 
     expect(wrapper.text()).toContain('Engineer')
     expect(wrapper.text()).toContain('U')
+  })
+})
+
+describe('EngineerMilestonesCard.vue', () => {
+  const mockStats: UserLearningStats = {
+    currentStreak: 12,
+    longestStreak: 25,
+    freezeCreditsRemaining: 3,
+    totalDrillsCompleted: 48,
+    averageScore: 9.2,
+    totalCardsInDeck: 120,
+    totalHighlightsSaved: 35,
+    memberSince: '2026-01-01'
+  }
+
+  const mockQuizStats: QuizStats = {
+    totalAnswered: 50,
+    masteredCount: 42,
+    reviewQueueCount: 8,
+    accuracyRate: 84,
+    levelBreakdown: [],
+    topicBreakdown: []
+  }
+
+  it('renders 4 cumulative milestone cells with full data', () => {
+    const wrapper = mount(EngineerMilestonesCard, {
+      props: {
+        stats: mockStats,
+        quizStats: mockQuizStats
+      }
+    })
+
+    // Milestones Bento assertions
+    expect(wrapper.text()).toContain('profile.milestones_title')
+    expect(wrapper.text()).toContain('48') // Drills completed
+    expect(wrapper.text()).toContain('9.2/10') // Average score
+    expect(wrapper.text()).toContain('84%') // Quiz accuracy
+    expect(wrapper.text()).toContain('120') // SM-2 Memory Vault concepts
+    expect(wrapper.text()).toContain('35') // Highlights saved
+    expect(wrapper.text()).toContain('profile.memory_vault')
+    expect(wrapper.text()).toContain('profile.highlights_vault')
+  })
+
+  it('handles null props gracefully without crashing', () => {
+    const wrapper = mount(EngineerMilestonesCard, {
+      props: {
+        stats: null,
+        quizStats: null
+      }
+    })
+
+    expect(wrapper.text()).toContain('profile.milestones_title')
     expect(wrapper.text()).toContain('0')
   })
 })

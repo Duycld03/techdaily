@@ -93,13 +93,14 @@ describe('profile.vue (Asymmetric 2-Column Bento Dashboard)', () => {
     // Title
     expect(wrapper.text()).toContain('profile.title')
 
-    // Right Column: Identity Hero
+    // Identity Passport & Milestones
     expect(wrapper.text()).toContain('Taylor TechLead')
     expect(wrapper.text()).toContain('staff.dev@techdaily.dev')
     expect(wrapper.text()).toContain('Tech Lead')
-    expect(wrapper.text()).toContain('9') // Streak
+    expect(wrapper.text()).toContain('profile.longest_streak_record')
     expect(wrapper.text()).toContain('35') // Drills
-
+    expect(wrapper.text()).toContain('80') // Memory Vault
+    expect(wrapper.text()).toContain('20') // Highlights Saved
     // Left Column: Domain Goal Tracker
     expect(wrapper.text()).toContain('profile.domain_mastery')
     expect(wrapper.text()).toContain('profile.domain_backend_runtime')

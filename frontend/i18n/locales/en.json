@@ -638,7 +638,12 @@
     "freeze_credits_badge": "{count} freezes available",
     "quiz_accuracy": "Quiz Accuracy",
     "status_active": "Active",
-    "settings_and_goals": "Settings & Goals"
+    "settings_and_goals": "Settings & Goals",
+    "memory_vault": "Memory Vault",
+    "memory_vault_desc": "SM-2 active concepts",
+    "highlights_vault": "Architecture Highlights",
+    "highlights_vault_desc": "Saved quotes & insights",
+    "member_since": "Member since {date}"
   },
   "settings": {
     "title": "Settings",

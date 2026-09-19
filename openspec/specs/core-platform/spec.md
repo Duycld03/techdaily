@@ -36,21 +36,33 @@ The User Profile interface SHALL NOT display notification scheduling controls (`
 
 When submitting profile updates from the profile page, the client application SHALL dispatch only personal identity and pace fields (`name`, `targetRole`, `dailyGoalMinutes`) to `PUT /api/v1/user/profile`. The backend API SHALL support partial updates, preserving existing notification schedule and timezone database records when those fields are omitted.
 
-The User Profile interface (`frontend/pages/profile.vue`) SHALL present an Asymmetric 2-Column Engineer Portfolio Dashboard (Desktop 2/3 - 1/3, stacking on mobile) adhering to the **Dev-Learning Studio** visual standard:
-1. Root container renders on deep dark canvas (`dark:bg-canvas`, `dark:bg-canvas-subtle`).
-2. Left Column (Settings & Goals): Personal info tab (Name, Target Role selector, interactive Daily Goal Pace chips 5m/10m/15m/30m) and Security tab (Current password, New password with dynamic strength bar, Confirm password), housed within `.glass-card` surfaces with hairline borders (`dark:border-white/[0.08]`).
-3. Right Column (Identity & Milestones Widget, `EngineerProfileHero.vue`): Large avatar with status badge, display name, target role badge, account type (Google linked / Standard email). Stacked milestone card: Active Streak with fire icon, longest streak, freeze credits remaining; Total Drills completed; Quiz Accuracy rate, styled with `.glass-card` surfaces and subtle violet ambient glows.
-4. Domain Mastery Progress Bar (Goal Tracker, `DomainGoalTracker.vue`): Progress bars tracking curriculum domain coverage across four universal, framework-agnostic core engineering pillars, utilizing high-contrast gradient tracks (`from-brand-600 to-brand-500`):
-   - **Pillar 1: Backend Runtime & Concurrency** (`profile.domain_backend_runtime`: "Nền Tảng Backend & Runtime" / "Backend Runtime & Concurrency") - tracking runtime mechanisms, memory allocation, async I/O, threads, and concurrency across .NET/CLR, Node.js/NestJS/Express, Go/Goroutines, Java/Spring/JVM, and Python.
-   - **Pillar 2: Data Storage & Persistence** (`profile.domain_data_storage`: "Hệ Lưu Trữ & Cơ Sở Dữ Liệu" / "Data Storage & Persistence") - tracking storage engines, query execution, and persistence across PostgreSQL, MongoDB, Redis, MySQL, SQLite, Cassandra, ACID transactions, B-Trees, LSM-Trees, replication, WAL, and indexing.
-   - **Pillar 3: Distributed Systems & Architecture** (`profile.domain_system_design`: "Hệ Thống Phân Tán & Thiết Kế" / "Distributed Systems & Architecture") - tracking distributed architecture patterns, microservices, message queues (Kafka, RabbitMQ), CAP theorem, transactional outbox, consensus, idempotency, rate limiting, and observability.
-   - **Pillar 4: Frontend & Browser Engineering** (`profile.domain_frontend`: "Hiệu Năng Frontend & Trình Duyệt" / "Frontend & Browser Engineering") - tracking browser execution, rendering pipelines, critical rendering path, DOM, Vue, React, TypeScript, JavaScript, Web Vitals, and SSR/hydration.
+The User Profile interface (`frontend/pages/profile.vue`) SHALL present an executive **Senior Engineer Career Portfolio & Passport** adhering to the **Dev-Learning Studio** visual standard:
+1. **Root Container**: Renders on deep dark canvas (`dark:bg-canvas`, `dark:bg-canvas-subtle`) with `scrollbar-gutter: stable` and responsive spacing.
+2. **Top Full-Width Engineer Identity Passport**: A prominent `.glass-card` banner spanning the top of the profile page featuring:
+   - Large avatar with status indicator badge.
+   - Engineer display name, email address, and membership tenure (`Member since: <date>`).
+   - Badges for Target Role (e.g. `Senior Engineer`), Account Connection (Google Linked / Standard Email), and Personal Best Record (`Longest Streak: <days>` trophy badge).
+3. **Left Column (Account & Security Hub)**:
+   - Houses the settings and credentials forms inside a dedicated `.glass-card` with clean tab switching:
+     - *Personal Info Tab*: Full Name input, Target Role selector, interactive Daily Goal Pace chips (`5m`, `10m`, `15m`, `30m`).
+     - *Security Tab*: Current password verification, new password with dynamic strength bar, confirm password matching, and Google account hint banner.
+4. **Right Column (Cumulative Milestones & Domain Mastery Portfolio)**:
+   - **4-Cell Cumulative Achievement Bento Grid**: Replaces redundant active daily streak with four authentic long-term senior engineering telemetry cards:
+     - *Architecture Drills*: Total senior scenario drills completed and average score (`{totalDrillsCompleted}` completed, `{averageScore}/10`).
+     - *Interview Quiz Accuracy*: Accuracy percentage (`{accuracyRate}%`) and mastered concepts ratio (`{masteredCount}/{totalAnswered}`).
+     - *Memory Vault (Spaced Repetition)*: Total technical concepts active in the SM-2 review deck (`{totalCardsInDeck}`).
+     - *Architecture Source Highlights*: Total highlighted code and architectural quotes saved (`{totalHighlightsSaved}`).
+   - **Domain Mastery Progress Bar (Goal Tracker)**: Categorized visual progress bars tracking curriculum domain coverage across four universal, framework-agnostic core engineering pillars, utilizing high-contrast gradient tracks:
+     - **Pillar 1: Backend Runtime & Concurrency** (`profile.domain_backend_runtime`: "Nền Tảng Backend & Runtime" / "Backend Runtime & Concurrency") - tracking runtime mechanisms, memory allocation, async I/O, threads, and concurrency across .NET/CLR, Node.js/NestJS/Express, Go/Goroutines, Java/Spring/JVM, and Python.
+     - **Pillar 2: Data Storage & Persistence** (`profile.domain_data_storage`: "Hệ Lưu Trữ & Cơ Sở Dữ Liệu" / "Data Storage & Persistence") - tracking storage engines, query execution, and persistence across PostgreSQL, MongoDB, Redis, MySQL, SQLite, Cassandra, ACID transactions, B-Trees, LSM-Trees, replication, WAL, and indexing.
+     - **Pillar 3: Distributed Systems & Architecture** (`profile.domain_system_design`: "Hệ Thống Phân Tán & Thiết Kế" / "Distributed Systems & Architecture") - tracking distributed architecture patterns, microservices, message queues (Kafka, RabbitMQ), CAP theorem, transactional outbox, consensus, idempotency, rate limiting, and observability.
+     - **Pillar 4: Frontend & Browser Engineering** (`profile.domain_frontend`: "Hiệu Năng Frontend & Trình Duyệt" / "Frontend & Browser Engineering") - tracking browser execution, rendering pipelines, critical rendering path, DOM, Vue, React, TypeScript, JavaScript, Web Vitals, and SSR/hydration.
 
-The Domain Mastery Goal Tracker component (`frontend/components/profile/DomainGoalTracker.vue`) SHALL evaluate and aggregate topic mastery dynamically across multi-stack keywords via `matchCategory(keyOrTopic: string)`, ensuring book chapters, drills, and quiz attempts in any modern stack map seamlessly into the appropriate universal pillar.
+The Domain Mastery Goal Tracker component SHALL evaluate and aggregate topic mastery dynamically across multi-stack keywords via `matchCategory(keyOrTopic: string)`, ensuring book chapters, drills, and quiz attempts in any modern stack map seamlessly into the appropriate universal pillar.
 
-The Engineer Portfolio Dashboard SHALL adapt responsively across Desktop (≥ 1280px, asymmetric 2-column 2/3 - 1/3 layout) and Mobile (~375px - 390px, single-column vertically stacked layout) viewports without horizontal scrolling or layout overlap.
+The Engineer Portfolio Dashboard SHALL adapt responsively across Desktop (≥ 1024px, top full-width passport + 2-column grid) and Mobile (< 1024px, vertically stacked layout) viewports without horizontal scrolling or layout overlap.
 
-The Identity widget, milestone statistics, and domain goal tracker SHALL support bilingual rendering in both English and Vietnamese, ensuring that universal engineering pillar titles render cleanly without text truncation, badge clipping, or broken progress bar labels.
+The Identity passport, milestone statistics, and domain goal tracker SHALL support bilingual rendering in both English and Vietnamese, ensuring that universal engineering pillar titles render cleanly without text truncation, badge clipping, or broken progress bar labels.
 
 #### Scenario: Unauthenticated request to user profile
 - **WHEN** unauthenticated client calls `GET /api/v1/user/profile`
@@ -86,14 +98,15 @@ The Identity widget, milestone statistics, and domain goal tracker SHALL support
 - **THEN** the server updates only the non-null properties, updates `UpdatedAt = DateTime.UtcNow`, and returns `200 OK` with the updated `UserProfileDto`.
 
 #### Scenario: Desktop 2-column vs mobile single-column stacked responsive layout
-- **WHEN** authenticated user accesses `/profile` on a desktop viewport ($\ge 1280\text{px}$)
-- **THEN** the layout renders an asymmetric 2-column structure with settings and domain tracker on the left (2/3 width) and identity/milestone cards on the right (1/3 width)
-- **WHEN** user accesses `/profile` on a mobile viewport ($375\text{px} - 390\text{px}$)
-- **THEN** the layout stacks into a single vertical column with the Identity widget at the top followed by the settings tabs and domain goal tracker, maintaining touch-friendly targets and zero horizontal overflow.
+- **WHEN** authenticated user accesses `/profile` on a desktop viewport ($\ge 1024\text{px}$)
+- **THEN** the layout renders a full-width top identity passport followed by a 2-column grid with Account & Security Hub on the left and Cumulative Milestones & Domain Mastery on the right
+- **WHEN** user accesses `/profile` on a mobile viewport ($< 1024\text{px}$)
+- **THEN** the layout stacks into a single vertical column with the Identity passport at the top followed by the Cumulative Milestones, Domain Mastery tracker, and Account settings form, maintaining touch-friendly targets and zero horizontal overflow.
 
 #### Scenario: User inspects identity and learning milestones widget
-- **WHEN** user views the right-column identity card
-- **THEN** UI renders the user avatar, account connection badge (Google / Email), active streak with fire icon and freeze credits, total drills completed, and quiz accuracy percentage inside `.glass-card` components with hairline borders.
+- **WHEN** user views the profile page
+- **THEN** UI renders the top identity passport with user avatar, account connection badge (Google / Email), membership tenure, and all-time longest streak badge
+- **AND** the milestones bento renders 4 cumulative cards: total drills completed with average score, quiz accuracy rate, SM-2 cards in deck, and total highlights saved inside `.glass-card` components with hairline borders.
 
 #### Scenario: User monitors curriculum domain mastery goal progress
 - **WHEN** user views the Domain Mastery Goal Tracker section on `/profile`
@@ -106,12 +119,11 @@ The Identity widget, milestone statistics, and domain goal tracker SHALL support
 
 #### Scenario: Bilingual visual verification for identity widget, milestone stats, and domain goal tracker
 - **WHEN** user toggles between English (`en`) and Vietnamese (`vi`) on the `/profile` page
-- **THEN** all copy across the Identity card, milestone badges (active streak, drills completed, quiz accuracy), and domain goal tracker updates dynamically
+- **THEN** all copy across the Identity passport, cumulative milestone cards (drills completed, quiz accuracy, memory vault, highlights saved), and domain goal tracker updates dynamically
 - **AND** universal pillar titles render with exact localized strings:
   - In English: "Backend Runtime & Concurrency", "Data Storage & Persistence", "Distributed Systems & Architecture", "Frontend & Browser Engineering"
   - In Vietnamese: "Nền Tảng Backend & Runtime", "Hệ Lưu Trữ & Cơ Sở Dữ Liệu", "Hệ Thống Phân Tán & Thiết Kế", "Hiệu Năng Frontend & Trình Duyệt"
 - **AND** longer Vietnamese domain titles render without badge clipping, text truncation, or misalignment of progress bar percentages.
-
 ---
 
 ### Requirement: Daily Doc Reading Slice
