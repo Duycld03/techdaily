@@ -14,6 +14,7 @@ import {
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
+import AppTimePicker from '~/components/common/AppTimePicker.vue'
 import { useProfileStore } from '~/stores/useProfileStore'
 import { useWebPush } from '~/composables/useWebPush'
 import { ApiError } from '~/composables/useApiClient'
@@ -270,10 +271,10 @@ async function handleSaveSchedule() {
             <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
               {{ $t('settings.preferred_study_time') }}
             </label>
-            <input
-              type="time"
+            <AppTimePicker
               v-model="preferredStudyTime"
-              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
+              id="preferred-study-time"
+              :aria-label="$t('settings.preferred_study_time')"
             />
             <p class="text-[11px] text-slate-500">{{ $t('settings.preferred_study_time_desc') }}</p>
           </div>
@@ -283,10 +284,10 @@ async function handleSaveSchedule() {
             <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">
               {{ $t('settings.streak_alert_time') }}
             </label>
-            <input
-              type="time"
+            <AppTimePicker
               v-model="streakAlertTime"
-              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white text-xs sm:text-sm font-semibold focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
+              id="streak-alert-time"
+              :aria-label="$t('settings.streak_alert_time')"
             />
             <p class="text-[11px] text-slate-500">{{ $t('settings.streak_alert_time_desc') }}</p>
           </div>
