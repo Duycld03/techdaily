@@ -66,15 +66,20 @@ const componentId = computed(() => props.id || `app-time-picker-${Math.random().
 function updateFloatingPosition() {
   if (!triggerRef.value || typeof window === 'undefined') return
   const rect = triggerRef.value.getBoundingClientRect()
-  const width = Math.max(rect.width, 280)
+  const width = 224
   const spaceBelow = window.innerHeight - rect.bottom
   const spaceAbove = rect.top
-  const placeAbove = spaceBelow < 320 && spaceAbove > spaceBelow
+  const placeAbove = spaceBelow < 280 && spaceAbove > spaceBelow
+
+  let left = rect.left
+  if (typeof window !== 'undefined' && left + width > window.innerWidth - 12) {
+    left = Math.max(12, window.innerWidth - width - 12)
+  }
 
   isFlipped.value = placeAbove
   floatingStyle.value = {
     position: 'fixed',
-    left: `${rect.left}px`,
+    left: `${left}px`,
     width: `${width}px`,
     top: placeAbove ? 'auto' : `${rect.bottom + 6}px`,
     bottom: placeAbove ? `${window.innerHeight - rect.top + 6}px` : 'auto',
@@ -205,25 +210,25 @@ if (typeof window !== 'undefined') {
           :aria-label="ariaLabel || 'Time Picker'"
           :style="floatingStyle"
           @keydown.esc="closeDropdown"
-          class="glass-panel dark:bg-canvas-elevated border border-slate-200/90 dark:border-white/[0.08] shadow-2xl rounded-2xl p-3.5 backdrop-blur-md space-y-3 outline-none"
+          class="glass-panel dark:bg-canvas-elevated border border-slate-200/90 dark:border-white/[0.08] shadow-2xl rounded-2xl p-3 backdrop-blur-md space-y-2.5 outline-none"
           data-testid="app-time-picker-popover"
         >
           <!-- 3 Columns (Hours, Minutes, Period) -->
           <div>
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid grid-cols-3 gap-1.5">
               <!-- Hours Column -->
               <div class="space-y-1">
                 <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center">
                   {{ $t('settings.time_hour') || 'Hour' }}
                 </div>
-                <div class="max-h-36 overflow-y-auto space-y-1 p-1 rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/[0.04] scrollbar-thin">
+                <div class="max-h-36 overflow-y-auto space-y-0.5 p-1 rounded-xl bg-slate-100/60 dark:bg-white/[0.03] border border-slate-200/50 dark:border-white/[0.04] scrollbar-none">
                   <button
                     v-for="h in 12"
                     :key="h"
                     type="button"
                     @click="setHour(h)"
                     :class="[
-                      'w-full py-1 rounded-lg text-xs font-mono font-semibold transition-all text-center cursor-pointer',
+                      'w-full py-1 rounded-md text-xs font-mono font-medium transition-all text-center cursor-pointer',
                       currentHour12 === h
                         ? 'bg-brand-600 text-white shadow-sm font-bold'
                         : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/[0.06]'
@@ -240,14 +245,14 @@ if (typeof window !== 'undefined') {
                 <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center">
                   {{ $t('settings.time_minute') || 'Min' }}
                 </div>
-                <div class="max-h-36 overflow-y-auto space-y-1 p-1 rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/[0.04] scrollbar-thin">
+                <div class="max-h-36 overflow-y-auto space-y-0.5 p-1 rounded-xl bg-slate-100/60 dark:bg-white/[0.03] border border-slate-200/50 dark:border-white/[0.04] scrollbar-none">
                   <button
                     v-for="m in minuteOptions"
                     :key="m"
                     type="button"
                     @click="setMinute(m)"
                     :class="[
-                      'w-full py-1 rounded-lg text-xs font-mono font-semibold transition-all text-center cursor-pointer',
+                      'w-full py-1 rounded-md text-xs font-mono font-medium transition-all text-center cursor-pointer',
                       currentMinute === m
                         ? 'bg-brand-600 text-white shadow-sm font-bold'
                         : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/[0.06]'
@@ -264,12 +269,12 @@ if (typeof window !== 'undefined') {
                 <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center">
                   {{ $t('settings.time_period') || 'Period' }}
                 </div>
-                <div class="flex flex-col gap-1.5 p-1 rounded-xl bg-slate-50/70 dark:bg-black/20 border border-slate-200/60 dark:border-white/[0.04]">
+                <div class="flex flex-col gap-1.5 p-1 rounded-xl bg-slate-100/60 dark:bg-white/[0.03] border border-slate-200/50 dark:border-white/[0.04]">
                   <button
                     type="button"
                     @click="setPeriod('AM')"
                     :class="[
-                      'w-full py-2.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer',
+                      'w-full py-2 rounded-md text-xs font-bold transition-all text-center cursor-pointer',
                       currentPeriod === 'AM'
                         ? 'bg-brand-600 text-white shadow-sm'
                         : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/[0.06]'
@@ -282,7 +287,7 @@ if (typeof window !== 'undefined') {
                     type="button"
                     @click="setPeriod('PM')"
                     :class="[
-                      'w-full py-2.5 rounded-lg text-xs font-bold transition-all text-center cursor-pointer',
+                      'w-full py-2 rounded-md text-xs font-bold transition-all text-center cursor-pointer',
                       currentPeriod === 'PM'
                         ? 'bg-brand-600 text-white shadow-sm'
                         : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/[0.06]'
@@ -297,14 +302,11 @@ if (typeof window !== 'undefined') {
           </div>
 
           <!-- Bottom Footer -->
-          <div class="pt-2 border-t border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between">
-            <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-              {{ modelValue || '08:00' }}
-            </span>
+          <div class="pt-2 border-t border-slate-200/60 dark:border-white/[0.06]">
             <button
               type="button"
               @click="closeDropdown"
-              class="px-3.5 py-1 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
+              class="w-full py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer text-center"
               data-testid="time-picker-done-btn"
             >
               {{ $t('settings.btn_done') || 'Done' }}
