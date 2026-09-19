@@ -201,6 +201,12 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     expect(wrapper.text()).toContain('quiz.title')
     expect(wrapper.text()).toContain('quiz.subtitle')
 
+    // Standard studio container max-w-6xl
+    expect(wrapper.find('.max-w-6xl').exists()).toBe(true)
+
+    // Balanced 50/50 Bento Grid
+    expect(wrapper.find('.lg\\:grid-cols-2').exists()).toBe(true)
+
     // Generate CTA button
     const generateBtn = wrapper.find('[data-testid="generate-quiz-btn"]')
     expect(generateBtn.exists()).toBe(true)
@@ -212,7 +218,8 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     expect(wrapper.text()).toContain('quiz.level_middle')
     expect(wrapper.text()).toContain('quiz.level_senior')
 
-    // Segmented question count pills
+    // Segmented question count pills (3 / 5 / 10)
+    expect(wrapper.text()).toContain('quiz.count_3')
     expect(wrapper.text()).toContain('quiz.count_5')
     expect(wrapper.text()).toContain('quiz.count_10')
 

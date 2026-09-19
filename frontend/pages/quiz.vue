@@ -103,15 +103,56 @@ const groundedBookOptions = computed(() => [
   { value: '', label: t('quiz.any_book_in_library') },
   ...(libraryStore.books || []).map(b => ({ value: b.id, label: b.title }))
 ])
-const quickTopics = [
-  '.NET 10 Internals & Memory',
-  'PostgreSQL MVCC & Indexing',
-  'React 19 Concurrency & Server Components',
-  'Distributed Consensus & Raft',
-  'Redis Caching & Lock Strategies',
-  'Docker & Kubernetes Architecture',
-  'Go Routines, Channels & Memory Model'
-]
+const computedQuickTopics = computed(() => {
+  const list: string[] = []
+
+  // 1. Prioritize active technical books from user's library
+  if (libraryStore.books && libraryStore.books.length > 0) {
+    libraryStore.books.slice(0, 3).forEach((b) => {
+      if (b.title && !list.includes(b.title)) {
+        list.push(b.title)
+      }
+    })
+  }
+
+  // 2. Prioritize target role specialization if set in profile
+  const role = profileStore.profile?.targetRole?.toLowerCase() || ''
+  if (role.includes('backend') || role.includes('.net') || role.includes('c#')) {
+    const backendTopics = ['.NET 10 Runtime & Memory', 'PostgreSQL MVCC & Indexing', 'Distributed Systems & Raft']
+    backendTopics.forEach((t) => {
+      if (!list.includes(t)) list.push(t)
+    })
+  } else if (role.includes('frontend') || role.includes('react') || role.includes('web')) {
+    const feTopics = ['React 19 Concurrency', 'CSS Engine & Layout Performance', 'Web Vitals & Browser Runtime']
+    feTopics.forEach((t) => {
+      if (!list.includes(t)) list.push(t)
+    })
+  } else if (role.includes('devops') || role.includes('cloud') || role.includes('infra')) {
+    const devopsTopics = ['Kubernetes Scheduling & Pods', 'Docker Storage Drivers', 'Linux Kernel & cgroups']
+    devopsTopics.forEach((t) => {
+      if (!list.includes(t)) list.push(t)
+    })
+  }
+
+  // 3. Fallback to foundational senior engineering topics
+  const fallbacks = [
+    'PostgreSQL MVCC & Indexing',
+    'Distributed Consensus & Raft',
+    'Redis Caching & Lock Strategies',
+    'Docker & Kubernetes Architecture',
+    '.NET 10 Internals & Memory',
+    'React 19 Concurrency & Server Components',
+    'Go Routines, Channels & Memory Model'
+  ]
+  for (const item of fallbacks) {
+    if (list.length >= 7) break
+    if (!list.includes(item)) {
+      list.push(item)
+    }
+  }
+
+  return list.slice(0, 7)
+})
 
 function onReviewPageChange(newPage: number) {
   router.replace({
@@ -390,7 +431,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
     <!-- Header Section -->
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-white/[0.08] pb-4">
       <div class="flex items-center gap-3">
@@ -482,47 +523,50 @@ defineExpose({
     </div>
 
     <!-- TAB 1: GENERATE QUIZ (BENTO STUDIO) -->
-    <div v-if="quizStore.activeTab === 'generate'" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-      <!-- LEFT BENTO: Topic & Context Hub (7 cols) -->
-      <div class="lg:col-span-7 glass-card p-5 sm:p-7 space-y-6">
-        <!-- Topic Selection -->
-        <div class="space-y-2.5">
-          <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
-            {{ $t('quiz.topic_label') }}
-          </label>
-          <input
-            v-model="customTopicInput"
-            type="text"
-            :placeholder="$t('quiz.topic_placeholder')"
-            class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm sm:text-base transition-all shadow-sm"
-            @keyup.enter="handleGenerateQuiz()"
-          />
+    <div v-if="quizStore.activeTab === 'generate'" class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+      <!-- LEFT BENTO: Topic & Context Hub -->
+      <div class="glass-card p-5 sm:p-7 space-y-6 flex flex-col justify-between">
+        <div class="space-y-6">
+          <!-- Topic Selection -->
+          <div class="space-y-2.5">
+            <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
+              {{ $t('quiz.topic_label') }}
+            </label>
+            <input
+              v-model="customTopicInput"
+              type="text"
+              :placeholder="$t('quiz.topic_placeholder')"
+              class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm sm:text-base transition-all shadow-sm"
+              @keyup.enter="handleGenerateQuiz()"
+            />
 
-          <!-- Quick Topic Chips -->
-          <div class="space-y-2 pt-1">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              {{ $t('quiz.quick_topics') }}
-            </span>
-            <div class="flex flex-wrap gap-2">
-              <button
-                v-for="topic in quickTopics"
-                :key="topic"
-                @click="customTopicInput = topic"
-                :class="[
-                  'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap shrink-0',
-                  customTopicInput === topic
-                    ? 'border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-300 font-bold shadow-sm'
-                    : 'bg-slate-100 dark:bg-white/[0.03] hover:bg-brand-50 dark:hover:bg-white/[0.06] text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-300 border-slate-200 dark:border-white/[0.06]'
-                ]"
-              >
-                {{ topic }}
-              </button>
+            <!-- Quick Topic Chips -->
+            <div class="space-y-2 pt-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                {{ $t('quiz.quick_topics') }}
+              </span>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="topic in computedQuickTopics"
+                  :key="topic"
+                  @click="customTopicInput = topic"
+                  :class="[
+                    'px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border transition-colors whitespace-nowrap shrink-0 max-w-[220px] truncate',
+                    customTopicInput === topic
+                      ? 'border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-300 font-bold shadow-sm'
+                      : 'bg-slate-100 dark:bg-white/[0.03] hover:bg-brand-50 dark:hover:bg-white/[0.06] text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-brand-300 border-slate-200 dark:border-white/[0.06]'
+                  ]"
+                  :title="topic"
+                >
+                  {{ topic }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Grounded in Book Toggle Card -->
-        <div class="p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] bg-slate-50/70 dark:bg-white/[0.02] space-y-3">
+        <div class="p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] bg-slate-50/70 dark:bg-white/[0.02] space-y-3 mt-4">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
               <div class="w-8 h-8 rounded-xl bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
@@ -569,72 +613,85 @@ defineExpose({
         </div>
       </div>
 
-      <!-- RIGHT BENTO: Seniority & Generation Controls (5 cols) -->
-      <div class="lg:col-span-5 glass-card p-5 sm:p-7 space-y-6">
-        <!-- Level Picker (Purely Typographic, No Emojis, No Icons) -->
-        <div class="space-y-2.5">
-          <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
-            {{ $t('quiz.level_label') }}
-          </label>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5">
-            <button
-              v-for="lvl in seniorityLevels"
-              :key="lvl.id"
-              @click="selectedLevel = lvl.id"
-              :class="[
-                'p-3.5 sm:p-4 rounded-xl border text-left transition-all relative',
-                selectedLevel === lvl.id
-                  ? 'border-brand-500 bg-brand-500/10 text-brand-900 dark:text-white ring-1 ring-brand-500/30 shadow-sm'
-                  : 'border-slate-200/80 dark:border-white/[0.06] bg-white/60 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/[0.15]'
-              ]"
-            >
-              <div class="flex items-center justify-between mb-1">
-                <span class="font-bold text-sm sm:text-base text-slate-900 dark:text-white">{{ $t(`quiz.${lvl.key}`) }}</span>
-                <span
-                  v-if="selectedLevel === lvl.id"
-                  class="w-2 h-2 rounded-full bg-brand-500 shrink-0"
-                ></span>
-              </div>
-              <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
-                {{ lvl.desc }}
-              </p>
-            </button>
+      <!-- RIGHT BENTO: Seniority & Generation Controls -->
+      <div class="glass-card p-5 sm:p-7 space-y-6 flex flex-col justify-between">
+        <div class="space-y-6">
+          <!-- Level Picker (Purely Typographic, 2x2 Grid, No Emojis/Icons) -->
+          <div class="space-y-2.5">
+            <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
+              {{ $t('quiz.level_label') }}
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                v-for="lvl in seniorityLevels"
+                :key="lvl.id"
+                @click="selectedLevel = lvl.id"
+                :class="[
+                  'p-3.5 sm:p-4 rounded-xl border text-left transition-all relative flex flex-col justify-between',
+                  selectedLevel === lvl.id
+                    ? 'border-brand-500 bg-brand-500/10 text-brand-900 dark:text-white ring-1 ring-brand-500/30 shadow-sm'
+                    : 'border-slate-200/80 dark:border-white/[0.06] bg-white/60 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/[0.15]'
+                ]"
+              >
+                <div class="flex items-center justify-between mb-1.5 gap-2">
+                  <span class="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">{{ $t(`quiz.${lvl.key}`) }}</span>
+                  <span
+                    v-if="selectedLevel === lvl.id"
+                    class="w-2 h-2 rounded-full bg-brand-500 shrink-0"
+                  ></span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-normal leading-relaxed">
+                  {{ lvl.desc }}
+                </p>
+              </button>
+            </div>
           </div>
-        </div>
 
-        <!-- Question Count (Segmented Pill Container) -->
-        <div class="space-y-2.5">
-          <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
-            {{ $t('quiz.count_label') }}
-          </label>
-          <div class="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08]">
-            <button
-              @click="selectedCount = 5"
-              :class="[
-                'flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center whitespace-nowrap',
-                selectedCount === 5
-                  ? 'bg-brand-600 text-white font-bold shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              ]"
-            >
-              {{ $t('quiz.count_5') }}
-            </button>
-            <button
-              @click="selectedCount = 10"
-              :class="[
-                'flex-1 py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center whitespace-nowrap',
-                selectedCount === 10
-                  ? 'bg-brand-600 text-white font-bold shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              ]"
-            >
-              {{ $t('quiz.count_10') }}
-            </button>
+          <!-- Question Count (3-Tier Segmented Pill Container) -->
+          <div class="space-y-2.5">
+            <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
+              {{ $t('quiz.count_label') }}
+            </label>
+            <div class="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08]">
+              <button
+                @click="selectedCount = 3"
+                :class="[
+                  'flex-1 py-2 px-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center whitespace-nowrap shrink-0',
+                  selectedCount === 3
+                    ? 'bg-brand-600 text-white font-bold shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ]"
+              >
+                {{ $t('quiz.count_3') }}
+              </button>
+              <button
+                @click="selectedCount = 5"
+                :class="[
+                  'flex-1 py-2 px-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center whitespace-nowrap shrink-0',
+                  selectedCount === 5
+                    ? 'bg-brand-600 text-white font-bold shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ]"
+              >
+                {{ $t('quiz.count_5') }}
+              </button>
+              <button
+                @click="selectedCount = 10"
+                :class="[
+                  'flex-1 py-2 px-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center whitespace-nowrap shrink-0',
+                  selectedCount === 10
+                    ? 'bg-brand-600 text-white font-bold shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                ]"
+              >
+                {{ $t('quiz.count_10') }}
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- Generate Button -->
-        <div class="pt-2">
+        <div class="pt-4">
           <button
             data-testid="generate-quiz-btn"
             @click="handleGenerateQuiz()"
