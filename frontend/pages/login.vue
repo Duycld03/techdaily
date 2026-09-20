@@ -234,7 +234,7 @@ async function handleSubmit() {
         </div>
         <!-- Google OAuth Button Container -->
         <div class="flex flex-col items-center justify-center min-h-[44px]">
-          <div ref="googleBtnContainer" class="flex justify-center w-full max-w-[320px]"></div>
+          <div ref="googleBtnContainer" class="flex justify-center w-full max-w-[320px]" style="color-scheme: light;"></div>
         </div>
       </div>
 
