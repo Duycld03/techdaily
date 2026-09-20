@@ -3,17 +3,8 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import {
   BookOpen,
   LogOut,
-  User,
   Menu,
   X,
-  Target,
-  Map,
-  Compass,
-  HelpCircle,
-  Layers,
-  Highlighter,
-  Network,
-  Settings,
   Search
 } from 'lucide-vue-next'
 import StreakBadge from '~/components/common/StreakBadge.vue'
@@ -30,64 +21,13 @@ const commandPalette = useCommandPalette()
 const currentStreak = computed(() => focusStore.data?.currentStreak ?? 0)
 const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 2)
 
-interface NavGroup {
-  titleKey: string
-  links: Array<{
-    name: string
-    path: string
-    icon: any
-  }>
-}
+const { navGroups, isLinkActive } = useNavigationMenu()
 
-const navGroups: NavGroup[] = [
-  {
-    titleKey: 'nav.group_practice',
-    links: [
-      { name: 'nav.today', path: '/today', icon: Target },
-      { name: 'nav.roadmap', path: '/roadmap', icon: Map },
-      { name: 'nav.quiz', path: '/quiz', icon: HelpCircle },
-      { name: 'nav.review', path: '/review', icon: Layers }
-    ]
-  },
-  {
-    titleKey: 'nav.group_knowledge',
-    links: [
-      { name: 'nav.insights', path: '/insights', icon: Compass },
-      { name: 'nav.library', path: '/library', icon: BookOpen },
-        { name: 'nav.notes', path: '/notes', icon: Highlighter },
-      { name: 'nav.graph', path: '/graph', icon: Network }
-    ]
-  },
-  {
-    titleKey: 'nav.group_account',
-    links: [
-      { name: 'nav.profile', path: '/profile', icon: User },
-      { name: 'nav.settings', path: '/settings', icon: Settings }
-    ]
+useEventListener(window, 'keydown', (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && isMobileNavOpen.value) {
+    isMobileNavOpen.value = false
   }
-]
-
-function isLinkActive(linkPath: string): boolean {
-  const currentPath = route.path
-  if (linkPath === '/today') {
-    return currentPath === '/today' || currentPath === '/'
-  }
-  if (linkPath === '/library') {
-    return currentPath === '/library' || currentPath.startsWith('/read')
-  }
-  if (linkPath === '/graph') {
-    return currentPath === '/graph' || currentPath.startsWith('/graph')
-  }
-  return currentPath === linkPath
-}
-
-function handleMobileLinkClick(event: MouseEvent, navigate: (e?: MouseEvent) => Promise<unknown>) {
-  navigate(event)
-  isMobileNavOpen.value = false
-  if (event.currentTarget && typeof (event.currentTarget as HTMLElement).blur === 'function') {
-    (event.currentTarget as HTMLElement).blur()
-  }
-}
+})
 
 watch(isMobileNavOpen, (open) => {
   if (typeof document !== 'undefined') {
@@ -216,18 +156,28 @@ onUnmounted(() => {
         class="md:hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm touch-none animate-in fade-in"
         @click.self="isMobileNavOpen = false"
       >
-        <div class="fixed inset-y-0 left-0 z-50 w-[85%] max-w-xs bg-white dark:bg-slate-900 h-full min-h-[100dvh] flex flex-col justify-between p-5 sm:p-6 shadow-2xl border-r border-slate-200 dark:border-slate-800 animate-in slide-in-from-left">
+        <div
+          class="fixed inset-y-0 left-0 z-50 w-[85%] max-w-xs bg-white/95 dark:bg-canvas-subtle/95 backdrop-blur-md h-full min-h-[100dvh] flex flex-col justify-between p-5 sm:p-6 shadow-2xl border-r border-slate-200/80 dark:border-white/[0.08] animate-in slide-in-from-left duration-200"
+          data-testid="mobile-nav-drawer"
+        >
           <!-- Drawer Header -->
-          <div class="shrink-0 flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
-            <div class="flex items-center gap-3 font-bold tracking-tight">
-              <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center shadow-md shrink-0">
-                <BookOpen class="w-5 h-5 text-slate-950 font-bold" :stroke-width="1.5" />
+          <div class="shrink-0 flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/[0.08]">
+            <NuxtLink
+              to="/"
+              @click="isMobileNavOpen = false"
+              class="flex items-center gap-2.5 font-bold tracking-tight hover:opacity-90 transition-opacity"
+            >
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-400 flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
+                <BookOpen class="w-4 h-4 text-white font-bold" :stroke-width="1.5" />
               </div>
-              <span class="text-base font-black text-slate-900 dark:text-white">TechDaily Menu</span>
-            </div>
+              <span
+                data-testid="mobile-nav-title"
+                class="text-base sm:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-brand-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent"
+              >TechDaily</span>
+            </NuxtLink>
             <button
               @click="isMobileNavOpen = false"
-              class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white"
+              class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors"
               aria-label="Close menu"
             >
               <X class="w-5 h-5" :stroke-width="1.5" />
@@ -237,9 +187,9 @@ onUnmounted(() => {
           <!-- Navigation Links (Scrollable) -->
           <div class="flex-1 overflow-y-auto min-h-0 py-4 -mx-1 px-1 overscroll-contain">
             <nav class="space-y-4">
-              <div v-for="group in navGroups" :key="group.titleKey" class="space-y-1">
+              <div v-for="group in navGroups" :key="group.titleKey" class="space-y-0.5">
                 <!-- Category Header -->
-                <div class="px-4 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <div class="px-3.5 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   {{ $t(group.titleKey) }}
                 </div>
 
@@ -254,10 +204,10 @@ onUnmounted(() => {
                     :href="href"
                     @click="navigate(); isMobileNavOpen = false"
                     :class="[
-                      'flex items-center gap-3.5 px-4 py-2.5 rounded-xl text-sm transition-colors',
+                      'flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-colors border-l-2',
                       isLinkActive(link.path)
-                        ? 'bg-slate-100 dark:bg-slate-800/80 text-brand-600 dark:text-brand-400 font-bold'
-                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/50 font-medium'
+                        ? 'bg-brand-500/10 dark:bg-white/[0.06] text-brand-600 dark:text-white font-semibold border-brand-500 shadow-sm'
+                        : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/70 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-100 font-medium'
                     ]"
                   >
                     <component
@@ -268,7 +218,7 @@ onUnmounted(() => {
                       ]"
                       :stroke-width="1.5"
                     />
-                    <span>{{ $t(link.name) }}</span>
+                    <span class="whitespace-nowrap">{{ $t(link.name) }}</span>
                   </a>
                 </NuxtLink>
               </div>
@@ -276,9 +226,9 @@ onUnmounted(() => {
           </div>
 
           <!-- Drawer Footer (Fixed Pinned) -->
-          <div class="shrink-0 pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center justify-between p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/60">
-              <div class="flex items-center gap-3 min-w-0 pr-2">
+          <div class="shrink-0 pt-4 border-t border-slate-200/80 dark:border-white/[0.08] space-y-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div v-if="authStore.isLoggedIn && authStore.user" class="flex items-center justify-between p-3 rounded-2xl bg-slate-100/90 dark:bg-canvas-elevated/80 border border-slate-200/80 dark:border-white/[0.06]">
+              <div class="flex items-center gap-2.5 min-w-0 pr-2">
                 <div class="w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
                   {{ authStore.user.name.charAt(0).toUpperCase() }}
                 </div>
@@ -288,9 +238,11 @@ onUnmounted(() => {
               </div>
               <button
                 @click="authStore.logout(); isMobileNavOpen = false"
-                class="text-xs font-semibold text-rose-600 dark:text-rose-400 shrink-0 hover:underline"
+                class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0"
+                :title="$t('nav.logout')"
               >
-                Log Out
+                <LogOut class="w-3.5 h-3.5" :stroke-width="1.5" />
+                <span>{{ $t('nav.logout') }}</span>
               </button>
             </div>
 
@@ -298,7 +250,7 @@ onUnmounted(() => {
               v-else
               to="/login"
               @click="isMobileNavOpen = false"
-              class="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md shadow-brand-500/20 active:scale-95"
+              class="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md shadow-brand-500/20 active:scale-95 transition-all"
             >
               {{ $t('nav.login') }}
             </NuxtLink>

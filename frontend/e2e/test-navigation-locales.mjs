@@ -93,9 +93,15 @@ async function runTests() {
     await menuButton.click();
     await page.waitForTimeout(500);
 
-    const mobileDrawerTitle = page.locator('span:has-text("TechDaily Menu")');
+    const mobileDrawerTitle = page.locator('[data-testid="mobile-nav-title"]');
     await mobileDrawerTitle.waitFor({ state: 'visible', timeout: 3000 });
     console.log('✅ Mobile navigation drawer is open.');
+
+    // Verify Dashboard link exists in mobile drawer
+    const mobileDashboardLink = page.locator('div[data-testid="mobile-nav-drawer"] a[href="/"]');
+    const hasDashboard = (await mobileDashboardLink.count()) > 0;
+    console.log(`- Mobile Drawer Link 'Dashboard' (/): ${hasDashboard ? 'PASS' : 'FAIL'}`);
+    if (!hasDashboard) throw new Error('Missing Dashboard link in mobile drawer');
 
     // Verify 3 Group Headers inside Mobile Drawer
     const mobilePractice = page.locator('div.fixed >> text=Luyện Tập');

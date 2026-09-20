@@ -73,6 +73,8 @@ CLAUDE.md
 .omp/
 .gemini/
 .claude/
+.skills/
+skills-lock.json
 .cursor/
 .cursorrules
 .windsurf/
