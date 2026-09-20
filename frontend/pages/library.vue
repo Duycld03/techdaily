@@ -729,14 +729,14 @@ async function confirmDeleteBook() {
     <!-- Import Document Modal (Teleported to Body) -->
     <Teleport to="body">
       <div v-if="isImportModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in" @click.self="isImportModalOpen = false">
-        <div class="w-full max-w-2xl glass-panel border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-2xl p-5 sm:p-8 md:p-9 space-y-5 sm:space-y-6 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto [scrollbar-gutter:stable]">
+        <div class="w-full max-w-2xl glass-panel border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-2xl p-5 sm:p-8 md:p-9 space-y-5 sm:space-y-6 animate-in zoom-in-95 max-h-[85dvh] overflow-y-auto [scrollbar-gutter:stable]">
           <div class="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-white/[0.08] gap-2">
             <div class="min-w-0">
               <h3 class="text-base sm:text-xl font-bold text-slate-900 dark:text-white truncate">{{ $t('library.import_modal_title') }}</h3>
               <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{{ $t('library.import_modal_desc') }}</p>
             </div>
             <button @click="isImportModalOpen = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-canvas-elevated shrink-0" aria-label="Close modal">
-              <X class="w-5 h-5" />
+              <X class="w-5 h-5" :stroke-width="1.5" />
             </button>
           </div>
 
@@ -839,7 +839,7 @@ async function confirmDeleteBook() {
               <button
                 type="button"
                 @click="isImportModalOpen = false"
-                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 sm:border-transparent transition-colors text-center"
+                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/[0.08] sm:border-transparent transition-colors text-center"
               >
                 {{ $t('library.cancel') }}
               </button>
@@ -963,7 +963,7 @@ async function confirmDeleteBook() {
               <button
                 type="button"
                 @click="isImportModalOpen = false; if (pollInterval) { clearInterval(pollInterval); pollInterval = null; isProcessingPdf = false; }"
-                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 sm:border-transparent transition-colors text-center"
+                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/[0.08] sm:border-transparent transition-colors text-center"
               >
                 {{ $t('library.cancel') }}
               </button>
@@ -1049,7 +1049,7 @@ async function confirmDeleteBook() {
               <button
                 type="button"
                 @click="isImportModalOpen = false"
-                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 sm:border-transparent transition-colors text-center"
+                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/[0.08] sm:border-transparent transition-colors text-center"
               >
                 {{ $t('library.cancel') }}
               </button>

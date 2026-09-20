@@ -276,7 +276,7 @@ async function confirmDeleteHighlight() {
     <!-- Header -->
     <div class="space-y-1 sm:space-y-2">
       <h1 class="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5 sm:gap-3">
-        <Highlighter class="w-6 h-6 sm:w-7 sm:h-7 text-brand-600 dark:text-brand-400" />
+        <Highlighter class="w-6 h-6 sm:w-7 sm:h-7 text-brand-600 dark:text-brand-400" :stroke-width="1.5" />
         <span>{{ $t('notes.title') }}</span>
       </h1>
       <p class="text-sm md:text-lg text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{{ $t('notes.subtitle') }}</p>
@@ -286,7 +286,7 @@ async function confirmDeleteHighlight() {
     <div class="space-y-4">
       <!-- Search & Filter Bar -->
       <div v-if="notesStore.highlights.length > 0" class="relative">
-        <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
         <input
           v-model="highlightSearchQuery"
           type="text"
@@ -298,7 +298,7 @@ async function confirmDeleteHighlight() {
           @click="highlightSearchQuery = ''"
           class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full"
         >
-          <X class="w-4 h-4" />
+          <X class="w-4 h-4" :stroke-width="1.5" />
         </button>
       </div>
 

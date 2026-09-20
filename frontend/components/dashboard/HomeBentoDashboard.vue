@@ -126,7 +126,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-4 lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden flex flex-col justify-start gap-3.5 sm:gap-4">
+  <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-4 lg:h-[calc(100dvh-3.5rem)] lg:overflow-hidden flex flex-col justify-start gap-3.5 sm:gap-4">
     <!-- 1. Welcome & Orientation Banner (Image #1 Inspired) -->
     <div class="glass-card px-4 py-3 sm:px-5 sm:py-3.5 relative overflow-hidden border border-slate-200/80 dark:border-white/[0.06] shrink-0">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 relative z-10">
@@ -160,7 +160,7 @@ onMounted(() => {
             <div class="flex items-center justify-between gap-3 mb-3">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-center shrink-0">
-                  <BookOpen class="w-4 h-4" />
+                  <BookOpen class="w-4 h-4" :stroke-width="1.5" />
                 </div>
                 <div>
                   <span class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -173,7 +173,7 @@ onMounted(() => {
               </div>
 
               <div class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                <Clock class="w-3.5 h-3.5" />
+                <Clock class="w-3.5 h-3.5" :stroke-width="1.5" />
                 <span>{{ estimatedMinutes }} {{ $t('today.estimated_read') }}</span>
               </div>
             </div>
@@ -215,7 +215,7 @@ onMounted(() => {
               class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md shadow-brand-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
             >
               <span>{{ $t('dashboard.continue_reading') }}</span>
-              <ArrowRight class="w-4 h-4" />
+              <ArrowRight class="w-4 h-4" :stroke-width="1.5" />
             </button>
           </div>
         </div>
@@ -226,7 +226,7 @@ onMounted(() => {
             <div class="flex items-center justify-between gap-3 mb-3">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-center shrink-0">
-                  <Terminal class="w-4 h-4" />
+                  <Terminal class="w-4 h-4" :stroke-width="1.5" />
                 </div>
                 <div>
                   <span class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -259,7 +259,7 @@ onMounted(() => {
               class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.04] hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 font-semibold text-xs sm:text-sm border border-slate-200/80 dark:border-white/[0.06] transition-all flex items-center justify-center gap-2 shrink-0"
             >
               <span>{{ $t('dashboard.solve_challenge') }}</span>
-              <ArrowRight class="w-4 h-4 text-slate-400" />
+              <ArrowRight class="w-4 h-4 text-slate-400" :stroke-width="1.5" />
             </button>
           </div>
         </div>
@@ -281,7 +281,7 @@ onMounted(() => {
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-2">
               <div class="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
-                <Flame class="w-4 h-4 fill-amber-500" />
+                <Flame class="w-4 h-4 fill-amber-500" :stroke-width="1.5" />
               </div>
               <span class="text-xs font-bold text-slate-800 dark:text-slate-200">
                 {{ streak }} {{ $t('dashboard.days_streak') }}
@@ -289,7 +289,7 @@ onMounted(() => {
             </div>
 
             <div class="flex items-center gap-1 text-[11px] text-sky-500 font-semibold" title="Streak Freeze Credits">
-              <Shield class="w-3.5 h-3.5 fill-sky-500/20" />
+              <Shield class="w-3.5 h-3.5 fill-sky-500/20" :stroke-width="1.5" />
               <span>{{ freezeCredits }}/2 {{ $t('dashboard.freezes') }}</span>
             </div>
           </div>

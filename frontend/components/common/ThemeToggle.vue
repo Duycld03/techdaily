@@ -15,7 +15,7 @@ function toggleTheme() {
     :title="colorMode.value === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
     aria-label="Toggle Color Theme"
   >
-    <Sun v-if="colorMode.value === 'dark'" class="w-4 h-4 text-amber-400" />
-    <Moon v-else class="w-4 h-4 text-slate-700" />
+    <Sun v-if="colorMode.value === 'dark'" class="w-4 h-4 text-amber-400" :stroke-width="1.5" />
+    <Moon v-else class="w-4 h-4 text-slate-700" :stroke-width="1.5" />
   </button>
 </template>

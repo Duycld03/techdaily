@@ -15,7 +15,7 @@ const emit = defineEmits<{
       @click="emit('grade', 1)"
       :disabled="disabled"
       type="button"
-      class="group relative flex flex-col items-center justify-center p-3 sm:p-3.5 rounded-2xl border border-rose-200/80 dark:border-rose-500/30 bg-rose-50/80 dark:bg-rose-500/10 hover:bg-rose-100/90 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 font-semibold transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-rose-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+      class="group relative flex flex-col items-center justify-center min-h-[48px] p-3 sm:p-3.5 rounded-2xl border border-rose-200/80 dark:border-rose-500/30 bg-rose-50/80 dark:bg-rose-500/10 hover:bg-rose-100/90 dark:hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 font-semibold transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-rose-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
     >
       <div class="flex items-center gap-1.5">
         <span class="font-bold text-sm sm:text-base tracking-tight">{{ $t('review.grade_again') }}</span>
@@ -29,7 +29,7 @@ const emit = defineEmits<{
       @click="emit('grade', 3)"
       :disabled="disabled"
       type="button"
-      class="group relative flex flex-col items-center justify-center p-3 sm:p-3.5 rounded-2xl border border-amber-200/80 dark:border-amber-500/30 bg-amber-50/80 dark:bg-amber-500/10 hover:bg-amber-100/90 dark:hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-semibold transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-amber-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+      class="group relative flex flex-col items-center justify-center min-h-[48px] p-3 sm:p-3.5 rounded-2xl border border-amber-200/80 dark:border-amber-500/30 bg-amber-50/80 dark:bg-amber-500/10 hover:bg-amber-100/90 dark:hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-semibold transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-amber-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
     >
       <div class="flex items-center gap-1.5">
         <span class="font-bold text-sm sm:text-base tracking-tight">{{ $t('review.grade_hard') }}</span>
@@ -43,7 +43,7 @@ const emit = defineEmits<{
       @click="emit('grade', 4)"
       :disabled="disabled"
       type="button"
-      class="group relative flex flex-col items-center justify-center p-3 sm:p-3.5 rounded-2xl border border-sky-200/80 dark:border-sky-500/30 bg-sky-50/80 dark:bg-sky-500/10 hover:bg-sky-100/90 dark:hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 font-semibold transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-sky-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+      class="group relative flex flex-col items-center justify-center min-h-[48px] p-3 sm:p-3.5 rounded-2xl border border-sky-200/80 dark:border-sky-500/30 bg-sky-50/80 dark:bg-sky-500/10 hover:bg-sky-100/90 dark:hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 font-semibold transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-sky-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
     >
       <div class="flex items-center gap-1.5">
         <span class="font-bold text-sm sm:text-base tracking-tight">{{ $t('review.grade_good') }}</span>
@@ -57,7 +57,7 @@ const emit = defineEmits<{
       @click="emit('grade', 5)"
       :disabled="disabled"
       type="button"
-      class="group relative flex flex-col items-center justify-center p-3 sm:p-3.5 rounded-2xl border border-brand-200/80 dark:border-brand-500/30 bg-brand-50/80 dark:bg-brand-500/10 hover:bg-brand-100/90 dark:hover:bg-brand-500/20 text-brand-700 dark:text-brand-300 font-semibold transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-brand-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+      class="group relative flex flex-col items-center justify-center min-h-[48px] p-3 sm:p-3.5 rounded-2xl border border-brand-200/80 dark:border-brand-500/30 bg-brand-50/80 dark:bg-brand-500/10 hover:bg-brand-100/90 dark:hover:bg-brand-500/20 text-brand-700 dark:text-brand-300 font-semibold transition-all active:scale-[0.98] shadow-sm hover:shadow-md hover:shadow-brand-500/10 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
     >
       <div class="flex items-center gap-1.5">
         <span class="font-bold text-sm sm:text-base tracking-tight">{{ $t('review.grade_easy') }}</span>

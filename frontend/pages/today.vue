@@ -175,7 +175,7 @@ watch(locale, (newLocale) => {
           ]"
           :title="isOutlineOpen ? 'Close Outline' : 'Open Outline'"
         >
-          <List class="w-3.5 h-3.5" />
+          <List class="w-3.5 h-3.5" :stroke-width="1.5" />
           <span class="hidden sm:inline">{{ $t('reader.toc') || 'Outline' }}</span>
         </button>
 
@@ -187,7 +187,7 @@ watch(locale, (newLocale) => {
               class="flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-canvas-elevated hover:bg-slate-200 dark:hover:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] text-xs font-bold text-slate-800 dark:text-slate-200 transition-all shrink-0"
               title="Switch Document Book"
             >
-              <BookOpen class="w-3.5 h-3.5 text-brand-400 shrink-0" />
+              <BookOpen class="w-3.5 h-3.5 text-brand-400 shrink-0" :stroke-width="1.5" />
               <span class="max-w-[110px] sm:max-w-[160px] truncate">
                 {{ focusStore.data.pacer.bookTitle }}
               </span>
@@ -196,13 +196,14 @@ watch(locale, (newLocale) => {
                   'w-3 h-3 text-slate-400 transition-transform duration-200 shrink-0',
                   isBookMenuOpen ? 'rotate-180' : '',
                 ]"
+                :stroke-width="1.5"
               />
             </button>
 
             <!-- Book Switcher Dropdown -->
             <div
               v-if="isBookMenuOpen"
-              class="absolute left-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-white dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1 select-none"
+              class="absolute left-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1 select-none"
             >
               <div
                 class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"

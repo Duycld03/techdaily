@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import {
   X,
@@ -34,6 +34,38 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', onKeydown)
+
+// Mobile bottom sheet swipe-to-dismiss gesture handling
+const touchStartY = ref(0)
+const isDragging = ref(false)
+const drawerOffsetY = ref(0)
+
+function onTouchStart(e: TouchEvent) {
+  if (typeof window !== 'undefined' && window.innerWidth >= 768) return
+  touchStartY.value = e.touches[0].clientY
+  isDragging.value = true
+  drawerOffsetY.value = 0
+}
+
+function onTouchMove(e: TouchEvent) {
+  if (!isDragging.value) return
+  const currentY = e.touches[0].clientY
+  const delta = currentY - touchStartY.value
+  if (delta > 0) {
+    drawerOffsetY.value = delta
+  } else {
+    drawerOffsetY.value = 0
+  }
+}
+
+function onTouchEnd() {
+  if (!isDragging.value) return
+  isDragging.value = false
+  if (drawerOffsetY.value > 80) {
+    close()
+  }
+  drawerOffsetY.value = 0
+}
 
 // Node type detection
 const nodeType = computed(() => node.value?.type?.toLowerCase() || '')
@@ -184,14 +216,20 @@ function getMasteryBadgeClass(status?: string | null): string {
     <!-- Drawer container: slide-over on desktop, bottom sheet on mobile -->
     <aside
       class="fixed z-50 bg-white dark:bg-canvas-subtle border-slate-200 dark:border-white/[0.08] shadow-2xl flex flex-col overflow-hidden transition-transform duration-300 ease-out
-        inset-x-0 bottom-0 max-h-[85vh] rounded-t-3xl border-t
+        inset-x-0 bottom-0 max-h-[85dvh] rounded-t-3xl border-t
         md:inset-x-auto md:right-0 md:top-16 md:bottom-0 md:w-96 md:max-w-md md:max-h-full md:rounded-none md:border-t-0 md:border-l"
+      :style="drawerOffsetY > 0 ? { transform: `translateY(${drawerOffsetY}px)`, transition: isDragging ? 'none' : undefined } : undefined"
       role="dialog"
       aria-modal="true"
       aria-labelledby="drawer-node-title"
     >
       <!-- Mobile drag handle indicator -->
-      <div class="md:hidden flex justify-center pt-2.5 pb-1">
+      <div
+        class="md:hidden flex justify-center pt-2.5 pb-1 cursor-grab active:cursor-grabbing touch-none select-none"
+        @touchstart="onTouchStart"
+        @touchmove="onTouchMove"
+        @touchend="onTouchEnd"
+      >
         <div class="w-10 h-1 rounded-full bg-slate-300 dark:bg-white/20" />
       </div>
 
@@ -293,20 +331,20 @@ function getMasteryBadgeClass(status?: string | null): string {
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               {{ $t('graph.drawer.metrics') }}
             </h4>
-            <div class="grid grid-cols-2 gap-2">
-              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08]">
-                <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">
+            <div class="grid grid-cols-2 gap-2 min-w-0">
+              <div class="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] min-w-0">
+                <span class="text-[10px] sm:text-[11px] font-medium text-slate-400 dark:text-slate-500 block truncate">
                   {{ $t('graph.drawer.connectedTopics') }}
                 </span>
-                <span class="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block" data-test="pillar-topics-count">
+                <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 block tabular-nums" data-test="pillar-topics-count">
                   {{ connectedTopicsCount }}
                 </span>
               </div>
-              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08]">
-                <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">
+              <div class="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] min-w-0">
+                <span class="text-[10px] sm:text-[11px] font-medium text-slate-400 dark:text-slate-500 block truncate">
                   {{ $t('graph.drawer.connectedBooks') }}
                 </span>
-                <span class="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block" data-test="pillar-books-count">
+                <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 block tabular-nums" data-test="pillar-books-count">
                   {{ connectedBooksCount }}
                 </span>
               </div>
@@ -341,36 +379,36 @@ function getMasteryBadgeClass(status?: string | null): string {
           <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('graph.drawer.metrics') }}
           </h4>
-          <div class="grid grid-cols-2 gap-2">
-            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08]">
-              <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">
+          <div class="grid grid-cols-2 gap-2 min-w-0">
+            <div class="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] min-w-0">
+              <span class="text-[10px] sm:text-[11px] font-medium text-slate-400 dark:text-slate-500 block truncate">
                 {{ $t('graph.drawer.intervalDays') }}
               </span>
-              <span class="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">
+              <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 block tabular-nums truncate">
                 {{ node.intervalDays ?? 0 }} days
               </span>
             </div>
-            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08]">
-              <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">
+            <div class="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] min-w-0">
+              <span class="text-[10px] sm:text-[11px] font-medium text-slate-400 dark:text-slate-500 block truncate">
                 {{ $t('graph.drawer.easeFactor') }}
               </span>
-              <span class="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">
+              <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 block tabular-nums truncate">
                 {{ typeof node.easeFactor === 'number' ? node.easeFactor.toFixed(2) : (node.easeFactor ?? '2.50') }}
               </span>
             </div>
-            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08]">
-              <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">
+            <div class="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] min-w-0">
+              <span class="text-[10px] sm:text-[11px] font-medium text-slate-400 dark:text-slate-500 block truncate">
                 {{ $t('graph.drawer.repetitions') }}
               </span>
-              <span class="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">
+              <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 block tabular-nums truncate">
                 {{ node.repetitionCount ?? 0 }} reviews
               </span>
             </div>
-            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08]">
-              <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500 block">
+            <div class="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] min-w-0">
+              <span class="text-[10px] sm:text-[11px] font-medium text-slate-400 dark:text-slate-500 block truncate">
                 {{ $t('graph.drawer.nextReview') }}
               </span>
-              <span class="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">
+              <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 block truncate">
                 {{ formattedNextReview }}
               </span>
             </div>
@@ -421,7 +459,7 @@ function getMasteryBadgeClass(status?: string | null): string {
 
       <!-- Drawer Action Bridges (Footer) -->
       <div
-        class="p-4 border-t border-slate-200/80 dark:border-white/[0.06] bg-slate-50/70 dark:bg-canvas-subtle/90 flex flex-wrap gap-2 items-center justify-end"
+        class="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-slate-200/80 dark:border-white/[0.06] bg-slate-50/70 dark:bg-canvas-subtle/90 flex flex-wrap gap-2 items-center justify-end"
       >
         <!-- Topic Actions -->
         <template v-if="nodeType === 'topic'">

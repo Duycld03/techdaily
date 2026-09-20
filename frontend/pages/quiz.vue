@@ -21,6 +21,7 @@ export function formatSeniorityLevel(level: string | number) {
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import {
   HelpCircle,
   Sparkles,
@@ -274,6 +275,39 @@ function handleRetryMistakes() {
     selectedOptionIndex.value = null
   }
 }
+function handleKeydown(e: KeyboardEvent) {
+  if (typeof document !== 'undefined') {
+    const activeEl = document.activeElement
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.getAttribute('contenteditable') === 'true')) {
+      return
+    }
+  }
+
+  if (activeTab.value !== 'practice' || !currentQ.value) return
+
+  if (!quizStore.isCurrentAnswered && !quizStore.isSubmitting) {
+    const num = parseInt(e.key, 10)
+    if (!isNaN(num) && num >= 1 && num <= (currentQ.value.options?.length || 4)) {
+      e.preventDefault()
+      handleSelectOption(num - 1)
+      return
+    }
+    if (e.key === 'Enter' && selectedOptionIndex.value !== null) {
+      e.preventDefault()
+      handleSubmitAnswer()
+      return
+    }
+  } else if (quizStore.isCurrentAnswered) {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
+      e.preventDefault()
+      if (!quizStore.isLastQuestion) {
+        handleNextQuestion()
+      }
+    }
+  }
+}
+
+useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handleKeydown)
 
 function getOptionLetter(idx: number): string {
   return ['A', 'B', 'C', 'D'][idx] || `${idx + 1}`
@@ -766,7 +800,7 @@ defineExpose({
             ]"
           >
             <span
-              class="w-7 h-7 rounded-xl font-black text-xs sm:text-sm shrink-0 flex items-center justify-center transition-colors shadow-sm"
+              class="w-7 h-7 rounded-xl font-black text-xs sm:text-sm whitespace-nowrap shrink-0 flex items-center justify-center transition-colors shadow-sm"
               :class="[
                 quizStore.isCurrentAnswered
                   ? (idx === currentSub?.correctOptionIndex

@@ -58,7 +58,13 @@ const listboxId = computed(() => `${componentId.value}-listbox`)
 function updateFloatingPosition() {
   if (!triggerRef.value || typeof window === 'undefined') return
   const rect = triggerRef.value.getBoundingClientRect()
-  const width = rect.width > 0 ? rect.width : 240
+  const rawWidth = rect.width > 0 ? rect.width : 240
+  const maxWidth = Math.min(rawWidth, window.innerWidth - 32)
+  const width = Math.max(maxWidth, 180)
+  let left = rect.left
+  if (left + width > window.innerWidth - 16) {
+    left = Math.max(16, window.innerWidth - width - 16)
+  }
   const spaceBelow = window.innerHeight - rect.bottom
   const spaceAbove = rect.top
   const placeAbove = spaceBelow < 250 && spaceAbove > spaceBelow
@@ -66,8 +72,9 @@ function updateFloatingPosition() {
   isFlipped.value = placeAbove
   floatingStyle.value = {
     position: 'fixed',
-    left: `${rect.left}px`,
+    left: `${left}px`,
     width: `${width}px`,
+    maxWidth: 'calc(100vw - 32px)',
     top: placeAbove ? 'auto' : `${rect.bottom + 6}px`,
     bottom: placeAbove ? `${window.innerHeight - rect.top + 6}px` : 'auto',
     zIndex: '60'
@@ -285,6 +292,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (ev
       <ChevronDown
         class="w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0"
         :class="{ 'rotate-180': isOpen }"
+        :stroke-width="1.5"
         aria-hidden="true"
       />
     </button>
@@ -324,7 +332,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (ev
           @click="selectOption(option)"
           @mouseenter="highlightedIndex = index"
           :class="[
-            'w-full flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all select-none',
+            'w-full flex items-center justify-between gap-2.5 px-3 py-2 min-h-[44px] rounded-xl text-xs sm:text-sm font-medium transition-all select-none',
             option.disabled
               ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-50'
               : String(option.value) === String(modelValue)
@@ -356,6 +364,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (ev
           <Check
             v-if="String(option.value) === String(modelValue)"
             class="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0 ml-1.5"
+            :stroke-width="1.5"
             aria-hidden="true"
           />
         </div>

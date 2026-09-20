@@ -234,7 +234,7 @@ async function handlePasswordChange() {
                 <label class="block text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mb-1.5">
                   {{ $t('profile.daily_goal') }}
                 </label>
-                <div class="grid grid-cols-4 gap-2 max-w-sm">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 max-w-sm">
                   <button
                     v-for="opt in dailyGoalOptions"
                     :key="opt.minutes"
@@ -259,7 +259,7 @@ async function handlePasswordChange() {
                   :disabled="profileStore.isUpdating"
                   class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md transition-all active:scale-[0.98] disabled:opacity-50"
                 >
-                  <Save v-if="!profileStore.isUpdating" class="w-4 h-4" />
+                  <Save v-if="!profileStore.isUpdating" class="w-4 h-4 shrink-0" :stroke-width="1.5" />
                   <span v-if="profileStore.isUpdating" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                   <span>{{ profileStore.isUpdating ? $t('profile.saving') : $t('profile.save_btn') }}</span>
                 </button>

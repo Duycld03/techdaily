@@ -1,4 +1,5 @@
 import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue'
+import { useEventListener } from '@vueuse/core'
 
 export interface ReaderTypography {
   fontSize: 'sm' | 'base' | 'lg' | 'xl' | '2xl'
@@ -108,7 +109,7 @@ function setupPersistenceWatcher() {
   )
 
   if (typeof window !== 'undefined') {
-    window.addEventListener('storage', (event) => {
+    useEventListener(window, 'storage', (event: StorageEvent) => {
       if (event.key === TYPOGRAPHY_STORAGE_KEY && event.newValue) {
         initTypography(true)
       }

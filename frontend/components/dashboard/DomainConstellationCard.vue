@@ -50,7 +50,7 @@ const edges = [
     <div class="flex items-center justify-between mb-2">
       <div class="flex items-center gap-2">
         <div class="w-7 h-7 rounded-lg bg-brand-500/10 text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
-          <Network class="w-4 h-4" />
+          <Network class="w-4 h-4" :stroke-width="1.5" />
         </div>
         <span class="text-xs font-bold text-slate-800 dark:text-slate-200">
           {{ $t('dashboard.domain_constellation') }}
@@ -62,7 +62,7 @@ const edges = [
         class="text-xs font-semibold text-brand-400 hover:text-brand-300 flex items-center gap-1 transition-colors"
       >
         <span>{{ $t('dashboard.open_cosmos') }}</span>
-        <Compass class="w-3.5 h-3.5 shrink-0" />
+        <Compass class="w-3.5 h-3.5 shrink-0" :stroke-width="1.5" />
       </NuxtLink>
     </div>
 
@@ -128,7 +128,7 @@ const edges = [
       <!-- Telemetry Counters Footer -->
       <div class="grid grid-cols-2 gap-2 w-full mt-1 text-center font-mono">
         <div class="p-2 rounded-xl bg-slate-100/60 dark:bg-canvas-subtle border border-slate-200/60 dark:border-white/[0.06]">
-          <div class="text-sm sm:text-base font-black text-slate-800 dark:text-white">
+          <div class="text-sm sm:text-base font-black text-slate-800 dark:text-white tabular-nums">
             {{ nodeCount }}
           </div>
           <div class="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -137,7 +137,7 @@ const edges = [
         </div>
 
         <div class="p-2 rounded-xl bg-slate-100/60 dark:bg-canvas-subtle border border-slate-200/60 dark:border-white/[0.06]">
-          <div class="text-sm sm:text-base font-black text-slate-800 dark:text-white">
+          <div class="text-sm sm:text-base font-black text-slate-800 dark:text-white tabular-nums">
             {{ edgeCount }}
           </div>
           <div class="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">

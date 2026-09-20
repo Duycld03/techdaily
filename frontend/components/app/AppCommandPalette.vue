@@ -240,7 +240,7 @@ onUnmounted(() => {
       >
         <!-- Search Input Bar -->
         <div class="flex items-center gap-3 px-4 py-3.5 border-b border-slate-200 dark:border-white/[0.08] bg-slate-50/50 dark:bg-canvas-subtle/50">
-          <Search class="w-5 h-5 text-brand-500 shrink-0" />
+          <Search class="w-5 h-5 text-brand-500 shrink-0" :stroke-width="1.5" />
           <input
             ref="searchInputRef"
             v-model="searchQuery"
@@ -255,7 +255,7 @@ onUnmounted(() => {
             class="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             title="Clear search"
           >
-            <X class="w-4 h-4" />
+            <X class="w-4 h-4" :stroke-width="1.5" />
           </button>
           <kbd class="hidden sm:inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[11px] font-mono font-medium text-slate-500 dark:text-slate-400 bg-slate-200/80 dark:bg-white/10 border border-slate-300 dark:border-white/[0.08]">
             ESC
@@ -289,7 +289,7 @@ onUnmounted(() => {
                     : 'bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400'
                 ]"
               >
-                <component :is="item.icon" class="w-4 h-4" />
+                <component :is="item.icon" class="w-4 h-4" :stroke-width="1.5" />
               </div>
               <div class="min-w-0">
                 <div class="font-semibold truncate">{{ $t(item.titleKey) }}</div>
@@ -303,7 +303,7 @@ onUnmounted(() => {
                 class="hidden sm:inline-flex items-center gap-1 text-xs font-medium text-brand-600 dark:text-brand-400"
               >
                 {{ $t('command_palette.hint_select') }}
-                <CornerDownLeft class="w-3.5 h-3.5" />
+                <CornerDownLeft class="w-3.5 h-3.5" :stroke-width="1.5" />
               </span>
             </div>
           </div>

@@ -38,7 +38,7 @@ const formattedMemberSince = computed(() => {
 </script>
 
 <template>
-  <div class="glass-card p-6 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm relative overflow-hidden transition-colors duration-200 glow-subtle">
+  <div class="glass-card p-5 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm relative overflow-hidden transition-colors duration-200 glow-subtle">
     <!-- Subtle top decorative background accent -->
     <div class="absolute -top-12 -right-12 w-40 h-40 bg-brand-500/15 dark:bg-brand-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
@@ -82,7 +82,7 @@ const formattedMemberSince = computed(() => {
             <!-- Longest Streak Trophy Badge (prominent on desktop & mobile) -->
             <div class="flex items-center justify-center sm:justify-end shrink-0">
               <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 font-bold text-xs whitespace-nowrap shadow-xs">
-                <Trophy class="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                <Trophy class="w-3.5 h-3.5 shrink-0 text-amber-500" :stroke-width="1.5" />
                 <span>{{ $t('profile.longest_streak_record', { days: stats?.longestStreak ?? 0 }) }}</span>
               </span>
             </div>
@@ -90,7 +90,7 @@ const formattedMemberSince = computed(() => {
 
           <!-- Membership Tenure -->
           <div v-if="stats?.memberSince" class="flex items-center justify-center sm:justify-start gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-            <Calendar class="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <Calendar class="w-3.5 h-3.5 text-slate-400 shrink-0" :stroke-width="1.5" />
             <span>{{ $t('profile.member_since', { date: formattedMemberSince }) }}</span>
           </div>
 
@@ -98,7 +98,7 @@ const formattedMemberSince = computed(() => {
           <div class="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 pt-1">
             <!-- Target Role Badge -->
             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-brand-50 dark:bg-brand-950/60 border border-brand-200 dark:border-brand-800/60 text-brand-700 dark:text-brand-300 font-bold text-xs whitespace-nowrap shrink-0">
-              <Briefcase class="w-3 h-3 shrink-0" />
+              <Briefcase class="w-3 h-3 shrink-0" :stroke-width="1.5" />
               <span class="truncate max-w-[150px]">{{ profile?.targetRole || 'Senior Engineer' }}</span>
             </span>
 
@@ -119,13 +119,13 @@ const formattedMemberSince = computed(() => {
               v-else
               class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] text-xs font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap shrink-0"
             >
-              <Mail class="w-3 h-3 shrink-0 text-brand-500" />
+              <Mail class="w-3 h-3 shrink-0 text-brand-500" :stroke-width="1.5" />
               <span>{{ $t('profile.standard_account') }}</span>
             </span>
 
             <!-- Target Pace Badge -->
             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 font-bold text-xs whitespace-nowrap shrink-0">
-              <Clock class="w-3 h-3 shrink-0" />
+              <Clock class="w-3 h-3 shrink-0" :stroke-width="1.5" />
               <span>{{ $t('profile.target_pace', { minutes: profile?.dailyGoalMinutes || 10 }) }}</span>
             </span>
           </div>

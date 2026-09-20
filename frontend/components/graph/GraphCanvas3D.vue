@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, shallowRef, watch, onMounted, onBeforeUnmount, computed } from 'vue'
+import { useEventListener, useDebounceFn } from '@vueuse/core'
 import {
   RotateCcw,
   Compass,
@@ -19,15 +20,19 @@ const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
 
 const containerRef = ref<HTMLDivElement | null>(null)
-let graphInstance: any = null
+const graphInstance = shallowRef<any>(null)
+const scene = shallowRef<any>(null)
+const camera = shallowRef<any>(null)
+const renderer = shallowRef<any>(null)
+const controls = shallowRef<any>(null)
 const isAutoRotate = ref(false)
 const hoveredNode = ref<GraphNode | null>(null)
 const showAllLabels = ref(false)
 
 function toggleAllLabels() {
   showAllLabels.value = !showAllLabels.value
-  if (graphInstance) {
-    graphInstance.refresh()
+  if (graphInstance.value) {
+    graphInstance.value.refresh()
   }
 }
 
@@ -148,7 +153,7 @@ function getTooltipHtml(node: GraphNode): string {
 }
 
 function updateGraphData() {
-  if (!graphInstance) return
+  if (!graphInstance.value) return
 
   const nodes = store.filteredNodes.map((n) => ({
     ...n,
@@ -166,58 +171,71 @@ function updateGraphData() {
       target: e.target
     }))
 
-  graphInstance.graphData({ nodes, links: edges })
+  graphInstance.value.graphData({ nodes, links: edges })
 }
-
 function fitScreen() {
-  if (!graphInstance) return
+  if (!graphInstance.value) return
   if (isAutoRotate.value) {
     isAutoRotate.value = false
     stopAutoRotate()
   }
-  graphInstance.zoomToFit(1200, 60)
+  graphInstance.value.zoomToFit(1200, 60)
 }
 
-let autoRotateTimer: ReturnType<typeof setInterval> | null = null
+let autoRotateRafId: number | null = null
 let currentOrbitAngle = 0
 
 function startAutoRotate() {
-  if (autoRotateTimer || !graphInstance) return
+  if (autoRotateRafId !== null || !graphInstance.value) return
 
-  const camera = graphInstance.camera()
-  if (camera) {
-    const pos = camera.position
+  const cam = camera.value || graphInstance.value.camera?.()
+  if (cam) {
+    const pos = cam.position
     currentOrbitAngle = Math.atan2(pos.x, pos.z)
   }
 
-  // Smooth orbital rotation: 40 FPS (25ms interval), ~60s for a full 360-degree revolution
-  const angleDelta = (2 * Math.PI) / 2400
+  // Smooth orbital rotation: ~60s for full 360 revolution (~0.0017 rad per frame at 60fps)
+  const angleDelta = (2 * Math.PI) / 3600
 
-  autoRotateTimer = setInterval(() => {
-    if (!graphInstance) {
+  function rotateStep() {
+    if (!graphInstance.value) {
       stopAutoRotate()
       return
     }
 
-    const camera = graphInstance.camera()
-    if (!camera) return
+    const cam = camera.value || graphInstance.value.camera?.()
+    if (!cam) return
 
-    const pos = camera.position
+    const pos = cam.position
     const radius = Math.hypot(pos.x, pos.z) || 450
     currentOrbitAngle += angleDelta
 
-    graphInstance.cameraPosition({
+    graphInstance.value.cameraPosition({
       x: radius * Math.sin(currentOrbitAngle),
       y: pos.y,
       z: radius * Math.cos(currentOrbitAngle)
     })
-  }, 25)
+
+    autoRotateRafId = requestAnimationFrame(rotateStep)
+  }
+
+  autoRotateRafId = requestAnimationFrame(rotateStep)
 }
 
 function stopAutoRotate() {
-  if (autoRotateTimer) {
-    clearInterval(autoRotateTimer)
-    autoRotateTimer = null
+  if (autoRotateRafId !== null) {
+    cancelAnimationFrame(autoRotateRafId)
+    autoRotateRafId = null
+  }
+}
+
+function onControlStart() {
+  stopAutoRotate()
+}
+
+function onControlEnd() {
+  if (isAutoRotate.value) {
+    startAutoRotate()
   }
 }
 
@@ -231,11 +249,11 @@ function toggleAutoRotate() {
 }
 
 function zoomIn() {
-  if (!graphInstance) return
-  const camera = graphInstance.camera()
-  if (camera) {
-    const pos = camera.position
-    graphInstance.cameraPosition(
+  if (!graphInstance.value) return
+  const cam = camera.value || graphInstance.value.camera?.()
+  if (cam) {
+    const pos = cam.position
+    graphInstance.value.cameraPosition(
       { x: pos.x * 0.75, y: pos.y * 0.75, z: pos.z * 0.75 },
       undefined,
       400
@@ -244,11 +262,11 @@ function zoomIn() {
 }
 
 function zoomOut() {
-  if (!graphInstance) return
-  const camera = graphInstance.camera()
-  if (camera) {
-    const pos = camera.position
-    graphInstance.cameraPosition(
+  if (!graphInstance.value) return
+  const cam = camera.value || graphInstance.value.camera?.()
+  if (cam) {
+    const pos = cam.position
+    graphInstance.value.cameraPosition(
       { x: pos.x * 1.3, y: pos.y * 1.3, z: pos.z * 1.3 },
       undefined,
       400
@@ -268,7 +286,7 @@ onMounted(async () => {
 
     const bgClr = isDark.value ? '#09090b' : '#f8fafc'
 
-    graphInstance = ForceGraph3D()(containerRef.value)
+    const fg = ForceGraph3D()(containerRef.value)
       .backgroundColor(bgClr)
       .showNavInfo(false)
       .nodeId('id')
@@ -335,10 +353,10 @@ onMounted(async () => {
           stopAutoRotate()
         }
         // Smooth camera fly-to on selection
-        if (graphInstance && node.x !== undefined) {
+        if (graphInstance.value && node.x !== undefined) {
           const distance = 90
           const distRatio = 1 + distance / Math.hypot(node.x || 1, node.y || 1, node.z || 1)
-          graphInstance.cameraPosition(
+          graphInstance.value.cameraPosition(
             { x: (node.x || 0) * distRatio, y: (node.y || 0) * distRatio, z: (node.z || 0) * distRatio },
             node,
             1200
@@ -355,34 +373,33 @@ onMounted(async () => {
         store.selectNode(null)
       })
 
+    graphInstance.value = fg
+    scene.value = fg.scene?.() || null
+    camera.value = fg.camera?.() || null
+    renderer.value = fg.renderer?.() || null
+    controls.value = fg.controls?.() || null
+
     // Configure OrbitControls
-    const controls = graphInstance.controls()
-    if (controls) {
-      controls.enableDamping = true
-      controls.dampingFactor = 0.1
-      controls.maxDistance = 1400
-      controls.minDistance = 30
+    if (controls.value) {
+      controls.value.enableDamping = true
+      controls.value.dampingFactor = 0.1
+      controls.value.maxDistance = 1400
+      controls.value.minDistance = 30
     }
 
     // Pause auto-rotation during manual drag interaction and resume if enabled
-    if (controls && typeof controls.addEventListener === 'function') {
-      controls.addEventListener('start', () => {
-        stopAutoRotate()
-      })
-      controls.addEventListener('end', () => {
-        if (isAutoRotate.value) {
-          startAutoRotate()
-        }
-      })
+    if (controls.value && typeof controls.value.addEventListener === 'function') {
+      controls.value.addEventListener('start', onControlStart)
+      controls.value.addEventListener('end', onControlEnd)
     }
 
     updateGraphData()
-    emit('ready', graphInstance)
+    emit('ready', fg)
 
     // Initial camera position overview
     setTimeout(() => {
-      if (graphInstance) {
-        graphInstance.cameraPosition({ x: 0, y: 100, z: 420 }, { x: 0, y: 0, z: 0 }, 1500)
+      if (graphInstance.value) {
+        graphInstance.value.cameraPosition({ x: 0, y: 100, z: 420 }, { x: 0, y: 0, z: 0 }, 1500)
       }
     }, 400)
   } catch (err) {
@@ -403,8 +420,8 @@ watch(
 watch(
   isDark,
   (dark) => {
-    if (!graphInstance) return
-    graphInstance.backgroundColor(dark ? '#09090b' : '#f8fafc')
+    if (!graphInstance.value) return
+    graphInstance.value.backgroundColor(dark ? '#09090b' : '#f8fafc')
   }
 )
 
@@ -423,22 +440,43 @@ watch(
 watch(
   () => store.hoveredLegendType,
   () => {
-    if (graphInstance) {
-      graphInstance.refresh()
+    if (graphInstance.value) {
+      graphInstance.value.refresh()
     }
   }
 )
 
+const handleResize3D = useDebounceFn(() => {
+  if (graphInstance.value && containerRef.value) {
+    const width = containerRef.value.clientWidth
+    const height = containerRef.value.clientHeight
+    if (width > 0 && height > 0) {
+      graphInstance.value.width(width)
+      graphInstance.value.height(height)
+    }
+  }
+}, 150)
+
+useEventListener(typeof window !== 'undefined' ? window : null, 'resize', handleResize3D)
+
 onBeforeUnmount(() => {
   stopAutoRotate()
-  if (graphInstance) {
+  if (controls.value && typeof controls.value.removeEventListener === 'function') {
+    controls.value.removeEventListener('start', onControlStart)
+    controls.value.removeEventListener('end', onControlEnd)
+  }
+  if (graphInstance.value) {
     try {
-      graphInstance._destructor?.()
+      graphInstance.value._destructor?.()
     } catch {
       // ignore destructor error on unmount
     }
-    graphInstance = null
+    graphInstance.value = null
   }
+  scene.value = null
+  camera.value = null
+  renderer.value = null
+  controls.value = null
 })
 
 defineExpose({
