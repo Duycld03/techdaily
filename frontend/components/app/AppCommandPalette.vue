@@ -232,7 +232,7 @@ onUnmounted(() => {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-60 flex items-start justify-center pt-16 sm:pt-24 px-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
+      class="fixed inset-0 z-[60] flex items-start justify-center pt-16 sm:pt-24 px-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-sm transition-opacity"
       @click.self="close"
     >
       <div
