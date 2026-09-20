@@ -48,17 +48,7 @@ const { pause: stopGooglePoll, resume: startGooglePoll } = useIntervalFn(() => {
         auto_select: false,
         cancel_on_tap_outside: true
       })
-      const btnContainer = googleBtnContainer.value || document.getElementById('google-signin-btn')
-      if (btnContainer) {
-        ;(window as any).google.accounts.id.renderButton(btnContainer, {
-          theme: colorMode.value === 'dark' ? 'filled_black' : 'outline',
-          size: 'large',
-          width: 320,
-          text: 'continue_with',
-          shape: 'rectangular',
-          logo_alignment: 'left'
-        })
-      }
+      renderGoogleButton()
     } catch (e) {
       console.warn('Google Sign-In initialization:', e)
     }
@@ -66,6 +56,24 @@ const { pause: stopGooglePoll, resume: startGooglePoll } = useIntervalFn(() => {
     stopGooglePoll()
   }
 }, 200, { immediate: false })
+
+function renderGoogleButton() {
+  const gsi = (window as any).google?.accounts?.id
+  const btnContainer = googleBtnContainer.value
+  if (!gsi || !btnContainer) return
+  gsi.renderButton(btnContainer, {
+    theme: colorMode.value === 'dark' ? 'filled_black' : 'outline',
+    size: 'large',
+    width: 320,
+    text: 'continue_with',
+    shape: 'rectangular',
+    logo_alignment: 'left'
+  })
+}
+
+watch(() => colorMode.value, () => {
+  renderGoogleButton()
+})
 
 function initGoogleButton() {
   if (typeof window === 'undefined') return
