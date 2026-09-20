@@ -138,11 +138,11 @@ onMounted(() => {
     <GraphMinimap
       v-if="store.viewMode === '2d'"
       :cy="cyInstance"
-      class="absolute bottom-4 right-4 z-20 hidden sm:block"
+      class="absolute bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-20 hidden sm:block"
     />
 
     <!-- Interactive Visual Graph Legend (Bottom Left, 2D & 3D) -->
-    <div class="absolute bottom-5 left-5 z-20 pointer-events-none">
+    <div class="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-3 sm:left-5 z-20 pointer-events-none">
       <GraphLegend />
     </div>
     <!-- Slide-Over / Bottom-Sheet Detail Drawer -->

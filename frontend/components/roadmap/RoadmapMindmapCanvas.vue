@@ -244,8 +244,24 @@ function endPan() {
   isPanning.value = false
 }
 
-// Touch gesture pan support
+// Touch gesture pan & pinch-zoom support
+let initialTouchDistance = 0
+let initialTouchScale = 1.0
+
+function getTouchDistance(e: TouchEvent): number {
+  if (e.touches.length < 2) return 0
+  const dx = e.touches[0].clientX - e.touches[1].clientX
+  const dy = e.touches[0].clientY - e.touches[1].clientY
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
 function onTouchStart(e: TouchEvent) {
+  if (e.touches.length === 2) {
+    isPanning.value = false
+    initialTouchDistance = getTouchDistance(e)
+    initialTouchScale = scale.value
+    return
+  }
   if (e.touches.length === 1) {
     const target = e.target as HTMLElement | null
     if (target?.closest('.interactive-node') || target?.closest('button') || target?.closest('input')) return
@@ -258,6 +274,14 @@ function onTouchStart(e: TouchEvent) {
 }
 
 function onTouchMove(e: TouchEvent) {
+  if (e.touches.length === 2 && initialTouchDistance > 0) {
+    const dist = getTouchDistance(e)
+    if (dist > 0) {
+      const factor = dist / initialTouchDistance
+      scale.value = Number(Math.min(2.5, Math.max(0.4, initialTouchScale * factor)).toFixed(2))
+    }
+    return
+  }
   if (!isPanning.value || e.touches.length !== 1) return
   pan.value = {
     x: e.touches[0].clientX - dragStart.value.x,
@@ -267,6 +291,7 @@ function onTouchMove(e: TouchEvent) {
 
 function onTouchEnd() {
   isPanning.value = false
+  initialTouchDistance = 0
 }
 
 const windowTarget = typeof window !== 'undefined' ? window : null
@@ -359,7 +384,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
 <template>
   <div
     ref="containerRef"
-    class="relative w-full h-[620px] sm:h-[720px] rounded-3xl bg-slate-50/80 dark:bg-canvas border border-slate-200/90 dark:border-white/[0.08] overflow-hidden select-none transition-colors"
+    class="relative w-full h-[620px] sm:h-[720px] rounded-3xl bg-slate-50/80 dark:bg-canvas border border-slate-200/90 dark:border-white/[0.08] overflow-hidden select-none transition-colors touch-none"
     @wheel="handleWheel"
     @mousedown="startPan"
     @mousemove="onMouseMove"

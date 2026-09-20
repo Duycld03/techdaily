@@ -70,7 +70,7 @@ function handleRetry() {
       <!-- Timeout / Fallback Notice -->
       <div v-else class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-3 animate-in fade-in duration-200">
         <div class="flex items-start gap-2.5">
-          <AlertCircle class="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <AlertCircle class="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" :stroke-width="1.5" />
           <div class="space-y-1">
             <h4 class="text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-200">
               {{ $t('pacer.timeout_title') }}
@@ -85,7 +85,7 @@ function handleRetry() {
           @click="handleRetry"
           class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs sm:text-sm font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap shrink-0"
         >
-          <RefreshCw class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <RefreshCw class="w-3.5 h-3.5 sm:w-4 sm:h-4" :stroke-width="1.5" />
           <span>{{ $t('pacer.retry_action') }}</span>
         </button>
       </div>
@@ -107,7 +107,7 @@ function handleRetry() {
     <!-- Bottom Footer State -->
     <div class="pt-4 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
       <div class="flex items-center gap-1.5 font-medium">
-        <Cpu class="w-3.5 h-3.5 text-brand-500" />
+        <Cpu class="w-3.5 h-3.5 text-brand-500" :stroke-width="1.5" />
         <span>Gemini 3.5 Flash-Lite</span>
       </div>
       <span class="italic">{{ $t('pacer.zero_wait_note') }}</span>

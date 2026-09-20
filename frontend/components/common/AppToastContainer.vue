@@ -30,10 +30,10 @@ const { toasts, remove } = useToast()
         ]"
       >
         <div class="shrink-0 mt-0.5">
-          <CheckCircle2 v-if="toast.type === 'success'" class="w-5 h-5 text-brand-400" />
-          <AlertCircle v-else-if="toast.type === 'error'" class="w-5 h-5 text-rose-400" />
-          <AlertTriangle v-else-if="toast.type === 'warning'" class="w-5 h-5 text-amber-400" />
-          <Info v-else class="w-5 h-5 text-brand-400" />
+          <CheckCircle2 v-if="toast.type === 'success'" class="w-5 h-5 text-brand-400" :stroke-width="1.5" />
+          <AlertCircle v-else-if="toast.type === 'error'" class="w-5 h-5 text-rose-400" :stroke-width="1.5" />
+          <AlertTriangle v-else-if="toast.type === 'warning'" class="w-5 h-5 text-amber-400" :stroke-width="1.5" />
+          <Info v-else class="w-5 h-5 text-brand-400" :stroke-width="1.5" />
         </div>
 
         <div class="flex-1 text-sm font-semibold leading-snug break-words">
@@ -46,7 +46,7 @@ const { toasts, remove } = useToast()
           aria-label="Close notification"
           class="shrink-0 p-1 -mr-1 -mt-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
         >
-          <X class="w-4 h-4" />
+          <X class="w-4 h-4" :stroke-width="1.5" />
         </button>
       </div>
     </TransitionGroup>

@@ -158,10 +158,10 @@ defineExpose({
         :disabled="currentPage <= 1 || disabled"
         :aria-label="prevLabel"
         :aria-disabled="currentPage <= 1 || disabled ? 'true' : undefined"
-        class="min-w-[40px] min-h-[40px] h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-colors shrink-0 text-xs sm:text-sm font-medium whitespace-nowrap cursor-pointer"
+        class="min-w-[40px] min-h-[40px] h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-colors shrink-0 text-xs sm:text-sm font-medium whitespace-nowrap cursor-pointer"
         @click="goToPage(currentPage - 1)"
       >
-        <ChevronLeft class="w-4 h-4 shrink-0" />
+        <ChevronLeft class="w-4 h-4 shrink-0" :stroke-width="1.5" />
         <span class="hidden sm:inline">{{ prevLabel }}</span>
       </button>
 
@@ -177,7 +177,7 @@ defineExpose({
           :class="[
             page === currentPage
               ? 'bg-brand-600 text-white font-bold shadow-sm'
-              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white font-medium'
+              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white font-medium'
           ]"
           @click="goToPage(page)"
         >
@@ -198,11 +198,11 @@ defineExpose({
         :disabled="currentPage >= totalPages || disabled"
         :aria-label="nextLabel"
         :aria-disabled="currentPage >= totalPages || disabled ? 'true' : undefined"
-        class="min-w-[40px] min-h-[40px] h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-colors shrink-0 text-xs sm:text-sm font-medium whitespace-nowrap cursor-pointer"
+        class="min-w-[40px] min-h-[40px] h-10 px-3 flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-colors shrink-0 text-xs sm:text-sm font-medium whitespace-nowrap cursor-pointer"
         @click="goToPage(currentPage + 1)"
       >
         <span class="hidden sm:inline">{{ nextLabel }}</span>
-        <ChevronRight class="w-4 h-4 shrink-0" />
+        <ChevronRight class="w-4 h-4 shrink-0" :stroke-width="1.5" />
       </button>
     </div>
   </nav>

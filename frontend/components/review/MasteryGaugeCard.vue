@@ -26,14 +26,14 @@ const tierInfo = computed(() => {
   if (rate <= 25) {
     return {
       labelKey: 'review.tier_starting',
-      badgeClass: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+      badgeClass: 'bg-slate-100 dark:bg-canvas-subtle text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08]',
       arcColor: 'text-slate-400 dark:text-slate-500'
     }
   }
   if (rate <= 50) {
     return {
       labelKey: 'review.tier_building',
-      badgeClass: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      badgeClass: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20',
       arcColor: 'text-amber-500'
     }
   }
@@ -60,14 +60,14 @@ const tierInfo = computed(() => {
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
-          <Award class="w-4 h-4" />
+          <Award class="w-4 h-4" :stroke-width="1.5" />
         </div>
         <div>
           <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('review.mastery_rate') }}
           </h3>
           <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            {{ masteredCount }} / {{ totalCount }} {{ $t('review.mastered_cards').toLowerCase() }}
+            <span class="tabular-nums">{{ masteredCount }}</span> / <span class="tabular-nums">{{ totalCount }}</span> {{ $t('review.mastered_cards').toLowerCase() }}
           </p>
         </div>
       </div>
@@ -116,7 +116,7 @@ const tierInfo = computed(() => {
 
         <!-- Center Numerical Label -->
         <div class="absolute inset-x-0 bottom-0 text-center flex flex-col items-center pointer-events-none">
-          <span class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-none">
+          <span class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-none tabular-nums">
             {{ masteryRate }}%
           </span>
         </div>

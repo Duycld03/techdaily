@@ -193,7 +193,7 @@ const domainProgressList = computed(() => {
     <div class="flex items-start justify-between gap-4">
       <div class="space-y-1">
         <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-          <Compass class="w-5 h-5 text-brand-500 shrink-0" />
+          <Compass class="w-5 h-5 text-brand-500 shrink-0" :stroke-width="1.5" />
           <span>{{ $t('profile.domain_mastery') }}</span>
         </h3>
         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
@@ -213,7 +213,7 @@ const domainProgressList = computed(() => {
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border" :class="domain.badgeColor">
-              <component :is="domain.icon" class="w-4 h-4" />
+              <component :is="domain.icon" class="w-4 h-4 shrink-0" :stroke-width="1.5" />
             </div>
             <div class="min-w-0">
               <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
@@ -227,7 +227,7 @@ const domainProgressList = computed(() => {
 
           <!-- Percentage Badge -->
           <div class="text-right shrink-0">
-            <span class="text-sm sm:text-base font-black font-mono tracking-tight" :class="domain.textColor">
+            <span class="text-sm sm:text-base font-black font-mono tracking-tight tabular-nums" :class="domain.textColor">
               {{ domain.percentage }}%
             </span>
           </div>

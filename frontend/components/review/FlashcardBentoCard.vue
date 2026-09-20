@@ -127,7 +127,7 @@ const statusBadge = computed(() => {
           class="p-1.5 rounded-xl text-slate-400 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
           :title="$t('review.edit_card')"
         >
-          <Pencil class="w-3.5 h-3.5" />
+          <Pencil class="w-3.5 h-3.5" :stroke-width="1.5" />
         </button>
 
         <button
@@ -136,7 +136,7 @@ const statusBadge = computed(() => {
           class="p-1.5 rounded-xl text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
           :title="$t('review.reset_progress')"
         >
-          <RotateCcw class="w-3.5 h-3.5" />
+          <RotateCcw class="w-3.5 h-3.5" :stroke-width="1.5" />
         </button>
 
         <button
@@ -145,7 +145,7 @@ const statusBadge = computed(() => {
           class="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
           :title="$t('review.delete_card')"
         >
-          <Trash2 class="w-3.5 h-3.5" />
+          <Trash2 class="w-3.5 h-3.5" :stroke-width="1.5" />
         </button>
       </div>
     </div>
@@ -153,7 +153,7 @@ const statusBadge = computed(() => {
     <!-- Middle Body: Front Prompt -->
     <div class="space-y-2 flex-1">
       <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1">
-        <HelpCircle class="w-3.5 h-3.5 text-brand-500" />
+        <HelpCircle class="w-3.5 h-3.5 text-brand-500" :stroke-width="1.5" />
         <span>{{ $t('review.front_label') }}</span>
       </div>
       <div
@@ -170,7 +170,7 @@ const statusBadge = computed(() => {
         class="w-full flex items-center justify-between p-2 rounded-xl text-xs font-semibold text-brand-600 dark:text-brand-400 hover:bg-brand-50/50 dark:hover:bg-brand-500/10 transition-all cursor-pointer"
       >
         <span class="flex items-center gap-1.5">
-          <FileText class="w-3.5 h-3.5 text-brand-500" />
+          <FileText class="w-3.5 h-3.5 text-brand-500" :stroke-width="1.5" />
           <span>{{ isExpanded ? $t('review.hide_answer') : $t('review.show_answer') }}</span>
         </span>
         <ChevronDown

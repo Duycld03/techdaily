@@ -195,9 +195,9 @@ const hasActiveFilters = computed(() => {
     </div>
 
     <!-- Filter Pills Container (Desktop visible, mobile collapsible) -->
-    <div :class="['space-y-2.5 transition-all max-h-[50vh] sm:max-h-none overflow-y-auto sm:overflow-visible pr-0.5', isExpanded ? 'block' : 'hidden sm:block']">
+    <div :class="['space-y-2.5 transition-all max-h-[50dvh] sm:max-h-none overflow-y-auto sm:overflow-visible pr-0.5', isExpanded ? 'block' : 'hidden sm:block']">
       <!-- Category Pillars Row -->
-      <div class="flex flex-wrap items-center gap-1.5">
+      <div class="flex flex-wrap items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
         <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 whitespace-nowrap shrink-0">
           {{ $t('graph.filters.pillars') }}:
         </span>
@@ -220,7 +220,7 @@ const hasActiveFilters = computed(() => {
       <!-- Secondary Row: Node Types & Flashcard Mastery -->
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 border-t border-slate-100 dark:border-white/[0.06]">
         <!-- Node Type Toggles -->
-        <div class="flex flex-wrap items-center gap-1.5">
+        <div class="flex flex-wrap items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full">
           <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 whitespace-nowrap shrink-0">
             {{ $t('graph.filters.nodeTypes') }}:
           </span>
@@ -243,7 +243,7 @@ const hasActiveFilters = computed(() => {
         <!-- Flashcard Mastery Selector (visible if card is not filtered out) -->
         <div
           v-if="store.selectedNodeType.toLowerCase() === 'all' || store.selectedNodeType.toLowerCase() === 'card'"
-          class="flex flex-wrap items-center gap-1.5"
+          class="flex flex-wrap items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-full"
         >
           <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1 whitespace-nowrap shrink-0">
             {{ $t('graph.filters.mastery') }}:

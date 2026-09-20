@@ -31,7 +31,7 @@ withDefaults(defineProps<Props>(), {
     </div>
 
     <!-- 4-Cell Full-Width Telemetry Bento Strip -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
       <!-- 1. Architecture Drills Completed -->
       <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-canvas-elevated/70 border border-slate-200/60 dark:border-white/[0.06] space-y-2.5 transition-all hover:border-brand-500/30">
         <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -42,7 +42,7 @@ withDefaults(defineProps<Props>(), {
         </div>
 
         <div class="flex items-baseline justify-between gap-2 pt-0.5">
-          <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">
             {{ stats?.totalDrillsCompleted ?? 0 }}
           </div>
           <span v-if="stats?.averageScore" class="text-xs font-semibold text-slate-500 dark:text-slate-400 shrink-0">
@@ -61,7 +61,7 @@ withDefaults(defineProps<Props>(), {
         </div>
 
         <div class="flex items-baseline justify-between gap-2 pt-0.5">
-          <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">
             {{ quizStats?.accuracyRate ?? 0 }}%
           </div>
           <span v-if="quizStats" class="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
@@ -80,7 +80,7 @@ withDefaults(defineProps<Props>(), {
         </div>
 
         <div class="flex items-baseline justify-between gap-2 pt-0.5">
-          <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">
             {{ stats?.totalCardsInDeck ?? 0 }}
           </div>
           <span class="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">
@@ -99,7 +99,7 @@ withDefaults(defineProps<Props>(), {
         </div>
 
         <div class="flex items-baseline justify-between gap-2 pt-0.5">
-          <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums">
             {{ stats?.totalHighlightsSaved ?? 0 }}
           </div>
           <span class="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">

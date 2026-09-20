@@ -81,6 +81,7 @@ function updateFloatingPosition() {
     position: 'fixed',
     left: `${left}px`,
     width: `${width}px`,
+    maxWidth: 'calc(100vw - 24px)',
     top: placeAbove ? 'auto' : `${rect.bottom + 6}px`,
     bottom: placeAbove ? `${window.innerHeight - rect.top + 6}px` : 'auto',
     zIndex: '60'

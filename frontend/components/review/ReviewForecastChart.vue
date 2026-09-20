@@ -77,20 +77,20 @@ function getBarHeightPercent(count: number): number {
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
-          <Calendar class="w-4 h-4" />
+          <Calendar class="w-4 h-4" :stroke-width="1.5" />
         </div>
         <div>
           <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('review.forecast_title') }}
           </h3>
           <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            {{ totalUpcoming }} {{ $t('review.forecast_cards_count', { count: '' }).trim() || 'cards' }} (7d)
+            <span class="tabular-nums">{{ totalUpcoming }}</span> {{ $t('review.forecast_cards_count', { count: '' }).trim() || 'cards' }} (7d)
           </p>
         </div>
       </div>
 
       <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-        <BarChart3 class="w-3.5 h-3.5" />
+        <BarChart3 class="w-3.5 h-3.5" :stroke-width="1.5" />
         <span>7d</span>
       </span>
     </div>
@@ -107,7 +107,7 @@ function getBarHeightPercent(count: number): number {
           <div
             class="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 shadow-md z-30"
           >
-            {{ day.count }} {{ $t('review.forecast_cards_count', { count: '' }).trim() || 'cards' }}
+            <span class="tabular-nums">{{ day.count }}</span> {{ $t('review.forecast_cards_count', { count: '' }).trim() || 'cards' }}
             <template v-if="day.isToday">({{ $t('review.today_badge') }})</template>
           </div>
 

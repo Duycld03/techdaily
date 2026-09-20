@@ -721,7 +721,7 @@ async function handleHighlightAndNote() {
           <!-- Typography Popover Dropdown (click-outside dismissed) -->
           <div
             v-if="isTypographyOpen"
-            class="absolute right-0 mt-2 w-80 sm:w-84 p-4 bg-white/95 dark:bg-canvas-elevated/95 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-2xl z-50 space-y-4 text-xs select-none"
+            class="absolute right-0 mt-2 w-80 sm:w-84 max-w-[calc(100vw-1.5rem)] p-4 bg-white/95 dark:bg-canvas-elevated/95 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-2xl z-50 space-y-4 text-xs select-none"
           >
             <!-- Section 1: Font Size -->
             <div class="space-y-2">
@@ -1024,7 +1024,7 @@ async function handleHighlightAndNote() {
           @click.self="isMobileTocOpen = false"
         >
           <div
-            class="w-4/5 max-w-xs bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white h-full flex flex-col shadow-2xl border-r border-slate-200/80 dark:border-white/[0.08] animate-in slide-in-from-left"
+            class="w-4/5 max-w-xs bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white h-full flex flex-col shadow-2xl border-r border-slate-200/80 dark:border-white/[0.08] pb-[max(1rem,env(safe-area-inset-bottom))] animate-in slide-in-from-left"
           >
             <div
               class="p-4 border-b border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between"
@@ -1032,7 +1032,7 @@ async function handleHighlightAndNote() {
               <div
                 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white"
               >
-                <BookOpen class="w-4 h-4 text-brand-500" />
+                <BookOpen class="w-4 h-4 text-brand-500" :stroke-width="1.5" />
                 <span>{{ $t("reader.toc") }}</span>
               </div>
               <button
@@ -1040,7 +1040,7 @@ async function handleHighlightAndNote() {
                 class="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors"
                 :aria-label="$t('reader.close_toc')"
               >
-                <X class="w-5 h-5" />
+                <X class="w-5 h-5" :stroke-width="1.5" />
               </button>
             </div>
 
@@ -1062,6 +1062,7 @@ async function handleHighlightAndNote() {
                 <CheckCircle2
                   v-if="completedSlices.has(chunk.chunkOrder)"
                   class="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5"
+                  :stroke-width="1.5"
                 />
                 <span
                   v-else

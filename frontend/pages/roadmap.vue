@@ -531,7 +531,7 @@ function getDifficultyColor(diff: number) {
             <div
               class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-500/20 border border-brand-200 dark:border-brand-500/30 text-brand-700 dark:text-brand-300 text-xs font-bold tracking-wide uppercase whitespace-nowrap shrink-0"
             >
-              <MapIcon class="w-3.5 h-3.5 shrink-0" />
+              <MapIcon class="w-3.5 h-3.5 shrink-0" :stroke-width="1.5" />
               <span>{{ $t('roadmap.badge') }}</span>
             </div>
 
@@ -546,6 +546,7 @@ function getDifficultyColor(diff: number) {
                 <component
                   :is="isCurriculumSelected ? Compass : BookOpen"
                   class="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0"
+                  :stroke-width="1.5"
                 />
                 <span class="max-w-[140px] sm:max-w-[220px] md:max-w-[280px] truncate">
                   {{ currentTrackTitle }}
@@ -555,6 +556,7 @@ function getDifficultyColor(diff: number) {
                     'w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0',
                     isTrackMenuOpen ? 'rotate-180' : ''
                   ]"
+                  :stroke-width="1.5"
                 />
               </button>
 
@@ -562,7 +564,7 @@ function getDifficultyColor(diff: number) {
               <div
                 v-if="isTrackMenuOpen"
                 data-testid="track-menu-popover"
-                class="absolute left-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-14rem)] overflow-y-auto rounded-2xl bg-white dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1"
+                class="absolute left-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-14rem)] overflow-y-auto rounded-2xl bg-white dark:bg-canvas-elevated border border-slate-200 dark:border-white/[0.08] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1"
               >
                 <!-- In-Progress Document Tracks -->
                 <div

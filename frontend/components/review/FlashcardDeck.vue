@@ -144,7 +144,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
     <!-- Card Telemetry & Progress Bar -->
     <div class="flex items-center justify-between w-full text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-semibold px-1">
       <span class="flex items-center gap-2 text-brand-600 dark:text-brand-400 font-bold">
-        <Layers class="w-4 h-4" />
+        <Layers class="w-4 h-4" :stroke-width="1.5" />
         <span>Card 1 of {{ remainingCount }}</span>
       </span>
       <div class="flex items-center gap-2">
@@ -186,7 +186,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
 
             <!-- Question Label Header -->
             <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
-              <HelpCircle class="w-3.5 h-3.5" />
+              <HelpCircle class="w-3.5 h-3.5" :stroke-width="1.5" />
               <span>{{ $t('review.question_prompt') }}</span>
             </div>
 
@@ -203,7 +203,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
               type="button"
               class="group inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 transition-all active:scale-[0.98] cursor-pointer w-full sm:w-auto"
             >
-              <Eye class="w-4 h-4 transition-transform group-hover:scale-110" />
+              <Eye class="w-4 h-4 transition-transform group-hover:scale-110" :stroke-width="1.5" />
               <span>{{ $t('review.show_answer') }}</span>
               <kbd class="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-white/20 text-white border border-white/30">Space</kbd>
             </button>

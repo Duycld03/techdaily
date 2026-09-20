@@ -54,7 +54,7 @@ const retentionPercentage = computed(() => {
     <div class="flex items-center justify-between gap-3 mb-2.5">
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-center shrink-0">
-          <BrainCircuit class="w-4 h-4" />
+          <BrainCircuit class="w-4 h-4" :stroke-width="1.5" />
         </div>
         <div>
           <h3 class="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
@@ -115,7 +115,7 @@ const retentionPercentage = computed(() => {
 
         <!-- Central Numeric Display -->
         <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span class="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+          <span class="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight leading-none tabular-nums">
             {{ retentionPercentage }}%
           </span>
           <span class="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-0.5">
@@ -132,7 +132,7 @@ const retentionPercentage = computed(() => {
             <span class="w-2.5 h-2.5 rounded-full bg-brand-500 shrink-0"></span>
             <span class="text-slate-600 dark:text-slate-300 font-medium">{{ $t('dashboard.daily_goal') }}</span>
           </div>
-          <span class="font-bold text-slate-900 dark:text-white">
+          <span class="font-bold text-slate-900 dark:text-white tabular-nums">
             {{ actualMinutes }} / {{ goalMinutes }}m
           </span>
         </div>
@@ -143,7 +143,7 @@ const retentionPercentage = computed(() => {
             <span class="w-2.5 h-2.5 rounded-full bg-cyber-500 shrink-0"></span>
             <span class="text-slate-600 dark:text-slate-300 font-medium">{{ $t('dashboard.sm2_retention') }}</span>
           </div>
-          <span class="font-bold text-slate-900 dark:text-white">
+          <span class="font-bold text-slate-900 dark:text-white tabular-nums">
             {{ masteredCards }} / {{ totalCards || 0 }}
           </span>
         </div>
@@ -153,10 +153,9 @@ const retentionPercentage = computed(() => {
     <!-- Review Due Action Banner -->
     <div class="mt-2.5 pt-2.5 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between">
       <div class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-        <Flame class="w-3.5 h-3.5 text-amber-500 shrink-0" />
-        <span>{{ dueCards }} {{ $t('dashboard.cards_due') }}</span>
+        <Flame class="w-3.5 h-3.5 text-amber-500 shrink-0" :stroke-width="1.5" />
+        <span><span class="tabular-nums">{{ dueCards }}</span> {{ $t('dashboard.cards_due') }}</span>
       </div>
-
       <NuxtLink
         to="/review"
         :class="[
@@ -167,7 +166,7 @@ const retentionPercentage = computed(() => {
         ]"
       >
         <span>{{ dueCards > 0 ? $t('dashboard.review_now') : $t('dashboard.view_deck') }}</span>
-        <ArrowUpRight class="w-3.5 h-3.5" />
+        <ArrowUpRight class="w-3.5 h-3.5" :stroke-width="1.5" />
       </NuxtLink>
     </div>
   </div>

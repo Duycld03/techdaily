@@ -56,7 +56,7 @@ function handleKeydown(event: KeyboardEvent) {
           : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
       ]"
     >
-      <ListOrdered class="w-4 h-4 shrink-0" />
+      <ListOrdered class="w-4 h-4 shrink-0" :stroke-width="1.5" />
       <span>{{ $t('roadmap.timeline_view') }}</span>
     </button>
 
@@ -76,7 +76,7 @@ function handleKeydown(event: KeyboardEvent) {
           : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
       ]"
     >
-      <GitFork class="w-4 h-4 shrink-0" />
+      <GitFork class="w-4 h-4 shrink-0" :stroke-width="1.5" />
       <span>{{ $t('roadmap.mindmap_view') }}</span>
     </button>
   </div>

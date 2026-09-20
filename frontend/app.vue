@@ -15,7 +15,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-canvas text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
+  <div class="min-h-dvh flex flex-col bg-slate-50 dark:bg-canvas text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
     <AppHeader v-if="!isReaderMode" />
     <AppCommandPalette />
     <AppToastContainer />

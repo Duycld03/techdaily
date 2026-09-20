@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
-import { useEventListener } from '@vueuse/core'
+import { ref, shallowRef, watch, onMounted, onBeforeUnmount, computed } from 'vue'
+import { useEventListener, useDebounceFn } from '@vueuse/core'
 import cytoscape, { type Core, type EventObject, type Stylesheet, type CoseLayoutOptions } from 'cytoscape'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
 
@@ -13,7 +13,7 @@ const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
 
 const containerRef = ref<HTMLDivElement | null>(null)
-let cy: Core | null = null
+const cy = shallowRef<Core | null>(null)
 
 function getStylesheet(dark: boolean): Stylesheet[] {
   const textClr = dark ? '#f8fafc' : '#0f172a'
@@ -287,12 +287,12 @@ function getStylesheet(dark: boolean): Stylesheet[] {
 }
 
 function runLayout() {
-  if (!cy || cy.nodes().length === 0) return
+  if (!cy.value || cy.value.nodes().length === 0) return
 
   // Headless test environment check (where layout dimensions are 0)
   const container = containerRef.value
   if (container && (container.clientWidth === 0 || container.clientHeight === 0)) {
-    const fallback = cy.layout({ name: 'preset' })
+    const fallback = cy.value.layout({ name: 'preset' })
     fallback.run()
     return
   }
@@ -317,15 +317,15 @@ function runLayout() {
     }
   }
 
-  const layout = cy.layout(coseOptions)
+  const layout = cy.value.layout(coseOptions)
   layout.run()
 }
 
 function syncElements() {
-  if (!cy) return
+  if (!cy.value) return
 
-  cy.batch(() => {
-    cy!.elements().remove()
+  cy.value.batch(() => {
+    cy.value!.elements().remove()
 
     const nodeElements = store.filteredNodes.map((node) => ({
       group: 'nodes' as const,
@@ -350,14 +350,14 @@ function syncElements() {
       }
     }))
 
-    cy!.add([...nodeElements, ...edgeElements])
+    cy.value!.add([...nodeElements, ...edgeElements])
   })
 
   runLayout()
   applySearchHighlights()
 
   if (store.selectedNodeId) {
-    const target = cy.getElementById(store.selectedNodeId)
+    const target = cy.value.getElementById(store.selectedNodeId)
     if (target && target.length > 0) {
       target.select()
     }
@@ -365,18 +365,18 @@ function syncElements() {
 }
 
 function applySearchHighlights() {
-  if (!cy) return
+  if (!cy.value) return
 
   const query = store.searchQuery?.trim().toLowerCase()
   if (!query) {
-    cy.elements().removeClass('search-dimmed search-matched')
+    cy.value.elements().removeClass('search-dimmed search-matched')
     return
   }
 
-  cy.batch(() => {
+  cy.value.batch(() => {
     const matchedNodeIds = new Set<string>()
 
-    cy!.nodes().forEach((node) => {
+    cy.value!.nodes().forEach((node) => {
       const data = node.data()
       const matchesLabel = data.label?.toLowerCase().includes(query) ?? false
       const matchesSummary = data.summary?.toLowerCase().includes(query) ?? false
@@ -391,7 +391,7 @@ function applySearchHighlights() {
       }
     })
 
-    cy!.edges().forEach((edge) => {
+    cy.value!.edges().forEach((edge) => {
       const sourceId = edge.data('source')
       const targetId = edge.data('target')
       if (matchedNodeIds.has(sourceId) && matchedNodeIds.has(targetId)) {
@@ -404,23 +404,23 @@ function applySearchHighlights() {
 }
 
 function fitScreen() {
-  if (!cy || cy.nodes().length === 0) return
-  cy.animate({
+  if (!cy.value || cy.value.nodes().length === 0) return
+  cy.value.animate({
     fit: { padding: 90 },
     duration: 400
   })
 }
 
-function handleResize() {
-  if (cy) {
-    cy.resize()
+const handleResize = useDebounceFn(() => {
+  if (cy.value) {
+    cy.value.resize()
   }
-}
+}, 150)
 
 function initCytoscape() {
   if (!containerRef.value) return
 
-  cy = cytoscape({
+  const instance = cytoscape({
     container: containerRef.value,
     style: getStylesheet(isDark.value),
     elements: [],
@@ -432,42 +432,42 @@ function initCytoscape() {
     boxSelectionEnabled: false,
     wheelSensitivity: 0.3
   })
+  cy.value = instance
 
   // Interactivity: tap node to select, tap background to deselect
-  cy.on('tap', 'node', (evt: EventObject) => {
+  instance.on('tap', 'node', (evt: EventObject) => {
     const node = evt.target
     store.selectNode(node.id())
   })
 
-  cy.on('tap', (evt: EventObject) => {
-    if (evt.target === cy) {
+  instance.on('tap', (evt: EventObject) => {
+    if (evt.target === instance) {
       store.selectNode(null)
     }
   })
 
   // LOD: Hover to reveal label on cards and highlights
-  cy.on('mouseover', 'node[type = "card"], node[type = "highlight"]', (evt: EventObject) => {
+  instance.on('mouseover', 'node[type = "card"], node[type = "highlight"]', (evt: EventObject) => {
     evt.target.addClass('label-revealed')
   })
 
-  cy.on('mouseout', 'node[type = "card"], node[type = "highlight"]', (evt: EventObject) => {
-    if (!evt.target.selected() && cy && cy.zoom() < 1.1) {
+  instance.on('mouseout', 'node[type = "card"], node[type = "highlight"]', (evt: EventObject) => {
+    if (!evt.target.selected() && instance.zoom() < 1.1) {
       evt.target.removeClass('label-revealed')
     }
   })
 
   // Dynamic LOD on zoom: zoom >= 1.1 reveals all leaf labels
-  cy.on('zoom', () => {
-    if (!cy) return
-    const zoom = cy.zoom()
+  instance.on('zoom', () => {
+    const zoom = instance.zoom()
     if (zoom >= 1.1) {
-      cy.elements('node[type = "card"], node[type = "highlight"]').addClass('label-revealed')
+      instance.elements('node[type = "card"], node[type = "highlight"]').addClass('label-revealed')
     } else {
-      cy.elements('node[type = "card"]:unselected, node[type = "highlight"]:unselected').removeClass('label-revealed')
+      instance.elements('node[type = "card"]:unselected, node[type = "highlight"]:unselected').removeClass('label-revealed')
     }
   })
 
-  emit('cy-ready', cy)
+  emit('cy-ready', instance)
   syncElements()
 }
 
@@ -478,16 +478,16 @@ onMounted(() => {
 useEventListener(typeof window !== 'undefined' ? window : null, 'resize', handleResize)
 
 onBeforeUnmount(() => {
-  if (cy) {
-    cy.destroy()
-    cy = null
+  if (cy.value) {
+    cy.value.destroy()
+    cy.value = null
   }
 })
 
 // Watch color mode for reactive dark/light palette synchronization
 watch(isDark, (newVal) => {
-  if (cy) {
-    cy.style(getStylesheet(newVal))
+  if (cy.value) {
+    cy.value.style(getStylesheet(newVal))
   }
 })
 
@@ -527,16 +527,16 @@ function matchesLegendType(nodeData: any, legendType: string): boolean {
 watch(
   () => store.hoveredLegendType,
   (type) => {
-    if (!cy) return
+    if (!cy.value) return
     if (!type) {
-      cy.batch(() => {
-        cy?.nodes().removeClass('legend-dimmed')
-        cy?.edges().removeClass('legend-dimmed')
+      cy.value.batch(() => {
+        cy.value?.nodes().removeClass('legend-dimmed')
+        cy.value?.edges().removeClass('legend-dimmed')
       })
       return
     }
-    cy.batch(() => {
-      cy?.nodes().forEach((node) => {
+    cy.value.batch(() => {
+      cy.value?.nodes().forEach((node) => {
         const d = node.data()
         if (matchesLegendType(d, type)) {
           node.removeClass('legend-dimmed')
@@ -544,7 +544,7 @@ watch(
           node.addClass('legend-dimmed')
         }
       })
-      cy?.edges().addClass('legend-dimmed')
+      cy.value?.edges().addClass('legend-dimmed')
     })
   }
 )
@@ -553,27 +553,27 @@ watch(
 watch(
   () => store.selectedNodeId,
   (newId) => {
-    if (!cy) return
+    if (!cy.value) return
     if (newId) {
-      cy.$(':selected').unselect()
-      const target = cy.getElementById(newId)
+      cy.value.$(':selected').unselect()
+      const target = cy.value.getElementById(newId)
       if (target && target.length > 0) {
         target.select()
-        cy.animate({
+        cy.value.animate({
           center: { eles: target },
-          zoom: Math.max(cy.zoom(), 1.1),
+          zoom: Math.max(cy.value.zoom(), 1.1),
           duration: 400
         })
       }
     } else {
-      cy.$(':selected').unselect()
+      cy.value.$(':selected').unselect()
     }
   }
 )
 
 defineExpose({
   fitScreen,
-  cy: () => cy
+  cy: () => cy.value
 })
 </script>
 
