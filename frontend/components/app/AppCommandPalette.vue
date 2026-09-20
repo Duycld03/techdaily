@@ -335,3 +335,10 @@ onUnmounted(() => {
     </div>
   </Teleport>
 </template>
+
+<style scoped>
+input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+</style>
