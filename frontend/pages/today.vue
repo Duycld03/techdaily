@@ -313,11 +313,10 @@ watch(locale, (newLocale) => {
 
         <!-- Scenario Challenge Dock Toggle -->
         <button
-          v-show="!isChallengeDockOpen"
           @click="isChallengeDockOpen = !isChallengeDockOpen"
           type="button"
           :class="[
-            'flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all shrink-0',
+            'hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all shrink-0',
             isChallengeDockOpen
               ? 'bg-brand-600 hover:bg-brand-500 text-white border-transparent shadow-sm shadow-brand-500/20 active:scale-95'
               : 'bg-slate-100 dark:bg-canvas-elevated text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08] hover:border-brand-500/30'
