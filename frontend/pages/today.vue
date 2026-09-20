@@ -313,6 +313,7 @@ watch(locale, (newLocale) => {
 
         <!-- Scenario Challenge Dock Toggle -->
         <button
+          v-show="!isChallengeDockOpen"
           @click="isChallengeDockOpen = !isChallengeDockOpen"
           type="button"
           :class="[
