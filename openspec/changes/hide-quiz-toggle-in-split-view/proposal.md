@@ -2,11 +2,13 @@
 
 ## Why
 
-On desktop (md+) screens, when the Today page displays both the Reader and Challenge Dock panels side by side, the purple toggle button (Terminal icon) in the header toolbar is redundant — the quiz panel is already visible. On mobile, the tab switcher already handles panel switching, making the button equally unnecessary there. Hiding it when the dock is open declutters the header toolbar.
+On mobile screens, the Today page uses the bottom navigation tab switcher to toggle between the Reader and Scenario Challenge views. Having an additional Scenario Challenge Dock toggle button in the header toolbar is redundant and takes up scarce header width.
+On desktop (md+) screens, the Scenario Challenge Dock toggle button is essential: it allows users to collapse the dock into "Full Immersion Reader" mode or reopen it into a 2-column split view.
 
 ## What Changes
 
-- Hide the Scenario Challenge Dock toggle button (`isChallengeDockOpen` toggle) when the dock is already open. The button remains visible only when the dock has been collapsed, allowing users to re-open it.
+- Hide the Scenario Challenge Dock toggle button on mobile devices (`<md`) using `hidden md:flex`.
+- Preserve the toggle button on desktop/laptop screens (`md:flex`) so users can freely open or collapse the scenario dock at any time.
 
 ## Capabilities
 
@@ -16,8 +18,8 @@ _None._
 
 ### Modified Capabilities
 
-_None — UI visibility tweak for an existing toggle button, no behavior change._
+_None — responsive UI visibility optimization for the header toolbar._
 
 ## Impact
 
-- **`frontend/pages/today.vue`**: Add `v-show="!isChallengeDockOpen"` to the toggle button (lines 314–328). No other files affected.
+- **`frontend/pages/today.vue`**: Set toggle button class to `hidden md:flex` instead of unconditional `flex`.

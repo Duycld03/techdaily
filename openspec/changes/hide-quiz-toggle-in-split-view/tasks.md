@@ -1,9 +1,11 @@
 # Tasks
 
-## 1. Frontend — Toggle Button Visibility
+## 1. Frontend — Responsive Toggle Button Visibility
 
-- [x] 1.1 Add `v-show="!isChallengeDockOpen"` to the Scenario Challenge Dock toggle button in `frontend/pages/today.vue` (lines 314–328) so it only appears when the dock is collapsed
+- [x] 1.1 Update the Scenario Challenge Dock toggle button classes in `frontend/pages/today.vue` (lines ~318–324) to `hidden md:flex` so it is hidden on mobile (where the tab switcher handles navigation) and visible on desktop
+- [x] 1.2 Retain toggle functionality on desktop so users can alternate between 2-panel split view and Full Immersion Reader mode
 
 ## 2. Verification
 
-- [x] 2.1 Verify the purple toggle button is hidden when both panels are visible on desktop, and reappears when the dock is collapsed
+- [x] 2.1 Verify the toggle button is hidden on mobile viewport (<768px)
+- [x] 2.2 Verify the toggle button remains visible on desktop (≥768px) and clicking it successfully collapses and reopens the challenge dock
