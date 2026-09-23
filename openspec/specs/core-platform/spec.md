@@ -6,16 +6,23 @@ Provides the foundational user authentication, user profile management, daily cu
 ## Requirements
 
 ### Requirement: Standard Email & Password Authentication
-The system SHALL allow users to register an account with email, password (min 6 characters), full name, and preferred locale (`POST /api/v1/auth/register`), securely hash passwords using PBKDF2 with SHA-256 (16-byte random salt, 100,000 iterations), and authenticate users via email and password (`POST /api/v1/auth/login`), issuing a 256-bit JWT bearer token upon successful verification.
+The system SHALL allow users to register an account with email, password (min 8 characters), full name, and preferred locale (`POST /api/v1/auth/register`), securely hash passwords using PBKDF2 with SHA-256 (16-byte random salt, 600,000 iterations), and authenticate users via email and password (`POST /api/v1/auth/login`), issuing a 256-bit JWT bearer token upon successful verification. On login, if the stored password hash uses fewer than 600,000 iterations, the system SHALL transparently rehash the password with 600,000 iterations after successful verification.
 
 #### Scenario: User registers with valid email and password
-- **WHEN** visitor sends `POST /api/v1/auth/register` with valid email, name, and password >= 6 characters
-- **THEN** system provisions user entity with PBKDF2 password hash, creates user learning stats, and returns `201 Created` with JWT token.
+- **WHEN** visitor sends `POST /api/v1/auth/register` with valid email, name, and password >= 8 characters
+- **THEN** system provisions user entity with PBKDF2 password hash (600,000 iterations), creates user learning stats, and returns `201 Created` with JWT token and refresh token.
 
 #### Scenario: User authenticates with registered credentials
 - **WHEN** user sends `POST /api/v1/auth/login` with registered email and correct password
-- **THEN** system verifies hash and returns `200 OK` with JWT bearer token and user profile.
+- **THEN** system verifies hash and returns `200 OK` with JWT bearer token, refresh token, and user profile.
 
+#### Scenario: Existing user with legacy iteration count logs in
+- **WHEN** user with a password hashed at 100,000 iterations sends `POST /api/v1/auth/login` with correct password
+- **THEN** system verifies the password against the stored hash, rehashes with 600,000 iterations, persists the updated hash, and returns the normal login response
+
+#### Scenario: User attempts to register with password shorter than 8 characters
+- **WHEN** visitor sends `POST /api/v1/auth/register` with a password of 7 characters or fewer
+- **THEN** system returns `HTTP 400` with error code `AUTH_PASSWORD_TOO_SHORT`
 ---
 
 ### Requirement: Google OAuth 2.0 Authentication
@@ -1228,3 +1235,24 @@ The Engineer Portfolio Profile (`pages/profile.vue`), System Settings (`pages/se
 - **WHEN** user configures notification schedules or timezone preferences in `pages/settings.vue` on a mobile device
 - **THEN** time picker popovers and timezone dropdowns SHALL clamp within viewport boundaries
 - **AND** the Brave push setup guidance card SHALL adapt responsively without table or code block clipping.
+
+### Requirement: Dev-Learning Studio Visual Language & Responsive Density
+The web frontend SHALL implement the Dev-Learning Studio visual language with platform-independent visual density and uniform typography metrics:
+1. **Font Metrics Parity**: The application SHALL load the `Inter` webfont across all supported browsers and platforms, preventing font metric discrepancies between operating systems (such as wider `Segoe UI` tracking on Windows versus condensed `Ubuntu` on Linux).
+2. **Decoupled Typography Hierarchy**:
+   - **Reading Prose Scale**: Long-form curriculum document text and article paragraphs SHALL use `text-base md:text-lg` (16px–18px) with `leading-relaxed` for reading ergonomics.
+   - **Interactive Control Scale**: Interactive elements, scenario options, form inputs, buttons, card headers, and UI widgets SHALL use `text-sm md:text-base` (14px–16px), strictly preventing `text-lg` from bloating interactive controls.
+3. **Card & Surface Spacing Tokens**: Standard card surfaces (`.glass-card`, `.glass-panel`) SHALL use balanced padding (`p-4 sm:p-5`) with standard radius (`rounded-2xl`), eliminating disproportionate padding (`p-7`, `p-8`, `md:p-10`).
+4. **Natural Viewport Flow**: Primary dashboard and studio views SHALL utilize natural vertical scrolling (`min-h-[calc(100dvh-3.5rem)]`) and SHALL NOT lock container height with `overflow-hidden` on desktop displays, ensuring all widgets remain accessible when viewports are constrained by browser chrome and taskbars.
+
+#### Scenario: Inter font loaded uniformly across operating systems
+- **WHEN** a user accesses TechDaily from any desktop operating system (Windows 11, Linux, macOS)
+- **THEN** the browser loads and renders the `Inter` webfont family with consistent letter spacing, character width, and x-height metrics.
+
+#### Scenario: Interactive controls adhere to UI typography scale
+- **WHEN** viewing interactive controls, option choices, buttons, and form inputs on desktop viewports
+- **THEN** text is styled between `text-sm` (14px) and `text-base` (16px) rather than scaling up to `text-lg` (18px).
+
+#### Scenario: Dashboard widgets remain accessible on constrained desktop viewports
+- **WHEN** the dashboard is viewed in a browser with bookmarks bar and OS taskbar visible (available height $\le 860\text{px}$)
+- **THEN** all Bento cards (including knowledge constellation) are reachable via smooth vertical scrolling without overflow clipping.

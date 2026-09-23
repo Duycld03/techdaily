@@ -163,7 +163,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
         <div
           v-if="!isFlipped"
           key="front"
-          class="w-full min-h-[340px] sm:min-h-[400px] p-6 sm:p-8 rounded-3xl glass-card border border-slate-200/80 dark:border-white/[0.08] shadow-xl dark:shadow-2xl flex flex-col justify-between transition-all"
+          class="w-full min-h-[280px] sm:min-h-[320px] p-5 sm:p-6 rounded-2xl glass-card border border-slate-200/80 dark:border-white/[0.08] shadow-xl dark:shadow-2xl flex flex-col justify-between transition-all"
         >
           <!-- Top Metadata Row -->
           <div>
@@ -191,13 +191,13 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
             </div>
 
             <!-- Question Challenge Text -->
-            <h2 class="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white leading-snug tracking-tight">
+            <h2 class="text-base sm:text-xl font-bold text-slate-900 dark:text-white leading-snug tracking-tight">
               {{ questionText }}
             </h2>
           </div>
 
           <!-- Flip Action CTA -->
-          <div class="mt-8 pt-6 border-t border-slate-100 dark:border-white/[0.06] flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div class="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06] flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               @click="isFlipped = true"
               type="button"
@@ -219,7 +219,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
         <div
           v-else
           key="back"
-          class="w-full min-h-[340px] sm:min-h-[400px] p-6 sm:p-8 rounded-3xl glass-card border border-brand-500/20 dark:border-brand-500/30 shadow-xl dark:shadow-2xl flex flex-col justify-between transition-all"
+          class="w-full min-h-[280px] sm:min-h-[320px] p-5 sm:p-6 rounded-2xl glass-card border border-brand-500/20 dark:border-brand-500/30 shadow-xl dark:shadow-2xl flex flex-col justify-between transition-all"
         >
           <div>
             <!-- Top Metadata Row -->

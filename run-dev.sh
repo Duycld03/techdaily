@@ -21,6 +21,14 @@ if [ -f .env ]; then
   set +a
 fi
 
+# Ensure frontend receives public runtime config
+export NUXT_PUBLIC_GOOGLE_CLIENT_ID="${NUXT_PUBLIC_GOOGLE_CLIENT_ID:-$GOOGLE_CLIENT_ID}"
+export NUXT_PUBLIC_API_BASE_URL="${NUXT_PUBLIC_API_BASE_URL:-http://localhost:5000}"
+
+# Ensure backend receives Google OAuth credentials matching production
+export Authentication__Google__ClientId="${Authentication__Google__ClientId:-$GOOGLE_CLIENT_ID}"
+export Authentication__Google__ClientSecret="${Authentication__Google__ClientSecret:-$GOOGLE_CLIENT_SECRET}"
+
 # 1. Check if database container is running
 if ! docker ps --format '{{.Names}}' | grep -q 'techdaily_postgres'; then
   echo "📦 Starting PostgreSQL 17 (pgvector) container..."

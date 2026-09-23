@@ -150,98 +150,105 @@ public static class AuthEndpoints
             IRefreshTokenService tokenService,
             IConfiguration config) =>
         {
-            var clientId = config["Authentication:Google:ClientId"];
+            var clientId = (!string.IsNullOrWhiteSpace(config["Authentication:Google:ClientId"]) ? config["Authentication:Google:ClientId"] : null)
+                ?? (!string.IsNullOrWhiteSpace(config["Authentication__Google__ClientId"]) ? config["Authentication__Google__ClientId"] : null)
+                ?? (!string.IsNullOrWhiteSpace(config["GOOGLE_CLIENT_ID"]) ? config["GOOGLE_CLIENT_ID"] : null);
+
             if (string.IsNullOrWhiteSpace(clientId))
             {
                 return Results.BadRequest(new { code = Error.GoogleNotConfigured.Code, error = Error.GoogleNotConfigured.Message });
             }
 
+            GoogleJsonWebSignature.Payload payload;
             try
             {
-                var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, new GoogleJsonWebSignature.ValidationSettings
+                payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, new GoogleJsonWebSignature.ValidationSettings
                 {
-                    Audience = new[] { clientId }
-                });
-
-                var user = await db.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
-                if (user == null)
-                {
-                    user = new User
-                    {
-                        Email = payload.Email,
-                        Name = payload.Name ?? payload.Email.Split('@')[0],
-                        AvatarUrl = payload.Picture,
-                        GoogleSubjectId = payload.Subject,
-                        PreferredLocale = "vi",
-                        TargetRole = "Senior Engineer",
-                        DailyGoalMinutes = 10
-                    };
-                    await db.Users.AddAsync(user);
-
-                    var streak = StreakRecord.Create(user.Id);
-                    await db.StreakRecords.AddAsync(streak);
-
-                    await db.SaveChangesAsync();
-                }
-                else
-                {
-                    bool updated = false;
-                    if (string.IsNullOrWhiteSpace(user.GoogleSubjectId) && !string.IsNullOrWhiteSpace(payload.Subject))
-                    {
-                        user.GoogleSubjectId = payload.Subject;
-                        updated = true;
-                    }
-                    if (!string.IsNullOrWhiteSpace(payload.Picture) && user.AvatarUrl != payload.Picture)
-                    {
-                        user.AvatarUrl = payload.Picture;
-                        updated = true;
-                    }
-                    if (string.IsNullOrWhiteSpace(user.Name) && !string.IsNullOrWhiteSpace(payload.Name))
-                    {
-                        user.Name = payload.Name;
-                        updated = true;
-                    }
-                    if (string.IsNullOrWhiteSpace(user.TargetRole))
-                    {
-                        user.TargetRole = "Senior Engineer";
-                        updated = true;
-                    }
-                    if (user.DailyGoalMinutes <= 0)
-                    {
-                        user.DailyGoalMinutes = 10;
-                        updated = true;
-                    }
-
-                    if (updated)
-                    {
-                        user.UpdatedAt = DateTime.UtcNow;
-                        await db.SaveChangesAsync();
-                    }
-                }
-
-                var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
-                SetRefreshTokenCookie(context, rawRefreshToken);
-
-                var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
-                return Results.Ok(new
-                {
-                    Token = token,
-                    User = new
-                    {
-                        user.Id,
-                        user.Email,
-                        user.Name,
-                        user.PreferredLocale,
-                        user.AvatarUrl,
-                        user.TargetRole,
-                        user.DailyGoalMinutes
-                    }
+                    Audience = new[] { clientId.Trim() },
+                    IssuedAtClockTolerance = TimeSpan.FromMinutes(5),
+                    ExpirationTimeClockTolerance = TimeSpan.FromMinutes(5)
                 });
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[GoogleAuth Error] Token validation failed: {ex.Message}");
                 return Results.BadRequest(new { code = Error.GoogleTokenInvalid.Code, error = "Invalid Google token: " + ex.Message });
             }
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+            if (user == null)
+            {
+                user = new User
+                {
+                    Email = payload.Email,
+                    Name = payload.Name ?? payload.Email.Split('@')[0],
+                    AvatarUrl = payload.Picture,
+                    GoogleSubjectId = payload.Subject,
+                    PreferredLocale = "vi",
+                    TargetRole = "Senior Engineer",
+                    DailyGoalMinutes = 10
+                };
+                await db.Users.AddAsync(user);
+
+                var streak = StreakRecord.Create(user.Id);
+                await db.StreakRecords.AddAsync(streak);
+
+                await db.SaveChangesAsync();
+            }
+            else
+            {
+                bool updated = false;
+                if (string.IsNullOrWhiteSpace(user.GoogleSubjectId) && !string.IsNullOrWhiteSpace(payload.Subject))
+                {
+                    user.GoogleSubjectId = payload.Subject;
+                    updated = true;
+                }
+                if (!string.IsNullOrWhiteSpace(payload.Picture) && user.AvatarUrl != payload.Picture)
+                {
+                    user.AvatarUrl = payload.Picture;
+                    updated = true;
+                }
+                if (string.IsNullOrWhiteSpace(user.Name) && !string.IsNullOrWhiteSpace(payload.Name))
+                {
+                    user.Name = payload.Name;
+                    updated = true;
+                }
+                if (string.IsNullOrWhiteSpace(user.TargetRole))
+                {
+                    user.TargetRole = "Senior Engineer";
+                    updated = true;
+                }
+                if (user.DailyGoalMinutes <= 0)
+                {
+                    user.DailyGoalMinutes = 10;
+                    updated = true;
+                }
+
+                if (updated)
+                {
+                    user.UpdatedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync();
+                }
+            }
+
+            var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
+            SetRefreshTokenCookie(context, rawRefreshToken);
+
+            var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
+            return Results.Ok(new
+            {
+                Token = token,
+                User = new
+                {
+                    user.Id,
+                    user.Email,
+                    user.Name,
+                    user.PreferredLocale,
+                    user.AvatarUrl,
+                    user.TargetRole,
+                    user.DailyGoalMinutes
+                }
+            });
         })
         .WithName("GoogleLogin")
         .WithSummary("Authenticates with Google ID token and returns app JWT.");

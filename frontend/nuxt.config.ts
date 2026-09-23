@@ -45,7 +45,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:5000',
-      googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || ''
+      googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || ''
     }
   },
 
@@ -53,14 +53,17 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'TechDaily — Daily Senior Engineering & System Design Focus',
+      title: 'TechDaily - Daily Senior Engineering & System Design Focus',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'description', content: 'Transform 30 mins into senior engineering mastery with daily architecture drills, SM-2 flashcards, and multimodal AI evaluation.' }
       ],
       link: [
-        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap' }
       ],
       script: [
         { src: 'https://accounts.google.com/gsi/client', async: true, defer: true }

@@ -126,7 +126,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-4 lg:h-[calc(100dvh-3.5rem)] lg:overflow-hidden flex flex-col justify-start gap-3.5 sm:gap-4">
+  <div class="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-3.5 sm:py-4 min-h-[calc(100dvh-3.5rem)] pb-8 flex flex-col justify-start gap-3.5 sm:gap-4">
     <!-- 1. Welcome & Orientation Banner (Image #1 Inspired) -->
     <div class="glass-card px-4 py-3 sm:px-5 sm:py-3.5 relative overflow-hidden border border-slate-200/80 dark:border-white/[0.06] shrink-0">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 relative z-10">

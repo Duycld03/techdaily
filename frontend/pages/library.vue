@@ -630,11 +630,11 @@ async function confirmDeleteBook() {
       <span>{{ $t('library.loading') }}</span>
     </div>
 
-    <div v-else-if="libraryStore.books.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div v-else-if="libraryStore.books.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
       <div
         v-for="book in libraryStore.books"
         :key="book.id"
-        class="glass-card p-6 sm:p-7 rounded-3xl border-slate-200/80 dark:border-white/[0.08] hover:border-brand-400 dark:hover:border-brand-500/30 transition-all flex flex-col justify-between space-y-4 group shadow-md dark:shadow-none"
+        class="glass-card p-4 sm:p-5 rounded-2xl border-slate-200/80 dark:border-white/[0.08] hover:border-brand-400 dark:hover:border-brand-500/30 transition-all flex flex-col justify-between space-y-3 group shadow-md dark:shadow-none"
       >
         <div class="flex flex-col flex-1">
           <div class="flex items-center justify-between gap-2 mb-3.5">

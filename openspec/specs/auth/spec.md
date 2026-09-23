@@ -17,12 +17,12 @@ For standard accounts without Google OAuth linkage (`string.IsNullOrEmpty(user.G
 - **THEN** the system returns `hasPassword: false` and `isGoogleLinked: true` when no PBKDF2 password hash is present.
 
 #### Scenario: User with Google account creates first password
-- **WHEN** user sends `PUT /api/v1/user/change-password` with `newPassword` (length >= 6) and no `currentPassword`
-- **THEN** the system hashes the new password with PBKDF2 (100,000 iterations, 16-byte random salt), updates `user.PasswordHash`, and returns `200 OK`.
+- **WHEN** user sends `PUT /api/v1/user/change-password` with `newPassword` (length >= 8) and no `currentPassword`
+- **THEN** the system hashes the new password with PBKDF2-HMAC-SHA256 (600,000 iterations, 16-byte random salt), updates `user.PasswordHash`, and returns `200 OK`.
 - **THEN** subsequent profile requests return `hasPassword: true`.
 
 #### Scenario: User with Google account updates existing password without current password
-- **WHEN** a user with `isGoogleLinked: true` and `hasPassword: true` sends `PUT /api/v1/user/change-password` with a valid `newPassword` (length >= 6) and null or omitted `currentPassword`
+- **WHEN** a user with `isGoogleLinked: true` and `hasPassword: true` sends `PUT /api/v1/user/change-password` with a valid `newPassword` (length >= 8) and null or omitted `currentPassword`
 - **THEN** the system updates `user.PasswordHash` with the new hashed password and returns `200 OK`.
 
 #### Scenario: Standard user without Google account must provide current password
@@ -61,21 +61,32 @@ The system SHALL allow users on devices where Google OAuth cannot be used to req
 ### Requirement: Machine-Readable Authentication Error Codes
 The authentication and user account management endpoints (`/api/v1/auth/*` and `/api/v1/user/*`) SHALL return standardized error codes for all credential and validation failures:
 - `AUTH_EMAIL_PASSWORD_REQUIRED`: Email or password omitted.
-- `AUTH_PASSWORD_TOO_SHORT`: Password length less than 6 characters.
+- `AUTH_PASSWORD_TOO_SHORT`: Password length less than 8 characters.
 - `AUTH_EMAIL_EXISTS`: Registered account with email already present.
 - `AUTH_INVALID_CREDENTIALS`: Email not found or password verification failed.
-- `AUTH_GOOGLE_TOKEN_INVALID`: Google ID token invalid or signature verification failed.
+- `AUTH_GOOGLE_TOKEN_INVALID`: Google ID token invalid, expired, or signature/audience verification failed. This error code SHALL strictly represent external token validation failures and SHALL NOT be returned for internal database connection or user provisioning exceptions.
 - `AUTH_GOOGLE_NOT_CONFIGURED`: Google Client ID unconfigured on server.
 - `USER_CURRENT_PASSWORD_INCORRECT`: Supplied current password failed verification.
-- `USER_NEW_PASSWORD_TOO_SHORT`: New password length less than 6 characters.
+- `USER_NEW_PASSWORD_TOO_SHORT`: New password length less than 8 characters.
+- `AUTH_TOKEN_REUSE_DETECTED`: A previously-rotated refresh token was reused (potential theft).
+- `AUTH_REFRESH_TOKEN_EXPIRED`: The refresh token has expired.
 
 #### Scenario: User attempts login with wrong password
 - **WHEN** user submits invalid credentials to `POST /api/v1/auth/login`
-- **THEN** server returns HTTP 400 with `{ "code": "AUTH_INVALID_CREDENTIALS", "error": "Invalid email or password." }`.
+- **THEN** server returns HTTP 400 with `{ "code": "AUTH_INVALID_CREDENTIALS", "error": "Invalid email or password." }`
 
 #### Scenario: User registers with an existing email
 - **WHEN** user submits duplicate email to `POST /api/v1/auth/register`
-- **THEN** server returns HTTP 400 with `{ "code": "AUTH_EMAIL_EXISTS", "error": "An account with this email already exists." }`.
+- **THEN** server returns HTTP 400 with `{ "code": "AUTH_EMAIL_EXISTS", "error": "An account with this email already exists." }`
+
+#### Scenario: Google token validation fails
+- **WHEN** client sends an invalid Google ID token to `POST /api/v1/auth/google`
+- **THEN** server returns HTTP 400 with `{ "code": "AUTH_GOOGLE_TOKEN_INVALID", "error": "Invalid Google token." }` without leaking internal exception details
+
+#### Scenario: Database connection failure during Google login does not return AUTH_GOOGLE_TOKEN_INVALID
+- **WHEN** client sends a valid Google ID token to `POST /api/v1/auth/google` but the database is unreachable or connection fails
+- **THEN** the system does NOT return `AUTH_GOOGLE_TOKEN_INVALID`
+- **AND** the failure is reported through standard exception and problem details handling.
 
 ### Requirement: Proactive JWT Expiration Validation
 The client-side authentication store SHALL decode the JWT payload `exp` claim and consider tokens expired if `exp * 1000 <= Date.now()`. When initialized or checked, an expired token SHALL be purged from cookies and local storage immediately.
@@ -103,11 +114,11 @@ The HTTP client composable (`useApiClient`) SHALL intercept any response with HT
 ---
 
 ### Requirement: Extended Access Token Lifespan Matching Curriculum
-The authentication endpoints (`/api/v1/auth/login`, `/register`, `/google`) SHALL issue JWT access tokens with a 30-day lifetime (`AddDays(30)`) to match the 30-day curriculum timeline and the frontend cookie retention duration.
+The authentication endpoints (`/api/v1/auth/login`, `/register`, `/google`) SHALL issue JWT access tokens with a 60-minute lifetime. Long-lived session continuity SHALL be provided by refresh tokens (see `refresh-tokens` capability) rather than long-lived access tokens.
 
 #### Scenario: User authenticates successfully
 - **WHEN** user signs in via email/password or Google OAuth
-- **THEN** the returned JWT token has an expiration date set to 30 days from creation time.
+- **THEN** the returned JWT access token has an expiration set to 60 minutes from creation time
 
 ### Requirement: Route Middleware Token Expiry Validation
 The client-side route guard SHALL check token validity against expiration time before allowing access to protected routes or redirecting away from guest-only pages like `/login`. A raw unvalidated cookie string SHALL NOT be considered proof of active authentication.
@@ -119,3 +130,46 @@ The client-side route guard SHALL check token validity against expiration time b
 #### Scenario: Active logged-in user visits /login
 - **WHEN** authenticated user with a valid non-expired token navigates to `/login`
 - **THEN** middleware redirects to `/today`.
+
+### Requirement: Mandatory secret configuration at startup
+The application SHALL fail fast during startup if the `Jwt:Secret` configuration value is missing, empty, or has fewer than 256 bits of cryptographically random entropy. The `Jwt:Secret` value MUST be generated using a CSPRNG; human-readable, example, or default secrets SHALL NOT be used. The application SHALL NOT fall back to any hardcoded default JWT signing key. The same fail-fast behavior SHALL apply to VAPID key configuration (`WebPush:PrivateKey`, `WebPush:PublicKey`).
+
+#### Scenario: Application starts without JWT secret
+- **WHEN** the application starts with `Jwt:Secret` unset or empty
+- **THEN** the application throws an exception during startup and does not begin accepting HTTP requests
+
+#### Scenario: Application starts with JWT secret configured
+- **WHEN** the application starts with `Jwt:Secret` set to a CSPRNG-generated value with at least 256 bits of entropy
+- **THEN** the application starts normally and uses the configured secret for JWT signing
+
+### Requirement: Production CORS origin isolation
+The CORS policy SHALL load allowed origins exclusively from configuration (`Cors:AllowedOrigins`). The policy SHALL NOT include localhost or loopback origins unless explicitly listed in the configuration for that environment.
+
+#### Scenario: Production deployment with configured origins
+- **WHEN** the application runs with `Cors:AllowedOrigins` set to `["https://techdaily.duckdns.org"]`
+- **THEN** CORS preflight and actual requests from `http://localhost:3000` are rejected
+
+#### Scenario: Development with localhost origins
+- **WHEN** the application runs with `Cors:AllowedOrigins` including localhost entries
+- **THEN** requests from those localhost origins are permitted
+
+### Requirement: Google Identity Services Client Configuration & Fallback
+The web frontend application SHALL resolve the Google Identity Services Client ID from runtime configuration using flexible environment variable resolution, supporting either `NUXT_PUBLIC_GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_ID`.
+
+The system SHALL guarantee that:
+1. When either `NUXT_PUBLIC_GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_ID` is set in the hosting environment (including local development runner `.env`), the frontend initializes Google Identity Services (`google.accounts.id.initialize`) with the resolved non-empty Client ID.
+2. In local development environments executed via `run-dev.sh`, environment variables from `.env` are automatically propagated to the frontend development server process.
+3. If neither variable is configured (empty string), the application SHALL NOT initialize Google Identity Services with an empty Client ID, preventing `400: invalid_request (Missing required parameter: client_id)` authorization errors.
+
+#### Scenario: Local development environment with GOOGLE_CLIENT_ID defined in .env
+- **WHEN** a developer starts the development stack with `run-dev.sh` and root `.env` defines `GOOGLE_CLIENT_ID`
+- **THEN** the Nuxt frontend runtime configuration resolves `googleClientId` to the value of `GOOGLE_CLIENT_ID`
+- **AND** the Google Sign-In button initializes with the configured Client ID without `client_id` missing parameter errors.
+
+#### Scenario: Production or CI deployment with NUXT_PUBLIC_GOOGLE_CLIENT_ID defined
+- **WHEN** the application runs in a container or environment where `NUXT_PUBLIC_GOOGLE_CLIENT_ID` is defined
+- **THEN** the Nuxt frontend runtime configuration resolves `googleClientId` to the value of `NUXT_PUBLIC_GOOGLE_CLIENT_ID`.
+
+#### Scenario: Environment without Google OAuth credentials configured
+- **WHEN** neither `NUXT_PUBLIC_GOOGLE_CLIENT_ID` nor `GOOGLE_CLIENT_ID` is defined
+- **THEN** the frontend recognizes the missing Client ID, avoids passing an empty string to `google.accounts.id.initialize`, and does not render a broken Google Sign-In authorization flow.

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
 import { BookOpen, Lock, Mail, User, ArrowRight, AlertCircle } from 'lucide-vue-next'
 import { useApiError } from '~/composables/useApiError'
+import { useAuthStore } from '~/stores/useAuthStore'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -41,6 +42,10 @@ const { pause: stopGooglePoll, resume: startGooglePoll } = useIntervalFn(() => {
   googleInitAttempts++
   if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
     stopGooglePoll()
+    if (!config.public.googleClientId) {
+      console.warn('[TechDaily Auth] Google Client ID is not configured. Google Sign-In is disabled.')
+      return
+    }
     try {
       ;(window as any).google.accounts.id.initialize({
         client_id: config.public.googleClientId,
@@ -60,7 +65,7 @@ const { pause: stopGooglePoll, resume: startGooglePoll } = useIntervalFn(() => {
 function renderGoogleButton() {
   const gsi = (window as any).google?.accounts?.id
   const btnContainer = googleBtnContainer.value
-  if (!gsi || !btnContainer) return
+  if (!config.public.googleClientId || !gsi || !btnContainer) return
   btnContainer.innerHTML = ''
   gsi.renderButton(btnContainer, {
     theme: colorMode.value === 'dark' ? 'filled_black' : 'outline',
@@ -91,9 +96,11 @@ async function handleGoogleCredentialResponse(response: any) {
     toast.success(t('auth.toast_google_success'))
     await navigateTo('/today')
   } catch (err: any) {
+    const rawError = (err as any)?.data?.error || (err as any)?.response?._data?.error
+    console.error('[TechDaily Auth] Google login failed:', err, rawError)
     const formatted = formatError(err, 'auth.toast_google_failed')
-    errorMessage.value = formatted
-    toast.error(formatted)
+    errorMessage.value = rawError ? `${formatted} (${rawError})` : formatted
+    toast.error(errorMessage.value)
   } finally {
     isLoading.value = false
   }

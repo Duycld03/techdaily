@@ -19,12 +19,13 @@ config.global.mocks = {
 // Global Nuxt mock composables for Vitest
 ;(globalThis as any).useApiError = useApiError
 ;(globalThis as any).useToast = useToast
-;(globalThis as any).useRuntimeConfig = () => ({
+const mockRuntimeConfig = {
   public: {
     apiBaseUrl: 'http://localhost:5000',
     googleClientId: 'mock-google-client-id'
   }
-})
+}
+;(globalThis as any).useRuntimeConfig = () => mockRuntimeConfig
 
 ;(globalThis as any).useRoute = () => ({
   path: '/today',

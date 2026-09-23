@@ -310,9 +310,9 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] p-4 sm:p-6 md:p-10 flex flex-col items-center bg-slate-50 dark:bg-canvas transition-colors duration-200">
+  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] p-4 sm:p-6 md:p-8 flex flex-col items-center bg-slate-50 dark:bg-canvas transition-colors duration-200">
     <!-- Top-Level Tab Switcher -->
-    <div class="w-full max-w-5xl flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] pb-3 mb-6 sm:mb-8">
+    <div class="w-full max-w-5xl flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] pb-3 mb-4 sm:mb-6">
       <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shrink-0 overflow-x-auto">
         <!-- Tab 1: Review Session -->
         <button

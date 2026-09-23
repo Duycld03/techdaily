@@ -170,7 +170,7 @@ async function handleOptionSubmit() {
 
       <!-- Question Text -->
       <h2
-        class="text-base sm:text-xl md:text-2xl font-bold text-slate-900 dark:text-white leading-snug"
+        class="text-base sm:text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-snug"
       >
         {{ question.questionText }}
       </h2>
@@ -194,7 +194,7 @@ async function handleOptionSubmit() {
             @click="handleOptionSelect(index)"
             :disabled="isReviewed || focusStore.isSubmitting"
             :class="[
-              'w-full text-left p-3.5 sm:p-5 rounded-2xl text-sm md:text-lg font-medium border transition-all duration-200 flex items-start gap-3 sm:gap-4 relative group select-none',
+              'w-full text-left p-3 sm:p-3.5 rounded-xl text-sm sm:text-base font-medium border transition-all duration-200 flex items-start gap-3 sm:gap-4 relative group select-none',
               !isReviewed && selectedOption === index
                 ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-950 dark:text-brand-100 ring-2 ring-brand-500/30 shadow-sm'
                 : !isReviewed
@@ -211,7 +211,7 @@ async function handleOptionSubmit() {
             <!-- Option Letter Badge -->
             <div
               :class="[
-                'w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center font-bold text-sm sm:text-base shrink-0 transition-colors duration-200 mt-0.5 sm:mt-0',
+                'w-7 h-7 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 transition-colors duration-200 mt-0.5 sm:mt-0',
                 !isReviewed && selectedOption === index
                   ? 'bg-brand-600 text-white'
                   : !isReviewed
@@ -229,7 +229,7 @@ async function handleOptionSubmit() {
             </div>
 
             <!-- Option Text -->
-            <div class="flex-1 min-w-0 break-words pt-0.5 leading-relaxed text-sm sm:text-base md:text-lg">
+            <div class="flex-1 min-w-0 break-words pt-0.5 leading-relaxed text-sm sm:text-base">
               {{ option }}
             </div>
 
