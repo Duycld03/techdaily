@@ -1,6 +1,6 @@
 # Spec Delta
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Immersive Reader Studio Mobile Height and Typography Controls
 The dedicated Reader Studio (`pages/read/[bookId].vue`) and document reading surfaces (`DocReaderPane.vue`) SHALL utilize dynamic viewport units (`h-dvh`), safe area padding, and responsive segmented typography controls to prevent layout clipping, text wrapping, and event listener leaks on mobile devices.

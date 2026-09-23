@@ -1,6 +1,6 @@
 # Spec Delta
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Executive Bento Profile and Settings Mobile Responsive Standards
 The Engineer Portfolio Profile (`pages/profile.vue`), System Settings (`pages/settings.vue`), and Authentication (`pages/login.vue`) surfaces SHALL render with responsive Bento geometry down to $320\text{px}$, responsive 2x2 daily study pace chips, and touch-accessible notification scheduling controls.

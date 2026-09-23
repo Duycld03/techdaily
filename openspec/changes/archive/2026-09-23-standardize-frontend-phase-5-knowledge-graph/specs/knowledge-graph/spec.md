@@ -1,6 +1,6 @@
 # Spec Delta
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: WebGL Shallow Reactivity, OrbitControls Hygiene and Mobile Bottom-Sheet Drawer
 The Knowledge Graph 3D and 2D Studio (`pages/graph.vue`, `GraphCanvas3D.vue`, `GraphCanvas.vue`, `GraphDetailDrawer.vue`, `GraphControlBar.vue`) SHALL store WebGL and canvas instances strictly in `shallowRef` to prevent reactive memory overhead, manage OrbitControls event listeners via VueUse hygiene, provide an adaptive touch-swipeable bottom-sheet drawer on mobile viewports $< 768\text{px}$, and clear safe area boundaries.

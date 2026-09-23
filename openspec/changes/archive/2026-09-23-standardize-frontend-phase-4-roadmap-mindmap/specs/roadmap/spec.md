@@ -1,6 +1,6 @@
 # Spec Delta
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Interactive Mindmap SVG Shallow Reactivity and Touch Viewport Containment
 The Roadmap Mindmap Canvas (`RoadmapMindmapCanvas.vue`) and Dual-View Switcher (`RoadmapViewSwitcher.vue`) SHALL utilize `shallowRef` for tree node hierarchies to eliminate proxy traversal overhead, support touch pinch-to-zoom and pan gestures on mobile viewports $< 768\text{px}$, and preserve zero-shift border transitions.

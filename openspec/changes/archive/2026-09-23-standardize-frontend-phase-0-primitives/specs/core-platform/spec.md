@@ -1,6 +1,6 @@
 # Spec Delta
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Shared UI Primitives Responsive Geometry and Event Hygiene
 All shared foundation UI primitives (`frontend/components/common/`, `frontend/components/app/`, `app.vue`, and `error.vue`) SHALL conform to strict mobile viewport responsiveness down to $320\text{px}$, zero horizontal overflow, VueUse declarative event lifecycle management, and clean engineering iconography.

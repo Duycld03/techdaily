@@ -911,7 +911,6 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 - **WHEN** a user visits the daily focus workspace (`/today`) while daily topics are loading
 - **THEN** the loading container displays a `Loader2` spinner with 1.5px stroke weight rather than a spinning sparkle icon.
 
-
 #### Scenario: User opens custom AppTimePicker dropdown in dark mode
 - **WHEN** user clicks the time picker trigger for preferred study time on `/settings`
 - **THEN** a floating glassmorphic popover opens anchored to the trigger button
@@ -1121,7 +1120,6 @@ The application shell topbar (`AppHeader.vue`) SHALL provide intuitive, direct n
 - **WHEN** a user clicks the TechDaily brand logo in the top application header (`AppHeader.vue`)
 - **THEN** the application navigates to the root Home Bento Dashboard (`/`) instead of `/today`.
 
-
 ### Requirement: Modernized Mobile Navigation Drawer & Cross-Device Parity
 The mobile slide-out navigation drawer (`AppHeader.vue`) SHALL provide 100% visual and functional parity with the desktop sidebar (`AppSidebar.vue`), adhering to the **Dev-Learning Studio** design tokens, zero-shift active link geometry, unified route structure, and complete localization across all supported locales:
 
@@ -1178,6 +1176,7 @@ The mobile slide-out navigation drawer (`AppHeader.vue`) SHALL provide 100% visu
 - **THEN** navigation groups render in Vietnamese ("LUYỆN TẬP", "TRI THỨC & GHI NHỚ", "HỆ THỐNG")
 - **AND** the brand header renders "TechDaily" with the primary gradient
 - **AND** the logout button renders localized text ("Đăng xuất") instead of hardcoded English "Log Out".
+
 ### Requirement: Automated VPS Deployment Pipeline & Image Pull Resilience
 The automated continuous deployment workflow targeting Google Cloud VPS via SSH SHALL execute container image pulls with bounded retry logic and exponential backoff to ensure resilience against transient network resets, TCP connection drops, and registry CDN rate limits. The deployment script SHALL enforce that all deployed application containers run strictly from pre-built registry images (`--no-build`) and prohibit local compilation or image building on the production server. Following container recreation, the pipeline SHALL restart the Nginx reverse proxy service to clear cached upstream IP resolutions and prevent stale DNS 502 Bad Gateway responses.
 
@@ -1196,3 +1195,36 @@ The automated continuous deployment workflow targeting Google Cloud VPS via SSH 
 - **WHEN** production application containers are successfully recreated and launched
 - **THEN** the deployment workflow explicitly executes `docker compose restart nginx`
 - **AND** Nginx re-resolves internal bridge network DNS mappings for the backend and frontend services without routing requests to stale container IP addresses.
+
+### Requirement: Shared UI Primitives Responsive Geometry and Event Hygiene
+All shared foundation UI primitives (`frontend/components/common/`, `frontend/components/app/`, `app.vue`, and `error.vue`) SHALL conform to strict mobile viewport responsiveness down to $320\text{px}$, zero horizontal overflow, VueUse declarative event lifecycle management, and clean engineering iconography.
+
+#### Scenario: Dropdown and Time Picker Popovers on Narrow Mobile Viewports
+- **WHEN** user activates `AppSelect` or `AppTimePicker` on a narrow mobile viewport ($320\text{px}$ to $375\text{px}$)
+- **THEN** the popover menu or dropdown modal SHALL clamp within the visible viewport bounds without horizontal scrolling or clipping
+- **AND** all clickable items SHALL provide a touch-target size of at least $44\text{px} \times 44\text{px}$.
+
+#### Scenario: Mobile Dynamic Viewport Shell Adaptation
+- **WHEN** user navigates any application route on a mobile device with dynamic address bars
+- **THEN** the root layout shell in `app.vue` and `error.vue` SHALL utilize dynamic viewport units (`min-h-dvh`) to prevent layout jumpiness upon browser chrome collapse.
+
+#### Scenario: Keyboard and Outside-Click Hygiene in Primitives
+- **WHEN** floating primitives (`AppSelect`, `AppTimePicker`, `AppCommandPalette`) are opened or closed
+- **THEN** document listeners for keyboard navigation (`Escape`, `ArrowUp`, `ArrowDown`, `Enter`) and backdrop dismissal SHALL be handled via VueUse composables (`useEventListener`, `onClickOutside`) with automatic teardown upon component unmount.
+
+### Requirement: Executive Bento Profile and Settings Mobile Responsive Standards
+The Engineer Portfolio Profile (`pages/profile.vue`), System Settings (`pages/settings.vue`), and Authentication (`pages/login.vue`) surfaces SHALL render with responsive Bento geometry down to $320\text{px}$, responsive 2x2 daily study pace chips, and touch-accessible notification scheduling controls.
+
+#### Scenario: Executive Bento Profile on 320px Viewports
+- **WHEN** user views `pages/profile.vue` on a narrow mobile viewport ($320\text{px}$ to $375\text{px}$)
+- **THEN** Tier 1 Passport badges (Role, Google Linked, Streak Trophy) SHALL wrap cleanly without clipping
+- **AND** Tier 2 Milestones telemetry cells SHALL render in a balanced 2-column grid (`grid-cols-2 lg:grid-cols-4`) without label truncation.
+
+#### Scenario: Responsive Daily Goal Pace Selector
+- **WHEN** user selects daily study pace ("5m", "10m", "15m", "30m") in Account Settings
+- **THEN** the selection chips SHALL wrap into `grid-cols-2 sm:grid-cols-4 gap-2` on mobile screens to ensure touch targets remain $\ge 44\text{px}$ without horizontal text squishing.
+
+#### Scenario: Mobile Settings Web Push and Timezone Controls
+- **WHEN** user configures notification schedules or timezone preferences in `pages/settings.vue` on a mobile device
+- **THEN** time picker popovers and timezone dropdowns SHALL clamp within viewport boundaries
+- **AND** the Brave push setup guidance card SHALL adapt responsively without table or code block clipping.

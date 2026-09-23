@@ -1,6 +1,6 @@
 # Spec Delta
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: Spaced Repetition Grading Geometry and Quiz Option State Isolation
 The SM-2 flashcard grading interface (`Sm2GradingButtons.vue`), forecast chart (`ReviewForecastChart.vue`), and Quiz Arena (`pages/quiz.vue`) SHALL enforce mobile responsive grid wrapping, touch target sizing ($\ge 44\text{px}$), and strict option selection isolation across question sessions.
