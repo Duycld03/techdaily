@@ -40,7 +40,7 @@ const router = useRouter()
 const { formatError } = useApiError()
 const reviewStore = useReviewStore()
 const toast = useToast()
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
 
 function renderMarkdown(raw: string | undefined | null): string {
   if (!raw) return ''

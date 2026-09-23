@@ -45,7 +45,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:5000',
-      googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || '982684500709-75solmbterlbdvut85btisallcsf83ef.apps.googleusercontent.com'
+      googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || ''
     }
   },
 

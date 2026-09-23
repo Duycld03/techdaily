@@ -26,4 +26,5 @@ public class User : BaseEntity
     public ICollection<UserQuizProgress> QuizProgresses { get; set; } = new List<UserQuizProgress>();
     public ICollection<UserBookPacer> BookPacers { get; set; } = new List<UserBookPacer>();
     public ICollection<UserPushSubscription> PushSubscriptions { get; set; } = new List<UserPushSubscription>();
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }

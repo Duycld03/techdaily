@@ -19,6 +19,9 @@ public class DocumentBook : BaseEntity
     public int ProgressPercentage { get; set; } = 0;
     public string? StatusMessage { get; set; }
     public string? ErrorMessage { get; set; }
+    // Ownership
+    public Guid? CreatedByUserId { get; set; }
+    public User? CreatedByUser { get; set; }
 
     // Navigation properties
     public ICollection<DocumentChunk> Chunks { get; set; } = new List<DocumentChunk>();

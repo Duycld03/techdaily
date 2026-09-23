@@ -41,7 +41,7 @@ public class UploadPdfHandlerTests : IDisposable
         var validator = new UploadPdfValidator();
         var handler = new UploadPdfHandler(_db, mockQueue, validator);
 
-        using var memoryStream = new MemoryStream(new byte[] { 1, 2, 3, 4 });
+        using var memoryStream = new MemoryStream(System.Text.Encoding.ASCII.GetBytes("%PDF-1.4 sample content for testing"));
         var request = new UploadPdfRequest(
             FileStream: memoryStream,
             FileName: "architecture-book.pdf",
@@ -65,6 +65,32 @@ public class UploadPdfHandlerTests : IDisposable
         var savedBook = await _db.DocumentBooks.FirstOrDefaultAsync(b => b.Id == result.Value.Book.Id);
         savedBook.Should().NotBeNull();
         savedBook!.Status.Should().Be(ProcessingStatus.Processing);
+    }
+
+    [Fact]
+    public async Task UploadPdf_ShouldReturnInvalidFormat_WhenMagicBytesAreNotPdf()
+    {
+        // Arrange
+        var mockQueue = new MockPdfIngestionQueue();
+        var validator = new UploadPdfValidator();
+        var handler = new UploadPdfHandler(_db, mockQueue, validator);
+
+        using var memoryStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
+        var request = new UploadPdfRequest(
+            FileStream: memoryStream,
+            FileName: "fake.pdf",
+            FileLength: 5,
+            Title: "Fake PDF",
+            Category: Category.SystemDesign,
+            Language: "en"
+        );
+
+        // Act
+        var result = await handler.ExecuteAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("INVALID_PDF_FORMAT");
     }
 
     [Fact]

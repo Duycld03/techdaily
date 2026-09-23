@@ -48,7 +48,7 @@ watch(
   { deep: true }
 )
 
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
 
 const highlightSearchQuery = ref('')
 

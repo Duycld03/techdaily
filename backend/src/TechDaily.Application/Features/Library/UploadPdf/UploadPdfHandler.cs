@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using FluentValidation;
 using TechDaily.Application.Common;
@@ -14,7 +15,8 @@ public record UploadPdfRequest(
     long FileLength,
     string? Title,
     Category Category,
-    string Language = "en");
+    string Language = "en",
+    Guid? CreatedByUserId = null);
 
 public class UploadPdfResponse
 {
@@ -94,6 +96,23 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
             return Error.Custom("PdfUpload.Failed", $"Failed to save uploaded file: {ex.Message}");
         }
 
+        // Validate PDF magic bytes (%PDF-)
+        var magicBytes = new byte[5];
+        int bytesRead;
+        await using (var verifyStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true))
+        {
+            bytesRead = await verifyStream.ReadAsync(magicBytes.AsMemory(0, 5), cancellationToken);
+        }
+
+        if (bytesRead < 5 || Encoding.ASCII.GetString(magicBytes) != "%PDF-")
+        {
+            if (File.Exists(tempFilePath))
+            {
+                File.Delete(tempFilePath);
+            }
+            return Error.Custom("INVALID_PDF_FORMAT", "The file is not a valid PDF document.");
+        }
+
         var book = new DocumentBook
         {
             Id = bookId,
@@ -106,7 +125,8 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
             Status = ProcessingStatus.Processing,
             ProgressPercentage = 0,
             StatusMessage = "File uploaded, queued for processing...",
-            TotalChunks = 0
+            TotalChunks = 0,
+            CreatedByUserId = request.CreatedByUserId
         };
 
         await _dbContext.DocumentBooks.AddAsync(book, cancellationToken);

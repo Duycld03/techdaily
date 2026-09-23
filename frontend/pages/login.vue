@@ -106,6 +106,12 @@ async function handleSubmit() {
     toast.error(t('auth.toast_enter_credentials'))
     return
   }
+  if (authMode.value === 'register' && password.value.length < 8) {
+    const formatted = t('api_errors.AUTH_PASSWORD_TOO_SHORT')
+    errorMessage.value = formatted
+    toast.error(formatted)
+    return
+  }
   isLoading.value = true
 
   try {
@@ -217,7 +223,7 @@ async function handleSubmit() {
               v-model="password"
               required
               type="password"
-              minlength="6"
+              :minlength="authMode === 'register' ? 8 : undefined"
               placeholder="••••••••"
               class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-brand-500 focus:outline-none transition-colors"
             />

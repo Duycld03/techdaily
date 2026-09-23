@@ -6,7 +6,7 @@ public static class PasswordHasher
 {
     private const int SaltSize = 16;
     private const int HashSize = 32;
-    private const int Iterations = 100000;
+    private const int Iterations = 600000;
     private static readonly HashAlgorithmName Algorithm = HashAlgorithmName.SHA256;
 
     public static string HashPassword(string password)
@@ -33,5 +33,14 @@ public static class PasswordHasher
         byte[] actualHash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, Algorithm, expectedHash.Length);
 
         return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
+    }
+
+    public static bool NeedsRehash(string hashedPassword)
+    {
+        var parts = hashedPassword.Split('.');
+        if (parts.Length != 3 || !int.TryParse(parts[0], out int iterations))
+            return true;
+
+        return iterations < Iterations;
     }
 }

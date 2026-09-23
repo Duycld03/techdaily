@@ -51,10 +51,22 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // Configure JWT Authentication
-var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "TechDaily_Senior_Super_Secret_Key_2026_Min_32_Chars!";
+var jwtSecret = builder.Configuration["Jwt:Secret"];
+if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
+{
+    throw new InvalidOperationException("Jwt:Secret must be configured with at least 32 characters (256-bit entropy).");
+}
+if (!builder.Environment.IsDevelopment())
+{
+    var vapidPrivate = builder.Configuration["WebPush:PrivateKey"];
+    var vapidPublic = builder.Configuration["WebPush:PublicKey"];
+    if (string.IsNullOrWhiteSpace(vapidPrivate) || string.IsNullOrWhiteSpace(vapidPublic))
+    {
+        throw new InvalidOperationException("WebPush:PrivateKey and WebPush:PublicKey must be configured in non-development environments.");
+    }
+}
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "TechDaily";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "TechDailyUsers";
-
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -280,6 +292,10 @@ if (args.Contains("--cleanup-data"))
 
 // Configure Middleware Pipeline
 app.UseExceptionHandler();
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+});
 
 if (app.Environment.IsDevelopment())
 {

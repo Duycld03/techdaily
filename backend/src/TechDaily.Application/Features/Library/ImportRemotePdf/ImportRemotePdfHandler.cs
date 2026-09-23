@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using FluentValidation;
 using TechDaily.Application.Common;
@@ -13,7 +15,8 @@ public record ImportRemotePdfRequest(
     string PdfUrl,
     string Title,
     Category Category,
-    string Language = "en");
+    string Language = "en",
+    Guid? CreatedByUserId = null);
 
 public class ImportRemotePdfValidator : AbstractValidator<ImportRemotePdfRequest>
 {
@@ -63,10 +66,12 @@ public class ImportRemotePdfHandler : IUseCase<ImportRemotePdfRequest, UploadPdf
             return Error.Custom("Validation.Failed", validation.Errors.First().ErrorMessage);
         }
 
-        // 1. SSRF Safety Check
+        // 1. SSRF Safety Check with IP Pinning
+        Uri validatedUri;
+        IPAddress[] resolvedIps;
         try
         {
-            UrlSecurityValidator.ValidateSafeUrl(request.PdfUrl);
+            (validatedUri, resolvedIps) = UrlSecurityValidator.ValidateSafeUrl(request.PdfUrl);
         }
         catch (Exception ex)
         {
@@ -82,9 +87,13 @@ public class ImportRemotePdfHandler : IUseCase<ImportRemotePdfRequest, UploadPdf
         HttpResponseMessage response;
         try
         {
-            using var httpRequest = new HttpRequestMessage(HttpMethod.Get, request.PdfUrl);
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Get, validatedUri);
             httpRequest.Headers.Add("User-Agent", "TechDailyCrawler/1.0 (Remote PDF Ingestion)");
             response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            if ((int)response.StatusCode >= 300 && (int)response.StatusCode < 400)
+            {
+                return Error.Custom("Security.RedirectRejected", "HTTP redirects are not permitted for remote PDF downloads.");
+            }
             response.EnsureSuccessStatusCode();
         }
         catch (Exception ex)
@@ -144,7 +153,8 @@ public class ImportRemotePdfHandler : IUseCase<ImportRemotePdfRequest, UploadPdf
             Status = ProcessingStatus.Processing,
             ProgressPercentage = 0,
             StatusMessage = "Remote PDF download initiated. Processing chapters...",
-            TotalChunks = 0
+            TotalChunks = 0,
+            CreatedByUserId = request.CreatedByUserId
         };
 
         await _dbContext.DocumentBooks.AddAsync(book, cancellationToken);

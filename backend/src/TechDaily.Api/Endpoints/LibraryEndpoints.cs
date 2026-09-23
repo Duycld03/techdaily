@@ -110,10 +110,13 @@ public static class LibraryEndpoints
         // Protected Document Import (Requires Authentication)
         group.MapPost("/import", async (
             [FromBody] ImportDocumentRequest request,
+            ClaimsPrincipal userClaims,
             [FromServices] IUseCase<ImportDocumentRequest, ImportDocumentResponse> handler,
             CancellationToken ct) =>
         {
-            var result = await handler.ExecuteAsync(request, ct);
+            var userId = GetUserIdFromClaims(userClaims);
+            var authorizedRequest = request with { CreatedByUserId = userId };
+            var result = await handler.ExecuteAsync(authorizedRequest, ct);
             return result.Match(
                 success => Results.Created($"/api/v1/library/books/{success.Book.Id}", success),
                 error => Results.BadRequest(new { code = error.Code, error = error.Message })
@@ -122,18 +125,27 @@ public static class LibraryEndpoints
         .RequireAuthorization()
         .WithName("ImportDocument");
 
-        // Protected Document Deletion (Requires Authentication)
+        // Protected Document Deletion (Requires Authentication and Ownership)
         group.MapDelete("/books/{id:guid}", async (
             Guid id,
+            ClaimsPrincipal userClaims,
             [FromServices] IUseCase<DeleteBookRequest, DeleteBookResponse> handler,
             CancellationToken ct) =>
         {
-            var result = await handler.ExecuteAsync(new DeleteBookRequest(id), ct);
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await handler.ExecuteAsync(new DeleteBookRequest(id, userId.Value), ct);
             return result.Match(
                 success => Results.NoContent(),
                 error => error == Error.NotFound 
                     ? Results.NotFound(new { code = error.Code, error = error.Message }) 
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                    : error.Code == "LIBRARY_FORBIDDEN"
+                        ? Results.Json(new { code = error.Code, error = error.Message }, statusCode: StatusCodes.Status403Forbidden)
+                        : Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
         .RequireAuthorization()
@@ -142,9 +154,11 @@ public static class LibraryEndpoints
         // Protected PDF Upload (Requires Authentication, supports up to 300MB, Zero-LOH streaming)
         group.MapPost("/upload-pdf", async (
             HttpRequest httpRequest,
+            ClaimsPrincipal userClaims,
             [FromServices] IUseCase<UploadPdfRequest, UploadPdfResponse> handler,
             CancellationToken ct) =>
         {
+            var userId = GetUserIdFromClaims(userClaims);
             if (!httpRequest.HasFormContentType)
             {
                 return Results.BadRequest(new { code = Error.MultipartRequired.Code, error = Error.MultipartRequired.Message });
@@ -170,7 +184,8 @@ public static class LibraryEndpoints
                 FileLength: file.Length,
                 Title: string.IsNullOrWhiteSpace(title) ? null : title,
                 Category: category,
-                Language: language);
+                Language: language,
+                CreatedByUserId: userId);
 
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
@@ -185,10 +200,13 @@ public static class LibraryEndpoints
         // Protected Remote PDF Streaming Ingestion (Requires Authentication, streams directly to temp disk)
         group.MapPost("/import-remote-pdf", async (
             [FromBody] ImportRemotePdfRequest request,
+            ClaimsPrincipal userClaims,
             [FromServices] IUseCase<ImportRemotePdfRequest, UploadPdfResponse> handler,
             CancellationToken ct) =>
         {
-            var result = await handler.ExecuteAsync(request, ct);
+            var userId = GetUserIdFromClaims(userClaims);
+            var authorizedRequest = request with { CreatedByUserId = userId };
+            var result = await handler.ExecuteAsync(authorizedRequest, ct);
             return result.Match(
                 success => Results.Accepted($"/api/v1/library/books/{success.Book.Id}/status", success),
                 error => Results.BadRequest(new { code = error.Code, error = error.Message })

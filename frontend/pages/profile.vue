@@ -110,7 +110,7 @@ async function handleProfileSave() {
 }
 
 async function handlePasswordChange() {
-  if (newPassword.value.length < 6) {
+  if (newPassword.value.length < 8) {
     toast.error(t('profile.password_strength_weak'))
     return
   }
@@ -313,7 +313,7 @@ async function handlePasswordChange() {
                     v-model="newPassword"
                     required
                     :type="showNewPassword ? 'text' : 'password'"
-                    minlength="6"
+                    minlength="8"
                     placeholder="••••••••"
                     class="w-full pl-9 pr-10 py-2.5 bg-white dark:bg-canvas-subtle border border-slate-300 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
                   />
@@ -353,7 +353,7 @@ async function handlePasswordChange() {
                     v-model="confirmPassword"
                     required
                     :type="showConfirmPassword ? 'text' : 'password'"
-                    minlength="6"
+                    minlength="8"
                     placeholder="••••••••"
                     class="w-full pl-9 pr-10 py-2.5 bg-white dark:bg-canvas-subtle border border-slate-300 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 shadow-sm transition-colors"
                   />

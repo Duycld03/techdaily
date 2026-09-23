@@ -60,6 +60,7 @@ export const useAuthStore = defineStore('auth', () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('techdaily_token')
       localStorage.removeItem('techdaily_user')
+      localStorage.removeItem('techdaily_refresh_token')
     }
   }
 
@@ -122,48 +123,63 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(email: string, password: string) {
     const api = useApiClient()
-    const response = await api.post<{ token: string; user: AuthUser }>('/api/v1/auth/login', {
+    const response = await api.post<{ token?: string; accessToken?: string; user: AuthUser }>('/api/v1/auth/login', {
       email,
       password
     })
-    setSession(response.token, response.user)
-    return response
+    const jwt = response.accessToken || response.token || ''
+    setSession(jwt, response.user)
+    return { ...response, token: jwt }
   }
 
   async function register(email: string, password: string, name?: string, locale: string = 'en') {
     const api = useApiClient()
-    const response = await api.post<{ token: string; user: AuthUser }>('/api/v1/auth/register', {
+    const response = await api.post<{ token?: string; accessToken?: string; user: AuthUser }>('/api/v1/auth/register', {
       email,
       password,
       name,
       locale
     })
-    setSession(response.token, response.user)
-    return response
+    const jwt = response.accessToken || response.token || ''
+    setSession(jwt, response.user)
+    return { ...response, token: jwt }
   }
 
   async function googleLogin(idToken: string) {
     const api = useApiClient()
-    const response = await api.post<{ token: string; user: AuthUser }>('/api/v1/auth/google', { idToken })
-    setSession(response.token, response.user)
-    return response
+    const response = await api.post<{ token?: string; accessToken?: string; user: AuthUser }>('/api/v1/auth/google', { idToken })
+    const jwt = response.accessToken || response.token || ''
+    setSession(jwt, response.user)
+    return { ...response, token: jwt }
   }
 
-  function setSession(newToken: string, newUser: AuthUser) {
+  function setSession(newToken: string, newUser?: AuthUser | null) {
     token.value = newToken
-    user.value = newUser
     tokenCookie.value = newToken
-    userCookie.value = newUser
     if (typeof window !== 'undefined') {
       localStorage.setItem('techdaily_token', newToken)
-      localStorage.setItem('techdaily_user', JSON.stringify(newUser))
+      localStorage.removeItem('techdaily_refresh_token')
+    }
+    if (newUser) {
+      user.value = newUser
+      userCookie.value = newUser
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('techdaily_user', JSON.stringify(newUser))
+      }
     }
   }
 
-  function logout(redirectPath: string = '/login') {
+  async function logout(redirectPath: string = '/login') {
     clearSession()
-    if (typeof navigateTo === 'function') {
-      navigateTo(redirectPath)
+    try {
+      const api = useApiClient()
+      await api.post('/api/v1/auth/revoke', undefined, { credentials: 'include' } as RequestInit)
+    } catch {
+      // Ignore network / revoke failure so client state is still cleared
+    } finally {
+      if (typeof navigateTo === 'function') {
+        navigateTo(redirectPath)
+      }
     }
   }
 
@@ -184,6 +200,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isTokenExpired,
     clearSession,
+    setSession,
+    parseUserFromJwt,
     init,
     login,
     register,

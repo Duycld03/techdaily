@@ -30,16 +30,19 @@ public class WebArticleCrawler : IWebArticleCrawler
         var targetUrl = ResolveGitHubRawUrl(url);
 
         // SSRF Defense: Validate URL host and IP against loopback, private subnets, and cloud metadata
-        ValidateSafeUrl(targetUrl);
+        var (validatedUri, resolvedIps) = UrlSecurityValidator.ValidateSafeUrl(targetUrl);
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, targetUrl);
+        using var request = new HttpRequestMessage(HttpMethod.Get, validatedUri);
         request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 TechDailyCrawler/1.0");
         request.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7");
         request.Headers.Add("Accept-Language", "en-US,en;q=0.9,vi;q=0.8");
 
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if ((int)response.StatusCode >= 300 && (int)response.StatusCode < 400)
+        {
+            throw new InvalidOperationException("HTTP redirects are not permitted for article crawling.");
+        }
         response.EnsureSuccessStatusCode();
-
         // 2. Direct PDF Document Handling
         if (targetUrl.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ||
             response.Content.Headers.ContentType?.MediaType?.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) == true ||
@@ -69,7 +72,7 @@ public class WebArticleCrawler : IWebArticleCrawler
         var (isPdfDetected, detectedPdfUrl) = SniffEmbeddedPdf(rawContent, targetUrl);
         if (isPdfDetected && !string.IsNullOrWhiteSpace(detectedPdfUrl))
         {
-            ValidateSafeUrl(detectedPdfUrl);
+            UrlSecurityValidator.ValidateSafeUrl(detectedPdfUrl);
         }
 
         // 4. Direct Markdown / Plaintext File Handling
@@ -408,7 +411,7 @@ public class WebArticleCrawler : IWebArticleCrawler
         return cleaned.Trim();
     }
 
-    public static void ValidateSafeUrl(string url) => UrlSecurityValidator.ValidateSafeUrl(url);
+    public static (Uri ValidatedUri, IPAddress[] ResolvedIps) ValidateSafeUrl(string url) => UrlSecurityValidator.ValidateSafeUrl(url);
     public static Category InferCategoryFromContext(string title, string url, string? content = null)
     {
         var combined = $"{title} {url} {content}".ToLowerInvariant();

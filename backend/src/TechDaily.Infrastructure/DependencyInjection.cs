@@ -16,7 +16,7 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? "Host=localhost;Port=5432;Database=techdaily_db;Username=techdaily_user;Password=techdaily_password_secret";
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
 
         services.AddDbContext<TechDailyDbContext>(options =>
         {
@@ -33,9 +33,17 @@ public static class DependencyInjection
         services.AddHttpClient<GeminiEmbeddingService>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<TermExplanationService>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<TelegramNotifier>();
-        services.AddHttpClient<IWebArticleCrawler, WebArticleCrawler>();
+        services.AddHttpClient<IWebArticleCrawler, WebArticleCrawler>()
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                AllowAutoRedirect = false
+            });
         services.AddHttpClient<LookAheadBufferService>(client => client.Timeout = TimeSpan.FromSeconds(15));
-        services.AddHttpClient<ImportRemotePdfHandler>(client => client.Timeout = TimeSpan.FromSeconds(180));
+        services.AddHttpClient<ImportRemotePdfHandler>(client => client.Timeout = TimeSpan.FromSeconds(180))
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                AllowAutoRedirect = false
+            });
 
         // Service Registrations
         services.AddScoped<IEmbeddingService, GeminiEmbeddingService>();
@@ -49,6 +57,7 @@ public static class DependencyInjection
         services.AddSingleton<IPdfIngestionQueue, PdfIngestionQueue>();
         services.AddScoped<ILookAheadBufferService, LookAheadBufferService>();
         services.AddSingleton<IWebPushService, WebPushService>();
+        services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
         services.AddScoped<DatabaseMaintenanceRunner>();
         // Background Workers

@@ -13,7 +13,8 @@ public record ImportDocumentRequest(
     string MarkdownContent,
     Category Category,
     string? SourceUrl = null,
-    string Language = "en");
+    string Language = "en",
+    Guid? CreatedByUserId = null);
 
 public class ImportDocumentResponse
 {
@@ -64,7 +65,8 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
             Category = request.Category,
             SourceType = request.SourceUrl != null ? SourceType.WebDocUrl : SourceType.MarkdownSeries,
             AuthorOrSourceUrl = request.SourceUrl,
-            IsPublished = true
+            IsPublished = true,
+            CreatedByUserId = request.CreatedByUserId
         };
 
         // Split markdown content into logical chunks by heading or paragraphs

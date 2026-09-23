@@ -153,6 +153,13 @@ public class DocumentBookConfiguration : IEntityTypeConfiguration<DocumentBook>
             .WithOne(c => c.DocumentBook)
             .HasForeignKey(c => c.DocumentBookId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(b => b.CreatedByUserId);
+        builder.HasIndex(b => b.CreatedByUserId);
+        builder.HasOne(b => b.CreatedByUser)
+            .WithMany()
+            .HasForeignKey(b => b.CreatedByUserId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -462,5 +469,29 @@ public class UserPushSubscriptionConfiguration : IEntityTypeConfiguration<UserPu
             .WithMany(u => u.PushSubscriptions)
             .HasForeignKey(s => s.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
+{
+    public void Configure(EntityTypeBuilder<RefreshToken> builder)
+    {
+        builder.ToTable("RefreshTokens");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.TokenHash).HasMaxLength(64).IsRequired();
+        builder.HasIndex(r => r.TokenHash).IsUnique();
+        builder.Property(r => r.FamilyId).IsRequired();
+        builder.HasIndex(r => r.FamilyId);
+        builder.HasIndex(r => r.UserId);
+
+        builder.HasOne(r => r.User)
+            .WithMany(u => u.RefreshTokens)
+            .HasForeignKey(r => r.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(r => r.ReplacedByToken)
+            .WithMany()
+            .HasForeignKey(r => r.ReplacedByTokenId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

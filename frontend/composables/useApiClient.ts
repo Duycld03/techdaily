@@ -17,6 +17,43 @@ export class ApiError extends Error {
     Object.setPrototypeOf(this, ApiError.prototype)
   }
 }
+interface LockManagerLike {
+  request: (name: string, callback: () => Promise<string | null>) => Promise<string | null>
+}
+
+interface NavigatorWithLocks {
+  locks: LockManagerLike
+}
+
+let inFlightRefreshPromise: Promise<string | null> | null = null
+
+function parseJwtExp(jwt: string): number | null {
+  try {
+    const parts = jwt.split('.')
+    if (parts.length < 2) return null
+    const base64Url = parts[1]
+    if (!base64Url) return null
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    let binaryStr = ''
+    if (typeof atob !== 'undefined') {
+      binaryStr = atob(base64)
+    } else if (typeof Buffer !== 'undefined') {
+      binaryStr = Buffer.from(base64, 'base64').toString('binary')
+    } else {
+      return null
+    }
+    const jsonPayload = decodeURIComponent(
+      binaryStr
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    const payload = JSON.parse(jsonPayload)
+    return typeof payload.exp === 'number' ? payload.exp : null
+  } catch {
+    return null
+  }
+}
 
 export function useApiClient() {
   const config = useRuntimeConfig()
@@ -58,7 +95,92 @@ export function useApiClient() {
     return null
   }
 
+  async function executeRefresh(): Promise<string | null> {
+    const refreshUrl = `${baseUrl}/api/v1/auth/refresh`
+    const res = await fetch(refreshUrl, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!res.ok) {
+      throw new Error(`Token refresh failed with status ${res.status}`)
+    }
+
+    const rawData: unknown = await res.json()
+    let newToken: string | null = null
+    if (rawData && typeof rawData === 'object') {
+      if ('accessToken' in rawData && typeof rawData.accessToken === 'string') {
+        newToken = rawData.accessToken
+      } else if ('token' in rawData && typeof rawData.token === 'string') {
+        newToken = rawData.token
+      }
+    }
+    if (!newToken) {
+      throw new Error('No access token returned from refresh')
+    }
+
+    try {
+      const authStore = useAuthStore()
+      authStore.setSession(newToken, authStore.user)
+    } catch {
+      const tokenCookie = useCookie<string | null>('techdaily_token')
+      tokenCookie.value = newToken
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('techdaily_token', newToken)
+      }
+    }
+
+    return newToken
+  }
+
+  async function refreshAuthToken(): Promise<string | null> {
+    if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+      const nav = navigator as unknown as NavigatorWithLocks
+      return await nav.locks.request('techdaily_auth_refresh', async () => {
+        const token = getAuthToken()
+        if (token) {
+          const exp = parseJwtExp(token)
+          if (exp && exp * 1000 - Date.now() > 30 * 1000) {
+            return token
+          }
+        }
+        return await executeRefresh()
+      })
+    }
+
+    if (!inFlightRefreshPromise) {
+      inFlightRefreshPromise = executeRefresh().finally(() => {
+        inFlightRefreshPromise = null
+      })
+    }
+    return await inFlightRefreshPromise
+  }
+
   async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const isAuthEndpoint =
+      endpoint.includes('/api/v1/auth/login') ||
+      endpoint.includes('/api/v1/auth/register') ||
+      endpoint.includes('/api/v1/auth/refresh') ||
+      endpoint.includes('/api/v1/auth/revoke') ||
+      endpoint.includes('/api/v1/auth/google')
+
+    if (!isAuthEndpoint) {
+      const currentToken = getAuthToken()
+      if (currentToken) {
+        const exp = parseJwtExp(currentToken)
+        if (exp && exp * 1000 - Date.now() <= 30 * 1000) {
+          try {
+            await refreshAuthToken()
+          } catch {
+            // Proactive refresh failed, proceed and let 401 handler manage it
+          }
+        }
+      }
+    }
+
     const token = getAuthToken()
     const headers: Record<string, string> = {
       ...(options.headers as Record<string, string> || {})
@@ -74,11 +196,53 @@ export function useApiClient() {
 
     const response = await fetch(`${baseUrl}${endpoint}`, {
       ...options,
+      credentials: options.credentials || 'include',
       headers
     })
-
     if (!response.ok) {
-      if (response.status === 401 && !endpoint.includes('/api/v1/auth/login') && !endpoint.includes('/api/v1/auth/register')) {
+      if (
+        response.status === 401 &&
+        !endpoint.includes('/api/v1/auth/login') &&
+        !endpoint.includes('/api/v1/auth/register') &&
+        !endpoint.includes('/api/v1/auth/refresh') &&
+        !endpoint.includes('/api/v1/auth/revoke') &&
+        !endpoint.includes('/api/v1/auth/google')
+      ) {
+        let refreshedToken: string | null = null
+        try {
+          refreshedToken = await refreshAuthToken()
+        } catch {
+          // Token refresh failed
+        }
+
+        if (refreshedToken) {
+          const retryHeaders: Record<string, string> = {
+            ...(options.headers as Record<string, string> || {}),
+            Authorization: `Bearer ${refreshedToken}`
+          }
+
+          if (!(options.body instanceof FormData) && !retryHeaders['Content-Type']) {
+            retryHeaders['Content-Type'] = 'application/json'
+          }
+
+          const retryResponse = await fetch(`${baseUrl}${endpoint}`, {
+            ...options,
+            credentials: options.credentials || 'include',
+            headers: retryHeaders
+          })
+
+          if (retryResponse.ok) {
+            if (retryResponse.status === 204 || retryResponse.headers.get('content-length') === '0') {
+              return {} as T
+            }
+            const text = await retryResponse.text()
+            if (!text || text.trim() === '') {
+              return {} as T
+            }
+            return JSON.parse(text)
+          }
+        }
+
         try {
           const authStore = useAuthStore()
           authStore.clearSession()
@@ -151,23 +315,26 @@ export function useApiClient() {
   }
 
   return {
-    get: <T>(url: string) => request<T>(url, { method: 'GET' }),
-    post: <T>(url: string, body?: any) =>
+    get: <T>(url: string, options?: RequestInit) => request<T>(url, { method: 'GET', ...options }),
+    post: <T>(url: string, body?: unknown, options?: RequestInit) =>
       request<T>(url, {
         method: 'POST',
-        body: body ? JSON.stringify(body) : undefined
+        body: body ? JSON.stringify(body) : undefined,
+        ...options
       }),
-    postRaw: <T>(url: string, body: FormData) =>
+    postRaw: <T>(url: string, body: FormData, options?: RequestInit) =>
       request<T>(url, {
         method: 'POST',
-        body
+        body,
+        ...options
       }),
-    put: <T>(url: string, body?: any) =>
+    put: <T>(url: string, body?: unknown, options?: RequestInit) =>
       request<T>(url, {
         method: 'PUT',
-        body: body ? JSON.stringify(body) : undefined
+        body: body ? JSON.stringify(body) : undefined,
+        ...options
       }),
-    delete: <T>(url: string) => request<T>(url, { method: 'DELETE' }),
+    delete: <T>(url: string, options?: RequestInit) => request<T>(url, { method: 'DELETE', ...options }),
     download: async (url: string, defaultFileName = 'export.md'): Promise<void> => {
       const token = getAuthToken()
       const headers: Record<string, string> = {}
@@ -176,6 +343,7 @@ export function useApiClient() {
       }
       const response = await fetch(`${baseUrl}${url}`, {
         method: 'GET',
+        credentials: 'include',
         headers
       })
       if (!response.ok) {

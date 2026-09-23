@@ -78,7 +78,7 @@ public static class DailyFocusEndpoints
         .WithName("SubmitDailyDrill")
         .WithSummary("Evaluates multiple-choice senior scenario decision and updates user streak.");
 
-        // Public Term Explanation (Backed by Semantic Cache)
+        // Protected Term Explanation (Backed by Semantic Cache, Rate Limited)
         group.MapPost("/explain-term", async (
             [FromBody] ExplainTermRequest request,
             IUseCase<ExplainTermRequest, ExplainTermResponse> handler,
@@ -90,10 +90,10 @@ public static class DailyFocusEndpoints
                 ? Results.Ok(result.Value)
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
+        .RequireAuthorization()
         .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("ExplainTerm")
         .WithSummary("Provides instant AI terminology explanation tooltip.");
-
         // Protected Active Book Switcher (Requires Logged-In User)
         group.MapPost("/switch-book", async (
             [FromBody] SwitchBookBodyRequest body,
@@ -140,9 +140,10 @@ public static class DailyFocusEndpoints
                 Difficulty = question.Difficulty
             });
         })
+        .RequireAuthorization()
+        .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("GetOrGenerateChunkChallenge")
         .WithSummary("Retrieves or triggers high-priority generation for a slice's senior trade-off scenario.");
-
         return group;
     }
 

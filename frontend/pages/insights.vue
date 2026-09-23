@@ -29,7 +29,7 @@ const { formatError } = useApiError()
 const authStore = useAuthStore()
 const insightsStore = useInsightsStore()
 const toast = useToast()
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
+const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
 
 const viewMode = ref<'explore' | 'saved'>('explore')
 const bookmarkedCount = computed(() => insightsStore.bookmarkedInsights.length)

@@ -39,6 +39,15 @@ public class DeleteBookHandlerTests : IDisposable
     {
         // Arrange
         var bookId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var user = new User
+        {
+            Id = userId,
+            Email = "user@example.com",
+            Name = "User",
+            PasswordHash = "hash"
+        };
+        await _db.Users.AddAsync(user);
         var book = new DocumentBook
         {
             Id = bookId,
@@ -46,7 +55,8 @@ public class DeleteBookHandlerTests : IDisposable
             Slug = "architecture-handbook",
             Category = Category.SystemDesign,
             SourceType = SourceType.MarkdownSeries,
-            TotalChunks = 1
+            TotalChunks = 1,
+            CreatedByUserId = userId
         };
 
         var chunk = new DocumentChunk
@@ -67,7 +77,7 @@ public class DeleteBookHandlerTests : IDisposable
         var handler = new DeleteBookHandler(_db);
 
         // Act
-        var result = await handler.ExecuteAsync(new DeleteBookRequest(bookId));
+        var result = await handler.ExecuteAsync(new DeleteBookRequest(bookId, userId));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -94,10 +104,48 @@ public class DeleteBookHandlerTests : IDisposable
         var handler = new DeleteBookHandler(_db);
 
         // Act
-        var result = await handler.ExecuteAsync(new DeleteBookRequest(Guid.NewGuid()));
+        var result = await handler.ExecuteAsync(new DeleteBookRequest(Guid.NewGuid(), Guid.NewGuid()));
 
         // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Should().Be(Error.NotFound);
+    }
+
+    [Fact]
+    public async Task DeleteBook_ShouldReturnForbidden_WhenUserIsNotOwner()
+    {
+        // Arrange
+        var ownerId = Guid.NewGuid();
+        var owner = new User
+        {
+            Id = ownerId,
+            Email = "owner@example.com",
+            Name = "Owner",
+            PasswordHash = "hash"
+        };
+        await _db.Users.AddAsync(owner);
+        var otherUserId = Guid.NewGuid();
+        var bookId = Guid.NewGuid();
+        var book = new DocumentBook
+        {
+            Id = bookId,
+            Title = "Forbidden Book",
+            Slug = "forbidden-book",
+            Category = Category.SystemDesign,
+            SourceType = SourceType.MarkdownSeries,
+            TotalChunks = 1,
+            CreatedByUserId = ownerId
+        };
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.SaveChangesAsync();
+
+        var handler = new DeleteBookHandler(_db);
+
+        // Act
+        var result = await handler.ExecuteAsync(new DeleteBookRequest(bookId, otherUserId));
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("LIBRARY_FORBIDDEN");
     }
 }

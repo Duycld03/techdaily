@@ -4,7 +4,7 @@ using TechDaily.Application.Interfaces;
 
 namespace TechDaily.Application.Features.Library.DeleteBook;
 
-public record DeleteBookRequest(Guid BookId);
+public record DeleteBookRequest(Guid BookId, Guid UserId);
 
 public record DeleteBookResponse(bool Success);
 
@@ -28,6 +28,11 @@ public class DeleteBookHandler : IUseCase<DeleteBookRequest, DeleteBookResponse>
         if (book == null)
         {
             return Error.NotFound;
+        }
+
+        if (book.CreatedByUserId == null || book.CreatedByUserId != request.UserId)
+        {
+            return Error.Custom("LIBRARY_FORBIDDEN", "You do not have permission to delete this book.");
         }
 
         // Soft delete book and all its chunks

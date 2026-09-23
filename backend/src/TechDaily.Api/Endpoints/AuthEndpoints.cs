@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TechDaily.Application.Common;
+using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
 using TechDaily.Infrastructure.Persistence;
 using TechDaily.Infrastructure.Security;
@@ -16,23 +17,29 @@ public static class AuthEndpoints
 {
     public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder group, IConfiguration configuration)
     {
-        var jwtSecret = configuration["Jwt:Secret"] ?? "TechDaily_Senior_Super_Secret_Key_2026_Min_32_Chars!";
+        var jwtSecret = configuration["Jwt:Secret"];
+        if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
+        {
+            throw new InvalidOperationException("Jwt:Secret must be configured with at least 32 characters (256-bit entropy).");
+        }
         var jwtIssuer = configuration["Jwt:Issuer"] ?? "TechDaily";
         var jwtAudience = configuration["Jwt:Audience"] ?? "TechDailyUsers";
 
         // Standard Email & Password Registration
         group.MapPost("/register", async (
             [FromBody] RegisterRequest request,
-            TechDailyDbContext db) =>
+            HttpContext context,
+            TechDailyDbContext db,
+            IRefreshTokenService tokenService) =>
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
                 return Results.BadRequest(new { code = Error.EmailPasswordRequired.Code, error = Error.EmailPasswordRequired.Message });
             }
 
-            if (request.Password.Length < 6)
+            if (request.Password.Length < 8)
             {
-                return Results.BadRequest(new { code = Error.PasswordTooShort.Code, error = Error.PasswordTooShort.Message });
+                return Results.BadRequest(new { code = "AUTH_PASSWORD_TOO_SHORT", error = "Password must be at least 8 characters long." });
             }
 
             var normalizedEmail = request.Email.Trim().ToLowerInvariant();
@@ -59,6 +66,9 @@ public static class AuthEndpoints
 
             await db.SaveChangesAsync();
 
+            var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
+            SetRefreshTokenCookie(context, rawRefreshToken);
+
             var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
             return Results.Ok(new
             {
@@ -80,7 +90,9 @@ public static class AuthEndpoints
         // Standard Email & Password Login
         group.MapPost("/login", async (
             [FromBody] LoginRequest request,
-            TechDailyDbContext db) =>
+            HttpContext context,
+            TechDailyDbContext db,
+            IRefreshTokenService tokenService) =>
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
@@ -99,6 +111,17 @@ public static class AuthEndpoints
             {
                 return Results.BadRequest(new { code = Error.InvalidCredentials.Code, error = Error.InvalidCredentials.Message });
             }
+
+            // Automatic password rehash migration if iterations were upgraded
+            if (PasswordHasher.NeedsRehash(user.PasswordHash))
+            {
+                user.PasswordHash = PasswordHasher.HashPassword(request.Password);
+                user.MarkUpdated();
+                await db.SaveChangesAsync();
+            }
+
+            var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
+            SetRefreshTokenCookie(context, rawRefreshToken);
 
             var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
             return Results.Ok(new
@@ -122,7 +145,9 @@ public static class AuthEndpoints
         // Google OAuth Login
         group.MapPost("/google", async (
             [FromBody] GoogleAuthRequest request,
+            HttpContext context,
             TechDailyDbContext db,
+            IRefreshTokenService tokenService,
             IConfiguration config) =>
         {
             var clientId = config["Authentication:Google:ClientId"];
@@ -194,6 +219,9 @@ public static class AuthEndpoints
                     }
                 }
 
+                var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
+                SetRefreshTokenCookie(context, rawRefreshToken);
+
                 var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
                 return Results.Ok(new
                 {
@@ -218,7 +246,86 @@ public static class AuthEndpoints
         .WithName("GoogleLogin")
         .WithSummary("Authenticates with Google ID token and returns app JWT.");
 
+        // Refresh Token Rotation
+        group.MapPost("/refresh", async (
+            HttpContext context,
+            IRefreshTokenService tokenService) =>
+        {
+            var rawToken = context.Request.Cookies["refreshToken"];
+            if (string.IsNullOrWhiteSpace(rawToken))
+            {
+                return Results.Json(new { code = "AUTH_INVALID_CREDENTIALS", error = "Refresh token is missing." }, statusCode: StatusCodes.Status401Unauthorized);
+            }
+
+            var rotateResult = await tokenService.RotateTokenAsync(rawToken);
+            if (!rotateResult.IsSuccess)
+            {
+                ClearRefreshTokenCookie(context);
+                return Results.Json(new { code = rotateResult.Error.Code, error = rotateResult.Error.Message }, statusCode: StatusCodes.Status401Unauthorized);
+            }
+
+            var (newRawToken, _, user) = rotateResult.Value;
+            SetRefreshTokenCookie(context, newRawToken);
+
+            var newAccessToken = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
+            return Results.Ok(new
+            {
+                Token = newAccessToken,
+                User = new
+                {
+                    user.Id,
+                    user.Email,
+                    user.Name,
+                    user.PreferredLocale,
+                    user.TargetRole,
+                    user.DailyGoalMinutes,
+                    user.AvatarUrl
+                }
+            });
+        })
+        .WithName("RefreshToken")
+        .WithSummary("Rotates refresh token and issues a new access token.");
+
+        // Revoke Token / Logout
+        group.MapPost("/revoke", async (
+            HttpContext context,
+            IRefreshTokenService tokenService) =>
+        {
+            var rawToken = context.Request.Cookies["refreshToken"];
+            if (!string.IsNullOrWhiteSpace(rawToken))
+            {
+                await tokenService.RevokeFamilyAsync(rawToken);
+            }
+            ClearRefreshTokenCookie(context);
+            return Results.NoContent();
+        })
+        .WithName("RevokeToken")
+        .WithSummary("Revokes refresh token family and clears the cookie.");
+
         return group;
+    }
+
+    private static void SetRefreshTokenCookie(HttpContext context, string refreshToken)
+    {
+        context.Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Path = "/api/v1/auth",
+            Expires = DateTimeOffset.UtcNow.AddDays(30)
+        });
+    }
+
+    private static void ClearRefreshTokenCookie(HttpContext context)
+    {
+        context.Response.Cookies.Delete("refreshToken", new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Path = "/api/v1/auth"
+        });
     }
 
     private static string GenerateJwtToken(User user, string secret, string issuer, string audience)
@@ -234,7 +341,7 @@ public static class AuthEndpoints
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.Name)
             }),
-            Expires = DateTime.UtcNow.AddDays(30),
+            Expires = DateTime.UtcNow.AddMinutes(60),
             Issuer = issuer,
             Audience = audience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

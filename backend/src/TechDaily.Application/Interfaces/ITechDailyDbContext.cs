@@ -21,6 +21,7 @@ public interface ITechDailyDbContext
     DbSet<UserQuizProgress> UserQuizProgresses { get; }
     DbSet<UserBookPacer> UserBookPacers { get; }
     DbSet<UserPushSubscription> UserPushSubscriptions { get; }
+    DbSet<RefreshToken> RefreshTokens { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
