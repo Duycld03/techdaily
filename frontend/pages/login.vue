@@ -61,6 +61,7 @@ function renderGoogleButton() {
   const gsi = (window as any).google?.accounts?.id
   const btnContainer = googleBtnContainer.value
   if (!gsi || !btnContainer) return
+  btnContainer.innerHTML = ''
   gsi.renderButton(btnContainer, {
     theme: colorMode.value === 'dark' ? 'filled_black' : 'outline',
     size: 'large',
