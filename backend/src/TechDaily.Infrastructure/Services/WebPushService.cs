@@ -32,8 +32,8 @@ public class WebPushService : IWebPushService
         _client = new WebPushClient();
 
         var subject = configuration["WebPush:Subject"] ?? "mailto:support@techdaily.app";
-        var publicKey = configuration["WebPush:PublicKey"];
-        var privateKey = configuration["WebPush:PrivateKey"];
+        var publicKey = configuration["WebPush:PublicKey"] ?? configuration["VAPID_PUBLIC_KEY"];
+        var privateKey = configuration["WebPush:PrivateKey"] ?? configuration["VAPID_PRIVATE_KEY"];
 
         if (!string.IsNullOrWhiteSpace(publicKey) && !string.IsNullOrWhiteSpace(privateKey))
         {

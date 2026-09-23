@@ -58,8 +58,8 @@ if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
 }
 if (!builder.Environment.IsDevelopment())
 {
-    var vapidPrivate = builder.Configuration["WebPush:PrivateKey"];
-    var vapidPublic = builder.Configuration["WebPush:PublicKey"];
+    var vapidPrivate = builder.Configuration["WebPush:PrivateKey"] ?? builder.Configuration["VAPID_PRIVATE_KEY"];
+    var vapidPublic = builder.Configuration["WebPush:PublicKey"] ?? builder.Configuration["VAPID_PUBLIC_KEY"];
     if (string.IsNullOrWhiteSpace(vapidPrivate) || string.IsNullOrWhiteSpace(vapidPublic))
     {
         throw new InvalidOperationException("WebPush:PrivateKey and WebPush:PublicKey must be configured in non-development environments.");

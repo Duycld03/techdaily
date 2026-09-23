@@ -35,7 +35,7 @@ fi
 
 # 2. Start Backend API with Hot Reload
 echo "🚀 Starting ASP.NET Core API on http://0.0.0.0:5000..."
-dotnet watch --project backend/src/TechDaily.Api --urls "http://0.0.0.0:5000" &
+ASPNETCORE_ENVIRONMENT=Development dotnet watch --project backend/src/TechDaily.Api --urls "http://0.0.0.0:5000" &
 BACKEND_PID=$!
 
 # Wait for backend port to be open
