@@ -125,12 +125,15 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
 
     await flushPromises()
 
-    // Initially on Tab 1 (Review Session)
+    // Initially on Tab 1 (Review Session with StudioLayout)
     expect(wrapper.findComponent({ name: 'FlashcardDeck' }).exists()).toBe(true)
+    expect(wrapper.text()).toContain('Distributed Consensus with Raft')
+    expect(wrapper.text()).toContain('review.session_progress')
+    expect(wrapper.text()).toContain('review.sm2_telemetry')
+    expect(wrapper.text()).toContain('review.shortcuts_title')
     // Mutual exclusivity invariant: completion hero card must NOT render while cards are due
     expect(wrapper.text()).not.toContain('review.no_cards')
     expect(wrapper.text()).not.toContain('review.no_cards_desc')
-    // Switch to Tab 2
     const buttons = wrapper.findAll('button')
     const deckTabBtn = buttons.find((b) => b.text().includes('review.tab_management'))
     expect(deckTabBtn).toBeDefined()

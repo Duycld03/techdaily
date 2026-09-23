@@ -119,9 +119,9 @@ onUnmounted(() => {
       <!-- User Profile / Auth Status -->
       <div v-if="authStore.isLoggedIn" class="flex items-center gap-1 sm:gap-2 pl-1.5 sm:pl-3 border-l border-slate-200 dark:border-slate-800">
         <NuxtLink
-          to="/profile"
+          to="/settings?tab=profile"
           class="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors group"
-          title="View Profile"
+          title="View Profile & Settings"
         >
           <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-brand-100 dark:bg-brand-950 border border-brand-200 dark:border-brand-800 flex items-center justify-center text-xs font-bold text-brand-800 dark:text-brand-300 shadow-sm group-hover:scale-105 transition-transform">
             {{ (authStore.user?.name || 'U').charAt(0).toUpperCase() }}

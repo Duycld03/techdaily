@@ -3,15 +3,15 @@ import { ref, computed, watch } from "vue";
 import {
   Terminal,
   CheckCircle2,
-  XCircle,
   Sparkles,
   Lock,
   ArrowRight,
-  Check,
   AlertCircle,
+  Check
 } from "lucide-vue-next";
 import confetti from "canvas-confetti";
 import AISynthesisCard from "~/components/today/AISynthesisCard.vue";
+import OptionCard from "~/components/ui/OptionCard.vue";
 import type {
   InterviewQuestion,
   DailyDrill,
@@ -134,7 +134,7 @@ async function handleOptionSubmit() {
 
   <div
     v-else
-    class="h-full flex flex-col bg-slate-50/50 dark:bg-canvas-subtle/40 p-4 sm:p-6 md:p-8 overflow-y-auto space-y-5 sm:space-y-6 transition-colors duration-200"
+    class="h-full flex flex-col bg-slate-50/50 dark:bg-canvas-subtle/40 p-3.5 sm:p-4 md:p-5 overflow-y-auto space-y-3 sm:space-y-4 transition-colors duration-200"
   >
     <!-- Header -->
     <div class="space-y-2.5 sm:space-y-3">
@@ -177,7 +177,7 @@ async function handleOptionSubmit() {
     </div>
 
     <!-- Scenario Multiple-Choice Interface -->
-    <div class="space-y-6 flex-1 flex flex-col justify-start">
+    <div class="space-y-4 flex-1 flex flex-col justify-start">
       <!-- Options List -->
       <div class="space-y-3">
         <div
@@ -186,77 +186,26 @@ async function handleOptionSubmit() {
           {{ $t("today.select_option_hint") }}
         </div>
 
-        <div class="space-y-2.5 sm:space-y-3">
-          <button
+        <div class="space-y-2 sm:space-y-2.5">
+          <OptionCard
             v-for="(option, index) in question.options"
             :key="index"
-            type="button"
-            @click="handleOptionSelect(index)"
+            :letter="optionLetters[index] || index + 1"
+            :text="option"
+            :state="!isReviewed ? (selectedOption === index ? 'selected' : 'default') : (index === question.correctOptionIndex ? 'correct' : (selectedOption === index ? 'incorrect' : 'default'))"
             :disabled="isReviewed || focusStore.isSubmitting"
-            :class="[
-              'w-full text-left p-3 sm:p-3.5 rounded-xl text-sm sm:text-base font-medium border transition-all duration-200 flex items-start gap-3 sm:gap-4 relative group select-none',
-              !isReviewed && selectedOption === index
-                ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-500/10 text-brand-950 dark:text-brand-100 ring-2 ring-brand-500/30 shadow-sm'
-                : !isReviewed
-                  ? 'border-slate-200 dark:border-white/[0.08] bg-white dark:bg-canvas-elevated text-slate-800 dark:text-slate-200 hover:border-brand-500/40 dark:hover:border-brand-500/40 hover:bg-slate-50 dark:hover:bg-white/[0.04] cursor-pointer'
-                  : isReviewed && index === question.correctOptionIndex
-                    ? 'border-brand-500 dark:border-brand-500/40 bg-brand-50/80 dark:bg-brand-500/10 text-brand-950 dark:text-brand-100 font-semibold ring-2 ring-brand-500/20'
-                    : isReviewed &&
-                        selectedOption === index &&
-                        index !== question.correctOptionIndex
-                      ? 'border-rose-500 dark:border-rose-500/40 bg-rose-50/80 dark:bg-rose-500/10 text-rose-950 dark:text-rose-100 ring-2 ring-rose-500/20'
-                      : 'border-slate-200/60 dark:border-white/[0.04] bg-slate-50/30 dark:bg-canvas-subtle/30 text-slate-500 dark:text-slate-400 opacity-60',
-            ]"
+            @select="handleOptionSelect(index)"
           >
-            <!-- Option Letter Badge -->
-            <div
-              :class="[
-                'w-7 h-7 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 transition-colors duration-200 mt-0.5 sm:mt-0',
-                !isReviewed && selectedOption === index
-                  ? 'bg-brand-600 text-white'
-                  : !isReviewed
-                    ? 'bg-slate-100 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 group-hover:border-brand-500/40'
-                    : isReviewed && index === question.correctOptionIndex
-                      ? 'bg-brand-600 text-white shadow-sm'
-                      : isReviewed &&
-                          selectedOption === index &&
-                          index !== question.correctOptionIndex
-                        ? 'bg-rose-600 text-white shadow-sm'
-                        : 'bg-slate-200 dark:bg-canvas-elevated text-slate-400 border border-transparent dark:border-white/[0.06]',
-              ]"
-            >
-              {{ optionLetters[index] || index + 1 }}
-            </div>
-
-            <!-- Option Text -->
-            <div class="flex-1 min-w-0 break-words pt-0.5 leading-relaxed text-sm sm:text-base">
-              {{ option }}
-            </div>
-
-            <!-- Status Indicator Icon / Badges -->
-            <div
-              v-if="isReviewed"
-              class="shrink-0 flex items-center gap-1 sm:gap-1.5 pt-0.5"
-            >
+            <template v-if="isReviewed" #trailing>
               <span
                 v-if="index === question.correctOptionIndex"
-                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-600 text-white shadow-sm whitespace-nowrap shrink-0"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold bg-emerald-600 text-white shadow-sm whitespace-nowrap shrink-0"
               >
                 <Check class="w-3.5 h-3.5" :stroke-width="1.5" />
                 <span>{{ $t("today.optimal_choice") }}</span>
               </span>
-              <span
-                v-else-if="
-                  selectedOption === index &&
-                  index !== question.correctOptionIndex
-                "
-                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white shadow-sm whitespace-nowrap shrink-0"
-              >
-                <XCircle class="w-3.5 h-3.5" :stroke-width="1.5" />
-                <span>{{ $t("today.your_choice") }}</span>
-              </span>
-            </div>
-          </button>
+            </template>
+          </OptionCard>
         </div>
       </div>
 
@@ -285,7 +234,7 @@ async function handleOptionSubmit() {
           type="button"
           @click="handleOptionSubmit"
           :disabled="selectedOption === null || focusStore.isSubmitting"
-          class="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98]"
+          class="w-full sm:w-auto flex items-center justify-center gap-2 h-9 px-5 text-sm font-semibold rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-lg shadow-brand-500/20 transition-all active:scale-[0.98]"
         >
           <span
             v-if="focusStore.isSubmitting"

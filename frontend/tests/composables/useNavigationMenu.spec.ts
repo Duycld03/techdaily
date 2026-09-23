@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { navGroups, isLinkActive } from '~/composables/useNavigationMenu'
+import { navGroups, getNavGroups, isLinkActive } from '~/composables/useNavigationMenu'
 
 describe('useNavigationMenu', () => {
   it('defines structured navigation groups with complete route entries', () => {
@@ -32,10 +32,29 @@ describe('useNavigationMenu', () => {
     ])
 
     expect(account.titleKey).toBe('nav.group_account')
-    expect(account.links.map((l) => l.path)).toEqual([
-      '/profile',
-      '/settings'
+    expect(account.links.map((l) => l.path)).toContain('/settings')
+    expect(account.links[0]?.name).toBe('nav.settings_profile')
+  })
+
+  it('includes showcase route in development mode (isDev = true)', () => {
+    const devGroups = getNavGroups(true)
+    const account = devGroups[2]
+    expect(account).toBeDefined()
+    expect(account?.links.map((l) => l.path)).toEqual([
+      '/settings',
+      '/showcase'
     ])
+    expect(account?.links[1]?.name).toBe('nav.showcase')
+  })
+
+  it('excludes showcase route when running in production mode (import.meta.dev = false)', () => {
+    const prodGroups = getNavGroups(false)
+    expect(prodGroups).toHaveLength(3)
+
+    const account = prodGroups[2]
+    expect(account).toBeDefined()
+    expect(account?.links.map((l) => l.path)).toEqual(['/settings'])
+    expect(account?.links.some((l) => l.path === '/showcase')).toBe(false)
   })
 
   it('correctly matches active links without false positives on root path', () => {
@@ -59,6 +78,9 @@ describe('useNavigationMenu', () => {
     // When on /graph
     expect(isLinkActive('/graph', '/graph')).toBe(true)
     expect(isLinkActive('/graph', '/graph/pillar-backend')).toBe(true)
+    // When on /settings or redirected from /profile
+    expect(isLinkActive('/settings', '/settings')).toBe(true)
+    expect(isLinkActive('/settings', '/profile')).toBe(true)
 
     // When on exact routes
     expect(isLinkActive('/settings', '/settings')).toBe(true)

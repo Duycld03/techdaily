@@ -1256,3 +1256,176 @@ The web frontend SHALL implement the Dev-Learning Studio visual language with pl
 #### Scenario: Dashboard widgets remain accessible on constrained desktop viewports
 - **WHEN** the dashboard is viewed in a browser with bookmarks bar and OS taskbar visible (available height $\le 860\text{px}$)
 - **THEN** all Bento cards (including knowledge constellation) are reachable via smooth vertical scrolling without overflow clipping.
+
+### Requirement: Engineering Cockpit Visual Density Standards
+The web frontend SHALL standardize on an Engineering Cockpit visual density baseline (Density 8/10) across all application pages, ensuring compact, high-efficiency information layout on desktop viewports:
+1. **Interactive Control Heights**: Buttons, inputs, search boxes, and dropdown selects SHALL standardize to `h-9` (36px height) with `px-3.5 text-sm`, eliminating oversized touch targets (`py-3.5`, `rounded-2xl`) on desktop screens.
+2. **Concentric Border Radii**: Cards and containers SHALL maintain concentric radius geometry ($R_{\text{outer}} = R_{\text{inner}} + \text{padding}$). Outer cards SHALL use `rounded-xl` (12px), while nested controls and option buttons SHALL use `rounded-lg` (8px) or `rounded-md` (6px). Large `rounded-3xl` radii that force excessive internal padding are prohibited on data cards.
+3. **Card & Container Spacing Scale**: Base card padding (`.glass-card`) SHALL standardize to `p-3.5` (14px) to `p-4.5` (18px). Page outer containers SHALL standardize to `py-4 sm:py-5 px-4 sm:px-6`, eliminating `p-8` to `p-10` dead margins.
+4. **Desktop Fold Fit Constraint**: Standard desktop pages and cards SHALL fit key data and actions within an available vertical viewport height of $700\text{px}–850\text{px}$ (simulating 1080p desktop with 125% DPI scaling, taskbar, and browser chrome) without unintentional vertical clipping.
+
+#### Scenario: User navigates pages on 1080p desktop with 125% DPI
+- **WHEN** user views `/settings`, `/profile`, or `/insights` on a 1080p display with 125% DPI display scaling
+- **THEN** page containers render with compact padding (`py-4 sm:py-5 px-4 sm:px-6`)
+- **AND** cards render with compact padding (`p-3.5` to `p-4.5`)
+- **AND** interactive buttons and inputs render at `h-9` (36px) height.
+
+### Requirement: 3-Tier Production Modal Shell
+All modal dialogs across the platform SHALL adhere to a 3-tier layout architecture capped at `max-h-[85vh]`:
+1. **Fixed Header**: Pinned at the top (`shrink-0`) containing the modal title and close button.
+2. **Scrollable Body**: Constrained to `max-h-[60vh]` with `overflow-y-auto` and `scrollbar-gutter: stable`, allowing long forms to scroll independently.
+3. **Sticky Footer**: Pinned at the bottom (`shrink-0`) containing submission and cancellation action buttons. Action buttons SHALL remain permanently visible above the screen fold at all times regardless of content height.
+
+#### Scenario: User opens modal with lengthy form content
+- **WHEN** user opens a modal dialog containing multiple inputs, file upload zones, or explanatory guidelines
+- **THEN** the modal header and modal footer remain fixed in place
+- **AND** the submit and cancel buttons in the footer are immediately visible without requiring internal scrolling
+- **AND** only the central form body scrolls when content exceeds `60vh`.
+
+### Requirement: Interactive Design System Showcase
+The platform SHALL maintain an interactive living design system showcase at `/showcase` exclusively in development environments (`NODE_ENV !== 'production'`) displaying:
+1. Base UI Primitives (Buttons, inputs with ⌘K badge, tags, segmented switcher)
+2. Interactive Multiple-Choice Option Cards with active/correct/incorrect states
+3. Production Modal Shell with sticky actions
+4. Bento Metric Cards with tabular numerals
+5. Code Snippet Block with clipboard copy feedback
+6. Skeleton Loading Shimmers
+7. Empty and Error State Cards
+8. Reader Floating Selection Toolbar
+
+The frontend build pipeline (`nuxt.config.ts`) and navigation shell (`useNavigationMenu.ts`) SHALL enforce that `/showcase` and `/playground` routes are strictly isolated to development environments:
+1. **Build-Time Route Pruning**:
+   - In production builds (`process.env.NODE_ENV === 'production'`), `/showcase` and `/playground` routes SHALL be stripped during build time via the Nuxt `pages:extend` hook, ensuring zero JavaScript chunks or client-side route manifest entries are emitted into production artifacts.
+2. **Environment-Gated Navigation Menu**:
+   - The application navigation composable (`useNavigationMenu.ts`) SHALL only include `{ name: 'nav.showcase', path: '/showcase', icon: Palette }` when running in local development mode (`import.meta.dev`), omitting it from the sidebar in production builds.
+3. **Route Defense & Zero Metadata Leakage**:
+   - Direct URL requests to `/showcase` or `/playground` on production deployments SHALL return standard 404 Not Found status without leaking internal design system components, source maps, or prototype state.
+
+#### Scenario: Developer or Agent inspects design system showcase
+- **WHEN** user navigates to `/showcase` in a local development environment
+- **THEN** the page renders all 8 component showcases in both light and dark modes
+- **AND** interactive demo states (selection, modal open, copy feedback) function seamlessly.
+
+#### Scenario: User attempts to access design system showcase in production
+- **WHEN** a user or crawler accesses `/showcase` or `/playground` on a production deployment
+- **THEN** the system returns a standard 404 Not Found error
+- **AND** client-side DevTools, route tables, and source maps contain zero references to showcase or playground components.
+
+---
+
+### Requirement: Accessible Custom Select Dropdown Invariant
+All dropdown selection controls across the frontend application and component showcases SHALL use custom accessible dropdown components (`AppSelect.vue`) rather than unstyled native HTML `<select><option>` elements.
+1. **Styling & Theme Integrity**:
+   - The dropdown trigger button and floating options listbox SHALL adhere to the Dev-Learning Studio theme (`dark:bg-canvas-elevated`, `dark:border-white/[0.08]`, `dark:text-slate-200`).
+   - The dropdown listbox SHALL NOT display native operating system selection highlights (such as default blue Windows highlight `#0078d7` or unstyled browser option boxes).
+2. **Keyboard Accessibility**:
+   - The custom select component SHALL support standard WAI-ARIA combobox/listbox navigation: `Enter` or `Space` to toggle, `Up` / `Down` arrow keys to highlight options, `Escape` to dismiss, and `Enter` to commit selection.
+
+#### Scenario: Interacting with Select Dropdowns on Windows
+- **WHEN** an engineer opens a select dropdown on Windows 11
+- **THEN** the options menu displays as a themed dark obsidian floating panel with brand-tinted active/hover states, with zero native OS unstyled option rendering.
+
+---
+
+### Requirement: Living Design System Layout Archetypes Showcase
+The interactive design system showcase at `/showcase` (`frontend/pages/showcase.vue`) SHALL include Section 09: **"System Layout Archetypes"** (`LayoutArchetypesShowcase.vue`).
+1. **Interactive Layout Demos**:
+   - The showcase section SHALL provide interactive tabs to demonstrate each of the three layout archetypes:
+     - **Tab 1: Flashcards Studio Demo**: Demonstrates `StudioLayout` with sample flashcard, telemetry dock, and hotkey cheatsheet.
+     - **Tab 2: Settings Master-Detail Demo**: Demonstrates `MasterDetailLayout` with left sub-nav and right configuration panels using custom `AppSelect` controls.
+     - **Tab 3: Notes Board Demo**: Demonstrates `BoardLayout` with sticky search/filter toolbar and responsive card grid.
+2. **Full Primitive Parity**:
+   - The showcase Primitives section (`PrimitivesShowcase.vue`) SHALL use `AppSelect.vue` for all dropdown controls, confirming elimination of raw `<select>` elements.
+
+#### Scenario: Viewing Layout Archetypes in Showcase
+- **WHEN** a developer navigates to `/showcase` and selects the "09. System Layout Archetypes" section
+- **THEN** interactive previews of `StudioLayout`, `MasterDetailLayout`, and `BoardLayout` are rendered with realistic mock data and responsive layout controls.
+
+---
+
+### Requirement: Unified Account & Settings Master-Detail Architecture
+The Settings interface (`frontend/pages/settings.vue`) SHALL serve as the unified Master-Detail Hub for all account identity, credentials, learning telemetry, interface preferences, notifications, and scheduling, consolidating previously separate `/profile` and `/settings` surfaces into a single comprehensive layout using `MasterDetailLayout.vue`.
+1. **Consolidated Category Navigation Rail (`#nav`)**:
+   - Pinned on the left (`w-full md:w-64 shrink-0`) featuring category icons, titles, and active pills for 3 consolidated sections:
+     - `general` (**General & Profile**): Developer identity card (avatar initials, name, email, level badge), 2-column form grid for difficulty track, daily goal, timezone, theme, full name, and interface language, followed by auto-advance toggle card and contextual "Save changes" submit action.
+     - `notifications` (**Web Push Notifications**): Browser push toggle switch, active endpoint status banner, test push trigger, and Study & Alert schedule time pickers with dedicated "Save Schedule Preferences" action.
+     - `security` (**Security & Password**): Account password change form with real-time strength bar, Google OAuth connection status, and dedicated "Update Password" action.
+   - Navigation rail buttons SHALL maintain clean typography without persistent numeric badge counters.
+2. **Contextual Per-Tab Action Invariant**:
+   - The `#header` template of `MasterDetailLayout` SHALL display only the clean section icon and title, without global save buttons.
+   - Each tab SHALL own its dedicated save action button positioned at the bottom right of its respective form content panel.
+3. **Comprehensive Bilingual i18n Invariant**:
+   - All form controls, select dropdowns, options, placeholders, status callouts, and action buttons SHALL be 100% localized in English and Vietnamese.
+
+#### Scenario: Accessing Unified Settings on Desktop
+- **WHEN** an authenticated user opens `/settings` on a desktop browser
+- **THEN** the left rail displays the 3 consolidated configuration categories without unread badge noise and the active tab displays its controls and dedicated save button.
+
+---
+
+### Requirement: Zero-Flicker Tab Navigation Invariant
+All navigation rail tab buttons in `MasterDetailLayout` and interactive tab switchers SHALL enforce a constant 1px border baseline (`border border-transparent` in inactive state, `border-brand-500/20` in active state) and scoped `transition-colors` rather than `transition-all`.
+1. **Layout Shift Elimination**:
+   - Tab switching SHALL NOT cause 1px box-sizing height/width jumps or border flashing.
+2. **Visual Consistency**:
+   - Inactive buttons maintain consistent padding and alignment with active pill buttons.
+
+#### Scenario: Switching Tabs in Master-Detail Settings
+- **WHEN** a user clicks between navigation rail tabs in `/settings`
+- **THEN** the active tab updates smoothly with zero border flashing, zero layout jumping, and immediate visual feedback.
+
+---
+
+### Requirement: Deep-Linked Tab Synchronization & Profile Route Redirection
+The Settings interface SHALL support deep-linking and state preservation via URL search parameters, and existing `/profile` routes SHALL seamlessly redirect to the unified settings view.
+1. **URL Query Synchronization**:
+   - The active tab SHALL synchronize with `route.query.tab` (e.g. `/settings?tab=security`).
+   - Clicking a rail tab updates the URL query without triggering full page reloads.
+2. **Profile Route Redirection**:
+   - Navigating to `/profile` SHALL immediately redirect to `/settings?tab=profile`, preserving backward compatibility for bookmarks and cached links.
+3. **Application Shell Integration**:
+   - The topbar user avatar chip (`AppHeader.vue`) SHALL link directly to `/settings?tab=profile`.
+   - The sidebar navigation menu (`useNavigationMenu.ts`) under `nav.group_account` SHALL consolidate the separate Profile link into a unified "Settings & Profile" destination.
+
+#### Scenario: Navigating from Legacy Profile Link
+- **WHEN** a user navigates to `/profile` or clicks their user avatar in `AppHeader.vue`
+- **THEN** the browser lands on `/settings?tab=profile` with the Profile & Identity tab actively selected.
+
+### Requirement: Executive Cockpit Bento Dashboard Layout Integration
+The primary root route `/` (`HomeBentoDashboard.vue`) SHALL implement the `BentoDashboardLayout` archetype (`BentoDashboardLayout.vue`), decoupling layout shell geometry from individual card content.
+1. **Header Slot (`#header`)**:
+   - Houses the Welcome & Orientation Banner, displaying the personalized engineer greeting, role target, active reading slice badge, and streak status.
+2. **Action Stage Slot (`#action-stage`)**:
+   - Houses Card A (Today's Reading Slice) and Card B (Daily Scenario Challenge) with compact typography, tight CTA placement, and zero horizontal dead voids.
+3. **Telemetry Dock Slot (`#telemetry-dock`)**:
+   - Houses Card C (7-day Consistency Heatmap and SM-2 Due Count) and Card D (Domain Knowledge Constellation Card), equalizing total vertical height with the action stage.
+
+#### Scenario: Navigating Home Dashboard on 1080p Desktop
+- **WHEN** an engineer loads the root page `/` on a 1920x1080 desktop browser
+- **THEN** the entire Bento Grid renders with cohesive spacing and equalized column heights, eliminating empty internal margins within Card A and Card B.
+
+---
+
+### Requirement: Settings Master-Detail Desktop Layout Standard
+The Settings interface (`frontend/pages/settings.vue`) SHALL implement the `MasterDetailLayout` archetype (`MasterDetailLayout.vue`), replacing the narrow single-column layout with a standard desktop master-detail architecture.
+1. **Category Navigation Rail (`#nav`)**:
+   - Pinned on the left (`w-full md:w-64 shrink-0`) featuring section icons, category titles (General & Preferences, Push Notifications, Security), and active state pills.
+2. **Settings Content Panel (`#content`)**:
+   - Expands to fill available width (`flex-1 min-w-0`), organizing form controls into responsive 2-column grids (`grid sm:grid-cols-2 gap-4`) using `AppSelect.vue` for all selection inputs.
+   - Eliminates $> 800\text{px}$ dead margins on desktop displays.
+
+#### Scenario: Configuring Settings on Desktop
+- **WHEN** an engineer accesses `/settings` on a desktop viewport ($\ge 1280\text{px}$)
+- **THEN** the left rail displays configuration categories, the right panel displays the active settings form in a 2-column grid, and no empty side voids surround the interface.
+
+---
+
+### Requirement: Developer & Agent UI Design Governance Protocol
+The project repository SHALL mandate strict UI design governance rules codified in `AGENTS.md` (Rules 19, 20, and 21):
+1. **Rule 19 (Mandatory System Layout Archetypes)**: All page Single File Components (`*.vue`) MUST inherit from one of the four standardized layout archetypes (`StudioLayout`, `MasterDetailLayout`, `BoardLayout`, or `BentoDashboardLayout`). Arbitrary unconstrained wrapper divs causing empty black voids on 1080p screens are strictly prohibited.
+2. **Rule 20 (Strict Prohibition of Native HTML Select)**: Raw `<select><option>` elements are strictly prohibited across all components and views. All selection controls MUST use `AppSelect.vue`.
+3. **Rule 21 (Sandbox Playground & Screenshot Preview Protocol)**: Major UI redesigns or new layouts MUST be drafted in `frontend/pages/playground/`, visually verified via headless 1080p screenshots, and approved by the user before cutover into production routes.
+
+#### Scenario: Agent Implements a New View
+- **WHEN** an AI agent or developer is instructed to create or refactor a frontend view
+- **THEN** the agent selects an established layout archetype, verifies dropdowns use `AppSelect.vue`, and prototypes in `frontend/pages/playground/` with visual screenshot proof before touching production routes.

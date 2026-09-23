@@ -188,7 +188,7 @@ const domainProgressList = computed(() => {
 </script>
 
 <template>
-  <div class="glass-card p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-4 transition-colors duration-200">
+  <div class="glass-card p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-4 transition-colors duration-200 h-full flex flex-col justify-between">
     <!-- Header -->
     <div class="flex items-start justify-between gap-4">
       <div class="space-y-1">

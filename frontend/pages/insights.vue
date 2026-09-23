@@ -206,29 +206,29 @@ function getCategoryBadge(cat: number) {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+  <div class="max-w-4xl mx-auto py-4 sm:py-5 px-4 sm:px-6 space-y-4 animate-in fade-in duration-300">
     <!-- Header Banner -->
-    <div class="p-4 sm:p-7 rounded-2xl sm:rounded-3xl glass-panel border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-white shadow-md dark:shadow-none relative overflow-hidden transition-all">
-      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 relative z-10">
-        <div class="space-y-1 sm:space-y-2 flex-1 min-w-0">
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/20 text-xs font-bold uppercase tracking-wider">
+    <div class="p-4 sm:p-5 rounded-2xl glass-panel border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-white shadow-sm relative overflow-hidden transition-all space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 relative z-10">
+        <div class="space-y-1 flex-1 min-w-0">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/20 text-xs font-bold uppercase tracking-wider">
             <Sparkles class="w-3.5 h-3.5" />
             <span>{{ $t('insights.badge') }}</span>
           </div>
 
-          <h1 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+          <h1 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
             {{ $t('insights.title') }}
           </h1>
 
-          <p class="text-slate-600 dark:text-slate-300 text-sm md:text-lg leading-relaxed max-w-2xl">
+          <p class="text-slate-600 dark:text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl">
             {{ $t('insights.subtitle') }}
           </p>
         </div>
 
-        <div class="flex items-center gap-2.5 sm:gap-3 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+        <div class="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
           <button
             @click="insightsStore.shuffle()"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-white dark:bg-canvas-subtle hover:bg-slate-50 dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-200 text-sm md:text-base font-bold transition-all border border-slate-200/80 dark:border-white/[0.08] shadow-sm active:scale-95"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-white dark:bg-canvas-subtle hover:bg-slate-50 dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all border border-slate-200/80 dark:border-white/[0.08] shadow-sm active:scale-95"
             :title="$t('insights.shuffle')"
           >
             <Shuffle class="w-4 h-4 text-slate-500 dark:text-slate-400" />
@@ -237,7 +237,7 @@ function getCategoryBadge(cat: number) {
 
           <button
             @click="isGenerateModalOpen = true"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white text-sm md:text-base font-bold transition-all shadow-md shadow-brand-500/20 active:scale-95"
+            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-bold transition-all shadow-md shadow-brand-500/20 active:scale-95"
           >
             <Plus class="w-4 h-4" />
             <span>{{ $t('insights.generate_ai') }}</span>

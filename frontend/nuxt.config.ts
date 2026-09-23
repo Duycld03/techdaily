@@ -48,6 +48,20 @@ export default defineNuxtConfig({
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || ''
     }
   },
+  hooks: {
+    'pages:extend'(pages) {
+      if (process.env.NODE_ENV === 'production') {
+        const devPrefixes = ['/showcase', '/playground']
+        for (let i = pages.length - 1; i >= 0; i--) {
+          const path = pages[i].path || ''
+          if (devPrefixes.some(prefix => path === prefix || path.startsWith(`${prefix}/`))) {
+            pages.splice(i, 1)
+          }
+        }
+      }
+    }
+  },
+
 
   css: ['~/assets/css/main.css'],
 

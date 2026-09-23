@@ -168,7 +168,7 @@ describe('InterviewChallengePane.vue', () => {
       }
     })
 
-    const container = wrapper.find('.space-y-6.flex-1.flex.flex-col.justify-start')
+    const container = wrapper.find('.space-y-4.flex-1.flex.flex-col.justify-start')
     expect(container.exists()).toBe(true)
     expect(wrapper.find('.flex-1.flex-col.justify-between').exists()).toBe(false)
   })

@@ -21,9 +21,12 @@ import {
   Check,
   HelpCircle,
   FileText,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Gauge,
+  Keyboard
 } from 'lucide-vue-next'
 import confetti from 'canvas-confetti'
+import StudioLayout from '~/components/layout/StudioLayout.vue'
 import FlashcardDeck from '~/components/review/FlashcardDeck.vue'
 import FlashcardHeroCard from '~/components/review/FlashcardHeroCard.vue'
 import MasteryGaugeCard from '~/components/review/MasteryGaugeCard.vue'
@@ -52,8 +55,62 @@ function renderMarkdown(raw: string | undefined | null): string {
 const activeTab = ref<'session' | 'management'>('session')
 
 // Tab 1: Review Session Logic
+const initialSessionTotal = ref(0)
 const currentCard = computed(() => {
   return reviewStore.cards[0] || null
+})
+
+// Keep track of initial total due cards for progress calculation
+watch(
+  () => reviewStore.cards.length,
+  (len) => {
+    if (len > initialSessionTotal.value) {
+      initialSessionTotal.value = len
+    }
+  },
+  { immediate: true }
+)
+
+const sessionProgress = computed(() => {
+  const total = Math.max(initialSessionTotal.value, reviewStore.cards.length)
+  if (total === 0) return { reviewed: 0, total: 0, percentage: 100 }
+  const reviewed = Math.max(0, total - reviewStore.cards.length)
+  const percentage = Math.min(100, Math.round((reviewed / total) * 100))
+  return { reviewed, total, percentage }
+})
+
+const cardMasteryBadge = computed(() => {
+  if (!currentCard.value) return { label: '', classes: '' }
+  switch (currentCard.value.status) {
+    case 1:
+      return {
+        label: t('review.status_reviewing'),
+        classes: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
+      }
+    case 2:
+      return {
+        label: t('review.status_mastered'),
+        classes: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+      }
+    case 0:
+    default:
+      return {
+        label: t('review.status_learning'),
+        classes: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+      }
+  }
+})
+
+const cardSourceContext = computed(() => {
+  if (!currentCard.value) return null
+  const card = currentCard.value as any
+  const bookTitle = card.bookTitle || card.sourceBookTitle || (card.sourceType === 1 ? 'Reading Highlight' : null)
+  const chapterTitle = card.chapterTitle || card.sourceChapterTitle || (card.sourceType === 1 && card.topicTitle ? card.topicTitle : null)
+  if (!bookTitle && !chapterTitle) return null
+  return {
+    bookTitle: bookTitle || 'Technical Monograph',
+    chapterTitle: chapterTitle || card.topicTitle || 'Reference Chapter'
+  }
 })
 
 async function onGrade(score: number) {
@@ -190,10 +247,35 @@ const displayedCards = computed(() => {
   return list
 })
 
+function isInteractiveElement(target: EventTarget | null): boolean {
+  if (!target || !(target instanceof HTMLElement)) return false
+  const tag = target.tagName.toLowerCase()
+  return (
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    target.isContentEditable ||
+    target.getAttribute('contenteditable') === 'true'
+  )
+}
+
 function handleKeydown(e: KeyboardEvent) {
+  if (isInteractiveElement(e.target) || (typeof document !== 'undefined' && isInteractiveElement(document.activeElement))) {
+    return
+  }
+
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault()
     searchInputRef.value?.focus()
+    return
+  }
+
+  // Active review session shortcuts: [E] Edit active card
+  if (activeTab.value === 'session' && currentCard.value && !cardToEdit.value && !cardToReset.value && !cardToDelete.value) {
+    if (e.key === 'e' || e.key === 'E') {
+      e.preventDefault()
+      openEditModal(currentCard.value)
+    }
   }
 }
 
@@ -366,20 +448,181 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
         <span>Loading Spaced Repetition Deck...</span>
       </div>
 
-      <!-- Active Review Deck -->
-      <div v-else-if="currentCard" class="w-full max-w-2xl">
-        <div class="text-center mb-6 sm:mb-8">
-          <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            {{ $t('review.title') }}
-          </h1>
-          <p class="text-sm md:text-lg text-slate-500 dark:text-slate-400 mt-1.5">{{ $t('review.subtitle') }}</p>
-        </div>
+      <!-- Active Review Deck with Studio Layout Archetype -->
+      <div v-else-if="currentCard" class="w-full max-w-6xl mx-auto flex flex-col flex-1 min-h-0">
+        <StudioLayout class="w-full">
+          <!-- Slot #header: current topic/card title and remaining card count badge -->
+          <template #header>
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
+                <Layers class="w-4 h-4" />
+              </div>
+              <div class="min-w-0">
+                <h1 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                  {{ currentCard.topicTitle || $t('review.title') }}
+                </h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {{ $t('review.subtitle') }}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 shadow-sm">
+                <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+                <span>{{ reviewStore.cards.length }} {{ $t('review.cards_remaining') }}</span>
+              </span>
+            </div>
+          </template>
 
-        <FlashcardDeck
-          :card="currentCard"
-          :remaining-count="reviewStore.cards.length"
-          @grade="onGrade"
-        />
+          <!-- Slot #main: Flashcard Deck centered in comfortable width -->
+          <template #main>
+            <FlashcardDeck
+              :card="currentCard"
+              :remaining-count="reviewStore.cards.length"
+              @grade="onGrade"
+            />
+          </template>
+
+          <!-- Slot #dock: Companion Telemetry Dock -->
+          <template #dock>
+            <!-- 1. Today's Session Progress -->
+            <div class="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/[0.08] dark:bg-canvas-subtle">
+              <div class="mb-2.5 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+                <span class="flex items-center gap-1.5">
+                  <Clock class="h-3.5 w-3.5 text-brand-500" />
+                  {{ $t('review.session_progress') }}
+                </span>
+                <span class="tabular-nums font-mono text-slate-700 dark:text-slate-300">
+                  {{ sessionProgress.reviewed }} / {{ sessionProgress.total }}
+                </span>
+              </div>
+              <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/[0.06]">
+                <div
+                  class="h-full rounded-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-300 ease-out"
+                  :style="{ width: `${sessionProgress.percentage}%` }"
+                />
+              </div>
+              <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+                <span>{{ $t('review.reviewed_today') }}</span>
+                <span class="font-medium text-brand-600 dark:text-brand-400">{{ sessionProgress.percentage }}%</span>
+              </div>
+            </div>
+
+            <!-- 2. SM-2 Card Telemetry -->
+            <div class="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/[0.08] dark:bg-canvas-subtle">
+              <div class="mb-3 flex items-center justify-between">
+                <span class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <Gauge class="h-3.5 w-3.5 text-slate-400" />
+                  {{ $t('review.sm2_telemetry') }}
+                </span>
+                <span
+                  :class="[
+                    'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-xs',
+                    cardMasteryBadge.classes
+                  ]"
+                >
+                  {{ cardMasteryBadge.label }}
+                </span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 text-center">
+                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04]">
+                  <div class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">
+                    {{ $t('review.ease_factor_label') }}
+                  </div>
+                  <div class="mt-1 text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">
+                    {{ currentCard.easeFactor.toFixed(2) }}
+                  </div>
+                </div>
+                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04]">
+                  <div class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">
+                    {{ $t('review.interval_label') }}
+                  </div>
+                  <div class="mt-1 text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">
+                    {{ currentCard.intervalDays }}d
+                  </div>
+                </div>
+                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04]">
+                  <div class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">
+                    {{ $t('review.repetitions_label') }}
+                  </div>
+                  <div class="mt-1 text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">
+                    {{ currentCard.repetitionCount }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Keyboard Shortcuts Cheatsheet -->
+            <div class="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/[0.08] dark:bg-canvas-subtle">
+              <div class="mb-2.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <Keyboard class="h-3.5 w-3.5 text-slate-400" />
+                {{ $t('review.shortcuts_title') }}
+              </div>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-600 dark:text-slate-300">{{ $t('review.shortcut_flip') }}</span>
+                  <kbd class="px-2 py-0.5 rounded-md border border-slate-200 bg-slate-100 dark:border-white/[0.08] dark:bg-white/[0.04] text-[10px] font-mono text-slate-600 dark:text-slate-300 font-semibold shadow-2xs">
+                    Space
+                  </kbd>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-600 dark:text-slate-300">{{ $t('review.shortcut_grade') }}</span>
+                  <kbd class="px-2 py-0.5 rounded-md border border-slate-200 bg-slate-100 dark:border-white/[0.08] dark:bg-white/[0.04] text-[10px] font-mono text-slate-600 dark:text-slate-300 font-semibold shadow-2xs">
+                    1 - 4
+                  </kbd>
+                </div>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-600 dark:text-slate-300">{{ $t('review.shortcut_edit') }}</span>
+                  <kbd class="px-2 py-0.5 rounded-md border border-slate-200 bg-slate-100 dark:border-white/[0.08] dark:bg-white/[0.04] text-[10px] font-mono text-slate-600 dark:text-slate-300 font-semibold shadow-2xs">
+                    E
+                  </kbd>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Source Context (Book & Chapter if available) -->
+            <div
+              v-if="cardSourceContext"
+              class="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/[0.08] dark:bg-canvas-subtle"
+            >
+              <div class="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <BookOpen class="h-3.5 w-3.5 text-slate-400" />
+                {{ $t('review.source_context') }}
+              </div>
+              <div class="space-y-1.5">
+                <div class="flex items-start gap-2 text-xs">
+                  <span class="text-slate-400 shrink-0 text-[11px]">{{ $t('review.book_reference') }}:</span>
+                  <span class="font-medium text-slate-800 dark:text-slate-200 truncate">{{ cardSourceContext.bookTitle }}</span>
+                </div>
+                <div class="flex items-start gap-2 text-xs">
+                  <span class="text-slate-400 shrink-0 text-[11px]">{{ $t('review.chapter_reference') }}:</span>
+                  <span class="text-slate-600 dark:text-slate-400 truncate">{{ cardSourceContext.chapterTitle }}</span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </StudioLayout>
+
+        <!-- Mobile Dock Fallback (<1024px) -->
+        <div class="mt-4 flex flex-col gap-3 lg:hidden">
+          <div class="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/[0.08] dark:bg-canvas-subtle">
+            <div class="mb-2 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <span class="flex items-center gap-1.5">
+                <Clock class="h-3.5 w-3.5 text-brand-500" />
+                {{ $t('review.session_progress') }}
+              </span>
+              <span class="tabular-nums font-mono text-slate-700 dark:text-slate-300">
+                {{ sessionProgress.reviewed }} / {{ sessionProgress.total }}
+              </span>
+            </div>
+            <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/[0.06]">
+              <div
+                class="h-full rounded-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-300 ease-out"
+                :style="{ width: `${sessionProgress.percentage}%` }"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Empty / Completed State -->

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
 import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb } from 'lucide-vue-next'
+import AppModal from '~/components/ui/AppModal.vue'
 import BasePagination from '~/components/common/BasePagination.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
 import { useApiError } from '~/composables/useApiError'
@@ -726,338 +727,331 @@ async function confirmDeleteBook() {
       <p class="text-sm text-slate-500 mt-1">{{ $t('library.empty_desc') }}</p>
     </div>
 
-    <!-- Import Document Modal (Teleported to Body) -->
-    <Teleport to="body">
-      <div v-if="isImportModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-sm animate-in fade-in" @click.self="isImportModalOpen = false">
-        <div class="w-full max-w-2xl glass-panel border border-slate-200/80 dark:border-white/[0.08] rounded-3xl shadow-2xl p-5 sm:p-8 md:p-9 space-y-5 sm:space-y-6 animate-in zoom-in-95 max-h-[85dvh] overflow-y-auto [scrollbar-gutter:stable]">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-white/[0.08] gap-2">
-            <div class="min-w-0">
-              <h3 class="text-base sm:text-xl font-bold text-slate-900 dark:text-white truncate">{{ $t('library.import_modal_title') }}</h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{{ $t('library.import_modal_desc') }}</p>
-            </div>
-            <button @click="isImportModalOpen = false" class="p-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-canvas-elevated shrink-0" aria-label="Close modal">
-              <X class="w-5 h-5" :stroke-width="1.5" />
-            </button>
+    <!-- Import Document Modal -->
+    <AppModal
+      :open="isImportModalOpen"
+      :title="$t('library.import_modal_title')"
+      max-width="max-w-2xl"
+      @close="isImportModalOpen = false"
+    >
+      <!-- 3-Tab Selector -->
+      <div class="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 bg-slate-100 dark:bg-canvas-subtle rounded-2xl border border-slate-200/80 dark:border-white/[0.08]">
+        <button
+          type="button"
+          @click="activeTab = 'markdown'"
+          :class="[
+            'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-colors border',
+            activeTab === 'markdown'
+              ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border-slate-200/80 dark:border-white/[0.12]'
+              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          ]"
+        >
+          <FileText class="w-4 h-4 shrink-0" />
+          <span class="truncate">{{ $t('library.tab_markdown') }}</span>
+        </button>
+
+        <button
+          type="button"
+          @click="activeTab = 'pdf'"
+          :class="[
+            'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-colors border',
+            activeTab === 'pdf'
+              ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border-slate-200/80 dark:border-white/[0.12]'
+              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          ]"
+        >
+          <FileUp class="w-4 h-4 shrink-0" />
+          <span class="truncate">{{ $t('library.tab_pdf') }}</span>
+        </button>
+
+        <button
+          type="button"
+          @click="activeTab = 'url'"
+          :class="[
+            'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-colors border',
+            activeTab === 'url'
+              ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border-slate-200/80 dark:border-white/[0.12]'
+              : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+          ]"
+        >
+          <Globe class="w-4 h-4 shrink-0" />
+          <span class="truncate">{{ $t('library.tab_url') }}</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: Markdown Direct Form -->
+      <form v-if="activeTab === 'markdown'" @submit.prevent="handleImportSubmit" class="space-y-4">
+        <div>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.title_label') }}</label>
+          <input
+            v-model="importTitle"
+            required
+            type="text"
+            placeholder="e.g. Designing Data-Intensive Applications — Chapter 5"
+            class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
+          />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
+            <AppSelect
+              v-model="importCategory"
+              :options="formCategoryOptions"
+              :aria-label="$t('library.category_label')"
+            />
           </div>
 
-          <!-- 3-Tab Selector -->
-          <div class="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 bg-slate-100 dark:bg-canvas-subtle rounded-2xl border border-slate-200/80 dark:border-white/[0.08]">
-            <button
-              type="button"
-              @click="activeTab = 'markdown'"
-              :class="[
-                'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-colors border',
-                activeTab === 'markdown'
-                  ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border-slate-200/80 dark:border-white/[0.12]'
-                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              ]"
-            >
-              <FileText class="w-4 h-4 shrink-0" />
-              <span class="truncate">{{ $t('library.tab_markdown') }}</span>
-            </button>
+          <div>
+            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.url_label') }}</label>
+            <input
+              v-model="importSourceUrl"
+              type="url"
+              placeholder="https://..."
+              class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
+            />
+          </div>
+        </div>
 
-            <button
-              type="button"
-              @click="activeTab = 'pdf'"
-              :class="[
-                'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-colors border',
-                activeTab === 'pdf'
-                  ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border-slate-200/80 dark:border-white/[0.12]'
-                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              ]"
-            >
-              <FileUp class="w-4 h-4 shrink-0" />
-              <span class="truncate">{{ $t('library.tab_pdf') }}</span>
-            </button>
+        <div class="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+          <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
+          <span>{{ $t('library.verbatim_category_hint') }}</span>
+        </div>
 
-            <button
-              type="button"
-              @click="activeTab = 'url'"
-              :class="[
-                'flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-colors border',
-                activeTab === 'url'
-                  ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm border-slate-200/80 dark:border-white/[0.12]'
-                  : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              ]"
-            >
-              <Globe class="w-4 h-4 shrink-0" />
-              <span class="truncate">{{ $t('library.tab_url') }}</span>
-            </button>
+        <div>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.content_label') }}</label>
+          <textarea
+            v-model="importContent"
+            required
+            rows="6"
+            :placeholder="$t('library.content_placeholder')"
+            class="w-full p-4 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm font-mono text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none resize-none"
+          ></textarea>
+        </div>
+      </form>
+
+      <!-- TAB 2: PDF Drag & Drop Upload Form -->
+      <form v-else-if="activeTab === 'pdf'" @submit.prevent="handlePdfUpload" class="space-y-4">
+        <!-- Asynchronous Ingestion Progress Card -->
+        <div v-if="isProcessingPdf" class="p-5 sm:p-6 rounded-2xl bg-brand-50/70 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 space-y-4 animate-in fade-in duration-200">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 text-brand-700 dark:text-brand-300 font-bold text-xs sm:text-sm">
+              <Loader2 class="w-4 h-4 animate-spin text-brand-600 dark:text-brand-400 shrink-0" />
+              <span>{{ $t('library.processing_pdf') }}</span>
+            </div>
+            <span class="font-mono font-bold text-xs sm:text-sm text-brand-600 dark:text-brand-400">{{ pdfProgress }}%</span>
           </div>
 
-          <!-- TAB 1: Markdown Direct Form -->
-          <form v-if="activeTab === 'markdown'" @submit.prevent="handleImportSubmit" class="space-y-4">
-            <div>
-              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.title_label') }}</label>
-              <input
-                v-model="importTitle"
-                required
-                type="text"
-                placeholder="e.g. Designing Data-Intensive Applications — Chapter 5"
-                class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
-              />
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
-                <AppSelect
-                  v-model="importCategory"
-                  :options="formCategoryOptions"
-                  :aria-label="$t('library.category_label')"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.url_label') }}</label>
-                <input
-                  v-model="importSourceUrl"
-                  type="url"
-                  placeholder="https://..."
-                  class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div class="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
-              <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
-              <span>{{ $t('library.verbatim_category_hint') }}</span>
-            </div>
-
-            <div>
-              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.content_label') }}</label>
-              <textarea
-                v-model="importContent"
-                required
-                rows="6"
-                :placeholder="$t('library.content_placeholder')"
-                class="w-full p-4 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm font-mono text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none resize-none"
-              ></textarea>
-            </div>
-
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3 pt-3 sm:pt-4">
-              <button
-                type="button"
-                @click="isImportModalOpen = false"
-                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/[0.08] sm:border-transparent transition-colors text-center"
-              >
-                {{ $t('library.cancel') }}
-              </button>
-              <button
-                type="submit"
-                :disabled="libraryStore.isImporting"
-                class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
-              >
-                <span v-if="libraryStore.isImporting" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                <span>{{ libraryStore.isImporting ? $t('library.importing') : $t('library.import_action') }}</span>
-              </button>
-            </div>
-          </form>
-
-          <!-- TAB 2: PDF Drag & Drop Upload Form -->
-          <form v-else-if="activeTab === 'pdf'" @submit.prevent="handlePdfUpload" class="space-y-4">
-            <!-- Asynchronous Ingestion Progress Card -->
-            <div v-if="isProcessingPdf" class="p-5 sm:p-6 rounded-2xl bg-brand-50/70 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 space-y-4 animate-in fade-in duration-200">
-              <div class="flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2 text-brand-700 dark:text-brand-300 font-bold text-xs sm:text-sm">
-                  <Loader2 class="w-4 h-4 animate-spin text-brand-600 dark:text-brand-400 shrink-0" />
-                  <span>{{ $t('library.processing_pdf') }}</span>
-                </div>
-                <span class="font-mono font-bold text-xs sm:text-sm text-brand-600 dark:text-brand-400">{{ pdfProgress }}%</span>
-              </div>
-
-              <!-- Realtime Progress Bar -->
-              <div class="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
-                <div
-                  class="h-full bg-gradient-to-r from-brand-500 to-emerald-400 rounded-full transition-all duration-300 shadow-sm"
-                  :style="{ width: `${pdfProgress}%` }"
-                ></div>
-              </div>
-
-              <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
-                {{ pdfStatusMessage || $t('library.processing_desc') }}
-              </p>
-
-              <div class="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 pt-2 border-t border-brand-200/50 dark:border-brand-800/50">
-                <span>{{ $t('library.pdf_service_note_1') }}</span>
-                <span>{{ $t('library.pdf_service_note_2') }}</span>
-              </div>
-            </div>
-
-            <!-- Dropzone -->
+          <!-- Realtime Progress Bar -->
+          <div class="w-full h-2.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200 dark:border-slate-700">
             <div
-              v-show="!isProcessingPdf"
-              @dragover.prevent="isDraggingPdf = true"
-              @dragleave.prevent="isDraggingPdf = false"
-              @drop.prevent="onPdfDrop"
-              :class="[
-                'border-2 border-dashed rounded-3xl p-6 sm:p-8 text-center transition-all cursor-pointer relative',
-                isDraggingPdf
-                  ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40'
-                  : 'border-slate-300 dark:border-white/[0.08] hover:border-brand-400 dark:hover:border-brand-500/30 bg-slate-50/60 dark:bg-canvas-subtle'
-              ]"
-              @click="($refs.pdfInput as HTMLInputElement)?.click()"
-            >
-              <input
-                ref="pdfInput"
-                type="file"
-                accept=".pdf,application/pdf"
-                class="hidden"
-                @change="onPdfFileChange"
-              />
+              class="h-full bg-gradient-to-r from-brand-500 to-emerald-400 rounded-full transition-all duration-300 shadow-sm"
+              :style="{ width: `${pdfProgress}%` }"
+            ></div>
+          </div>
 
-              <div class="flex flex-col items-center justify-center space-y-3">
-                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-brand-100 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 flex items-center justify-center border border-brand-200 dark:border-brand-900 shadow-sm">
-                  <UploadCloud class="w-6 h-6 sm:w-7 sm:h-7" />
-                </div>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+            {{ pdfStatusMessage || $t('library.processing_desc') }}
+          </p>
 
-                <div v-if="!pdfFile" class="space-y-1">
-                  <h4 class="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
-                    {{ $t('library.pdf_drop_title') }}
-                  </h4>
-                  <p class="text-sm text-slate-500 dark:text-slate-400">
-                    {{ $t('library.pdf_drop_desc') }}
-                  </p>
-                  <p class="text-xs sm:text-sm text-brand-600 dark:text-brand-400 font-mono pt-1">
-                    {{ $t('library.pdf_size_limit') }}
-                  </p>
-                </div>
+          <div class="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 pt-2 border-t border-brand-200/50 dark:border-brand-800/50">
+            <span>{{ $t('library.pdf_service_note_1') }}</span>
+            <span>{{ $t('library.pdf_service_note_2') }}</span>
+          </div>
+        </div>
 
-                <div v-else class="space-y-1">
-                  <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
-                    <CheckCircle2 class="w-4 h-4" />
-                    <span>{{ pdfFile.name }} ({{ (pdfFile.size / (1024 * 1024)).toFixed(1) }} MB)</span>
-                  </div>
-                  <p class="text-xs text-slate-400">{{ $t('library.pdf_replace_hint') }}</p>
-                </div>
+        <!-- Dropzone -->
+        <div
+          v-show="!isProcessingPdf"
+          @dragover.prevent="isDraggingPdf = true"
+          @dragleave.prevent="isDraggingPdf = false"
+          @drop.prevent="onPdfDrop"
+          :class="[
+            'border-2 border-dashed rounded-2xl p-4 sm:p-5 text-center transition-all cursor-pointer relative',
+            isDraggingPdf
+              ? 'border-brand-500 bg-brand-50/50 dark:bg-brand-950/40'
+              : 'border-slate-300 dark:border-white/[0.08] hover:border-brand-400 dark:hover:border-brand-500/30 bg-slate-50/60 dark:bg-canvas-subtle'
+          ]"
+          @click="($refs.pdfInput as HTMLInputElement)?.click()"
+        >
+          <input
+            ref="pdfInput"
+            type="file"
+            accept=".pdf,application/pdf"
+            class="hidden"
+            @change="onPdfFileChange"
+          />
+
+          <div class="flex flex-col items-center justify-center space-y-2">
+            <div class="w-12 h-12 rounded-xl bg-brand-100 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 flex items-center justify-center border border-brand-200 dark:border-brand-900 shadow-sm">
+              <UploadCloud class="h-8 w-8" />
+            </div>
+
+            <div v-if="!pdfFile" class="space-y-1">
+              <h4 class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                {{ $t('library.pdf_drop_title') }}
+              </h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                {{ $t('library.pdf_drop_desc') }}
+              </p>
+              <p class="text-xs text-brand-600 dark:text-brand-400 font-mono">
+                {{ $t('library.pdf_size_limit') }}
+              </p>
+            </div>
+
+            <div v-else class="space-y-1">
+              <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+                <CheckCircle2 class="w-4 h-4" />
+                <span>{{ pdfFile.name }} ({{ (pdfFile.size / (1024 * 1024)).toFixed(1) }} MB)</span>
               </div>
-            </div>
-
-            <div v-show="!isProcessingPdf" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.title_label') }}</label>
-                <input
-                  v-model="pdfTitle"
-                  type="text"
-                  :placeholder="$t('library.title_placeholder')"
-                  class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
-                <AppSelect
-                  v-model="pdfCategory"
-                  :options="formCategoryOptions"
-                  :aria-label="$t('library.category_label')"
-                />
-              </div>
-            </div>
-
-            <div v-show="!isProcessingPdf" class="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
-              <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
-              <span>{{ $t('library.verbatim_category_hint') }}</span>
-            </div>
-
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 sm:gap-3 pt-3 sm:pt-4">
-              <button
-                type="button"
-                @click="isImportModalOpen = false; if (pollInterval) { clearInterval(pollInterval); pollInterval = null; isProcessingPdf = false; }"
-                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/[0.08] sm:border-transparent transition-colors text-center"
-              >
-                {{ $t('library.cancel') }}
-              </button>
-              <button
-                type="submit"
-                :disabled="!pdfFile || isUploadingPdf || isProcessingPdf"
-                class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50"
-              >
-                <span v-if="isUploadingPdf || isProcessingPdf" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                <span>{{ isProcessingPdf ? `${$t('library.processing_pdf')} (${pdfProgress}%)` : (isUploadingPdf ? $t('library.parsing_pdf') : $t('library.upload_pdf_action')) }}</span>
-              </button>
-            </div>
-          </form>
-
-          <!-- TAB 3: Web URL Crawler Form -->
-          <div v-else-if="activeTab === 'url'" class="space-y-4">
-            <div>
-              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                {{ $t('library.url_crawler_title') }}
-              </label>
-              <div class="flex flex-col sm:flex-row gap-2">
-                <input
-                  v-model="crawlUrlInput"
-                  type="url"
-                  :placeholder="$t('library.url_input_placeholder')"
-                  class="flex-1 px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
-                  @keyup.enter="handleCrawlUrl"
-                />
-                <button
-                  type="button"
-                  :disabled="!crawlUrlInput || isCrawling"
-                  @click="handleCrawlUrl"
-                  class="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 shrink-0"
-                >
-                  <span v-if="isCrawling" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  <Globe v-else class="w-4 h-4" />
-                  <span>{{ isCrawling ? $t('library.fetching_url') : $t('library.fetch_url_btn') }}</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Category Selector for URL import -->
-            <div>
-              <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
-              <AppSelect
-                v-model="importCategory"
-                :options="formCategoryOptions"
-                :aria-label="$t('library.category_label')"
-              />
-              <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
-                <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
-                <span>{{ $t('library.verbatim_category_hint') }}</span>
-              </div>
-            </div>
-
-            <!-- Embedded PDF Preview Card -->
-            <div v-if="isPdfDetected && detectedPdfUrl" class="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/80 space-y-3">
-              <div class="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-bold text-xs sm:text-sm">
-                <FileUp class="w-4 h-4 shrink-0" />
-                <span>{{ $t('library.embedded_pdf_detected') }}</span>
-              </div>
-              <p class="text-xs text-slate-600 dark:text-slate-400 font-mono truncate">{{ detectedPdfUrl }}</p>
-              <button
-                type="button"
-                @click="handleImportRemotePdf"
-                :disabled="isProcessingPdf"
-                class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap shrink-0"
-              >
-                <FileUp class="w-4 h-4 shrink-0" />
-                <span class="whitespace-nowrap">{{ $t('library.import_detected_pdf') }}</span>
-              </button>
-            </div>
-
-            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-2">
-              <h5 class="font-bold text-slate-700 dark:text-slate-300">Supported Sources:</h5>
-              <ul class="list-disc list-inside space-y-1">
-                <li><strong>GitHub Repositories:</strong> Links to <code>README.md</code> or any <code>.md</code> file in a repository.</li>
-                <li><strong>Technical Blogs & RFCs:</strong> Microsoft Learn, Martin Fowler, Dev.to, Medium, Substack architecture posts.</li>
-              </ul>
-            </div>
-
-            <div class="flex justify-end pt-2">
-              <button
-                type="button"
-                @click="isImportModalOpen = false"
-                class="w-full sm:w-auto px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/[0.08] sm:border-transparent transition-colors text-center"
-              >
-                {{ $t('library.cancel') }}
-              </button>
+              <p class="text-xs text-slate-400">{{ $t('library.pdf_replace_hint') }}</p>
             </div>
           </div>
         </div>
+
+        <div v-show="!isProcessingPdf" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.title_label') }}</label>
+            <input
+              v-model="pdfTitle"
+              type="text"
+              :placeholder="$t('library.title_placeholder')"
+              class="w-full px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
+            <AppSelect
+              v-model="pdfCategory"
+              :options="formCategoryOptions"
+              :aria-label="$t('library.category_label')"
+            />
+          </div>
+        </div>
+
+        <div v-show="!isProcessingPdf" class="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+          <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
+          <span>{{ $t('library.verbatim_category_hint') }}</span>
+        </div>
+
+        <!-- Hidden accessible submit button for keyboard & test automation -->
+        <button type="submit" class="hidden">{{ $t('library.upload_pdf_action') }}</button>
+      </form>
+
+      <!-- TAB 3: Web URL Crawler Form -->
+      <div v-else-if="activeTab === 'url'" class="space-y-4">
+        <div>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+            {{ $t('library.url_crawler_title') }}
+          </label>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input
+              v-model="crawlUrlInput"
+              type="url"
+              :placeholder="$t('library.url_input_placeholder')"
+              class="flex-1 px-4 py-3 bg-slate-50 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600 focus:border-brand-500 focus:outline-none"
+              @keyup.enter="handleCrawlUrl"
+            />
+            <button
+              type="button"
+              :disabled="!crawlUrlInput || isCrawling"
+              @click="handleCrawlUrl"
+              class="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 shrink-0"
+            >
+              <span v-if="isCrawling" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <Globe v-else class="w-4 h-4" />
+              <span>{{ isCrawling ? $t('library.fetching_url') : $t('library.fetch_url_btn') }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Category Selector for URL import -->
+        <div>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.category_label') }}</label>
+          <AppSelect
+            v-model="importCategory"
+            :options="formCategoryOptions"
+            :aria-label="$t('library.category_label')"
+          />
+          <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+            <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
+            <span>{{ $t('library.verbatim_category_hint') }}</span>
+          </div>
+        </div>
+
+        <!-- Embedded PDF Preview Card -->
+        <div v-if="isPdfDetected && detectedPdfUrl" class="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/80 space-y-3">
+          <div class="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-bold text-xs sm:text-sm">
+            <FileUp class="w-4 h-4 shrink-0" />
+            <span>{{ $t('library.embedded_pdf_detected') }}</span>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-400 font-mono truncate">{{ detectedPdfUrl }}</p>
+          <button
+            type="button"
+            @click="handleImportRemotePdf"
+            :disabled="isProcessingPdf"
+            class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap shrink-0"
+          >
+            <FileUp class="w-4 h-4 shrink-0" />
+            <span class="whitespace-nowrap">{{ $t('library.import_detected_pdf') }}</span>
+          </button>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 space-y-2">
+          <h5 class="font-bold text-slate-700 dark:text-slate-300">Supported Sources:</h5>
+          <ul class="list-disc list-inside space-y-1">
+            <li><strong>GitHub Repositories:</strong> Links to <code>README.md</code> or any <code>.md</code> file in a repository.</li>
+            <li><strong>Technical Blogs & RFCs:</strong> Microsoft Learn, Martin Fowler, Dev.to, Medium, Substack architecture posts.</li>
+          </ul>
+        </div>
       </div>
-    </Teleport>
+
+      <!-- Pinned Sticky Footer -->
+      <template #footer>
+        <button
+          type="button"
+          class="h-9 rounded-xl border border-slate-300 dark:border-white/[0.08] px-4 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-white/[0.06] cursor-pointer"
+          @click="isImportModalOpen = false"
+        >
+          {{ $t('library.cancel') }}
+        </button>
+
+        <button
+          v-if="activeTab === 'markdown'"
+          type="button"
+          :disabled="libraryStore.isImporting || !importTitle || !importContent"
+          class="h-9 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 disabled:opacity-50 px-4 flex items-center justify-center gap-1.5 cursor-pointer"
+          @click="handleImportSubmit"
+        >
+          <span v-if="libraryStore.isImporting" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+          <span>{{ libraryStore.isImporting ? $t('library.importing') : $t('library.import_action') }}</span>
+        </button>
+
+        <button
+          v-else-if="activeTab === 'pdf'"
+          type="button"
+          :disabled="!pdfFile || isUploadingPdf || isProcessingPdf"
+          class="h-9 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 disabled:opacity-50 px-4 flex items-center justify-center gap-1.5 cursor-pointer"
+          @click="handlePdfUpload"
+        >
+          <span v-if="isUploadingPdf || isProcessingPdf" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+          <span>{{ isProcessingPdf ? `${$t('library.processing_pdf')} (${pdfProgress}%)` : (isUploadingPdf ? $t('library.parsing_pdf') : $t('library.upload_pdf_action')) }}</span>
+        </button>
+
+        <button
+          v-else-if="activeTab === 'url'"
+          type="button"
+          :disabled="!crawlUrlInput || isCrawling"
+          class="h-9 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 disabled:opacity-50 px-4 flex items-center justify-center gap-1.5 cursor-pointer"
+          @click="handleCrawlUrl"
+        >
+          <span v-if="isCrawling" class="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+          <Globe v-else class="w-3.5 h-3.5" />
+          <span>{{ isCrawling ? $t('library.fetching_url') : $t('library.fetch_url_btn') }}</span>
+        </button>
+      </template>
+    </AppModal>
 
     <!-- Delete Confirmation Modal (Teleported to Body) -->
     <Teleport to="body">

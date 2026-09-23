@@ -60,7 +60,9 @@ const mockRuntimeConfig = {
 
 ;(globalThis as any).navigateTo = vi.fn()
 Reflect.set(globalThis, 'clearError', vi.fn())
+Reflect.set(globalThis, 'definePageMeta', vi.fn())
 
+;(globalThis as any).defineNuxtConfig = (c: any) => c
 
 const mockCookies = new Map<string, any>()
 ;(globalThis as any).useCookie = (name: string) => {

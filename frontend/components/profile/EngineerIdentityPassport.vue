@@ -38,7 +38,7 @@ const formattedMemberSince = computed(() => {
 </script>
 
 <template>
-  <div class="glass-card p-5 sm:p-7 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm relative overflow-hidden transition-colors duration-200 glow-subtle">
+  <div class="glass-card p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm relative overflow-hidden transition-colors duration-200 glow-subtle">
     <!-- Subtle top decorative background accent -->
     <div class="absolute -top-12 -right-12 w-40 h-40 bg-brand-500/15 dark:bg-brand-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
@@ -52,11 +52,11 @@ const formattedMemberSince = computed(() => {
             :src="profile.avatarUrl"
             :alt="profile?.name || 'Engineer'"
             @error="hasAvatarError = true"
-            class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover border-2 border-slate-200 dark:border-white/[0.12] shadow-sm"
+            class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-slate-200 dark:border-white/[0.12] shadow-sm"
           />
           <div
             v-else
-            class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-emerald-500 flex items-center justify-center text-white font-black text-3xl shadow-sm tracking-tight"
+            class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-emerald-500 flex items-center justify-center text-white font-black text-2xl sm:text-3xl shadow-sm tracking-tight"
           >
             {{ userInitial }}
           </div>

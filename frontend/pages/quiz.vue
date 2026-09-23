@@ -51,6 +51,7 @@ import { useProfileStore } from '~/stores/useProfileStore'
 import { useLibraryStore } from '~/stores/useLibraryStore'
 import BasePagination from '~/components/common/BasePagination.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
+import OptionCard from '~/components/ui/OptionCard.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 
 const route = useRoute()
@@ -313,26 +314,6 @@ function getOptionLetter(idx: number): string {
   return ['A', 'B', 'C', 'D'][idx] || `${idx + 1}`
 }
 
-function getOptionClass(idx: number): string {
-  if (!quizStore.isCurrentAnswered) {
-    if (selectedOptionIndex.value === idx) {
-      return 'border-brand-500 bg-brand-500/10 text-brand-600 dark:text-white ring-1 ring-brand-500/40 shadow-sm'
-    }
-    return 'border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-white/[0.16] hover:bg-slate-50/70 dark:hover:bg-white/[0.04]'
-  }
-
-  // Answered state
-  const isCorrectOption = idx === currentSub.value?.correctOptionIndex
-  const isSelectedByMe = idx === (selectedOptionIndex.value ?? currentQ.value?.lastSelectedOptionIndex)
-
-  if (isCorrectOption) {
-    return 'border-brand-500/60 bg-brand-50/80 dark:bg-brand-500/10 text-brand-900 dark:text-brand-300 ring-1 ring-brand-500/30'
-  }
-  if (isSelectedByMe && !currentSub.value?.isCorrect) {
-    return 'border-rose-500/60 bg-rose-50/80 dark:bg-rose-500/10 text-rose-900 dark:text-rose-300 ring-1 ring-rose-500/30'
-  }
-  return 'opacity-40 border-slate-200/60 dark:border-white/[0.04] bg-slate-50/40 dark:bg-white/[0.01] text-slate-400 dark:text-slate-500'
-}
 
 // Readiness Tier Calculation for Bento Hero Card
 const readinessInfo = computed(() => {
@@ -774,7 +755,7 @@ defineExpose({
       </div>
 
       <!-- Question Card -->
-      <div class="glass-card p-5 sm:p-7 space-y-6">
+      <div class="glass-card p-4 sm:p-5 space-y-4">
         <!-- Question Text -->
         <div class="space-y-2">
           <h2 class="text-base sm:text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-relaxed break-words">
@@ -786,39 +767,16 @@ defineExpose({
         </div>
 
         <!-- Options Grid -->
-        <div class="grid grid-cols-1 gap-3.5">
-          <button
+        <div class="grid grid-cols-1 gap-2.5">
+          <OptionCard
             v-for="(opt, idx) in currentQ.options"
             :key="idx"
-            data-testid="quiz-option"
-            @click="handleSelectOption(idx)"
+            :letter="getOptionLetter(idx)"
+            :text="opt"
+            :state="quizStore.isCurrentAnswered ? (idx === currentSub?.correctOptionIndex ? 'correct' : (idx === (selectedOptionIndex ?? currentQ.lastSelectedOptionIndex) && !currentSub?.isCorrect ? 'incorrect' : 'default')) : (selectedOptionIndex === idx ? 'selected' : 'default')"
             :disabled="quizStore.isCurrentAnswered"
-            :class="[
-              'p-4 sm:p-5 rounded-2xl border text-left transition-all flex items-start gap-3.5',
-              getOptionClass(idx),
-              quizStore.isCurrentAnswered ? 'cursor-default' : 'cursor-pointer'
-            ]"
-          >
-            <span
-              class="w-7 h-7 rounded-xl font-black text-xs sm:text-sm whitespace-nowrap shrink-0 flex items-center justify-center transition-colors shadow-sm"
-              :class="[
-                quizStore.isCurrentAnswered
-                  ? (idx === currentSub?.correctOptionIndex
-                      ? 'bg-brand-600 text-white'
-                      : (idx === (selectedOptionIndex ?? currentQ.lastSelectedOptionIndex) && !currentSub?.isCorrect
-                          ? 'bg-rose-600 text-white'
-                          : 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.08]'))
-                  : (selectedOptionIndex === idx
-                      ? 'bg-brand-600 text-white'
-                      : 'bg-slate-100 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.08]')
-              ]"
-            >
-              {{ getOptionLetter(idx) }}
-            </span>
-            <span class="text-sm sm:text-base font-medium leading-relaxed break-words flex-1">
-              {{ opt }}
-            </span>
-          </button>
+            @select="handleSelectOption(idx)"
+          />
         </div>
 
         <!-- Action / Submit Button -->
@@ -827,7 +785,7 @@ defineExpose({
             data-testid="submit-answer-btn"
             @click="handleSubmitAnswer()"
             :disabled="selectedOptionIndex === null || quizStore.isSubmitting"
-            class="px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-md shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+            class="h-9 px-5 text-sm font-bold rounded-xl bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Loader2 v-if="quizStore.isSubmitting" class="w-4 h-4 animate-spin" />
             <span>{{ quizStore.isSubmitting ? $t('quiz.submitting_loader') : $t('quiz.btn_submit_choice') }}</span>

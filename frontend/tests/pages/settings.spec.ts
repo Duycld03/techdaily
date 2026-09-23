@@ -68,6 +68,10 @@ describe('SettingsPage handleSendTestPush', () => {
         }
       }
     })
+    const notifTab = wrapper.findAll('button').find(b => b.text().includes('settings.tab_notifications'))
+    expect(notifTab).toBeDefined()
+    await notifTab?.trigger('click')
+    await flushPromises()
 
     const testBtn = wrapper.findAll('button').find(b => b.text().includes('settings.web_push_test_btn'))
     expect(testBtn).toBeDefined()
@@ -92,6 +96,10 @@ describe('SettingsPage handleSendTestPush', () => {
         }
       }
     })
+    const notifTab = wrapper.findAll('button').find(b => b.text().includes('settings.tab_notifications'))
+    expect(notifTab).toBeDefined()
+    await notifTab?.trigger('click')
+    await flushPromises()
 
     const testBtn = wrapper.findAll('button').find(b => b.text().includes('settings.web_push_test_btn'))
     await testBtn!.trigger('click')
@@ -122,6 +130,10 @@ describe('SettingsPage handleSendTestPush', () => {
         }
       }
     })
+    const notifTab = wrapper.findAll('button').find(b => b.text().includes('settings.tab_notifications'))
+    expect(notifTab).toBeDefined()
+    await notifTab?.trigger('click')
+    await flushPromises()
 
     const testBtn = wrapper.findAll('button').find(b => b.text().includes('settings.web_push_test_btn'))
     await testBtn!.trigger('click')
@@ -154,6 +166,10 @@ describe('SettingsPage handleSendTestPush', () => {
         }
       }
     })
+    const notifTab = wrapper.findAll('button').find(b => b.text().includes('settings.tab_notifications'))
+    expect(notifTab).toBeDefined()
+    await notifTab?.trigger('click')
+    await flushPromises()
 
     const testBtn = wrapper.findAll('button').find(b => b.text().includes('settings.web_push_test_btn'))
     await testBtn!.trigger('click')
@@ -197,11 +213,17 @@ describe('SettingsPage Timezone Auto-Persist', () => {
       dailyGoalMinutes: 30,
       timeZone: 'Asia/Tokyo'
     })
+    // Timezone selector is directly available on the General tab
+    await flushPromises()
 
-    const appSelect = wrapper.findComponent(AppSelect)
-    expect(appSelect.exists()).toBe(true)
+    const appSelects = wrapper.findAllComponents(AppSelect)
+    const tzSelect = appSelects.find(c => {
+      const opts = c.props('options') as Array<{ value: string }> | undefined
+      return opts?.some(o => o.value === 'UTC' || o.value === 'Asia/Ho_Chi_Minh')
+    }) ?? appSelects[2]
+    expect(tzSelect).toBeDefined()
 
-    await appSelect.vm.$emit('update:modelValue', 'Asia/Tokyo')
+    await tzSelect!.vm.$emit('update:modelValue', 'Asia/Tokyo')
     await flushPromises()
 
     expect(updateSpy).toHaveBeenCalledWith({ timeZone: 'Asia/Tokyo' })
@@ -209,5 +231,125 @@ describe('SettingsPage Timezone Auto-Persist', () => {
     const lastToast = toast.toasts.value[toast.toasts.value.length - 1]
     expect(lastToast).toBeDefined()
     expect(lastToast?.type).toBe('success')
+  })
+})
+
+describe('SettingsPage Unified Navigation & Account Tabs', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    const toast = useToast()
+    toast.toasts.value = []
+  })
+
+  it('renders consolidated navigation rail tabs', async () => {
+    const wrapper = mount(SettingsPage, {
+      global: {
+        stubs: {
+          ThemeToggle: true,
+          LocaleSelector: true,
+          AppSelect: true,
+          AppTimePicker: true,
+          EngineerIdentityPassport: true,
+          EngineerMilestonesCard: true,
+          DomainGoalTracker: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const buttons = wrapper.findAll('button')
+    expect(buttons.some(b => b.text().includes('settings.tab_general'))).toBe(true)
+    expect(buttons.some(b => b.text().includes('settings.tab_notifications'))).toBe(true)
+    expect(buttons.some(b => b.text().includes('settings.tab_security'))).toBe(true)
+  })
+
+  it('submits profile updates on profile tab', async () => {
+    const wrapper = mount(SettingsPage, {
+      global: {
+        stubs: {
+          ThemeToggle: true,
+          LocaleSelector: true,
+          AppSelect: true,
+          AppTimePicker: true,
+          EngineerIdentityPassport: true,
+          EngineerMilestonesCard: true,
+          DomainGoalTracker: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const profileStore = useProfileStore()
+    const updateSpy = vi.spyOn(profileStore, 'updateProfile').mockResolvedValueOnce({
+      id: 'usr-1',
+      email: 'test@techdaily.dev',
+      name: 'Alex Principal',
+      targetRole: 'Principal Architect',
+      dailyGoalMinutes: 15,
+      preferredLocale: 'en'
+    })
+
+    // Profile tab is active by default
+    const nameInput = wrapper.find('input[type="text"]')
+    expect(nameInput.exists()).toBe(true)
+    await nameInput.setValue('Alex Principal')
+
+    const form = wrapper.find('form')
+    await form.trigger('submit.prevent')
+    await flushPromises()
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Alex Principal'
+      })
+    )
+    const toast = useToast()
+    const lastToast = toast.toasts.value[toast.toasts.value.length - 1]
+    expect(lastToast?.type).toBe('success')
+  })
+
+  it('submits password change on security tab', async () => {
+    const wrapper = mount(SettingsPage, {
+      global: {
+        stubs: {
+          ThemeToggle: true,
+          LocaleSelector: true,
+          AppSelect: true,
+          AppTimePicker: true,
+          EngineerIdentityPassport: true,
+          EngineerMilestonesCard: true,
+          DomainGoalTracker: true
+        }
+      }
+    })
+    await flushPromises()
+
+    const profileStore = useProfileStore()
+    if (profileStore.profile) {
+      profileStore.profile.hasPassword = true
+    }
+
+    const secTab = wrapper.findAll('button').find(b => b.text().includes('settings.tab_security'))
+    await secTab?.trigger('click')
+    await flushPromises()
+
+    const changePwdSpy = vi.spyOn(profileStore, 'changePassword').mockResolvedValueOnce()
+
+    const pwdInputs = wrapper.findAll('input[type="password"]')
+    expect(pwdInputs.length).toBeGreaterThanOrEqual(2)
+
+    // Enter current, new, and confirm passwords
+    await pwdInputs[0]?.setValue('OldSecret123!')
+    await pwdInputs[1]?.setValue('NewSecret123!')
+    if (pwdInputs[2]) {
+      await pwdInputs[2].setValue('NewSecret123!')
+    }
+
+    const form = wrapper.find('form')
+    await form.trigger('submit.prevent')
+    await flushPromises()
+
+    expect(changePwdSpy).toHaveBeenCalled()
   })
 })
