@@ -18,7 +18,7 @@ onMounted(() => {
 
 <template>
   <div class="min-h-dvh flex flex-col bg-slate-50 dark:bg-canvas text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
-    <AppHeader v-if="!isReaderMode" />
+    <AppHeader v-if="!isReaderMode && !isAuthPage" />
     <AppCommandPalette />
     <AppToastContainer />
     <div class="flex-1 flex overflow-hidden">

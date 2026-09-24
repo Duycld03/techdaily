@@ -56,6 +56,26 @@ describe('auth.global route middleware', () => {
       })
     })
 
+    it('redirects unauthenticated visitor accessing root / to /login with redirect parameter', async () => {
+      const to = { path: '/', fullPath: '/' } as any
+      await (authMiddleware as any)(to)
+
+      expect((globalThis as any).navigateTo).toHaveBeenCalledWith({
+        path: '/login',
+        query: { redirect: '/' }
+      })
+    })
+
+    it('permits unauthenticated visitor on guest auth paths without redirect', async () => {
+      const registerTo = { path: '/register', fullPath: '/register' } as any
+      const forgotTo = { path: '/forgot-password', fullPath: '/forgot-password' } as any
+
+      await (authMiddleware as any)(registerTo)
+      await (authMiddleware as any)(forgotTo)
+
+      expect((globalThis as any).navigateTo).not.toHaveBeenCalled()
+    })
+
     it('permits unauthenticated visitor on /playground and /showcase without redirect', async () => {
       const playgroundTo = { path: '/playground/phase-2', fullPath: '/playground/phase-2' } as any
       const showcaseTo = { path: '/showcase', fullPath: '/showcase' } as any
@@ -89,11 +109,18 @@ describe('auth.global route middleware', () => {
       expect((globalThis as any).navigateTo).not.toHaveBeenCalled()
     })
 
-    it('redirects logged-in user away from /login to /', async () => {
+    it('redirects logged-in user away from /login to /today when no redirect param', async () => {
       const to = { path: '/login', fullPath: '/login' } as any
       await (authMiddleware as any)(to)
 
-      expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/')
+      expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/today')
+    })
+
+    it('redirects logged-in user away from /login to redirect query destination if provided', async () => {
+      const to = { path: '/login', fullPath: '/login?redirect=/library', query: { redirect: '/library' } } as any
+      await (authMiddleware as any)(to)
+
+      expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/library')
     })
   })
 

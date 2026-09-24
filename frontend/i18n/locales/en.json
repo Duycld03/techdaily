@@ -879,7 +879,19 @@
     "toast_passwords_mismatch": "Passwords do not match. Please check again.",
     "toast_login_success": "Signed in successfully!",
     "toast_register_success": "Account created successfully!",
-    "toast_auth_failed": "Authentication failed. Please try again."
+    "toast_auth_failed": "Authentication failed. Please try again.",
+    "forgot_password_link": "Forgot password?",
+    "forgot_password_title": "Reset Password",
+    "forgot_password_subtitle": "Enter your email address and we'll send you a password reset link.",
+    "forgot_password_btn": "Send Reset Link",
+    "back_to_sign_in": "Back to Sign In",
+    "toast_reset_link_sent": "Password reset link sent to your email!",
+    "pillar_drills_title": "Scenario Architecture Drills",
+    "pillar_drills_desc": "High-depth technical scenarios simulating real Staff+ dilemmas.",
+    "pillar_sm2_title": "SM-2 Spaced Mastery",
+    "pillar_sm2_desc": "Algorithmic review schedules ensuring long-term concept retention.",
+    "pillar_design_title": "Daily System Design Doses",
+    "pillar_design_desc": "Atomic 5-minute deep-dives into distributed systems architecture."
   },
   "quiz": {
     "title": "Interview Quiz",

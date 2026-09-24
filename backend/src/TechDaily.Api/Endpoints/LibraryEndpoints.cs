@@ -21,7 +21,8 @@ public static class LibraryEndpoints
     public static IEndpointRouteBuilder MapLibraryEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/library")
-            .WithTags("Library");
+            .WithTags("Library")
+            .RequireAuthorization();
 
         // Public Book Browsing
         group.MapGet("/books", async (

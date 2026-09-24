@@ -879,7 +879,19 @@
     "toast_passwords_mismatch": "Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.",
     "toast_login_success": "Đăng nhập thành công!",
     "toast_register_success": "Đăng ký tài khoản thành công!",
-    "toast_auth_failed": "Xác thực thất bại. Vui lòng thử lại."
+    "toast_auth_failed": "Xác thực thất bại. Vui lòng thử lại.",
+    "forgot_password_link": "Quên mật khẩu?",
+    "forgot_password_title": "Đặt Lại Mật Khẩu",
+    "forgot_password_subtitle": "Nhập email của bạn để nhận liên kết đặt lại mật khẩu.",
+    "forgot_password_btn": "Gửi Liên Kết Đặt Lại",
+    "back_to_sign_in": "Quay lại Đăng Nhập",
+    "toast_reset_link_sent": "Đã gửi liên kết đặt lại mật khẩu đến email của bạn!",
+    "pillar_drills_title": "Kịch Bản Kiến Trúc Thực Chiến",
+    "pillar_drills_desc": "Các tình huống kỹ thuật chuyên sâu mô phỏng bài toán Staff+ thực tế.",
+    "pillar_sm2_title": "Ghi Nhớ Giãn Cách SM-2",
+    "pillar_sm2_desc": "Lịch ôn tập thuật toán đảm bảo ghi nhớ kiến thức dài hạn.",
+    "pillar_design_title": "Hệ Thống Thiết Kế Mỗi Ngày",
+    "pillar_design_desc": "Bài học 5 phút cô đọng về kiến trúc hệ thống phân tán."
   },
   "quiz": {
     "title": "Trắc Nghiệm Phỏng Vấn",

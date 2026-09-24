@@ -280,22 +280,33 @@ The library system SHALL expose real-time curation progress through `GET /api/v1
 - **THEN** the book card displays an active progress bar with percentage indicator and descriptive status message (`AI is curating slice X/Y...`).
 
 ### Requirement: Lightweight Book Details and Single Slice Retrieval
-The library API SHALL provide book details with lightweight chunk summaries for Table of Contents rendering via `GET /api/v1/library/books/{id}` (omitting full markdown from chunk lists), and provide a dedicated endpoint `GET /api/v1/library/books/{id}/slices/{chunkOrder}` to retrieve the complete markdown, takeaways, and quiz for a specific slice.
+The library API SHALL provide authenticated endpoints for book details and slice reading:
+1. `GET /api/v1/library/books/{id}`: Returns book metadata and an array of chunk summaries (omitting full markdown).
+2. `GET /api/v1/library/books/{id}/status`: Returns ingestion progress (`ProcessingStatus`, `ProgressPercentage`, `StatusMessage`, `TotalChunks`).
+3. `GET /api/v1/library/books/{id}/slices/{chunkOrder}`: Returns the complete markdown, takeaways, and quiz for a specific slice.
+
+All of the above endpoints SHALL enforce `.RequireAuthorization()` and reject unauthenticated requests with `HTTP 401 Unauthorized`.
 
 #### Scenario: Client requests book details for reader
-- **WHEN** client requests `GET /api/v1/library/books/{id}`
+- **WHEN** client requests `GET /api/v1/library/books/{id}` with JWT authorization header
 - **THEN** response contains book metadata and an array of chunk summaries containing IDs, titles, chunk orders, and reading times, without heavy markdown content.
 
 #### Scenario: Client requests a specific slice
-- **WHEN** client requests `GET /api/v1/library/books/{id}/slices/{chunkOrder}`
+- **WHEN** client requests `GET /api/v1/library/books/{id}/slices/{chunkOrder}` with JWT authorization header
 - **THEN** response contains the full `originalTextMarkdown`, `summaryMarkdown`, `keyTakeaways`, and `microQuiz` for that slice.
 
 #### Scenario: Client requests a non-existent slice
 - **WHEN** client requests `GET /api/v1/library/books/{id}/slices/{chunkOrder}` with an invalid slice order or book ID
 - **THEN** server returns HTTP 404 Not Found.
 
+#### Scenario: Unauthenticated request to book details or slice is rejected
+- **WHEN** client sends a request to `GET /api/v1/library/books/{id}` or `GET /api/v1/library/books/{id}/slices/{order}` without an authorization token
+- **THEN** server returns HTTP 401 Unauthorized.
+
 ### Requirement: Paginated Book Catalog Browsing and State Synchronization
-The library system SHALL expose an endpoint `GET /api/v1/library/books` accepting optional query parameters: `category` (enum/integer), `search` (string), `page` (integer, default 1, minimum 1), and `pageSize` (integer, default 12, minimum 1, maximum 100). The endpoint SHALL return a structured envelope containing:
+The library system SHALL expose an authenticated endpoint `GET /api/v1/library/books` accepting optional query parameters: `category` (enum/integer), `search` (string), `page` (integer, default 1, minimum 1), and `pageSize` (integer, default 12, minimum 1, maximum 100). The endpoint SHALL enforce `.RequireAuthorization()` and reject unauthenticated requests with `HTTP 401 Unauthorized`.
+
+When authorized, the endpoint SHALL return a structured envelope containing:
 1. `books`: A list of `BookDto` items matching filter criteria, ordered by `CreatedAt` descending.
 2. `totalCount`: Total number of books matching the query across the entire catalog.
 3. `page`: The current active page number (1-based).
@@ -312,11 +323,14 @@ The `/library` page SHALL render numbered pagination controls (`< 1 2 3 ... 8 >`
 5. **Two-Way URL Query Synchronization**: The active `page`, `category`, and `search` query SHALL synchronize bidirectionally with browser URL query parameters (`?page=N&category=C&search=S`). Reloading the page or sharing the URL SHALL restore the exact catalog page and filter state.
 
 #### Scenario: User browses the first page of the technical library
-- **WHEN** an authenticated or anonymous user navigates to `/library`
-- **THEN** client calls `GET /api/v1/library/books?page=1&pageSize=12`
+- **WHEN** an authenticated user navigates to `/library`
+- **THEN** client calls `GET /api/v1/library/books?page=1&pageSize=12` with JWT authorization header
 - **AND** backend returns up to 12 book cards along with `totalCount`, `page = 1`, `pageSize = 12`, and `totalPages`
 - **AND** client renders the books in a balanced responsive grid with page 1 highlighted in the pagination controls.
 
+#### Scenario: Anonymous request to book catalog is rejected
+- **WHEN** an unauthenticated client sends `GET /api/v1/library/books` without a valid JWT bearer token
+- **THEN** backend rejects the request with `HTTP 401 Unauthorized`.
 #### Scenario: User navigates to a subsequent catalog page
 - **GIVEN** the library catalog has 30 books (`totalPages = 3`)
 - **WHEN** the user clicks page number "2" in the pagination bar

@@ -386,7 +386,78 @@ describe('pages/login.vue', () => {
     expect(dividerBadge.text()).toContain('auth.or_continue_with')
   })
 
+  it('renders top ambient utility bar with emblem, LocaleSelector, and ThemeToggle', () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' },
+          LocaleSelector: { template: '<div data-testid="locale-selector">Locale</div>' },
+          ThemeToggle: { template: '<div data-testid="theme-toggle">Theme</div>' }
+        }
+      }
+    })
+
+    const header = wrapper.find('header')
+    expect(header.exists()).toBe(true)
+    expect(header.text()).toContain('TechDaily')
+    expect(wrapper.find('[data-testid="locale-selector"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="theme-toggle"]').exists()).toBe(true)
+  })
+
+  it('switches to forgot-password mode and submits email for password reset', async () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' },
+          LocaleSelector: true,
+          ThemeToggle: true
+        }
+      }
+    })
+
+    // Click "Forgot password?"
+    const forgotLink = wrapper.findAll('button').find(b => b.text().includes('auth.forgot_password_link'))
+    expect(forgotLink).toBeDefined()
+    await forgotLink!.trigger('click')
+    await flushPromises()
+
+    // Header updates to forgot password title
+    expect(wrapper.text()).toContain('auth.forgot_password_title')
+    expect(wrapper.text()).toContain('auth.forgot_password_subtitle')
+
+    // Submit with email
+    const emailInput = wrapper.find('input[type="email"]')
+    await emailInput.setValue('developer@techdaily.io')
+
+    const form = wrapper.find('form')
+    await form.trigger('submit.prevent')
+    await flushPromises()
+
+    // Mode returns to login after reset link is sent
+    expect(wrapper.text()).toContain('auth.welcome_title')
+  })
+
   describe('app shell isolation', () => {
+    it('suppresses AppHeader on /login route', () => {
+      const origUseRoute = globalRoute.useRoute
+      globalRoute.useRoute = () => ({ path: '/login', params: {}, query: {} })
+
+      const wrapper = mount(App, {
+        global: {
+          stubs: {
+            AppHeader: { template: '<header data-testid="header">Header</header>' },
+            AppSidebar: true,
+            AppCommandPalette: true,
+            AppToastContainer: true,
+            NuxtPage: true
+          }
+        }
+      })
+
+      expect(wrapper.find('[data-testid="header"]').exists()).toBe(false)
+      globalRoute.useRoute = origUseRoute
+    })
+
     it('suppresses AppSidebar on /login route', () => {
       const origUseRoute = globalRoute.useRoute
       globalRoute.useRoute = () => ({ path: '/login', params: {}, query: {} })
@@ -407,14 +478,14 @@ describe('pages/login.vue', () => {
       globalRoute.useRoute = origUseRoute
     })
 
-    it('renders AppSidebar on non-auth route', () => {
+    it('renders AppHeader and AppSidebar on non-auth route', () => {
       const origUseRoute = globalRoute.useRoute
       globalRoute.useRoute = () => ({ path: '/today', params: {}, query: {} })
 
       const wrapper = mount(App, {
         global: {
           stubs: {
-            AppHeader: true,
+            AppHeader: { template: '<header data-testid="header">Header</header>' },
             AppSidebar: { template: '<aside data-testid="sidebar">Sidebar</aside>' },
             AppCommandPalette: true,
             AppToastContainer: true,
@@ -423,6 +494,7 @@ describe('pages/login.vue', () => {
         }
       })
 
+      expect(wrapper.find('[data-testid="header"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="sidebar"]').exists()).toBe(true)
       globalRoute.useRoute = origUseRoute
     })
