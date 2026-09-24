@@ -329,12 +329,34 @@ describe('utils/roadmapTreeLayout', () => {
       expect(chapters).toHaveLength(1)
       const firstChapter = chapters[0]!
       expect(firstChapter.id).toBe('0')
+      expect(firstChapter.index).toBe(1)
       expect(firstChapter.title).toBe('Frontend & Architecture')
       expect(firstChapter.isActive).toBe(true)
-
       expect(firstChapter.slices).toHaveLength(2)
       expect(firstChapter.slices[0]?.status).toBe('completed')
       expect(firstChapter.slices[1]?.status).toBe('active_today')
+    })
+
+    it('safely assigns clean integer indexes (1, 2, 3, 4) without string concatenation when categories are strings', () => {
+      const curriculumData: any = {
+        totalDays: 30,
+        completedDaysCount: 0,
+        overallProgressPercentage: 0,
+        modules: [
+          { category: 'FrontendWeb', moduleTitle: 'Frontend & Browser Internals', days: [] },
+          { category: 'BackendRuntime', moduleTitle: 'Backend & Runtime Systems', days: [] },
+          { category: 'DatabaseStorage', moduleTitle: 'Database & Storage Engines', days: [] },
+          { category: 'SystemDesign', moduleTitle: 'System Design & Distributed Systems', days: [] }
+        ]
+      }
+
+      const { chapters } = convertCurriculumToTree(curriculumData)
+      expect(chapters).toHaveLength(4)
+      expect(chapters[0].index).toBe(1)
+      expect(chapters[1].index).toBe(2)
+      expect(chapters[2].index).toBe(3)
+      expect(chapters[3].index).toBe(4)
+      expect(typeof chapters[0].index).toBe('number')
     })
   })
 })

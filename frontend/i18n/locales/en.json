@@ -167,6 +167,8 @@
     "curriculum_track_desc": "Sample track (Upload custom documents in Library to learn your way)",
     "browse_library": "Choose from Library",
     "active_badge": "Active",
+    "no_active_books": "No Active Reading Document",
+    "no_active_books_desc": "Select a document from Library to start your learning roadmap and interactive mindmap.",
     "timeline_view": "Timeline View",
     "mindmap_view": "Mindmap View",
     "view_mode_label": "Roadmap view mode",

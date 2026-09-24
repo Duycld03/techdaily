@@ -396,7 +396,7 @@ export function convertCurriculumToTree(
     trackType: 'curriculum'
   }
 
-  const chapters: TreeChapterBranch[] = (curriculum.modules || []).map(mod => {
+  const chapters: TreeChapterBranch[] = (curriculum.modules || []).map((mod, idx) => {
     const isCompleted = mod.completedCount === mod.totalCount && mod.totalCount > 0
     const isActive = mod.days ? mod.days.some(d => d.isActiveToday) : false
 
@@ -420,7 +420,7 @@ export function convertCurriculumToTree(
 
     return {
       id: String(mod.category),
-      index: mod.category + 1,
+      index: idx + 1,
       title: mod.moduleTitle,
       subtitle: `Days ${mod.startDay}–${mod.endDay} • ${mod.description}`,
       totalCount: mod.totalCount,

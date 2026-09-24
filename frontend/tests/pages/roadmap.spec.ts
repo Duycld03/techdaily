@@ -181,7 +181,7 @@ describe('pages/roadmap.vue', () => {
     expect(trackSwitcherBtn.text()).toContain('Designing Data-Intensive Applications')
   })
 
-  it('toggles the track switcher dropdown and renders available books, curriculum, and library link', async () => {
+  it('toggles the track switcher dropdown and renders available books and library link without legacy demo track', async () => {
     setupMockStores()
 
     const wrapper = mount(RoadmapPage, {
@@ -208,8 +208,8 @@ describe('pages/roadmap.vue', () => {
     expect(wrapper.find('[data-testid="track-book-option-book-1"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="track-book-option-book-2"]').exists()).toBe(true)
 
-    // Curriculum option
-    expect(wrapper.find('[data-testid="track-curriculum-option"]').exists()).toBe(true)
+    // Legacy demo curriculum option should NOT be in the dropdown
+    expect(wrapper.find('[data-testid="track-curriculum-option"]').exists()).toBe(false)
 
     // Library link
     expect(wrapper.find('[data-testid="track-browse-library-link"]').exists()).toBe(true)
@@ -243,7 +243,8 @@ describe('pages/roadmap.vue', () => {
     expect(wrapper.find('[data-testid="track-menu-popover"]').exists()).toBe(false)
   })
 
-  it('switches to the 30-day curriculum track when curriculum option is selected', async () => {
+  it('switches to curriculum track when query track=curriculum is present', async () => {
+    mockRouteQuery = { track: 'curriculum' }
     setupMockStores()
 
     const wrapper = mount(RoadmapPage, {
@@ -256,25 +257,15 @@ describe('pages/roadmap.vue', () => {
     })
     await flushPromises()
 
-    // Open dropdown
-    await wrapper.find('[data-testid="track-switcher-btn"]').trigger('click')
-
-    // Select curriculum option
-    await wrapper.find('[data-testid="track-curriculum-option"]').trigger('click')
-    await flushPromises()
-
-    // Track title in switcher button should update to curriculum
-    const trackSwitcherBtn = wrapper.find('[data-testid="track-switcher-btn"]')
-    expect(trackSwitcherBtn.text()).toContain('roadmap.curriculum_track')
-
     // Modules list should be displayed
     expect(wrapper.text()).toContain('Frontend & Web Core')
     expect(wrapper.text()).toContain('Backend & Systems')
   })
 
-  it('falls back to 30-day curriculum when no active book pacer exists', async () => {
-    const { focusStore } = setupMockStores()
+  it('renders empty state with library CTA when no active book and no available books exist', async () => {
+    const { focusStore, libraryStore } = setupMockStores()
     focusStore.data = null as unknown as typeof focusStore.data
+    libraryStore.selectedBook = null
 
     const wrapper = mount(RoadmapPage, {
       global: {
@@ -286,9 +277,8 @@ describe('pages/roadmap.vue', () => {
     })
     await flushPromises()
 
-    const trackSwitcherBtn = wrapper.find('[data-testid="track-switcher-btn"]')
-    expect(trackSwitcherBtn.text()).toContain('roadmap.curriculum_track')
-    expect(wrapper.text()).toContain('Frontend & Web Core')
+    expect(wrapper.find('[data-testid="roadmap-empty-state"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('roadmap.no_active_books')
   })
 
   it('renders unclipped track switcher popover with overflow-visible banner container and elevated z-index', async () => {
@@ -326,7 +316,7 @@ describe('pages/roadmap.vue', () => {
     // All elements must be rendered inside the popover
     expect(wrapper.find('[data-testid="track-book-option-book-1"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="track-book-option-book-2"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="track-curriculum-option"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="track-curriculum-option"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="track-browse-library-link"]').exists()).toBe(true)
   })
 

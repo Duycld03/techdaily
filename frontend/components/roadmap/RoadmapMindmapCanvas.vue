@@ -581,10 +581,10 @@ function handleSliceClick(slice: TreeSliceLeaf) {
                   : 'bg-white dark:bg-canvas-subtle border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-slate-200 hover:border-brand-400 dark:hover:border-brand-500/40'
             ]"
           >
-            <div class="flex items-center gap-2.5 min-w-0">
+            <div class="flex items-center gap-2.5 min-w-0 flex-1">
               <div
                 :class="[
-                  'w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0',
+                  'w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden select-none',
                   ch.data.isActive
                     ? 'bg-amber-500 text-slate-950'
                     : ch.data.isCompleted
@@ -592,9 +592,9 @@ function handleSliceClick(slice: TreeSliceLeaf) {
                       : 'bg-slate-100 dark:bg-canvas-elevated text-slate-600 dark:text-slate-300 border border-transparent dark:border-white/[0.06]'
                 ]"
               >
-                <span>{{ ch.data.index }}</span>
+                <span class="truncate max-w-[1.75rem] text-center">{{ ch.data.index }}</span>
               </div>
-              <div class="min-w-0">
+              <div class="min-w-0 flex-1">
                 <div class="font-bold text-xs sm:text-sm truncate">
                   {{ ch.data.title }}
                 </div>

@@ -76,8 +76,10 @@ onMounted(async () => {
   } else if (focusStore.data?.pacer?.bookId) {
     selectedBookId.value = focusStore.data.pacer.bookId
     await loadBookDetails(focusStore.data.pacer.bookId)
-  } else {
-    isCurriculumSelected.value = true
+  } else if (availableBookTracks.value.length > 0) {
+    const defaultBookId = availableBookTracks.value[0].id
+    selectedBookId.value = defaultBookId
+    await loadBookDetails(defaultBookId)
   }
 })
 
@@ -86,7 +88,7 @@ onMounted(async () => {
 watch(
   () => focusStore.data?.pacer?.bookId,
   async (newBookId) => {
-    if (newBookId && !isCurriculumSelected.value) {
+    if (newBookId && !selectedBookId.value) {
       selectedBookId.value = newBookId
       await loadBookDetails(newBookId)
     }
@@ -129,16 +131,16 @@ const availableBookTracks = computed(() => {
 })
 
 const currentTrackTitle = computed(() => {
-  if (isCurriculumSelected.value) {
-    return t('roadmap.curriculum_track')
-  }
   if (libraryStore.selectedBook?.title) {
     return libraryStore.selectedBook.title
   }
   if (focusStore.data?.pacer?.bookTitle) {
     return focusStore.data.pacer.bookTitle
   }
-  return t('roadmap.curriculum_track')
+  if (isCurriculumSelected.value) {
+    return t('roadmap.curriculum_track')
+  }
+  return t('roadmap.active_book')
 })
 
 const headerTitle = computed(() => {
@@ -613,34 +615,24 @@ function getDifficultyColor(diff: number) {
                   </button>
                 </div>
 
-                <!-- 30-Day Senior Curriculum Option -->
+                <div
+                  v-else
+                  class="px-3 py-3 text-center text-xs text-slate-500 dark:text-slate-400"
+                >
+                  {{ $t('roadmap.no_active_books') }}
+                </div>
+
+                <!-- Browse Library Bridge -->
                 <div class="pt-2 border-t border-slate-100 dark:border-white/[0.08]">
-                  <button
-                    type="button"
-                    data-testid="track-curriculum-option"
-                    @click="handleSelectCurriculumTrack"
-                    :class="[
-                      'w-full text-left p-2.5 rounded-xl text-xs sm:text-sm transition-all flex items-center justify-between group',
-                      isCurriculumSelected
-                        ? 'bg-brand-50/80 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800/80 text-brand-950 dark:text-brand-100 font-bold'
-                        : 'hover:bg-slate-100 dark:hover:bg-white/[0.06] text-slate-700 dark:text-slate-300'
-                    ]"
+                  <NuxtLink
+                    to="/library"
+                    data-testid="track-browse-library-link"
+                    @click="isTrackMenuOpen = false"
+                    class="flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-white/[0.06] transition-colors whitespace-nowrap shrink-0"
                   >
-                    <div class="flex items-center gap-2.5 min-w-0">
-                      <Compass class="w-4 h-4 text-brand-500 shrink-0" />
-                      <div class="min-w-0">
-                        <div class="font-bold truncate">{{ $t('roadmap.curriculum_track') }}</div>
-                        <div class="text-xs text-slate-400 dark:text-slate-500 truncate">
-                          {{ $t('roadmap.curriculum_track_desc') }}
-                        </div>
-                      </div>
-                    </div>
-                    <span class="text-xs font-mono text-slate-400 shrink-0 whitespace-nowrap">
-                      {{ roadmapStore.roadmapData?.completedDaysCount ?? 0 }}/30 ({{
-                        roadmapStore.roadmapData?.overallProgressPercentage ?? 0
-                      }}%)
-                    </span>
-                  </button>
+                    <span>+ {{ $t('roadmap.browse_library') }}</span>
+                    <ArrowRight class="w-3.5 h-3.5 shrink-0" />
+                  </NuxtLink>
                 </div>
 
                 <!-- Browse Library Bridge -->
@@ -731,6 +723,30 @@ function getDifficultyColor(diff: number) {
         <div class="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
         <p class="text-slate-500 dark:text-slate-400 text-sm font-medium">{{ $t('roadmap.loading') }}</p>
       </div>
+      <div
+        v-else-if="!selectedBookId && !isCurriculumSelected"
+        data-testid="roadmap-empty-state-mindmap"
+        class="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-3xl bg-white dark:bg-canvas-subtle border border-slate-200/90 dark:border-white/[0.08] shadow-sm space-y-4 my-6"
+      >
+        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-brand-50 dark:bg-brand-500/20 border border-brand-200 dark:border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 shadow-sm">
+          <BookOpen class="w-7 h-7 sm:w-8 sm:h-8" />
+        </div>
+        <div class="max-w-md space-y-1.5">
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+            {{ $t('roadmap.no_active_books') }}
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            {{ $t('roadmap.no_active_books_desc') }}
+          </p>
+        </div>
+        <NuxtLink
+          to="/library"
+          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95"
+        >
+          <span>{{ $t('roadmap.browse_library') }}</span>
+          <ArrowRight class="w-4 h-4" />
+        </NuxtLink>
+      </div>
       <RoadmapMindmapCanvas
         v-else
         :selected-book="libraryStore.selectedBook"
@@ -747,8 +763,34 @@ function getDifficultyColor(diff: number) {
     <!-- VIEW CONTAINER: TIMELINE VIEW                                             -->
     <!-- ========================================================================= -->
     <div v-else key="timeline-view" class="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
+      <!-- Empty State when no document book is available -->
+      <div
+        v-if="!selectedBookId && !isCurriculumSelected && !isLoadingBookDetails"
+        data-testid="roadmap-empty-state"
+        class="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-3xl bg-white dark:bg-canvas-subtle border border-slate-200/90 dark:border-white/[0.08] shadow-sm space-y-4 my-6"
+      >
+        <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-brand-50 dark:bg-brand-500/20 border border-brand-200 dark:border-brand-500/30 flex items-center justify-center text-brand-600 dark:text-brand-400 shadow-sm">
+          <BookOpen class="w-7 h-7 sm:w-8 sm:h-8" />
+        </div>
+        <div class="max-w-md space-y-1.5">
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+            {{ $t('roadmap.no_active_books') }}
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+            {{ $t('roadmap.no_active_books_desc') }}
+          </p>
+        </div>
+        <NuxtLink
+          to="/library"
+          class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95"
+        >
+          <span>{{ $t('roadmap.browse_library') }}</span>
+          <ArrowRight class="w-4 h-4" />
+        </NuxtLink>
+      </div>
+
       <!-- 1. ACTIVE DOCUMENT BOOK TRACK -->
-      <template v-if="!isCurriculumSelected">
+      <template v-else-if="!isCurriculumSelected">
         <!-- Book Chapter Milestones Loading State -->
         <div v-if="isLoadingBookDetails" class="flex flex-col items-center justify-center py-20 space-y-4">
           <div class="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>

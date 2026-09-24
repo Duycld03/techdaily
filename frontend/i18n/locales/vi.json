@@ -167,6 +167,8 @@
     "curriculum_track_desc": "Bộ kỹ năng mẫu (Tải tài liệu riêng trong Thư Viện để học theo ý bạn)",
     "browse_library": "Khám phá Thư Viện",
     "active_badge": "Đang Học",
+    "no_active_books": "Chưa Có Tài Liệu Đang Đọc",
+    "no_active_books_desc": "Chọn một tài liệu từ Thư Viện để bắt đầu lộ trình học tập và tạo sơ đồ tư duy tương tác.",
     "timeline_view": "Dạng Dòng Thời Gian",
     "mindmap_view": "Dạng Sơ Đồ Tư Duy",
     "view_mode_label": "Chế độ hiển thị lộ trình",
