@@ -63,7 +63,9 @@ For documents with large chapter counts (greater than 12 chapters), the mindmap 
 
 Canvas panning and dragging interactions SHALL capture mouse and touch events globally on `window` upon pointerdown to prevent sticky dragging cursor states when moving outside the container boundary, suppress native drag-selection hitches via `preventDefault()`, and disable visual CSS transitions during active drag for zero-latency 1:1 pointer tracking.
 
-The mindmap viewport and controls SHALL strictly employ the Dev-Learning Studio design language: the canvas container SHALL utilize neutral obsidian background `dark:bg-canvas` with translucent hairline borders `dark:border-white/[0.08]`; floating search and toolbar controls SHALL render as glassmorphic panels (`.glass-panel`); chapter branch and slice leaf cards SHALL utilize `dark:bg-canvas-subtle` and `dark:bg-canvas-elevated` with translucent hairline borders, eliminating all legacy `dark:bg-slate-900`, `dark:bg-slate-950`, and `dark:border-slate-800` styling.
+The mindmap viewport and controls SHALL strictly employ the Dev-Learning Studio design language: the canvas container SHALL utilize neutral obsidian background `dark:bg-canvas` with translucent hairline borders `dark:border-white/[0.08]`; floating search bar and control toolbar render with translucent backdrop-blur `.glass-panel` styling; chapter branch and slice leaf cards SHALL utilize `dark:bg-canvas-subtle` and `dark:bg-canvas-elevated` with translucent hairline borders, eliminating all legacy `dark:bg-slate-900`, `dark:bg-slate-950`, and `dark:border-slate-800` styling.
+
+Chapter branch node index indicators SHALL strictly be sequential integer numbers (`1`, `2`, `3`, `4`, ...) representing chapter order, and SHALL NOT display category string identifiers or concatenated strings. The 32px chapter index badge (`w-8 h-8 rounded-xl`) SHALL hold only the numeric chapter index without text overflow, ensuring zero visual overlap with the chapter title or slice completion counts across all screen densities.
 
 #### Scenario: Mindmap tree rendering from active track
 - **GIVEN** an active book pacer or curriculum track is loaded
@@ -150,12 +152,17 @@ The mindmap viewport and controls SHALL strictly employ the Dev-Learning Studio 
 - **AND** floating search bar and control toolbar render with translucent backdrop-blur `.glass-panel` styling
 - **AND** chapter branch cards and slice leaf cards render on `dark:bg-canvas-subtle` and `dark:bg-canvas-elevated`, with active nodes illuminated by amber and violet accent rings.
 
+#### Scenario: User opens mindmap view for multi-chapter document
+- **WHEN** user toggles to the Mindmap View on `/roadmap`
+- **THEN** all chapter branch nodes display numeric badges (`1`, `2`, `3`, ...) cleanly separated from chapter titles
+- **AND** no category strings (such as `FrontendWeb` or `BackendRuntime`) overflow or overlap with node text.
+
 ---
 
 ### Requirement: Active Track Synchronization & Switcher
-The `/roadmap` page SHALL present a single, cohesive timeline view directly synchronized with the user's active learning track on `/today` (Active Book Pacer or 30-Day Senior Curriculum). The page SHALL provide a unified header containing an integrated Track Switcher dropdown that displays the active track, allows switching between in-progress library books, viewing the 30-day curriculum, and linking directly to `/library`. The page SHALL render chapter milestones and slices with search filtering and provide direct 1-click action bridges to `/today` and `/read/[bookId]`.
+The `/roadmap` page SHALL present an interactive roadmap progression view that operates in a document-first paradigm, prioritizing the user's active learning materials from `/today` (Active Book Pacer). The page SHALL provide a unified header containing an integrated Track Switcher dropdown that automatically selects the user's currently active document book (`focusStore.data.pacer.bookId` or first item in `availableBookTracks`), eliminating the separate hardcoded demo starter pack track. The dropdown popover SHALL list in-progress and available document books with completion counts and percentage bars, and provide a direct "+ Khám phá Thư Viện" link to `/library`. When the user has zero reading books in progress, the roadmap SHALL present an encouraging empty state with a 1-click CTA leading to `/library`.
 
-The Track Switcher dropdown popover SHALL render fully without box-model clipping or truncation by parent containers, cleanly floating above subsequent page controls, view switchers, and in-canvas mindmap search and toolbar elements, ensuring 100% visibility of all in-progress books, curriculum options, and library action links.
+The Track Switcher dropdown popover SHALL render fully without box-model clipping or truncation by parent containers, cleanly floating above subsequent page controls, view switchers, and in-canvas mindmap search and toolbar elements, ensuring 100% visibility of all in-progress books and library action links.
 
 #### Scenario: Active book pacer on /today reflected on /roadmap
 - **GIVEN** an authenticated user has an active document book pacer configured on `/today`
@@ -164,7 +171,7 @@ The Track Switcher dropdown popover SHALL render fully without box-model clippin
 
 #### Scenario: Switching track via dropdown
 - **WHEN** user clicks the Track Switcher dropdown button in the `/roadmap` header
-- **THEN** the application displays a popover menu listing the active track with an `Active` badge, other in-progress library books with progress bars, the 30-Day Senior Curriculum track option, and a link to browse `/library`
+- **THEN** the application displays a popover menu listing the active track with an `Active` badge, other in-progress library books with progress bars, and a link to browse `/library` without displaying a duplicate demo track
 - **WHEN** user selects an alternative document book from the dropdown
 - **THEN** the roadmap view immediately transitions to display the selected book's chapter milestones and slices, and synchronizes the active book pacer on `/today`.
 
@@ -180,9 +187,9 @@ The Track Switcher dropdown popover SHALL render fully without box-model clippin
 - **THEN** the dropdown popover menu SHALL float strictly on top of the mindmap canvas and in-canvas search bar
 - **AND** the in-canvas search bar SHALL NOT overlap, slice through, or obscure any track options in the open dropdown.
 
-#### Scenario: 30-day curriculum fallback
-- **WHEN** a user with no active book pacer visits `/roadmap` or selects the 30-Day Senior Curriculum track from the dropdown
-- **THEN** the roadmap view smoothly transitions to display the 30-day curriculum modules with day nodes and completion percentages while preserving the unified header and track switcher.
+#### Scenario: Empty state guidance when no active book exists
+- **WHEN** a user with no active book pacer and no in-progress library books visits `/roadmap`
+- **THEN** the roadmap view renders an encouraging empty state prompting the user to explore `/library` and begin reading a book, rather than falling back to an unconfigurable mock demo track.
 
 #### Scenario: 1-click bridge actions
 - **WHEN** user clicks `Start Today's Drill` on the active slice card or active chapter header
