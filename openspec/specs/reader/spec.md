@@ -96,7 +96,19 @@ The system SHALL automatically record the user's latest read slice for each book
 ---
 
 ### Requirement: Scoped Floating Mini-Toolbar & Active Recall Quiz
-The reader floating selection toolbar SHALL render exactly 3 streamlined action buttons: `Explain with Gemini`, `Highlight/Note`, and `Copy`. The direct flashcard creation button SHALL be removed from the reader selection tooltip to protect reading immersion and avoid premature card generation. The `Highlight/Note` action SHALL unify text highlighting and note-taking into a single continuous action: clicking the button immediately creates and persists a highlight record (`POST /api/v1/notes/highlights`), while smoothly opening an attached reflection popover where users can optionally add personal reflection notes and technical tags. The floating toolbar container and attached note popover SHALL render with Dev-Learning Studio elevated obsidian panels (`bg-slate-900/95 dark:bg-canvas-elevated/95 backdrop-blur-xl border border-slate-700/80 dark:border-white/[0.12] shadow-2xl rounded-2xl`). Text input fields in the note popover SHALL use elevated studio styling (`dark:bg-canvas-subtle dark:border-white/[0.10] focus:ring-brand-500/40 focus:border-brand-500`).
+The reader floating selection toolbar SHALL render exactly 3 streamlined action buttons: `Explain with Gemini`, `Highlight/Note`, and `Copy`. The direct flashcard creation button SHALL be removed from the reader selection tooltip to protect reading immersion and avoid premature card generation. The `Highlight/Note` action SHALL unify text highlighting and note-taking into a single continuous action: clicking the button immediately creates and persists a highlight record (`POST /api/v1/notes/highlights`), while smoothly opening an attached reflection popover where users can optionally add personal reflection notes and technical tags.
+
+The floating toolbar container and attached note popover SHALL render with **Dev-Learning Studio** elevated obsidian panels (`bg-slate-900/95 dark:bg-canvas-elevated/95 backdrop-blur-xl border border-slate-700/60 dark:border-white/[0.12] rounded-2xl shadow-2xl`) and adhere to the following design system invariants:
+1. **Toolbar Button Hierarchy**:
+   - `Explain with Gemini`: Styled as a primary Iris Violet accent button (`bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow rounded-xl`).
+   - `Highlight/Note`: Styled with Iris Violet brand-tinted glass (`bg-brand-500/10 text-brand-300 border border-brand-500/20 hover:bg-brand-500/20 hover:text-white rounded-xl`), transitioning to an elevated active state when the note popover is open. Harsh amber/orange button styling (`bg-amber-500`) is strictly prohibited.
+   - `Copy`: Styled as a refined neutral translucent glass button (`text-slate-300 hover:text-white hover:bg-white/[0.08] rounded-xl`).
+2. **Input Placeholders & Guidance**:
+   - The reflection note textarea SHALL display the localized placeholder text (`reader.note_placeholder`) to guide architectural reflection and prevent blank void states.
+   - The tag input field SHALL display the localized placeholder text (`reader.tags_placeholder`).
+3. **Refined Focus Outlines & Quote Display**:
+   - Inputs SHALL render with subtle hairline borders (`border-slate-700/80 dark:border-white/[0.10]`) and soft focus rings (`focus:ring-1 focus:ring-brand-500/40 focus:border-brand-500/60`), eliminating harsh, thick neon borders.
+   - Excerpt quotes SHALL display subtle Iris Violet accent borders (`border-l-2 border-brand-500/60 pl-2.5 py-0.5 text-xs text-slate-300 dark:text-slate-300 italic line-clamp-2`).
 
 #### Scenario: User highlights text in reader pane
 - **WHEN** user selects text (2 to 500 characters) inside the reader markdown container
@@ -123,9 +135,18 @@ The reader floating selection toolbar SHALL render exactly 3 streamlined action 
 #### Scenario: Floating toolbar and reflection popover obsidian styling
 - **WHEN** the floating selection toolbar or note popover renders
 - **THEN** container styles use elevated obsidian tokens (`dark:bg-canvas-elevated/95`, `dark:border-white/[0.12]`)
-- **AND** quote preview renders with a primary brand border indicator (`border-brand-500`).
+- **AND** quote preview renders with a primary brand border indicator (`border-brand-500/60`).
 
----
+#### Scenario: Reflection textarea and tag inputs display localized placeholders
+- **WHEN** user opens the reflection note popover from the floating selection toolbar
+- **THEN** the reflection textarea displays the placeholder "Viết đúc kết hoặc suy ngẫm kiến trúc của bạn..." in Vietnamese or "Write your reflection or architectural takeaway..." in English
+- **AND** the tag input displays "Thẻ phân loại (vd: storage, concurrency)" in Vietnamese or "Tags (e.g. storage, concurrency)" in English
+- **AND** focusing the textarea activates a soft Iris Violet focus ring (`focus:ring-1 focus:ring-brand-500/40`) without glaring thick outlines.
+
+#### Scenario: Unified Dev-Learning Studio button hierarchy in floating toolbar
+- **WHEN** the floating selection toolbar appears
+- **THEN** the `Highlight/Note` button renders using Iris Violet brand glass tokens (`bg-brand-500/10 text-brand-300 border-brand-500/20`)
+- **AND** zero amber or orange background styling is rendered.
 
 ### Requirement: Sanitized Markdown Rendering and Code Block Copying
 The reader SHALL sanitize markdown rendering by suppressing duplicate first-line headings that match the active slice chapter title, suppressing redundant trailing Key Takeaways sections from the markdown body when structured takeaways are present, formatting inline code (`code:not(pre code)`) with Dev-Learning Studio tokens (neutral pill in light mode with `bg-slate-100 text-slate-800 border-slate-200/90`, and Obsidian pill in dark mode with `dark:bg-canvas-elevated dark:text-brand-300 dark:border-white/[0.08] font-medium`, eliminating legacy green/emerald styling across both `/read/[bookId]` and `/today`), formatting markdown links with system primary brand tokens (`prose-a:text-brand-600 dark:prose-a:text-brand-400 hover:prose-a:underline`), parsing technical alert callouts (`NOTE`, `TIP`, `IMPORTANT`, `WARNING`, `CAUTION`), and providing reliable 1-click syntax-highlighted code block copying with localized confirmation feedback.

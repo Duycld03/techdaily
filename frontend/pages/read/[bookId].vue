@@ -850,7 +850,7 @@ async function handleHighlightAndNote() {
       <div
         v-if="floatingToolbar.visible"
         @mousedown.stop
-        class="fixed z-50 -translate-x-1/2 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-slate-900/95 dark:bg-canvas-elevated/95 backdrop-blur-xl text-white shadow-2xl border border-slate-700/80 dark:border-white/[0.12] animate-in fade-in zoom-in-95 duration-150"
+        class="fixed z-50 -translate-x-1/2 flex flex-col items-center gap-1.5 p-1 rounded-2xl bg-slate-900/95 dark:bg-canvas-elevated/95 backdrop-blur-xl text-white shadow-2xl border border-slate-700/60 dark:border-white/[0.12] animate-in fade-in zoom-in-95 duration-150"
         :style="{
           left: `${floatingToolbar.x}px`,
           top: `${floatingToolbar.y}px`,
@@ -861,7 +861,7 @@ async function handleHighlightAndNote() {
           <!-- 1. Explain with Gemini -->
           <button
             @click="handleExplainSelection"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow transition-colors whitespace-nowrap shrink-0"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs shadow-sm transition-all duration-150 whitespace-nowrap shrink-0"
           >
             <Sparkles class="w-3.5 h-3.5" />
             <span>{{ $t("reader.explain_with_gemini") }}</span>
@@ -872,10 +872,10 @@ async function handleHighlightAndNote() {
             @click="handleHighlightAndNote"
             :disabled="isCreatingHighlight"
             :class="[
-              'flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors whitespace-nowrap shrink-0 disabled:opacity-50',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-150 whitespace-nowrap shrink-0 disabled:opacity-50',
               isNotePopoverOpen
-                ? 'bg-amber-500 text-slate-950 shadow'
-                : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500 hover:text-slate-950'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'bg-brand-500/10 text-brand-300 border border-brand-500/20 hover:bg-brand-500/20 hover:text-white'
             ]"
             :title="$t('reader.highlight_note')"
           >
@@ -887,7 +887,7 @@ async function handleHighlightAndNote() {
           <!-- 3. Copy -->
           <button
             @click="handleCopySelection"
-            class="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors whitespace-nowrap shrink-0"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/[0.08] transition-all duration-150 whitespace-nowrap shrink-0"
           >
             <Copy class="w-3.5 h-3.5" />
             <span>{{ $t("reader.copy") }}</span>
@@ -897,10 +897,10 @@ async function handleHighlightAndNote() {
         <!-- Expandable Note Popover -->
         <div
           v-if="isNotePopoverOpen"
-          class="w-72 sm:w-80 p-3 bg-slate-950/95 dark:bg-canvas-elevated/95 backdrop-blur-xl rounded-2xl border border-slate-700/80 dark:border-white/[0.12] text-left flex flex-col gap-2.5 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150"
+          class="w-72 sm:w-80 max-w-[calc(100vw-2rem)] p-3 bg-slate-950/95 dark:bg-canvas-elevated/95 backdrop-blur-xl rounded-2xl border border-slate-700/60 dark:border-white/[0.12] text-left flex flex-col gap-2.5 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-150"
         >
           <!-- Quote preview -->
-          <div class="text-[11px] text-slate-400 italic line-clamp-2 border-l-2 border-brand-500 pl-2">
+          <div class="text-[11px] text-slate-300 dark:text-slate-300 italic line-clamp-2 border-l-2 border-brand-500/60 pl-2.5 py-0.5">
             "{{ floatingToolbar.selectedText }}"
           </div>
 
@@ -908,17 +908,21 @@ async function handleHighlightAndNote() {
           <textarea
             v-model="noteText"
             rows="3"
-            class="w-full text-xs bg-slate-900 dark:bg-canvas-subtle border border-slate-700 dark:border-white/[0.10] rounded-lg p-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500/50 focus:border-brand-500 resize-none"
+            :placeholder="$t('reader.note_placeholder')"
+            class="w-full text-xs bg-slate-900 dark:bg-canvas-subtle border border-slate-700/80 dark:border-white/[0.10] rounded-lg p-2 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-brand-500 transition-colors resize-none"
             autofocus
           ></textarea>
 
           <!-- Optional tags input -->
-          <input
-            v-model="tagInput"
-            type="text"
-            class="w-full text-xs bg-slate-900 dark:bg-canvas-subtle border border-slate-700 dark:border-white/[0.10] rounded-lg px-2 py-1.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500/50 focus:border-brand-500"
-            @keydown.enter.prevent="handleSaveNote"
-          />
+          <div class="relative flex items-center">
+            <input
+              v-model="tagInput"
+              type="text"
+              :placeholder="$t('reader.tags_placeholder')"
+              class="w-full text-xs bg-slate-900 dark:bg-canvas-subtle border border-slate-700/80 dark:border-white/[0.10] rounded-lg px-2.5 py-1.5 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-brand-500 transition-colors"
+              @keydown.enter.prevent="handleSaveNote"
+            />
+          </div>
 
           <!-- Action buttons -->
           <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-800 dark:border-white/[0.08]">
@@ -931,8 +935,9 @@ async function handleHighlightAndNote() {
             <button
               @click="handleSaveNote"
               :disabled="isSavingNote"
-              class="flex items-center gap-1 px-3 py-1 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow disabled:opacity-50 transition-colors"
+              class="flex items-center gap-1.5 px-3 py-1 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow-sm disabled:opacity-50 transition-colors"
             >
+              <Loader2 v-if="isSavingNote" class="w-3 h-3 animate-spin" />
               <span>{{ $t("reader.save_note") }}</span>
             </button>
           </div>

@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useLibraryStore, type BookDetail } from '~/stores/useLibraryStore'
@@ -216,5 +218,39 @@ describe('Immersive Document Reader (Hướng 1)', () => {
 
     expect(takeawayBulletClass).toContain('bg-brand-500')
     expect(takeawayBulletClass).not.toContain('bg-amber')
+  })
+
+  it('validates floating toolbar Dev-Learning Studio Iris Violet buttons and absence of amber colors', () => {
+    const readerSource = fs.readFileSync(path.resolve(__dirname, '../../pages/read/[bookId].vue'), 'utf-8')
+    const toolbarBlock = readerSource.slice(readerSource.indexOf('<Teleport to="body">'))
+
+    // Ensure Highlight/Note does not use legacy amber tokens
+    expect(toolbarBlock).not.toContain('bg-amber')
+    expect(toolbarBlock).not.toContain('text-amber')
+
+    // Ensure Iris Violet brand glass tokens are present
+    expect(toolbarBlock).toContain('bg-brand-500/10')
+    expect(toolbarBlock).toContain('text-brand-300')
+    expect(toolbarBlock).toContain('border-brand-500/20')
+    expect(toolbarBlock).toContain('hover:bg-brand-500/20')
+
+    // Ensure active state transitions to solid brand violet
+    expect(toolbarBlock).toContain("'bg-brand-600 text-white shadow-sm'")
+  })
+
+  it('validates reflection popover placeholder bindings, soft focus rings, and glassmorphic tokens', () => {
+    const readerSource = fs.readFileSync(path.resolve(__dirname, '../../pages/read/[bookId].vue'), 'utf-8')
+
+    // Ensure explicit placeholder bindings exist
+    expect(readerSource).toContain(':placeholder="$t(\'reader.note_placeholder\')"')
+    expect(readerSource).toContain(':placeholder="$t(\'reader.tags_placeholder\')"')
+
+    // Ensure refined hairline borders and focus states are applied
+    expect(readerSource).toContain('focus:border-brand-500')
+    expect(readerSource).toContain('border-slate-700/80')
+    expect(readerSource).toContain('dark:border-white/[0.10]')
+
+    // Ensure quote preview uses Iris Violet border accent
+    expect(readerSource).toContain('border-brand-500/60')
   })
 })
