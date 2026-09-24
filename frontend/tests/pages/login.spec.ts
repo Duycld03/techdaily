@@ -239,8 +239,8 @@ describe('pages/login.vue', () => {
     })
 
     // Brand stage
-    expect(wrapper.text()).toContain('TechDaily Studio')
-
+    expect(wrapper.text()).toContain('TechDaily')
+    expect(wrapper.text()).toContain('TECHDAILY')
     // Right interactive auth card
     expect(wrapper.find('.glass-panel').exists()).toBe(true)
   })
@@ -374,7 +374,7 @@ describe('pages/login.vue', () => {
       }
     })
 
-    const dividerContainer = wrapper.find('.relative.my-5')
+    const dividerContainer = wrapper.find('.relative.my-4, .relative.my-5')
     expect(dividerContainer.exists()).toBe(true)
 
     const absoluteLine = dividerContainer.find('.absolute.inset-0.flex.items-center')
@@ -421,10 +421,9 @@ describe('pages/login.vue', () => {
     await forgotLink!.trigger('click')
     await flushPromises()
 
-    // Header updates to forgot password title
-    expect(wrapper.text()).toContain('auth.forgot_password_title')
-    expect(wrapper.text()).toContain('auth.forgot_password_subtitle')
-
+    // Header updates to recovery title
+    expect(wrapper.text()).toContain('auth.recover_cockpit_title')
+    expect(wrapper.text()).toContain('auth.recover_cockpit_subtitle')
     // Submit with email
     const emailInput = wrapper.find('input[type="email"]')
     await emailInput.setValue('developer@techdaily.io')
@@ -497,6 +496,138 @@ describe('pages/login.vue', () => {
       expect(wrapper.find('[data-testid="header"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="sidebar"]').exists()).toBe(true)
       globalRoute.useRoute = origUseRoute
+    })
+  })
+
+  describe('Studio Cockpit Layout & Telemetry Architecture', () => {
+    it('renders clean top header branding without telemetry clutter or version pill', () => {
+      const wrapper = mount(LoginPage, {
+        global: {
+          stubs: {
+            NuxtLink: { template: '<a><slot /></a>' },
+            LocaleSelector: { template: '<div data-testid="locale-selector">Locale</div>' },
+            ThemeToggle: { template: '<div data-testid="theme-toggle">Theme</div>' }
+          }
+        }
+      })
+
+      expect(wrapper.text()).toContain('TechDaily')
+      expect(wrapper.text()).not.toContain('IDE')
+      expect(wrapper.text()).not.toContain('v2.5.0-sys')
+      expect(wrapper.text()).not.toContain('PING 18ms')
+      expect(wrapper.text()).not.toContain('auth.status_operational')
+      expect(wrapper.text()).not.toContain('auth.system_invariant')
+      expect(wrapper.find('[data-testid="locale-selector"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="theme-toggle"]').exists()).toBe(true)
+    })
+
+    it('renders curriculum telemetry showcase with gauges and live code showcase', () => {
+      const wrapper = mount(LoginPage, {
+        global: {
+          stubs: {
+            NuxtLink: { template: '<a><slot /></a>' }
+          }
+        }
+      })
+
+      // Left showcase elements
+      expect(wrapper.text()).toContain('TECHDAILY')
+      expect(wrapper.text()).toContain('SM-2 ACTIVE RECALL')
+      expect(wrapper.text()).toContain('auth.cockpit_title')
+      expect(wrapper.text()).toContain('auth.session_interval_target')
+      expect(wrapper.text()).toContain('auth.session_interval_hit')
+      expect(wrapper.text()).toContain('auth.sm2_spaced_decay')
+      expect(wrapper.text()).toContain('auth.sm2_decay_value')
+
+      // Live code card
+      expect(wrapper.text()).toContain('auth.file_consensus')
+      expect(wrapper.text()).toContain('techDaily.getDailySlice')
+    })
+
+    it('renders interactive auth cockpit card with shortcut badges and session persistence', () => {
+      globalObj.useRuntimeConfig().public.googleClientId = ''
+      const wrapper = mount(LoginPage, {
+        global: {
+          stubs: {
+            NuxtLink: { template: '<a><slot /></a>' }
+          }
+        }
+      })
+
+      // Google OAuth button present, GitHub OAuth removed
+      expect(wrapper.text()).toContain('⌘L')
+      expect(wrapper.text()).not.toContain('⌘G')
+
+      // Monospace labels
+      expect(wrapper.text()).toContain('auth.dev_handle_label')
+      expect(wrapper.text()).toContain('auth.secret_token_label')
+      // Session persistence and submit shortcut
+      expect(wrapper.text()).toContain('auth.remember_session')
+      expect(wrapper.text()).toContain('↵ RETURN')
+    })
+
+    it('does not render bottom compliance telemetry bar or redundant status lines', () => {
+      const wrapper = mount(LoginPage, {
+        global: {
+          stubs: {
+            NuxtLink: { template: '<a><slot /></a>' }
+          }
+        }
+      })
+
+      expect(wrapper.text()).not.toContain('auth.compliance_footer')
+      expect(wrapper.text()).not.toContain('auth.node_secure')
+      expect(wrapper.text()).not.toContain('auth.tls_badge')
+      expect(wrapper.find('footer').exists()).toBe(false)
+    })
+  })
+  describe('Studio Cockpit Account Recovery & 3-Tab Switcher', () => {
+    it('switches to recovery mode via top segmented recovery tab', async () => {
+      const wrapper = mount(LoginPage, {
+        global: {
+          stubs: {
+            NuxtLink: { template: '<a><slot /></a>' }
+          }
+        }
+      })
+
+      // Find recovery tab in top segmented switcher
+      const buttons = wrapper.findAll('button')
+      const recoveryTab = buttons.find(b => b.text().includes('auth.recovery_tab_title'))
+      expect(recoveryTab).toBeDefined()
+      await recoveryTab!.trigger('click')
+      await flushPromises()
+
+      // Assert recovery header and advisory notice
+      expect(wrapper.text()).toContain('auth.recover_cockpit_title')
+      expect(wrapper.text()).toContain('auth.recover_cockpit_subtitle')
+      expect(wrapper.text()).toContain('auth.account_email_label')
+      expect(wrapper.text()).toContain('auth.oauth_bypass_notice')
+      expect(wrapper.text()).toContain('auth.send_recovery_link_btn')
+      expect(wrapper.text()).toContain('auth.back_to_signin_btn')
+
+      // Click "Back to Sign In"
+      const backBtn = wrapper.findAll('button').find(b => b.text().includes('auth.back_to_signin_btn'))
+      expect(backBtn).toBeDefined()
+      await backBtn!.trigger('click')
+      await flushPromises()
+
+      // Returns to login mode
+      expect(wrapper.text()).toContain('auth.welcome_title')
+    })
+
+    it('renders zero-knowledge security footnote and legal links in card footer', () => {
+      const wrapper = mount(LoginPage, {
+        global: {
+          stubs: {
+            NuxtLink: { template: '<a><slot /></a>' }
+          }
+        }
+      })
+
+      expect(wrapper.text()).toContain('auth.zero_knowledge_badge')
+      expect(wrapper.text()).toContain('auth.terms_link')
+      expect(wrapper.text()).toContain('auth.privacy_link')
     })
   })
 })
