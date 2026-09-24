@@ -275,7 +275,7 @@ async function confirmDeleteHighlight() {
 <template>
   <div class="py-4 sm:py-6 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-canvas min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] transition-colors duration-200">
     <div class="max-w-7xl mx-auto">
-      <BoardLayout class="w-full">
+      <BoardLayout flat class="w-full">
         <!-- Header -->
         <template #header>
           <div class="flex items-center gap-3">
@@ -365,59 +365,24 @@ async function confirmDeleteHighlight() {
               class="glass-card p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-brand-400 dark:hover:border-brand-500/30 transition-all flex flex-col justify-between shadow-xs space-y-3"
             >
               <div class="space-y-3">
-                <!-- Reference bar -->
+                <!-- Reference bar: Dedicated to document source context -->
                 <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-semibold gap-2">
-                  <div class="flex items-center gap-1.5 min-w-0">
+                  <div class="flex items-center gap-1.5 min-w-0 flex-1" :title="`${item.bookTitle} • ${item.chapterTitle}`">
                     <BookOpen class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400 shrink-0" />
-                    <span class="text-slate-800 dark:text-slate-200 truncate">{{ item.bookTitle }}</span>
+                    <span class="text-slate-800 dark:text-slate-200 font-bold truncate">{{ item.bookTitle || 'Document' }}</span>
                     <span class="text-slate-400 dark:text-slate-600 shrink-0">•</span>
-                    <span class="truncate">{{ item.chapterTitle }}</span>
+                    <span class="text-slate-500 dark:text-slate-400 truncate">{{ item.chapterTitle || 'Reading Slice' }}</span>
                   </div>
 
-                  <div class="flex items-center gap-1.5 shrink-0">
-                    <!-- Edit Note action button -->
-                    <button
-                      @click="startEditing(item)"
-                      :disabled="editingHighlightId === item.id"
-                      class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-canvas-subtle hover:bg-slate-100 dark:hover:bg-canvas-elevated border-slate-200/80 dark:border-white/[0.08] disabled:opacity-50"
-                      :title="$t('notes.edit_note')"
-                    >
-                      <Pencil class="w-3.5 h-3.5 text-brand-500" />
-                      <span class="hidden sm:inline">{{ $t('notes.edit_note') }}</span>
-                    </button>
-
-                    <!-- Deliberate Flashcard SM-2 creation button -->
-                    <button
-                      @click="handleCreateFlashcard(item.id)"
-                      :disabled="creatingCardHighlightId === item.id || createdCardHighlightIds.has(item.id) || item.hasFlashcard"
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 disabled:opacity-60"
-                      :class="(createdCardHighlightIds.has(item.id) || item.hasFlashcard)
-                        ? 'bg-brand-500/15 text-brand-600 dark:text-brand-400 border-brand-500/30'
-                        : 'bg-brand-50/70 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 hover:bg-brand-100/80 dark:hover:bg-brand-500/20 border-brand-200/80 dark:border-brand-500/20'"
-                      :title="(createdCardHighlightIds.has(item.id) || item.hasFlashcard) ? $t('notes.in_sm2') : $t('notes.create_flashcard')"
-                    >
-                      <Check v-if="createdCardHighlightIds.has(item.id) || item.hasFlashcard" class="w-3.5 h-3.5 text-brand-500" />
-                      <Zap v-else class="w-3.5 h-3.5 text-brand-500" />
-                      <span class="hidden sm:inline">{{
-                        (createdCardHighlightIds.has(item.id) || item.hasFlashcard)
-                          ? $t('notes.in_sm2')
-                          : creatingCardHighlightId === item.id
-                            ? $t('notes.creating_card')
-                            : $t('notes.create_flashcard')
-                      }}</span>
-                    </button>
-
-                    <!-- Delete button -->
-                    <button
-                      @click="openDeleteModal(item.id)"
-                      class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors shrink-0"
-                      :title="$t('notes.delete_btn')"
-                    >
-                      <Trash2 class="w-4 h-4" />
-                    </button>
-                  </div>
+                  <!-- Delete button (compact icon in top-right) -->
+                  <button
+                    @click="openDeleteModal(item.id)"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0"
+                    :title="$t('notes.delete_btn')"
+                  >
+                    <Trash2 class="w-4 h-4" />
+                  </button>
                 </div>
-
                 <!-- Highlight Quote -->
                 <blockquote class="border-l-2 border-brand-500/60 pl-3 py-0.5 text-xs sm:text-sm text-slate-800 dark:text-slate-200 italic leading-relaxed line-clamp-4">
                   "{{ item.selectedText }}"
@@ -484,21 +449,61 @@ async function confirmDeleteHighlight() {
                 </template>
               </div>
 
-              <!-- Card Footer: Tags -->
-              <div v-if="item.tags?.length" class="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
-                <button
-                  v-for="(tag, i) in item.tags"
-                  :key="i"
-                  @click="selectTag(tag)"
-                  :class="[
-                    'px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors whitespace-nowrap shrink-0',
-                    selectedTag === tag.trim().replace(/^#/, '').toLowerCase()
-                      ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                      : 'bg-slate-100 dark:bg-canvas-subtle hover:bg-brand-100 dark:hover:bg-brand-900/40 text-slate-600 dark:text-slate-400 hover:text-brand-700 dark:hover:text-brand-300 border-slate-200 dark:border-white/[0.08]'
-                  ]"
-                >
-                  #{{ tag.replace(/^#/, '') }}
-                </button>
+              <!-- Card Footer: Tags & Action Buttons -->
+              <div class="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                <!-- Tags row -->
+                <div class="flex flex-wrap items-center gap-1.5 min-w-0">
+                  <template v-if="item.tags?.length">
+                    <button
+                      v-for="(tag, i) in item.tags"
+                      :key="i"
+                      @click="selectTag(tag)"
+                      :class="[
+                        'px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-colors whitespace-nowrap shrink-0',
+                        selectedTag === tag.trim().replace(/^#/, '').toLowerCase()
+                          ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                          : 'bg-slate-100 dark:bg-canvas-subtle hover:bg-brand-100 dark:hover:bg-brand-900/40 text-slate-600 dark:text-slate-400 hover:text-brand-700 dark:hover:text-brand-300 border-slate-200 dark:border-white/[0.08]'
+                      ]"
+                    >
+                      #{{ tag.replace(/^#/, '') }}
+                    </button>
+                  </template>
+                </div>
+
+                <!-- Primary Action Buttons -->
+                <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+                  <!-- Edit Note action button -->
+                  <button
+                    @click="startEditing(item)"
+                    :disabled="editingHighlightId === item.id"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-canvas-subtle hover:bg-slate-100 dark:hover:bg-canvas-elevated border-slate-200/80 dark:border-white/[0.08] disabled:opacity-50 active:scale-95 cursor-pointer"
+                    :title="$t('notes.edit_note')"
+                  >
+                    <Pencil class="w-3.5 h-3.5 text-brand-500" />
+                    <span>{{ $t('notes.edit_note') }}</span>
+                  </button>
+
+                  <!-- Deliberate Flashcard SM-2 creation button -->
+                  <button
+                    @click="handleCreateFlashcard(item.id)"
+                    :disabled="creatingCardHighlightId === item.id || createdCardHighlightIds.has(item.id) || item.hasFlashcard"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 disabled:opacity-60 active:scale-95 cursor-pointer"
+                    :class="(createdCardHighlightIds.has(item.id) || item.hasFlashcard)
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-brand-50/70 dark:bg-brand-500/10 text-brand-700 dark:text-brand-300 hover:bg-brand-100/80 dark:hover:bg-brand-500/20 border-brand-200/80 dark:border-brand-500/20'"
+                    :title="(createdCardHighlightIds.has(item.id) || item.hasFlashcard) ? $t('notes.in_sm2') : $t('notes.create_flashcard')"
+                  >
+                    <Check v-if="createdCardHighlightIds.has(item.id) || item.hasFlashcard" class="w-3.5 h-3.5 text-emerald-500" />
+                    <Zap v-else class="w-3.5 h-3.5 text-brand-500" />
+                    <span>{{
+                      (createdCardHighlightIds.has(item.id) || item.hasFlashcard)
+                        ? $t('notes.in_sm2')
+                        : creatingCardHighlightId === item.id
+                          ? $t('notes.creating_card')
+                          : $t('notes.create_flashcard')
+                    }}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

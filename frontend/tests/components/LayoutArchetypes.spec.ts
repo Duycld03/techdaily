@@ -165,5 +165,23 @@ describe('BoardLayout.vue', () => {
   it('renders natural height when maxHeight is not provided', () => {
     const wrapper = mount(BoardLayout)
     expect((wrapper.element as HTMLElement).style.height).toBe('')
+    expect(wrapper.classes()).toContain('glass-card')
+  })
+
+  it('renders flat open-canvas mode without glass-card when flat is true', () => {
+    const wrapper = mount(BoardLayout, {
+      props: {
+        flat: true
+      },
+      slots: {
+        header: '<div>Header</div>',
+        filters: '<div>Filters</div>',
+        content: '<div>Content</div>',
+        pagination: '<div>Pagination</div>'
+      }
+    })
+
+    expect(wrapper.classes()).not.toContain('glass-card')
+    expect(wrapper.classes()).toContain('space-y-4')
   })
 })

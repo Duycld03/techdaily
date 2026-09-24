@@ -1,9 +1,38 @@
-# notes Specification
+# Spec Delta: notes
 
-## Purpose
-Provides a dedicated reading notes and highlights management hub (`/notes`), enabling software engineers to curate chapter highlights, edit personal technical reflections and tags inline, filter by tags and search keywords, and deliberately generate SuperMemo SM-2 flashcards without interface clutter from saved insights.
+## MODIFIED Requirements
 
-## Requirements
+### Requirement: Technical Notes Board Layout Integration
+The technical notes archive interface (`frontend/pages/notes.vue`) SHALL implement the `BoardLayout` archetype (`BoardLayout.vue`) in **flat open-canvas mode** (`:flat="true"`), rendering directly onto the obsidian background canvas (`bg-slate-50 dark:bg-canvas`) without an enclosing outer `.glass-card` container ("card tổng").
+
+1. **Flat Open-Canvas Shell**:
+   - The root layout SHALL NOT enclose the page sections within a parent `.glass-card` container or force an artificial overflow scroll box.
+   - The page header, search and filter bars, notes content grid, and pagination controls SHALL flow naturally within `max-w-7xl mx-auto space-y-4`, preventing double-card nesting and eliminating artificial black margins.
+
+2. **Header Slot (`#header`)**:
+   - Houses the Notes Archive title, subtitle, and primary action triggers directly on the canvas without an enclosing card border.
+
+3. **Filters Slot (`#filters`)**:
+   - Houses the full-text search input with shortcut indicator and horizontal scrollable tag filter chips (#All, #Database, #Vue, #Kafka).
+
+4. **Content Grid Slot (`#content`)**:
+   - Renders saved technical highlights in a responsive auto-flowing grid: 1 column on mobile, 2 columns on tablets/small laptops (`md:grid-cols-2`), and 3 columns on standard desktop viewports (`xl:grid-cols-3 gap-4`).
+   - Each individual note item SHALL render as its own self-contained `.glass-card`.
+
+5. **Pagination Slot (`#pagination`)**:
+   - Houses the paginated navigation controls (`BasePagination.vue`).
+
+#### Scenario: Browsing Technical Highlights on Desktop
+- **WHEN** an engineer views their saved highlights on a 1920x1080 display
+- **THEN** highlights render as compact, structured cards distributed evenly across a 2-to-3 column grid spanning the available container width, with search and tag filters pinned at the top.
+
+#### Scenario: Browsing Technical Highlights on Open Canvas
+- **WHEN** an engineer views their saved highlights on `/notes`
+- **THEN** the page renders directly on the obsidian canvas without an enclosing outer `.glass-card` shell
+- **AND** the individual note cards sit as first-class elevation cards on the canvas
+- **AND** zero double-card nesting occurs.
+
+---
 
 ### Requirement: Dedicated Reading Notes Management View
 The `/notes` page SHALL serve as an exclusive reading notes hub, displaying user highlights with book titles, chapter titles, selected excerpt quotes, reflection notes, tags, timestamps, and persistent flashcard association state (`HasFlashcard`), adhering to the **Dev-Learning Studio** visual theme:
@@ -141,85 +170,3 @@ The `/notes` page SHALL serve as an exclusive reading notes hub, displaying user
 - **WHEN** user views the bottom of a note card on `/notes`
 - **THEN** the tag badges appear on the left side of the footer divider
 - **AND** the "Edit Note" and "Flashcard SM-2" action buttons appear on the right side of the footer divider with comfortable click targets.
-
-### Requirement: Highlight Reflection and Tag Updating
-The system SHALL provide an API endpoint `PUT /api/v1/notes/highlights/{id}` allowing users to update the personal reflection note and technical tags of an existing reading highlight. The frontend `/notes` interface SHALL provide an inline editing mechanism for highlights, enabling in-place editing of notes and tags without page reloads.
-
-#### Scenario: User saves updated reflection note and tags inline
-- **WHEN** user clicks "Edit Note" on a highlight card in `/notes`, modifies the note text and tag list, and clicks "Save Changes"
-- **THEN** client sends `PUT /api/v1/notes/highlights/{id}` with `note` and `tags`
-- **AND** backend validates the request, updates `Note`, `Tags`, and `UpdatedAt` on the entity, and returns HTTP 200 OK with the updated highlight DTO
-- **AND** frontend updates the highlight card in `useNotesStore` and displays a success toast (`notes.toast_update_success`).
-
-#### Scenario: User clears reflection note
-- **WHEN** user clears the note text and submits the inline editor
-- **THEN** client sends `PUT /api/v1/notes/highlights/{id}` with `note = null` or empty string
-- **AND** backend clears the `Note` property on the highlight and persists changes.
-
-#### Scenario: Unauthorized update attempt
-- **WHEN** user attempts to update a highlight belonging to another user account
-- **THEN** backend rejects the request with HTTP 404 Not Found or HTTP 403 Forbidden without modifying database records.
-
----
-
-### Requirement: Deliberate Flashcard SM-2 Creation from Notes
-Each highlight card in `/notes` SHALL feature a deliberate "Flashcard SM-2" action button to convert the excerpt and reflection into an active recall spaced repetition card (`POST /api/v1/review/cards/from-highlight`). Flashcard synthesis SHALL be strictly fail-fast: the backend SHALL invoke AI active recall synthesis and, if the external AI service fails (e.g. network timeout, rate limits, unconfigured key, or provider errors), the system SHALL immediately return an error result without persisting any synthetic fallback cards into the database, preserving data integrity and preventing review deck pollution.
-
-Flashcard creation state SHALL be persistently reflected on the highlight card: upon card creation or initial page load where `HasFlashcard = true`, the action button transitions to a disabled badge displaying `<Check />` and localized text `notes.in_sm2` ("Đã Trong SM-2" / "In SM-2"), preserving state across browser refreshes. When card creation fails due to AI downtime or timeouts, the action button SHALL remain active in the unconverted state, allowing the user to retry when the service recovers.
-
-#### Scenario: User creates SM-2 flashcard from highlight
-- **WHEN** user clicks "Flashcard SM-2" on a highlight card in `/notes`
-- **THEN** client invokes `POST /api/v1/review/cards/from-highlight` with `highlightId` and current user `locale`
-- **AND** backend creates or retrieves the `SpacedRepetitionCard` with `SourceType = CardSourceType.Highlight`, `SourceHighlightId = highlightId`, `FrontMarkdown = excerpt`, and `BackMarkdown = note / summary`
-- **AND** frontend displays a success toast (`notes.toast_flashcard_success`) and immediately marks the card as created with the green `In SM-2` check badge.
-
-#### Scenario: User attempts to create SM-2 flashcard when AI service fails or times out (Fail-Fast with No Database Writes)
-- **WHEN** user clicks "Flashcard SM-2" on a highlight card in `/notes` and the AI service times out, exceeds rate limits (429), or returns an error
-- **THEN** backend aborts execution and immediately returns an error failure result (HTTP 400 Bad Request)
-- **AND** does NOT insert, create, or persist any `SpacedRepetitionCard` records in the database, ensuring zero junk data
-- **AND** frontend catches the API failure and presents a localized error toast (`notes.toast_flashcard_error`) to inform the user
-- **AND** the highlight card action button remains in the active `⚡ Flashcard SM-2` state without transitioning to the disabled `In SM-2` state, enabling the user to retry later.
-#### Scenario: User reloads notes hub after creating flashcards
-- **WHEN** user reloads `/notes` (F5) or revisits the page after previously converting highlights into flashcards
-- **THEN** client fetches highlights via `GET /api/v1/notes/highlights`
-- **AND** backend queries `SpacedRepetitionCards` for the current user and returns `HasFlashcard = true` for each linked highlight
-- **AND** client populates `createdCardHighlightIds` with all highlight IDs having `hasFlashcard: true`
-- **AND** all previously converted highlights immediately render the disabled green `<Check />` `In SM-2` button without reverting to the amber `⚡ Flashcard SM-2` state.
-
-#### Scenario: Highlight deleted after flashcard generation
-- **WHEN** user deletes a highlight that previously generated an SM-2 flashcard
-- **THEN** backend soft-deletes the `UserHighlight` record
-- **AND** the foreign key on `SpacedRepetitionCards.SourceHighlightId` is set to null via `onDelete: ReferentialAction.SetNull`
-- **AND** the flashcard remains fully intact and schedulable in the user's review deck with its persisted front and back markdown.
-
-### Requirement: Technical Notes Board Layout Integration
-The technical notes archive interface (`frontend/pages/notes.vue`) SHALL implement the `BoardLayout` archetype (`BoardLayout.vue`) in **flat open-canvas mode** (`:flat="true"`), rendering directly onto the obsidian background canvas (`bg-slate-50 dark:bg-canvas`) without an enclosing outer `.glass-card` container ("card tổng").
-
-1. **Flat Open-Canvas Shell**:
-   - The root layout SHALL NOT enclose the page sections within a parent `.glass-card` container or force an artificial overflow scroll box.
-   - The page header, search and filter bars, notes content grid, and pagination controls SHALL flow naturally within `max-w-7xl mx-auto space-y-4`, preventing double-card nesting and eliminating artificial black margins.
-
-2. **Header Slot (`#header`)**:
-   - Houses the Notes Archive title, subtitle, and primary action triggers directly on the canvas without an enclosing card border.
-
-3. **Filters Slot (`#filters`)**:
-   - Houses the full-text search input with shortcut indicator and horizontal scrollable tag filter chips (#All, #Database, #Vue, #Kafka).
-
-4. **Content Grid Slot (`#content`)**:
-   - Renders saved technical highlights in a responsive auto-flowing grid: 1 column on mobile, 2 columns on tablets/small laptops (`md:grid-cols-2`), and 3 columns on standard desktop viewports (`xl:grid-cols-3 gap-4`).
-   - Each individual note item SHALL render as its own self-contained `.glass-card`.
-
-5. **Pagination Slot (`#pagination`)**:
-   - Houses the paginated navigation controls (`BasePagination.vue`).
-
-#### Scenario: Browsing Technical Highlights on Desktop
-- **WHEN** an engineer views their saved highlights on a 1920x1080 display
-- **THEN** highlights render as compact, structured cards distributed evenly across a 2-to-3 column grid spanning the available container width, with search and tag filters pinned at the top.
-
-#### Scenario: Browsing Technical Highlights on Open Canvas
-- **WHEN** an engineer views their saved highlights on `/notes`
-- **THEN** the page renders directly on the obsidian canvas without an enclosing outer `.glass-card` shell
-- **AND** the individual note cards sit as first-class elevation cards on the canvas
-- **AND** zero double-card nesting occurs.
-
----

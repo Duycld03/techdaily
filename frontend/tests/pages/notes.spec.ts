@@ -70,8 +70,23 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     // Highlight content rendered
     expect(wrapper.text()).toContain('Replication lag can cause stale reads')
     expect(wrapper.text()).toContain('DDIA')
-  })
+    expect(wrapper.text()).toContain('Chapter 1: Reliability')
 
+    // BoardLayout uses flat mode (open canvas without outer glass-card)
+    const boardLayout = wrapper.findComponent({ name: 'BoardLayout' })
+    expect(boardLayout.exists()).toBe(true)
+    expect(boardLayout.props('flat')).toBe(true)
+
+    // Header contains document reference and delete button
+    const deleteBtn = wrapper.find('button[title="notes.delete_btn"]')
+    expect(deleteBtn.exists()).toBe(true)
+
+    // Footer contains action buttons (edit and flashcard)
+    const editBtn = wrapper.find('button[title="notes.edit_note"]')
+    expect(editBtn.exists()).toBe(true)
+    const flashcardBtn = wrapper.find('button[title="notes.create_flashcard"]')
+    expect(flashcardBtn.exists()).toBe(true)
+  })
   it('toggles inline editing mode on highlight card and saves updates', async () => {
     const wrapper = mount(NotesPage, {
       global: {
