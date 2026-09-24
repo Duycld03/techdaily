@@ -61,7 +61,7 @@ async function setAuthMode(mode: 'login' | 'register' | 'forgot-password') {
   authMode.value = mode
   errorMessage.value = ''
   confirmPassword.value = ''
-  if (mode !== 'forgot-password') {
+  if (mode === 'login') {
     await nextTick()
     renderGoogleButton()
   }
@@ -145,10 +145,21 @@ function renderGoogleButton() {
 }
 
 function triggerGoogleSignIn() {
+  const btnContainer = googleBtnContainer.value
+  const googleBtn = btnContainer?.querySelector('div[role="button"]') as HTMLElement | null
+  if (googleBtn) {
+    googleBtn.click()
+    return
+  }
+
   const gsi = (window as any).google?.accounts?.id
   if (gsi && config.public.googleClientId) {
     try {
-      gsi.prompt()
+      gsi.prompt((notification: any) => {
+        if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
+          console.warn('[TechDaily Auth] GSI prompt not displayed:', notification.getNotDisplayedReason?.() || notification.getSkippedReason?.())
+        }
+      })
       return
     } catch (e) {
       console.warn('[TechDaily Auth] GSI prompt failed:', e)
@@ -162,7 +173,7 @@ watch(() => colorMode.value, () => {
 })
 
 watch(() => authMode.value, async (mode) => {
-  if (mode !== 'forgot-password') {
+  if (mode === 'login') {
     await nextTick()
     renderGoogleButton()
   }
@@ -444,29 +455,32 @@ async function handleSubmit() {
             </div>
 
             <!-- OAuth Provider (Google SSO) -->
-            <div v-if="authMode !== 'forgot-password'" class="mb-5">
-              <!-- Official Clean Full-Width Google Button (Zero Hover Clipping/Overflow) -->
-              <button 
-                type="button"
-                @click="triggerGoogleSignIn"
-                class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-[#202024] hover:bg-slate-200 dark:hover:bg-zinc-800 text-sm font-medium text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-white/[0.08] transition shadow-sm hover:border-slate-300 dark:hover:border-white/15 cursor-pointer"
-              >
-                <!-- Official Google Icon SVG with Transparent Background -->
-                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                  <path d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" fill="#4285F4"></path>
-                  <path d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z" fill="#34A853"></path>
-                  <path d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z" fill="#FBBC05"></path>
-                  <path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z" fill="#EA4335"></path>
-                </svg>
-                <span>{{ $t('auth.google_sign_in_with') }}</span>
-              </button>
+            <div v-if="authMode === 'login'" class="mb-5">
+              <!-- Interactive Wrapper with Invisible Native GSI Overlay (Guarantees Native Flow & Zero Overflow) -->
+              <div class="relative w-full overflow-hidden rounded-xl group">
+                <!-- Visual Custom Google Button -->
+                <button 
+                  type="button"
+                  @click="triggerGoogleSignIn"
+                  class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-[#202024] group-hover:bg-slate-200 dark:group-hover:bg-zinc-800 text-sm font-medium text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-white/[0.08] transition shadow-sm group-hover:border-slate-300 dark:group-hover:border-white/15 cursor-pointer"
+                >
+                  <!-- Official Google Icon SVG with Transparent Background -->
+                  <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" fill="#4285F4"></path>
+                    <path d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z" fill="#34A853"></path>
+                    <path d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z" fill="#FBBC05"></path>
+                    <path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z" fill="#EA4335"></path>
+                  </svg>
+                  <span>{{ $t('auth.google_sign_in_with') }}</span>
+                </button>
 
-              <!-- Hidden GSI Bridge for Auto-One-Tap / Background Prompt -->
-              <div
-                ref="googleBtnContainer"
-                class="hidden"
-                style="color-scheme: light;"
-              ></div>
+                <!-- Transparent GSI Native Target Overlay -->
+                <div
+                  ref="googleBtnContainer"
+                  class="absolute inset-0 opacity-0 cursor-pointer overflow-hidden flex items-center justify-center pointer-events-auto"
+                  style="z-index: 10;"
+                ></div>
+              </div>
 
               <!-- Divider -->
               <div class="relative my-5 flex items-center justify-center">
@@ -548,6 +562,7 @@ async function handleSubmit() {
                     {{ $t('auth.secret_token_label') }}
                   </label>
                   <button
+                    v-if="authMode === 'login'"
                     type="button"
                     @click="setAuthMode('forgot-password')"
                     class="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-500 transition cursor-pointer"
@@ -617,8 +632,8 @@ async function handleSubmit() {
                 </p>
               </div>
 
-              <!-- Remember Session Checkbox -->
-              <div v-if="authMode !== 'forgot-password'" class="flex items-center pt-1">
+              <!-- Remember Session Checkbox (Login Mode Only) -->
+              <div v-if="authMode === 'login'" class="flex items-center pt-1">
                 <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-600 dark:text-zinc-400 select-none">
                   <input
                     v-model="rememberSession"
@@ -697,5 +712,11 @@ async function handleSubmit() {
 .tech-border-glow {
   box-shadow: 0 0 45px -10px rgba(124, 58, 237, 0.22),
               inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+input:focus,
+input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 </style>

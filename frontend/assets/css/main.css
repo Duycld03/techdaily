@@ -35,13 +35,22 @@
   button:focus-visible,
   a:focus-visible,
   [role="button"]:focus-visible,
-  input:focus-visible,
-  textarea:focus-visible,
+  input:focus-visible:not(.bg-transparent),
+  textarea:focus-visible:not(.bg-transparent),
   select:focus-visible {
     outline: 2px solid #8b5cf6 !important;
     outline-offset: 2px !important;
     box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.2) !important;
     -webkit-tap-highlight-color: transparent !important;
+  }
+
+  /* Suppress inner input outlines for styled container wrappers */
+  input.bg-transparent:focus,
+  input.bg-transparent:focus-visible,
+  textarea.bg-transparent:focus,
+  textarea.bg-transparent:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   /* Universal form select normalization & custom chevron indicator */

@@ -183,6 +183,11 @@ describe('pages/login.vue', () => {
     expect(passwordInputs.length).toBe(2) // Password and Confirm Password inputs
     expect(passwordInputs[0].attributes('placeholder')).toBeTruthy()
     expect(passwordInputs[1].attributes('placeholder')).toBeTruthy()
+
+    // In register mode, forgot password link, remember session checkbox, and Google OAuth must NOT be displayed
+    expect(wrapper.text()).not.toContain('auth.forgot_password_link')
+    expect(wrapper.text()).not.toContain('auth.remember_session')
+    expect(wrapper.text()).not.toContain('auth.google_sign_in_with')
   })
 
   it('shows password mismatch warning when confirm password does not match', async () => {
@@ -564,6 +569,26 @@ describe('pages/login.vue', () => {
       // Session persistence and submit shortcut
       expect(wrapper.text()).toContain('auth.remember_session')
       expect(wrapper.text()).toContain('↵ RETURN')
+    })
+
+    it('provides transparent native Google GSI overlay and triggers sign in flow', async () => {
+      const wrapper = mount(LoginPage, {
+        global: {
+          stubs: {
+            NuxtLink: { template: '<a><slot /></a>' }
+          }
+        }
+      })
+
+      const googleBtnWrapper = wrapper.find('.group.relative')
+      expect(googleBtnWrapper.exists()).toBe(true)
+
+      const overlay = googleBtnWrapper.find('.absolute.inset-0')
+      expect(overlay.exists()).toBe(true)
+      expect(overlay.classes()).toContain('opacity-0')
+
+      const customBtn = googleBtnWrapper.find('button')
+      await customBtn.trigger('click')
     })
 
     it('does not render bottom compliance telemetry bar or redundant status lines', () => {
