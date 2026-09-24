@@ -69,13 +69,13 @@ onBeforeUnmount(() => {
         <!-- Dialog Shell: 3-tier flex column capped at 85vh -->
         <div
           :class="[
-            'relative z-10 flex max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl dark:border-white/[0.08] dark:bg-canvas-elevated',
+            'relative z-10 flex max-h-[85vh] w-full flex-col overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-200/80 bg-white dark:bg-canvas-elevated shadow-2xl dark:border-white/[0.1] text-slate-900 dark:text-slate-100',
             maxWidth
           ]"
         >
           <!-- Fixed Header -->
           <header
-            class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 px-4 sm:px-6 py-3.5 dark:border-white/[0.08]"
+            class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 px-5 sm:px-6 py-4 dark:border-white/[0.08]"
           >
             <div class="min-w-0 flex-1">
               <slot name="header">
@@ -87,21 +87,21 @@ onBeforeUnmount(() => {
             <button
               type="button"
               aria-label="Close dialog"
-              class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/[0.06] dark:hover:text-white shrink-0 cursor-pointer"
+              class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors shrink-0 cursor-pointer"
               @click="emit('close')"
             >
-              <X class="h-4 w-4" :stroke-width="1.5" />
+              <X class="h-5 w-5" :stroke-width="1.5" />
             </button>
           </header>
 
           <!-- Scrollable Body -->
-          <div class="modal-scroll-container max-h-[60vh] flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4 [scrollbar-gutter:stable]">
+          <div class="modal-scroll-container max-h-[60vh] flex-1 overflow-y-auto px-5 sm:px-6 py-4 sm:py-5 space-y-4 [scrollbar-gutter:stable]">
             <slot />
           </div>
 
           <!-- Sticky Footer -->
           <footer
-            class="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200/80 bg-slate-50/90 px-4 sm:px-6 py-3 dark:border-white/[0.08] dark:bg-canvas-subtle/80"
+            class="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200/80 bg-slate-50/90 px-5 sm:px-6 py-3.5 dark:border-white/[0.08] dark:bg-canvas-subtle/80"
           >
             <slot name="footer">
               <button

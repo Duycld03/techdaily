@@ -288,32 +288,12 @@ describe('FlashcardBentoCard.vue', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('review.source_highlight')
-    expect(wrapper.text()).toContain('review.status_reviewing')
-    expect(wrapper.text()).toContain('review.due_today')
     expect(wrapper.text()).toContain('Explain how MVCC works in PostgreSQL.')
-    expect(wrapper.text()).toContain('review.repetitions')
-    expect(wrapper.text()).toContain('review.interval_days')
-    expect(wrapper.text()).toContain('review.ease_factor')
-  })
-
-  it('toggles accordion answer on button click', async () => {
-    const wrapper = mount(FlashcardBentoCard, {
-      props: {
-        card: mockCard
-      }
-    })
-
-    expect(wrapper.text()).toContain('review.show_answer')
-    expect(wrapper.text()).not.toContain('PostgreSQL uses xmin/xmax tuple headers')
-
-    // Click show answer
-    const toggleBtn = wrapper.findAll('button').find((b) => b.text().includes('review.show_answer'))
-    expect(toggleBtn).toBeDefined()
-    await toggleBtn!.trigger('click')
-
-    expect(wrapper.text()).toContain('review.hide_answer')
-    expect(wrapper.text()).toContain('PostgreSQL uses xmin/xmax tuple headers')
+    expect(wrapper.text()).toContain('PostgreSQL uses xmin/xmax tuple headers to determine visibility.')
+    expect(wrapper.text()).toContain('review.card_urgency_due')
+    expect(wrapper.text()).toContain('review.card_ef_interval')
+    expect(wrapper.text()).toContain('review.card_source')
+    expect(wrapper.text()).toContain('review.card_details_btn')
   })
 
   it('emits edit, reset, and delete when action buttons are clicked', async () => {

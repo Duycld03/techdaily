@@ -262,6 +262,13 @@
   background-color: transparent !important;
   line-height: inherit !important;
 }
+/* Shiki dual-theme support: Light mode uses inline color (vitesse-light); Dark mode switches to --shiki-dark (vitesse-dark) */
+html.dark .shiki,
+html.dark .shiki span,
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+}
 
 /* Code comment typography: italic styling for enhanced developer readability */
 .code-block-wrapper pre .comment,
@@ -273,7 +280,11 @@
 .shiki span[style*="color:#6272a4"],
 .shiki span[style*="color:#6a737d"],
 .shiki span[style*="color:#758575"],
-.shiki span[style*="color:#808080"] {
+.shiki span[style*="color:#808080"],
+.shiki span[style*="color:#a0ada0"],
+.shiki span[style*="color:#8a998a"],
+.shiki span[style*="color:#A0ADA0"],
+.shiki span[style*="color:#8A998A"] {
   font-style: italic !important;
 }
 

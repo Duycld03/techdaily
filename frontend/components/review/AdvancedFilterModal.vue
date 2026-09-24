@@ -65,7 +65,7 @@ function handleBackdropClick(e: MouseEvent) {
       @click="handleBackdropClick"
     >
       <div
-        class="w-full max-w-xl rounded-3xl glass-panel text-slate-900 dark:text-white shadow-2xl p-5 sm:p-6 space-y-6 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
+        class="w-full max-w-2xl rounded-3xl glass-panel text-slate-900 dark:text-white shadow-2xl p-5 sm:p-6 space-y-6 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
       >
@@ -98,7 +98,7 @@ function handleBackdropClick(e: MouseEvent) {
           <label class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('review.filter_knowledge_source') }}
           </label>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
               @click="localSourceType = null"
@@ -155,7 +155,7 @@ function handleBackdropClick(e: MouseEvent) {
           <label class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('review.filter_mastery_stage') }}
           </label>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
               @click="localStatus = null"
@@ -212,7 +212,7 @@ function handleBackdropClick(e: MouseEvent) {
           <label class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('review.filter_urgency') }}
           </label>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
               @click="localUrgency = null"
@@ -269,12 +269,12 @@ function handleBackdropClick(e: MouseEvent) {
           <label class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('review.filter_sort') }}
           </label>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
               @click="localSortBy = null"
               :class="[
-                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left whitespace-nowrap',
+                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap cursor-pointer',
                 localSortBy === null
                   ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.04]'
@@ -286,7 +286,7 @@ function handleBackdropClick(e: MouseEvent) {
               type="button"
               @click="localSortBy = 'nextReviewDate_desc'"
               :class="[
-                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left whitespace-nowrap',
+                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap cursor-pointer',
                 localSortBy === 'nextReviewDate_desc'
                   ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.04]'
@@ -298,7 +298,7 @@ function handleBackdropClick(e: MouseEvent) {
               type="button"
               @click="localSortBy = 'difficulty'"
               :class="[
-                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left whitespace-nowrap',
+                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap cursor-pointer',
                 localSortBy === 'difficulty'
                   ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.04]'
@@ -310,7 +310,7 @@ function handleBackdropClick(e: MouseEvent) {
               type="button"
               @click="localSortBy = 'recent'"
               :class="[
-                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-left whitespace-nowrap',
+                'px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap cursor-pointer',
                 localSortBy === 'recent'
                   ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.04]'

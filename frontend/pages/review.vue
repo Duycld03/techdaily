@@ -23,11 +23,11 @@ import {
   FileText,
   SlidersHorizontal,
   Gauge,
-  Keyboard
+  Keyboard,
+  Flame
 } from 'lucide-vue-next'
 import confetti from 'canvas-confetti'
 import StudioLayout from '~/components/layout/StudioLayout.vue'
-import FlashcardDeck from '~/components/review/FlashcardDeck.vue'
 import FlashcardHeroCard from '~/components/review/FlashcardHeroCard.vue'
 import MasteryGaugeCard from '~/components/review/MasteryGaugeCard.vue'
 import ReviewForecastChart from '~/components/review/ReviewForecastChart.vue'
@@ -659,95 +659,70 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
     <!-- ========================================================================= -->
     <!-- TAB 2: DECK MANAGEMENT                                                    -->
     <!-- ========================================================================= -->
-    <div v-else-if="activeTab === 'management'" class="w-full max-w-5xl space-y-6">
-      <!-- 1. Bento Overview (3 Cards) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <FlashcardHeroCard
-          :due-count="reviewStore.totalCardsDue"
-          @start-review="activeTab = 'session'"
-        />
-        <MasteryGaugeCard
-          :mastered-count="reviewStore.deckStatistics.masteredCount"
-          :total-count="reviewStore.deckStatistics.totalCards"
-        />
-        <ReviewForecastChart
-          :cards="reviewStore.deckCards.length > 0 ? reviewStore.deckCards : reviewStore.cards"
-        />
-      </div>
-
-      <!-- 2. Quick Search & Filter Bar -->
-      <div class="p-4 sm:p-5 glass-card space-y-3.5">
-        <!-- Search input with ⌘K -->
-        <div class="relative flex items-center">
-          <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            ref="searchInputRef"
-            v-model="searchQuery"
-            type="text"
-            class="w-full pl-10 pr-20 py-2.5 text-xs sm:text-sm rounded-2xl bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
-            :placeholder="$t('review.search_placeholder')"
-          />
-          <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-            <button
-              v-if="searchQuery"
-              @click="searchQuery = ''"
-              class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
-            >
-              <X class="w-4 h-4" />
-            </button>
-            <kbd class="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-slate-400 bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08] select-none">
-              ⌘K
-            </kbd>
-          </div>
-        </div>
-
-        <!-- Quick Filter Chips & Advanced Filter Button -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-white/[0.06]">
-          <!-- Quick Filter Chips -->
-          <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-            <button
-              type="button"
-              @click="setQuickFilter('all')"
-              :class="[
-                'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
-                selectedStatus === null && selectedUrgency === null
-                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                  : 'bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.06] hover:border-white/[0.15]'
-              ]"
-            >
-              {{ $t('review.quick_filter_all') }}
-            </button>
-            <button
-              type="button"
-              @click="setQuickFilter('due')"
-              :class="[
-                'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
-                selectedUrgency === 'due'
-                  ? 'bg-amber-600 text-white border-transparent shadow-sm'
-                  : 'bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.06] hover:border-white/[0.15]'
-              ]"
-            >
-              {{ $t('review.quick_filter_due') }}
-            </button>
-            <button
-              type="button"
-              @click="setQuickFilter('mastered')"
-              :class="[
-                'px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
-                selectedStatus === 2
-                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                  : 'bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/[0.06] hover:border-white/[0.15]'
-              ]"
-            >
-              {{ $t('review.quick_filter_mastered') }}
-            </button>
+    <div v-else-if="activeTab === 'management'" class="w-full max-w-7xl mx-auto space-y-5">
+      <!-- 1. Header: Bento Overview (3 Cards) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
+            <FlashcardHeroCard
+              :due-count="reviewStore.totalCardsDue"
+              @start-review="activeTab = 'session'"
+            />
+            <MasteryGaugeCard
+              :mastered-count="reviewStore.deckStatistics.masteredCount"
+              :total-count="reviewStore.deckStatistics.totalCards"
+            />
+            <ReviewForecastChart
+              :cards="reviewStore.deckCards.length > 0 ? reviewStore.deckCards : reviewStore.cards"
+            />
           </div>
 
+      <!-- 2. Filters & Search Bar (Trực tiếp trên nền Canvas) -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+        <!-- Quick Filter Chips -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0">
+          <button
+            type="button"
+            @click="setQuickFilter('all')"
+            :class="[
+              'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
+              selectedStatus === null && selectedUrgency === null
+                ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08]'
+            ]"
+          >
+            <Layers class="w-3.5 h-3.5" />
+            <span>{{ $t('review.quick_filter_all') }} ({{ reviewStore.deckTotalCount || reviewStore.deckStatistics.totalCards }})</span>
+          </button>
+          <button
+            type="button"
+            @click="setQuickFilter('due')"
+            :class="[
+              'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
+              selectedUrgency === 'due'
+                ? 'bg-amber-600 text-white border-transparent shadow-sm'
+                : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08]'
+            ]"
+          >
+            <Flame class="w-3.5 h-3.5" :class="selectedUrgency === 'due' ? 'text-white' : 'text-amber-500'" />
+            <span>{{ $t('review.quick_filter_due') }} ({{ reviewStore.totalCardsDue }})</span>
+          </button>
+          <button
+            type="button"
+            @click="setQuickFilter('mastered')"
+            :class="[
+              'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
+              selectedStatus === 2
+                ? 'bg-emerald-600 text-white border-transparent shadow-sm'
+                : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08]'
+            ]"
+          >
+            <Check class="w-3.5 h-3.5" :class="selectedStatus === 2 ? 'text-white' : 'text-emerald-500'" />
+            <span>{{ $t('review.quick_filter_mastered') }} ({{ reviewStore.deckStatistics.masteredCount }})</span>
+          </button>
           <!-- Advanced Filter Trigger Button -->
           <button
             type="button"
             @click="isAdvancedFilterOpen = true"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.06] hover:border-white/[0.15] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-canvas-subtle text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08] hover:border-brand-500/40 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
             <SlidersHorizontal class="w-3.5 h-3.5" />
             <span>{{ $t('review.advanced_filter_btn') }}</span>
@@ -759,46 +734,71 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
             </span>
           </button>
         </div>
-      </div>
 
-      <!-- 3. Cards Bento Grid -->
-      <div v-if="reviewStore.isDeckLoading" class="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 text-sm">
-        <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mb-3"></div>
-        <span>Loading flashcard library...</span>
-      </div>
-
-      <div v-else-if="displayedCards.length > 0" class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
-          <FlashcardBentoCard
-            v-for="card in displayedCards"
-            :key="card.id"
-            :card="card"
-            @edit="openEditModal"
-            @reset="openResetModal"
-            @delete="openDeleteModal"
+        <!-- Search input with ⌘K -->
+        <div class="relative w-full sm:w-72 shrink-0">
+          <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
+          <input
+            ref="searchInputRef"
+            v-model="searchQuery"
+            type="text"
+            :placeholder="$t('review.search_placeholder')"
+            class="w-full pl-9 pr-14 py-1.5 text-xs rounded-xl bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brand-500 shadow-sm"
           />
+          <div class="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <button
+              v-if="searchQuery"
+              type="button"
+              @click="searchQuery = ''"
+              class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
+            >
+              <X class="w-3.5 h-3.5" />
+            </button>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-400 bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08]">⌘K</span>
+          </div>
         </div>
-
-        <!-- Pagination Controls -->
-        <BasePagination
-          :current-page="reviewStore.deckCurrentPage"
-          :total-pages="totalPages"
-          :total-count="reviewStore.deckTotalCount"
-          :page-size="reviewStore.deckPageSize"
-          show-summary
-          @change="onDeckPageChange"
-        />
       </div>
 
-      <!-- Empty Deck State -->
-      <div v-else class="text-center py-16 glass-card p-8 space-y-3">
-        <Layers class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto" />
-        <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $t('review.empty_deck') }}</h3>
-        <p v-if="searchQuery || selectedStatus !== null || selectedSource !== null || selectedUrgency !== null" class="text-xs text-slate-500 max-w-sm mx-auto">
-          Try clearing search filters to see all cards in your library.
-        </p>
+
+      <!-- 3. Content: Flashcard Inventory Cards -->
+      <!-- Loading state -->
+          <div v-if="reviewStore.isDeckLoading" class="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 text-sm">
+            <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mb-3"></div>
+            <span>{{ $t('review.loading_deck') }}</span>
+          </div>
+
+          <!-- Cards Bento Grid -->
+          <div v-else-if="displayedCards.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 items-start">
+            <FlashcardBentoCard
+              v-for="card in displayedCards"
+              :key="card.id"
+              :card="card"
+              @edit="openEditModal"
+              @reset="openResetModal"
+              @delete="openDeleteModal"
+            />
+          </div>
+
+          <!-- Empty Deck State -->
+          <div v-else class="text-center py-16 glass-card p-8 space-y-3">
+            <Layers class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto" />
+            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $t('review.empty_deck') }}</h3>
+            <p v-if="searchQuery || selectedStatus !== null || selectedSource !== null || selectedUrgency !== null" class="text-xs text-slate-500 max-w-sm mx-auto">
+              {{ $t('review.empty_deck_hint') }}
+            </p>
+          </div>
+      <!-- 4. Pagination -->
+      <div v-if="displayedCards.length > 0" class="w-full pt-1">
+            <BasePagination
+              :current-page="reviewStore.deckCurrentPage"
+              :total-pages="totalPages"
+              :total-count="reviewStore.deckTotalCount"
+              :page-size="reviewStore.deckPageSize"
+              show-summary
+              @change="onDeckPageChange"
+            />
+          </div>
       </div>
-    </div>
     <!-- ========================================================================= -->
     <!-- MODALS (Teleported to Body)                                               -->
     <!-- ========================================================================= -->

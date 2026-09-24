@@ -36,24 +36,27 @@ describe('useNavigationMenu', () => {
     expect(account.links[0]?.name).toBe('nav.settings_profile')
   })
 
-  it('includes showcase route in development mode (isDev = true)', () => {
+  it('includes playground and showcase routes in development mode (isDev = true)', () => {
     const devGroups = getNavGroups(true)
     const account = devGroups[2]
     expect(account).toBeDefined()
     expect(account?.links.map((l) => l.path)).toEqual([
       '/settings',
+      '/playground/temp',
       '/showcase'
     ])
-    expect(account?.links[1]?.name).toBe('nav.showcase')
+    expect(account?.links[1]?.name).toBe('nav.playground')
+    expect(account?.links[2]?.name).toBe('nav.showcase')
   })
 
-  it('excludes showcase route when running in production mode (import.meta.dev = false)', () => {
+  it('excludes playground and showcase routes when running in production mode (import.meta.dev = false)', () => {
     const prodGroups = getNavGroups(false)
     expect(prodGroups).toHaveLength(3)
 
     const account = prodGroups[2]
     expect(account).toBeDefined()
     expect(account?.links.map((l) => l.path)).toEqual(['/settings'])
+    expect(account?.links.some((l) => l.path === '/playground/temp')).toBe(false)
     expect(account?.links.some((l) => l.path === '/showcase')).toBe(false)
   })
 
@@ -82,7 +85,10 @@ describe('useNavigationMenu', () => {
     expect(isLinkActive('/settings', '/settings')).toBe(true)
     expect(isLinkActive('/settings', '/profile')).toBe(true)
 
-    // When on exact routes
+    // When on /playground
+    expect(isLinkActive('/playground/temp', '/playground')).toBe(true)
+    expect(isLinkActive('/playground/temp', '/playground/temp')).toBe(true)
+    expect(isLinkActive('/playground/temp', '/settings')).toBe(false)
     expect(isLinkActive('/settings', '/settings')).toBe(true)
     expect(isLinkActive('/profile', '/settings')).toBe(false)
   })

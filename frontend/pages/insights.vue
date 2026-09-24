@@ -17,7 +17,8 @@ import {
   ExternalLink,
   Plus,
   X,
-  Lightbulb
+  Lightbulb,
+  FileCode2
 } from 'lucide-vue-next'
 import { useInsightsStore } from '~/stores/useInsightsStore'
 import { useAuthStore } from '~/stores/useAuthStore'
@@ -35,8 +36,7 @@ const viewMode = ref<'explore' | 'saved'>('explore')
 const bookmarkedCount = computed(() => insightsStore.bookmarkedInsights.length)
 
 function renderMarkdown(raw: string | undefined | null): string {
-  if (!raw) return ''
-  const clean = raw.replace(/\\n/g, '\n').replace(/\\`/g, '`')
+  const clean = raw.normalize('NFC').replace(/\\n/g, '\n').replace(/\\`/g, '`')
   return md.render(clean)
 }
 
@@ -206,136 +206,142 @@ function getCategoryBadge(cat: number) {
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto py-4 sm:py-5 px-4 sm:px-6 space-y-4 animate-in fade-in duration-300">
-    <!-- Header Banner -->
-    <div class="p-4 sm:p-5 rounded-2xl glass-panel border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-white shadow-sm relative overflow-hidden transition-all space-y-3">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 relative z-10">
-        <div class="space-y-1 flex-1 min-w-0">
-          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/20 text-xs font-bold uppercase tracking-wider">
-            <Sparkles class="w-3.5 h-3.5" />
-            <span>{{ $t('insights.badge') }}</span>
+  <div class="py-4 sm:py-6 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-canvas min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] transition-colors duration-200">
+    <div class="max-w-7xl mx-auto space-y-4">
+      <!-- 1. Header Banner -->
+      <div class="p-5 sm:p-6 rounded-2xl glass-panel border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-white shadow-sm relative overflow-hidden transition-all">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 relative z-10">
+            <div class="space-y-1 flex-1 min-w-0">
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/20 text-xs font-bold uppercase tracking-wider">
+                <Sparkles class="w-3.5 h-3.5" />
+                <span>{{ $t('insights.badge') }}</span>
+              </div>
+
+            <h1 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+              {{ $t('insights.title') }}
+            </h1>
+
+            <p class="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-medium leading-relaxed max-w-2xl">
+              {{ $t('insights.subtitle') }}
+            </p>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+              <button
+                @click="insightsStore.shuffle()"
+                class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-white dark:bg-canvas-subtle hover:bg-slate-50 dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all border border-slate-200/80 dark:border-white/[0.08] shadow-sm active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+                :title="$t('insights.shuffle')"
+              >
+                <Shuffle class="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <span>{{ $t('insights.shuffle') }}</span>
+              </button>
+
+              <button
+                @click="isGenerateModalOpen = true"
+                class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-bold transition-all shadow-md shadow-brand-500/20 active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <Plus class="w-4 h-4" />
+                <span>{{ $t('insights.generate_ai') }}</span>
+              </button>
+            </div>
+        </div>
+      </div>
+
+      <!-- 2. Controls & Filter Bar -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full pt-1">
+            <!-- View Mode Switcher -->
+            <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-xl w-fit shrink-0">
+              <button
+                @click="switchViewMode('explore')"
+                :class="[
+                  'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 border cursor-pointer',
+                  viewMode === 'explore'
+                    ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 border-slate-200/80 dark:border-white/[0.12] shadow-sm'
+                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                ]"
+              >
+                <Sparkles class="w-3.5 h-3.5 text-brand-500" />
+                <span>{{ $t('insights.view_explore') }}</span>
+              </button>
+              <button
+                @click="switchViewMode('saved')"
+                :class="[
+                  'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 border cursor-pointer',
+                  viewMode === 'saved'
+                    ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 border-slate-200/80 dark:border-white/[0.12] shadow-sm'
+                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                ]"
+              >
+                <BookmarkCheck class="w-3.5 h-3.5 text-brand-500" />
+                <span>{{ $t('insights.view_saved', { count: bookmarkedCount }) }}</span>
+              </button>
+            </div>
+
+            <!-- Category Filter Bar -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0">
+              <button
+                v-for="cat in computedCategories"
+                :key="String(cat.id)"
+                @click="handleCategorySelect(cat.id)"
+                :class="[
+                  'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 border whitespace-nowrap cursor-pointer',
+                  insightsStore.selectedCategory === cat.id
+                    ? 'bg-brand-600 text-white border-transparent shadow-sm shadow-brand-500/20'
+                    : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
+                ]"
+              >
+                {{ cat.label }}
+              </button>
+            </div>
+      </div>
+
+      <!-- 3. Content Surface: Loading, Empty, or Active Insight Card -->
+          <!-- Main Card Container Loading -->
+          <div v-if="insightsStore.isLoading" class="flex flex-col items-center justify-center py-20 space-y-4">
+            <div class="w-10 h-10 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin"></div>
+            <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading senior technical insights...</p>
           </div>
 
-          <h1 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-            {{ $t('insights.title') }}
-          </h1>
-
-          <p class="text-slate-600 dark:text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl">
-            {{ $t('insights.subtitle') }}
-          </p>
-        </div>
-
-        <div class="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap w-full sm:w-auto">
-          <button
-            @click="insightsStore.shuffle()"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-white dark:bg-canvas-subtle hover:bg-slate-50 dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold transition-all border border-slate-200/80 dark:border-white/[0.08] shadow-sm active:scale-95"
-            :title="$t('insights.shuffle')"
+          <!-- Empty State: Saved Mode -->
+          <div
+            v-else-if="!insightsStore.currentInsight && viewMode === 'saved'"
+            class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl glass-card border border-slate-200/80 dark:border-white/[0.08] space-y-4"
           >
-            <Shuffle class="w-4 h-4 text-slate-500 dark:text-slate-400" />
-            <span>{{ $t('insights.shuffle') }}</span>
-          </button>
+            <div class="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto text-brand-500 border border-brand-500/20">
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ $t('insights.saved_empty_title') }}</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ $t('insights.saved_empty_desc') }}</p>
+            <button
+              @click="switchViewMode('explore')"
+              class="px-5 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-500 shadow-md shadow-brand-500/20 transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0"
+            >
+              <Sparkles class="w-4 h-4" />
+              <span>{{ $t('insights.saved_empty_cta') }}</span>
+            </button>
+          </div>
 
-          <button
-            @click="isGenerateModalOpen = true"
-            class="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-bold transition-all shadow-md shadow-brand-500/20 active:scale-95"
+          <!-- Empty State: Explore Mode -->
+          <div
+            v-else-if="!insightsStore.currentInsight"
+            class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl glass-card border border-slate-200/80 dark:border-white/[0.08] space-y-4"
           >
-            <Plus class="w-4 h-4" />
-            <span>{{ $t('insights.generate_ai') }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-    <!-- View Mode Switcher -->
-    <div class="flex items-center gap-2 p-1 bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-2xl w-fit">
-      <button
-        @click="switchViewMode('explore')"
-        :class="[
-          'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors inline-flex items-center gap-2 whitespace-nowrap shrink-0 border',
-          viewMode === 'explore'
-            ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 border-slate-200/80 dark:border-white/[0.12] shadow-sm'
-            : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-        ]"
-      >
-        <Sparkles class="w-4 h-4 text-brand-500" />
-        <span>{{ $t('insights.view_explore') }}</span>
-      </button>
-      <button
-        @click="switchViewMode('saved')"
-        :class="[
-          'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors inline-flex items-center gap-2 whitespace-nowrap shrink-0 border',
-          viewMode === 'saved'
-            ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 border-slate-200/80 dark:border-white/[0.12] shadow-sm'
-            : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-        ]"
-      >
-        <BookmarkCheck class="w-4 h-4 text-brand-500" />
-        <span>{{ $t('insights.view_saved', { count: bookmarkedCount }) }}</span>
-      </button>
-    </div>
+            <div class="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto text-brand-500 border border-brand-500/20">
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ $t('insights.empty_title') }}</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ $t('insights.empty_desc') }}</p>
+            <button
+              @click="isGenerateModalOpen = true"
+              class="px-5 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-500 shadow-md shadow-brand-500/20 transition-all whitespace-nowrap shrink-0"
+            >
+              {{ $t('insights.generate_ai') }}
+            </button>
+          </div>
 
-    <!-- Category Filter Bar -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-      <button
-        v-for="cat in computedCategories"
-        :key="String(cat.id)"
-        @click="handleCategorySelect(cat.id)"
-        :class="[
-          'px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shrink-0 border whitespace-nowrap',
-          insightsStore.selectedCategory === cat.id
-            ? 'bg-brand-600 text-white border-transparent shadow-sm shadow-brand-500/20'
-            : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
-        ]"
-      >
-        {{ cat.label }}
-      </button>
-    </div>
-
-    <!-- Main Card Container -->
-    <div v-if="insightsStore.isLoading" class="flex flex-col items-center justify-center py-20 space-y-4">
-      <div class="w-10 h-10 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin"></div>
-      <p class="text-sm font-semibold text-slate-500 dark:text-slate-400">Loading senior technical insights...</p>
-    </div>
-
-    <!-- Empty State: Saved Mode -->
-    <div
-      v-else-if="!insightsStore.currentInsight && viewMode === 'saved'"
-      class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl glass-card border border-slate-200/80 dark:border-white/[0.08] space-y-4"
-    >
-      <div class="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto text-brand-500 border border-brand-500/20">
-      </div>
-      <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ $t('insights.saved_empty_title') }}</h3>
-      <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ $t('insights.saved_empty_desc') }}</p>
-      <button
-        @click="switchViewMode('explore')"
-        class="px-5 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-500 shadow-md shadow-brand-500/20 transition-all inline-flex items-center gap-2 whitespace-nowrap shrink-0"
-      >
-        <Sparkles class="w-4 h-4" />
-        <span>{{ $t('insights.saved_empty_cta') }}</span>
-      </button>
-    </div>
-
-    <!-- Empty State: Explore Mode -->
-    <div
-      v-else-if="!insightsStore.currentInsight"
-      class="p-8 sm:p-12 text-center rounded-2xl sm:rounded-3xl glass-card border border-slate-200/80 dark:border-white/[0.08] space-y-4"
-    >
-      <div class="w-12 h-12 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto text-brand-500 border border-brand-500/20">
-      </div>
-      <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ $t('insights.empty_title') }}</h3>
-      <p class="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto">{{ $t('insights.empty_desc') }}</p>
-      <button
-        @click="isGenerateModalOpen = true"
-        class="px-5 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-500 shadow-md shadow-brand-500/20 transition-all whitespace-nowrap shrink-0"
-      >
-        {{ $t('insights.generate_ai') }}
-      </button>
-    </div>
-
-    <!-- Active Insight Card -->
-    <div
-      v-else
-      class="rounded-2xl sm:rounded-3xl glass-card border border-slate-200/80 dark:border-white/[0.08] shadow-xl overflow-hidden transition-all duration-300"
-    >
+          <!-- Active Insight Card -->
+          <div
+            v-else
+            class="rounded-2xl sm:rounded-3xl glass-card border border-slate-200/80 dark:border-white/[0.08] shadow-xl overflow-hidden transition-all duration-300"
+          >
       <!-- Card Top Header -->
       <div class="p-4 sm:p-7 md:p-8 border-b border-slate-100 dark:border-white/[0.06] space-y-3.5 sm:space-y-4">
         <div class="flex items-center justify-between gap-3">
@@ -393,56 +399,48 @@ function getCategoryBadge(cat: number) {
         ></div>
       </div>
 
-      <!-- Code Snippets Showcase -->
-      <div class="p-4 sm:p-7 md:p-8 bg-slate-50/60 dark:bg-canvas-subtle/50 border-b border-slate-100 dark:border-white/[0.06] space-y-4 sm:space-y-5">
-        <div class="flex items-center justify-between border-b border-slate-200/80 dark:border-white/[0.08] pb-3">
-          <div class="flex items-center gap-2">
-            <button
-              @click="activeCodeTab = 'solution'"
-              :class="[
-                'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all',
-                activeCodeTab === 'solution'
-                  ? 'bg-brand-500/15 text-brand-700 dark:text-brand-300 border border-brand-500/30'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-              ]"
-            >
-              <CheckCircle2 class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-500" />
-              <span>{{ $t('insights.solution_tab') }}</span>
-            </button>
-
-            <button
-              @click="activeCodeTab = 'problem'"
-              :class="[
-                'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all',
-                activeCodeTab === 'problem'
-                  ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30'
-                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-              ]"
-            >
-              <XCircle class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-500" />
-              <span>{{ $t('insights.problem_tab') }}</span>
-            </button>
-          </div>
-
-          <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:inline">
-            Side-by-side Architectural Comparison
-          </span>
-        </div>
-
-        <!-- Code Block Render -->
+      <!-- Code Snippets Showcase (Unified Developer Terminal Header) -->
+      <div class="p-4 sm:p-7 md:p-8 bg-slate-50/60 dark:bg-canvas-subtle/50 border-b border-slate-100 dark:border-white/[0.06]">
         <div class="max-w-full">
           <CommonShikiCodeBlock
-            v-if="activeCodeTab === 'solution'"
-            :code="insightsStore.currentInsight.solutionSnippet"
+            :code="activeCodeTab === 'solution' ? (insightsStore.currentInsight.solutionSnippet || '') : (insightsStore.currentInsight.problemSnippet || '')"
             :category="insightsStore.currentInsight.category"
             :tags="insightsStore.currentInsight.tags"
-          />
-          <CommonShikiCodeBlock
-            v-else
-            :code="insightsStore.currentInsight.problemSnippet"
-            :category="insightsStore.currentInsight.category"
-            :tags="insightsStore.currentInsight.tags"
-          />
+          >
+            <template #left>
+              <div class="flex items-center gap-2.5">
+                <FileCode2 class="h-4 w-4 shrink-0 text-brand-500 dark:text-brand-400" />
+                <div class="flex items-center p-0.5 rounded-lg bg-slate-200/80 dark:bg-black/40 border border-slate-300/80 dark:border-white/[0.06]">
+                  <button
+                    type="button"
+                    @click="activeCodeTab = 'solution'"
+                    :class="[
+                      'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer',
+                      activeCodeTab === 'solution'
+                        ? 'bg-brand-500/20 text-brand-700 dark:text-brand-300 border border-brand-500/30 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
+                    ]"
+                  >
+                    <CheckCircle2 class="w-3.5 h-3.5 text-brand-500 dark:text-brand-400" />
+                    <span>{{ $t('insights.solution_tab') }}</span>
+                  </button>
+                  <button
+                    type="button"
+                    @click="activeCodeTab = 'problem'"
+                    :class="[
+                      'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer',
+                      activeCodeTab === 'problem'
+                        ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
+                    ]"
+                  >
+                    <XCircle class="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
+                    <span>{{ $t('insights.problem_tab') }}</span>
+                  </button>
+                </div>
+              </div>
+            </template>
+          </CommonShikiCodeBlock>
         </div>
       </div>
 
@@ -505,7 +503,7 @@ function getCategoryBadge(cat: number) {
         </div>
       </div>
     </div>
-
+    </div>
     <!-- AI Generator Modal Dialog (Teleported to Body) -->
     <Teleport to="body">
       <div

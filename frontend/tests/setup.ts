@@ -61,6 +61,7 @@ const mockRuntimeConfig = {
 ;(globalThis as any).navigateTo = vi.fn()
 Reflect.set(globalThis, 'clearError', vi.fn())
 Reflect.set(globalThis, 'definePageMeta', vi.fn())
+Reflect.set(globalThis, 'defineNuxtRouteMiddleware', (fn: any) => fn)
 
 ;(globalThis as any).defineNuxtConfig = (c: any) => c
 

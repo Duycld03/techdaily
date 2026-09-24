@@ -11,6 +11,7 @@ import SkeletonShimmer from '~/components/showcase/SkeletonShimmer.vue'
 import EmptyStateCard from '~/components/showcase/EmptyStateCard.vue'
 import FloatingSelectionToolbar from '~/components/showcase/FloatingSelectionToolbar.vue'
 import LayoutArchetypesShowcase from '~/components/showcase/LayoutArchetypesShowcase.vue'
+import IconShowcase from '~/components/showcase/IconShowcase.vue'
 import { useToast } from '~/composables/useToast'
 
 useHead({
@@ -313,6 +314,15 @@ function onToolbarAction(action: string) {
         subtitle="Full-page templates that fill the 1680px working width — no black voids, no stretched phone columns."
       >
         <LayoutArchetypesShowcase />
+      </ShowcaseSection>
+
+      <!-- 10. Engineering Iconography System -->
+      <ShowcaseSection
+        index="10"
+        title="Engineering Iconography"
+        subtitle="Standardized 24-icon kit for technical learning, mastery tracking, and telemetry."
+      >
+        <IconShowcase />
       </ShowcaseSection>
     </div>
   </div>

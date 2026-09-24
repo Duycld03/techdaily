@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
-import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb } from 'lucide-vue-next'
+import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb, GraduationCap, ChevronRight } from 'lucide-vue-next'
 import AppModal from '~/components/ui/AppModal.vue'
 import BasePagination from '~/components/common/BasePagination.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
@@ -573,160 +573,197 @@ async function confirmDeleteBook() {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 bg-slate-50 dark:bg-canvas transition-colors duration-200">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-          <BookOpen class="w-7 h-7 text-brand-600 dark:text-brand-400" />
-          <span>{{ $t('library.title') }}</span>
-        </h1>
-        <p class="text-sm md:text-lg text-slate-500 dark:text-slate-400 mt-1.5 font-medium">{{ $t('library.subtitle') }}</p>
-      </div>
+  <div class="py-4 sm:py-6 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-canvas min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] transition-colors duration-200">
+    <div class="max-w-7xl mx-auto space-y-4">
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
+                <BookOpen class="w-5 h-5" :stroke-width="1.5" />
+              </div>
+              <div>
+                <h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>{{ $t('library.title') }}</span>
+                </h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  {{ $t('library.subtitle') }}
+                </p>
+              </div>
+            </div>
 
-      <button
-        @click="isImportModalOpen = true"
-        class="flex items-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm transition-all shadow-md shadow-brand-500/20 active:scale-[0.98] shrink-0"
-      >
-        <Plus class="w-4 h-4" />
-        <span>{{ $t('library.import_btn') }}</span>
-      </button>
-    </div>
+            <div class="flex items-center gap-3">
+              <!-- Search Input -->
+              <div class="relative w-full sm:w-72 shrink-0">
+                <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
+                <input
+                  v-model="searchQuery"
+                  @keyup.enter="handleSearch"
+                  type="text"
+                  :placeholder="$t('library.search_placeholder')"
+                  class="w-full pl-9 pr-8 py-2 bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
+                />
+                <button
+                  v-if="searchQuery"
+                  @click="searchQuery = ''; handleSearch()"
+                  class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
+                >
+                  <X class="w-3.5 h-3.5" :stroke-width="1.5" />
+                </button>
+              </div>
 
-    <!-- Filters & Search -->
-    <div class="flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-start">
-      <!-- Category Pills -->
-      <div class="flex flex-wrap gap-2 flex-1">
-        <button
-          v-for="cat in categories"
-          :key="cat.label"
-          @click="handleCategorySelect(cat.id)"
-          :class="[
-            'px-4 py-2 rounded-xl text-xs sm:text-sm border transition-all outline-none focus:outline-none',
-            selectedCategory === cat.id
-              ? 'bg-slate-100 dark:bg-canvas-elevated border-slate-300 dark:border-white/[0.12] text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-              : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-white/[0.16] font-medium'
-          ]"
-        >
-          {{ cat.label }}
-        </button>
-      </div>
-
-      <!-- Search Input -->
-      <div class="relative w-full md:w-80 shrink-0">
-        <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input
-          v-model="searchQuery"
-          @keyup.enter="handleSearch"
-          type="text"
-          :placeholder="$t('library.search_placeholder')"
-          class="w-full pl-10 pr-4 py-2 bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
-        />
-      </div>
-    </div>
-
-    <!-- Books Grid -->
-    <div v-if="libraryStore.isLoading" class="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 text-sm">
-      <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mb-3"></div>
-      <span>{{ $t('library.loading') }}</span>
-    </div>
-
-    <div v-else-if="libraryStore.books.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-      <div
-        v-for="book in libraryStore.books"
-        :key="book.id"
-        class="glass-card p-4 sm:p-5 rounded-2xl border-slate-200/80 dark:border-white/[0.08] hover:border-brand-400 dark:hover:border-brand-500/30 transition-all flex flex-col justify-between space-y-3 group shadow-md dark:shadow-none"
-      >
-        <div class="flex flex-col flex-1">
-          <div class="flex items-center justify-between gap-2 mb-3.5">
-            <span class="px-3 py-1 rounded-lg bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-300 text-xs font-bold">
-              {{ getCategoryLabel(book.category) }}
-            </span>
-            <span class="text-xs text-slate-500 font-mono flex items-center gap-1">
-              <Layers class="w-3.5 h-3.5" />
-              {{ book.totalChunks }} {{ $t('library.chunks') }}
-            </span>
+              <!-- Import Document Button -->
+              <button
+                @click="isImportModalOpen = true"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm transition-all shadow-md shadow-brand-500/20 active:scale-[0.98] whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <Plus class="w-4 h-4" :stroke-width="2" />
+                <span>{{ $t('library.import_btn') }}</span>
+              </button>
+            </div>
           </div>
 
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors line-clamp-2 leading-snug">
-            {{ book.title }}
-          </h3>
+      <!-- Filters Bar -->
+      <div class="flex flex-wrap items-center gap-2 w-full py-0.5">
+            <button
+              v-for="cat in categories"
+              :key="cat.label"
+              @click="handleCategorySelect(cat.id)"
+              :class="[
+                'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm border transition-all outline-none focus:outline-none whitespace-nowrap shrink-0 cursor-pointer',
+                selectedCategory === cat.id
+                  ? 'bg-slate-100 dark:bg-canvas-elevated border-slate-300 dark:border-white/[0.12] text-brand-600 dark:text-brand-400 font-bold shadow-sm'
+                  : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-white/[0.16] font-medium'
+              ]"
+            >
+              {{ cat.label }}
+            </button>
+      </div>
+      <!-- Content Grid -->
+      <!-- Books Grid Loading -->
+          <div v-if="libraryStore.isLoading" class="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 text-sm">
+            <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mb-3"></div>
+            <span>{{ $t('library.loading') }}</span>
+          </div>
 
-          <p v-if="book.authorOrSourceUrl" class="text-xs sm:text-sm text-slate-500 mt-2 truncate font-mono">
-            {{ book.authorOrSourceUrl }}
-          </p>
+          <div v-else-if="libraryStore.books.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div
+              v-for="book in libraryStore.books"
+              :key="book.id"
+              class="p-5 rounded-2xl border border-slate-200/90 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle hover:border-brand-500/40 transition-all flex flex-col justify-between space-y-4 shadow-sm"
+            >
+              <div class="flex flex-col flex-1 space-y-2">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                  <span class="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-brand-500/10 text-brand-600 dark:text-brand-300 border border-brand-500/20 whitespace-nowrap shrink-0">
+                    {{ getCategoryLabel(book.category) }}
+                  </span>
+                  <span class="text-xs text-slate-400 font-mono flex items-center gap-1">
+                    <Bookmark class="w-3.5 h-3.5 text-brand-400" />
+                    {{ book.totalChunks }} {{ $t('library.chunks') }}
+                  </span>
+                </div>
 
-          <div class="mt-auto pt-3">
-            <!-- Bookmark Badge if exists -->
-            <div v-if="bookmarks[book.id]" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-300 text-xs sm:text-sm font-semibold">
-              <Bookmark class="w-3.5 h-3.5 text-brand-500 fill-brand-500" />
-              <span>{{ $t('library.resumes_at', { slice: bookmarks[book.id] }) }}</span>
-            </div>
-            <!-- Ready Badge if no bookmark -->
-            <div v-else-if="book.status === 'Ready' || (book.status as unknown as number) === 2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 text-xs sm:text-sm font-semibold">
-              <BookOpen class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
-              <span>{{ $t('library.ready_to_read') }}</span>
-            </div>
+                <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug">
+                  {{ book.title }}
+                </h3>
 
-            <!-- In-Progress Ingestion Indicator (Tier 1 Uploading) -->
-            <div v-if="book.status === 'Processing' || (book.status as any) === 1" class="p-3 rounded-2xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20">
-              <div class="flex items-center gap-2 text-xs font-semibold text-brand-700 dark:text-brand-300">
-                <Loader2 class="w-3.5 h-3.5 text-brand-500 animate-spin shrink-0" />
-                <span class="truncate">{{ getStatusMessage(book) }}</span>
+                <p v-if="book.authorOrSourceUrl" class="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
+                  {{ book.authorOrSourceUrl }}
+                </p>
+
+                <div class="mt-auto pt-3 space-y-2">
+                  <!-- Bookmark Badge if exists -->
+                  <div v-if="bookmarks[book.id]" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-300 text-xs font-semibold">
+                    <Bookmark class="w-3.5 h-3.5 text-brand-500 fill-brand-500" />
+                    <span>{{ $t('library.resumes_at', { slice: bookmarks[book.id] }) }}</span>
+                  </div>
+                  <!-- Ready Badge if no bookmark -->
+                  <div v-else-if="book.status === 'Ready' || (book.status as unknown as number) === 2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 text-xs font-semibold">
+                    <BookOpen class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                    <span>{{ $t('library.ready_to_read') }}</span>
+                  </div>
+                  <!-- In-Progress Ingestion Indicator -->
+                  <div v-if="book.status === 'Processing' || (book.status as any) === 1" class="p-3 rounded-2xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20">
+                    <div class="flex items-center gap-2 text-xs font-semibold text-brand-700 dark:text-brand-300">
+                      <Loader2 class="w-3.5 h-3.5 text-brand-500 animate-spin shrink-0" />
+                      <span class="truncate">{{ getStatusMessage(book) }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Progress Bar Row -->
+                  <div class="space-y-1 pt-1">
+                    <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                      <span class="inline-flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400 text-[11px]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        {{ book.status === 'Processing' || (book.status as any) === 1 ? $t('library.status_processing') : (bookmarks[book.id] ? (bookmarks[book.id] >= book.totalChunks ? $t('library.status_completed') : $t('library.status_in_progress')) : $t('library.status_ready')) }}
+                      </span>
+                      <span class="font-mono text-[11px]">
+                        {{ bookmarks[book.id] ? $t('library.slice_progress', { current: bookmarks[book.id], total: book.totalChunks, percent: Math.round((bookmarks[book.id] / (book.totalChunks || 1)) * 100) }) : $t('library.slices_total', { count: book.totalChunks }) }}
+                      </span>
+                    </div>
+                    <div class="w-full h-1 bg-slate-100 dark:bg-canvas-elevated rounded-full overflow-hidden">
+                      <div
+                        class="h-full bg-brand-500 rounded-full transition-all"
+                        :style="{ width: `${bookmarks[book.id] ? Math.min(100, Math.round((bookmarks[book.id] / (book.totalChunks || 1)) * 100)) : 0}%` }"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-2.5 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="text-[11px] text-slate-400 font-mono truncate max-w-[80px]">
+                    {{ book.sourceType === 2 ? 'PDF' : book.sourceType === 3 ? 'Web Doc' : 'Markdown' }}
+                  </span>
+                  <button
+                    @click.stop="openDeleteModal(book)"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                    :title="$t('library.delete_doc')"
+                    :aria-label="$t('library.delete_doc')"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    @click.stop="handleExportBook(book)"
+                    :disabled="exportingBookId === book.id"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-brand-500 hover:bg-brand-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                    :title="$t('reader.export_obsidian')"
+                    :aria-label="$t('reader.export_obsidian')"
+                  >
+                    <Download class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <NuxtLink
+                  :to="`/read/${book.id}`"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-500/10 text-brand-600 dark:text-brand-300 hover:bg-brand-500/20 border border-brand-500/30 whitespace-nowrap shrink-0 transition-colors"
+                >
+                  <GraduationCap class="w-3.5 h-3.5" />
+                  <span>{{ bookmarks[book.id] ? $t('library.continue_reading') : $t('library.read_book') }}</span>
+                  <ChevronRight class="w-3.5 h-3.5" />
+                </NuxtLink>
               </div>
             </div>
           </div>
-        </div>
-        <div class="pt-4 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-3">
-          <div class="flex items-center gap-1.5 min-w-0">
-            <button
-              @click.stop="openDeleteModal(book)"
-              class="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 transition-colors shrink-0"
-              :title="$t('library.delete_doc')"
-              :aria-label="$t('library.delete_doc')"
-            >
-              <Trash2 class="w-4 h-4" />
-            </button>
-            <button
-              @click.stop="handleExportBook(book)"
-              :disabled="exportingBookId === book.id"
-              class="p-2 rounded-xl text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-500/10 border border-transparent hover:border-brand-200 dark:hover:border-brand-500/20 transition-colors shrink-0 disabled:opacity-50"
-              :title="$t('reader.export_obsidian')"
-              :aria-label="$t('reader.export_obsidian')"
-            >
-              <Download class="w-4 h-4" />
-            </button>
-          </div>
 
-          <NuxtLink
-            :to="`/read/${book.id}`"
-            class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm transition-transform active:scale-95 shadow-sm whitespace-nowrap shrink-0"
-          >
-            <span>{{ bookmarks[book.id] ? $t('library.continue_reading') : $t('library.read_book') }}</span>
-            <ExternalLink class="w-3.5 h-3.5" />
-          </NuxtLink>
-        </div>
+          <!-- Empty state -->
+          <div v-else class="text-center py-16 glass-card rounded-2xl border border-slate-200/80 dark:border-white/[0.08] p-8 shadow-sm">
+            <FileText class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" :stroke-width="1.5" />
+            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $t('library.no_books') }}</h3>
+            <p class="text-sm text-slate-500 mt-1">{{ $t('library.empty_desc') }}</p>
+          </div>
+      <!-- Pagination -->
+      <div v-if="libraryStore.books.length > 0" class="w-full pt-1">
+        <BasePagination
+          :current-page="libraryStore.currentPage"
+          :total-pages="libraryStore.totalPages"
+          :total-count="libraryStore.totalCount"
+          :page-size="libraryStore.pageSize"
+          show-summary
+          @change="onPageChange"
+        />
       </div>
     </div>
-
-    <!-- Pagination -->
-    <BasePagination
-      v-if="libraryStore.books.length > 0"
-      :current-page="libraryStore.currentPage"
-      :total-pages="libraryStore.totalPages"
-      :total-count="libraryStore.totalCount"
-      :page-size="libraryStore.pageSize"
-      show-summary
-      @change="onPageChange"
-    />
-
-    <!-- Empty state -->
-    <div v-else class="text-center py-16 glass-card rounded-3xl border border-slate-200/80 dark:border-white/[0.08] p-8 shadow-sm">
-      <FileText class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
-      <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $t('library.no_books') }}</h3>
-      <p class="text-sm text-slate-500 mt-1">{{ $t('library.empty_desc') }}</p>
-    </div>
-
     <!-- Import Document Modal -->
     <AppModal
       :open="isImportModalOpen"

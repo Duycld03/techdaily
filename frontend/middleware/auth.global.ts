@@ -1,3 +1,5 @@
+import { useAuthStore } from '~/stores/useAuthStore'
+
 export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore()
 
@@ -16,7 +18,9 @@ export default defineNuxtRouteMiddleware((to) => {
     to.path.startsWith('/notes') ||
     to.path.startsWith('/profile') ||
     to.path.startsWith('/settings') ||
-    to.path.startsWith('/quiz')
+    to.path.startsWith('/quiz') ||
+    to.path.startsWith('/library') ||
+    to.path.startsWith('/read')
 
   // Logged-in users cannot visit /login
   if (isGuestOnly && hasToken) {

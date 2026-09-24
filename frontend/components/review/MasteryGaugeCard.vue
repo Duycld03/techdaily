@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Award } from 'lucide-vue-next'
+import { Award, TrendingUp } from 'lucide-vue-next'
 
 const props = defineProps<{
   masteredCount: number
@@ -13,6 +13,10 @@ const masteryRate = computed(() => {
   return Math.min(100, Math.max(0, Math.round(rate)))
 })
 
+const learningCount = computed(() => {
+  return Math.max(0, props.totalCount - props.masteredCount)
+})
+
 // Semi-circle arc circumference for radius = 45: π * 45 ≈ 141.37
 const arcCircumference = 141.37
 
@@ -20,7 +24,6 @@ const strokeDashoffset = computed(() => {
   const percent = masteryRate.value / 100
   return arcCircumference - percent * arcCircumference
 })
-
 const tierInfo = computed(() => {
   const rate = masteryRate.value
   if (rate <= 25) {
@@ -54,73 +57,76 @@ const tierInfo = computed(() => {
 
 <template>
   <div
-    class="rounded-3xl glass-card text-slate-900 dark:text-white p-5 sm:p-6 shadow-sm flex flex-col justify-between h-full min-h-[200px]"
+    class="rounded-2xl glass-card text-slate-900 dark:text-white p-5 shadow-sm flex flex-col justify-between h-full min-h-[190px]"
   >
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center">
-          <Award class="w-4 h-4" :stroke-width="1.5" />
+          <Award class="w-4 h-4" />
         </div>
         <div>
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          <h3 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
             {{ $t('review.mastery_rate') }}
           </h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
-            <span class="tabular-nums">{{ masteredCount }}</span> / <span class="tabular-nums">{{ totalCount }}</span> {{ $t('review.mastered_cards').toLowerCase() }}
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">
+            {{ $t('review.mastery_desc') }}
           </p>
         </div>
       </div>
-
-      <!-- Dynamic Proficiency Tier Badge -->
-      <span
-        :class="[
-          'px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors whitespace-nowrap',
-          tierInfo.badgeClass
-        ]"
-      >
+      <span :class="['px-2.5 py-1 rounded-full text-[11px] font-bold border whitespace-nowrap shrink-0', tierInfo.badgeClass]">
         {{ $t(tierInfo.labelKey) }}
       </span>
     </div>
 
-    <!-- Semi-Circular Radial Arc Gauge -->
-    <div class="relative flex flex-col items-center justify-center my-auto pt-3">
-      <div class="relative w-40 h-24 flex items-end justify-center">
-        <svg
-          class="w-full h-full overflow-visible"
-          viewBox="0 0 120 70"
-          aria-label="Mastery rate gauge"
-        >
-          <!-- Background Arc (180deg) -->
+    <!-- Semi-circular Gauge and Breakdown -->
+    <div class="flex items-center justify-center gap-5 py-1">
+      <div class="relative w-28 h-16 flex items-end justify-center">
+        <svg class="w-28 h-16 overflow-visible" viewBox="0 0 100 55" aria-label="Mastery rate gauge">
           <path
-            d="M 15 60 A 45 45 0 0 1 105 60"
+            d="M 5 50 A 45 45 0 0 1 95 50"
             fill="none"
             stroke="currentColor"
-            stroke-width="10"
+            stroke-width="8"
             stroke-linecap="round"
-            class="text-slate-100 dark:text-white/[0.08]"
+            class="text-slate-100 dark:text-white/[0.06]"
           />
-
-          <!-- Foreground Value Arc -->
           <path
-            d="M 15 60 A 45 45 0 0 1 105 60"
+            d="M 5 50 A 45 45 0 0 1 95 50"
             fill="none"
             stroke="currentColor"
-            stroke-width="10"
+            stroke-width="8"
             stroke-linecap="round"
+            :class="['transition-all duration-700', tierInfo.arcColor]"
             :stroke-dasharray="arcCircumference"
             :stroke-dashoffset="strokeDashoffset"
-            :class="['transition-all duration-700 ease-out', tierInfo.arcColor]"
           />
         </svg>
-
-        <!-- Center Numerical Label -->
-        <div class="absolute inset-x-0 bottom-0 text-center flex flex-col items-center pointer-events-none">
-          <span class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-none tabular-nums">
-            {{ masteryRate }}%
-          </span>
+        <div class="absolute bottom-0 text-center">
+          <span class="text-xl font-black text-slate-900 dark:text-white leading-none tabular-nums">{{ masteryRate }}%</span>
+          <span class="block text-[10px] text-slate-400 font-medium">{{ $t('review.mastery_label') }}</span>
         </div>
       </div>
+
+      <div class="space-y-1 text-xs text-slate-500 dark:text-slate-400">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-brand-500 shrink-0"></span>
+          <span class="tabular-nums">{{ $t('review.mastery_count_mastered', { count: masteredCount }) }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-slate-300 dark:bg-white/[0.2] shrink-0"></span>
+          <span class="tabular-nums">{{ $t('review.mastery_count_learning', { count: learningCount }) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Summary & Weekly Trend -->
+    <div class="pt-2 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+      <span class="tabular-nums">{{ $t('review.mastery_total_cards', { count: totalCount }) }}</span>
+      <span class="inline-flex items-center gap-1 font-mono text-emerald-500 font-bold whitespace-nowrap shrink-0">
+        <TrendingUp class="w-3.5 h-3.5" />
+        <span>{{ $t('review.mastery_weekly_trend', { percent: 12 }) }}</span>
+      </span>
     </div>
   </div>
 </template>

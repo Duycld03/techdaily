@@ -1,6 +1,7 @@
 import { createHighlighter, type Highlighter } from 'shiki'
 
 export const CODE_THEME = 'vitesse-dark'
+export const CODE_THEME_LIGHT = 'vitesse-light'
 
 export const SUPPORTED_LANGS = [
   'csharp',
@@ -36,7 +37,7 @@ export function getShikiHighlighter(): Promise<Highlighter> {
   if (highlighterInstance) return Promise.resolve(highlighterInstance)
   if (!highlighterPromise) {
     highlighterPromise = createHighlighter({
-      themes: [CODE_THEME],
+      themes: [CODE_THEME, CODE_THEME_LIGHT],
       langs: SUPPORTED_LANGS
     }).then((hl) => {
       highlighterInstance = hl
@@ -293,7 +294,7 @@ export function detectCodeLanguage(
 export async function highlightCode(
   code: string,
   lang: string,
-  theme = CODE_THEME
+  theme?: string
 ): Promise<string> {
   if (!code) return ''
 
@@ -304,9 +305,18 @@ export async function highlightCode(
     if (targetLang === 'vue' && !code.includes('<template') && !code.includes('<script')) {
       targetLang = 'typescript'
     }
+    if (theme) {
+      return highlighter.codeToHtml(code.trimEnd(), {
+        lang: targetLang,
+        theme
+      })
+    }
     return highlighter.codeToHtml(code.trimEnd(), {
       lang: targetLang,
-      theme
+      themes: {
+        light: CODE_THEME_LIGHT,
+        dark: CODE_THEME
+      }
     })
   } catch (err) {
     console.warn('Shiki syntax highlighting fallback:', err)
