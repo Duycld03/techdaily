@@ -6,7 +6,9 @@ import {
   ArrowRight,
   Flame,
   Shield,
-  Clock
+  Clock,
+  Target,
+  CheckCircle2
 } from 'lucide-vue-next'
 import ConcentricMetricCard from '~/components/today/ConcentricMetricCard.vue'
 import DomainConstellationCard from '~/components/dashboard/DomainConstellationCard.vue'
@@ -19,6 +21,7 @@ import BentoDashboardLayout from '~/components/layout/BentoDashboardLayout.vue'
 const emit = defineEmits<{
   (e: 'startReading'): void
   (e: 'startScenario'): void
+  (e: 'startTodayPractice'): void
 }>()
 const { t } = useI18n()
 
@@ -35,6 +38,7 @@ function handleStartReading() {
 }
 
 function handleStartScenario() {
+  emit('startTodayPractice')
   emit('startScenario')
   navigateTo('/today')
 }
@@ -49,9 +53,24 @@ const targetRole = computed(() => (authStore.user as any)?.targetRole || 'Senior
 
 const topic = computed(() => focusStore.data?.topic)
 const pacer = computed(() => focusStore.data?.pacer)
-const scenario = computed(() => focusStore.data?.scenario)
+const scenario = computed(() => (focusStore.data as any)?.scenario)
+const drill = computed(() => focusStore.data?.drill)
 const streak = computed(() => focusStore.data?.currentStreak ?? 0)
 const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 2)
+
+const curriculumDay = computed(() => topic.value?.dayOrder || 1)
+const curriculumDayText = computed(() => {
+  return t('dashboard.curriculum_day_badge', { day: curriculumDay.value, total: 30 })
+})
+
+const isDrillCompleted = computed(() => {
+  const status = drill.value?.status
+  return status === 1 || status === 2 || status === 'Submitted' || status === 'Reviewed' || drill.value?.isCorrect !== undefined
+})
+
+const drillScore = computed(() => {
+  return drill.value?.score ?? (drill.value?.isCorrect ? 10 : 0)
+})
 
 const sliceBadgeText = computed(() => {
   if (pacer.value && pacer.value.totalChunks > 0) {
@@ -221,45 +240,79 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Card B: Senior Scenario Challenge Card -->
-      <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-emerald-500/30 transition-all border border-slate-200/80 dark:border-white/[0.06] min-h-0">
+      <!-- Card B: Today's Practice Session Cockpit -->
+      <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-brand-500/30 transition-all border border-slate-200/80 dark:border-white/[0.06] min-h-0">
         <div>
+          <!-- Header: Icon, Category Badge, Curriculum Day & Status -->
           <div class="flex items-center justify-between gap-3 mb-3">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-center shrink-0">
-                <Terminal class="w-4 h-4" :stroke-width="1.5" />
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
+                <Target class="w-4 h-4" :stroke-width="1.5" />
               </div>
-              <div>
-                <span class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  {{ $t('today.interview_challenge') }}
-                </span>
-                <div class="text-xs text-slate-500 dark:text-slate-400">
-                  {{ $t('dashboard.scenario_subtitle') }}
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
+                    {{ $t('dashboard.today_practice_badge') }}
+                  </span>
+                </div>
+                <div class="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {{ curriculumDayText }}
                 </div>
               </div>
             </div>
 
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              +10 {{ $t('dashboard.points_reward') }}
-            </span>
+            <!-- Drill Completion Status Pill -->
+            <div class="shrink-0">
+              <span
+                v-if="isDrillCompleted"
+                class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap flex items-center gap-1"
+              >
+                <CheckCircle2 class="w-3 h-3" :stroke-width="1.5" />
+                <span>{{ $t('dashboard.status_completed') }}</span>
+              </span>
+              <span
+                v-else
+                class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap"
+              >
+                +10 {{ $t('dashboard.points_reward') }}
+              </span>
+            </div>
           </div>
 
-          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-2 group-hover:text-emerald-300 transition-colors">
-            {{ scenario?.title || $t('dashboard.scenario_teaser_title') }}
+          <!-- Title: Daily Topic / Scenario -->
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-2 group-hover:text-brand-300 transition-colors line-clamp-1">
+            {{ topic?.title || scenario?.title || $t('dashboard.loading_topic') }}
           </h3>
 
-          <p class="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mb-4">
-            {{ scenario?.situation || $t('dashboard.scenario_teaser_desc') }}
+          <p class="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mb-3">
+            {{ topic?.summary || scenario?.situation || $t('dashboard.slice_summary_placeholder') }}
           </p>
+
+          <!-- Today's Session Itinerary Strip -->
+          <div class="grid grid-cols-2 gap-2 mb-4">
+            <div class="px-2.5 py-1.5 rounded-xl bg-slate-100/80 dark:bg-canvas-elevated/60 border border-slate-200/60 dark:border-white/[0.04] flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 min-w-0">
+              <BookOpen class="w-3.5 h-3.5 text-brand-500 shrink-0" :stroke-width="1.5" />
+              <span class="truncate">{{ $t('dashboard.itinerary_reading') }}</span>
+            </div>
+            <div class="px-2.5 py-1.5 rounded-xl bg-slate-100/80 dark:bg-canvas-elevated/60 border border-slate-200/60 dark:border-white/[0.04] flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 min-w-0">
+              <Terminal class="w-3.5 h-3.5 text-emerald-500 shrink-0" :stroke-width="1.5" />
+              <span class="truncate">{{ scenario?.title || $t('dashboard.itinerary_scenario') }}</span>
+            </div>
+          </div>
         </div>
 
-        <div class="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-end">
+        <!-- Footer Action CTA -->
+        <div class="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between">
+          <span class="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+            {{ isDrillCompleted ? $t('dashboard.today_drill_finished_hint') : $t('dashboard.today_drill_ready_hint') }}
+          </span>
+
           <button
             @click="handleStartScenario"
             type="button"
-            class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.04] hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 font-semibold text-xs sm:text-sm border border-slate-200/80 dark:border-white/[0.06] transition-all flex items-center justify-center gap-2 shrink-0"
+            class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.04] hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 font-semibold text-xs sm:text-sm border border-slate-200/80 dark:border-white/[0.06] transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
           >
-            <span>{{ $t('dashboard.solve_challenge') }}</span>
+            <span>{{ isDrillCompleted ? $t('dashboard.review_today_practice') : $t('dashboard.start_today_practice') }}</span>
             <ArrowRight class="w-4 h-4 text-slate-400" :stroke-width="1.5" />
           </button>
         </div>

@@ -187,7 +187,7 @@ describe('HomeBentoDashboard.vue', () => {
     })
   })
 
-  it('routes to /today when solve challenge is clicked', async () => {
+  it('routes to /today when start today practice is clicked', async () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
       topic: { id: 'top-1', title: 'ASP.NET Core Architecture', dayOrder: 3 },
@@ -204,9 +204,60 @@ describe('HomeBentoDashboard.vue', () => {
       }
     })
 
-    const challengeBtn = wrapper.findAll('button').find(b => b.text().includes('dashboard.solve_challenge'))
-    expect(challengeBtn).toBeDefined()
-    await challengeBtn!.trigger('click')
+    const practiceBtn = wrapper.findAll('button').find(b => b.text().includes('dashboard.start_today_practice'))
+    expect(practiceBtn).toBeDefined()
+    await practiceBtn!.trigger('click')
+
+    expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/today')
+  })
+
+  it('renders Today\'s Practice card with curriculum day and pending status badge', () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = {
+      topic: { id: 'top-1', title: 'ASP.NET Core Architecture', dayOrder: 12 },
+      drill: { status: 'Pending' }
+    } as any
+
+    const wrapper = mount(HomeBentoDashboard, {
+      global: {
+        stubs: {
+          ConcentricMetricCard: true,
+          DomainConstellationCard: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    expect(wrapper.text()).toContain('dashboard.today_practice_badge')
+    expect(wrapper.text()).toContain('+10 dashboard.points_reward')
+    expect(wrapper.text()).toContain('dashboard.itinerary_reading')
+    expect(wrapper.text()).toContain('dashboard.itinerary_scenario')
+    expect(wrapper.text()).toContain('dashboard.start_today_practice')
+  })
+
+  it('renders Today\'s Practice card with completed drill status and review CTA', async () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = {
+      topic: { id: 'top-1', title: 'Concurrency & Channels', dayOrder: 14 },
+      drill: { status: 'Submitted', isCorrect: true, score: 10 }
+    } as any
+
+    const wrapper = mount(HomeBentoDashboard, {
+      global: {
+        stubs: {
+          ConcentricMetricCard: true,
+          DomainConstellationCard: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    expect(wrapper.text()).toContain('dashboard.status_completed')
+    expect(wrapper.text()).toContain('dashboard.review_today_practice')
+
+    const reviewBtn = wrapper.findAll('button').find(b => b.text().includes('dashboard.review_today_practice'))
+    expect(reviewBtn).toBeDefined()
+    await reviewBtn!.trigger('click')
 
     expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/today')
   })
