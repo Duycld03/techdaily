@@ -805,12 +805,11 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
     - Native calendar and clock picker indicators (`::-webkit-calendar-picker-indicator`) SHALL render with high contrast, brand accent styling, and `cursor: pointer` in dark mode.
     - All workspace loading states SHALL utilize dedicated `Loader2` spinners (`class="animate-spin"`) with 1.5px stroke weight, eliminating decorative sparkle animations for loading processes.
 
-13. **Studio Time Picker Architecture (`AppTimePicker.vue`)**:
-    - The application SHALL provide a dedicated `AppTimePicker.vue` component to replace unstyled native temporal inputs (`<input type="time">`) across user settings and schedule configurations.
-    - The time picker trigger SHALL display the formatted time value (`08:00 AM`) with a 1.5px stroke `Clock` icon and high-contrast studio hairline border.
-    - The time picker dropdown SHALL render via `<Teleport to="body">` with fixed positioning, collision-aware auto-flip, and glassmorphic elevation (`dark:bg-canvas-elevated`, `backdrop-blur-md`, `border-white/[0.08]`).
-    - The picker popover SHALL feature column selection for hours, minutes, and AM/PM periods with a balanced compact layout, and bind via two-way `v-model` using `HH:mm` format.
-
+13. **Studio Native Time Input Architecture (`AppTimePicker.vue`)**:
+    - The application SHALL provide a dedicated `AppTimePicker.vue` component rendering as an in-place native time input (`<input type="time">`) styled according to TechDaily form control standards, eliminating dropdown popovers, floating overlays, and duplicate time displays.
+    - The input container SHALL adhere to standard input dimensions (`h-11`, `rounded-xl`, `border-slate-200/90 dark:border-white/[0.08]`, `bg-white dark:bg-canvas-subtle`) with an inset 1.5px stroke `Clock` icon on the left.
+    - The component SHALL accept `modelValue: string | null | undefined`, sanitize input strings (`HH:mm`), and emit `update:modelValue` and `change` with 24-hour formatted time upon selection.
+    - The native calendar/picker indicator icon SHALL remain clickable and adapt cleanly to Dark Mode via invert filter.
 #### Scenario: User opens application in dark mode with new design tokens
 - **WHEN** a user visits any page in dark mode
 - **THEN** the body background is rendered with neutral dark obsidian `#09090b`
@@ -918,20 +917,15 @@ The web frontend SHALL implement the **Dev-Learning Studio** visual language, re
 - **WHEN** a user visits the daily focus workspace (`/today`) while daily topics are loading
 - **THEN** the loading container displays a `Loader2` spinner with 1.5px stroke weight rather than a spinning sparkle icon.
 
-#### Scenario: User opens custom AppTimePicker dropdown in dark mode
-- **WHEN** user clicks the time picker trigger for preferred study time on `/settings`
-- **THEN** a floating glassmorphic popover opens anchored to the trigger button
-- **AND** the popover renders with studio dark elevation (`dark:bg-canvas-elevated`, `border-white/[0.08]`, `backdrop-blur-md`) without using unstyled OS browser dialogs.
+#### Scenario: User changes time via native AppTimePicker control
+- **WHEN** user selects or types a new time `20:00` into the native time input on `/settings`
+- **THEN** the component emits `update:modelValue` with `20:00`
+- **AND** the input value reflects the update immediately in-place.
 
-#### Scenario: User selects study time via column selection
-- **WHEN** user selects hour `08`, minute `00`, and period `AM` in the time picker popover
-- **THEN** the active selections highlight in Deep Iris Violet (`bg-brand-600 text-white`)
-- **AND** the component emits `update:modelValue` with `'08:00'`
-- **AND** the trigger button immediately updates to display `08:00 AM`.
-
-#### Scenario: User dismisses AppTimePicker via outside click or Escape
-- **WHEN** the time picker popover is open and the user clicks outside or presses `Escape`
-- **THEN** the popover smoothly closes without modifying the unconfirmed time value.
+#### Scenario: User navigates native AppTimePicker on mobile device
+- **WHEN** user taps the time input on a touch screen
+- **THEN** the device's native time picker interface appears
+- **AND** confirming the selection updates the model value with zero layout shifting.
 ---
 
 ### Requirement: Home Command Center Dashboard & Zero-Scroll Desktop Layout
@@ -1451,3 +1445,32 @@ Developers and AI agents MUST NOT create disconnected, standalone `.html` files 
 #### Scenario: Prototyping a prospective UI phase
 - **WHEN** preparing a visual preview for user design review
 - **THEN** the preview MUST be created as a Vue Single File Component under `frontend/pages/playground/` consuming project component primitives rather than an isolated HTML file.
+
+---
+
+### Requirement: Native Time Input Conforming to Studio Design System
+The custom timepicker component (`AppTimePicker.vue`) SHALL render as an in-place native time input (`<input type="time">`) styled according to TechDaily form control standards, eliminating dropdown popovers and duplicate time displays.
+
+1. **In-Place Input Presentation**:
+   - The component SHALL render directly in the form layout without triggering floating popovers, dropdowns, or modal dialogs.
+   - The input SHALL display the time in 24-hour (`HH:mm`) format internally, allowing the user's browser/OS locale to format the presentation (e.g. 12h AM/PM on US/VN systems).
+   - An inset `Clock` icon SHALL be rendered inside the left edge of the input container.
+
+2. **Form Interaction & Events**:
+   - The component SHALL accept `modelValue: string | null | undefined` and safely sanitize input strings (e.g. `08:00:00` or `08:00`).
+   - Editing the time SHALL emit `update:modelValue` and `change` with the updated 24-hour string format (`HH:mm`).
+   - The component SHALL support a `disabled` property that renders the input in an inactive, non-interactive state.
+
+3. **Styling & Theme Uniformity**:
+   - The input container SHALL adhere to the standard TechDaily input dimensions: `h-11`, `rounded-xl`, `border-slate-200/90 dark:border-white/[0.08]`, `bg-white dark:bg-canvas-subtle`.
+   - The native calendar/picker indicator icon SHALL remain clickable and adapt cleanly to Dark Mode via invert filter.
+
+#### Scenario: User changes time via native control
+- **WHEN** user selects or types a new time `20:00` into the native time input
+- **THEN** the component emits `update:modelValue` with `20:00`
+- **AND** the input value reflects the update immediately in-place.
+
+#### Scenario: User navigates on mobile device
+- **WHEN** user taps the time input on a touch screen
+- **THEN** the device's native time picker interface appears
+- **AND** confirming the selection updates the model value with zero layout shifting.
