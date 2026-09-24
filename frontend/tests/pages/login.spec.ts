@@ -605,6 +605,19 @@ describe('pages/login.vue', () => {
       expect(wrapper.text()).not.toContain('auth.tls_badge')
       expect(wrapper.find('footer').exists()).toBe(false)
     })
+
+    it('renders Stitch Developer Emblem brand logo in header', () => {
+      const wrapper = mount(LoginPage, {
+        global: {
+          stubs: {
+            NuxtLink: { template: '<a><slot /></a>' }
+          }
+        }
+      })
+
+      const headerLogo = wrapper.find('header svg[aria-label="TechDaily"]')
+      expect(headerLogo.exists()).toBe(true)
+    })
   })
   describe('Studio Cockpit Account Recovery & 3-Tab Switcher', () => {
     it('switches to recovery mode via top segmented recovery tab', async () => {

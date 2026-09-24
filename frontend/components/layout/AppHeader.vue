@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import {
-  BookOpen,
   LogOut,
   Menu,
   X,
   Search
 } from 'lucide-vue-next'
+import AppLogo from '~/components/common/AppLogo.vue'
 import { useEventListener } from '@vueuse/core'
 import StreakBadge from '~/components/common/StreakBadge.vue'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
@@ -69,9 +69,7 @@ onUnmounted(() => {
       </button>
 
       <NuxtLink to="/" class="flex items-center gap-2 font-bold tracking-tight hover:opacity-90 transition-opacity">
-        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-400 flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
-          <BookOpen class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white font-bold" :stroke-width="1.5" />
-        </div>
+        <AppLogo size="md" id-prefix="header-logo" class="w-7 h-7 sm:w-8 sm:h-8" />
         <span class="hidden sm:inline text-base sm:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-brand-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">TechDaily</span>
       </NuxtLink>
 
@@ -172,9 +170,7 @@ onUnmounted(() => {
               @click="isMobileNavOpen = false"
               class="flex items-center gap-2.5 font-bold tracking-tight hover:opacity-90 transition-opacity"
             >
-              <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-400 flex items-center justify-center shadow-md shadow-brand-500/20 shrink-0">
-                <BookOpen class="w-4 h-4 text-white font-bold" :stroke-width="1.5" />
-              </div>
+              <AppLogo size="md" id-prefix="mobile-drawer-logo" class="w-8 h-8" />
               <span
                 data-testid="mobile-nav-title"
                 class="text-base sm:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-brand-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent"

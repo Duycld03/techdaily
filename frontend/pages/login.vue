@@ -2,7 +2,6 @@
 import { ref, onMounted, watch, nextTick } from 'vue'
 import { useIntervalFn, useEventListener, useDebounceFn } from '@vueuse/core'
 import {
-  BookOpen,
   Lock,
   Mail,
   User,
@@ -23,6 +22,7 @@ import {
   Shield,
   Zap
 } from 'lucide-vue-next'
+import AppLogo from '~/components/common/AppLogo.vue'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
 import { useApiError } from '~/composables/useApiError'
@@ -294,11 +294,7 @@ async function handleSubmit() {
         <!-- Brand -->
         <NuxtLink to="/login" class="flex items-center gap-2.5 group">
           <!-- Logo Icon -->
-          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-600 to-indigo-700 p-0.5 shadow-lg shadow-brand-600/20 group-hover:scale-105 transition-transform duration-200">
-            <div class="w-full h-full bg-white dark:bg-[#0c0c0e] rounded-[7px] flex items-center justify-center">
-              <BookOpen class="w-4 h-4 text-brand-500 dark:text-brand-400 group-hover:text-brand-600 dark:group-hover:text-white transition-colors" :stroke-width="2" />
-            </div>
-          </div>
+          <AppLogo size="md" id-prefix="login-logo" class="group-hover:scale-105 transition-transform duration-200" />
           <!-- Brand Title -->
           <span class="text-base font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors">TechDaily</span>
         </NuxtLink>
