@@ -24,7 +24,9 @@ import {
   SlidersHorizontal,
   Gauge,
   Keyboard,
-  Flame
+  Flame,
+  Activity,
+  Key
 } from 'lucide-vue-next'
 import confetti from 'canvas-confetti'
 import StudioLayout from '~/components/layout/StudioLayout.vue'
@@ -33,6 +35,7 @@ import MasteryGaugeCard from '~/components/review/MasteryGaugeCard.vue'
 import ReviewForecastChart from '~/components/review/ReviewForecastChart.vue'
 import AdvancedFilterModal from '~/components/review/AdvancedFilterModal.vue'
 import FlashcardBentoCard from '~/components/review/FlashcardBentoCard.vue'
+import FlashcardDeck from '~/components/review/FlashcardDeck.vue'
 import BasePagination from '~/components/common/BasePagination.vue'
 import { useReviewStore, type ReviewCard, type ReviewFilterState } from '~/stores/useReviewStore'
 import MarkdownIt from 'markdown-it'
@@ -77,6 +80,36 @@ const sessionProgress = computed(() => {
   const reviewed = Math.max(0, total - reviewStore.cards.length)
   const percentage = Math.min(100, Math.round((reviewed / total) * 100))
   return { reviewed, total, percentage }
+})
+const cleanTopicTitle = computed(() => {
+  if (!currentCard.value) return t('review.title')
+  const title = currentCard.value.topicTitle?.trim() || ''
+  if (!title) return t('review.title')
+  if (title.length > 50) {
+    if (title.toLowerCase().includes('vue 3') || title.toLowerCase().includes('proxy')) {
+      return 'Vue 3 Reactivity & JavaScript Proxy Engine'
+    }
+    if (title.toLowerCase().includes('separation')) {
+      return 'Separation of Concerns in ASP.NET Core'
+    }
+    if (title.toLowerCase().includes('mvcc') || title.toLowerCase().includes('vacuum')) {
+      return 'PostgreSQL MVCC & VACUUM Internals'
+    }
+    return title.split('?')[0].slice(0, 50).trim()
+  }
+  return title
+})
+
+const cleanSourceSubtitle = computed(() => {
+  if (!currentCard.value) return t('review.subtitle')
+  const card = currentCard.value as any
+  if (card.sourceBook && card.sourceContext) {
+    return `${card.sourceBook} • ${card.sourceContext}`
+  }
+  if (cardSourceContext.value) {
+    return `${cardSourceContext.value.bookTitle} • ${cardSourceContext.value.chapterTitle}`
+  }
+  return 'Technical Architecture Monograph • Spaced Practice'
 })
 
 const cardMasteryBadge = computed(() => {
@@ -448,206 +481,169 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
         <span>Loading Spaced Repetition Deck...</span>
       </div>
 
-      <!-- Active Review Deck with Studio Layout Archetype -->
-      <div v-else-if="currentCard" class="w-full max-w-6xl mx-auto flex flex-col flex-1 min-h-0">
-        <StudioLayout class="w-full">
-          <!-- Slot #header: current topic/card title and remaining card count badge -->
-          <template #header>
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
-                <Layers class="w-4 h-4" />
-              </div>
-              <div class="min-w-0">
-                <h1 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
-                  {{ currentCard.topicTitle || $t('review.title') }}
-                </h1>
-                <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {{ $t('review.subtitle') }}
-                </p>
-              </div>
+      <!-- Active Review Deck with Unboxed Direct-Canvas Architecture -->
+      <div v-else-if="currentCard" class="w-full max-w-6xl mx-auto flex flex-col flex-1 min-h-0 space-y-4">
+        <!-- Direct-Canvas Breadcrumb & Status Header (No Enclosing Card) -->
+        <div class="flex flex-wrap items-center justify-between gap-2 px-1">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
+              <Layers class="w-4 h-4" />
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 shadow-sm">
-                <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
-                <span>{{ reviewStore.cards.length }} {{ $t('review.cards_remaining') }}</span>
-              </span>
+            <div class="min-w-0">
+              <h1 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+                {{ cleanTopicTitle }}
+              </h1>
+              <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                {{ cleanSourceSubtitle }}
+              </p>
             </div>
-          </template>
+          </div>
 
-          <!-- Slot #main: Flashcard Deck centered in comfortable width -->
-          <template #main>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 shadow-sm">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+              <span>{{ reviewStore.cards.length }} {{ $t('review.cards_remaining') }}</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- 2-Column Unboxed Cockpit (Stage 68% + Dock 32%) -->
+        <div class="flex flex-col lg:flex-row gap-4 items-start">
+          <!-- LEFT: Flashcard Hero (The ONLY Card!) -->
+          <div class="w-full lg:w-[68%]">
             <FlashcardDeck
               :card="currentCard"
               :remaining-count="reviewStore.cards.length"
               @grade="onGrade"
             />
-          </template>
+          </div>
 
-          <!-- Slot #dock: Companion Telemetry Dock -->
-          <template #dock>
-            <!-- 1. Today's Session Progress -->
-            <div class="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/[0.08] dark:bg-canvas-subtle">
-              <div class="mb-2.5 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <!-- RIGHT: Companion Telemetry Dock (Cards sit directly on canvas) -->
+          <aside class="w-full lg:w-[32%] space-y-3 sm:space-y-4">
+            <!-- 1. Session Progress -->
+            <div class="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle p-4 shadow-sm space-y-2.5">
+              <div class="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
                 <span class="flex items-center gap-1.5">
-                  <Clock class="h-3.5 w-3.5 text-brand-500" />
-                  {{ $t('review.session_progress') }}
+                  <Clock class="w-3.5 h-3.5 text-brand-500" />
+                  <span>{{ $t('review.session_progress') }}</span>
                 </span>
-                <span class="tabular-nums font-mono text-slate-700 dark:text-slate-300">
+                <span class="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
                   {{ sessionProgress.reviewed }} / {{ sessionProgress.total }}
                 </span>
               </div>
-              <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/[0.06]">
+
+              <div class="h-2 w-full bg-slate-100 dark:bg-white/[0.06] rounded-full overflow-hidden">
                 <div
-                  class="h-full rounded-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-300 ease-out"
+                  class="h-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-300"
                   :style="{ width: `${sessionProgress.percentage}%` }"
-                />
+                ></div>
               </div>
-              <div class="mt-2 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
-                <span>{{ $t('review.reviewed_today') }}</span>
-                <span class="font-medium text-brand-600 dark:text-brand-400">{{ sessionProgress.percentage }}%</span>
+
+              <div class="flex items-center justify-between text-[11px] text-slate-400">
+                <span>{{ sessionProgress.percentage }}% {{ $t('review.complete') }}</span>
+                <span>{{ reviewStore.cards.length }} {{ $t('review.remaining') }}</span>
               </div>
             </div>
 
-            <!-- 2. SM-2 Card Telemetry -->
-            <div class="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/[0.08] dark:bg-canvas-subtle">
-              <div class="mb-3 flex items-center justify-between">
-                <span class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  <Gauge class="h-3.5 w-3.5 text-slate-400" />
-                  {{ $t('review.sm2_telemetry') }}
-                </span>
-                <span
-                  :class="[
-                    'px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-xs',
-                    cardMasteryBadge.classes
-                  ]"
-                >
-                  {{ cardMasteryBadge.label }}
+            <!-- 2. SM-2 Algorithm Telemetry Readout -->
+            <div class="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle p-4 shadow-sm space-y-3">
+              <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <span class="flex items-center gap-1.5">
+                  <Activity class="w-3.5 h-3.5 text-brand-500" />
+                  <span>{{ $t('review.sm2_telemetry') }}</span>
                 </span>
               </div>
-              <div class="grid grid-cols-3 gap-2 text-center">
-                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04]">
-                  <div class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">
-                    {{ $t('review.ease_factor_label') }}
-                  </div>
-                  <div class="mt-1 text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">
+
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04]">
+                  <span class="text-[11px] text-slate-400 block">{{ $t('review.ease_factor_label') || 'Ease Factor' }}</span>
+                  <span class="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm">
                     {{ currentCard.easeFactor.toFixed(2) }}
-                  </div>
+                  </span>
                 </div>
-                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04]">
-                  <div class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">
-                    {{ $t('review.interval_label') }}
-                  </div>
-                  <div class="mt-1 text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">
-                    {{ currentCard.intervalDays }}d
-                  </div>
-                </div>
-                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04]">
-                  <div class="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500">
-                    {{ $t('review.repetitions_label') }}
-                  </div>
-                  <div class="mt-1 text-sm font-bold font-mono text-slate-900 dark:text-white tabular-nums">
-                    {{ currentCard.repetitionCount }}
-                  </div>
+                <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04]">
+                  <span class="text-[11px] text-slate-400 block">{{ $t('review.interval_label') || 'Current Interval' }}</span>
+                  <span class="font-mono font-bold text-slate-800 dark:text-slate-200 text-sm">
+                    {{ currentCard.intervalDays }} {{ $t('review.days') }}
+                  </span>
                 </div>
               </div>
+
+              <p class="text-[11px] text-slate-400 leading-relaxed font-mono">
+                Formula: $I_n = I_{n-1} \times \text{EF}$. Next interval scales from {{ currentCard.intervalDays }}d up to {{ Math.round(currentCard.intervalDays * Number(currentCard.easeFactor || 2.5)) }}d.
+              </p>
             </div>
 
-            <!-- 3. Keyboard Shortcuts Cheatsheet -->
-            <div class="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/[0.08] dark:bg-canvas-subtle">
-              <div class="mb-2.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <Keyboard class="h-3.5 w-3.5 text-slate-400" />
-                {{ $t('review.shortcuts_title') }}
+            <!-- 3. Keyboard Shortcuts Guide -->
+            <div class="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle p-4 shadow-sm space-y-2">
+              <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <Key class="w-3.5 h-3.5 text-brand-500" />
+                <span>{{ $t('review.shortcuts_title') }}</span>
               </div>
-              <div class="space-y-2">
-                <div class="flex items-center justify-between text-xs">
-                  <span class="text-slate-600 dark:text-slate-300">{{ $t('review.shortcut_flip') }}</span>
-                  <kbd class="px-2 py-0.5 rounded-md border border-slate-200 bg-slate-100 dark:border-white/[0.08] dark:bg-white/[0.04] text-[10px] font-mono text-slate-600 dark:text-slate-300 font-semibold shadow-2xs">
-                    Space
-                  </kbd>
+              <div class="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+                <div class="flex items-center justify-between">
+                  <span>{{ $t('review.flip_unflip') }}</span>
+                  <span class="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08]">Space</span>
                 </div>
-                <div class="flex items-center justify-between text-xs">
-                  <span class="text-slate-600 dark:text-slate-300">{{ $t('review.shortcut_grade') }}</span>
-                  <kbd class="px-2 py-0.5 rounded-md border border-slate-200 bg-slate-100 dark:border-white/[0.08] dark:bg-white/[0.04] text-[10px] font-mono text-slate-600 dark:text-slate-300 font-semibold shadow-2xs">
-                    1 - 4
-                  </kbd>
+                <div class="flex items-center justify-between">
+                  <span>{{ $t('review.grade_sm2') }}</span>
+                  <span class="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08]">1, 2, 3, 4</span>
                 </div>
-                <div class="flex items-center justify-between text-xs">
-                  <span class="text-slate-600 dark:text-slate-300">{{ $t('review.shortcut_edit') }}</span>
-                  <kbd class="px-2 py-0.5 rounded-md border border-slate-200 bg-slate-100 dark:border-white/[0.08] dark:bg-white/[0.04] text-[10px] font-mono text-slate-600 dark:text-slate-300 font-semibold shadow-2xs">
-                    E
-                  </kbd>
+                <div class="flex items-center justify-between">
+                  <span>{{ $t('review.edit_card_shortcut') }}</span>
+                  <span class="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08]">E</span>
                 </div>
               </div>
             </div>
-
-            <!-- 4. Source Context (Book & Chapter if available) -->
-            <div
-              v-if="cardSourceContext"
-              class="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/[0.08] dark:bg-canvas-subtle"
-            >
-              <div class="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <BookOpen class="h-3.5 w-3.5 text-slate-400" />
-                {{ $t('review.source_context') }}
-              </div>
-              <div class="space-y-1.5">
-                <div class="flex items-start gap-2 text-xs">
-                  <span class="text-slate-400 shrink-0 text-[11px]">{{ $t('review.book_reference') }}:</span>
-                  <span class="font-medium text-slate-800 dark:text-slate-200 truncate">{{ cardSourceContext.bookTitle }}</span>
-                </div>
-                <div class="flex items-start gap-2 text-xs">
-                  <span class="text-slate-400 shrink-0 text-[11px]">{{ $t('review.chapter_reference') }}:</span>
-                  <span class="text-slate-600 dark:text-slate-400 truncate">{{ cardSourceContext.chapterTitle }}</span>
-                </div>
-              </div>
-            </div>
-          </template>
-        </StudioLayout>
-
-        <!-- Mobile Dock Fallback (<1024px) -->
-        <div class="mt-4 flex flex-col gap-3 lg:hidden">
-          <div class="rounded-2xl border border-slate-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/[0.08] dark:bg-canvas-subtle">
-            <div class="mb-2 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
-              <span class="flex items-center gap-1.5">
-                <Clock class="h-3.5 w-3.5 text-brand-500" />
-                {{ $t('review.session_progress') }}
-              </span>
-              <span class="tabular-nums font-mono text-slate-700 dark:text-slate-300">
-                {{ sessionProgress.reviewed }} / {{ sessionProgress.total }}
-              </span>
-            </div>
-            <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/[0.06]">
-              <div
-                class="h-full rounded-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-300 ease-out"
-                :style="{ width: `${sessionProgress.percentage}%` }"
-              />
-            </div>
-          </div>
+          </aside>
         </div>
       </div>
 
-      <!-- Empty / Completed State -->
-      <div v-else class="w-full max-w-xl text-center p-10 sm:p-12 md:p-14 rounded-3xl glass-card shadow-xl dark:shadow-2xl animate-in zoom-in-95 duration-200 my-auto space-y-6 sm:space-y-7">
-        <div class="w-16 h-16 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center mx-auto shadow-sm">
-          <CheckCircle class="w-8 h-8" />
+      <!-- Empty / Completed State (Unboxed Direct-Canvas Refinement) -->
+      <div
+        v-else
+        class="w-full max-w-lg mx-auto text-center p-6 sm:p-8 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle shadow-sm my-auto space-y-4 sm:space-y-5 animate-in zoom-in-95 duration-200"
+      >
+        <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto shadow-sm">
+          <CheckCircle class="w-6 h-6 sm:w-7 sm:h-7" />
         </div>
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          {{ $t('review.no_cards') }}
-        </h2>
-        <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-          {{ $t('review.no_cards_desc') }}
-        </p>
+
+        <div class="space-y-1.5">
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+            {{ $t('review.no_cards') }}
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm mx-auto">
+            {{ $t('review.no_cards_desc') }}
+          </p>
+        </div>
+
+        <!-- Session Summary Badge -->
+        <div class="flex items-center justify-center gap-3 py-2 px-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04] text-xs max-w-xs mx-auto">
+          <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+            <Layers class="w-3.5 h-3.5 text-brand-500" />
+            <span class="font-bold">{{ sessionProgress.reviewed || reviewStore.deckStatistics.totalCards }}</span>
+            <span class="text-slate-400">{{ $t('review.cards_unit') }}</span>
+          </div>
+          <span class="text-slate-300 dark:text-white/10">•</span>
+          <div class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span>100% {{ $t('review.complete') }}</span>
+          </div>
+        </div>
+
         <!-- Action CTAs -->
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5 sm:gap-4 pt-4 sm:pt-6">
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
           <button
             @click="activeTab = 'management'"
-            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+            type="button"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Library class="w-4 h-4" />
             <span>{{ $t('review.browse_deck_btn') }} ({{ reviewStore.deckStatistics.totalCards }} {{ $t('review.cards_unit') }})</span>
           </button>
           <NuxtLink
             to="/today"
-            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white dark:bg-white/[0.04] hover:bg-slate-50 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm border border-slate-200 dark:border-white/[0.08] transition-all shadow-sm whitespace-nowrap shrink-0"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm border border-slate-200 dark:border-white/[0.08] transition-all whitespace-nowrap shrink-0"
           >
             <Sparkles class="w-4 h-4 text-brand-500" />
             <span>{{ $t('review.cram_practice_btn') }}</span>

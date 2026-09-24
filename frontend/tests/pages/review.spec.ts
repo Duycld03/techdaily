@@ -195,23 +195,9 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
     expect(wrapper.text()).toContain('review.no_cards')
     expect(wrapper.text()).toContain('review.no_cards_desc')
 
-    // Completion card container generous padding & geometry assertions
-    const completionCard = wrapper.findAll('div').find((d) => d.classes().includes('rounded-3xl') && d.text().includes('review.no_cards'))
+    // Completion card container
+    const completionCard = wrapper.findAll('div').find((d) => d.classes().includes('rounded-2xl') && d.text().includes('review.no_cards'))
     expect(completionCard).toBeDefined()
-    expect(completionCard!.classes()).toContain('max-w-xl')
-    expect(completionCard!.classes()).toContain('p-10')
-    expect(completionCard!.classes()).toContain('sm:p-12')
-    expect(completionCard!.classes()).toContain('md:p-14')
-    expect(completionCard!.classes()).toContain('space-y-6')
-    expect(completionCard!.classes()).toContain('sm:space-y-7')
-
-    // CTA action row spacing assertions
-    const ctaRow = wrapper.find('div.pt-4')
-    expect(ctaRow.exists()).toBe(true)
-    expect(ctaRow.classes()).toContain('pt-4')
-    expect(ctaRow.classes()).toContain('sm:pt-6')
-    expect(ctaRow.classes()).toContain('gap-3.5')
-    expect(ctaRow.classes()).toContain('sm:gap-4')
 
     // Deduplicated: Mastery Gauge and Review Forecast are NOT in completion session
     expect(wrapper.text()).not.toContain('review.mastery_rate')

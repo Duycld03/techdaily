@@ -95,12 +95,6 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
 
-    // Proactively purge expired tokens
-    if (token.value && isTokenExpired(token.value)) {
-      clearSession()
-      isInitialized.value = true
-      return
-    }
 
     if (token.value && !user.value) {
       const parsed = parseUserFromJwt(token.value)
@@ -192,6 +186,22 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
   }
+  async function tryRefreshToken(): Promise<boolean> {
+    try {
+      const api = useApiClient()
+      const newToken = await api.refreshAuthToken()
+      if (newToken) {
+        setSession(newToken, user.value || parseUserFromJwt(newToken))
+        return true
+      }
+      clearSession()
+      return false
+    } catch {
+      clearSession()
+      return false
+    }
+  }
+
 
   return {
     token,
@@ -207,6 +217,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     googleLogin,
     updateUser,
+    tryRefreshToken,
     logout
   }
 })

@@ -28,7 +28,7 @@ const containerClass = computed(() => {
     case 'incorrect':
       return 'border-rose-500 bg-rose-500/10 dark:bg-rose-500/[0.12] ring-1 ring-rose-500/40 text-rose-950 dark:text-rose-100'
     default:
-      return 'border-slate-200/80 dark:border-white/[0.08] bg-white/60 dark:bg-canvas-elevated/50 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/[0.16] hover:bg-slate-50 dark:hover:bg-white/[0.04]'
+      return 'border-slate-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-canvas-subtle text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/[0.16] hover:bg-slate-50 dark:hover:bg-white/[0.04]'
   }
 })
 
@@ -41,21 +41,28 @@ const badgeClass = computed(() => {
     case 'incorrect':
       return 'bg-rose-600 text-white border-rose-500'
     default:
-      return 'bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/[0.08]'
+      return 'bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08]'
   }
 })
 
 const textClass = computed(() => {
   switch (props.state) {
     case 'correct':
-      return 'text-emerald-900 dark:text-emerald-200 font-semibold'
+      return 'text-emerald-950 dark:text-emerald-100'
     case 'incorrect':
-      return 'text-rose-900 dark:text-rose-200'
+      return 'text-rose-950 dark:text-rose-100'
     case 'selected':
-      return 'text-slate-900 dark:text-white font-semibold'
+      return 'text-slate-950 dark:text-white'
     default:
       return 'text-slate-700 dark:text-slate-300'
   }
+})
+
+const badgeLetter = computed(() => {
+  if (typeof props.letter === 'number') {
+    return ['A', 'B', 'C', 'D'][props.letter] || String(props.letter)
+  }
+  return props.letter
 })
 </script>
 
@@ -67,21 +74,21 @@ const textClass = computed(() => {
     data-testid="quiz-option"
     @click="emit('select')"
     :class="[
-      'group flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors duration-150 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer select-none',
+      'group flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 sm:px-4 sm:py-3.5 text-left transition-colors duration-150 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer select-none',
       containerClass
     ]"
   >
     <span
       :class="[
-        'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-xs font-bold tabular-nums transition-colors mt-0.5',
+        'flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg border text-xs sm:text-sm font-mono font-bold tabular-nums transition-colors mt-0.5',
         badgeClass
       ]"
     >
-      <Check v-if="state === 'correct'" class="h-3.5 w-3.5" :stroke-width="2.5" />
-      <X v-else-if="state === 'incorrect'" class="h-3.5 w-3.5" :stroke-width="2.5" />
-      <template v-else>{{ letter }}</template>
+      <Check v-if="state === 'correct'" class="h-4 w-4" :stroke-width="2.5" />
+      <X v-else-if="state === 'incorrect'" class="h-4 w-4" :stroke-width="2.5" />
+      <template v-else>{{ badgeLetter }}</template>
     </span>
-    <span :class="['flex-1 min-w-0 break-words text-sm leading-relaxed', textClass]">{{ text }}</span>
+    <span :class="['flex-1 min-w-0 break-words text-sm sm:text-base leading-relaxed font-medium', textClass]">{{ text }}</span>
     <slot name="trailing" />
   </button>
 </template>

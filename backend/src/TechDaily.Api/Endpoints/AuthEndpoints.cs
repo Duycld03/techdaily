@@ -24,7 +24,7 @@ public static class AuthEndpoints
         }
         var jwtIssuer = configuration["Jwt:Issuer"] ?? "TechDaily";
         var jwtAudience = configuration["Jwt:Audience"] ?? "TechDailyUsers";
-
+        var jwtExpiryMinutes = configuration.GetValue<int?>("Jwt:ExpiryMinutes") ?? 60;
         // Standard Email & Password Registration
         group.MapPost("/register", async (
             [FromBody] RegisterRequest request,
@@ -69,7 +69,7 @@ public static class AuthEndpoints
             var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
             SetRefreshTokenCookie(context, rawRefreshToken);
 
-            var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
+            var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience, jwtExpiryMinutes);
             return Results.Ok(new
             {
                 Token = token,
@@ -123,7 +123,7 @@ public static class AuthEndpoints
             var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
             SetRefreshTokenCookie(context, rawRefreshToken);
 
-            var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
+            var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience, jwtExpiryMinutes);
             return Results.Ok(new
             {
                 Token = token,
@@ -234,7 +234,7 @@ public static class AuthEndpoints
             var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
             SetRefreshTokenCookie(context, rawRefreshToken);
 
-            var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
+            var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience, jwtExpiryMinutes);
             return Results.Ok(new
             {
                 Token = token,
@@ -274,7 +274,7 @@ public static class AuthEndpoints
             var (newRawToken, _, user) = rotateResult.Value;
             SetRefreshTokenCookie(context, newRawToken);
 
-            var newAccessToken = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience);
+            var newAccessToken = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience, jwtExpiryMinutes);
             return Results.Ok(new
             {
                 Token = newAccessToken,
@@ -312,12 +312,19 @@ public static class AuthEndpoints
         return group;
     }
 
+    private static bool IsHttpsRequest(HttpContext context)
+    {
+        return context.Request.IsHttps ||
+               string.Equals(context.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static void SetRefreshTokenCookie(HttpContext context, string refreshToken)
     {
+        var isHttps = IsHttpsRequest(context);
         context.Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
+            Secure = isHttps,
             SameSite = SameSiteMode.Lax,
             Path = "/api/v1/auth",
             Expires = DateTimeOffset.UtcNow.AddDays(30)
@@ -326,16 +333,17 @@ public static class AuthEndpoints
 
     private static void ClearRefreshTokenCookie(HttpContext context)
     {
+        var isHttps = IsHttpsRequest(context);
         context.Response.Cookies.Delete("refreshToken", new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
+            Secure = isHttps,
             SameSite = SameSiteMode.Lax,
             Path = "/api/v1/auth"
         });
     }
 
-    private static string GenerateJwtToken(User user, string secret, string issuer, string audience)
+    private static string GenerateJwtToken(User user, string secret, string issuer, string audience, int expiryMinutes = 60)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(secret);
@@ -348,7 +356,7 @@ public static class AuthEndpoints
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.Name)
             }),
-            Expires = DateTime.UtcNow.AddMinutes(60),
+            Expires = DateTime.UtcNow.AddMinutes(expiryMinutes),
             Issuer = issuer,
             Audience = audience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

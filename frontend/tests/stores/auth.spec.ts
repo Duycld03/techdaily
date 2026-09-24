@@ -3,8 +3,11 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '~/stores/useAuthStore'
 
 // Mock useApiClient composable
+const mockRefreshAuthToken = vi.fn()
+
 vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
+    refreshAuthToken: mockRefreshAuthToken,
     post: vi.fn(async (url: string, body: any) => {
       if (url.includes('/login') || url.includes('/register') || url.includes('/google')) {
         return {
@@ -26,6 +29,8 @@ describe('useAuthStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
+    useCookie('techdaily_token').value = null
+    useCookie('techdaily_user').value = null
   })
 
   it('initializes with logged out state', () => {
@@ -107,7 +112,7 @@ describe('useAuthStore', () => {
       expect(auth.isAuthenticated).toBe(true)
     })
 
-    it('proactively purges expired token on init()', () => {
+    it('preserves user and token for refresh on init() when token is expired but reports isLoggedIn as false', () => {
       const auth = useAuthStore()
       const expiredToken = createMockJwt(-120)
 
@@ -117,12 +122,43 @@ describe('useAuthStore', () => {
       auth.init()
 
       expect(auth.isLoggedIn).toBe(false)
-      expect(auth.token).toBeNull()
-      expect(auth.user).toBeNull()
-      expect(localStorage.getItem('techdaily_token')).toBeNull()
-      expect(localStorage.getItem('techdaily_user')).toBeNull()
+      expect(auth.token).toBe(expiredToken)
+      expect(auth.user?.email).toBe('test@techdaily.io')
+      expect(localStorage.getItem('techdaily_token')).toBe(expiredToken)
     })
 
+    it('successfully refreshes token via tryRefreshToken() and marks isLoggedIn true', async () => {
+      const auth = useAuthStore()
+      const expiredToken = createMockJwt(-120)
+      const freshToken = createMockJwt(3600)
+      auth.token = expiredToken
+      auth.user = { id: 'u-100', email: 'test@techdaily.io', name: 'Test' } as any
+
+      mockRefreshAuthToken.mockResolvedValueOnce(freshToken)
+
+      const success = await auth.tryRefreshToken()
+
+      expect(success).toBe(true)
+      expect(mockRefreshAuthToken).toHaveBeenCalledTimes(1)
+      expect(auth.token).toBe(freshToken)
+      expect(auth.isLoggedIn).toBe(true)
+    })
+
+    it('clears session on tryRefreshToken() failure', async () => {
+      const auth = useAuthStore()
+      const expiredToken = createMockJwt(-120)
+      auth.token = expiredToken
+      auth.user = { id: 'u-100', email: 'test@techdaily.io', name: 'Test' } as any
+
+      mockRefreshAuthToken.mockRejectedValueOnce(new Error('Refresh token expired'))
+
+      const success = await auth.tryRefreshToken()
+
+      expect(success).toBe(false)
+      expect(auth.token).toBeNull()
+      expect(auth.user).toBeNull()
+      expect(auth.isLoggedIn).toBe(false)
+    })
     it('preserves valid token on init()', () => {
       const auth = useAuthStore()
       const activeToken = createMockJwt(7200)

@@ -233,4 +233,49 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     await wrapper.vm.$nextTick()
     expect((topicInput.element as HTMLInputElement).value).not.toBe('')
   })
+
+  it('renders unboxed direct-canvas arena studio and handles keyboard shortcuts', async () => {
+    const quizStore = useInterviewQuizStore()
+    quizStore.questions = [
+      {
+        id: 'q-1',
+        topic: 'ASP.NET Core Performance',
+        category: 1,
+        level: 3,
+        questionText: 'Which collection pool avoids LOH allocation?',
+        options: ['List<T>', 'ArrayPool<T>', 'Queue<T>', 'Stack<T>'],
+        correctOptionIndex: 1,
+        explanationMarkdown: 'ArrayPool reduces GC pressure.',
+        tags: ['Performance'],
+        isMastered: false,
+        correctCount: 2,
+        incorrectCount: 1
+      }
+    ]
+    quizStore.currentIndex = 0
+    quizStore.activeTab = 'arena'
+
+    const wrapper = mount(QuizPage)
+    await flushPromises()
+
+    // Renders topic and question text
+    expect(wrapper.text()).toContain('ASP.NET Core Performance')
+    expect(wrapper.text()).toContain('Which collection pool avoids LOH allocation?')
+
+    // 4 Option cards rendered
+    const optionCards = wrapper.findAllComponents({ name: 'OptionCard' })
+    expect(optionCards.length).toBe(4)
+
+    // Test keyboard selection via '2' or 'b'
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
+    await wrapper.vm.$nextTick()
+
+    // Second option card should now have state selected
+    expect(optionCards[1].props('state')).toBe('selected')
+
+    // Test keyboard selection via 'c' (third option)
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c' }))
+    await wrapper.vm.$nextTick()
+    expect(optionCards[2].props('state')).toBe('selected')
+  })
 })

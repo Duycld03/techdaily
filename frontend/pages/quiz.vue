@@ -42,7 +42,8 @@ import {
   Target,
   Check,
   AlertCircle,
-  Swords
+  Swords,
+  Key
 } from 'lucide-vue-next'
 import { useReviewStore } from '~/stores/useReviewStore'
 import { useInterviewQuizStore, type QuizQuestion } from '~/stores/useInterviewQuizStore'
@@ -284,7 +285,7 @@ function handleKeydown(e: KeyboardEvent) {
     }
   }
 
-  if (activeTab.value !== 'practice' || !currentQ.value) return
+  if (quizStore.activeTab !== 'arena' || !currentQ.value) return
 
   if (!quizStore.isCurrentAnswered && !quizStore.isSubmitting) {
     const num = parseInt(e.key, 10)
@@ -293,6 +294,18 @@ function handleKeydown(e: KeyboardEvent) {
       handleSelectOption(num - 1)
       return
     }
+
+    const letterKey = e.key.toLowerCase()
+    if (['a', 'b', 'c', 'd'].includes(letterKey)) {
+      const letterMap: Record<string, number> = { a: 0, b: 1, c: 2, d: 3 }
+      const idx = letterMap[letterKey]
+      if (idx !== undefined && idx < (currentQ.value.options?.length || 4)) {
+        e.preventDefault()
+        handleSelectOption(idx)
+        return
+      }
+    }
+
     if (e.key === 'Enter' && selectedOptionIndex.value !== null) {
       e.preventDefault()
       handleSubmitAnswer()
@@ -307,7 +320,6 @@ function handleKeydown(e: KeyboardEvent) {
     }
   }
 }
-
 useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handleKeydown)
 
 function getOptionLetter(idx: number): string {
@@ -717,130 +729,213 @@ defineExpose({
       </div>
     </div>
 
-    <!-- TAB 2: QUIZ ARENA -->
-    <div v-if="quizStore.activeTab === 'arena' && currentQ" class="space-y-6">
-      <!-- Stepper & Topic Bar -->
-      <div class="glass-card p-4 sm:p-5 space-y-3">
-        <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
-              {{ $t('quiz.question_counter', { current: quizStore.currentIndex + 1, total: quizStore.questions.length }) }}
-            </span>
-            <span class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
-              {{ currentQ.topic }}
-            </span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.06]">
-              {{ formatSeniorityLevel(currentQ.level).label }}
-            </span>
-            <span
-              v-if="currentQ.isMastered"
-              class="px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/30 flex items-center gap-1"
-            >
-              <CheckCircle2 class="w-3.5 h-3.5" :stroke-width="1.5" />
-              Mastered
-            </span>
-          </div>
+    <!-- TAB 2: QUIZ ARENA (UNBOXED DIRECT-CANVAS STUDIO ARCHETYPE) -->
+    <div v-if="quizStore.activeTab === 'arena' && currentQ" class="space-y-4">
+      <!-- Direct-Canvas Breadcrumb Bar (No Enclosing Card) -->
+      <div class="flex flex-wrap items-center justify-between gap-2 px-1">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 shrink-0">
+            {{ $t('quiz.question_counter', { current: quizStore.currentIndex + 1, total: quizStore.questions.length }) }}
+          </span>
+          <h2 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">
+            {{ currentQ.topic }}
+          </h2>
         </div>
 
-        <!-- Progress Bar -->
-        <div class="w-full h-2 bg-slate-100 dark:bg-canvas-elevated rounded-full overflow-hidden">
-          <div
-            class="h-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-300"
-            :style="{ width: `${quizStore.progressPercentage}%` }"
-          ></div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.06]">
+            {{ formatSeniorityLevel(currentQ.level).label }}
+          </span>
+          <span
+            v-if="currentQ.isMastered"
+            class="px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/30 flex items-center gap-1"
+          >
+            <CheckCircle2 class="w-3.5 h-3.5" :stroke-width="1.5" />
+            Mastered
+          </span>
         </div>
       </div>
 
-      <!-- Question Card -->
-      <div class="glass-card p-4 sm:p-5 space-y-4">
-        <!-- Question Text -->
-        <div class="space-y-2">
-          <h2 class="text-base sm:text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-relaxed break-words">
-            {{ currentQ.questionText }}
-          </h2>
-          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            {{ $t('quiz.choose_optimal_answer') }}
-          </p>
-        </div>
+      <!-- 2-Column Unboxed Cockpit (Stage 68% + Dock 32%) -->
+      <div class="flex flex-col lg:flex-row gap-4 items-start">
+        <!-- LEFT: Primary Action Card (The ONLY Card!) -->
+        <div class="w-full lg:w-[68%] rounded-2xl border border-slate-200/90 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle p-5 sm:p-7 space-y-5 shadow-sm">
+          <!-- Question Heading -->
+          <div class="space-y-2">
+            <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <HelpCircle class="w-3.5 h-3.5 text-brand-500" />
+              <span>{{ $t('quiz.choose_optimal_answer') }}</span>
+            </div>
+            <h1 class="text-base sm:text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-relaxed break-words tracking-tight">
+              {{ currentQ.questionText }}
+            </h1>
+          </div>
 
-        <!-- Options Grid -->
-        <div class="grid grid-cols-1 gap-2.5">
-          <OptionCard
-            v-for="(opt, idx) in currentQ.options"
-            :key="idx"
-            :letter="getOptionLetter(idx)"
-            :text="opt"
-            :state="quizStore.isCurrentAnswered ? (idx === currentSub?.correctOptionIndex ? 'correct' : (idx === (selectedOptionIndex ?? currentQ.lastSelectedOptionIndex) && !currentSub?.isCorrect ? 'incorrect' : 'default')) : (selectedOptionIndex === idx ? 'selected' : 'default')"
-            :disabled="quizStore.isCurrentAnswered"
-            @select="handleSelectOption(idx)"
-          />
-        </div>
+          <!-- Options Grid -->
+          <div class="grid grid-cols-1 gap-2.5">
+            <OptionCard
+              v-for="(opt, idx) in currentQ.options"
+              :key="idx"
+              :letter="getOptionLetter(idx)"
+              :text="opt"
+              :state="quizStore.isCurrentAnswered ? (idx === currentSub?.correctOptionIndex ? 'correct' : (idx === (selectedOptionIndex ?? currentQ.lastSelectedOptionIndex) && !currentSub?.isCorrect ? 'incorrect' : 'default')) : (selectedOptionIndex === idx ? 'selected' : 'default')"
+              :disabled="quizStore.isCurrentAnswered"
+              @select="handleSelectOption(idx)"
+            />
+          </div>
 
-        <!-- Action / Submit Button -->
-        <div v-if="!quizStore.isCurrentAnswered" class="pt-2 flex justify-end">
-          <button
-            data-testid="submit-answer-btn"
-            @click="handleSubmitAnswer()"
-            :disabled="selectedOptionIndex === null || quizStore.isSubmitting"
-            class="h-9 px-5 text-sm font-bold rounded-xl bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            <Loader2 v-if="quizStore.isSubmitting" class="w-4 h-4 animate-spin" />
-            <span>{{ quizStore.isSubmitting ? $t('quiz.submitting_loader') : $t('quiz.btn_submit_choice') }}</span>
-          </button>
-        </div>
-
-        <!-- Explanation & Feedback (Shown after submitting) -->
-        <div v-if="quizStore.isCurrentAnswered && currentSub" class="space-y-4 pt-4 border-t border-slate-200/80 dark:border-white/[0.06]">
-          <!-- Banner -->
-          <div
-            :class="[
-              'p-4 rounded-xl border flex items-center gap-3',
-              currentSub.isCorrect
-                ? 'bg-brand-500/10 border-brand-500/30 text-brand-700 dark:text-brand-300'
-                : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
-            ]"
-          >
-            <CheckCircle2 v-if="currentSub.isCorrect" class="w-5 h-5 text-brand-500 shrink-0" :stroke-width="1.5" />
-            <XCircle v-else class="w-5 h-5 text-rose-500 shrink-0" :stroke-width="1.5" />
-            <span class="font-bold text-sm sm:text-base">
-              {{ currentSub.isCorrect ? $t('quiz.correct_banner') : $t('quiz.incorrect_banner') }}
+          <!-- Action Row / Submit Button -->
+          <div v-if="!quizStore.isCurrentAnswered" class="pt-2 flex items-center justify-between">
+            <span class="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+              Press <kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-white/10 font-mono text-[10px] font-bold">Enter</kbd> to submit
             </span>
+            <button
+              data-testid="submit-answer-btn"
+              @click="handleSubmitAnswer()"
+              :disabled="selectedOptionIndex === null || quizStore.isSubmitting"
+              class="h-10 px-6 text-sm font-bold rounded-xl bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer ml-auto"
+            >
+              <Loader2 v-if="quizStore.isSubmitting" class="w-4 h-4 animate-spin" />
+              <Check v-else class="w-4 h-4" :stroke-width="2.5" />
+              <span>{{ quizStore.isSubmitting ? $t('quiz.submitting_loader') : $t('quiz.btn_submit_choice') }}</span>
+            </button>
           </div>
 
-          <!-- Deep-dive Markdown -->
-          <div class="bg-slate-50 dark:bg-canvas-subtle rounded-xl p-5 border border-slate-200/80 dark:border-white/[0.06] space-y-2">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-              {{ $t('quiz.explanation_header') }}
-            </h3>
+          <!-- Explanation & Feedback (Shown after submitting) -->
+          <div v-if="quizStore.isCurrentAnswered && currentSub" class="space-y-4 pt-4 border-t border-slate-200/80 dark:border-white/[0.06] animate-in fade-in duration-200">
+            <!-- Banner -->
             <div
-              class="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed min-w-0 max-w-full"
-              v-html="renderedExplanationHtml"
-            ></div>
-          </div>
-
-          <!-- Next / Finish Control -->
-          <div class="flex items-center justify-between pt-2">
-            <button
-              @click="handlePrevQuestion()"
-              :disabled="quizStore.currentIndex === 0"
-              class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.04] text-slate-700 dark:text-slate-300 font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+              :class="[
+                'p-4 rounded-xl border flex items-center gap-3',
+                currentSub.isCorrect
+                  ? 'bg-brand-500/10 border-brand-500/30 text-brand-700 dark:text-brand-300'
+                  : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
+              ]"
             >
-              <ArrowLeft class="w-4 h-4" :stroke-width="1.5" />
-              {{ $t('quiz.btn_prev') }}
-            </button>
+              <CheckCircle2 v-if="currentSub.isCorrect" class="w-5 h-5 text-brand-500 shrink-0" :stroke-width="1.5" />
+              <XCircle v-else class="w-5 h-5 text-rose-500 shrink-0" :stroke-width="1.5" />
+              <span class="font-bold text-sm sm:text-base">
+                {{ currentSub.isCorrect ? $t('quiz.correct_banner') : $t('quiz.incorrect_banner') }}
+              </span>
+            </div>
 
-            <button
-              @click="handleNextQuestion()"
-              class="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-sm flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <span>{{ quizStore.currentIndex === quizStore.questions.length - 1 ? $t('quiz.btn_finish') : $t('quiz.btn_next') }}</span>
-              <ArrowRight class="w-4 h-4" :stroke-width="1.5" />
-            </button>
+            <!-- Deep-dive Markdown -->
+            <div class="bg-slate-50 dark:bg-canvas rounded-xl p-5 border border-slate-200/80 dark:border-white/[0.06] space-y-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                {{ $t('quiz.explanation_header') }}
+              </h3>
+              <div
+                class="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed min-w-0 max-w-full"
+                v-html="renderedExplanationHtml"
+              ></div>
+            </div>
+
+            <!-- Next / Finish Control -->
+            <div class="flex items-center justify-between pt-2">
+              <button
+                @click="handlePrevQuestion()"
+                :disabled="quizStore.currentIndex === 0"
+                class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-white/[0.04] text-slate-700 dark:text-slate-300 font-semibold text-sm disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <ArrowLeft class="w-4 h-4" :stroke-width="1.5" />
+                {{ $t('quiz.btn_prev') }}
+              </button>
+
+              <button
+                @click="handleNextQuestion()"
+                class="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-sm flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <span>{{ quizStore.currentIndex === quizStore.questions.length - 1 ? $t('quiz.btn_finish') : $t('quiz.btn_next') }}</span>
+                <ArrowRight class="w-4 h-4" :stroke-width="1.5" />
+              </button>
+            </div>
           </div>
         </div>
+
+        <!-- RIGHT: Companion Telemetry Dock (32% Desktop, Stacks Below on Mobile) -->
+        <aside class="w-full lg:w-[32%] space-y-3 sm:space-y-4">
+          <!-- 1. Session Score & Progress Card -->
+          <div class="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle p-4 shadow-sm space-y-2.5">
+            <div class="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <span class="flex items-center gap-1.5">
+                <Target class="w-3.5 h-3.5 text-brand-500" />
+                <span>Session Score</span>
+              </span>
+              <span class="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
+                {{ quizStore.sessionScore.correct }} / {{ quizStore.questions.length }}
+              </span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full h-2 bg-slate-100 dark:bg-white/[0.06] rounded-full overflow-hidden">
+              <div
+                class="h-full bg-gradient-to-r from-brand-600 to-brand-400 transition-all duration-300"
+                :style="{ width: `${quizStore.progressPercentage}%` }"
+              ></div>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span>{{ quizStore.currentIndex + 1 }} of {{ quizStore.questions.length }} answered</span>
+              <span class="font-mono">{{ quizStore.progressPercentage }}% complete</span>
+            </div>
+          </div>
+
+          <!-- 2. Question Navigation Matrix -->
+          <div class="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle p-4 shadow-sm space-y-2.5">
+            <div class="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <span class="flex items-center gap-1.5">
+                <BarChart3 class="w-3.5 h-3.5 text-brand-500" />
+                <span>Question Map</span>
+              </span>
+              <span class="text-[11px] font-mono text-slate-400">
+                {{ Object.keys(quizStore.submissions).length }}/{{ quizStore.questions.length }} Answered
+              </span>
+            </div>
+
+            <div class="grid grid-cols-5 gap-2">
+              <button
+                v-for="(q, idx) in quizStore.questions"
+                :key="q.id"
+                type="button"
+                @click="quizStore.currentIndex = idx; selectedOptionIndex = null"
+                :class="[
+                  'h-8 rounded-lg flex items-center justify-center text-xs font-mono font-bold border transition-colors cursor-pointer',
+                  quizStore.submissions[q.id]?.isCorrect
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                    : quizStore.submissions[q.id] && !quizStore.submissions[q.id].isCorrect
+                    ? 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                    : quizStore.currentIndex === idx
+                    ? 'bg-brand-500 text-white border-brand-600 shadow-sm ring-2 ring-brand-500/20'
+                    : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200/80 dark:border-white/[0.06] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                ]"
+              >
+                {{ idx + 1 }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. Keyboard Shortcuts Guide -->
+          <div class="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle p-4 shadow-sm space-y-2">
+            <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <Key class="w-3.5 h-3.5 text-brand-500" />
+              <span>Keyboard Controls</span>
+            </div>
+            <div class="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
+              <div class="flex items-center justify-between">
+                <span>Select Options</span>
+                <span class="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08]">1-4 / A-D</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Submit Choice</span>
+                <span class="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08]">Enter</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span>Next Question</span>
+                <span class="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/[0.06] border border-slate-200 dark:border-white/[0.08]">Space</span>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
 

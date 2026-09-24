@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useEventListener } from '@vueuse/core'
-import { Layers, Eye, EyeOff, Sparkles, BookOpen, HelpCircle } from 'lucide-vue-next'
+import {
+  Layers,
+  Eye,
+  EyeOff,
+  Sparkles,
+  BookOpen,
+  HelpCircle,
+  CheckCircle2,
+  Tag
+} from 'lucide-vue-next'
 import type { ReviewCard } from '~/stores/useReviewStore'
 import Sm2GradingButtons from '~/components/review/Sm2GradingButtons.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
@@ -30,42 +39,56 @@ const categoryMeta = computed(() => {
   const cat = props.card.category
   switch (cat) {
     case 1:
+    case 'BackendRuntime':
       return {
         label: 'Backend Runtime',
         badgeClass: 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20'
       }
     case 2:
+    case 'DatabaseStorage':
       return {
         label: 'Database & Storage',
         badgeClass: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20'
       }
     case 3:
+    case 'SystemDesign':
       return {
         label: 'System Design',
         badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20'
       }
     case 4:
+    case 'EngineeringCraft':
       return {
         label: 'Engineering Craft',
         badgeClass: 'bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/20'
       }
     case 0:
+    case 'FrontendWeb':
     default:
       return {
         label: 'Frontend & Browser',
-        badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+        badgeClass: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-500/20'
       }
   }
 })
 
 const difficultyLabel = computed(() => {
-  switch (props.card.difficulty) {
-    case 0: return 'Junior'
-    case 1: return 'Mid-Level'
-    case 2: return 'Senior'
-    case 3: return 'Staff'
-    default: return 'Senior'
-  }
+  const diff = props.card.difficulty
+  if (diff === 0 || diff === 'Fresher' || diff === 'Junior') return 'Junior'
+  if (diff === 1 || diff === 'Middle' || diff === 'Intermediate') return 'Mid-Level'
+  if (diff === 2 || diff === 'Senior') return 'Senior'
+  if (diff === 3 || diff === 'Lead' || diff === 'Staff') return 'Staff'
+  return 'Senior / Staff'
+})
+
+const formattedEaseFactor = computed(() => {
+  const val = Number(props.card?.easeFactor ?? 2.5)
+  return isNaN(val) ? '2.50' : val.toFixed(2)
+})
+
+const formattedInterval = computed(() => {
+  const val = props.card?.intervalDays ?? 1
+  return `${val}d`
 })
 
 const questionText = computed(() => {
@@ -88,6 +111,68 @@ const renderedDeepDive = computed(() => {
   return renderMarkdown(props.card.topicDeepDiveMarkdown)
 })
 
+const conceptTags = computed(() => {
+  const card = props.card as any
+  if (Array.isArray(card.conceptTags) && card.conceptTags.length) {
+    return card.conceptTags
+  }
+  const tags: string[] = []
+  const title = (card.topicTitle || '').toLowerCase()
+  if (title.includes('proxy')) tags.push('Proxy', 'Object.defineProperty')
+  if (title.includes('reactivity')) tags.push('Reactivity', 'Trap Handler')
+  if (title.includes('vue')) tags.push('Vue 3 Engine')
+  if (title.includes('mvcc')) tags.push('MVCC', 'Heap Tuples', 'VACUUM', 'Snapshot Isolation')
+  if (title.includes('separation')) tags.push('Separation of Concerns', 'Clean Architecture', 'Unit Testing')
+  if (title.includes('kestrel') || title.includes('pipe')) tags.push('PipeReader', 'MemoryPool', 'Zero-Allocation')
+
+  if (!tags.length) {
+    tags.push(categoryMeta.value.label, difficultyLabel.value)
+  }
+  return tags
+})
+
+const sourceExcerpt = computed(() => {
+  const card = props.card as any
+  if (card.sourceExcerpt) return card.sourceExcerpt
+  if (card.sourceHighlightText) return card.sourceHighlightText
+  if (card.sourceContext) return card.sourceContext
+  return null
+})
+
+const sm2Forecast = computed(() => {
+  const currentInterval = props.card.intervalDays || 1
+  const ef = Number(props.card.easeFactor || 2.5)
+  return [
+    {
+      grade: 1,
+      score: 1,
+      label: 'Chưa nhớ',
+      interval: '1d',
+      color: 'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20'
+    },
+    {
+      grade: 2,
+      score: 3,
+      label: 'Khó',
+      interval: `${Math.max(1, Math.round(currentInterval * 1.2))}d`,
+      color: 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
+    },
+    {
+      grade: 3,
+      score: 4,
+      label: 'Tốt',
+      interval: `${Math.max(1, Math.round(currentInterval * ef))}d`,
+      color: 'border-brand-500/40 text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20'
+    },
+    {
+      grade: 4,
+      score: 5,
+      label: 'Rất dễ',
+      interval: `${Math.max(1, Math.round(currentInterval * ef * 1.3))}d`,
+      color: 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+    }
+  ]
+})
 function handleGrade(score: number) {
   emit('grade', score)
   isFlipped.value = false
@@ -106,7 +191,6 @@ function isInteractiveInput(target: EventTarget | null): boolean {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  // Guard against triggering shortcuts while user is typing in search, inputs, or contentEditable
   if (isInteractiveInput(e.target)) return
   if (typeof document !== 'undefined' && isInteractiveInput(document.activeElement)) return
 
@@ -140,181 +224,135 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
 </script>
 
 <template>
-  <div class="w-full max-w-2xl mx-auto flex flex-col items-center space-y-5 sm:space-y-6">
-    <!-- Card Telemetry & Progress Bar -->
-    <div class="flex items-center justify-between w-full text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-semibold px-1">
-      <span class="flex items-center gap-2 text-brand-600 dark:text-brand-400 font-bold">
-        <Layers class="w-4 h-4" :stroke-width="1.5" />
-        <span>Card 1 of {{ remainingCount }}</span>
-      </span>
-      <div class="flex items-center gap-2">
-        <span class="px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 font-mono text-[11px] sm:text-xs shadow-sm">
-          EF: {{ card.easeFactor.toFixed(2) }} • {{ card.intervalDays }}d
-        </span>
-      </div>
-    </div>
-
-    <!-- 3D Perspective Flip Container -->
-    <div class="perspective-container w-full">
-      <Transition name="card-flip" mode="out-in">
-        <!-- ================================================================= -->
-        <!-- FRONT FACE: Question & Challenge (Zero Answer Leakage)            -->
-        <!-- ================================================================= -->
-        <div
-          v-if="!isFlipped"
-          key="front"
-          class="w-full min-h-[280px] sm:min-h-[320px] p-5 sm:p-6 rounded-2xl glass-card border border-slate-200/80 dark:border-white/[0.08] shadow-xl dark:shadow-2xl flex flex-col justify-between transition-all"
-        >
-          <!-- Top Metadata Row -->
-          <div>
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-4 sm:mb-5">
-              <div class="flex items-center gap-2">
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-xl text-xs font-bold border whitespace-nowrap"
-                  :class="categoryMeta.badgeClass"
-                >
-                  {{ categoryMeta.label }}
-                </span>
-                <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-400 text-xs font-semibold">
-                  {{ difficultyLabel }}
-                </span>
-              </div>
-              <span class="text-xs font-mono text-slate-500 dark:text-slate-400">
-                Repetition #{{ card.repetitionCount }}
-              </span>
-            </div>
-
-            <!-- Question Label Header -->
-            <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
-              <HelpCircle class="w-3.5 h-3.5" :stroke-width="1.5" />
-              <span>{{ $t('review.question_prompt') }}</span>
-            </div>
-
-            <!-- Question Challenge Text -->
-            <h2 class="text-base sm:text-xl font-bold text-slate-900 dark:text-white leading-snug tracking-tight">
-              {{ questionText }}
-            </h2>
-          </div>
-
-          <!-- Flip Action CTA -->
-          <div class="mt-5 pt-4 border-t border-slate-100 dark:border-white/[0.06] flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button
-              @click="isFlipped = true"
-              type="button"
-              class="group inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-lg shadow-brand-500/25 hover:shadow-brand-500/35 transition-all active:scale-[0.98] cursor-pointer w-full sm:w-auto"
+  <div class="perspective-box w-full">
+    <div
+      :class="[
+        'card-flipper w-full rounded-2xl border transition-all duration-300 relative shadow-md dark:shadow-xl overflow-hidden',
+        isFlipped
+          ? 'border-brand-500/30 bg-white dark:bg-canvas-subtle'
+          : 'border-slate-200/90 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle'
+      ]"
+    >
+      <!-- FRONT FACE: Active Recall Challenge (Pixel-Perfect from temp.vue) -->
+      <div v-if="!isFlipped" class="p-5 sm:p-7 space-y-4 sm:space-y-5">
+        <!-- Category & Seniority Tags -->
+        <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+          <div class="flex items-center gap-2">
+            <span
+              class="px-2.5 py-1 rounded-xl text-xs font-bold border whitespace-nowrap"
+              :class="categoryMeta.badgeClass"
             >
-              <Eye class="w-4 h-4 transition-transform group-hover:scale-110" :stroke-width="1.5" />
-              <span>{{ $t('review.show_answer') }}</span>
-              <kbd class="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-white/20 text-white border border-white/30">Space</kbd>
-            </button>
-            <span class="text-xs text-slate-400 dark:text-slate-500 sm:hidden">
-              {{ $t('review.flip_card_hint') }}
+              {{ categoryMeta.label }}
             </span>
+            <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-400 text-xs font-semibold">
+              {{ difficultyLabel }}
+            </span>
+          </div>
+          <div class="flex items-center gap-1.5 text-xs font-mono text-slate-400">
+            <span>Repetition #{{ card.repetitionCount }}</span>
+            <span>•</span>
+            <span>EF: {{ formattedEaseFactor }} • {{ formattedInterval }}</span>
           </div>
         </div>
 
-        <!-- ================================================================= -->
-        <!-- BACK FACE: Architectural Solution & Deep Dive                     -->
-        <!-- ================================================================= -->
+        <!-- Prompt Heading -->
+        <div class="space-y-2">
+          <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <HelpCircle class="w-3.5 h-3.5 text-brand-500" />
+            <span>{{ $t('review.question_prompt') }}</span>
+          </div>
+
+          <h2 class="text-base sm:text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-relaxed tracking-tight">
+            {{ questionText }}
+          </h2>
+        </div>
+
+        <!-- Core Concepts Tags -->
+        <div v-if="conceptTags.length" class="flex flex-wrap items-center gap-1.5">
+          <span class="text-[11px] text-slate-400 flex items-center gap-1 mr-1">
+            <Tag class="w-3 h-3" /> Core Concepts:
+          </span>
+          <span
+            v-for="tag in conceptTags"
+            :key="tag"
+            class="px-2 py-0.5 rounded-md text-[11px] font-mono bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.06]"
+          >
+            {{ tag }}
+          </span>
+        </div>
+
+        <!-- Source Excerpt Box -->
+        <div v-if="sourceExcerpt" class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.06] space-y-1">
+          <div class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <BookOpen class="w-3 h-3 text-brand-500" />
+            <span>Original Documentation Context</span>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">
+            "{{ sourceExcerpt }}"
+          </p>
+        </div>
+
+        <!-- Flip CTA Button -->
+        <div class="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-center">
+          <button
+            @click="isFlipped = true"
+            type="button"
+            class="group inline-flex items-center justify-center gap-2 px-8 py-3 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md shadow-brand-500/25 transition-all cursor-pointer w-full sm:w-auto active:scale-[0.98]"
+          >
+            <Eye class="w-4 h-4 transition-transform group-hover:scale-110" />
+            <span>{{ $t('review.show_answer') }}</span>
+            <kbd class="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-white/20 text-white">Space</kbd>
+          </button>
+        </div>
+      </div>
+
+      <!-- BACK FACE: Architectural Solution & SM-2 Rating (Pixel-Perfect from temp.vue) -->
+      <div v-else class="p-5 sm:p-7 space-y-4">
+        <!-- Solution Header -->
+        <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-white/[0.06]">
+          <span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+            <CheckCircle2 class="w-3.5 h-3.5 text-emerald-500" />
+            {{ $t('review.core_solution') }}
+          </span>
+          <button
+            @click="isFlipped = false"
+            type="button"
+            class="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+          >
+            <EyeOff class="w-3.5 h-3.5" />
+            <span>{{ $t('review.hide_answer') }}</span>
+            <kbd class="px-1 rounded text-[10px] font-mono bg-slate-100 dark:bg-white/10">Esc</kbd>
+          </button>
+        </div>
+
+        <!-- Summary -->
+        <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-relaxed">
+          {{ answerText }}
+        </p>
+
+        <!-- Technical Mechanics (Deep Dive) -->
         <div
-          v-else
-          key="back"
-          class="w-full min-h-[280px] sm:min-h-[320px] p-5 sm:p-6 rounded-2xl glass-card border border-brand-500/20 dark:border-brand-500/30 shadow-xl dark:shadow-2xl flex flex-col justify-between transition-all"
-        >
-          <div>
-            <!-- Top Metadata Row -->
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100 dark:border-white/[0.06]">
-              <div class="flex items-center gap-2">
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-xl text-xs font-bold border whitespace-nowrap"
-                  :class="categoryMeta.badgeClass"
-                >
-                  {{ categoryMeta.label }}
-                </span>
-                <span class="text-xs font-mono text-slate-500 dark:text-slate-400">
-                  Repetition #{{ card.repetitionCount }}
-                </span>
-              </div>
-              <button
-                @click="isFlipped = false"
-                type="button"
-                class="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
-              >
-                <EyeOff class="w-3.5 h-3.5" />
-                <span>{{ $t('review.hide_answer') }}</span>
-                <kbd class="hidden sm:inline-flex px-1 rounded text-[10px] font-mono bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-300">Esc</kbd>
-              </button>
-            </div>
+          v-if="hasDistinctDeepDive"
+          class="space-y-2 p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.06] overflow-y-auto max-h-[300px] prose prose-sm dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed"
+          v-html="renderedDeepDive"
+        ></div>
 
-            <!-- Question Reminder -->
-            <div class="mb-4">
-              <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-                {{ $t('review.question_prompt') }}
-              </div>
-              <p class="text-sm sm:text-base font-bold text-slate-700 dark:text-slate-300 line-clamp-2">
-                {{ questionText }}
-              </p>
-            </div>
-
-            <!-- Core Solution / Answer Container -->
-            <div class="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-canvas-subtle/80 border border-slate-200/80 dark:border-white/[0.08] shadow-sm mb-4">
-              <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 mb-2">
-                <Sparkles class="w-3.5 h-3.5 text-brand-500" />
-                <span>{{ $t('review.core_solution') }}</span>
-              </div>
-              <p class="text-sm sm:text-base md:text-lg text-slate-800 dark:text-slate-200 leading-relaxed font-normal">
-                {{ answerText }}
-              </p>
-            </div>
-
-            <!-- Deep Dive & Code Walkthrough (if distinct from summary) -->
-            <div v-if="hasDistinctDeepDive" class="p-4 sm:p-5 rounded-2xl bg-slate-50/40 dark:bg-canvas-subtle/40 border border-slate-200/60 dark:border-white/[0.06] mb-4">
-              <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-2.5">
-                <BookOpen class="w-3.5 h-3.5 text-slate-500" />
-                <span>{{ $t('review.deep_dive_explanation') }}</span>
-              </div>
-              <div
-                class="markdown-body prose prose-slate dark:prose-invert max-w-none text-sm sm:text-base leading-relaxed overflow-x-auto"
-                v-html="renderedDeepDive"
-              ></div>
-            </div>
+        <!-- SM-2 Grading Pill Bar -->
+        <div class="pt-3 border-t border-slate-100 dark:border-white/[0.06] space-y-2">
+          <div class="flex items-center justify-between text-[11px] text-slate-400 px-1 font-semibold">
+            <span>{{ $t('review.grade_keyboard_hint') }}</span>
+            <span class="font-mono">Keys [1] - [4]</span>
           </div>
 
-          <!-- Bottom Micro-Hint for Grading -->
-          <div class="pt-4 border-t border-slate-100 dark:border-white/[0.06] text-center">
-            <span class="text-[11px] sm:text-xs text-slate-400 dark:text-slate-500">
-              {{ $t('review.grade_keyboard_hint') }}
-            </span>
-          </div>
+          <Sm2GradingButtons @grade="handleGrade" />
         </div>
-      </Transition>
-    </div>
-
-    <!-- SM-2 Grading Buttons (Only visible when flipped) -->
-    <div v-if="isFlipped" class="w-full animate-in fade-in slide-in-from-bottom-2 duration-200">
-      <Sm2GradingButtons @grade="handleGrade" />
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.perspective-container {
+.perspective-box {
   perspective: 1000px;
-}
-
-.card-flip-enter-active,
-.card-flip-leave-active {
-  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-style: preserve-3d;
-}
-
-.card-flip-enter-from {
-  opacity: 0;
-  transform: rotateY(-90deg) scale(0.97);
-}
-
-.card-flip-leave-to {
-  opacity: 0;
-  transform: rotateY(90deg) scale(0.97);
 }
 </style>

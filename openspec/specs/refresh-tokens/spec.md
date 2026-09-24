@@ -6,16 +6,25 @@ Provides short-lived access tokens with concurrency-safe refresh token rotation,
 ## Requirements
 
 ### Requirement: Refresh token issuance alongside access token
-The authentication endpoints (`/api/v1/auth/login`, `/register`, `/google`) SHALL issue a refresh token alongside the JWT access token. The refresh token SHALL be a cryptographically random 256-bit value, stored as a SHA-256 hash in the database, and delivered to the client as an HttpOnly SameSite=Lax cookie scoped to the auth endpoint path (`Path=/api/v1/auth`). In production/HTTPS environments, the cookie SHALL include the `Secure` attribute; in local development over plain HTTP, the `Secure` attribute SHALL be omitted. Each refresh token SHALL have a 30-day absolute expiry.
+The authentication endpoints (`/api/v1/auth/login`, `/register`, `/google`, `/refresh`) SHALL issue a refresh token alongside the JWT access token. The refresh token SHALL be a cryptographically random 256-bit value, stored as a SHA-256 hash in the database, and delivered to the client as an HttpOnly SameSite=Lax cookie scoped to the auth endpoint path (`Path=/api/v1/auth`).
+
+In HTTPS environments (detected via direct TLS or `X-Forwarded-Proto: https`), the cookie SHALL include the `Secure` attribute. In local or development environments running over plain HTTP, the `Secure` attribute SHALL be omitted so that browsers running in non-secure HTTP contexts correctly store and transmit the cookie. Each refresh token SHALL have a 30-day absolute expiry.
 
 #### Scenario: Successful login returns access token and sets refresh cookie
 - **WHEN** user authenticates via `POST /api/v1/auth/login` with valid credentials
-- **THEN** the response body contains `accessToken` (JWT, 60-minute expiry) and the response includes a `Set-Cookie` header for the refresh token with `HttpOnly; SameSite=Lax; Path=/api/v1/auth; Max-Age=2592000`
+- **THEN** the response body contains `accessToken` (JWT, configurable expiry) and the response includes a `Set-Cookie` header for the refresh token with `HttpOnly; SameSite=Lax; Path=/api/v1/auth; Max-Age=2592000`
 
 #### Scenario: Google OAuth returns access token and sets refresh cookie
 - **WHEN** user authenticates via `POST /api/v1/auth/google` with a valid Google ID token
 - **THEN** the response body contains `accessToken` and the response includes a refresh token cookie with the same attributes
 
+#### Scenario: Login over plain HTTP in local/LAN development
+- **WHEN** client authenticates via `POST /api/v1/auth/login` over plain HTTP (e.g., `http://localhost:5000` or `http://192.168.x.x:5000`)
+- **THEN** the `Set-Cookie` header for `refreshToken` does NOT include the `secure` flag, allowing the browser to accept and persist the cookie
+
+#### Scenario: Login over HTTPS in production
+- **WHEN** client authenticates via `POST /api/v1/auth/login` over HTTPS or through a reverse proxy supplying `X-Forwarded-Proto: https`
+- **THEN** the `Set-Cookie` header for `refreshToken` includes `Secure; HttpOnly; SameSite=Lax; Path=/api/v1/auth`
 ### Requirement: Concurrency-safe refresh token rotation endpoint
 The system SHALL expose `POST /api/v1/auth/refresh` that reads the refresh token from the HttpOnly cookie. Rotation SHALL be performed as an atomic database operation ensuring that a given refresh token can be successfully rotated into a new successor token.
 
@@ -61,7 +70,19 @@ The system SHALL expose `POST /api/v1/auth/revoke` that reads the refresh token 
 - **THEN** the system returns `HTTP 200` without error (silent no-op)
 
 ### Requirement: Frontend transparent token refresh with cross-tab coordination
-The HTTP client composable SHALL detect access token expiry (either by a `401` response or proactively before each request) and coordinate `POST /api/v1/auth/refresh` across browser tabs using the Web Locks API (`navigator.locks`). Only one tab SHALL execute the refresh network call while other tabs wait and consume the updated token. If the refresh fails, the client SHALL execute session cleanup and redirect to `/login`.
+The HTTP client composable and frontend route middleware SHALL detect access token expiry and coordinate `POST /api/v1/auth/refresh` transparently across browser tabs and client-side navigations.
+
+When a protected page is accessed and the in-memory access token is expired or missing, the route middleware SHALL NOT synchronously purge user credentials. Instead, it SHALL asynchronously invoke token refresh via the auth store. Only if the refresh attempt yields a terminal failure (such as `401 Unauthorized`, expired refresh token, or network rejection) SHALL the client purge local session state, show an expiration notification, and redirect to `/login`.
+
+The Web Locks API (`navigator.locks`) SHALL guard token refresh attempts so that concurrent API calls or simultaneous route navigations share a single refresh network transaction.
+
+#### Scenario: Access token expires during page navigation
+- **WHEN** user navigates to an authenticated route (e.g., `/review`, `/today`, `/quiz`) while the access token is expired but a valid refresh token cookie exists
+- **THEN** the route middleware awaits a transparent token refresh, receives a new access token, updates the auth store, and completes navigation without redirecting to `/login`
+
+#### Scenario: User returns to active tab after token expiration
+- **WHEN** user returns to an existing tab or reloads a protected page after the access token has expired
+- **THEN** the store initialization preserves existing user metadata, triggers asynchronous token refresh, and retains authentication status
 
 #### Scenario: Access token expires during usage
 - **WHEN** the access token expires while the user is actively using the application
@@ -71,10 +92,9 @@ The HTTP client composable SHALL detect access token expiry (either by a `401` r
 - **WHEN** multiple browser tabs make requests simultaneously with an expired access token
 - **THEN** the Web Locks API ensures only one tab sends `POST /api/v1/auth/refresh` and other tabs reuse the newly refreshed access token without race conditions
 
-#### Scenario: Refresh token also expired
-- **WHEN** both the access token and refresh token are expired
-- **THEN** the client clears session state, shows the session-expired notification, and redirects to `/login`
-
+#### Scenario: Refresh token also expired or invalid during navigation
+- **WHEN** both the access token and refresh token are expired or refresh fails with `401 Unauthorized`
+- **THEN** the client clears session state, shows the session-expired notification, and redirects to `/login` with the attempted route preserved in query parameter `redirect`
 ### Requirement: Credential logging prohibition
 Application logs SHALL NOT contain raw values of access tokens, refresh tokens, JWT strings, Authorization header values, OAuth client secrets, database connection strings containing passwords, or VAPID private keys. Logs MAY contain user IDs, token family IDs, request IDs, failure reason codes (without embedded credentials), and token expiry timestamps.
 

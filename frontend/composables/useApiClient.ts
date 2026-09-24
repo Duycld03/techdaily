@@ -111,11 +111,15 @@ export function useApiClient() {
 
     const rawData: unknown = await res.json()
     let newToken: string | null = null
+    let returnedUser: any = null
     if (rawData && typeof rawData === 'object') {
       if ('accessToken' in rawData && typeof rawData.accessToken === 'string') {
         newToken = rawData.accessToken
       } else if ('token' in rawData && typeof rawData.token === 'string') {
         newToken = rawData.token
+      }
+      if ('user' in rawData && typeof rawData.user === 'object' && rawData.user !== null) {
+        returnedUser = rawData.user
       }
     }
     if (!newToken) {
@@ -124,7 +128,7 @@ export function useApiClient() {
 
     try {
       const authStore = useAuthStore()
-      authStore.setSession(newToken, authStore.user)
+      authStore.setSession(newToken, returnedUser || authStore.user)
     } catch {
       const tokenCookie = useCookie<string | null>('techdaily_token')
       tokenCookie.value = newToken
