@@ -354,8 +354,7 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
     const searchInput = wrapper.find('[data-testid="mindmap-search-input"]')
     expect(searchInput.exists()).toBe(true)
     const searchContainer = searchInput.element.closest('div')
-    expect(searchContainer?.classList.contains('z-10')).toBe(true)
-    expect(searchContainer?.classList.contains('z-20')).toBe(false)
+    expect(searchContainer?.classList.contains('z-20')).toBe(true)
     // Search for "Reliability" which belongs to collapsed chapter 1
     await searchInput.setValue('Reliability')
     vi.advanceTimersByTime(200)

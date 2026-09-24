@@ -38,7 +38,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="h-[calc(100vh-4rem)] w-full overflow-hidden relative select-none bg-slate-50 dark:bg-canvas">
+  <div class="h-[calc(100vh-4rem)] h-[calc(100dvh-4rem)] w-full overflow-hidden relative select-none bg-slate-50 dark:bg-canvas">
     <!-- Floating Glassmorphic Control Bar -->
     <div class="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-20 pointer-events-none">
       <div class="pointer-events-auto max-w-4xl mx-auto">

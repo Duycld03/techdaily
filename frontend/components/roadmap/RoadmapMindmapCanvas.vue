@@ -384,7 +384,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
 <template>
   <div
     ref="containerRef"
-    class="relative w-full h-[620px] sm:h-[720px] rounded-3xl bg-slate-50/80 dark:bg-canvas border border-slate-200/90 dark:border-white/[0.08] overflow-hidden select-none transition-colors touch-none"
+    class="relative w-full h-[520px] sm:h-[640px] lg:h-[calc(100vh-18rem)] lg:h-[calc(100dvh-18rem)] lg:min-h-[640px] lg:max-h-[860px] rounded-3xl bg-slate-50/80 dark:bg-canvas border border-slate-200/90 dark:border-white/[0.08] overflow-hidden select-none transition-colors touch-none"
     @wheel="handleWheel"
     @mousedown="startPan"
     @mousemove="onMouseMove"
@@ -397,7 +397,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
   >
     <!-- Search Bar in Top Left -->
     <div
-      class="absolute top-3 sm:top-4 left-3 sm:left-4 z-10 flex items-center gap-1.5 px-3 py-1.5 glass-panel dark:bg-canvas-subtle/90 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-white/[0.08] shadow-md max-w-[180px] sm:max-w-[240px] md:max-w-xs transition-all"
+      class="absolute top-3 sm:top-4 left-3 sm:left-4 z-20 flex items-center gap-1.5 px-3 py-1.5 glass-panel dark:bg-canvas-subtle/90 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-white/[0.08] shadow-md max-w-[180px] sm:max-w-[240px] md:max-w-xs transition-all"
       @mousedown.stop
       @touchstart.stop
       @wheel.stop
@@ -423,7 +423,7 @@ function handleSliceClick(slice: TreeSliceLeaf) {
 
     <!-- Floating Toolbar -->
     <div
-      class="absolute top-3 sm:top-4 right-3 sm:right-4 z-10 flex items-center gap-1 sm:gap-1.5 p-1.5 glass-panel dark:bg-canvas-subtle/90 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-white/[0.08] shadow-md"
+      class="absolute top-3 sm:top-4 right-3 sm:right-4 z-20 flex items-center gap-1 sm:gap-1.5 p-1.5 glass-panel dark:bg-canvas-subtle/90 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-white/[0.08] shadow-md"
       @mousedown.stop
       @touchstart.stop
       @wheel.stop
