@@ -384,7 +384,7 @@ async function handleTimezoneChange(newTz: string | number) {
               type="button"
               @click="setTab('general')"
               :class="[
-                'w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors duration-200 text-left border whitespace-nowrap shrink-0',
+                'w-auto md:w-full flex items-center justify-start md:justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors duration-200 text-left border whitespace-nowrap shrink-0',
                 activeTab === 'general'
                   ? 'bg-brand-500/15 text-brand-600 dark:text-brand-400 font-bold border-brand-500/30 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.04] border-transparent'
@@ -401,7 +401,7 @@ async function handleTimezoneChange(newTz: string | number) {
               type="button"
               @click="setTab('notifications')"
               :class="[
-                'w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors duration-200 text-left border whitespace-nowrap shrink-0',
+                'w-auto md:w-full flex items-center justify-start md:justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors duration-200 text-left border whitespace-nowrap shrink-0',
                 activeTab === 'notifications'
                   ? 'bg-brand-500/15 text-brand-600 dark:text-brand-400 font-bold border-brand-500/30 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.04] border-transparent'
@@ -418,7 +418,7 @@ async function handleTimezoneChange(newTz: string | number) {
               type="button"
               @click="setTab('security')"
               :class="[
-                'w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors duration-200 text-left border whitespace-nowrap shrink-0',
+                'w-auto md:w-full flex items-center justify-start md:justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors duration-200 text-left border whitespace-nowrap shrink-0',
                 activeTab === 'security'
                   ? 'bg-brand-500/15 text-brand-600 dark:text-brand-400 font-bold border-brand-500/30 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.04] border-transparent'

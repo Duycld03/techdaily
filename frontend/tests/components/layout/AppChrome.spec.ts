@@ -102,7 +102,7 @@ describe('components/layout/AppChrome', () => {
       expect(wrapper.find('[data-testid="test-content"]').exists()).toBe(true)
 
       const navEl = wrapper.find('nav')
-      expect(navEl.classes()).toContain('md:w-64')
+      expect(navEl.classes()).toContain('md:w-72')
       expect(navEl.classes()).toContain('overflow-x-auto')
 
       const sectionEl = wrapper.find('section')
