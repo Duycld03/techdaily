@@ -634,19 +634,6 @@ function getDifficultyColor(diff: number) {
                     <ArrowRight class="w-3.5 h-3.5 shrink-0" />
                   </NuxtLink>
                 </div>
-
-                <!-- Browse Library Bridge -->
-                <div class="pt-2 border-t border-slate-100 dark:border-white/[0.08]">
-                  <NuxtLink
-                    to="/library"
-                    data-testid="track-browse-library-link"
-                    @click="isTrackMenuOpen = false"
-                    class="flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-sm font-bold text-brand-600 dark:text-brand-400 hover:bg-brand-50 dark:hover:bg-white/[0.06] transition-colors whitespace-nowrap shrink-0"
-                  >
-                    <span>+ {{ $t('roadmap.browse_library') }}</span>
-                    <ArrowRight class="w-3.5 h-3.5 shrink-0" />
-                  </NuxtLink>
-                </div>
               </div>
             </div>
           </div>
