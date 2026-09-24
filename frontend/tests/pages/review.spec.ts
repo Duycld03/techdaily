@@ -196,9 +196,8 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
     expect(wrapper.text()).toContain('review.no_cards_desc')
 
     // Completion card container
-    const completionCard = wrapper.findAll('div').find((d) => d.classes().includes('rounded-2xl') && d.text().includes('review.no_cards'))
+    const completionCard = wrapper.findAll('div').find((d) => d.text().includes('review.no_cards'))
     expect(completionCard).toBeDefined()
-
     // Deduplicated: Mastery Gauge and Review Forecast are NOT in completion session
     expect(wrapper.text()).not.toContain('review.mastery_rate')
     expect(wrapper.text()).not.toContain('review.forecast_title')

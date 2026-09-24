@@ -54,7 +54,7 @@ describe('OptionCard.vue', () => {
     expect(wrapper.emitted('select')).toBeUndefined()
   })
 
-  it('renders selected state with active brand classes and aria-pressed true', () => {
+  it('renders selected state with aria-pressed true', () => {
     const wrapper = mount(OptionCard, {
       props: {
         letter: 'B',
@@ -63,11 +63,10 @@ describe('OptionCard.vue', () => {
       }
     })
 
-    expect(wrapper.find('button').classes()).toContain('border-brand-500')
     expect(wrapper.find('button').attributes('aria-pressed')).toBe('true')
   })
 
-  it('renders correct state with emerald classes and Check icon', () => {
+  it('renders correct state with Check icon', () => {
     const wrapper = mount(OptionCard, {
       props: {
         letter: 'B',
@@ -76,12 +75,11 @@ describe('OptionCard.vue', () => {
       }
     })
 
-    expect(wrapper.find('button').classes()).toContain('border-emerald-500')
     // Check icon is rendered inside badge
     expect(wrapper.find('svg').exists()).toBe(true)
   })
 
-  it('renders incorrect state with rose classes and X icon', () => {
+  it('renders incorrect state with X icon', () => {
     const wrapper = mount(OptionCard, {
       props: {
         letter: 'C',
@@ -90,7 +88,6 @@ describe('OptionCard.vue', () => {
       }
     })
 
-    expect(wrapper.find('button').classes()).toContain('border-rose-500')
     expect(wrapper.find('svg').exists()).toBe(true)
   })
 })

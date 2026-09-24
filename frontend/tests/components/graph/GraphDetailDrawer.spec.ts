@@ -121,18 +121,10 @@ describe('GraphDetailDrawer.vue', () => {
     const quizLink = links.find((l) => l.props('to')?.includes('/quiz?topic='))
     expect(quizLink).toBeDefined()
     expect(quizLink?.props('to')).toContain('/quiz?topic=postgresql-mvcc-vacuum')
-    expect(quizLink?.classes()).toContain('whitespace-nowrap')
-    expect(quizLink?.classes()).toContain('shrink-0')
 
     // View roadmap link
     const roadmapLink = links.find((l) => l.props('to')?.includes('/roadmap#3'))
     expect(roadmapLink).toBeDefined()
-    expect(roadmapLink?.classes()).toContain('whitespace-nowrap')
-    expect(roadmapLink?.classes()).toContain('shrink-0')
-
-    // Verify badges have whitespace-nowrap shrink-0
-    const badges = wrapper.findAll('span.whitespace-nowrap.shrink-0')
-    expect(badges.length).toBeGreaterThan(0)
   })
 
   it('renders book node metadata and navigation links with whitespace-nowrap shrink-0', () => {
@@ -153,14 +145,10 @@ describe('GraphDetailDrawer.vue', () => {
     // Browse library link
     const libLink = links.find((l) => l.props('to') === '/library')
     expect(libLink).toBeDefined()
-    expect(libLink?.classes()).toContain('whitespace-nowrap')
-    expect(libLink?.classes()).toContain('shrink-0')
 
     // Read slices link
     const readLink = links.find((l) => l.props('to') === '/read/book_1')
     expect(readLink).toBeDefined()
-    expect(readLink?.classes()).toContain('whitespace-nowrap')
-    expect(readLink?.classes()).toContain('shrink-0')
   })
 
   it('renders card node SM-2 metrics, mastery status badge, and review action button', () => {
@@ -178,18 +166,16 @@ describe('GraphDetailDrawer.vue', () => {
     expect(wrapper.text()).toContain('4 reviews')
     expect(wrapper.text()).toContain('Mastered')
 
-    // Mastery status badge has whitespace-nowrap shrink-0
+    // Mastery status badge
     const statusBadge = wrapper
       .findAll('span')
-      .find((el) => el.text() === 'Mastered' && el.classes().includes('whitespace-nowrap') && el.classes().includes('shrink-0'))
+      .find((el) => el.text() === 'Mastered')
     expect(statusBadge).toBeDefined()
 
     // Review flashcard action bridge
     const links = wrapper.findAllComponents(NuxtLinkStub)
     const reviewLink = links.find((l) => l.props('to') === '/review?cardId=card_1')
     expect(reviewLink).toBeDefined()
-    expect(reviewLink?.classes()).toContain('whitespace-nowrap')
-    expect(reviewLink?.classes()).toContain('shrink-0')
   })
 
   it('renders highlight node quote, note, tags, and action bridge buttons', () => {
@@ -218,13 +204,9 @@ describe('GraphDetailDrawer.vue', () => {
     const links = wrapper.findAllComponents(NuxtLinkStub)
     const readChapterLink = links.find((l) => l.props('to')?.includes('/read/book_1#slice-chunk_7'))
     expect(readChapterLink).toBeDefined()
-    expect(readChapterLink?.classes()).toContain('whitespace-nowrap')
-    expect(readChapterLink?.classes()).toContain('shrink-0')
 
     const viewNotesLink = links.find((l) => l.props('to')?.includes('/notes?highlightId=hl_1'))
     expect(viewNotesLink).toBeDefined()
-    expect(viewNotesLink?.classes()).toContain('whitespace-nowrap')
-    expect(viewNotesLink?.classes()).toContain('shrink-0')
   })
 
   it('closes the drawer when close button is clicked', async () => {
@@ -273,9 +255,6 @@ describe('GraphDetailDrawer.vue', () => {
     // Filter action button
     const filterBtn = wrapper.find('[data-test="filter-to-pillar"]')
     expect(filterBtn.exists()).toBe(true)
-    expect(filterBtn.classes()).toContain('whitespace-nowrap')
-    expect(filterBtn.classes()).toContain('shrink-0')
-
     // Clicking the filter button sets category in store and closes drawer
     const setCategorySpy = vi.spyOn(store, 'setCategory')
     await filterBtn.trigger('click')

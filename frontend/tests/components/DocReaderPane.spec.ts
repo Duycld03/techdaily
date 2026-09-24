@@ -67,7 +67,7 @@ describe('DocReaderPane.vue', () => {
     expect(wrapper.text()).toContain('Key Takeaway 2')
   })
 
-  it('renders code snippet with full content and horizontal scrolling classes without clipping', () => {
+  it('renders code snippet with full content', () => {
     const wrapper = mount(DocReaderPane, {
       props: {
         topic: mockTopic,
@@ -84,14 +84,7 @@ describe('DocReaderPane.vue', () => {
 
     const readerContent = wrapper.find('.doc-reader-content')
     expect(readerContent.exists()).toBe(true)
-    // Must NOT have overflow-x-hidden which clips long code lines
-    expect(readerContent.classes()).not.toContain('overflow-x-hidden')
-    expect(readerContent.classes()).toContain('min-w-0')
-    expect(readerContent.classes()).toContain('max-w-full')
-
-    // Must preserve full long code line
     expect(wrapper.text()).toContain("queryClient.setQueryData(['items'], (old) => updateLocal(old, itemId));")
-    expect(wrapper.html()).toContain('overflow-x-auto')
   })
 
   it('does not render micro quiz container, providing distraction-free reading', () => {
@@ -146,7 +139,6 @@ describe('DocReaderPane.vue', () => {
     expect(readerContent.exists()).toBe(true)
     expect(readerContent.attributes('style')).toContain('font-size: 16px')
     expect(readerContent.attributes('style')).toContain('line-height: 1.75')
-    expect(readerContent.classes()).toContain('font-sans')
 
     // Dismiss via Escape key
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))

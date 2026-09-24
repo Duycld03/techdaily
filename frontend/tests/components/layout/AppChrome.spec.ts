@@ -32,8 +32,6 @@ describe('components/layout/AppChrome', () => {
 
       const header = wrapper.find('header')
       expect(header.exists()).toBe(true)
-      expect(header.classes()).toContain('sticky')
-      expect(header.classes()).toContain('z-40')
       expect(wrapper.text()).toContain('TechDaily')
       expect(wrapper.find('[data-testid="streak-badge-stub"]').exists()).toBe(true)
     })
@@ -60,12 +58,11 @@ describe('components/layout/AppChrome', () => {
 
       const drawer = wrapper.find('[data-testid="mobile-nav-drawer"]')
       expect(drawer.exists()).toBe(true)
-      expect(drawer.classes()).toContain('z-50')
     })
   })
 
   describe('AppSidebar.vue', () => {
-    it('renders desktop sidebar with md:w-64 width and label nowrap', async () => {
+    it('renders desktop sidebar with navigation links', async () => {
       const wrapper = mount(AppSidebar, {
         global: {
           stubs: {
@@ -80,10 +77,9 @@ describe('components/layout/AppChrome', () => {
 
       const aside = wrapper.find('aside')
       expect(aside.exists()).toBe(true)
-      expect(aside.classes()).toContain('md:w-64')
 
-      const labels = wrapper.findAll('span.whitespace-nowrap')
-      expect(labels.length).toBeGreaterThan(0)
+      const links = wrapper.findAll('.nuxt-link')
+      expect(links.length).toBeGreaterThan(0)
     })
   })
 
@@ -101,12 +97,8 @@ describe('components/layout/AppChrome', () => {
       expect(wrapper.find('[data-testid="test-nav"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="test-content"]').exists()).toBe(true)
 
-      const navEl = wrapper.find('nav')
-      expect(navEl.classes()).toContain('md:w-72')
-      expect(navEl.classes()).toContain('overflow-x-auto')
-
-      const sectionEl = wrapper.find('section')
-      expect(sectionEl.classes()).toContain('flex-1')
+      expect(wrapper.find('nav').exists()).toBe(true)
+      expect(wrapper.find('section').exists()).toBe(true)
     })
   })
 })

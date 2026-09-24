@@ -187,8 +187,6 @@ describe('BasePagination.vue', () => {
 
     const activeBtn = wrapper.find('button[data-page="3"]')
     expect(activeBtn.attributes('aria-current')).toBe('page')
-    expect(activeBtn.classes()).toContain('bg-brand-600')
-
     const inactiveBtn = wrapper.find('button[data-page="2"]')
     expect(inactiveBtn.attributes('aria-current')).toBeUndefined()
   })

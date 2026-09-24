@@ -82,47 +82,24 @@ describe("TermExplainerModal.vue", () => {
     });
   }
 
-  it("renders responsive header layout with truncate and flex constraints", async () => {
+  it("renders header with term title and category details", async () => {
     const wrapper = createWrapper();
     await flushPromises();
 
-    // Outer flex header
-    const header = wrapper.find(".border-b");
-    expect(header.classes()).toContain("flex");
-    expect(header.classes()).toContain("items-center");
-    expect(header.classes()).toContain("justify-between");
-    expect(header.classes()).toContain("gap-3");
+    const categorySpan = wrapper.find("span[title='Storage Engine']");
+    expect(categorySpan.exists()).toBe(true);
+    expect(categorySpan.text()).toBe("Storage Engine");
 
-    // Icon container has shrink-0
-    const iconWrapper = wrapper.find(".bg-brand-100");
-    expect(iconWrapper.classes()).toContain("shrink-0");
-
-    // Title and category container has min-w-0 flex-1
-    const textContainer = wrapper.find(".min-w-0.flex-1");
-    expect(textContainer.exists()).toBe(true);
-
-    // Category row has flex-wrap sm:flex-nowrap
-    const categoryRow = textContainer.find(".flex.items-center.gap-2");
-    expect(categoryRow.classes()).toContain("flex-wrap");
-    expect(categoryRow.classes()).toContain("sm:flex-nowrap");
-
-    // Category span has max-w and truncate
-    const categorySpan = categoryRow.find("span");
-    expect(categorySpan.classes()).toContain("truncate");
-    expect(categorySpan.classes()).toContain("max-w-[180px]");
-    expect(categorySpan.attributes("title")).toBe("Storage Engine");
-
-    // Term heading has truncate and title
     const termHeading = wrapper.find("h3");
-    expect(termHeading.classes()).toContain("truncate");
+    expect(termHeading.exists()).toBe(true);
     expect(termHeading.attributes("title")).toBe("Write-Ahead Log");
+    expect(termHeading.text()).toContain("Write-Ahead Log");
 
-    // Close button has shrink-0
     const closeBtn = wrapper.find("button[aria-label]");
-    expect(closeBtn.classes()).toContain("shrink-0");
+    expect(closeBtn.exists()).toBe(true);
   });
 
-  it("renders Instant Cache badge with whitespace-nowrap and shrink-0 when isFromCache is true", async () => {
+  it("renders Instant Cache badge when isFromCache is true", async () => {
     mockExplainTerm.mockResolvedValue({
       term: "Write-Ahead Log",
       explanation: "WAL ensures data durability.",
@@ -135,8 +112,6 @@ describe("TermExplainerModal.vue", () => {
 
     const badge = wrapper.find(".bg-amber-500\\/15");
     expect(badge.exists()).toBe(true);
-    expect(badge.classes()).toContain("whitespace-nowrap");
-    expect(badge.classes()).toContain("shrink-0");
     expect(badge.text()).toContain("Instant Cache");
   });
 

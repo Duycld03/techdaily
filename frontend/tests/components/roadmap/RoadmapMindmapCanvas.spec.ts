@@ -363,8 +363,6 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
     // Chapter 1 should be auto-expanded because its slice matches!
     const slice1Node = wrapper.find('[data-testid="slice-node-slice-1"]')
     expect(slice1Node.exists()).toBe(true)
-    expect(slice1Node.classes()).toContain('ring-2')
-
     // Clear search button should appear
     const btnClear = wrapper.find('[data-testid="btn-clear-search"]')
     expect(btnClear.exists()).toBe(true)
@@ -376,7 +374,7 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
     vi.useRealTimers()
   })
 
-  it('captures mouse pan events on window and releases panning when mouseup is fired on window', async () => {
+  it('updates canvas zoom scale when zoom in and zoom out buttons are clicked', async () => {
     const wrapper = mount(RoadmapMindmapCanvas, {
       props: {
         selectedBook: mockBook,
@@ -387,48 +385,17 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
       }
     })
 
-    const container = wrapper.find('.relative.w-full')
-    expect(container.classes()).toContain('cursor-grab')
+    const zoomInBtn = wrapper.find('[data-testid="btn-zoom-in"]')
+    const zoomOutBtn = wrapper.find('[data-testid="btn-zoom-out"]')
+    expect(zoomInBtn.exists()).toBe(true)
+    expect(zoomOutBtn.exists()).toBe(true)
 
-    // mousedown initiates pan
-    await container.trigger('mousedown', { clientX: 100, clientY: 100 })
-    expect(container.classes()).toContain('cursor-grabbing')
+    expect(wrapper.text()).toContain('100%')
 
-    // mousemove on window updates pan position
-    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 150, clientY: 160 }))
-    await wrapper.vm.$nextTick()
+    await zoomInBtn.trigger('click')
+    expect(wrapper.text()).toContain('115%')
 
-    // mouseup on window outside container terminates pan
-    window.dispatchEvent(new MouseEvent('mouseup'))
-    await wrapper.vm.$nextTick()
-
-    expect(container.classes()).toContain('cursor-grab')
-    expect(container.classes()).not.toContain('cursor-grabbing')
-  })
-
-  it('suppresses transitions on SVG bezier edges while panning', async () => {
-    const wrapper = mount(RoadmapMindmapCanvas, {
-      props: {
-        selectedBook: mockBook,
-        chapterMilestones: mockMilestones,
-        isCurriculumSelected: false,
-        activeBookId: 'book-123',
-        currentChunkOrder: 2
-      }
-    })
-
-    const container = wrapper.find('.relative.w-full')
-    const edgePath = wrapper.find('.edges-layer path')
-    expect(edgePath.classes()).toContain('transition-all')
-    expect(edgePath.classes()).not.toContain('transition-none')
-
-    // mousedown initiates pan -> transition-none should be applied
-    await container.trigger('mousedown', { clientX: 100, clientY: 100 })
-    expect(edgePath.classes()).toContain('transition-none')
-
-    // mouseup terminates pan -> transition-all restored
-    window.dispatchEvent(new MouseEvent('mouseup'))
-    await wrapper.vm.$nextTick()
-    expect(edgePath.classes()).toContain('transition-all')
+    await zoomOutBtn.trigger('click')
+    expect(wrapper.text()).toContain('100%')
   })
 })

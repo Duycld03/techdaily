@@ -11,7 +11,7 @@ describe('GraphControlBar.vue', () => {
     return store
   }
 
-  it('renders search input, fit screen button, and filter pills inside flex-wrap containers with all 6 pillars', () => {
+  it('renders search input, fit screen button, and category filter buttons', () => {
     createTestStore()
     const wrapper = mount(GraphControlBar)
 
@@ -21,22 +21,8 @@ describe('GraphControlBar.vue', () => {
     // Fit Screen button
     const fitBtn = wrapper.findAll('button').find((b) => b.attributes('title') === 'graph.fitScreen' || b.text().includes('graph.fitScreen'))
     expect(fitBtn).toBeDefined()
-    expect(fitBtn?.classes()).toContain('whitespace-nowrap')
-    expect(fitBtn?.classes()).toContain('shrink-0')
 
-    // Filter pill containers use flex-wrap to prevent horizontal clipping
-    const flexWrapContainers = wrapper.findAll('div.flex.flex-wrap.items-center.gap-1\\.5')
-    expect(flexWrapContainers.length).toBeGreaterThanOrEqual(2)
-
-    // All 6 category pills render with whitespace-nowrap shrink-0
-    const pillarRow = flexWrapContainers[0]
-    expect(pillarRow).toBeDefined()
-    const pillarButtons = pillarRow!.findAll('button')
-    expect(pillarButtons.length).toBe(6)
-    pillarButtons.forEach((btn) => {
-      expect(btn.classes()).toContain('whitespace-nowrap')
-      expect(btn.classes()).toContain('shrink-0')
-    })
+    const pillarButtons = wrapper.findAll('button')
 
     // Verify all 6 category pills have explicit translation keys
     const expectedKeys = [

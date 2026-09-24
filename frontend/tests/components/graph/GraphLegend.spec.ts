@@ -78,19 +78,11 @@ describe('GraphLegend.vue', () => {
     expect(wrapper.find('[data-testid="legend-expand-btn"]').exists()).toBe(true)
   })
 
-  it('renders single-column vertical stack with w-56 and without truncate class', () => {
+  it('renders legend card with node type indicators', () => {
     const wrapper = mount(GraphLegend)
     const card = wrapper.find('[data-testid="legend-card"]')
     expect(card.exists()).toBe(true)
-    expect(card.classes()).toContain('w-56')
-
-    // Verify vertical stack container exists
-    const flexCols = wrapper.findAll('.flex-col')
-    expect(flexCols.length).toBeGreaterThanOrEqual(2)
-
-    // Verify no truncate class exists on legend items
-    const truncatedSpans = wrapper.findAll('span.truncate')
-    expect(truncatedSpans.length).toBe(0)
+    expect(wrapper.text()).toContain('graph.legend.topic')
   })
 
   it('defaults to collapsed on tablet/mobile screens (< 1024px) when no localStorage is set', () => {

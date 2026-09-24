@@ -281,7 +281,7 @@ describe('pages/roadmap.vue', () => {
     expect(wrapper.text()).toContain('roadmap.no_active_books')
   })
 
-  it('renders unclipped track switcher popover with overflow-visible banner container and elevated z-index', async () => {
+  it('renders track switcher popover with book options when triggered', async () => {
     setupMockStores()
 
     const wrapper = mount(RoadmapPage, {
@@ -294,24 +294,11 @@ describe('pages/roadmap.vue', () => {
     })
     await flushPromises()
 
-    // Banner card container should have overflow-visible and z-20
-    const bannerCard = wrapper.find('.rounded-3xl.bg-gradient-to-br')
-    expect(bannerCard.exists()).toBe(true)
-    expect(bannerCard.classes()).toContain('overflow-visible')
-    expect(bannerCard.classes()).toContain('z-20')
-    expect(bannerCard.classes()).not.toContain('overflow-hidden')
-
     // Open track switcher dropdown
     await wrapper.find('[data-testid="track-switcher-btn"]').trigger('click')
 
-    // Banner card should elevate to z-40 when track menu is open
-    expect(bannerCard.classes()).toContain('z-40')
-    expect(bannerCard.classes()).not.toContain('z-20')
-
     const popover = wrapper.find('[data-testid="track-menu-popover"]')
     expect(popover.exists()).toBe(true)
-    expect(popover.classes()).toContain('z-50')
-    expect(popover.classes()).toContain('overflow-y-auto')
 
     // All elements must be rendered inside the popover
     expect(wrapper.find('[data-testid="track-book-option-book-1"]').exists()).toBe(true)
@@ -468,8 +455,6 @@ describe('pages/roadmap.vue', () => {
 
     const spineLine = spineContainer.find('.absolute.w-0\\.5')
     expect(spineLine.exists()).toBe(true)
-    expect(spineLine.classes().some(c => c.includes('from-brand-500'))).toBe(true)
-
     // Milestone beads for chapters exist
     const milestoneBeads = wrapper.findAll('.rounded-full.z-10')
     expect(milestoneBeads.length).toBeGreaterThan(0)

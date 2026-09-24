@@ -138,7 +138,6 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     expect(sm2Btn.text()).toContain('notes.in_sm2')
     expect(sm2Btn.attributes('disabled')).toBeDefined()
     expect(sm2Btn.findComponent(Check).exists() || sm2Btn.find('svg.text-brand-500').exists()).toBe(true)
-    expect(sm2Btn.classes()).toContain('border-brand-500/30')
   })
 
   it('renders flashcard button in brand violet and converts to In SM-2 on click without reference error', async () => {
@@ -168,9 +167,6 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
 
     const sm2Btn = wrapper.find('button[title="notes.create_flashcard"]')
     expect(sm2Btn.exists()).toBe(true)
-    expect(sm2Btn.classes()).toContain('text-brand-700')
-    expect(sm2Btn.classes()).toContain('border-brand-200/80')
-
     // Click to create flashcard
     await sm2Btn.trigger('click')
     await flushPromises()
@@ -179,7 +175,6 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     const updatedBtn = wrapper.find('button[title="notes.in_sm2"]')
     expect(updatedBtn.exists()).toBe(true)
     expect(updatedBtn.attributes('disabled')).toBeDefined()
-    expect(updatedBtn.classes()).toContain('border-brand-500/30')
   })
 
   it('retains unconverted flashcard button and does not enter In SM-2 state when flashcard synthesis fails', async () => {

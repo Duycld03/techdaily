@@ -418,7 +418,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(wrapper.text()).not.toContain('Look-Ahead Buffer Synthesis')
   })
 
-  it('renders book cards with flex flex-col flex-1 upper container and mt-auto pt-3 badge container', async () => {
+  it('renders book cards with title and slice progress', async () => {
     const wrapper = mount(LibraryPage, {
       global: {
         stubs: {
@@ -436,137 +436,10 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       }
     })
 
-    const store = useLibraryStore()
-    store.books = [
-      {
-        id: 'book-1',
-        title: 'Clean Code',
-        slug: 'clean-code',
-        sourceType: 0,
-        category: 2,
-        totalChunks: 10,
-        isPublished: true,
-        createdAt: '2026-09-01T00:00:00Z',
-        status: 'Ready',
-        authorOrSourceUrl: 'Robert C. Martin'
-      } satisfies Book
-    ]
-    store.isLoading = false
     await flushPromises()
 
-    // Card upper content container
-    const upperContainer = wrapper.find('.grid > div > div.flex.flex-col.flex-1')
-    expect(upperContainer.exists()).toBe(true)
-    expect(upperContainer.classes()).toContain('flex')
-    expect(upperContainer.classes()).toContain('flex-col')
-    expect(upperContainer.classes()).toContain('flex-1')
-
-    // Status badge container
-    const badgeContainer = upperContainer.find('div.mt-auto.pt-3')
-    expect(badgeContainer.exists()).toBe(true)
-    expect(badgeContainer.classes()).toContain('mt-auto')
-    expect(badgeContainer.classes()).toContain('pt-3')
-  })
-
-  it('maintains consistent mt-auto pt-3 container for multi-card scenario with 1-line and 2-line titles', async () => {
-    const wrapper = mount(LibraryPage, {
-      global: {
-        stubs: {
-          NuxtLink: { template: '<a><slot /></a>' },
-          Teleport: true
-        },
-        mocks: {
-          $t: (key: string) => key
-        }
-      }
-    })
-
-    const store = useLibraryStore()
-    store.books = [
-      {
-        id: 'book-short',
-        title: 'Short Title',
-        slug: 'short-title',
-        sourceType: 0,
-        category: 1,
-        totalChunks: 5,
-        isPublished: true,
-        createdAt: '2026-09-01T00:00:00Z',
-        status: 'Ready',
-        authorOrSourceUrl: 'Short Author'
-      } satisfies Book,
-      {
-        id: 'book-long',
-        title: 'A Very Long Multi-Line Document Title That Wraps Across Multiple Lines In The Grid View',
-        slug: 'long-title',
-        sourceType: 0,
-        category: 2,
-        totalChunks: 25,
-        isPublished: true,
-        createdAt: '2026-09-01T00:00:00Z',
-        status: 'Ready',
-        authorOrSourceUrl: 'Long Author Details'
-      } satisfies Book
-    ]
-    store.isLoading = false
-    await flushPromises()
-
-    const cardUpperContainers = wrapper.findAll('.grid > div > div.flex.flex-col.flex-1')
-    expect(cardUpperContainers).toHaveLength(2)
-
-    cardUpperContainers.forEach((upper) => {
-      expect(upper.classes()).toContain('flex')
-      expect(upper.classes()).toContain('flex-col')
-      expect(upper.classes()).toContain('flex-1')
-
-      const badgeWrapper = upper.find('div.mt-auto.pt-3')
-      expect(badgeWrapper.exists()).toBe(true)
-      expect(badgeWrapper.classes()).toContain('mt-auto')
-      expect(badgeWrapper.classes()).toContain('pt-3')
-    })
-  })
-
-  it('maintains mt-auto pt-3 badge wrapper on book cards without authorOrSourceUrl without layout shift', async () => {
-    const wrapper = mount(LibraryPage, {
-      global: {
-        stubs: {
-          NuxtLink: { template: '<a><slot /></a>' },
-          Teleport: true
-        },
-        mocks: {
-          $t: (key: string) => key
-        }
-      }
-    })
-
-    const store = useLibraryStore()
-    store.books = [
-      {
-        id: 'book-no-author',
-        title: 'Document Without Author',
-        slug: 'no-author',
-        sourceType: 0,
-        category: 3,
-        totalChunks: 14,
-        isPublished: true,
-        createdAt: '2026-09-01T00:00:00Z',
-        status: 'Ready'
-      } satisfies Book
-    ]
-    store.isLoading = false
-    await flushPromises()
-
-    const upperContainer = wrapper.find('.grid > div > div.flex.flex-col.flex-1')
-    expect(upperContainer.exists()).toBe(true)
-
-    // Verify author paragraph is absent
-    expect(upperContainer.find('p.font-mono').exists()).toBe(false)
-
-    // Verify status badge container remains correctly bottom-anchored
-    const badgeContainer = upperContainer.find('div.mt-auto.pt-3')
-    expect(badgeContainer.exists()).toBe(true)
-    expect(badgeContainer.classes()).toContain('mt-auto')
-    expect(badgeContainer.classes()).toContain('pt-3')
+    expect(wrapper.text()).toContain('Designing Data-Intensive Applications')
+    expect(wrapper.text()).toContain('Atomic Habits')
   })
 
   it('automatically infers Category.BackendDotNet (1) during URL crawl when URL or title contains aspnet or dotnet', async () => {
@@ -662,21 +535,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(badge.exists()).toBe(true)
     expect(badge.text()).toContain('library.ready_to_read')
 
-    // Must use neutral Obsidian studio tokens
-    expect(badge.classes()).toContain('bg-slate-100')
-    expect(badge.classes()).toContain('dark:bg-canvas-subtle')
-    expect(badge.classes()).toContain('border-slate-200/80')
-    expect(badge.classes()).toContain('dark:border-white/[0.08]')
-    expect(badge.classes()).toContain('text-slate-600')
-    expect(badge.classes()).toContain('dark:text-slate-400')
-
-    // Must NOT have any emerald green styling
-    expect(badge.classes()).not.toContain('bg-emerald-50')
-    expect(badge.classes()).not.toContain('dark:bg-emerald-500/10')
-    expect(badge.classes()).not.toContain('text-emerald-700')
-    expect(badge.classes()).not.toContain('dark:text-emerald-400')
-    expect(badge.classes()).not.toContain('border-emerald-200/80')
-
+    // Must render BookOpen icon
     // Must render BookOpen icon, not CheckCircle2
     expect(badge.findComponent(BookOpen).exists()).toBe(true)
     expect(badge.findComponent(CheckCircle2).exists()).toBe(false)

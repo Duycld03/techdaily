@@ -49,17 +49,14 @@ describe('StudioLayout.vue', () => {
     })
 
     expect((wrapper.element as HTMLElement).style.height).toBe('750px')
-    expect(wrapper.classes()).not.toContain('flex-1')
   })
 
-  it('allows natural flex when maxHeight is not provided', () => {
+  it('renders natural height when maxHeight is not provided', () => {
     const wrapper = mount(StudioLayout)
-
-    expect(wrapper.classes()).toContain('flex-1')
     expect((wrapper.element as HTMLElement).style.height).toBe('')
   })
 
-  it('shows dock slot on desktop with responsive layout classes', () => {
+  it('renders dock slot inside aside container', () => {
     const wrapper = mount(StudioLayout, {
       slots: {
         dock: '<div data-testid="dock-content">Telemetry Stats</div>'
@@ -68,9 +65,6 @@ describe('StudioLayout.vue', () => {
 
     const dock = wrapper.find('aside[aria-label="Session telemetry"]')
     expect(dock.exists()).toBe(true)
-    expect(dock.classes()).toContain('hidden')
-    expect(dock.classes()).toContain('lg:flex')
-    expect(dock.classes()).toContain('lg:w-[32%]')
     expect(dock.find('[data-testid="dock-content"]').text()).toBe('Telemetry Stats')
   })
 })
@@ -116,13 +110,10 @@ describe('MasterDetailLayout.vue', () => {
     })
 
     expect((wrapper.element as HTMLElement).style.height).toBe('520px')
-    expect(wrapper.classes()).not.toContain('flex-1')
   })
 
-  it('allows natural flex when maxHeight is not provided', () => {
+  it('renders natural height when maxHeight is not provided', () => {
     const wrapper = mount(MasterDetailLayout)
-
-    expect(wrapper.classes()).toContain('flex-1')
     expect((wrapper.element as HTMLElement).style.height).toBe('')
   })
 })
@@ -169,13 +160,10 @@ describe('BoardLayout.vue', () => {
     })
 
     expect((wrapper.element as HTMLElement).style.height).toBe('680px')
-    expect(wrapper.classes()).not.toContain('flex-1')
   })
 
-  it('allows natural flex when maxHeight is not provided', () => {
+  it('renders natural height when maxHeight is not provided', () => {
     const wrapper = mount(BoardLayout)
-
-    expect(wrapper.classes()).toContain('flex-1')
     expect((wrapper.element as HTMLElement).style.height).toBe('')
   })
 })

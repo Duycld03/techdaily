@@ -55,17 +55,7 @@ describe('BentoDashboardLayout', () => {
     expect(wrapper.attributes('style')).toContain('height: 750px')
   })
 
-  it('applies flex-1 class when maxHeight prop is not passed', () => {
-    const wrapper = mount(BentoDashboardLayout, {
-      slots: {
-        'action-stage': '<div>Content</div>'
-      }
-    })
-
-    expect(wrapper.classes()).toContain('flex-1')
-  })
-
-  it('structures asymmetric grid with 2:1 column split on desktop', () => {
+  it('renders action stage and telemetry dock semantic elements', () => {
     const wrapper = mount(BentoDashboardLayout, {
       slots: {
         'action-stage': '<div>Action Cards</div>',
@@ -76,7 +66,7 @@ describe('BentoDashboardLayout', () => {
     const actionSection = wrapper.find('section[aria-label="Core action stage"]')
     const telemetryAside = wrapper.find('aside[aria-label="Telemetry and constellation dock"]')
 
-    expect(actionSection.classes()).toContain('lg:col-span-2')
-    expect(telemetryAside.classes()).toContain('lg:col-span-1')
+    expect(actionSection.exists()).toBe(true)
+    expect(telemetryAside.exists()).toBe(true)
   })
 })

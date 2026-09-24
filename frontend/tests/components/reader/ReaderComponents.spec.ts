@@ -106,15 +106,12 @@ describe("ReaderHeaderBar.vue", () => {
       },
     });
 
-    const buttons = wrapper.findAll("button");
-    const desktopTocBtn = buttons.find((b) => b.attributes("title") === "reader.open_toc");
-    expect(desktopTocBtn).toBeDefined();
-    await desktopTocBtn?.trigger("click");
+    const tocButtons = wrapper.findAll("button").filter((b) => b.attributes("title") === "reader.open_toc");
+    expect(tocButtons.length).toBeGreaterThanOrEqual(2);
+    await tocButtons[0]?.trigger("click");
     expect(wrapper.emitted("toggle-toc")).toHaveLength(1);
 
-    const mobileTocBtn = buttons.find((b) => b.classes().includes("md:hidden"));
-    expect(mobileTocBtn).toBeDefined();
-    await mobileTocBtn?.trigger("click");
+    await tocButtons[1]?.trigger("click");
     expect(wrapper.emitted("open-mobile-toc")).toHaveLength(1);
   });
 

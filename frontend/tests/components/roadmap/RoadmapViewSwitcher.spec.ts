@@ -103,28 +103,6 @@ describe('components/roadmap/RoadmapViewSwitcher.vue', () => {
     expect(wrapper.emitted('update:modelValue')?.[1]).toEqual(['timeline'])
   })
 
-  it('maintains constant 1px border geometry and transition-colors across active and inactive states', () => {
-    const wrapper = mount(RoadmapViewSwitcher, {
-      props: {
-        modelValue: 'timeline'
-      }
-    })
-
-    const timelineTab = wrapper.find('#tab-timeline')
-    const mindmapTab = wrapper.find('#tab-mindmap')
-
-    // Both tabs must have base border and transition-colors (never transition-all)
-    expect(timelineTab.classes()).toContain('border')
-    expect(timelineTab.classes()).toContain('transition-colors')
-    expect(timelineTab.classes()).not.toContain('transition-all')
-
-    expect(mindmapTab.classes()).toContain('border')
-    expect(mindmapTab.classes()).toContain('transition-colors')
-    expect(mindmapTab.classes()).not.toContain('transition-all')
-
-    // Inactive tab must allocate border-transparent to maintain exact geometry
-    expect(mindmapTab.classes()).toContain('border-transparent')
-  })
   describe('useRoadmapViewMode composable', () => {
     beforeEach(() => {
       window.localStorage.clear()

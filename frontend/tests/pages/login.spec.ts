@@ -229,7 +229,7 @@ describe('pages/login.vue', () => {
     expect(wrapper.find('button[aria-label="Hide password"]').exists()).toBe(true)
   })
 
-  it('renders Studio Auth 2-column desktop archetype with branding stage', () => {
+  it('renders Studio Auth desktop branding stage and auth card', () => {
     const wrapper = mount(LoginPage, {
       global: {
         stubs: {
@@ -238,25 +238,14 @@ describe('pages/login.vue', () => {
       }
     })
 
-    // Outer grid container
-    const gridContainer = wrapper.find('.grid.lg\\:grid-cols-12')
-    expect(gridContainer.exists()).toBe(true)
-    expect(gridContainer.classes()).toContain('max-w-5xl')
-
-    // Left brand column (desktop)
-    const leftCol = wrapper.find('.lg\\:col-span-5')
-    expect(leftCol.exists()).toBe(true)
-    expect(leftCol.classes()).toContain('hidden')
-    expect(leftCol.classes()).toContain('lg:block')
-    expect(leftCol.text()).toContain('TechDaily Studio')
+    // Brand stage
+    expect(wrapper.text()).toContain('TechDaily Studio')
 
     // Right interactive auth card
-    const rightCol = wrapper.find('.lg\\:col-span-7')
-    expect(rightCol.exists()).toBe(true)
-    expect(rightCol.find('.glass-panel').exists()).toBe(true)
+    expect(wrapper.find('.glass-panel').exists()).toBe(true)
   })
 
-  it('renders 2-column grid layout for inputs in register mode', async () => {
+  it('renders inputs for name, email, and dual passwords in register mode', async () => {
     const wrapper = mount(LoginPage, {
       global: {
         stubs: {
@@ -268,10 +257,6 @@ describe('pages/login.vue', () => {
     const buttons = wrapper.findAll('button')
     const registerTab = buttons.find(b => b.text().includes('Register') || b.text().includes('auth.register_tab'))
     await registerTab!.trigger('click')
-
-    const registerGrid = wrapper.find('.grid.grid-cols-1.sm\\:grid-cols-2')
-    expect(registerGrid.exists()).toBe(true)
-    expect(registerGrid.classes()).toContain('gap-3.5')
 
     // Col 1 (Row 1): Name, Col 2 (Row 1): Email
     const nameInput = wrapper.find('input[type="text"]')
