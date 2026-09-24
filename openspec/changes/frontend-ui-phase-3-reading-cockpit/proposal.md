@@ -17,10 +17,10 @@ The technical document reading interface (`read/[bookId].vue`) is currently a mo
 
 ### Modified Capabilities
 
-- `system-layout-archetypes`:
-  - Codify reading cockpit layout specifications and maximum prose width constraints (`max-w-3xl`).
 - `reader`:
-  - Formalize modular reader chrome component requirements.
+  - Formalize modular reader chrome component requirements and centered reading prose layout constraints.
+- `today-reader`:
+  - Standardize daily reading studio layout density, symmetric spacing, and split pane visual alignment.
 
 ## Impact
 

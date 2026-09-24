@@ -468,6 +468,8 @@
     "library": "Thư Viện",
     "contents": "Mục Lục",
     "chapters": "Các Chương",
+    "search_placeholder": "Tìm kiếm chương...",
+    "no_chapters_found": "Không tìm thấy chương phù hợp",
     "slice_of": "Lát cắt {current} trên {total}: {chapter}",
     "slice_badge": "Lát cắt {current} / {total}",
     "slice_badge_short": "{current}/{total}",

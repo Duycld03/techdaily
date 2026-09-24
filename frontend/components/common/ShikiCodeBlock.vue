@@ -143,10 +143,10 @@ async function copyCode() {
   font-family: inherit !important;
     background-color: transparent !important;
   }
-  :deep(.dark .shiki),
-  :deep(.dark .shiki span),
-  :deep(html.dark .shiki),
-  :deep(html.dark .shiki span) {
+  :deep(.dark .shiki[style*="--shiki-dark"]),
+  :deep(.dark .shiki span[style*="--shiki-dark"]),
+  :deep(html.dark .shiki[style*="--shiki-dark"]),
+  :deep(html.dark .shiki span[style*="--shiki-dark"]) {
     color: var(--shiki-dark) !important;
   }
 </style>

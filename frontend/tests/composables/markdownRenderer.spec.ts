@@ -26,6 +26,8 @@ describe('useMarkdownRenderer & shikiHighlighter', () => {
     expect(SUPPORTED_LANGS).toContain('nginx')
     expect(SUPPORTED_LANGS).toContain('powershell')
     expect(SUPPORTED_LANGS).toContain('xml')
+    expect(SUPPORTED_LANGS).toContain('proto')
+    expect(SUPPORTED_LANGS).toContain('razor')
   })
 
   it('normalizes language aliases correctly', () => {
@@ -50,6 +52,11 @@ describe('useMarkdownRenderer & shikiHighlighter', () => {
     expect(normalizeLanguage('patch')).toBe('diff')
     expect(normalizeLanguage('conf')).toBe('nginx')
     expect(normalizeLanguage('svg')).toBe('xml')
+    expect(normalizeLanguage('proto')).toBe('proto')
+    expect(normalizeLanguage('protobuf')).toBe('proto')
+    expect(normalizeLanguage('razor')).toBe('razor')
+    expect(normalizeLanguage('blazor')).toBe('razor')
+    expect(normalizeLanguage('cshtml')).toBe('razor')
   })
 
   it('formats display labels consistently with insights page', () => {
@@ -61,6 +68,10 @@ describe('useMarkdownRenderer & shikiHighlighter', () => {
     expect(formatLanguageLabel('text')).toBe('Output')
     expect(formatLanguageLabel('txt')).toBe('Output')
     expect(formatLanguageLabel('plaintext')).toBe('Output')
+    expect(formatLanguageLabel('proto')).toBe('Protobuf')
+    expect(formatLanguageLabel('protobuf')).toBe('Protobuf')
+    expect(formatLanguageLabel('razor')).toBe('Razor / Blazor')
+    expect(formatLanguageLabel('blazor')).toBe('Razor / Blazor')
   })
 
   it('highlights TypeScript code fence with vitesse-dark and macOS 3-dot window header', () => {
@@ -88,8 +99,9 @@ async function toggleFavorite(itemId: string) {
     // Verify TypeScript label
     expect(html).toContain('TypeScript')
 
-    // Verify Shiki vitesse-dark highlighting output
-    expect(html).toContain('shiki vitesse-dark')
+    // Verify Shiki dual-theme tokenization output
+    expect(html).toContain('vitesse-dark')
+    expect(html).toContain('--shiki-dark')
     expect(html).toContain('queryClient')
   })
 
@@ -108,7 +120,8 @@ public ValueTask<string> GetCachedDataAsync(string key) {
     const html = render(csharpMarkdown)
 
     expect(html).toContain('C# / .NET 10')
-    expect(html).toContain('shiki vitesse-dark')
+    expect(html).toContain('vitesse-dark')
+    expect(html).toContain('--shiki-dark')
     expect(html).toContain('bg-[#ff5f56]')
     expect(html).toContain('GetCachedDataAsync')
   })
@@ -147,6 +160,56 @@ async function toggleFavorite(itemId: string) {
 }`
     const detected = detectCodeLanguage(code)
     expect(detected).toBe('typescript')
+  })
+
+  it('auto-detects Protobuf / gRPC for protocol buffer definitions instead of Go', () => {
+    const protoCode = `syntax = "proto3";
+
+package greet;
+
+service Greeter {
+  rpc SayHello (HelloRequest) returns (HelloReply);
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}`
+    const detected = detectCodeLanguage(protoCode)
+    expect(detected).toBe('proto')
+    expect(formatLanguageLabel(detected)).toBe('Protobuf')
+  })
+  it('highlights Razor / Blazor code fence with Razor grammar and dual-theme tokens', () => {
+    const { render } = useMarkdownRenderer()
+    const razorMarkdown = `
+\`\`\`razor
+@page "/counter"
+<PageTitle>Counter</PageTitle>
+<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+@code {
+    private int currentCount = 0;
+}
+\`\`\`
+`
+    const html = render(razorMarkdown)
+    expect(html).toContain('Razor / Blazor')
+    expect(html).toContain('vitesse-dark')
+    expect(html).toContain('--shiki-dark')
+    expect(html).toContain('IncrementCount')
+  })
+
+  it('auto-detects Razor directives in unlabelled code blocks', () => {
+    const razorSnippet = `@page "/dashboard"
+@inject NavigationManager Nav
+@code {
+    private string title = "Dashboard";
+}`
+    const detected = detectCodeLanguage(razorSnippet)
+    expect(detected).toBe('razor')
+    expect(formatLanguageLabel(detected)).toBe('Razor / Blazor')
   })
 
   it('escapes raw HTML and script tags to prevent XSS execution', () => {
@@ -305,7 +368,7 @@ socket.on('telemetry', (batch) => {
     const html = render(vueScriptMarkdown)
     expect(html).toContain('Vue 3 / SFC')
     // Verify syntax highlighting has tokenized keywords (e.g. const)
-    expect(html).toContain('color:#CB7676') // vitesse-dark keyword color for 'const'
+    expect(html).toContain('--shiki-dark:#CB7676') // vitesse-dark keyword color for 'const'
   })
 
   it('highlights diff and nginx code fences properly', () => {

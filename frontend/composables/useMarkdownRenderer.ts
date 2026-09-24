@@ -8,6 +8,7 @@ import {
   normalizeLanguage,
   SUPPORTED_LANGS,
   CODE_THEME,
+  CODE_THEME_LIGHT,
 } from "~/utils/shikiHighlighter";
 declare global {
   interface Window {
@@ -207,7 +208,10 @@ export function useMarkdownRenderer() {
         try {
           highlightedHtml = highlighter.codeToHtml(code.trimEnd(), {
             lang: shikiLang,
-            theme: CODE_THEME,
+            themes: {
+              light: CODE_THEME_LIGHT,
+              dark: CODE_THEME,
+            },
           });
         } catch {
           highlightedHtml = "";

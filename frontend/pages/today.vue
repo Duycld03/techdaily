@@ -373,29 +373,31 @@ watch(locale, (newLocale) => {
         class="md:hidden flex border-b border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-canvas-subtle shrink-0"
       >
         <button
+          type="button"
           @click="activeMobileTab = 'reader'"
           :class="[
-            'flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-2 border-b-2 transition-colors',
+            'flex-1 min-h-[44px] h-11 py-2.5 px-3 text-xs font-bold flex items-center justify-center gap-2 border-b-2 transition-colors',
             activeMobileTab === 'reader'
-              ? 'border-brand-500 text-brand-400 bg-white dark:bg-canvas-elevated'
+              ? 'border-brand-500 text-brand-600 dark:text-brand-400 bg-white dark:bg-canvas-elevated'
               : 'border-transparent text-slate-500 dark:text-slate-400',
           ]"
         >
-          <BookOpen class="w-4 h-4" />
-          <span>{{ $t("today.doc_reader") }}</span>
+          <BookOpen class="w-4 h-4 shrink-0" />
+          <span class="whitespace-nowrap shrink-0">{{ $t("today.doc_reader") }}</span>
         </button>
 
         <button
+          type="button"
           @click="activeMobileTab = 'challenge'"
           :class="[
-            'flex-1 py-2.5 text-xs font-bold flex items-center justify-center gap-2 border-b-2 transition-colors',
+            'flex-1 min-h-[44px] h-11 py-2.5 px-3 text-xs font-bold flex items-center justify-center gap-2 border-b-2 transition-colors',
             activeMobileTab === 'challenge'
-              ? 'border-brand-500 text-brand-400 bg-white dark:bg-canvas-elevated'
+              ? 'border-brand-500 text-brand-600 dark:text-brand-400 bg-white dark:bg-canvas-elevated'
               : 'border-transparent text-slate-500 dark:text-slate-400',
           ]"
         >
-          <Terminal class="w-4 h-4" />
-          <span>{{ $t("today.interview_challenge") }}</span>
+          <Terminal class="w-4 h-4 shrink-0" />
+          <span class="whitespace-nowrap shrink-0">{{ $t("today.interview_challenge") }}</span>
         </button>
       </div>
 

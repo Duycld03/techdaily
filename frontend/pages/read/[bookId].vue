@@ -1,30 +1,26 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
-import { onClickOutside, useEventListener, useTimeoutFn } from "@vueuse/core";
+import { useEventListener, useTimeoutFn } from "@vueuse/core";
 import {
   BookOpen,
-  ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
-  List,
   CheckCircle2,
   Clock,
   Sparkles,
   Copy,
   Bookmark,
   Share2,
-  HelpCircle,
   Highlighter,
   X,
   AlertTriangle,
   AlertCircle,
   RefreshCw,
-  Download,
   Loader2,
 } from "lucide-vue-next";
 import type { BookDetail, ChunkSummary } from "~/stores/useLibraryStore";
+import ReaderHeaderBar from "~/components/reader/ReaderHeaderBar.vue";
+import ReaderTocSidebar from "~/components/reader/ReaderTocSidebar.vue";
+import ReaderNavigationCards from "~/components/reader/ReaderNavigationCards.vue";
 import TermExplainerModal from "~/components/today/TermExplainerModal.vue";
-import ThemeToggle from "~/components/common/ThemeToggle.vue";
 import { extractSurroundingContext } from "~/utils/contextExtractor";
 
 const { t, locale } = useI18n();
@@ -67,29 +63,11 @@ const isExportingMarkdown = ref(false);
 
 // Typography State & Settings
 const {
-  typography,
-  fontSizes,
-  fontSizePxMap,
-  fontScalePercentages,
-  lineHeightMap,
-  currentFontSizeIndex,
-  canDecreaseFontSize,
-  canIncreaseFontSize,
-  decreaseFontSize,
-  increaseFontSize,
   fontSizePx,
   lineHeightValue,
   fontFamilyClass,
-  readingWidthClass
+  readingWidthClass,
 } = useReaderTypography();
-const isTypographyOpen = ref(false);
-const typographyDropdownRef = ref<HTMLElement | null>(null);
-
-onClickOutside(typographyDropdownRef, () => {
-  if (isTypographyOpen.value) {
-    isTypographyOpen.value = false;
-  }
-});
 
 useEventListener(typeof window !== "undefined" ? window : null, "keydown", handleKeyDown);
 
@@ -447,10 +425,6 @@ function handleKeyDown(e: KeyboardEvent) {
     !isExplainerOpen.value &&
     !isMobileTocOpen.value
   ) {
-    if (isTypographyOpen.value) {
-      isTypographyOpen.value = false;
-      return;
-    }
     router.push("/library");
   }
 }
@@ -611,497 +585,38 @@ async function handleHighlightAndNote() {
     class="h-dvh flex flex-col overflow-hidden bg-slate-50 dark:bg-canvas text-slate-900 dark:text-slate-100 transition-colors duration-200"
   >
     <!-- Top Sticky Reader Navigation Bar -->
-    <header
-      class="h-14 sm:h-15 px-3 sm:px-6 border-b border-slate-200/80 dark:border-white/[0.08] bg-white/90 dark:bg-canvas/90 backdrop-blur-md flex items-center justify-between shrink-0 gap-2 sm:gap-4 z-20"
-    >
-      <!-- Left: Back to Library & TOC Toggle -->
-      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        <NuxtLink
-          to="/library"
-          class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors shrink-0"
-          :title="$t('reader.return_library')"
-        >
-          <ArrowLeft class="w-4 h-4 shrink-0" />
-          <span class="hidden sm:inline">{{ $t("reader.library") }}</span>
-        </NuxtLink>
-
-        <!-- Desktop TOC Toggle -->
-        <button
-          @click="isTocOpen = !isTocOpen"
-          :class="[
-            'hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-semibold transition-colors shrink-0',
-            isTocOpen
-              ? 'border-brand-300 dark:border-brand-500/30 bg-brand-50 dark:bg-brand-500/10 text-brand-700 dark:text-brand-400 font-bold'
-              : 'border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated',
-          ]"
-          :title="isTocOpen ? $t('reader.close_toc') : $t('reader.open_toc')"
-        >
-          <List class="w-4 h-4 shrink-0" />
-          <span>{{ $t("reader.contents") }}</span>
-        </button>
-
-        <!-- Mobile TOC Drawer Button -->
-        <button
-          @click="isMobileTocOpen = true"
-          class="md:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors shrink-0"
-          :title="$t('reader.open_toc')"
-        >
-          <List class="w-3.5 h-3.5 shrink-0" />
-          <span>{{ $t("reader.contents") }}</span>
-        </button>
-      </div>
-
-      <!-- Center: Book Title & Active Chapter Indicator -->
-      <div class="flex-1 min-w-0 text-center px-1 sm:px-3">
-        <h1
-          class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate max-w-[140px] sm:max-w-xs md:max-w-md mx-auto"
-        >
-          {{ book?.title || "Technical Document" }}
-        </h1>
-        <p
-          v-if="currentChunk"
-          class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate max-w-[180px] sm:max-w-sm mx-auto"
-        >
-          <span class="hidden sm:inline">{{
-            $t("reader.slice_of", {
-              current: currentChunk.chunkOrder,
-              total: totalChunks,
-              chapter: currentChunk.chapterTitle,
-            })
-          }}</span>
-          <span
-            class="sm:hidden font-semibold text-brand-600 dark:text-brand-400"
-            >{{
-              $t("reader.slice_badge", {
-                current: currentChunk.chunkOrder,
-                total: totalChunks,
-              })
-            }}</span
-          >
-        </p>
-      </div>
-
-      <!-- Right: Quiz Chapter, ThemeToggle, Progress & Quick Nav -->
-      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        <!-- 1-Click Quiz Chapter Action -->
-        <NuxtLink
-          v-if="currentChunk"
-          :to="{
-            path: '/quiz',
-            query: {
-              topic: currentChunk.chapterTitle || book?.title,
-              bookId: book?.id,
-              grounded: 'true',
-            },
-          }"
-          class="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-brand-50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-400 hover:bg-brand-100 dark:hover:bg-brand-500/20 text-xs font-bold transition-colors shrink-0"
-          :title="$t('reader.quiz_chapter_btn')"
-        >
-          <HelpCircle class="w-3.5 h-3.5 shrink-0" />
-          <span class="hidden md:inline">{{
-            $t("reader.quiz_chapter_btn")
-          }}</span>
-        </NuxtLink>
-
-        <!-- Novel-Style Typography Popover -->
-        <div ref="typographyDropdownRef" class="relative">
-          <button
-            @click.stop="isTypographyOpen = !isTypographyOpen"
-            :class="[
-              'px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 shrink-0',
-              isTypographyOpen
-                ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                : 'bg-white dark:bg-canvas-subtle text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-100 dark:hover:bg-canvas-elevated'
-            ]"
-            :title="$t('reader.typography_settings')"
-          >
-            <span class="font-serif text-sm font-black">Aa</span>
-          </button>
-
-          <!-- Typography Popover Dropdown (click-outside dismissed) -->
-          <div
-            v-if="isTypographyOpen"
-            class="absolute right-0 mt-2 w-80 sm:w-84 max-w-[calc(100vw-1.5rem)] p-4 bg-white/95 dark:bg-canvas-elevated/95 backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-2xl z-50 space-y-4 text-xs select-none"
-          >
-            <!-- Section 1: Font Size -->
-            <div class="space-y-2">
-              <div class="flex items-center justify-between text-slate-500 dark:text-slate-400 font-semibold">
-                <span>{{ $t('reader.font_size') }}</span>
-                <span class="font-mono text-xs font-bold text-slate-700 dark:text-slate-200">
-                  {{ fontScalePercentages[typography.fontSize] }}
-                </span>
-              </div>
-              <div class="flex items-center justify-between gap-2 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.06]">
-                <button
-                  type="button"
-                  @click="decreaseFontSize"
-                  :disabled="!canDecreaseFontSize"
-                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm"
-                  :title="$t('reader.font_smaller')"
-                >
-                  <span class="text-xs font-bold">A</span>
-                  <span class="text-[10px] font-mono">−</span>
-                </button>
-                <div class="flex items-center gap-1.5 px-2">
-                  <span
-                    v-for="(size, idx) in fontSizes"
-                    :key="size"
-                    class="w-1.5 h-1.5 rounded-full transition-all"
-                    :class="[
-                      typography.fontSize === size
-                        ? 'w-2 h-2 bg-brand-500 scale-110'
-                        : (idx < currentFontSizeIndex ? 'bg-slate-400 dark:bg-slate-500' : 'bg-slate-300 dark:bg-slate-700')
-                    ]"
-                  />
-                </div>
-                <button
-                  type="button"
-                  @click="increaseFontSize"
-                  :disabled="!canIncreaseFontSize"
-                  class="flex-1 py-1.5 px-3 rounded-lg font-serif font-bold text-sm flex items-center justify-center gap-1 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-300 shadow-none hover:shadow-sm"
-                  :title="$t('reader.font_larger')"
-                >
-                  <span class="text-sm font-black">A</span>
-                  <span class="text-[10px] font-mono">+</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Section 2: Font Family -->
-            <div class="space-y-2">
-              <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.font_family') }}</span>
-              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.06]">
-                <button
-                  type="button"
-                  @click="typography.fontFamily = 'sans'"
-                  class="py-2 px-2 rounded-lg font-sans font-medium text-xs transition-all text-center truncate"
-                  :class="[
-                    typography.fontFamily === 'sans'
-                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                  ]"
-                >
-                  {{ $t('reader.font_sans') }}
-                </button>
-                <button
-                  type="button"
-                  @click="typography.fontFamily = 'serif'"
-                  class="py-2 px-2 rounded-lg font-serif font-medium text-xs transition-all text-center truncate"
-                  :class="[
-                    typography.fontFamily === 'serif'
-                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                  ]"
-                >
-                  {{ $t('reader.font_serif') }}
-                </button>
-                <button
-                  type="button"
-                  @click="typography.fontFamily = 'mono'"
-                  class="py-2 px-2 rounded-lg font-mono font-medium text-xs transition-all text-center truncate"
-                  :class="[
-                    typography.fontFamily === 'mono'
-                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                  ]"
-                >
-                  {{ $t('reader.font_mono') }}
-                </button>
-              </div>
-            </div>
-
-            <!-- Section 3: Line Spacing -->
-            <div class="space-y-2">
-              <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.line_spacing') }}</span>
-              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.06]">
-                <button
-                  type="button"
-                  @click="typography.lineSpacing = 'normal'"
-                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
-                  :class="[
-                    typography.lineSpacing === 'normal'
-                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                  ]"
-                >
-                  {{ $t('reader.spacing_normal') }}
-                </button>
-                <button
-                  type="button"
-                  @click="typography.lineSpacing = 'relaxed'"
-                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
-                  :class="[
-                    typography.lineSpacing === 'relaxed'
-                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                  ]"
-                >
-                  {{ $t('reader.spacing_relaxed') }}
-                </button>
-                <button
-                  type="button"
-                  @click="typography.lineSpacing = 'loose'"
-                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
-                  :class="[
-                    typography.lineSpacing === 'loose'
-                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                  ]"
-                >
-                  {{ $t('reader.spacing_loose') }}
-                </button>
-              </div>
-            </div>
-
-            <!-- Section 4: Reading Column Width -->
-            <div class="space-y-2">
-              <span class="text-slate-500 dark:text-slate-400 font-semibold block">{{ $t('reader.reading_width') }}</span>
-              <div class="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/60 dark:border-white/[0.06]">
-                <button
-                  type="button"
-                  @click="typography.readingWidth = 'standard'"
-                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
-                  :class="[
-                    typography.readingWidth === 'standard'
-                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                  ]"
-                >
-                  {{ $t('reader.width_standard') }}
-                </button>
-                <button
-                  type="button"
-                  @click="typography.readingWidth = 'wide'"
-                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
-                  :class="[
-                    typography.readingWidth === 'wide'
-                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                  ]"
-                >
-                  {{ $t('reader.width_wide') }}
-                </button>
-                <button
-                  type="button"
-                  @click="typography.readingWidth = 'full'"
-                  class="py-1.5 px-2 rounded-lg font-medium text-xs transition-all text-center truncate"
-                  :class="[
-                    typography.readingWidth === 'full'
-                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 font-bold shadow-sm border border-slate-200/80 dark:border-white/[0.12]'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                  ]"
-                >
-                  {{ $t('reader.width_full') }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Theme Toggle -->
-        <ThemeToggle />
-
-        <!-- Progress Bar (Desktop) -->
-        <div class="hidden lg:flex items-center gap-2">
-          <div
-            class="w-20 xl:w-28 h-2 rounded-full bg-slate-200/80 dark:bg-canvas-subtle border border-slate-300/40 dark:border-white/[0.06] overflow-hidden"
-          >
-            <div
-              class="h-full bg-brand-500 rounded-full transition-all duration-300"
-              :style="{ width: `${progressPercentage}%` }"
-            ></div>
-          </div>
-          <span
-            class="text-xs font-bold text-brand-700 dark:text-brand-400 tabular-nums"
-          >
-            {{ progressPercentage }}%
-          </span>
-        </div>
-
-        <!-- Quick Slice Prev/Next -->
-        <div class="flex items-center gap-0.5 sm:gap-1">
-          <button
-            @click="goToPrevSlice"
-            :disabled="activeChunkIndex <= 0"
-            class="p-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            :title="$t('reader.prev_slice_hint')"
-          >
-            <ChevronLeft class="w-4 h-4" />
-          </button>
-          <button
-            @click="goToNextSlice"
-            :disabled="activeChunkIndex >= totalChunks - 1"
-            class="p-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            :title="$t('reader.next_slice_hint')"
-          >
-            <ChevronRight class="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </header>
+    <ReaderHeaderBar
+      :book="book"
+      :current-chunk="currentChunk"
+      :active-chunk-index="activeChunkIndex"
+      :total-chunks="totalChunks"
+      :is-toc-open="isTocOpen"
+      :progress-percentage="progressPercentage"
+      @toggle-toc="isTocOpen = !isTocOpen"
+      @open-mobile-toc="isMobileTocOpen = true"
+      @prev-slice="goToPrevSlice"
+      @next-slice="goToNextSlice"
+    />
 
     <!-- Main Body: Responsive TOC Sidebar + Reading Article Pane -->
     <div class="flex-1 flex overflow-hidden relative">
-      <!-- Desktop Table of Contents Sidebar (Collapsible) -->
-      <aside
-        v-if="isTocOpen"
-        class="hidden md:flex w-72 lg:w-80 border-r border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-canvas-subtle/70 flex-col shrink-0 overflow-y-auto"
-      >
-        <div
-          class="p-4 border-b border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between"
-        >
-          <div
-            class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400"
-          >
-            <BookOpen class="w-3.5 h-3.5" />
-            <span>{{ $t("reader.toc") }}</span>
-          </div>
-          <span class="text-xs font-semibold text-slate-400">
-            {{
-              $t("reader.done", {
-                count: completedSlices.size,
-                total: totalChunks,
-              })
-            }}
-          </span>
-        </div>
-
-        <div class="p-2 space-y-1">
-          <button
-            v-for="(chunk, idx) in book?.chunks"
-            :key="chunk.id"
-            @click="selectChunk(idx)"
-            :class="[
-              'w-full text-left p-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-start gap-2.5',
-              activeChunkIndex === idx
-                ? 'bg-brand-500/10 dark:bg-brand-500/15 text-brand-900 dark:text-brand-300 font-bold border-l-4 border-brand-500 shadow-sm'
-                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated/60 border-l-4 border-transparent',
-            ]"
-          >
-            <CheckCircle2
-              v-if="completedSlices.has(chunk.chunkOrder)"
-              class="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5"
-            />
-            <span
-              v-else
-              class="w-4 h-4 rounded-full border border-slate-300 dark:border-white/[0.12] flex items-center justify-center text-xs text-slate-500 dark:text-slate-400 shrink-0 mt-0.5"
-            >
-              {{ chunk.chunkOrder }}
-            </span>
-
-            <div class="flex-1 min-w-0">
-              <div class="truncate">{{ chunk.chapterTitle }}</div>
-              <div
-                class="text-xs text-slate-400 mt-0.5 flex items-center gap-1 font-normal"
-              >
-                <Clock class="w-3 h-3" />
-                <span>{{
-                  $t("reader.read_min", {
-                    minutes: chunk.estimatedReadMinutes || 3,
-                  })
-                }}</span>
-              </div>
-            </div>
-          </button>
-        </div>
-        <div class="p-3 border-t border-slate-200/80 dark:border-white/[0.06] mt-auto">
-          <button
-            @click="handleExportMarkdown"
-            :disabled="isExportingMarkdown"
-            class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-200/70 dark:bg-canvas-elevated hover:bg-slate-300 dark:hover:bg-canvas-subtle border border-transparent dark:border-white/[0.06] text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors disabled:opacity-50"
-          >
-            <Download class="w-3.5 h-3.5" />
-            <span>{{ isExportingMarkdown ? $t("reader.exporting") : $t("reader.export_obsidian") }}</span>
-          </button>
-        </div>
-      </aside>
-
-      <!-- Mobile Table of Contents Modal Drawer (Teleported to Body) -->
-      <Teleport to="body">
-        <div
-          v-if="isMobileTocOpen"
-          class="md:hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex justify-start animate-in fade-in"
-          @click.self="isMobileTocOpen = false"
-        >
-          <div
-            class="w-4/5 max-w-xs bg-white dark:bg-canvas-subtle text-slate-900 dark:text-white h-full flex flex-col shadow-2xl border-r border-slate-200/80 dark:border-white/[0.08] pb-[max(1rem,env(safe-area-inset-bottom))] animate-in slide-in-from-left"
-          >
-            <div
-              class="p-4 border-b border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between"
-            >
-              <div
-                class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white"
-              >
-                <BookOpen class="w-4 h-4 text-brand-500" :stroke-width="1.5" />
-                <span>{{ $t("reader.toc") }}</span>
-              </div>
-              <button
-                @click="isMobileTocOpen = false"
-                class="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors"
-                :aria-label="$t('reader.close_toc')"
-              >
-                <X class="w-5 h-5" :stroke-width="1.5" />
-              </button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto p-2 space-y-1">
-              <button
-                v-for="(chunk, idx) in book?.chunks"
-                :key="chunk.id"
-                @click="
-                  selectChunk(idx);
-                  isMobileTocOpen = false;
-                "
-                :class="[
-                  'w-full text-left p-3 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-start gap-2.5',
-                  activeChunkIndex === idx
-                    ? 'bg-brand-500/10 dark:bg-brand-500/15 text-brand-900 dark:text-brand-300 font-bold border-l-4 border-brand-500 shadow-sm'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated/60 border-l-4 border-transparent',
-                ]"
-              >
-                <CheckCircle2
-                  v-if="completedSlices.has(chunk.chunkOrder)"
-                  class="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0 mt-0.5"
-                  :stroke-width="1.5"
-                />
-                <span
-                  v-else
-                  class="w-4 h-4 rounded-full border border-slate-300 dark:border-white/[0.12] flex items-center justify-center text-xs text-slate-500 dark:text-slate-400 shrink-0 mt-0.5"
-                >
-                  {{ chunk.chunkOrder }}
-                </span>
-
-                <div class="flex-1 min-w-0">
-                  <div class="truncate">{{ chunk.chapterTitle }}</div>
-                  <div
-                    class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1 font-normal"
-                  >
-                    <Clock class="w-3 h-3" />
-                    <span>{{
-                      $t("reader.read_min", {
-                        minutes: chunk.estimatedReadMinutes || 3,
-                      })
-                    }}</span>
-                  </div>
-                </div>
-              </button>
-            </div>
-            <div class="p-3 border-t border-slate-200/80 dark:border-white/[0.06]">
-              <button
-                @click="handleExportMarkdown"
-                :disabled="isExportingMarkdown"
-                class="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-canvas-elevated hover:bg-slate-200 dark:hover:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.06] text-slate-800 dark:text-slate-200 text-xs font-bold transition-colors disabled:opacity-50"
-              >
-                <Download class="w-3.5 h-3.5" />
-                <span>{{ isExportingMarkdown ? $t("reader.exporting") : $t("reader.export_obsidian") }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </Teleport>
+      <!-- Responsive TOC Sidebar (Desktop Collapsible & Mobile Slide-over Drawer) -->
+      <ReaderTocSidebar
+        :book="book"
+        :active-chunk-index="activeChunkIndex"
+        :completed-slices="completedSlices"
+        :total-chunks="totalChunks"
+        :is-desktop-open="isTocOpen"
+        :is-mobile-open="isMobileTocOpen"
+        :is-exporting-markdown="isExportingMarkdown"
+        @select-chunk="selectChunk"
+        @close-mobile-toc="isMobileTocOpen = false"
+        @export-markdown="handleExportMarkdown"
+      />
 
       <!-- Main Reading Article Pane -->
       <main
+        id="main"
         ref="articleScrollContainer"
         class="flex-1 overflow-y-auto p-4 sm:p-8 md:p-12 lg:p-16 flex justify-center selection:bg-brand-500/30"
         @mouseup="handleTextSelection"
@@ -1317,82 +832,14 @@ async function handleHighlightAndNote() {
             </div>
 
             <!-- Symmetrical 2-Column Card Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <!-- Left Card: Previous Slice -->
-              <button
-                v-if="prevChunk"
-                @click="goToPrevSlice"
-                class="glass-card group flex flex-col items-start p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] hover:border-slate-300 dark:hover:border-white/[0.16] hover:bg-slate-50 dark:hover:bg-canvas-elevated transition-all text-left shadow-sm hover:shadow-md active:scale-[0.99] min-w-0"
-                :title="prevChunk.chapterTitle"
-              >
-                <div
-                  class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors"
-                >
-                  <ChevronLeft
-                    class="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1 shrink-0"
-                  />
-                  <span class="whitespace-nowrap shrink-0">{{
-                    $t("reader.prev_slice_card_label")
-                  }}</span>
-                </div>
-                <div
-                  class="w-full text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200 group-hover:text-brand-600 dark:group-hover:text-brand-400 truncate mt-1.5 transition-colors"
-                >
-                  {{ prevChunk.chapterTitle }}
-                </div>
-              </button>
-
-              <!-- Right Card: Next Slice -->
-              <button
-                v-if="activeChunkIndex < totalChunks - 1"
-                @click="goToNextSlice"
-                :class="[
-                  'group flex flex-col items-end p-4 sm:p-5 rounded-2xl border border-brand-500/30 dark:border-brand-500/20 bg-brand-50/30 dark:bg-brand-500/10 hover:bg-brand-50/60 dark:hover:bg-brand-500/20 hover:border-brand-500/60 dark:hover:border-brand-500/40 transition-all text-right shadow-sm hover:shadow-md active:scale-[0.99] min-w-0',
-                  { 'sm:col-start-2': !prevChunk },
-                ]"
-                :title="nextChunk?.chapterTitle"
-              >
-                <div
-                  class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 transition-colors"
-                >
-                  <span class="whitespace-nowrap shrink-0">{{
-                    $t("reader.next_slice_card_label")
-                  }}</span>
-                  <ChevronRight
-                    class="w-3.5 h-3.5 transition-transform group-hover:translate-x-1 shrink-0"
-                  />
-                </div>
-                <div
-                  class="w-full text-sm sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 truncate mt-1.5 transition-colors"
-                >
-                  {{ nextChunk?.chapterTitle || $t("reader.next_slice") }}
-                </div>
-              </button>
-
-              <!-- Right Card Alternative: Return to Library on Final Slice -->
-              <NuxtLink
-                v-else
-                to="/library"
-                :class="[
-                  'group flex flex-col items-end p-4 sm:p-5 rounded-2xl border border-brand-500/30 dark:border-brand-500/20 bg-brand-50/30 dark:bg-brand-500/10 hover:bg-brand-50/60 dark:hover:bg-brand-500/20 hover:border-brand-500/60 dark:hover:border-brand-500/40 transition-all text-right shadow-sm hover:shadow-md active:scale-[0.99] min-w-0',
-                  { 'sm:col-start-2': !prevChunk },
-                ]"
-              >
-                <div
-                  class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400 transition-colors"
-                >
-                  <span class="whitespace-nowrap shrink-0">{{
-                    $t("reader.completed_card_label")
-                  }}</span>
-                  <CheckCircle2 class="w-3.5 h-3.5 text-brand-500 shrink-0" />
-                </div>
-                <div
-                  class="w-full text-sm sm:text-base font-bold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-400 group-hover:underline truncate mt-1.5 transition-colors"
-                >
-                  {{ $t("reader.return_library") }}
-                </div>
-              </NuxtLink>
-            </div>
+            <ReaderNavigationCards
+              :prev-chunk="prevChunk"
+              :next-chunk="nextChunk"
+              :active-chunk-index="activeChunkIndex"
+              :total-chunks="totalChunks"
+              @prev-slice="goToPrevSlice"
+              @next-slice="goToNextSlice"
+            />
           </div>
         </div>
       </main>

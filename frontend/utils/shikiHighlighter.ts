@@ -23,6 +23,8 @@ export const SUPPORTED_LANGS = [
   'nginx',
   'powershell',
   'xml',
+  'proto',
+  'razor',
   'text'
 ]
 
@@ -114,7 +116,12 @@ export function normalizeLanguage(lang?: string): string {
     ps: 'powershell',
     pwsh: 'powershell',
     xml: 'xml',
-    svg: 'xml'
+    svg: 'xml',
+    proto: 'proto',
+    protobuf: 'proto',
+    razor: 'razor',
+    blazor: 'razor',
+    cshtml: 'razor'
   }
   return aliases[l] || l
 }
@@ -139,6 +146,12 @@ export function formatLanguageLabel(lang: string): string {
       return 'Rust'
     case 'go':
       return 'Go / Golang'
+    case 'proto':
+    case 'protobuf':
+      return 'Protobuf'
+    case 'razor':
+    case 'blazor':
+      return 'Razor / Blazor'
     case 'python':
       return 'Python'
     case 'bash':
@@ -204,6 +217,16 @@ export function detectCodeLanguage(
     return 'text'
   }
 
+  // 1.8. Razor / Blazor Directives
+  if (
+    /^\s*@page\s+['"]/m.test(trimmed) ||
+    /\b@code\s*\{/m.test(trimmed) ||
+    /^\s*@inject\s+\w+/m.test(trimmed) ||
+    /@onclick\s*=/m.test(trimmed)
+  ) {
+    return 'razor'
+  }
+
   // 2. Strong C# / .NET Syntax Signatures
   if (
     /\b(public|private|protected|internal)\s+(class|record|struct|interface|enum)\b/.test(trimmed) ||
@@ -226,9 +249,17 @@ export function detectCodeLanguage(
     return 'rust'
   }
 
+  // 3.5. Protocol Buffers / gRPC Signatures
+  if (
+    /^\s*syntax\s*=\s*['"]proto[23]['"]/m.test(trimmed) ||
+    /\b(service\s+\w+\s*\{|rpc\s+\w+\s*\(|message\s+\w+\s*\{)/m.test(trimmed)
+  ) {
+    return 'proto'
+  }
+
   // 4. Strong Go Syntax Signatures
   if (
-    /\b(package\s+\w+|func\s+\(?\w*\)?\s*\w+\(|fmt\.Print|fmt\.Sprintf|chan\s+\w+|go\s+func|make\(chan|make\(map|defer\s+\w+)/.test(trimmed)
+    /\b(package\s+[a-zA-Z0-9_]+(?!\s*;)|func\s+\(?\w*\)?\s*\w+\(|fmt\.Print|fmt\.Sprintf|chan\s+\w+|go\s+func|make\(chan|make\(map|defer\s+\w+)/.test(trimmed)
   ) {
     return 'go'
   }

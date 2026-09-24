@@ -468,6 +468,8 @@
     "library": "Library",
     "contents": "Contents",
     "chapters": "Chapters",
+    "search_placeholder": "Search chapters...",
+    "no_chapters_found": "No chapters found",
     "slice_of": "Slice {current} of {total}: {chapter}",
     "slice_badge": "Slice {current} of {total}",
     "slice_badge_short": "{current}/{total}",
