@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
+import { useAuthStore } from '~/stores/useAuthStore'
 import AppHeader from '~/components/layout/AppHeader.vue'
 import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppToastContainer from '~/components/common/AppToastContainer.vue'
@@ -8,6 +9,7 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const isReaderMode = computed(() => route.path.startsWith('/read'))
+const isAuthPage = computed(() => route.path === '/login')
 
 onMounted(() => {
   authStore.init()
@@ -20,7 +22,7 @@ onMounted(() => {
     <AppCommandPalette />
     <AppToastContainer />
     <div class="flex-1 flex overflow-hidden">
-      <AppSidebar v-if="!isReaderMode" />
+      <AppSidebar v-if="!isReaderMode && !isAuthPage" />
       <main class="flex-1 overflow-y-auto">
         <NuxtPage />
       </main>

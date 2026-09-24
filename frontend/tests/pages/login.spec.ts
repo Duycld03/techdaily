@@ -3,6 +3,7 @@ import type { Mock } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import LoginPage from '~/pages/login.vue'
+import App from '~/app.vue'
 import { useAuthStore } from '~/stores/useAuthStore'
 
 interface GoogleAccountsIdMock {
@@ -29,10 +30,19 @@ interface GlobalWithRuntimeConfig {
   }
   navigateTo: Mock
 }
+interface GlobalWithRoute {
+  useRoute: () => {
+    path: string
+    params: Record<string, string>
+    query: Record<string, string>
+  }
+}
+
 
 describe('pages/login.vue', () => {
   const win = window as unknown as WindowWithGoogle
   const globalObj = globalThis as unknown as GlobalWithRuntimeConfig
+  const globalRoute = globalThis as unknown as GlobalWithRoute
   let originalGoogle: unknown
 
   beforeEach(() => {
@@ -217,5 +227,219 @@ describe('pages/login.vue', () => {
     // Input type becomes "text"
     expect(wrapper.find('input[type="text"]').exists()).toBe(true)
     expect(wrapper.find('button[aria-label="Hide password"]').exists()).toBe(true)
+  })
+
+  it('renders Studio Auth 2-column desktop archetype with branding stage', () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+
+    // Outer grid container
+    const gridContainer = wrapper.find('.grid.lg\\:grid-cols-12')
+    expect(gridContainer.exists()).toBe(true)
+    expect(gridContainer.classes()).toContain('max-w-5xl')
+
+    // Left brand column (desktop)
+    const leftCol = wrapper.find('.lg\\:col-span-5')
+    expect(leftCol.exists()).toBe(true)
+    expect(leftCol.classes()).toContain('hidden')
+    expect(leftCol.classes()).toContain('lg:block')
+    expect(leftCol.text()).toContain('TechDaily Studio')
+
+    // Right interactive auth card
+    const rightCol = wrapper.find('.lg\\:col-span-7')
+    expect(rightCol.exists()).toBe(true)
+    expect(rightCol.find('.glass-panel').exists()).toBe(true)
+  })
+
+  it('renders 2-column grid layout for inputs in register mode', async () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+
+    const buttons = wrapper.findAll('button')
+    const registerTab = buttons.find(b => b.text().includes('Register') || b.text().includes('auth.register_tab'))
+    await registerTab!.trigger('click')
+
+    const registerGrid = wrapper.find('.grid.grid-cols-1.sm\\:grid-cols-2')
+    expect(registerGrid.exists()).toBe(true)
+    expect(registerGrid.classes()).toContain('gap-3.5')
+
+    // Col 1 (Row 1): Name, Col 2 (Row 1): Email
+    const nameInput = wrapper.find('input[type="text"]')
+    const emailInput = wrapper.find('input[type="email"]')
+    const passwordInputs = wrapper.findAll('input[type="password"]')
+    expect(nameInput.exists()).toBe(true)
+    expect(emailInput.exists()).toBe(true)
+    expect(passwordInputs.length).toBe(2)
+  })
+
+  it('submits login credentials when form is valid', async () => {
+    const authStore = useAuthStore()
+    const mockAuthResponse = {
+      token: 'mock-token',
+      user: { id: 'u1', email: 'user@example.com', name: 'User', preferredLocale: 'en' }
+    }
+    const loginSpy = vi.spyOn(authStore, 'login').mockResolvedValue(mockAuthResponse)
+
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+
+    await wrapper.find('input[type="email"]').setValue('user@example.com')
+    await wrapper.find('input[type="password"]').setValue('password123')
+    await wrapper.find('form').trigger('submit.prevent')
+
+    expect(loginSpy).toHaveBeenCalledWith('user@example.com', 'password123')
+  })
+
+  it('submits register credentials when form is valid', async () => {
+    const authStore = useAuthStore()
+    const mockAuthResponse = {
+      token: 'mock-token',
+      user: { id: 'u1', email: 'alex@example.com', name: 'Alex Morgan', preferredLocale: 'en' }
+    }
+    const registerSpy = vi.spyOn(authStore, 'register').mockResolvedValue(mockAuthResponse)
+
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+
+    const buttons = wrapper.findAll('button')
+    const registerTab = buttons.find(b => b.text().includes('Register') || b.text().includes('auth.register_tab'))
+    await registerTab!.trigger('click')
+
+    await wrapper.find('input[type="text"]').setValue('Alex Morgan')
+    await wrapper.find('input[type="email"]').setValue('alex@example.com')
+    const passwordInputs = wrapper.findAll('input[type="password"]')
+    await passwordInputs[0].setValue('SecurePass123!')
+    await passwordInputs[1].setValue('SecurePass123!')
+
+    await wrapper.find('form').trigger('submit.prevent')
+
+    expect(registerSpy).toHaveBeenCalledWith('alex@example.com', 'SecurePass123!', 'Alex Morgan', 'en')
+  })
+
+  it('validates required fields before submitting register', async () => {
+    const authStore = useAuthStore()
+    const mockAuthResponse = {
+      token: 'mock-token',
+      user: { id: 'u1', email: 'alex@example.com', name: 'Alex Morgan', preferredLocale: 'en' }
+    }
+    const registerSpy = vi.spyOn(authStore, 'register').mockResolvedValue(mockAuthResponse)
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+
+    const buttons = wrapper.findAll('button')
+    const registerTab = buttons.find(b => b.text().includes('Register') || b.text().includes('auth.register_tab'))
+    await registerTab!.trigger('click')
+
+    // Missing email / password
+    await wrapper.find('form').trigger('submit.prevent')
+    expect(registerSpy).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('auth.toast_enter_credentials')
+
+    // Provide email and password, but missing name
+    await wrapper.find('input[type="email"]').setValue('alex@example.com')
+    const passwordInputs = wrapper.findAll('input[type="password"]')
+    await passwordInputs[0].setValue('SecurePass123!')
+    await passwordInputs[1].setValue('SecurePass123!')
+
+    await wrapper.find('form').trigger('submit.prevent')
+    expect(registerSpy).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('auth.toast_name_required')
+
+    // Short password (< 8 chars)
+    await wrapper.find('input[type="text"]').setValue('Alex Morgan')
+    await passwordInputs[0].setValue('short')
+    await passwordInputs[1].setValue('short')
+
+    await wrapper.find('form').trigger('submit.prevent')
+    expect(registerSpy).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('api_errors.AUTH_PASSWORD_TOO_SHORT')
+  })
+
+  it('renders absolute centered OAuth divider without layout blowout', () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+
+    const dividerContainer = wrapper.find('.relative.my-5')
+    expect(dividerContainer.exists()).toBe(true)
+
+    const absoluteLine = dividerContainer.find('.absolute.inset-0.flex.items-center')
+    expect(absoluteLine.exists()).toBe(true)
+    expect(absoluteLine.find('.border-t').exists()).toBe(true)
+
+    const dividerBadge = dividerContainer.find('.relative.flex.justify-center')
+    expect(dividerBadge.exists()).toBe(true)
+    expect(dividerBadge.text()).toContain('auth.or_continue_with')
+  })
+
+  describe('app shell isolation', () => {
+    it('suppresses AppSidebar on /login route', () => {
+      const origUseRoute = globalRoute.useRoute
+      globalRoute.useRoute = () => ({ path: '/login', params: {}, query: {} })
+
+      const wrapper = mount(App, {
+        global: {
+          stubs: {
+            AppHeader: true,
+            AppSidebar: { template: '<aside data-testid="sidebar">Sidebar</aside>' },
+            AppCommandPalette: true,
+            AppToastContainer: true,
+            NuxtPage: true
+          }
+        }
+      })
+
+      expect(wrapper.find('[data-testid="sidebar"]').exists()).toBe(false)
+      globalRoute.useRoute = origUseRoute
+    })
+
+    it('renders AppSidebar on non-auth route', () => {
+      const origUseRoute = globalRoute.useRoute
+      globalRoute.useRoute = () => ({ path: '/today', params: {}, query: {} })
+
+      const wrapper = mount(App, {
+        global: {
+          stubs: {
+            AppHeader: true,
+            AppSidebar: { template: '<aside data-testid="sidebar">Sidebar</aside>' },
+            AppCommandPalette: true,
+            AppToastContainer: true,
+            NuxtPage: true
+          }
+        }
+      })
+
+      expect(wrapper.find('[data-testid="sidebar"]').exists()).toBe(true)
+      globalRoute.useRoute = origUseRoute
+    })
   })
 })
