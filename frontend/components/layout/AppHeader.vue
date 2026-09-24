@@ -7,9 +7,14 @@ import {
   X,
   Search
 } from 'lucide-vue-next'
+import { useEventListener } from '@vueuse/core'
 import StreakBadge from '~/components/common/StreakBadge.vue'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
+import { useAuthStore } from '~/stores/useAuthStore'
+import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
+import { useNavigationMenu } from '~/composables/useNavigationMenu'
+import { useCommandPalette } from '~/composables/useCommandPalette'
 
 const route = useRoute()
 const authStore = useAuthStore()
@@ -117,13 +122,13 @@ onUnmounted(() => {
       <ThemeToggle />
 
       <!-- User Profile / Auth Status -->
-      <div v-if="authStore.isLoggedIn" class="flex items-center gap-1 sm:gap-2 pl-1.5 sm:pl-3 border-l border-slate-200 dark:border-slate-800">
+      <div v-if="authStore.isLoggedIn" class="flex items-center gap-1 sm:gap-2 pl-1.5 sm:pl-3 border-l border-slate-200/80 dark:border-white/[0.08]">
         <NuxtLink
           to="/settings?tab=profile"
-          class="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors group"
+          class="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors group"
           title="View Profile & Settings"
         >
-          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-brand-100 dark:bg-brand-950 border border-brand-200 dark:border-brand-800 flex items-center justify-center text-xs font-bold text-brand-800 dark:text-brand-300 shadow-sm group-hover:scale-105 transition-transform">
+          <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-brand-100 dark:bg-brand-500/20 border border-brand-200 dark:border-brand-500/30 flex items-center justify-center text-xs font-bold text-brand-800 dark:text-brand-300 shadow-sm group-hover:scale-105 transition-transform">
             {{ (authStore.user?.name || 'U').charAt(0).toUpperCase() }}
           </div>
           <span class="text-xs font-bold text-slate-800 dark:text-slate-200 hidden md:inline group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors max-w-[120px] truncate">
@@ -133,7 +138,7 @@ onUnmounted(() => {
 
         <button
           @click="authStore.logout()"
-          class="hidden sm:inline-flex p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+          class="hidden sm:inline-flex p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
           title="Sign Out"
         >
           <LogOut class="w-4 h-4" :stroke-width="1.5" />
@@ -157,7 +162,7 @@ onUnmounted(() => {
         @click.self="isMobileNavOpen = false"
       >
         <div
-          class="fixed inset-y-0 left-0 z-50 w-[85%] max-w-xs bg-white/95 dark:bg-canvas-subtle/95 backdrop-blur-md h-full min-h-[100dvh] flex flex-col justify-between p-5 sm:p-6 shadow-2xl border-r border-slate-200/80 dark:border-white/[0.08] animate-in slide-in-from-left duration-200"
+          class="fixed inset-y-0 left-0 z-50 w-[85%] max-w-xs bg-white/95 dark:bg-canvas-subtle/95 backdrop-blur-md h-full min-h-[100dvh] flex flex-col justify-between p-5 sm:p-6 shadow-2xl border-r border-slate-200/80 dark:border-white/[0.08] animate-in slide-in-from-left duration-200 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
           data-testid="mobile-nav-drawer"
         >
           <!-- Drawer Header -->

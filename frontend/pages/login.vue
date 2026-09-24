@@ -141,8 +141,8 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] flex items-center justify-center p-3.5 sm:p-6 bg-slate-50 dark:bg-canvas transition-colors duration-200">
-    <div class="w-full max-w-md p-5 sm:p-10 rounded-3xl glass-panel shadow-2xl space-y-5 sm:space-y-6 animate-in zoom-in-95 duration-200">
+  <div class="min-h-[calc(100dvh-3.5rem)] sm:min-h-[calc(100dvh-3.75rem)] flex items-center justify-center p-3.5 sm:p-6 bg-slate-50 dark:bg-canvas transition-colors duration-200">
+    <div class="w-full max-w-md p-6 sm:p-8 rounded-3xl glass-panel shadow-2xl space-y-5 sm:space-y-6 animate-in zoom-in-95 duration-200">
       <!-- Brand Header -->
       <div class="text-center">
         <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center mx-auto mb-3.5 sm:mb-4 shadow-lg shadow-brand-500/20">
@@ -196,17 +196,26 @@ async function handleSubmit() {
 
       <!-- Email & Password Form -->
       <form @submit.prevent="handleSubmit" class="space-y-4">
-        <div v-if="authMode === 'register'">
-          <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.name_label') }}</label>
-          <div class="relative">
-            <User class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" :stroke-width="1.5" />
-            <input
-              v-model="name"
-              type="text"
-              class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-brand-500 focus:outline-none transition-colors"
-            />
+        <Transition
+          enter-active-class="transition-all duration-200 ease-out"
+          leave-active-class="transition-all duration-150 ease-in"
+          enter-from-class="opacity-0 -translate-y-2 max-h-0"
+          enter-to-class="opacity-100 translate-y-0 max-h-24"
+          leave-from-class="opacity-100 translate-y-0 max-h-24"
+          leave-to-class="opacity-0 -translate-y-2 max-h-0"
+        >
+          <div v-if="authMode === 'register'" class="overflow-hidden">
+            <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.name_label') }}</label>
+            <div class="relative">
+              <User class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" :stroke-width="1.5" />
+              <input
+                v-model="name"
+                type="text"
+                class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-sm md:text-base text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:border-brand-500 focus:outline-none transition-colors"
+              />
+            </div>
           </div>
-        </div>
+        </Transition>
 
         <div>
           <label class="block text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('auth.email_label') }}</label>

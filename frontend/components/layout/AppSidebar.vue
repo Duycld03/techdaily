@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useNavigationMenu } from '~/composables/useNavigationMenu'
+
 const { navGroups, isLinkActive } = useNavigationMenu()
 </script>
 
 <template>
-  <aside class="hidden md:flex md:w-60 border-r border-slate-200/80 dark:border-white/[0.06] bg-white/95 dark:bg-canvas-subtle/80 backdrop-blur-sm flex-col justify-between p-3.5 shrink-0 transition-colors duration-200 select-none overflow-y-auto">
+  <aside class="hidden md:flex md:w-64 border-r border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-canvas-subtle/80 backdrop-blur-sm flex-col justify-between p-3.5 shrink-0 transition-colors duration-200 select-none overflow-y-auto">
     <nav class="space-y-4">
       <div v-for="group in navGroups" :key="group.titleKey" class="space-y-0.5">
         <!-- Category Section Header -->
@@ -38,7 +40,7 @@ const { navGroups, isLinkActive } = useNavigationMenu()
               ]"
               :stroke-width="1.5"
             />
-            <span class="whitespace-nowrap">{{ $t(link.name) }}</span>
+            <span class="whitespace-nowrap shrink-0">{{ $t(link.name) }}</span>
           </a>
         </NuxtLink>
       </div>

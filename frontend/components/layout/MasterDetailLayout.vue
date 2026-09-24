@@ -18,7 +18,7 @@ defineProps<{
     <!-- Header -->
     <header
       v-if="$slots.header"
-      class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-white/[0.08]"
+      class="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 px-4 sm:px-6 py-3.5 dark:border-white/[0.08]"
     >
       <slot name="header" />
     </header>
@@ -26,7 +26,7 @@ defineProps<{
     <div class="flex min-h-0 flex-1 flex-col md:flex-row">
       <!-- Left sub-navigation rail -->
       <nav
-        class="shrink-0 gap-1 overflow-y-auto border-b border-slate-200 p-3 dark:border-white/[0.08] md:w-64 md:border-b-0 md:border-r"
+        class="shrink-0 gap-1 overflow-x-auto md:overflow-x-visible md:overflow-y-auto border-b border-slate-200/80 p-2.5 sm:p-3 dark:border-white/[0.08] md:w-64 md:border-b-0 md:border-r"
         aria-label="Settings sections"
       >
         <slot name="nav" />
@@ -34,7 +34,7 @@ defineProps<{
 
       <!-- Right content panel -->
       <section
-        class="min-h-0 min-w-0 flex-1 overflow-y-auto p-5"
+        class="min-h-0 min-w-0 flex-1 overflow-y-auto p-4 sm:p-6"
         aria-label="Settings content"
       >
         <slot name="content" />
