@@ -931,7 +931,18 @@
     "back_to_signin_btn": "Back to Sign In",
     "zero_knowledge_badge": "SECURE & ENCRYPTED AUTH",
     "terms_link": "Terms",
-    "privacy_link": "Privacy"
+    "privacy_link": "Privacy",
+    "chip_queue": "Zero-alloc Queue",
+    "chip_sm2": "Ebbinghaus SM-2",
+    "chip_drill": "Deliberate Drill",
+    "cluster_telemetry": "// CLUSTER: AP-SOUTHEAST-1 / SESSION: ANONYMOUS",
+    "systems_operational_tls": "SYSTEMS OPERATIONAL · TLS 1.3",
+    "node_status_v2": "NODE: SECURE_AUTH_V2",
+    "soc2_compliance": "SOC2 TYPE II COMPLIANT",
+    "jwt_handshake": "RFC-7519 JWT HANDSHAKE",
+    "engine_cipher_meta": "ENGINE: SM-2r4  CIPHER: AES-256-GCM  © 2025 TECHDAILY",
+    "google_sign_in_with": "Sign in with Google",
+    "sign_in_to_techdaily": "Sign in to TechDaily"
   },
   "quiz": {
     "title": "Interview Quiz",

@@ -555,7 +555,7 @@ describe('pages/login.vue', () => {
       })
 
       // Google OAuth button present, GitHub OAuth removed
-      expect(wrapper.text()).toContain('⌘L')
+      expect(wrapper.text()).toContain('auth.google_sign_in_with')
       expect(wrapper.text()).not.toContain('⌘G')
 
       // Monospace labels

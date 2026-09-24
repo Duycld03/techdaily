@@ -20,7 +20,8 @@ import {
   RotateCcw,
   Info,
   Send,
-  Shield
+  Shield,
+  Zap
 } from 'lucide-vue-next'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
@@ -259,198 +260,221 @@ async function handleSubmit() {
   }
 }
 </script>
-
 <template>
-  <div class="min-h-dvh flex flex-col justify-between bg-slate-50 dark:bg-canvas text-slate-900 dark:text-slate-100 transition-colors duration-200 overflow-x-hidden">
-    <!-- Minimal Studio Header -->
-    <header class="relative z-20 w-full h-14 border-b border-slate-200/80 dark:border-white/[0.08] bg-slate-50/80 dark:bg-[#09090b]/80 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between">
-      <!-- Left: Brand -->
-      <div class="flex items-center gap-3">
-        <NuxtLink to="/login" class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-brand-500/20 border border-brand-500/40 flex items-center justify-center text-brand-600 dark:text-brand-400 shadow-sm shadow-brand-500/20">
-            <BookOpen class="w-4 h-4" :stroke-width="1.75" />
-          </div>
-          <span class="font-bold tracking-tight text-slate-900 dark:text-white text-base">TechDaily</span>
-        </NuxtLink>
-      </div>
+  <div class="min-h-dvh flex flex-col justify-between bg-slate-50 dark:bg-[#070709] text-slate-900 dark:text-zinc-200 font-sans antialiased transition-colors duration-200 relative overflow-x-hidden">
+    <!-- BEGIN: Ambient Background Layers (Eliminates Empty Space) -->
+    <div class="fixed inset-0 pointer-events-none z-0">
+      <!-- Subtle engineering dot-matrix grid -->
+      <div class="absolute inset-0 bg-grid-dots opacity-70"></div>
+      <!-- Deep Iris Violet Radial Ambient Glow behind hero split card -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[650px] bg-brand-600/15 dark:bg-[#7c3aed]/15 rounded-full blur-[140px] pointer-events-none"></div>
+      <div class="absolute top-0 right-1/4 w-[400px] h-[300px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+      <div class="absolute bottom-10 left-10 w-[450px] h-[350px] bg-blue-600/10 rounded-full blur-[130px] pointer-events-none"></div>
+      <!-- Tech Baseline hairline decorations -->
+      <div class="absolute left-0 right-0 top-16 h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-white/[0.08] to-transparent"></div>
+      <div class="absolute left-12 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-slate-200/50 dark:via-white/[0.03] to-transparent hidden 2xl:block"></div>
+      <div class="absolute right-12 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-slate-200/50 dark:via-white/[0.03] to-transparent hidden 2xl:block"></div>
+    </div>
+    <!-- END: Ambient Background Layers -->
 
-      <!-- Right: Controls -->
-      <div class="flex items-center gap-3">
-        <LocaleSelector />
-        <ThemeToggle />
+    <!-- BEGIN: TopHeader -->
+    <header class="relative z-10 w-full border-b border-slate-200/80 dark:border-white/[0.06] bg-white/70 dark:bg-[#0c0c0e]/60 backdrop-blur-xl px-4 sm:px-8 py-3.5 transition-all">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <!-- Brand -->
+        <NuxtLink to="/login" class="flex items-center gap-2.5 group">
+          <!-- Logo Icon -->
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-600 to-indigo-700 p-0.5 shadow-lg shadow-brand-600/20 group-hover:scale-105 transition-transform duration-200">
+            <div class="w-full h-full bg-white dark:bg-[#0c0c0e] rounded-[7px] flex items-center justify-center">
+              <BookOpen class="w-4 h-4 text-brand-500 dark:text-brand-400 group-hover:text-brand-600 dark:group-hover:text-white transition-colors" :stroke-width="2" />
+            </div>
+          </div>
+          <!-- Brand Title -->
+          <span class="text-base font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors">TechDaily</span>
+        </NuxtLink>
+
+        <!-- Language Switcher & Theme Control -->
+        <div class="flex items-center gap-2">
+          <LocaleSelector />
+          <ThemeToggle />
+        </div>
       </div>
     </header>
+    <!-- END: TopHeader -->
 
-    <!-- Main Studio Cockpit Stage -->
-    <main class="flex-1 flex flex-col items-center justify-center p-3 sm:p-5 lg:p-6 min-h-0">
-      <div class="w-full max-w-6xl mx-auto py-2 px-1 sm:px-3">
-        <div class="grid lg:grid-cols-12 gap-6 lg:gap-10 items-start">
-          <!-- Left Column: Curriculum & Telemetry Showcase (Desktop Only) -->
-          <div class="lg:col-span-5 hidden lg:flex flex-col justify-between rounded-2xl bg-white/70 dark:bg-[#131315] border border-slate-200/80 dark:border-white/[0.08] p-6 sm:p-7 relative overflow-hidden shadow-xl">
-            <div class="space-y-4">
-            <!-- Track Badge -->
-            <div class="flex items-center gap-2">
-              <span class="px-2.5 py-0.5 rounded bg-brand-500/15 border border-brand-500/30 font-mono text-[11px] font-semibold text-brand-600 dark:text-brand-300">TECHDAILY</span>
-              <span class="font-mono text-[11px] text-slate-500 dark:text-slate-400 font-medium">SM-2 ACTIVE RECALL</span>
+    <!-- BEGIN: MainContentArea -->
+    <main class="relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <!-- Balanced Hero Split Grid -->
+      <div class="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
+        <!-- =============================================== -->
+        <!-- LEFT COLUMN: Value Proposition & Live Telemetry -->
+        <!-- =============================================== -->
+        <section class="lg:col-span-6 flex flex-col justify-center space-y-6">
+          <!-- Platform Badge -->
+          <div class="flex items-center gap-2.5">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-brand-500/10 border border-brand-500/25 text-brand-600 dark:text-brand-300 font-mono text-xs tracking-wide uppercase">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-500 dark:bg-brand-400"></span>
+              <span>TECHDAILY</span>
+              <span class="text-slate-300 dark:text-zinc-600">|</span>
+              <span class="text-brand-600 dark:text-brand-400">SM-2 ACTIVE RECALL</span>
+            </div>
+          </div>
+
+          <!-- Main Headline & Subtitle -->
+          <div class="space-y-3">
+            <h1 class="text-3xl sm:text-4xl lg:text-[40px] font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+              {{ $t('auth.cockpit_title') }}
+            </h1>
+            <p class="text-sm sm:text-base text-slate-600 dark:text-zinc-400 leading-relaxed max-w-xl">
+              {{ $t('auth.cockpit_desc') }}
+            </p>
+          </div>
+
+          <!-- Progress Slices Card -->
+          <div class="p-4 sm:p-5 rounded-xl bg-white/80 dark:bg-[#0c0c0e]/90 border border-slate-200 dark:border-white/[0.08] shadow-xl backdrop-blur-md space-y-4">
+            <!-- Daily Goal Metric -->
+            <div>
+              <div class="flex justify-between items-center text-xs font-mono mb-2">
+                <span class="text-slate-600 dark:text-zinc-400 tracking-wider flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
+                  {{ $t('auth.session_interval_target') }}
+                </span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-semibold">{{ $t('auth.session_interval_hit') }}</span>
+              </div>
+              <!-- Progress Track -->
+              <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-zinc-800/80 overflow-hidden p-0.5 border border-slate-200/50 dark:border-white/5">
+                <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 w-[94%] shadow-[0_0_12px_rgba(16,185,129,0.5)]"></div>
+              </div>
             </div>
 
-            <!-- Headline & Mission Description -->
-            <div class="space-y-1.5">
-              <h1 class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                {{ $t('auth.cockpit_title') }}
-              </h1>
-              <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                {{ $t('auth.cockpit_desc') }}
+            <!-- Spaced Repetition Metric -->
+            <div>
+              <div class="flex justify-between items-center text-xs font-mono mb-2">
+                <span class="text-slate-600 dark:text-zinc-400 tracking-wider flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand-500 dark:bg-brand-400"></span>
+                  {{ $t('auth.sm2_spaced_decay') }}
+                </span>
+                <span class="text-brand-600 dark:text-brand-400 font-semibold tracking-wide">{{ $t('auth.sm2_decay_value') }}</span>
+              </div>
+              <!-- Progress Track -->
+              <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-zinc-800/80 overflow-hidden p-0.5 border border-slate-200/50 dark:border-white/5">
+                <div class="h-full rounded-full bg-gradient-to-r from-brand-600 to-purple-400 w-[68%] shadow-[0_0_12px_rgba(124,58,237,0.5)]"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Code Snippet Simulation -->
+          <div class="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white/80 dark:bg-[#0c0c0e]/90 shadow-2xl overflow-hidden backdrop-blur-md">
+            <!-- Editor Titlebar -->
+            <div class="px-4 py-2.5 bg-slate-100 dark:bg-[#111115] border-b border-slate-200 dark:border-white/[0.06] flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
+                <span class="ml-2 font-mono text-xs text-slate-600 dark:text-zinc-400 flex items-center gap-1.5">
+                  <span class="text-brand-500 font-bold">&gt;_</span> {{ $t('auth.file_consensus') }}
+                </span>
+              </div>
+              <Lock class="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" :stroke-width="1.5" />
+            </div>
+            <!-- Code View -->
+            <div class="p-4 font-mono text-[13px] leading-relaxed text-slate-800 dark:text-zinc-300 overflow-x-auto bg-slate-50 dark:bg-[#0d0d11]">
+              <p><span class="text-purple-600 dark:text-purple-400 font-semibold">const</span> <span class="text-blue-600 dark:text-blue-300">drill</span> = <span class="text-purple-600 dark:text-purple-400 font-semibold">await</span> techDaily.<span class="text-amber-600 dark:text-amber-300">getDailySlice</span>({</p>
+              <p class="pl-4"><span class="text-slate-500 dark:text-zinc-400">track</span>: <span class="text-emerald-600 dark:text-emerald-400">"Architecture &amp; Systems"</span>,</p>
+              <p class="pl-4"><span class="text-slate-500 dark:text-zinc-400">spacedRepetition</span>: <span class="text-emerald-600 dark:text-emerald-400">"SM-2 Active Recall"</span>,</p>
+              <p class="pl-4"><span class="text-slate-500 dark:text-zinc-400">targetTime</span>: <span class="text-emerald-600 dark:text-emerald-400">"5 Mins / Day"</span></p>
+              <p>});</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- =============================================== -->
+        <!-- RIGHT COLUMN: Elevated Glass Cockpit Card       -->
+        <!-- =============================================== -->
+        <section class="lg:col-span-6 flex justify-center">
+          <div class="glass-panel w-full max-w-md bg-white/95 dark:bg-[#131317]/90 backdrop-blur-2xl rounded-2xl border border-slate-200 dark:border-white/[0.09] p-6 sm:p-8 shadow-2xl tech-border-glow relative">
+            <!-- Segmented Tab Switcher (Sign In, Register, Recover) -->
+            <div class="w-full bg-slate-100 dark:bg-[#0a0a0d] p-1 rounded-xl border border-slate-200/80 dark:border-white/[0.07] grid grid-cols-3 gap-1 mb-6 text-xs font-medium">
+              <button 
+                type="button"
+                @click="setAuthMode('login')"
+                :class="[
+                  'py-2 rounded-lg transition font-semibold cursor-pointer text-center',
+                  authMode === 'login'
+                    ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
+                ]"
+              >
+                {{ $t('auth.sign_in_tab') }}
+              </button>
+              <button 
+                type="button"
+                @click="setAuthMode('register')"
+                :class="[
+                  'py-2 rounded-lg transition font-semibold cursor-pointer text-center',
+                  authMode === 'register'
+                    ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
+                ]"
+              >
+                {{ $t('auth.register_tab') }}
+              </button>
+              <button 
+                type="button"
+                @click="setAuthMode('forgot-password')"
+                :class="[
+                  'py-2 rounded-lg transition font-semibold cursor-pointer flex items-center justify-center gap-1',
+                  authMode === 'forgot-password'
+                    ? 'bg-white dark:bg-zinc-800 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
+                ]"
+              >
+                <RotateCcw class="w-3 h-3 text-slate-500 dark:text-zinc-500" />
+                <span>{{ $t('auth.recovery_tab_title') }}</span>
+              </button>
+            </div>
+
+            <!-- Form Header -->
+            <div class="mb-6 space-y-1.5 text-left">
+              <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                {{ authMode === 'login' ? $t('auth.welcome_title') : (authMode === 'register' ? $t('auth.register_title') : $t('auth.recover_cockpit_title')) }}
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-zinc-400 leading-normal">
+                {{ authMode === 'forgot-password' ? $t('auth.recover_cockpit_subtitle') : $t('auth.welcome_subtitle') }}
               </p>
             </div>
-            <div class="space-y-3">
-              <!-- Metric 1: Session Interval Target -->
-              <div class="rounded-lg bg-slate-50 dark:bg-[#09090b] border border-slate-200/60 dark:border-white/[0.06] p-3">
-                <div class="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 mb-1.5">
-                  <span class="tracking-wider uppercase">{{ $t('auth.session_interval_target') }}</span>
-                  <span class="text-emerald-600 dark:text-emerald-400 font-semibold">{{ $t('auth.session_interval_hit') }}</span>
-                </div>
-                <div class="w-full bg-slate-200 dark:bg-[#1c1b1d] h-1.5 rounded-full overflow-hidden">
-                  <div class="bg-emerald-500 h-full rounded-full" style="width: 94%"></div>
-                </div>
-              </div>
 
-              <!-- Metric 2: SM-2 Spaced Decay -->
-              <div class="rounded-lg bg-slate-50 dark:bg-[#09090b] border border-slate-200/60 dark:border-white/[0.06] p-3">
-                <div class="flex items-center justify-between text-[11px] font-mono text-slate-500 dark:text-slate-400 mb-1.5">
-                  <span class="tracking-wider uppercase">{{ $t('auth.sm2_spaced_decay') }}</span>
-                  <span class="text-brand-600 dark:text-brand-300 font-semibold">{{ $t('auth.sm2_decay_value') }}</span>
-                </div>
-                <div class="w-full bg-slate-200 dark:bg-[#1c1b1d] h-1.5 rounded-full overflow-hidden">
-                  <div class="bg-gradient-to-r from-brand-500 to-purple-400 h-full rounded-full" style="width: 68%"></div>
-                </div>
-              </div>
-            </div>
+            <!-- OAuth Provider (Google SSO) -->
+            <div v-if="authMode !== 'forgot-password'" class="mb-5">
+              <!-- Official Clean Full-Width Google Button (Zero Hover Clipping/Overflow) -->
+              <button 
+                type="button"
+                @click="triggerGoogleSignIn"
+                class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-[#202024] hover:bg-slate-200 dark:hover:bg-zinc-800 text-sm font-medium text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-white/[0.08] transition shadow-sm hover:border-slate-300 dark:hover:border-white/15 cursor-pointer"
+              >
+                <!-- Official Google Icon SVG with Transparent Background -->
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" fill="#4285F4"></path>
+                  <path d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z" fill="#34A853"></path>
+                  <path d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z" fill="#FBBC05"></path>
+                  <path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z" fill="#EA4335"></path>
+                </svg>
+                <span>{{ $t('auth.google_sign_in_with') }}</span>
+              </button>
 
-            <!-- Live Code Snippet Box (Consensus_Promise.ts) -->
-            <div class="rounded-lg bg-slate-50 dark:bg-[#09090b] border border-slate-200/80 dark:border-white/[0.08] overflow-hidden text-xs font-mono">
-              <div class="flex items-center justify-between px-3 py-2 border-b border-slate-200/60 dark:border-white/[0.06] bg-slate-100/60 dark:bg-[#0d0d10]">
-                <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-[11px]">
-                  <Terminal class="w-3.5 h-3.5 text-brand-500 dark:text-brand-400" />
-                  <span>{{ $t('auth.file_consensus') }}</span>
-                </div>
-                <Lock class="w-3.5 h-3.5 text-slate-400" />
-              </div>
-              <div class="p-3 text-slate-700 dark:text-slate-300 leading-relaxed font-mono overflow-x-auto text-[11px]">
-                <p><span class="text-purple-600 dark:text-purple-400 font-medium">const</span> drill = <span class="text-purple-600 dark:text-purple-400 font-medium">await</span> techDaily.<span class="text-sky-600 dark:text-sky-300 font-semibold">getDailySlice</span>({</p>
-                <p class="pl-3 text-slate-500 dark:text-slate-400">track: <span class="text-emerald-600 dark:text-emerald-300">"Architecture &amp; Systems"</span>,</p>
-                <p class="pl-3 text-slate-500 dark:text-slate-400">spacedRepetition: <span class="text-amber-600 dark:text-amber-300">"SM-2 Active Recall"</span>,</p>
-                <p class="pl-3 text-slate-500 dark:text-slate-400">targetTime: <span class="text-brand-600 dark:text-brand-400">"5 Mins / Day"</span></p>
-                <p>});</p>
-              </div>
-            </div>
-          </div>
+              <!-- Hidden GSI Bridge for Auto-One-Tap / Background Prompt -->
+              <div
+                ref="googleBtnContainer"
+                class="hidden"
+                style="color-scheme: light;"
+              ></div>
 
-          <!-- Security footnote badge -->
-          <div class="pt-4 mt-3 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center gap-2 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
-            <Shield class="w-4 h-4 text-brand-500 dark:text-brand-400" :stroke-width="1.75" />
-            <span class="tracking-wide uppercase">{{ $t('auth.cryptographic_attestation') }}</span>
-          </div>
-        </div>
-
-          <!-- Right Column: Interactive Cockpit Auth Card -->
-          <div class="lg:col-span-7 w-full max-w-xl mx-auto flex flex-col justify-center">
-            <div class="glass-panel bg-white/95 dark:bg-[#18181b] border border-slate-200 dark:border-white/[0.08] rounded-3xl p-5 sm:p-7 shadow-2xl space-y-4">
-            <div class="space-y-3">
-              <!-- Mode Switcher Tabs -->
-              <!-- Mode Switcher Tabs: 3-Segmented Controls (Sign In, Register, Recover) -->
-              <div class="w-full flex p-1 rounded-xl bg-slate-100 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.08] text-xs font-mono select-none">
-                <button
-                  type="button"
-                  @click="setAuthMode('login')"
-                  :class="[
-                    'flex-1 py-1.5 px-3 rounded-lg transition-colors duration-150 outline-none focus:outline-none focus:ring-0 cursor-pointer text-center select-none',
-                    authMode === 'login'
-                      ? 'bg-white dark:bg-white/[0.12] text-brand-600 dark:text-white font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                  ]"
-                >
-                  {{ $t('auth.sign_in_tab') }}
-                </button>
-                <button
-                  type="button"
-                  @click="setAuthMode('register')"
-                  :class="[
-                    'flex-1 py-1.5 px-3 rounded-lg transition-colors duration-150 outline-none focus:outline-none focus:ring-0 cursor-pointer text-center select-none',
-                    authMode === 'register'
-                      ? 'bg-white dark:bg-white/[0.12] text-brand-600 dark:text-white font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                  ]"
-                >
-                  {{ $t('auth.register_tab') }}
-                </button>
-                <button
-                  type="button"
-                  @click="setAuthMode('forgot-password')"
-                  :class="[
-                    'px-3 py-1.5 rounded-lg transition-colors duration-150 outline-none focus:outline-none focus:ring-0 cursor-pointer text-center select-none flex items-center justify-center gap-1.5',
-                    authMode === 'forgot-password'
-                      ? 'bg-white dark:bg-white/[0.12] text-brand-600 dark:text-white font-bold shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                  ]"
-                  :title="$t('auth.recovery_tab_title')"
-                >
-                  <RotateCcw class="w-3.5 h-3.5" :stroke-width="1.75" />
-                  <span class="hidden sm:inline">{{ $t('auth.recovery_tab_title') }}</span>
-                </button>
-              </div>
-
-              <!-- Cockpit Title & Subtitle -->
-              <div>
-                <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  {{ authMode === 'login' 
-                    ? $t('auth.welcome_title') 
-                    : (authMode === 'register' ? $t('auth.register_title') : $t('auth.recover_cockpit_title')) }}
-                </h2>
-                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-                  {{ authMode === 'forgot-password' 
-                    ? $t('auth.recover_cockpit_subtitle')
-                    : $t('auth.welcome_subtitle') }}
-                </p>
-              </div>
-            </div>
-
-            <!-- OAuth Providers (Login & Register) -->
-            <!-- Fast 1-Click Developer OAuth Stack (Google Only) -->
-            <div v-if="authMode !== 'forgot-password'" class="mb-4 pt-1 w-full">
-              <div class="relative flex items-center justify-center min-h-[44px] w-full">
-                <div
-                  v-show="hasGsiRendered"
-                  ref="googleBtnContainer"
-                  class="google-btn-container w-full overflow-hidden rounded-xl"
-                  style="color-scheme: light;"
-                ></div>
-                <button
-                  v-if="!hasGsiRendered"
-                  type="button"
-                  @click="triggerGoogleSignIn"
-                  class="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-white/[0.12] bg-white dark:bg-[#1c1b1d] hover:bg-slate-50 dark:hover:bg-white/[0.04] text-slate-800 dark:text-slate-200 flex items-center justify-between transition-colors shadow-sm text-sm font-medium cursor-pointer"
-                >
-                  <div class="flex items-center gap-2.5">
-                    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"></path>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"></path>
-                    </svg>
-                    <span>{{ $t('auth.google_sign_in') }}</span>
-                  </div>
-                  <kbd class="font-mono text-xs bg-black/5 dark:bg-black/30 px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06]">⌘L</kbd>
-                </button>
-              </div>
-
-              <!-- Centered Divider -->
-              <div class="relative my-4">
+              <!-- Divider -->
+              <div class="relative my-5 flex items-center justify-center">
                 <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div class="w-full border-t border-slate-200 dark:border-white/[0.08]" />
+                  <div class="w-full border-t border-slate-200 dark:border-white/[0.08]"></div>
                 </div>
-                <div class="relative flex justify-center text-[10px] font-mono uppercase tracking-wider">
-                  <span class="bg-white dark:bg-[#18181b] px-3 text-slate-400 font-semibold">
+                <div class="relative flex justify-center text-[10px] font-mono uppercase tracking-widest whitespace-nowrap">
+                  <span class="bg-white dark:bg-[#131317] px-3 text-slate-400 dark:text-zinc-500">
                     {{ $t('auth.or_continue_with') }}
                   </span>
                 </div>
@@ -461,228 +485,170 @@ async function handleSubmit() {
             <div
               v-if="errorMessage"
               role="alert"
-              class="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-medium flex items-start gap-2 animate-in fade-in duration-200"
+              class="p-3 mb-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-medium flex items-start gap-2 animate-in fade-in duration-200"
             >
               <AlertCircle class="w-4 h-4 text-rose-500 shrink-0 mt-0.5" :stroke-width="1.5" />
               <span class="flex-1">{{ errorMessage }}</span>
             </div>
 
-            <!-- Credentials Form -->
-            <form @submit.prevent="handleSubmit" class="space-y-3.5">
-              <!-- Register Mode: 2-column input grid -->
-              <div v-if="authMode === 'register'" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <!-- Full Name -->
-                <div class="space-y-1">
-                  <label class="block text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    {{ $t('auth.name_label') }}
-                  </label>
-                  <div class="relative">
-                    <User class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-                    <input
-                      v-model="name"
-                      type="text"
-                      required
-                      :placeholder="$t('auth.name_placeholder')"
-                      class="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 focus:outline-none transition-all"
-                    />
-                  </div>
+            <!-- Auth Form Fields -->
+            <form @submit.prevent="handleSubmit" class="space-y-4">
+              <!-- Register Mode: Additional Name Field -->
+              <div v-if="authMode === 'register'" class="space-y-1.5 text-left">
+                <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="name">
+                  {{ $t('auth.name_label') }}
+                </label>
+                <div class="relative rounded-xl border border-slate-200 dark:border-white/[0.09] bg-slate-50 dark:bg-[#070709] focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500">
+                    <User class="w-4 h-4" :stroke-width="1.5" />
+                  </span>
+                  <input
+                    id="name"
+                    v-model="name"
+                    required
+                    type="text"
+                    :placeholder="$t('auth.name_placeholder')"
+                    class="w-full pl-10 pr-4 py-2.5 bg-transparent border-0 text-sm font-mono text-slate-900 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-600 focus:ring-0 focus:outline-none"
+                  />
                 </div>
+              </div>
 
-                <!-- Email Address -->
-                <div class="space-y-1">
-                  <label class="block text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    {{ $t('auth.email_label') }}
-                  </label>
-                  <div class="relative">
-                    <Mail class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-                    <input
-                      v-model="email"
-                      required
-                      type="email"
-                      placeholder="dev@techdaily.io"
-                      class="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 focus:outline-none transition-all"
-                    />
-                  </div>
+              <!-- Email / Username Input -->
+              <div class="space-y-1.5 text-left">
+                <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="email">
+                  {{ authMode === 'forgot-password' ? $t('auth.account_email_label') : $t('auth.dev_handle_label') }}
+                </label>
+                <div class="relative rounded-xl border border-slate-200 dark:border-white/[0.09] bg-slate-50 dark:bg-[#070709] focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none font-mono text-xs text-slate-400 dark:text-zinc-500">
+                    &gt;_
+                  </span>
+                  <input
+                    id="email"
+                    v-model="email"
+                    required
+                    type="email"
+                    placeholder="dev@techdaily.io"
+                    class="w-full pl-9 pr-4 py-2.5 bg-transparent border-0 text-sm font-mono text-slate-900 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-600 focus:ring-0 focus:outline-none"
+                  />
                 </div>
+              </div>
 
-                <!-- Password -->
-                <div class="space-y-1">
-                  <label class="block text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    {{ $t('auth.password_label') }}
-                  </label>
-                  <div class="relative">
-                    <Lock class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-                    <input
-                      v-model="password"
-                      required
-                      :type="showPassword ? 'text' : 'password'"
-                      minlength="8"
-                      :placeholder="$t('auth.password_placeholder')"
-                      class="w-full pl-9 pr-9 py-2 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 focus:outline-none transition-all"
-                    />
-                    <button
-                      type="button"
-                      @click="showPassword = !showPassword"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer"
-                      :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                    >
-                      <EyeOff v-if="showPassword" class="w-3.5 h-3.5" :stroke-width="1.5" />
-                      <Eye v-else class="w-3.5 h-3.5" :stroke-width="1.5" />
-                    </button>
-                  </div>
-                </div>
+              <!-- Contextual OAuth / Hardware Security Key Advisory Notice (Forgot Password Mode) -->
+              <div v-if="authMode === 'forgot-password'" class="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+                <Info class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" :stroke-width="1.75" />
+                <p class="leading-relaxed">
+                  {{ $t('auth.oauth_bypass_notice') }}
+                </p>
+              </div>
 
-                <!-- Confirm Password -->
-                <div class="space-y-1">
-                  <label class="block text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    {{ $t('auth.confirm_password_label') }}
+              <!-- Password Input with Forgot link -->
+              <div v-if="authMode !== 'forgot-password'" class="space-y-1.5 text-left">
+                <div class="flex items-center justify-between">
+                  <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="password">
+                    {{ $t('auth.secret_token_label') }}
                   </label>
-                  <div class="relative">
-                    <Lock class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-                    <input
-                      v-model="confirmPassword"
-                      required
-                      :type="showConfirmPassword ? 'text' : 'password'"
-                      minlength="8"
-                      :placeholder="$t('auth.confirm_password_placeholder')"
-                      class="w-full pl-9 pr-9 py-2 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 focus:outline-none transition-all"
-                    />
-                    <button
-                      type="button"
-                      @click="showConfirmPassword = !showConfirmPassword"
-                      class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer"
-                      :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
-                    >
-                      <EyeOff v-if="showConfirmPassword" class="w-3.5 h-3.5" :stroke-width="1.5" />
-                      <Eye v-else class="w-3.5 h-3.5" :stroke-width="1.5" />
-                    </button>
-                  </div>
-                  <p
-                    v-if="confirmPassword && confirmPassword !== password"
-                    class="text-xs text-rose-500 font-medium flex items-center gap-1.5 pt-0.5"
+                  <button
+                    type="button"
+                    @click="setAuthMode('forgot-password')"
+                    class="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-500 transition cursor-pointer"
                   >
-                    <AlertCircle class="w-3.5 h-3.5 shrink-0" />
-                    <span>{{ $t('auth.passwords_mismatch') }}</span>
-                  </p>
+                    {{ $t('auth.forgot_password_link') }}
+                  </button>
+                </div>
+                <div class="relative rounded-xl border border-slate-200 dark:border-white/[0.09] bg-slate-50 dark:bg-[#070709] focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500">
+                    <Key class="w-4 h-4" :stroke-width="1.5" />
+                  </span>
+                  <input
+                    id="password"
+                    v-model="password"
+                    required
+                    :type="showPassword ? 'text' : 'password'"
+                    minlength="8"
+                    placeholder="••••••••••••"
+                    class="w-full pl-10 pr-10 py-2.5 bg-transparent border-0 text-sm font-mono text-slate-900 dark:text-zinc-200 tracking-wider placeholder-slate-400 dark:placeholder-zinc-600 focus:ring-0 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    @click="showPassword = !showPassword"
+                    class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition cursor-pointer"
+                    :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                  >
+                    <EyeOff v-if="showPassword" class="w-4 h-4" :stroke-width="1.5" />
+                    <Eye v-else class="w-4 h-4" :stroke-width="1.5" />
+                  </button>
                 </div>
               </div>
 
-              <!-- Forgot Password Mode: Email only -->
-              <!-- Forgot Password Mode: TechDaily Recovery Panel -->
-              <div v-else-if="authMode === 'forgot-password'" class="space-y-3.5">
-                <!-- Account Registration Email -->
-                <div class="space-y-1">
-                  <label class="block text-xs font-mono font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                    {{ $t('auth.account_email_label') }}
-                  </label>
-                  <div class="relative">
-                    <Mail class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-                    <input
-                      v-model="email"
-                      required
-                      type="email"
-                      placeholder="dev@techdaily.io"
-                      class="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 focus:outline-none transition-all"
-                    />
-                  </div>
+              <!-- Confirm Password (Register Mode Only) -->
+              <div v-if="authMode === 'register'" class="space-y-1.5 text-left">
+                <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="confirmPassword">
+                  {{ $t('auth.confirm_password_label') }}
+                </label>
+                <div class="relative rounded-xl border border-slate-200 dark:border-white/[0.09] bg-slate-50 dark:bg-[#070709] focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500">
+                    <Lock class="w-4 h-4" :stroke-width="1.5" />
+                  </span>
+                  <input
+                    id="confirmPassword"
+                    v-model="confirmPassword"
+                    required
+                    :type="showConfirmPassword ? 'text' : 'password'"
+                    minlength="8"
+                    :placeholder="$t('auth.confirm_password_placeholder')"
+                    class="w-full pl-10 pr-10 py-2.5 bg-transparent border-0 text-sm font-mono text-slate-900 dark:text-zinc-200 tracking-wider placeholder-slate-400 dark:placeholder-zinc-600 focus:ring-0 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    @click="showConfirmPassword = !showConfirmPassword"
+                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer"
+                    :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
+                  >
+                    <EyeOff v-if="showConfirmPassword" class="w-4 h-4" :stroke-width="1.5" />
+                    <Eye v-else class="w-4 h-4" :stroke-width="1.5" />
+                  </button>
                 </div>
-
-                <!-- Contextual OAuth / Hardware Security Key Advisory Notice -->
-                <div class="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
-                  <Info class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" :stroke-width="1.75" />
-                  <p class="leading-relaxed">
-                    {{ $t('auth.oauth_bypass_notice') }}
-                  </p>
-                </div>
+                <p
+                  v-if="confirmPassword && confirmPassword !== password"
+                  class="text-xs text-rose-500 font-medium flex items-center gap-1.5 pt-0.5"
+                >
+                  <AlertCircle class="w-3.5 h-3.5 shrink-0" />
+                  <span>{{ $t('auth.passwords_mismatch') }}</span>
+                </p>
               </div>
 
-              <!-- Sign In Mode: Stacked Email + Password with Telemetry Labels -->
-              <div v-else class="space-y-3">
-                <!-- Email -->
-                <div class="space-y-1">
-                  <div class="flex items-center justify-between font-mono text-[11px] font-bold">
-                    <label class="text-slate-700 dark:text-slate-300 tracking-wider">
-                      {{ $t('auth.dev_handle_label') }}
-                    </label>
-                  </div>
-                  <div class="relative">
-                    <Terminal class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-                    <input
-                      v-model="email"
-                      required
-                      type="email"
-                      placeholder="dev@techdaily.io"
-                      class="w-full pl-11 pr-4 py-2.5 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 focus:outline-none transition-all"
-                    />
-                  </div>
-                </div>
-
-                <!-- Password -->
-                <div class="space-y-1">
-                  <div class="flex items-center justify-between font-mono text-[11px] font-bold">
-                    <label class="text-slate-700 dark:text-slate-300 tracking-wider">
-                      {{ $t('auth.secret_token_label') }}
-                    </label>
-                    <button
-                      type="button"
-                      @click="setAuthMode('forgot-password')"
-                      class="text-brand-600 dark:text-brand-400 hover:text-brand-500 font-medium transition-colors cursor-pointer text-[11px]"
-                    >
-                      {{ $t('auth.forgot_password_link') }}
-                    </button>
-                  </div>
-                  <div class="relative">
-                    <Key class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-                    <input
-                      v-model="password"
-                      required
-                      :type="showPassword ? 'text' : 'password'"
-                      placeholder="••••••••••••••••"
-                      class="w-full pl-11 pr-11 py-2.5 bg-slate-50 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm font-mono text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30 focus:outline-none transition-all"
-                    />
-                    <button
-                      type="button"
-                      @click="showPassword = !showPassword"
-                      class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none transition-colors cursor-pointer"
-                      :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                    >
-                      <EyeOff v-if="showPassword" class="w-4 h-4" :stroke-width="1.5" />
-                      <Eye v-else class="w-4 h-4" :stroke-width="1.5" />
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Remember Session Checkbox -->
-                <div class="flex items-center justify-between text-xs font-medium pt-0.5">
-                  <label class="flex items-center gap-2 cursor-pointer select-none text-slate-600 dark:text-slate-400">
-                    <input
-                      v-model="rememberSession"
-                      type="checkbox"
-                      class="rounded border-slate-300 dark:border-white/[0.12] bg-slate-100 dark:bg-canvas-subtle text-brand-600 focus:ring-brand-500/30 w-3.5 h-3.5"
-                    />
-                    <span>{{ $t('auth.remember_session') }}</span>
-                  </label>
-                </div>
+              <!-- Remember Session Checkbox -->
+              <div v-if="authMode !== 'forgot-password'" class="flex items-center pt-1">
+                <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-600 dark:text-zinc-400 select-none">
+                  <input
+                    v-model="rememberSession"
+                    type="checkbox"
+                    class="w-4 h-4 rounded bg-slate-100 dark:bg-[#070709] border-slate-300 dark:border-white/20 text-brand-600 focus:ring-0 focus:ring-offset-0 focus:outline-none cursor-pointer"
+                  />
+                  <span>{{ $t('auth.remember_session') }}</span>
+                </label>
               </div>
 
-              <!-- Submit Action Button -->
-              <button
-                type="submit"
-                :disabled="isLoading"
-                class="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 font-semibold text-white shadow-sm hover:shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2 text-xs sm:text-sm disabled:opacity-50 cursor-pointer"
-              >
-                <span v-if="isLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                <span v-else-if="authMode === 'forgot-password'" class="flex items-center gap-1.5">
-                  <span>{{ $t('auth.send_recovery_link_btn') }}</span>
-                  <Send class="w-3.5 h-3.5" :stroke-width="1.75" />
-                </span>
-                <span v-else>
-                  {{ authMode === 'login' 
-                    ? $t('auth.enter_cockpit') 
-                    : $t('auth.submit_register') }}
-                </span>
-                <kbd v-if="!isLoading" class="px-1.5 py-0.5 rounded bg-brand-700/60 text-white font-mono text-[10px]">↵ RETURN</kbd>
-              </button>
+              <!-- Primary Submit Action Button -->
+              <div class="pt-2">
+                <button
+                  type="submit"
+                  :disabled="isLoading"
+                  class="w-full group relative flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 active:scale-[0.99] text-white font-semibold text-sm shadow-lg shadow-brand-600/30 transition-all duration-150 ease-out cursor-pointer disabled:opacity-60"
+                >
+                  <span v-if="isLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  <span v-else-if="authMode === 'forgot-password'" class="flex items-center gap-1.5">
+                    <span>{{ $t('auth.send_recovery_link_btn') }}</span>
+                    <Send class="w-3.5 h-3.5" :stroke-width="1.75" />
+                  </span>
+                  <span v-else>
+                    {{ authMode === 'register' ? $t('auth.submit_register') : $t('auth.enter_cockpit') }}
+                  </span>
+                  <span v-if="!isLoading" class="inline-flex items-center font-mono text-[11px] px-1.5 py-0.5 rounded bg-brand-700/60 text-brand-200 border border-brand-400/20 group-hover:bg-brand-700 transition">
+                    ↵ RETURN
+                  </span>
+                </button>
+              </div>
 
               <!-- Back to Sign In button (Forgot Password Mode Only) -->
               <div v-if="authMode === 'forgot-password'" class="text-center pt-1">
@@ -697,52 +663,39 @@ async function handleSubmit() {
               </div>
             </form>
 
-            <!-- Card Security Footnote & Legal Links -->
-            <div class="mt-4 pt-3.5 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between text-slate-400 font-mono text-[11px]">
-              <div class="flex items-center gap-1.5">
-                <Lock class="w-3.5 h-3.5 text-emerald-500" :stroke-width="1.75" />
-                <span class="tracking-wide text-slate-600 dark:text-slate-300 font-medium">
-                  {{ $t('auth.zero_knowledge_badge') }}
-                </span>
+            <!-- Card Security Footer -->
+            <div class="mt-6 pt-5 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between text-xs text-slate-500 dark:text-zinc-500 font-mono">
+              <div class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <Shield class="w-3.5 h-3.5" :stroke-width="1.75" />
+                <span class="text-[11px] tracking-wide font-medium">{{ $t('auth.zero_knowledge_badge') }}</span>
               </div>
               <div class="flex items-center gap-2">
-                <a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">
-                  {{ $t('auth.terms_link') }}
-                </a>
+                <a href="#" class="hover:text-slate-800 dark:hover:text-zinc-300 transition">{{ $t('auth.terms_link') }}</a>
                 <span>·</span>
-                <a href="#" class="hover:text-slate-900 dark:hover:text-white transition-colors">
-                  {{ $t('auth.privacy_link') }}
-                </a>
+                <a href="#" class="hover:text-slate-800 dark:hover:text-zinc-300 transition">{{ $t('auth.privacy_link') }}</a>
               </div>
             </div>
 
-            <!-- Terms and Privacy Footer -->
-            <div class="text-center pt-1 text-[11px] text-slate-400 dark:text-slate-500">
-              <p class="leading-relaxed">
-                {{ $t('auth.terms_agreement') }}
-              </p>
-            </div>
+            <!-- Micro Agreement text -->
+            <p class="mt-3 text-[11px] text-center text-slate-400 dark:text-zinc-500">
+              {{ $t('auth.terms_agreement') }}
+            </p>
           </div>
-        </div>
-        </div>
+        </section>
       </div>
     </main>
+    <!-- END: MainContentArea -->
   </div>
 </template>
 
 <style scoped>
-:deep(.google-btn-container),
-:deep(.google-btn-container > div),
-:deep(.google-btn-container > div > div),
-:deep(.google-btn-container [role="button"]),
-:deep(.google-btn-container iframe) {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
+.bg-grid-dots {
+  background-size: 24px 24px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
 }
 
-:deep(.google-btn-container [role="button"]) {
-  border-radius: 0.75rem !important;
-  height: 44px !important;
+.tech-border-glow {
+  box-shadow: 0 0 45px -10px rgba(124, 58, 237, 0.22),
+              inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 </style>
