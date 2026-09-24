@@ -1499,11 +1499,11 @@ The custom timepicker component (`AppTimePicker.vue`) SHALL render as an in-plac
 ---
 
 ### Requirement: Frontend Testing Boundaries & Visual Inspection Standard
-The web frontend automated test suite (`Vitest` + `Happy-DOM`) SHALL enforce a strict separation between behavioral data contracts and visual layout verification:
+The web frontend automated test suite (`Vitest` + `Happy-DOM`) SHALL enforce a strict separation between behavioral data contracts and visual layout verification, actively purging test theater assertions:
 
 1. **Prohibition of CSS Class Assertions in Vitest**:
-   - Unit tests SHALL NOT assert the presence, absence, or modification of Tailwind CSS utility classes (e.g. `classes().toContain('max-w-5xl')`, `classes().toContain('hidden')`, `classes().toContain('lg:grid-cols-12')`) under the premise of verifying visual presentation or layout integrity.
-   - Tests asserting styling classes under the pretense of UI verification SHALL be treated as invalid test theater and deleted or replaced with behavioral assertions.
+   - Unit tests SHALL NOT assert the presence, absence, or modification of Tailwind CSS utility classes (e.g. `classes().toContain('max-w-5xl')`, `classes().toContain('hidden')`, `classes().toContain('lg:grid-cols-12')`, `classes().toContain('flex')`, `classes().toContain('shrink-0')`, `classes().toContain('whitespace-nowrap')`) under the premise of verifying visual presentation or layout integrity.
+   - All tests in the frontend test suite asserting styling classes under the pretense of UI layout verification SHALL be pruned or replaced with behavioral state assertions.
 
 2. **Permitted Scope for Automated Unit Testing (Vitest)**:
    - **Form Serialization & Data Contracts**: Verify that user input (names, emails, passwords, numerical values) is correctly parsed and dispatched in the exact required payload schema to backend endpoints or stores.
@@ -1523,3 +1523,8 @@ The web frontend automated test suite (`Vitest` + `Happy-DOM`) SHALL enforce a s
 - **WHEN** an agent develops or modifies a page component
 - **THEN** layout stability and responsive presentation are verified through direct browser rendering or screenshot inspection at desktop and mobile breakpoints
 - **AND** no Happy-DOM unit tests are written to verify pixel geometry.
+
+#### Scenario: Auditing and pruning legacy CSS class test assertions
+- **WHEN** the test suite executes
+- **THEN** unit test assertions focus exclusively on data payloads, DOM element presence, accessible ARIA attributes, and user event reactions
+- **AND** zero tests fail due to incidental styling or Tailwind utility class renames.
