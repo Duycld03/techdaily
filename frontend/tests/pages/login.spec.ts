@@ -144,4 +144,78 @@ describe('pages/login.vue', () => {
     await flushPromises()
     expect(globalObj.navigateTo).toHaveBeenCalledWith('/today')
   })
+
+  it('switches to register mode and displays name, confirm password, and eye toggles', async () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+
+    // Initially in login mode: only email and password inputs
+    expect(wrapper.findAll('input[type="text"]').length).toBe(0)
+    expect(wrapper.findAll('input[type="password"]').length).toBe(1)
+
+    // Click Register tab
+    const buttons = wrapper.findAll('button')
+    const registerTab = buttons.find(b => b.text().includes('Register') || b.text().includes('auth.register_tab'))
+    expect(registerTab).toBeDefined()
+    await registerTab!.trigger('click')
+
+    // Now in register mode: name and confirm password inputs are visible
+    const textInputs = wrapper.findAll('input[type="text"]')
+    expect(textInputs.length).toBe(1) // Name input
+    expect(textInputs[0].attributes('placeholder')).toBeTruthy()
+
+    const passwordInputs = wrapper.findAll('input[type="password"]')
+    expect(passwordInputs.length).toBe(2) // Password and Confirm Password inputs
+    expect(passwordInputs[0].attributes('placeholder')).toBeTruthy()
+    expect(passwordInputs[1].attributes('placeholder')).toBeTruthy()
+  })
+
+  it('shows password mismatch warning when confirm password does not match', async () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+
+    // Switch to register mode
+    const buttons = wrapper.findAll('button')
+    const registerTab = buttons.find(b => b.text().includes('Register') || b.text().includes('auth.register_tab'))
+    await registerTab!.trigger('click')
+
+    const passwordInputs = wrapper.findAll('input[type="password"]')
+    await passwordInputs[0].setValue('Password123!')
+    await passwordInputs[1].setValue('DifferentPassword!')
+
+    expect(wrapper.text()).toContain('passwords_mismatch')
+  })
+
+  it('toggles password visibility with eye toggle button', async () => {
+    const wrapper = mount(LoginPage, {
+      global: {
+        stubs: {
+          NuxtLink: { template: '<a><slot /></a>' }
+        }
+      }
+    })
+
+    // Initially password input has type="password"
+    const initialPasswordInput = wrapper.find('input[type="password"]')
+    expect(initialPasswordInput.exists()).toBe(true)
+
+    // Find eye toggle button
+    const eyeToggle = wrapper.find('button[aria-label="Show password"]')
+    expect(eyeToggle.exists()).toBe(true)
+    await eyeToggle.trigger('click')
+
+    // Input type becomes "text"
+    expect(wrapper.find('input[type="text"]').exists()).toBe(true)
+    expect(wrapper.find('button[aria-label="Hide password"]').exists()).toBe(true)
+  })
 })
