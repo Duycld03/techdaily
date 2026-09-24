@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue'
-import { useIntervalFn } from '@vueuse/core'
+import { useIntervalFn, useEventListener, useDebounceFn } from '@vueuse/core'
 import {
   BookOpen,
   Lock,
@@ -107,6 +107,12 @@ const { pause: stopGooglePoll, resume: startGooglePoll } = useIntervalFn(() => {
   }
 }, 200, { immediate: false })
 
+useEventListener('resize', useDebounceFn(() => {
+  if (hasGsiRendered.value) {
+    renderGoogleButton()
+  }
+}, 150))
+
 function renderGoogleButton() {
   if (typeof window === 'undefined') return
   const gsi = (window as any).google?.accounts?.id
@@ -117,10 +123,11 @@ function renderGoogleButton() {
   }
   btnContainer.innerHTML = ''
   try {
+    const containerWidth = Math.min(Math.max(btnContainer.clientWidth || 400, 200), 400)
     gsi.renderButton(btnContainer, {
       theme: colorMode.value === 'dark' ? 'filled_black' : 'outline',
       size: 'large',
-      width: 320,
+      width: containerWidth,
       text: 'signin',
       shape: 'rectangular',
       logo_alignment: 'left'
@@ -410,12 +417,12 @@ async function handleSubmit() {
 
             <!-- OAuth Providers (Login & Register) -->
             <!-- Fast 1-Click Developer OAuth Stack (Google Only) -->
-            <div v-if="authMode !== 'forgot-password'" class="mb-4 pt-1">
+            <div v-if="authMode !== 'forgot-password'" class="mb-4 pt-1 w-full">
               <div class="relative flex items-center justify-center min-h-[44px] w-full">
                 <div
                   v-show="hasGsiRendered"
                   ref="googleBtnContainer"
-                  class="w-full flex justify-center overflow-hidden rounded-xl"
+                  class="google-btn-container w-full overflow-hidden rounded-xl"
                   style="color-scheme: light;"
                 ></div>
                 <button
@@ -722,3 +729,20 @@ async function handleSubmit() {
     </main>
   </div>
 </template>
+
+<style scoped>
+:deep(.google-btn-container),
+:deep(.google-btn-container > div),
+:deep(.google-btn-container > div > div),
+:deep(.google-btn-container [role="button"]),
+:deep(.google-btn-container iframe) {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+:deep(.google-btn-container [role="button"]) {
+  border-radius: 0.75rem !important;
+  height: 44px !important;
+}
+</style>
