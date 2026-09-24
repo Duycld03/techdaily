@@ -2,9 +2,11 @@
 import { ref } from 'vue'
 import { Search, Plus, Trash2, Settings2, Flame } from 'lucide-vue-next'
 import AppSelect from '~/components/common/AppSelect.vue'
+import AppTimePicker from '~/components/common/AppTimePicker.vue'
 
 const searchValue = ref('')
 const selectValue = ref('senior')
+const timeValue = ref('08:30')
 const trackOptions = [
   { value: 'fresher', label: 'Fresher Track' },
   { value: 'mid', label: 'Mid Track' },
@@ -63,12 +65,12 @@ const tabs = [
       </div>
     </div>
 
-    <!-- Inputs & Select -->
+    <!-- Inputs, Select & TimePicker -->
     <div class="glass-card p-4 space-y-3.5">
       <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-        Inputs &amp; Select
+        Inputs, Select &amp; TimePicker
       </p>
-      <div class="grid gap-3 sm:grid-cols-2">
+      <div class="grid gap-3 sm:grid-cols-3">
         <div class="relative">
           <Search
             class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
@@ -90,6 +92,10 @@ const tabs = [
           v-model="selectValue"
           :options="trackOptions"
           aria-label="Difficulty track"
+        />
+        <AppTimePicker
+          v-model="timeValue"
+          aria-label="Demo time picker"
         />
       </div>
     </div>

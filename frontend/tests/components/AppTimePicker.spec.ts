@@ -125,4 +125,34 @@ describe('AppTimePicker.vue', () => {
     await wrapper.find('[data-testid="app-time-picker-trigger"]').trigger('click')
     expect(wrapper.find('[data-testid="app-time-picker-popover"]').exists()).toBe(false)
   })
+
+  it('renders live preview header and applies studio active highlight styling', async () => {
+    const wrapper = defaultMount({ modelValue: '08:15' })
+
+    await wrapper.find('[data-testid="app-time-picker-trigger"]').trigger('click')
+    const popover = wrapper.find('[data-testid="app-time-picker-popover"]')
+    expect(popover.exists()).toBe(true)
+
+    // Check live preview header
+    expect(popover.text()).toContain('08:15 AM')
+
+    // Active hour 8 should have brand highlight classes
+    const activeHour = wrapper.find('[data-testid="time-hour-8"]')
+    expect(activeHour.classes()).toContain('bg-brand-500/15')
+    expect(activeHour.classes()).toContain('text-brand-600')
+
+    // Active minute 15 should have brand highlight classes
+    const activeMinute = wrapper.find('[data-testid="time-minute-15"]')
+    expect(activeMinute.classes()).toContain('bg-brand-500/15')
+    expect(activeMinute.classes()).toContain('text-brand-600')
+
+    // Active period AM should have brand highlight classes
+    const activePeriod = wrapper.find('[data-testid="time-period-am"]')
+    expect(activePeriod.classes()).toContain('bg-brand-500/15')
+    expect(activePeriod.classes()).toContain('text-brand-600')
+
+    // Inactive period PM should have transparent border
+    const inactivePeriod = wrapper.find('[data-testid="time-period-pm"]')
+    expect(inactivePeriod.classes()).toContain('border-transparent')
+  })
 })
