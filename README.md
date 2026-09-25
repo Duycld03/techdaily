@@ -21,7 +21,7 @@ TechDaily (Clean Architecture)
 ├── Api            → ASP.NET Core Minimal APIs (.NET 10, C# 13), JWT Bearer Auth, RFC 7807 Problem Details
 ├── Application    → Pure DI Use-Case Handlers, FluentValidation, Result Pattern, DTOs
 ├── Domain         → Rich Domain Entities, SM-2 Spaced Repetition Invariants, PBKDF2 Password Security
-├── Infrastructure → PostgreSQL 17 (pgvector, EF Core 10), Gemini 3.5 Flash Lite Client, PdfPig, ReverseMarkdown
+├── Infrastructure → PostgreSQL 17 (pgvector, EF Core 10), Gemini 3.5 Flash Lite Client, PdfPig, ReverseMarkdown, SMTP Email Sender
 └── Frontend       → Nuxt 3, Vue 3.5, Pinia, Tailwind CSS, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode, Shiki
 ```
 
@@ -33,6 +33,7 @@ TechDaily (Clean Architecture)
 | **Document Ingestion** | **PdfPig + ReverseMarkdown** | Asynchronous Channel-based queue with zero-LOH disk spooling for PDFs up to 300MB (8,000+ pages), native PDF Bookmarks/Outline segmentation, HTML-to-Markdown Web Crawler |
 | **Frontend Web** | **Nuxt 3 + Vue 3.5** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
 | **Notifications** | **Web Push (VAPID) + Telegram** | Real-time browser push notifications (VAPID, Service Worker) and Telegram Bot alerts for Morning Curriculum and Streak Preservation with auto-detected IANA timezones |
+| **Identity & Security** | **JWT + Rotating Refresh Tokens + Email OTP** | PBKDF2 password hashing (16-byte salt, 100,000 SHA-256 iterations), OTP-verified email registration & password reset (SMTP transactional email), refresh-token family rotation with reuse detection, opt-in 30-day "Remember Me" persistence, Google OAuth 2.0 |
 
 ---
 
@@ -83,7 +84,7 @@ TechDaily (Clean Architecture)
 - **Bite-Sized Architectural Lessons:** Curated feed of Senior Anti-Patterns vs Idiomatic Solutions across C#, Rust, Go, Python, TypeScript, Vue 3, and PostgreSQL.
 - **Under-The-Hood Mechanics:** Memory layouts, lock contention, compiler lowerings, and OS syscalls with benchmark statistics.
 - **Database-Persisted Bookmarks:** Save important lessons with real-time bookmark toggle and "🔖 Đã Lưu" filter view.
-- **Multimodal AI Synthesis:** Generate on-demand, deep-dive insights on any custom technology or topic using Gemini 3.1 Flash Lite.
+- **Multimodal AI Synthesis:** Generate on-demand, deep-dive insights on any custom technology or topic using Gemini 3.5 Flash Lite.
 - **Keyboard Navigation:** Fast card flipping using `[Space]`, `[→]`, and `[←]` keys.
 
 ### 7. 🖍️ Architectural Highlights & Saved Insights Hub (`/notes`)
@@ -95,15 +96,18 @@ TechDaily (Clean Architecture)
 - **Markdown Knowledge Export:** Export complete book notes, chapter reflections, and tagged highlights formatted for second-brain tools.
 
 ### 8. 🎯 Senior Technical Interview Quiz & Mastery Arena (`/quiz`)
-- **High-Speed AI Quiz Synthesis:** Generate 5 or 10 real-world interview scenario questions tailored to seniority level (Fresher to Senior/Staff) in under 5 seconds with Gemini 3.1 Flash Lite.
+- **High-Speed AI Quiz Synthesis:** Generate 5 or 10 real-world interview scenario questions tailored to seniority level (Fresher to Senior/Staff) in under 5 seconds with Gemini 3.5 Flash Lite.
 - **Interactive Arena & Mistake Review:** Timed scenario questions with instant option grading, detailed markdown architectural explanations, and 1-click mistake retry sessions.
 - **Spaced Repetition Mastery:** Automatically tracks user progress in PostgreSQL. Questions are marked as `Mastered` after 2 consecutive correct submissions.
 - **Weak Topics Analysis:** Aggregated analytics dashboard tracking accuracy rate, mastered cards, and ranking weakest vs strongest engineering topics.
 
 ### 9. 🛡️ User Profile, Centralized Settings & Hybrid Auth (`/login`, `/profile`, `/settings`)
 - **Decluttered Profile & Centralized Settings:** Clean separation between personal identity/career track (`/profile`) and system preferences/notifications (`/settings`).
+- **OTP-Verified Email Registration:** No account is created until a 6-digit email verification code is confirmed (10-minute expiry, hashed & single-use, 5-attempt limit, 60-second resend cooldown).
 - **Standard Email/Password:** Secure PBKDF2 hashing with 16-byte random salt and 100,000 SHA-256 iterations.
-- **Google OAuth 2.0:** One-Tap & standard Google authentication.
+- **Passwordless Reset via Email OTP:** Forgot-password / reset-password flow that emails a one-time code and revokes every refresh-token family on success (signs out all devices).
+- **Remember-Me Session Persistence:** Opt-in "Remember session (30 days)" — a 30-day persistent refresh cookie when checked, or a browser-session-only cookie that ends on browser close when unchecked.
+- **Google OAuth 2.0:** One-Tap & standard Google authentication (always persistent).
 - **Hybrid Password Setup:** Seamlessly set an initial password for Google accounts to enable multi-device / mobile login without OAuth.
 - **Password Strength Analyzer:** Real-time entropy & security feedback.
 - **Global Toast Notification System:** Non-blocking, glassmorphic top-right toast alerts for all user actions.
@@ -120,7 +124,15 @@ TechDaily (Clean Architecture)
 ### Prerequisites
 - [Docker & Docker Compose](https://www.docker.com/) (PostgreSQL 17 + `pgvector`)
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Node.js 20+ & npm](https://nodejs.org/)
+- [Node.js 22+ & npm](https://nodejs.org/)
+
+### Configure Secrets
+All secrets load from a single gitignored `.env` at the repo root using native .NET `Section__Key` names (double underscore → `Section:Key`). Copy the template and fill in your values before starting:
+```bash
+cp .env.example .env
+# then set: POSTGRES_PASSWORD, Jwt__Secret, Gemini__ApiKey, Authentication__Google__ClientSecret,
+#           WebPush__PublicKey / WebPush__PrivateKey, Email__Smtp__From / Username / Password
+```
 
 ### Single-Command Start
 Run the fullstack development environment with all services wired:
@@ -141,10 +153,10 @@ Run the fullstack development environment with all services wired:
 Run the entire automated test suite:
 
 ```bash
-# Run Backend Unit & Integration Tests (74 Tests)
+# Run Backend Unit & Integration Tests (313 Tests)
 dotnet test backend/TechDaily.sln
 
-# Run Frontend Component & Store Tests (88 Tests)
+# Run Frontend Component & Store Tests (498 Tests)
 npm --prefix frontend test
 ```
 
