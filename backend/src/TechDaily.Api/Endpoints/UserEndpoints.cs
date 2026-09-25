@@ -79,7 +79,8 @@ public static class UserEndpoints
             });
         })
         .WithName("GetUserProfile")
-        .WithSummary("Fetches current authenticated user profile and aggregated learning statistics.");
+        .WithSummary("Get User Profile")
+        .WithDescription("Fetches current authenticated user profile and aggregated learning statistics.");
 
         // Update User Profile
         group.MapPut("/profile", async (
@@ -149,7 +150,8 @@ public static class UserEndpoints
             });
         })
         .WithName("UpdateUserProfile")
-        .WithSummary("Updates current authenticated user profile metadata.");
+        .WithSummary("Update User Profile")
+        .WithDescription("Updates current authenticated user profile metadata.");
 
         // Change Password
         group.MapPut("/change-password", async (
@@ -190,7 +192,8 @@ public static class UserEndpoints
             return Results.Ok(new { message = "Password updated successfully." });
         })
         .WithName("ChangePassword")
-        .WithSummary("Changes or sets password for current authenticated user account.");
+        .WithSummary("Change Password")
+        .WithDescription("Changes or sets password for current authenticated user account.");
 
         return group;
     }

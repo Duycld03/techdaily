@@ -45,6 +45,16 @@ public class DeleteBookHandler : IUseCase<DeleteBookRequest, DeleteBookResponse>
             chunk.UpdatedAt = DateTime.UtcNow;
         }
 
+        var pacers = await _dbContext.UserBookPacers
+            .Where(p => p.DocumentBookId == request.BookId)
+            .ToListAsync(cancellationToken);
+
+        foreach (var pacer in pacers)
+        {
+            pacer.IsActive = false;
+            pacer.UpdatedAt = DateTime.UtcNow;
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new DeleteBookResponse(true);

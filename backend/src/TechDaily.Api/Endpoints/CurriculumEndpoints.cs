@@ -30,7 +30,8 @@ public static class CurriculumEndpoints
         })
         .RequireAuthorization()
         .WithName("GetCurriculumRoadmap")
-        .WithSummary("Retrieves the full 30-day curriculum roadmap grouped into 4 core technical modules with authenticated user progress.");
+        .WithSummary("Get Curriculum Roadmap")
+        .WithDescription("Retrieves the full 30-day curriculum roadmap grouped into 4 core technical modules with authenticated user progress.");
 
         return group;
     }

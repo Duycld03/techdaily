@@ -335,7 +335,7 @@ Leave the browser open with the Counter page loaded.
 
         // Delete existing test book with this title if exists
         var existing = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
-            dbContext.DocumentBooks, b => b.Title == "ASP.NET Core 10 Architecture Guide");
+            dbContext.DocumentBooks.IgnoreQueryFilters(), b => b.Title == "ASP.NET Core 10 Architecture Guide" || b.Slug == "aspnet-core-10-architecture-guide");
         if (existing != null)
         {
             var oldChunkIds = dbContext.DocumentChunks

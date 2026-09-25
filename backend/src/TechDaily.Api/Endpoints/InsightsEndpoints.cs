@@ -23,7 +23,8 @@ public static class InsightsEndpoints
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GetInsightsMeta")
-        .WithSummary("Retrieves dynamic category metadata and curated AI topic suggestions.");
+        .WithSummary("Get Insights Metadata")
+        .WithDescription("Retrieves dynamic category metadata and curated AI topic suggestions.");
 
         // Authenticated Infinite Feed
         group.MapGet("/feed", async (
@@ -61,7 +62,8 @@ public static class InsightsEndpoints
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GetInsightsFeed")
-        .WithSummary("Retrieves bite-sized senior technical insights with category and tag filtering.");
+        .WithSummary("Get Insights Feed")
+        .WithDescription("Retrieves bite-sized senior technical insights with category and tag filtering.");
 
         // Generate Insight with Gemini Flash
         group.MapPost("/generate", async (
@@ -82,7 +84,8 @@ public static class InsightsEndpoints
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GenerateInsight")
-        .WithSummary("Generates an on-demand senior technical insight using Google Gemini Flash Lite.");
+        .WithSummary("Generate Insight")
+        .WithDescription("Generates an on-demand senior technical insight using Google Gemini Flash Lite.");
 
         // Bookmark Insight (Toggle Save)
         group.MapPost("/{id:guid}/bookmark", async (
@@ -105,7 +108,8 @@ public static class InsightsEndpoints
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("BookmarkInsight")
-        .WithSummary("Toggles bookmark status and updates bookmark count for authenticated user.");
+        .WithSummary("Bookmark Insight")
+        .WithDescription("Toggles bookmark status and updates bookmark count for authenticated user.");
 
         return group;
     }

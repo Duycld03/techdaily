@@ -26,6 +26,7 @@ public class GetTodayFocusResponse
     public int FreezeCreditsRemaining { get; set; }
     public PacerDto? Pacer { get; set; }
     public bool IsGeneratingQuestion { get; set; } = false;
+    public bool HasActiveBook { get; set; } = true;
 }
 
 public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocusResponse>
@@ -52,9 +53,16 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         var isAuthenticated = request.UserId.HasValue && request.UserId.Value != Guid.Empty;
         var userId = isAuthenticated ? request.UserId!.Value : Guid.Empty;
 
-        // Check if any books are ready in the library
-        var readyBooks = await _dbContext.DocumentBooks
-            .Where(b => b.Status == ProcessingStatus.Ready)
+        // Check if any books are ready in the user's library
+        var readyBooksQuery = _dbContext.DocumentBooks
+            .Where(b => b.Status == ProcessingStatus.Ready && !b.IsDeleted);
+
+        if (isAuthenticated)
+        {
+            readyBooksQuery = readyBooksQuery.Where(b => b.CreatedByUserId == userId);
+        }
+
+        var readyBooks = await readyBooksQuery
             .OrderByDescending(b => b.IsFeatured)
             .ThenBy(b => b.Title)
             .ToListAsync(cancellationToken);
@@ -63,11 +71,36 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         {
             return await HandleBookPacerModeAsync(request, readyBooks, userId, isAuthenticated, today, cancellationToken);
         }
+        // If the system has books, an authenticated user without ready books has an empty library
+        var anyBooksExist = await _dbContext.DocumentBooks.IgnoreQueryFilters().AnyAsync(cancellationToken);
+        if (isAuthenticated && anyBooksExist)
+        {
+            // User has no active books in their library (e.g. deleted their handbook)
+            var streak = await _dbContext.StreakRecords
+                .FirstOrDefaultAsync(s => s.UserId == userId, cancellationToken);
 
-        // Fallback: Legacy 30-Day Topic Curriculum Mode (when no DocumentBooks exist yet)
+            return new GetTodayFocusResponse
+            {
+                HasActiveBook = false,
+                CurrentStreak = streak?.CurrentStreak ?? 0,
+                LongestStreak = streak?.LongestStreak ?? 0,
+                FreezeCreditsRemaining = streak?.FreezeCreditsRemaining ?? 0,
+                Topic = new TopicDto { Title = "Empty Library", Summary = "No active books found in your library." },
+                Question = new InterviewQuestionDto(),
+                Drill = new DailyDrillDto()
+            };
+        }
+
+        // Fallback for unauthenticated guests: check if topics exist (e.g. in test fixtures or demo instances)
+        var hasTopics = await _dbContext.Topics.AnyAsync(t => !t.IsDeleted, cancellationToken);
+        if (hasTopics)
+        {
+            return await HandleLegacyTopicModeAsync(request, userId, isAuthenticated, today, cancellationToken);
+        }
+
+        // Fallback: Legacy Topic Mode (when no DocumentBooks exist yet for unauthenticated guests)
         return await HandleLegacyTopicModeAsync(request, userId, isAuthenticated, today, cancellationToken);
     }
-
     private async Task<Result<GetTodayFocusResponse>> HandleBookPacerModeAsync(
         GetTodayFocusRequest request,
         List<DocumentBook> readyBooks,
@@ -392,8 +425,11 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
             }
 
             var previewQuestion = previewTopic.InterviewQuestions.First();
+            var masterBookId = Guid.Parse("10000000-0000-0000-0000-000000000001");
             var previewChunk = await _dbContext.DocumentChunks
-                .FirstOrDefaultAsync(c => c.ChunkOrder == previewTopic.DayOrder, cancellationToken);
+                .FirstOrDefaultAsync(c => !c.IsDeleted && c.DocumentBookId == masterBookId && c.ChunkOrder == previewTopic.DayOrder, cancellationToken)
+                ?? await _dbContext.DocumentChunks
+                    .FirstOrDefaultAsync(c => !c.IsDeleted && c.ChunkOrder == previewTopic.DayOrder, cancellationToken);
 
             var previewDrill = new DailyDrill
             {
@@ -443,8 +479,11 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         }
 
         var question = topic.InterviewQuestions.First();
+        var masterBookGuid = Guid.Parse("10000000-0000-0000-0000-000000000001");
         var documentChunk = await _dbContext.DocumentChunks
-            .FirstOrDefaultAsync(c => c.ChunkOrder == targetDayOrder, cancellationToken);
+            .FirstOrDefaultAsync(c => !c.IsDeleted && c.DocumentBookId == masterBookGuid && c.ChunkOrder == targetDayOrder, cancellationToken)
+            ?? await _dbContext.DocumentChunks
+                .FirstOrDefaultAsync(c => !c.IsDeleted && c.ChunkOrder == targetDayOrder, cancellationToken);
 
         var existingDrill = await _dbContext.DailyDrills
             .Include(d => d.Question)

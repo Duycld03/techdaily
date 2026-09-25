@@ -13,7 +13,7 @@ public static class NotesEndpoints
     public static IEndpointRouteBuilder MapNotesEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/notes")
-            .WithTags("Notes")
+            .WithTags("Reading Highlights & Notes")
             .RequireAuthorization();
 
         group.MapGet("/highlights", async (
@@ -37,7 +37,9 @@ public static class NotesEndpoints
                 error => Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
-        .WithName("GetHighlights");
+        .WithName("GetHighlights")
+        .WithSummary("Get Highlights")
+        .WithDescription("Retrieves paginated reading highlights, architectural takeaways, and user tags with search filtering.");
 
         group.MapPost("/highlights", async (
             [FromBody] CreateHighlightApiRequest body,
@@ -64,7 +66,9 @@ public static class NotesEndpoints
                 error => Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
-        .WithName("CreateHighlight");
+        .WithName("CreateHighlight")
+        .WithSummary("Create Highlight")
+        .WithDescription("Saves a key technical excerpt, reflection note, and taxonomy tags from a reading slice.");
 
         group.MapPut("/highlights/{id:guid}", async (
             Guid id,
@@ -89,7 +93,8 @@ public static class NotesEndpoints
             );
         })
         .WithName("UpdateHighlight")
-        .WithSummary("Updates reflection note and tags for a reading highlight.");
+        .WithSummary("Update Highlight")
+        .WithDescription("Updates personal reflection notes and tags for an existing reading highlight.");
 
         group.MapDelete("/highlights/{id:guid}", async (
             Guid id,
@@ -111,7 +116,9 @@ public static class NotesEndpoints
                     : Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
-        .WithName("DeleteHighlight");
+        .WithName("DeleteHighlight")
+        .WithSummary("Delete Highlight")
+        .WithDescription("Removes a reading highlight and its associated flashcard references.");
 
         return app;
     }

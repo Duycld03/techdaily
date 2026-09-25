@@ -12,43 +12,6 @@ public static class CurriculumSeeder
 {
     public static async Task SeedAsync(TechDailyDbContext context)
     {
-        var masterBookId = Guid.Parse("10000000-0000-0000-0000-000000000001");
-        var masterBook = await context.DocumentBooks
-            .IgnoreQueryFilters()
-            .FirstOrDefaultAsync(b => b.Id == masterBookId);
-
-        if (masterBook == null)
-        {
-            masterBook = new DocumentBook
-            {
-                Id = masterBookId,
-                Title = "30-Day Senior Fullstack Curriculum",
-                Slug = "30-day-senior-curriculum",
-                SourceType = SourceType.MarkdownSeries,
-                Category = Category.BackendRuntime,
-                TotalChunks = 30,
-                AuthorOrSourceUrl = "https://techdaily.dev/curriculum",
-                IsPublished = true,
-                IsFeatured = true,
-                Status = ProcessingStatus.Ready,
-                ProgressPercentage = 100,
-                IsDeleted = false
-            };
-            await context.DocumentBooks.AddAsync(masterBook);
-        }
-        else
-        {
-            masterBook.IsDeleted = false;
-            masterBook.IsPublished = true;
-            masterBook.IsFeatured = true;
-            masterBook.Status = ProcessingStatus.Ready;
-            masterBook.ProgressPercentage = 100;
-            masterBook.TotalChunks = 30;
-        }
-        await context.SaveChangesAsync();
-
-        var curriculumData = GetCurriculumItems(masterBook.Id);
-
         // Ensure default development test user exists
         var devUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         var devUser = await context.Users
@@ -73,7 +36,89 @@ public static class CurriculumSeeder
         {
             devUser.IsDeleted = false;
         }
+        await context.SaveChangesAsync();
 
+        var masterBookId = Guid.Parse("10000000-0000-0000-0000-000000000001");
+        var masterBook = await context.DocumentBooks
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(b => b.Id == masterBookId || b.Slug == "30-day-senior-curriculum" || b.Slug == "senior-engineering-craft-handbook");
+
+        if (masterBook == null)
+        {
+            masterBook = new DocumentBook
+            {
+                Id = masterBookId,
+                Title = "Senior Engineering Craft Handbook",
+                Slug = "senior-engineering-craft-handbook",
+                SourceType = SourceType.MarkdownSeries,
+                Category = Category.EngineeringCraft,
+                TotalChunks = 30,
+                AuthorOrSourceUrl = "https://techdaily.dev/handbook",
+                IsPublished = true,
+                IsFeatured = true,
+                Status = ProcessingStatus.Ready,
+                ProgressPercentage = 100,
+                IsDeleted = false,
+                CreatedByUserId = devUserId
+            };
+            await context.DocumentBooks.AddAsync(masterBook);
+        }
+        else
+        {
+            masterBook.Title = "Senior Engineering Craft Handbook";
+            masterBook.Slug = "senior-engineering-craft-handbook";
+            masterBook.AuthorOrSourceUrl = "https://techdaily.dev/handbook";
+            masterBook.Category = Category.EngineeringCraft;
+            masterBook.CreatedByUserId = devUserId;
+            masterBook.IsDeleted = false;
+            masterBook.IsPublished = true;
+            masterBook.IsFeatured = true;
+            masterBook.Status = ProcessingStatus.Ready;
+            masterBook.ProgressPercentage = 100;
+            masterBook.TotalChunks = 30;
+        }
+
+        // Ensure dev user has an active UserBookPacer for the handbook
+        var devPacer = await context.UserBookPacers
+            .FirstOrDefaultAsync(p => p.UserId == devUserId && p.DocumentBookId == masterBook.Id);
+
+        if (devPacer == null)
+        {
+            devPacer = new UserBookPacer
+            {
+                Id = Guid.NewGuid(),
+                UserId = devUserId,
+                DocumentBookId = masterBook.Id,
+                CurrentChunkOrder = 1,
+                DailyPaceChunks = 1,
+                IsActive = true
+            };
+            await context.UserBookPacers.AddAsync(devPacer);
+        }
+        else
+        {
+            devPacer.IsActive = true;
+        }
+
+        await context.SaveChangesAsync();
+        // Clean up unowned legacy books (books without CreatedByUserId)
+        var unownedBooks = await context.DocumentBooks
+            .IgnoreQueryFilters()
+            .Where(b => b.CreatedByUserId == null && !b.IsDeleted)
+            .ToListAsync();
+
+        foreach (var unowned in unownedBooks)
+        {
+            unowned.IsDeleted = true;
+        }
+
+        if (unownedBooks.Count > 0)
+        {
+            await context.SaveChangesAsync();
+        }
+
+
+        var curriculumData = GetCurriculumItems(masterBook.Id);
         // Upsert all 30 topics, interview questions, and document chunks
         foreach (var (seededTopic, seededQuestion, seededChunk) in curriculumData)
         {
@@ -260,12 +305,12 @@ public static class CurriculumSeeder
         var assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? AppContext.BaseDirectory;
         var candidates = new[]
         {
-            Path.Combine(AppContext.BaseDirectory, "Data", "curriculum-30-days.json"),
-            Path.Combine(assemblyLocation, "Data", "curriculum-30-days.json"),
-            Path.Combine(AppContext.BaseDirectory, "curriculum-30-days.json"),
-            Path.Combine(Directory.GetCurrentDirectory(), "backend", "src", "TechDaily.Infrastructure", "Data", "curriculum-30-days.json"),
-            Path.Combine(Directory.GetCurrentDirectory(), "..", "TechDaily.Infrastructure", "Data", "curriculum-30-days.json"),
-            Path.Combine(Directory.GetCurrentDirectory(), "Data", "curriculum-30-days.json")
+            Path.Combine(AppContext.BaseDirectory, "Data", "senior-engineering-craft-handbook.json"),
+            Path.Combine(assemblyLocation, "Data", "senior-engineering-craft-handbook.json"),
+            Path.Combine(AppContext.BaseDirectory, "senior-engineering-craft-handbook.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "backend", "src", "TechDaily.Infrastructure", "Data", "senior-engineering-craft-handbook.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "TechDaily.Infrastructure", "Data", "senior-engineering-craft-handbook.json"),
+            Path.Combine(Directory.GetCurrentDirectory(), "Data", "senior-engineering-craft-handbook.json")
         };
 
         foreach (var path in candidates)
@@ -279,7 +324,7 @@ public static class CurriculumSeeder
         // Fallback to EmbeddedResource
         var assembly = Assembly.GetExecutingAssembly();
         var resourceName = assembly.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith("curriculum-30-days.json", StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(n => n.EndsWith("senior-engineering-craft-handbook.json", StringComparison.OrdinalIgnoreCase));
 
         if (resourceName != null)
         {
@@ -291,7 +336,7 @@ public static class CurriculumSeeder
             }
         }
 
-        throw new FileNotFoundException("Could not find curriculum-30-days.json in file system or embedded resources.");
+        throw new FileNotFoundException("Could not find senior-engineering-craft-handbook.json in file system or embedded resources.");
     }
 }
 

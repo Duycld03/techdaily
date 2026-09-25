@@ -131,7 +131,8 @@ Run the fullstack development environment with all services wired:
 ### Access URLs
 - **Frontend Application:** [http://localhost:3000](http://localhost:3000)
 - **Backend API:** [http://localhost:5000](http://localhost:5000)
-- **OpenAPI / Swagger Spec:** [http://localhost:5000/openapi/v1.json](http://localhost:5000/openapi/v1.json)
+- **Scalar API Reference:** [http://localhost:5000/scalar/v1](http://localhost:5000/scalar/v1)
+- **OpenAPI 3.1 Specification:** [http://localhost:5000/openapi/v1.json](http://localhost:5000/openapi/v1.json)
 
 ---
 
@@ -156,7 +157,7 @@ npm --prefix frontend test
 | [**`AGENTS.md`**](AGENTS.md) | Coding conventions, strict architectural rules, and invariants for AI agents and developers. |
 | [**`openspec/specs/`**](openspec/specs/) | Single source of truth for modular capability specifications, requirements, and acceptance criteria. |
 | [**`openspec/changes/`**](openspec/changes/) | Active lifecycle change proposals, delta specs, technical designs, and task checklists. |
-| [**`TechDaily.Api/Endpoints/`**](backend/src/TechDaily.Api/Endpoints/) | Executable Minimal API endpoint contracts with interactive Swagger at `/swagger`. |
+| [**`TechDaily.Api/Endpoints/`**](backend/src/TechDaily.Api/Endpoints/) | Executable Minimal API endpoint contracts with interactive Scalar API Reference at `/scalar/v1`. |
 | [**`TechDaily.Domain/Entities/`**](backend/src/TechDaily.Domain/Entities/) | Executable domain models, EF Core migrations, and pgvector schema definitions. |
 
 ---

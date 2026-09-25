@@ -204,6 +204,9 @@ The authentication surface at `/login` SHALL provide a responsive, viewport-boun
 3. **Responsive Input Groups & Touch Targets**:
    - Form inputs (Email, Password, Name) SHALL enforce minimum 44px touch heights (`py-2.5 sm:py-3`), comfortable leading icon clearance, and high-visibility focus rings (`focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20`).
    - Form submit buttons and third-party Google OAuth buttons SHALL span 100% width with clear loading indicators during async credentials verification.
+4. **Consistent Password Visibility Toggle Focus Styling**:
+   - Password and Confirm Password visibility toggle buttons SHALL maintain consistent vertically centered positioning (`top-1/2 -translate-y-1/2 right-3.5`).
+   - When navigated via keyboard (Tab), the focus indicator on password visibility toggle buttons SHALL render as a bounded, compact focus ring (`rounded-md focus-visible:ring-2 focus-visible:ring-brand-500`) that does not stretch across the container height or clip outside the input's rounded container.
 
 #### Scenario: User visits login page on desktop
 - **WHEN** user navigates to `/login` on desktop
@@ -214,6 +217,17 @@ The authentication surface at `/login` SHALL provide a responsive, viewport-boun
 - **WHEN** user clicks the "Register" or "Login" tab on `/login`
 - **THEN** the form inputs transition smoothly without sudden height jumping or layout stutter
 - **AND** existing valid email input is preserved across modes.
+
+#### Scenario: User tabs through password field to visibility toggle
+- **WHEN** user focuses the password input on `/login` and presses the Tab key to navigate to the visibility toggle button
+- **THEN** the password visibility toggle button displays a clean, compact focus ring centered within the input field
+- **AND** the focus ring does not stretch vertically to the top and bottom borders of the input container
+- **AND** the focus ring does not produce sharp rectangular corner clipping outside the input container's rounded border.
+
+#### Scenario: User toggles password visibility via keyboard
+- **WHEN** the password visibility toggle button is focused via keyboard navigation and the user presses Enter or Space
+- **THEN** the password input switches between masked (`password`) and plaintext (`text`) modes
+- **AND** the `:aria-label` updates dynamically to reflect the current state (`Show password` or `Hide password`).
 
 ### Requirement: Dev-Learning Studio Authentication Surface & Shell Isolation
 The platform SHALL provide a dedicated, full-screen **Studio Auth Cockpit** conforming to the Dev-Learning Studio visual language, completely isolated from internal application navigation chrome.

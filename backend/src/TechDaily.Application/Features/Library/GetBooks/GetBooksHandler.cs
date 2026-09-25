@@ -23,8 +23,12 @@ public class GetBooksHandler : IUseCase<GetBooksRequest, GetBooksResponse>
 
         var query = _dbContext.DocumentBooks
             .AsNoTracking()
-            .Where(b => b.IsPublished);
+            .Where(b => b.IsPublished && !b.IsDeleted);
 
+        if (request.UserId.HasValue)
+        {
+            query = query.Where(b => b.CreatedByUserId == request.UserId.Value);
+        }
         if (request.Category.HasValue)
         {
             query = query.Where(b => b.Category == request.Category.Value);

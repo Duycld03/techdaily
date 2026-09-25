@@ -582,7 +582,7 @@ async function handleSubmit() {
                   <button
                     type="button"
                     @click="showPassword = !showPassword"
-                    class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition cursor-pointer"
+                    class="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 transition cursor-pointer"
                     :aria-label="showPassword ? 'Hide password' : 'Show password'"
                   >
                     <EyeOff v-if="showPassword" class="w-4 h-4" :stroke-width="1.5" />
@@ -612,7 +612,7 @@ async function handleSubmit() {
                   <button
                     type="button"
                     @click="showConfirmPassword = !showConfirmPassword"
-                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer"
+                    class="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 transition cursor-pointer"
                     :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
                   >
                     <EyeOff v-if="showConfirmPassword" class="w-4 h-4" :stroke-width="1.5" />

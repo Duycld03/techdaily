@@ -30,7 +30,9 @@ public static class AuthEndpoints
             [FromBody] RegisterRequest request,
             HttpContext context,
             TechDailyDbContext db,
-            IRefreshTokenService tokenService) =>
+            IRefreshTokenService tokenService,
+            IStarterHandbookService starterHandbookService,
+            CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
@@ -64,8 +66,9 @@ public static class AuthEndpoints
             var streak = StreakRecord.Create(user.Id);
             await db.StreakRecords.AddAsync(streak);
 
-            await db.SaveChangesAsync();
+            await db.SaveChangesAsync(ct);
 
+            await starterHandbookService.ProvisionForUserAsync(user.Id, ct);
             var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
             SetRefreshTokenCookie(context, rawRefreshToken);
 
@@ -85,7 +88,8 @@ public static class AuthEndpoints
             });
         })
         .WithName("Register")
-        .WithSummary("Registers a new user with standard email and password.");
+        .WithSummary("Register User")
+        .WithDescription("Registers a new user with standard email and password.");
 
         // Standard Email & Password Login
         group.MapPost("/login", async (
@@ -140,7 +144,8 @@ public static class AuthEndpoints
             });
         })
         .WithName("Login")
-        .WithSummary("Authenticates with standard email and password.");
+        .WithSummary("Login User")
+        .WithDescription("Authenticates user with standard email and password.");
 
         // Google OAuth Login
         group.MapPost("/google", async (
@@ -148,7 +153,9 @@ public static class AuthEndpoints
             HttpContext context,
             TechDailyDbContext db,
             IRefreshTokenService tokenService,
-            IConfiguration config) =>
+            IConfiguration config,
+            IStarterHandbookService starterHandbookService,
+            CancellationToken ct) =>
         {
             var clientId = (!string.IsNullOrWhiteSpace(config["Authentication:Google:ClientId"]) ? config["Authentication:Google:ClientId"] : null)
                 ?? (!string.IsNullOrWhiteSpace(config["Authentication__Google__ClientId"]) ? config["Authentication__Google__ClientId"] : null)
@@ -193,7 +200,9 @@ public static class AuthEndpoints
                 var streak = StreakRecord.Create(user.Id);
                 await db.StreakRecords.AddAsync(streak);
 
-                await db.SaveChangesAsync();
+                await db.SaveChangesAsync(ct);
+
+                await starterHandbookService.ProvisionForUserAsync(user.Id, ct);
             }
             else
             {
@@ -251,7 +260,8 @@ public static class AuthEndpoints
             });
         })
         .WithName("GoogleLogin")
-        .WithSummary("Authenticates with Google ID token and returns app JWT.");
+        .WithSummary("Google Login")
+        .WithDescription("Authenticates with Google ID token and returns app JWT.");
 
         // Refresh Token Rotation
         group.MapPost("/refresh", async (
@@ -291,7 +301,8 @@ public static class AuthEndpoints
             });
         })
         .WithName("RefreshToken")
-        .WithSummary("Rotates refresh token and issues a new access token.");
+        .WithSummary("Refresh Access Token")
+        .WithDescription("Rotates refresh token and issues a new access token.");
 
         // Revoke Token / Logout
         group.MapPost("/revoke", async (
@@ -307,7 +318,8 @@ public static class AuthEndpoints
             return Results.NoContent();
         })
         .WithName("RevokeToken")
-        .WithSummary("Revokes refresh token family and clears the cookie.");
+        .WithSummary("Revoke Token")
+        .WithDescription("Revokes refresh token family and clears the cookie.");
 
         return group;
     }

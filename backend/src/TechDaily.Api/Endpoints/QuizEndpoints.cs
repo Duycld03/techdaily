@@ -47,7 +47,8 @@ public static class QuizEndpoints
         })
         .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("GenerateQuiz")
-        .WithSummary("Generates an interactive interview quiz batch tailored to seniority level using Google Gemini Flash Lite and unmastered DB questions.");
+        .WithSummary("Generate Quiz Batch")
+        .WithDescription("Generates an interactive interview quiz batch tailored to seniority level using Google Gemini Flash Lite and unmastered DB questions.");
 
         // 2. Submit Question Answer
         group.MapPost("/submit", async (
@@ -74,7 +75,8 @@ public static class QuizEndpoints
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("SubmitQuizAnswer")
-        .WithSummary("Submits an option choice, returns correctness and deep explanation, and updates user mastery status.");
+        .WithSummary("Submit Quiz Answer")
+        .WithDescription("Submits an option choice, returns correctness and deep explanation, and updates user mastery status.");
 
         // 3. Get Mistake Review Queue
         group.MapGet("/review-queue", async (
@@ -111,7 +113,8 @@ public static class QuizEndpoints
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GetQuizReviewQueue")
-        .WithSummary("Retrieves all unmastered/failed quiz questions in the user's review queue for iterative practice.");
+        .WithSummary("Get Quiz Review Queue")
+        .WithDescription("Retrieves all unmastered/failed quiz questions in the user's review queue for iterative practice.");
 
         // 4. Get Quiz Mastery Stats
         group.MapGet("/stats", async (
@@ -133,7 +136,8 @@ public static class QuizEndpoints
                 : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
         })
         .WithName("GetQuizStats")
-        .WithSummary("Calculates overall interview quiz statistics, mastery counts, accuracy rate, and level breakdown.");
+        .WithSummary("Get Quiz Statistics")
+        .WithDescription("Calculates overall interview quiz statistics, mastery counts, accuracy rate, and level breakdown.");
 
         return group;
     }

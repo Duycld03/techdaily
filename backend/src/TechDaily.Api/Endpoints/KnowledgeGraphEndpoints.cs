@@ -29,7 +29,8 @@ public static class KnowledgeGraphEndpoints
         })
         .RequireAuthorization()
         .WithName("GetKnowledgeGraph")
-        .WithSummary("Retrieves the full architecture knowledge graph with topics, books, cards, and highlights for the authenticated user.");
+        .WithSummary("Get Knowledge Graph")
+        .WithDescription("Retrieves the full architecture knowledge graph with topics, books, cards, and highlights for the authenticated user.");
 
         return group;
     }

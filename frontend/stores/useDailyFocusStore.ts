@@ -82,6 +82,7 @@ export interface TodayFocusResponse {
   freezeCreditsRemaining: number
   pacer?: PacerInfo
   isGeneratingQuestion?: boolean
+  hasActiveBook?: boolean
 }
 
 export const useDailyFocusStore = defineStore('dailyFocus', () => {

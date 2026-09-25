@@ -29,8 +29,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Data\curriculum-30-days.json" />
-    <None Update="Data\curriculum-30-days.json">
+    <EmbeddedResource Include="Data\senior-engineering-craft-handbook.json" />
+    <None Update="Data\senior-engineering-craft-handbook.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <EmbeddedResource Include="Data\tech-insights.json" />

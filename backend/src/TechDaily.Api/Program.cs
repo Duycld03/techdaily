@@ -15,7 +15,6 @@ using TechDaily.Infrastructure.Persistence.Seeders;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using TechDaily.Application.Interfaces;
-using TechDaily.Infrastructure.Maintenance;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,7 +89,15 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-            ?? new[] { "https://techdaily.duckdns.org", "http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000" };
+            ?? new[]
+            {
+                "https://techdaily.duckdns.org",
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "http://127.0.0.1:3000",
+                "http://localhost:5000",
+                "http://127.0.0.1:5000"
+            };
 
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
@@ -136,9 +143,9 @@ builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, context, cancellationToken) =>
     {
-        document.Info.Title = "TechDaily API";
+        document.Info.Title = "TechDaily API Reference";
         document.Info.Version = "v1";
-        document.Info.Description = "Daily Senior Engineering & Interview Drill Platform API";
+        document.Info.Description = "Daily Senior Engineering & Interview Drill Platform API. Interactive developer reference for all Minimal API endpoints, domain contracts, and RFC 7807 problem details.";
 
         var scheme = new OpenApiSecurityScheme
         {
@@ -151,144 +158,31 @@ builder.Services.AddOpenApi(options =>
         document.Components ??= new OpenApiComponents();
         document.Components.SecuritySchemes.Add("Bearer", scheme);
 
+        // Global security requirement enabling Scalar's interactive Bearer authorization
+        document.SecurityRequirements.Add(new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            }] = Array.Empty<string>()
+        });
+
+        // Clear 0.0.0.0 bind address and set valid servers for browser interactive testing
+        document.Servers ??= new List<OpenApiServer>();
+        document.Servers.Clear();
+        document.Servers.Add(new OpenApiServer { Url = "/", Description = "Current Origin (Auto)" });
+        document.Servers.Add(new OpenApiServer { Url = "http://localhost:5000", Description = "Localhost (http://localhost:5000)" });
+        document.Servers.Add(new OpenApiServer { Url = "http://127.0.0.1:5000", Description = "Loopback (http://127.0.0.1:5000)" });
+
         return Task.CompletedTask;
     });
 });
 
 var app = builder.Build();
-if (args.Contains("--cleanup-data"))
-{
-    using var scope = app.Services.CreateScope();
-    var services = scope.ServiceProvider;
-    var logger = services.GetRequiredService<ILogger<Program>>();
-    var context = services.GetRequiredService<TechDailyDbContext>();
-
-    if (context.Database.IsRelational())
-    {
-        try
-        {
-            await context.Database.MigrateAsync();
-            logger.LogInformation("Database migrations verified and applied.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Could not apply database migrations automatically.");
-        }
-    }
-
-    var runner = services.GetRequiredService<DatabaseMaintenanceRunner>();
-
-    var isExecute = args.Contains("--execute");
-    var isDryRun = args.Contains("--dry-run") || !isExecute;
-    var isBackfill = args.Contains("--backfill-embeddings");
-    var isReseed = args.Contains("--reseed-catalog");
-
-    var batchSize = 25;
-    var batchArg = args.FirstOrDefault(a => a.StartsWith("--batch-size=", StringComparison.OrdinalIgnoreCase));
-    if (batchArg != null && int.TryParse(batchArg["--batch-size=".Length..], out var parsedBatch) && parsedBatch > 0)
-    {
-        batchSize = Math.Clamp(parsedBatch, 5, 50);
-    }
-
-    // Baseline diagnostic analysis
-    var baseline = await runner.AnalyzeTaintedDataAsync();
-
-    if (isExecute)
-    {
-        var purge = await runner.PurgeTaintedDataAsync();
-        int reseededInsights = 0;
-        if (isReseed)
-        {
-            reseededInsights = await runner.ReseedCatalogAsync();
-        }
-
-        BackfillReport? backfill = null;
-        if (isBackfill)
-        {
-            backfill = await runner.BackfillEmbeddingsAsync(batchSize);
-        }
-
-        var post = await runner.AnalyzeTaintedDataAsync();
-
-        Console.WriteLine();
-        Console.WriteLine("=========================================================================================");
-        Console.WriteLine("                    TECHDAILY DATABASE MAINTENANCE EXECUTION REPORT                     ");
-        Console.WriteLine("=========================================================================================");
-        Console.WriteLine($" {"Target Table / Resource",-30} | {"Pre-Purge",-10} | {"Purged",-10} | {"Remaining Tainted",-18} ");
-        Console.WriteLine("-------------------------------+------------+------------+--------------------");
-        Console.WriteLine($" {"TermExplanationCaches",-30} | {baseline.TermExplanationCachesTainted,-10} | {purge.TermExplanationCachesPurged,-10} | {post.TermExplanationCachesTainted,-18} ");
-        Console.WriteLine($" {"TechInsights",-30} | {baseline.TechInsightsTainted,-10} | {purge.TechInsightsPurged,-10} | {post.TechInsightsTainted,-18} ");
-        Console.WriteLine($" {"QuizQuestions",-30} | {baseline.QuizQuestionsTainted,-10} | {purge.QuizQuestionsPurged,-10} | {post.QuizQuestionsTainted,-18} ");
-        Console.WriteLine($" {"SpacedRepetitionCards",-30} | {baseline.SpacedRepetitionCardsTainted,-10} | {purge.SpacedRepetitionCardsPurged,-10} | {post.SpacedRepetitionCardsTainted,-18} ");
-        Console.WriteLine($" {"DocumentChunks (Unvectorized)",-30} | {baseline.UnvectorizedDocumentChunks,-10} | {(backfill != null ? backfill.TotalVectorized.ToString() : "N/A"),-10} | {post.UnvectorizedDocumentChunks,-18} ");
-        Console.WriteLine("=========================================================================================");
-        if (isReseed)
-        {
-            Console.WriteLine($" Catalog reseeded: {reseededInsights} curated TechInsights active.");
-        }
-        if (isBackfill)
-        {
-            Console.WriteLine($" Vector backfill: {backfill?.TotalVectorized ?? 0} chunks vectorized across {backfill?.TotalBatches ?? 0} batches ({backfill?.FailedBatches ?? 0} failed).");
-        }
-        Console.WriteLine(" Database maintenance operations completed successfully.");
-        Console.WriteLine("=========================================================================================");
-        Console.WriteLine();
-    }
-    else if (isReseed || isBackfill)
-    {
-        int reseededInsights = 0;
-        if (isReseed)
-        {
-            reseededInsights = await runner.ReseedCatalogAsync();
-        }
-
-        BackfillReport? backfill = null;
-        if (isBackfill)
-        {
-            backfill = await runner.BackfillEmbeddingsAsync(batchSize);
-        }
-
-        var post = await runner.AnalyzeTaintedDataAsync();
-
-        Console.WriteLine();
-        Console.WriteLine("=========================================================================================");
-        Console.WriteLine("                    TECHDAILY DATABASE MAINTENANCE OPERATION REPORT                     ");
-        Console.WriteLine("=========================================================================================");
-        if (isReseed)
-        {
-            Console.WriteLine($" Catalog reseeded: {reseededInsights} curated TechInsights active.");
-        }
-        if (isBackfill)
-        {
-            Console.WriteLine($" Vector backfill: {backfill?.TotalVectorized ?? 0} chunks vectorized across {backfill?.TotalBatches ?? 0} batches ({backfill?.FailedBatches ?? 0} failed).");
-            Console.WriteLine($" Remaining unvectorized chunks: {post.UnvectorizedDocumentChunks}.");
-        }
-        Console.WriteLine("=========================================================================================");
-        Console.WriteLine();
-    }
-    else
-    {
-        // Dry-Run diagnostic analysis
-        Console.WriteLine();
-        Console.WriteLine("=========================================================================================");
-        Console.WriteLine("                    TECHDAILY DATABASE MAINTENANCE: DRY-RUN REPORT                      ");
-        Console.WriteLine("=========================================================================================");
-        Console.WriteLine($" {"Target Table / Resource",-32} | {"Tainted Rows",-14} | {"Planned Action",-25} ");
-        Console.WriteLine("----------------------------------+----------------+---------------------------");
-        Console.WriteLine($" {"TermExplanationCaches",-32} | {baseline.TermExplanationCachesTainted,-14} | {"Purge fallback entries",-25} ");
-        Console.WriteLine($" {"TechInsights",-32} | {baseline.TechInsightsTainted,-14} | {"Purge mock insights",-25} ");
-        Console.WriteLine($" {"QuizQuestions",-32} | {baseline.QuizQuestionsTainted,-14} | {"Purge mock questions",-25} ");
-        Console.WriteLine($" {"SpacedRepetitionCards",-32} | {baseline.SpacedRepetitionCardsTainted,-14} | {"Purge boilerplate cards",-25} ");
-        Console.WriteLine($" {"DocumentChunks (Unvectorized)",-32} | {baseline.UnvectorizedDocumentChunks,-14} | {"Backfill 768-D vectors",-25} ");
-        Console.WriteLine("=========================================================================================");
-        Console.WriteLine(" Zero mutations performed. Transaction rolled back (Dry-Run mode).");
-        Console.WriteLine(" Run with --execute to commit purge, --reseed-catalog to seed, --backfill-embeddings to embed.");
-        Console.WriteLine("=========================================================================================");
-        Console.WriteLine();
-    }
-
-    return;
-}
 
 // Configure Middleware Pipeline
 app.UseExceptionHandler();
@@ -297,12 +191,14 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
 });
 
+app.UseCors("AllowFrontend");
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference(options =>
     {
-        options.WithTitle("TechDaily API")
+        options.WithTitle("TechDaily API Reference")
                .WithTheme(ScalarTheme.Moon)
                .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
     });
@@ -310,9 +206,6 @@ if (app.Environment.IsDevelopment())
     app.MapGet("/swagger", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
     app.MapGet("/swagger/index.html", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
 }
-
-app.UseCors("AllowFrontend");
-
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -436,6 +329,10 @@ app.MapGet("/health", async (TechDailyDbContext db) =>
             timestamp = DateTime.UtcNow
         }, statusCode: 503);
     }
-});
+})
+.WithName("HealthCheck")
+.WithTags("System Diagnostics & Health")
+.WithSummary("System Health & Database Liveness")
+.WithDescription("Checks system health, core API readiness, and live PostgreSQL database connectivity.");
 
 app.Run();

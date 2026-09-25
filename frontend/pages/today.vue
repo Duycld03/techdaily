@@ -276,6 +276,11 @@ watch(locale, (newLocale) => {
             </span>
           </div>
         </template>
+        <template v-else-if="focusStore.data && focusStore.data.hasActiveBook === false">
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-canvas-elevated text-xs font-semibold text-slate-500">
+            <span>{{ $t('roadmap.no_active_books') }}</span>
+          </div>
+        </template>
       </div>
 
       <!-- Right: Pace badge, slice switcher, and copilot dock toggle -->
@@ -360,6 +365,26 @@ watch(locale, (newLocale) => {
         <p class="text-sm font-semibold text-rose-800 dark:text-rose-300">
           {{ focusStore.error }}
         </p>
+      </div>
+    </div>
+    <!-- Zero-Book Empty State -->
+    <div
+      v-else-if="focusStore.data && focusStore.data.hasActiveBook === false"
+      class="flex-1 flex flex-col items-center justify-center p-6 text-center my-auto"
+    >
+      <div class="max-w-md w-full glass-card p-8 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm text-center">
+        <BookOpen class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" :stroke-width="1.5" />
+        <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">{{ $t('roadmap.no_active_books') }}</h3>
+        <p class="text-sm text-slate-500 mt-2 leading-relaxed">{{ $t('roadmap.no_active_books_desc') }}</p>
+        <div class="mt-6 flex justify-center">
+          <NuxtLink
+            to="/library"
+            class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-brand-500 hover:bg-brand-600 text-white shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0"
+          >
+            <span>{{ $t('roadmap.browse_library') }}</span>
+            <ArrowUpRight class="w-4 h-4" />
+          </NuxtLink>
+        </div>
       </div>
     </div>
 

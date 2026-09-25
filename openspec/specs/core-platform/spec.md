@@ -547,23 +547,6 @@ Every document chunk in `DocumentChunks` associated with active curriculum books
 
 ---
 
-### Requirement: Database Maintenance CLI & Tooling Contract
-The platform application `TechDaily.Api` SHALL provide command-line arguments for headless operational maintenance:
-- `--cleanup-data`: Activates maintenance mode.
-- `--dry-run`: Analyzes and reports tainted records within an aborted transaction.
-- `--execute`: Executes atomic data purge within a committed transaction.
-- `--backfill-embeddings`: Iteratively backfills unvectorized document chunks using `IEmbeddingService`.
-- `--batch-size=<N>`: Controls the chunk batch size for embedding requests (bounds: 5 to 50, default: 25).
-- `--reseed-catalog`: Restores canonical catalog entries from `tech-insights.json` and `curriculum-30-days.json`.
-
-#### Scenario: Headless execution in container environment
-- **WHEN** the maintenance CLI is executed inside a container via `dotnet TechDaily.Api.dll --cleanup-data --execute --backfill-embeddings --reseed-catalog`
-- **THEN** the application executes the purge, re-seeds curated items, completes the vector backfill, and exits with code `0`.
-
-#### Scenario: Maintenance CLI dry-run reports non-zero tainted records
-- **WHEN** the maintenance CLI is executed with `--cleanup-data --dry-run` against a database containing legacy fallback records
-- **THEN** the CLI outputs the exact count of tainted records per table and exits with code `0` without altering database state.
-
 ### Requirement: Resilient Secondary Operation Fault Isolation
 Application services performing secondary or auxiliary caching operations (such as embedding generation and cache persistence in `TermExplanationService`) SHALL isolate secondary database interactions within non-blocking exception handlers. Secondary caching failures SHALL NOT fail primary user-facing requests or discard valid LLM generation outputs.
 
@@ -1013,12 +996,31 @@ The global error boundary page (`frontend/error.vue`) and authentication views (
 ---
 
 ### Requirement: Interactive API Documentation & OpenAPI Explorer
-The backend system SHALL generate OpenAPI 3.1 specification metadata and serve an interactive developer API explorer via `Scalar.AspNetCore` at route `/scalar/v1` during development environment runs. The API documentation SHALL support JWT Bearer authentication input, accurately reflect all Minimal API route groupings and status codes, and feature dark-theme styling consistent with TechDaily's Dev-Learning Studio theme. Legacy `/swagger` route requests SHALL be gracefully redirected to `/scalar/v1`.
+The backend system SHALL generate OpenAPI 3.1 specification metadata and serve an interactive developer API reference via `Scalar.AspNetCore` at route `/scalar/v1` during development environment runs. The API documentation SHALL support JWT Bearer authorization input, provide clean navigation, enforce concise operation summaries, and support automated TypeScript client generation:
+
+1. **OpenAPI Security Requirement & Interactive Authorization**:
+   - The OpenAPI document at `/openapi/v1.json` SHALL declare the HTTP Bearer JWT security scheme in `components.securitySchemes.Bearer`.
+   - The OpenAPI document SHALL declare a document-level `security` requirement (`[{ "Bearer": [] }]`), enabling Scalar's interactive authorization client, auth state indicator, and automatic token header injection (`Authorization: Bearer <token>`).
+
+2. **Concise Operation Summaries & Granular Descriptions Standard**:
+   - All Minimal API endpoints across all route groups SHALL strictly define `.WithSummary(...)` using concise, human-readable 2–5 word titles (e.g. `Get Curriculum Roadmap`, `Upload PDF Book`, `Generate AI Insight`).
+   - Deep architectural breakdowns, invariants, fallback behaviors, and rate-limiting policies SHALL be defined in `.WithDescription(...)`, ensuring Scalar's navigation sidebar displays clean endpoint titles without unreadable multi-sentence paragraphs.
+
+3. **100% Minimal API Endpoint Tagging & Metadata Coverage**:
+   - Every Minimal API endpoint (including all Library, Notes, and HealthCheck routes) SHALL explicitly define `.WithTags(...)`, `.WithSummary(...)`, and `.WithDescription(...)`.
+   - The `/health` probe SHALL be categorized under `System Diagnostics & Health` with summary `System Health & Database Liveness`.
+
+4. **Clean Legacy Swagger Redirection**:
+   - Requests to `/swagger` and `/swagger/index.html` SHALL redirect to `/scalar/v1` (HTTP 302) and SHALL be excluded from the OpenAPI specification description (`.ExcludeFromDescription()`).
+   - Project documentation (`AGENTS.md`, `README.md`) SHALL reference the Scalar API explorer at `/scalar/v1` and OpenAPI spec at `/openapi/v1.json`.
+
+5. **Automated Frontend Client Contract Generation**:
+   - The project SHALL provide an automated command (`npm run gen:api` in `frontend/package.json`) utilizing `openapi-typescript` that queries `/openapi/v1.json` and outputs strongly typed TypeScript interfaces to `frontend/types/api.generated.ts`.
 
 #### Scenario: Developer accesses interactive API documentation in development
 - **WHEN** a developer navigates to `/scalar/v1` in the development environment
-- **THEN** the system serves the Scalar API explorer rendered with dark theme
-- **AND** all registered Minimal API endpoints, parameter contracts, and RFC 7807 problem detail schemas are listed.
+- **THEN** the system serves the Scalar API explorer rendered with dark theme (`ScalarTheme.Moon`)
+- **AND** the sidebar renders clean, concise endpoint titles for all 47 Minimal API endpoints without multi-sentence text wrapping.
 
 #### Scenario: Developer authorizes API requests via JWT Bearer in Scalar
 - **WHEN** a developer provides a valid JWT token in Scalar's security definition dialog
@@ -1026,8 +1028,13 @@ The backend system SHALL generate OpenAPI 3.1 specification metadata and serve a
 
 #### Scenario: Legacy Swagger URL is requested
 - **WHEN** a user or client requests `/swagger` or `/swagger/index.html`
-- **THEN** the server responds with a redirect to `/scalar/v1`.
+- **THEN** the server responds with a redirect to `/scalar/v1`
+- **AND** the redirect routes do not appear in the Scalar documentation index.
 
+#### Scenario: Frontend developer generates OpenAPI TypeScript types
+- **WHEN** a developer runs `npm run gen:api` in the `frontend` directory with the backend running
+- **THEN** the CLI queries `http://localhost:5000/openapi/v1.json`
+- **AND** generates a clean TypeScript type definition file at `frontend/types/api.generated.ts` containing all endpoint paths, request bodies, and response schemas.
 ---
 
 ### Requirement: Frontend Composable Utilities & DOM Lifecycle Hygiene
@@ -1591,3 +1598,30 @@ The application SHALL serve a high-fidelity scalable vector favicon (`/favicon.s
 - **WHEN** any page of TechDaily is loaded in a web browser
 - **THEN** the browser tab displays the Stitch Developer Emblem favicon (`/favicon.svg`).
 - **AND** the icon is crisp and clearly identifiable on both dark and light browser tab bars.
+
+### Requirement: Technology-Agnostic Starter Handbook Content Invariant
+The platform's canonical starter handbook (*Senior Engineering Craft Handbook*) SHALL define foundational chapters organized into 4 core technical pillars rather than an artificial 30-day program:
+1. **Frontend Systems**: Reactive state propagation, modern web rendering & hydration models, browser rendering pipeline (reflow, repaint, compositing), web performance & Core Web Vitals, state management & cache invalidation, real-time protocols (WebSockets, SSE, long polling), module bundling & build optimization.
+2. **Backend Runtime & Systems**: Generational garbage collection & memory management, contiguous memory buffers & zero-allocation slicing, asynchronous execution & non-blocking event loops, thread synchronization & concurrency primitives, asynchronous channels & producer-consumer pipelines, dependency injection scopes & lifecycle hygiene, high-throughput socket & stream processing pipelines, compile-time metaprogramming & AOT compilation.
+3. **Database & Storage Systems**: Multi-Version Concurrency Control (MVCC) & Write-Ahead Logging (WAL), transaction isolation levels & concurrency anomalies, indexing structures (B-Tree, LSM-Tree, Inverted Indexes, BRIN), query optimization & execution plan analysis, connection pooling architectures, horizontal table partitioning & sharding, vector embeddings & approximate nearest neighbor search.
+4. **Distributed Systems & Architecture**: Distributed caching patterns & cache stampede mitigation, transactional outbox & dual-write reliability, idempotency keys & deduplication windows, distributed rate limiting & token bucket algorithms, resilience patterns & circuit breakers, distributed tracing & OpenTelemetry W3C context propagation, CQRS & event sourcing architectures, zero-trust security & token-based authorization.
+
+The curriculum titles, chapter slugs, summaries, and domain invariants SHALL NOT be branded around specific application frameworks, runtime frameworks, or proprietary database engines (including Vue, Nuxt, .NET/ASP.NET, or PostgreSQL). All conceptual definitions SHALL remain technology-agnostic (Backend Runtimes, Frontend Systems, Database Storage, Distributed Systems). Code snippets in TypeScript, C#, SQL, Go, or Python MAY be included strictly as concrete illustrative examples of the underlying universal concepts.
+
+#### Scenario: User inspects starter handbook chapters
+- **WHEN** a user or client inspects the chapters of the *Senior Engineering Craft Handbook*
+- **THEN** all chapter titles and summaries describe universal engineering concepts rather than framework-specific tutorials
+- **AND** illustrative code examples demonstrate practical applications without binding the curriculum to specific frontend frameworks.
+
+### Requirement: User-Centric Starter Handbook Provisioning on Registration
+When a new user account is created (via email/password registration or OAuth integration), the system SHALL automatically clone and provision a dedicated instance of the *Senior Engineering Craft Handbook* assigned to the new user with `CreatedByUserId = user.Id`.
+
+The provisioned book SHALL include:
+1. An active `UserBookPacer` initializing Chapter 1 / Slice 1 as active (`CurrentChunkOrder = 1`).
+2. Full ownership permissions allowing the user to read, annotate, track pacing, generate flashcards, or delete the handbook from their library.
+
+#### Scenario: New user registers account
+- **WHEN** a new user successfully completes registration
+- **THEN** a `DocumentBook` titled "Senior Engineering Craft Handbook" is created with `CreatedByUserId` set to the new user's ID
+- **AND** a `UserBookPacer` is created with `CurrentChunkOrder = 1` and `IsActive = true`
+- **AND** the user can immediately begin reading and learning without manual document importation.

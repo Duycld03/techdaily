@@ -753,7 +753,7 @@ async function handleTimezoneChange(newTz: string | number) {
                   <button
                     type="button"
                     @click="showCurrentPassword = !showCurrentPassword"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 transition cursor-pointer"
                   >
                     <EyeOff v-if="showCurrentPassword" class="w-4 h-4" />
                     <Eye v-else class="w-4 h-4" />
@@ -779,7 +779,7 @@ async function handleTimezoneChange(newTz: string | number) {
                   <button
                     type="button"
                     @click="showNewPassword = !showNewPassword"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 transition cursor-pointer"
                   >
                     <EyeOff v-if="showNewPassword" class="w-4 h-4" />
                     <Eye v-else class="w-4 h-4" />
@@ -819,7 +819,7 @@ async function handleTimezoneChange(newTz: string | number) {
                   <button
                     type="button"
                     @click="showConfirmPassword = !showConfirmPassword"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 transition cursor-pointer"
                   >
                     <EyeOff v-if="showConfirmPassword" class="w-4 h-4" />
                     <Eye v-else class="w-4 h-4" />

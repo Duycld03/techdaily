@@ -44,7 +44,8 @@ public static class ReviewEndpoints
         })
         .RequireAuthorization()
         .WithName("GetReviewDeck")
-        .WithSummary("Retrieves pending SM-2 spaced repetition cards due for current user.");
+        .WithSummary("Get Review Deck")
+        .WithDescription("Retrieves pending SM-2 spaced repetition cards due for current user.");
 
         group.MapPost("/cards/{id:guid}/grade", async (
             Guid id,
@@ -68,7 +69,8 @@ public static class ReviewEndpoints
         })
         .RequireAuthorization()
         .WithName("GradeReviewCard")
-        .WithSummary("Grades a review card (0-5) and recalculates next interval using SM-2.");
+        .WithSummary("Grade Review Card")
+        .WithDescription("Grades a review card (0-5) and recalculates next interval using SM-2.");
 
         group.MapPost("/cards/from-highlight", async (
             [FromBody] CreateCardFromHighlightJsonRequest body,
@@ -93,7 +95,8 @@ public static class ReviewEndpoints
         })
         .RequireAuthorization()
         .WithName("CreateCardFromHighlight")
-        .WithSummary("Creates or retrieves an active recall spaced repetition card from a user highlight.");
+        .WithSummary("Create Card From Highlight")
+        .WithDescription("Creates or retrieves an active recall spaced repetition card from a user highlight.");
 
         group.MapPost("/cards/from-quiz-mistake", async (
             [FromBody] CreateCardFromQuizMistakeJsonRequest body,
@@ -118,7 +121,8 @@ public static class ReviewEndpoints
         })
         .RequireAuthorization()
         .WithName("CreateCardFromQuizMistake")
-        .WithSummary("Creates or retrieves a spaced repetition card from a failed quiz question.");
+        .WithSummary("Create Card From Quiz Mistake")
+        .WithDescription("Creates or retrieves a spaced repetition card from a failed quiz question.");
 
         group.MapGet("/cards", async (
             [FromQuery] string? search,
@@ -145,7 +149,8 @@ public static class ReviewEndpoints
         })
         .RequireAuthorization()
         .WithName("GetReviewCards")
-        .WithSummary("Retrieves paginated flashcards in user's personal deck with search, filtering, and deck statistics.");
+        .WithSummary("Get Review Cards")
+        .WithDescription("Retrieves paginated flashcards in user's personal deck with search, filtering, and deck statistics.");
 
         group.MapPut("/cards/{id:guid}", async (
             Guid id,
@@ -171,7 +176,8 @@ public static class ReviewEndpoints
         })
         .RequireAuthorization()
         .WithName("UpdateReviewCard")
-        .WithSummary("Updates front and back markdown content for a flashcard.");
+        .WithSummary("Update Review Card")
+        .WithDescription("Updates front and back markdown content for a flashcard.");
 
         group.MapDelete("/cards/{id:guid}", async (
             Guid id,
@@ -196,7 +202,8 @@ public static class ReviewEndpoints
         })
         .RequireAuthorization()
         .WithName("DeleteReviewCard")
-        .WithSummary("Soft-deletes a spaced repetition card from user's personal deck.");
+        .WithSummary("Delete Review Card")
+        .WithDescription("Soft-deletes a spaced repetition card from user's personal deck.");
 
         group.MapPost("/cards/{id:guid}/reset", async (
             Guid id,
@@ -221,7 +228,8 @@ public static class ReviewEndpoints
         })
         .RequireAuthorization()
         .WithName("ResetReviewCardProgress")
-        .WithSummary("Resets SM-2 progression for a review card back to initial learning state.");
+        .WithSummary("Reset Card Progress")
+        .WithDescription("Resets SM-2 progression for a review card back to initial learning state.");
 
         return group;
     }

@@ -33,7 +33,8 @@ public static class NotificationEndpoints
         })
         .RequireAuthorization()
         .WithName("GetVapidPublicKey")
-        .WithSummary("Retrieves the VAPID public key for browser Web Push subscription.");
+        .WithSummary("Get VAPID Public Key")
+        .WithDescription("Retrieves the VAPID public key for browser Web Push subscription.");
 
         // 2. Subscribe Device to Web Push
         group.MapPost("/push/subscribe", async (
@@ -97,7 +98,8 @@ public static class NotificationEndpoints
         })
         .RequireAuthorization()
         .WithName("SubscribePush")
-        .WithSummary("Registers or updates a browser Web Push subscription for the authenticated user.");
+        .WithSummary("Subscribe Web Push")
+        .WithDescription("Registers or updates a browser Web Push subscription for the authenticated user.");
 
         // 3. Unsubscribe Device from Web Push
         group.MapPost("/push/unsubscribe", async (
@@ -141,7 +143,8 @@ public static class NotificationEndpoints
         })
         .RequireAuthorization()
         .WithName("UnsubscribePush")
-        .WithSummary("Removes a browser Web Push subscription and disables push if no devices remain.");
+        .WithSummary("Unsubscribe Web Push")
+        .WithDescription("Removes a browser Web Push subscription and disables push if no devices remain.");
 
         // 4. Send Test Push Notification
         group.MapPost("/push/test", async (
@@ -260,7 +263,8 @@ public static class NotificationEndpoints
         })
         .RequireAuthorization()
         .WithName("TestPushNotification")
-        .WithSummary("Sends an immediate test push notification and prunes stale subscriptions.");
+        .WithSummary("Send Test Push")
+        .WithDescription("Sends an immediate test push notification and prunes stale subscriptions.");
 
         return group;
     }

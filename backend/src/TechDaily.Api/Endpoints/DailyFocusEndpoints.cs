@@ -46,7 +46,8 @@ public static class DailyFocusEndpoints
         })
         .RequireAuthorization()
         .WithName("GetTodayFocus")
-        .WithSummary("Retrieves today's reading slice, micro-quiz, and interview scenario challenge.");
+        .WithSummary("Get Today Focus")
+        .WithDescription("Retrieves today's reading slice, micro-quiz, and interview scenario challenge.");
 
         // Protected Drill Submission (Requires Logged-In User)
         group.MapPost("/drills/{id:guid}/submit", async (
@@ -76,7 +77,8 @@ public static class DailyFocusEndpoints
         })
         .RequireAuthorization()
         .WithName("SubmitDailyDrill")
-        .WithSummary("Evaluates multiple-choice senior scenario decision and updates user streak.");
+        .WithSummary("Submit Daily Drill")
+        .WithDescription("Evaluates multiple-choice senior scenario decision and updates user streak.");
 
         // Protected Term Explanation (Backed by Semantic Cache, Rate Limited)
         group.MapPost("/explain-term", async (
@@ -93,7 +95,8 @@ public static class DailyFocusEndpoints
         .RequireAuthorization()
         .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("ExplainTerm")
-        .WithSummary("Provides instant AI terminology explanation tooltip.");
+        .WithSummary("Explain Technical Term")
+        .WithDescription("Provides instant AI terminology explanation tooltip backed by semantic vector cache.");
         // Protected Active Book Switcher (Requires Logged-In User)
         group.MapPost("/switch-book", async (
             [FromBody] SwitchBookBodyRequest body,
@@ -114,7 +117,8 @@ public static class DailyFocusEndpoints
         })
         .RequireAuthorization()
         .WithName("SwitchActiveBook")
-        .WithSummary("Switches the user's currently active reading book pacer.");
+        .WithSummary("Switch Active Book")
+        .WithDescription("Switches the user's currently active reading book pacer.");
 
         // Priority Promotion / On-Demand Challenge Generation for Chunk
         group.MapGet("/chunk-challenge/{chunkId:guid}", async (
@@ -143,7 +147,8 @@ public static class DailyFocusEndpoints
         .RequireAuthorization()
         .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("GetOrGenerateChunkChallenge")
-        .WithSummary("Retrieves or triggers high-priority generation for a slice's senior trade-off scenario.");
+        .WithSummary("Get Chunk Challenge")
+        .WithDescription("Retrieves or triggers high-priority generation for a slice's senior trade-off scenario.");
         return group;
     }
 

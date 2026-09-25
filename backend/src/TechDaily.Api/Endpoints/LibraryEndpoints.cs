@@ -21,11 +21,12 @@ public static class LibraryEndpoints
     public static IEndpointRouteBuilder MapLibraryEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/v1/library")
-            .WithTags("Library")
+            .WithTags("Technical Library")
             .RequireAuthorization();
 
         // Public Book Browsing
         group.MapGet("/books", async (
+            ClaimsPrincipal userClaims,
             [FromQuery] Category? category,
             [FromQuery] string? search,
             [FromQuery] int page = 1,
@@ -33,13 +34,16 @@ public static class LibraryEndpoints
             [FromServices] IUseCase<GetBooksRequest, GetBooksResponse> handler = null!,
             CancellationToken ct = default) =>
         {
-            var result = await handler.ExecuteAsync(new GetBooksRequest(category, search, page, pageSize), ct);
+            var userId = GetUserIdFromClaims(userClaims);
+            var result = await handler.ExecuteAsync(new GetBooksRequest(category, search, page, pageSize, userId), ct);
             return result.Match(
                 success => Results.Ok(success),
                 error => Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
-        .WithName("GetBooks");
+        .WithName("GetBooks")
+        .WithSummary("Get Books")
+        .WithDescription("Retrieves paginated technical books with category filtering, search terms, and reading progress metadata.");
 
         // Public Book Details
         group.MapGet("/books/{id:guid}", async (
@@ -55,7 +59,9 @@ public static class LibraryEndpoints
                     : Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
-        .WithName("GetBookById");
+        .WithName("GetBookById")
+        .WithSummary("Get Book Details")
+        .WithDescription("Fetches detailed technical book metadata, chapters, and ingested slice counts.");
 
         // Public Book Ingestion Status Polling
         group.MapGet("/books/{id:guid}/status", async (
@@ -71,7 +77,9 @@ public static class LibraryEndpoints
                     : Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
-        .WithName("GetBookStatus");
+        .WithName("GetBookStatus")
+        .WithSummary("Get Ingestion Status")
+        .WithDescription("Polls real-time ingestion, parsing, chunking, and embedding progress for an uploaded book.");
 
 
         // Public On-Demand Single Slice Retrieval
@@ -89,7 +97,9 @@ public static class LibraryEndpoints
                     : Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
-        .WithName("GetBookSlice");
+        .WithName("GetBookSlice")
+        .WithSummary("Get Book Slice")
+        .WithDescription("Retrieves a single reading slice by book ID and slice sequence order for active reading.");
 
         // Public On-Demand JIT Slice Curation
         group.MapPost("/books/{id:guid}/slices/{order:int}/curate", async (
@@ -106,7 +116,9 @@ public static class LibraryEndpoints
                     : Results.BadRequest(new { code = error.Code, error = error.Message })
             );
         })
-        .WithName("CurateSlice");
+        .WithName("CurateSlice")
+        .WithSummary("Curate Slice Content")
+        .WithDescription("Triggers on-demand just-in-time AI curation, term extraction, and drill scenario generation for a slice.");
 
         // Protected Document Import (Requires Authentication)
         group.MapPost("/import", async (
@@ -124,7 +136,9 @@ public static class LibraryEndpoints
             );
         })
         .RequireAuthorization()
-        .WithName("ImportDocument");
+        .WithName("ImportDocument")
+        .WithSummary("Import Markdown Document")
+        .WithDescription("Ingests user-provided Markdown technical documentation into slices and generates vector embeddings.");
 
         // Protected Document Deletion (Requires Authentication and Ownership)
         group.MapDelete("/books/{id:guid}", async (
@@ -150,7 +164,9 @@ public static class LibraryEndpoints
             );
         })
         .RequireAuthorization()
-        .WithName("DeleteBook");
+        .WithName("DeleteBook")
+        .WithSummary("Delete Book")
+        .WithDescription("Soft-deletes a technical book and all associated slices and cards for the owning user.");
 
         // Protected PDF Upload (Requires Authentication, supports up to 300MB, Zero-LOH streaming)
         group.MapPost("/upload-pdf", async (
@@ -196,7 +212,9 @@ public static class LibraryEndpoints
         })
         .DisableAntiforgery()
         .RequireAuthorization()
-        .WithName("UploadPdfDocument");
+        .WithName("UploadPdfDocument")
+        .WithSummary("Upload PDF Document")
+        .WithDescription("Streams and ingests an uploaded technical PDF book up to 300MB with zero large-object-heap pressure.");
 
         // Protected Remote PDF Streaming Ingestion (Requires Authentication, streams directly to temp disk)
         group.MapPost("/import-remote-pdf", async (
@@ -214,7 +232,9 @@ public static class LibraryEndpoints
             );
         })
         .RequireAuthorization()
-        .WithName("ImportRemotePdf");
+        .WithName("ImportRemotePdf")
+        .WithSummary("Import Remote PDF")
+        .WithDescription("Asynchronously downloads and streams a remote PDF document from an authorized URL for ingestion.");
 
         // Protected URL Crawler (Requires Authentication)
         group.MapPost("/crawl-url", async (
@@ -229,7 +249,9 @@ public static class LibraryEndpoints
             );
         })
         .RequireAuthorization()
-        .WithName("CrawlWebDocument");
+        .WithName("CrawlWebDocument")
+        .WithSummary("Crawl Web Documentation")
+        .WithDescription("Crawls and extracts clean Markdown documentation from an external technical URL with anti-SSRF protections.");
 
         // Protected Book Markdown Export (Requires Authentication)
         group.MapGet("/books/{id:guid}/export-markdown", async (
@@ -253,7 +275,9 @@ public static class LibraryEndpoints
             );
         })
         .RequireAuthorization()
-        .WithName("ExportBookMarkdown");
+        .WithName("ExportBookMarkdown")
+        .WithSummary("Export Book Markdown")
+        .WithDescription("Exports the complete assembled book text and notes as a downloadable Markdown document.");
 
         return app;
     }

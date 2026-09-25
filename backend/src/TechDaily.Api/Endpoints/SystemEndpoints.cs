@@ -171,7 +171,8 @@ public static class SystemEndpoints
             });
         })
         .WithName("GetAiHealth")
-        .WithSummary("Probes live Google Gemini text generation and embedding endpoints.")
+        .WithSummary("Probe AI Health")
+        .WithDescription("Probes live Google Gemini text generation and embedding endpoints.")
         .AllowAnonymous();
 
         return group;

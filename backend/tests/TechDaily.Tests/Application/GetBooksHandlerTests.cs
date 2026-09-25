@@ -172,4 +172,41 @@ public class GetBooksHandlerTests : IDisposable
         result.Value.TotalPages.Should().Be(0);
         result.Value.Books.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task GetBooks_WithUserId_ReturnsOnlyBooksOwnedByUser()
+    {
+        // Arrange
+        var user1Id = Guid.NewGuid();
+        var user2Id = Guid.NewGuid();
+
+        _db.Users.Add(new User { Id = user1Id, Email = "u1@test.com", Name = "User 1" });
+        _db.Users.Add(new User { Id = user2Id, Email = "u2@test.com", Name = "User 2" });
+        _db.DocumentBooks.Add(new DocumentBook
+        {
+            Title = "User 1 Book",
+            Slug = "user-1-book",
+            Category = Category.FrontendWeb,
+            IsPublished = true,
+            CreatedByUserId = user1Id
+        });
+        _db.DocumentBooks.Add(new DocumentBook
+        {
+            Title = "User 2 Book",
+            Slug = "user-2-book",
+            Category = Category.BackendRuntime,
+            IsPublished = true,
+            CreatedByUserId = user2Id
+        });
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetBooksRequest(UserId: user1Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.TotalCount.Should().Be(1);
+        result.Value.Books.Should().HaveCount(1);
+        result.Value.Books[0].Title.Should().Be("User 1 Book");
+    }
 }
