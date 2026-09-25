@@ -48,7 +48,7 @@ interface NotesComponentInstance {
 describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
-    currentHighlights = [...defaultHighlights]
+    currentHighlights = defaultHighlights.map((h) => ({ ...h, tags: [...(h.tags || [])] }))
   })
 
   it('renders dedicated highlights hub without saved insights tab', async () => {
@@ -87,7 +87,7 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     const flashcardBtn = wrapper.find('button[title="notes.create_flashcard"]')
     expect(flashcardBtn.exists()).toBe(true)
   })
-  it('toggles inline editing mode on highlight card and saves updates', async () => {
+  it('opens edit modal on highlight card and saves updates', async () => {
     const wrapper = mount(NotesPage, {
       global: {
         stubs: {
@@ -104,7 +104,7 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     expect(editBtn.exists()).toBe(true)
     await editBtn.trigger('click')
 
-    // Textarea should appear
+    // Modal textarea should appear populated with current note
     const textarea = wrapper.find('textarea')
     expect(textarea.exists()).toBe(true)
     expect((textarea.element as HTMLTextAreaElement).value).toBe('Important for read-after-write consistency')
@@ -120,6 +120,78 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
 
     const notesStore = useNotesStore()
     expect(notesStore.highlights[0]?.note).toBe('Updated reflection note for async replication')
+  })
+
+  it('cancels edit modal without modifying the note', async () => {
+    const wrapper = mount(NotesPage, {
+      global: {
+        stubs: {
+          NuxtLink: true,
+          Teleport: true
+        }
+      }
+    })
+
+    await flushPromises()
+
+    const editBtn = wrapper.find('button[title="notes.edit_note"]')
+    await editBtn.trigger('click')
+
+    const textarea = wrapper.find('textarea')
+    expect(textarea.exists()).toBe(true)
+    await textarea.setValue('Discarded draft text')
+
+    // Cancel edit
+    const cancelBtn = wrapper.findAll('button').find(b => b.text().includes('notes.cancel_edit'))!
+    expect(cancelBtn).toBeDefined()
+    await cancelBtn.trigger('click')
+    await flushPromises()
+
+    const notesStore = useNotesStore()
+    expect(notesStore.highlights[0]?.note).toBe('Important for read-after-write consistency')
+  })
+
+  it('opens modal in Details (Preview) mode when clicking card body and toggles between tabs', async () => {
+    const wrapper = mount(NotesPage, {
+      global: {
+        stubs: {
+          NuxtLink: true,
+          Teleport: true
+        }
+      }
+    })
+
+    await flushPromises()
+
+    // Find first article card and click it
+    const card = wrapper.find('article')
+    expect(card.exists()).toBe(true)
+    await card.trigger('click')
+
+    // Details mode: textarea should NOT be visible initially
+    expect(wrapper.find('textarea').exists()).toBe(false)
+
+    // Modal should show the full quote and rendered markdown note
+    expect(wrapper.text()).toContain('Replication lag can cause stale reads under async replication.')
+    expect(wrapper.text()).toContain('Important for read-after-write consistency')
+
+    // Find the Edit tab switcher button in modal header
+    const editTabBtn = wrapper.findAll('button').find((b) => b.text().trim() === 'notes.tab_edit')!
+    expect(editTabBtn).toBeDefined()
+    await editTabBtn.trigger('click')
+
+    // Now in Edit mode, textarea should appear
+    const textarea = wrapper.find('textarea')
+    expect(textarea.exists()).toBe(true)
+    expect((textarea.element as HTMLTextAreaElement).value).toBe('Important for read-after-write consistency')
+
+    // Switch back to Preview tab
+    const detailsTabBtn = wrapper.findAll('button').find((b) => b.text().trim() === 'notes.tab_details')!
+    expect(detailsTabBtn).toBeDefined()
+    await detailsTabBtn.trigger('click')
+
+    // Textarea hidden again
+    expect(wrapper.find('textarea').exists()).toBe(false)
   })
 
   it('renders flashcard button in disabled In SM-2 state with Check icon when highlight has hasFlashcard true', async () => {

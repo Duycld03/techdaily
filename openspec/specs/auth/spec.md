@@ -216,35 +216,46 @@ The authentication surface at `/login` SHALL provide a responsive, viewport-boun
 - **AND** existing valid email input is preserved across modes.
 
 ### Requirement: Dev-Learning Studio Authentication Surface & Shell Isolation
-The platform SHALL provide a dedicated, full-screen **Studio Auth Canvas** conforming to the Dev-Learning Studio visual language, completely isolated from internal application navigation chrome.
+The platform SHALL provide a dedicated, full-screen **Studio Auth Cockpit** conforming to the Dev-Learning Studio visual language, completely isolated from internal application navigation chrome.
 
-1. **Application Shell Isolation**:
+1. **Application Shell Isolation & Full-Screen Frame**:
    - The global layout shell (`app.vue`) SHALL detect authentication routes (`isAuthPage = computed(() => route.path === '/login')`) and completely suppress both `AppHeader.vue` and `AppSidebar.vue`.
    - The authentication surface SHALL occupy the entire viewport (`min-h-screen w-screen overflow-hidden`) with the dark obsidian background canvas (`bg-slate-50 dark:bg-canvas`).
+   - The page frame SHALL feature:
+     - **Top System Telemetry Bar**: System identity badge (`TECHDAILY::IDE v2.5.0-sys`), live ping latency status indicator (`● PING 18ms`), single-locale language selector (`EN | VI`), and theme toggle button (`ThemeToggle.vue`).
+     - **Ambient Status Sub-Header**: Live operational status ticker (`● ALL SERVICES OPERATIONAL  LATENCY 14MS`) and the platform invariant (`⚡ SYSTEM INVARIANT: DAILY DELIBERATE PRACTICE`).
+     - **Bottom Compliance Telemetry Bar**: Security framework and node compliance indicators (`TECHDAILY COCKPIT ENGINE // COMPLIANT WITH SOC2 TYPE II & RFC-7519 JWT`, `DISTRIBUTED COCKPIT // SECURE_AUTH_NODE`, `TLS 1.3 AES-256-GCM`).
 
-2. **Ambient Utilities on Auth Canvas**:
-   - The top-right corner of the Studio Auth Canvas SHALL provide direct, self-contained controls for `ThemeToggle.vue` and `LocaleSelector.vue`, enabling visitors to switch color schemes and languages without depending on the internal application header.
+2. **Left Column (Curriculum & Telemetry Showcase Stage)**:
+   - On desktop viewports ($\ge 1024\text{px}$), the left stage SHALL display:
+     - Track header badge: `STAFF+ TRACK v2.4-DRILL`.
+     - Platform headline and localized engineering mission statement.
+     - Live learning telemetry: `SESSION INTERVAL TARGET 99.4% HIT` progress gauge and `SM-2 SPACED DECAY 24.8 Hrs` indicator.
+     - Interactive code showcase card (`CONSENSUS_PROMISE.TS`) rendering syntax-highlighted monospace promise code (`await quorum.commit(...)`) with lock status.
 
-3. **Studio Auth 2-Column Desktop Archetype**:
-   - On desktop viewports ($\ge 1024\text{px}$), the authentication view (`pages/login.vue`) SHALL render within a balanced container (`max-w-4xl` to `max-w-5xl`) organized into two complementary columns:
-     - **Left Column (Platform Value Stage)**: Displays TechDaily's brand emblem, mission statement ("Master Senior Software Engineering Daily"), and 3 core learning pillars (Scenario Architecture Drills, SM-2 Spaced Mastery, Daily System Design Doses) with subtle studio badges.
-     - **Right Column (Interactive Auth Card)**: Houses the `.glass-panel` container (`dark:bg-canvas-elevated`, `dark:border-white/[0.08]`, `rounded-3xl`, `shadow-2xl`) containing mode switching tabs, input forms, and actions.
-   - On mobile and tablet viewports ($< 1024\text{px}$), the layout SHALL gracefully stack, placing a compact brand header above the authentication card.
+3. **Right Column (Interactive Cockpit Auth Card)**:
+   - Houses the `.glass-panel` container (`dark:bg-canvas-elevated`, `dark:border-white/[0.08]`, `rounded-3xl`, `shadow-2xl`) containing mode switching tabs, input forms, and actions.
+   - **Strict Single-Language i18n Standard**: All UI text, tabs, labels, badges, and action buttons SHALL render exclusively in the active locale (`en` or `vi`) via `@nuxtjs/i18n`. Bilingual slash concatenation (e.g. `Đăng nhập / Sign In` or `DEV HANDLE / WORK EMAIL`) is strictly prohibited.
+   - **Mode Switcher Tabs**: Segmented control switching between `login`, `register`, and `forgot-password` with zero layout shift.
+   - **OAuth Providers**: GitHub and Google sign-in buttons with monospace keyboard shortcut badges (`G`, `⌘L`).
+   - **Form Fields**: Monospace telemetry labels (`DEV HANDLE / WORK EMAIL`, `SECRET TOKEN / KEY`), clear localized placeholders, password visibility eye toggle, and inline "Forgot password?" trigger.
+   - **Session Persistence**: Remember session checkbox (`30 days`).
+   - **Primary Action Button**: Localized Iris Violet submit button (`bg-brand-600 hover:bg-brand-500 text-white font-semibold`) with `↵ RETURN` shortcut badge and loading spinner.
+   - **Card Footer**: Terms and Privacy navigation links.
 
 4. **Multi-Mode Authentication State Machine**:
-   - The authentication card SHALL support modes: `login`, `register`, and `forgot-password`.
-   - In `login` mode, the card presents Email, Password (with visibility eye toggle), Forgot Password link, Submit button, and Google OAuth button.
-   - In `register` mode, the card presents a 2-column input grid (`grid sm:grid-cols-2 gap-3.5`) for Full Name, Email, Password, and Confirm Password, reducing vertical elongation by over 40%.
-   - In `forgot-password` mode, the card presents Email input, Reset button, and a Back to Login navigation trigger.
-   - Transitions between modes SHALL execute smoothly with zero vertical jumping or scrollbar popping.
+   - In `login` mode, presents Email, Password, Forgot Password trigger, Remember Session checkbox, Submit button, and OAuth options.
+   - In `register` mode, presents a 2-column input grid (`grid sm:grid-cols-2 gap-3.5`) for Full Name, Email, Password, and Confirm Password, reducing vertical elongation by over 40%.
+   - In `forgot-password` mode, presents Email input, Reset button, and a Back to Login navigation trigger.
+   - Transitions between modes SHALL execute smoothly without vertical jumping or scrollbar popping.
 
 5. **Divider Layout Stability**:
    - The third-party OAuth divider SHALL use an absolute centering architecture (`absolute inset-0 flex items-center` with a relative centered text pill), eliminating flexbox dimension blowout and guaranteeing centered text alignment across all viewports.
 
 #### Scenario: Guest user arrives at login on desktop monitor
 - **WHEN** an unauthenticated user navigates to `/login` on a 1920x1080 display
-- **THEN** the internal navigation sidebar (`AppSidebar`) is hidden
-- **AND** the authentication surface displays the 2-column Studio Auth layout with the brand value stage on the left and the interactive card on the right
+- **THEN** the internal navigation sidebar (`AppSidebar`) and global header (`AppHeader`) are hidden
+- **AND** the authentication surface displays the 2-column Studio Cockpit layout with top/bottom telemetry frames, curriculum branding on the left, and the interactive auth card on the right
 - **AND** the entire authentication card fits cleanly within the viewport without requiring page scrolling.
 
 #### Scenario: User switches to Register mode on desktop
@@ -261,3 +272,137 @@ The platform SHALL provide a dedicated, full-screen **Studio Auth Canvas** confo
 - **WHEN** the user clicks "Forgot password?" on `/login`
 - **THEN** the card transitions to the forgot-password form displaying an email input and "Send Reset Link" button
 - **AND** a "Back to Sign In" button allows returning to the login form without reloading the page.
+
+#### Scenario: Strict single-language display without bilingual slash text
+- **WHEN** user views `/login` with active locale set to Vietnamese (`vi`)
+- **THEN** all tabs, labels, placeholders, and buttons display solely Vietnamese text (e.g. `Đăng nhập`, `Đăng ký`, `Email công việc`, `Mật khẩu`, `Vào Cockpit Luyện Tập`)
+- **AND** zero dual-language slash strings (such as `Đăng nhập / Sign In`) are rendered
+- **WHEN** user switches the locale to English (`en`)
+- **THEN** all elements update immediately to English (e.g. `Sign In`, `Register`, `Dev Handle / Work Email`, `Secret Token / Key`, `Enter Practice Cockpit`).
+
+#### Scenario: Full-screen Studio Cockpit telemetry and code showcase rendering
+- **WHEN** user loads `/login` on a desktop viewport
+- **THEN** the top system bar displays `TECHDAILY::IDE` and ping latency
+- **AND** the left stage renders the `CONSENSUS_PROMISE.TS` code block with monospace syntax highlighting and SM-2 spaced decay metrics
+- **AND** the bottom frame displays security compliance notices (`SOC2 TYPE II & RFC-7519 JWT`).
+
+---
+
+### Requirement: Studio Cockpit Account Recovery & 3-Tab Segmented Mode Switcher
+The interactive authentication cockpit card SHALL provide a unified 3-tab segmented control supporting direct switching between Sign In, Register, and Account Recovery (`forgot-password` mode).
+
+1. **Segmented Mode Switcher Architecture**:
+   - The top tab strip SHALL display three segmented options: `Sign In` (`auth.sign_in_tab`), `Register` (`auth.register_tab`), and a compact recovery action tab with a key/lock-reset icon (`auth.recovery_tab_title` with `KeyRound` / `RotateCcw` icon).
+   - Clicking the recovery tab SHALL activate `authMode = 'forgot-password'` with zero layout shift or vertical jumping.
+   - The active tab state SHALL be highlighted with high-contrast studio styling (`bg-slate-200 dark:bg-canvas-subtle text-brand-600 dark:text-brand-400 font-bold`).
+
+2. **Dedicated Account Recovery Surface**:
+   - In `forgot-password` mode, the card SHALL display a dedicated recovery header: "Recover Cockpit Access" (`auth.recover_cockpit_title`) and helper note explaining that a magic link valid for 15 minutes will be dispatched (`auth.recover_cockpit_subtitle`).
+   - The form SHALL provide a single monospace-labeled email input field (`ACCOUNT REGISTRATION EMAIL` / `auth.account_email_label`) with a leading mail icon and HTML5 email validation.
+   - The card SHALL present a contextual advisory notice with an informational icon informing engineers that accounts configured with GitHub OAuth or Hardware Security Keys can authenticate directly without resetting passwords (`auth.oauth_bypass_notice`).
+   - The primary action button SHALL display "Send Recovery Magic Link" (`auth.send_recovery_link_btn`) with a send icon and keyboard return hint (`↵ RETURN`).
+   - A dedicated secondary navigation action "Back to Sign In" (`auth.back_to_signin_btn`) SHALL restore the `authMode = 'login'` state.
+
+3. **Cockpit Footer & Security Attestation**:
+   - The card footer SHALL display an attestation badge: `ZERO-KNOWLEDGE AUTH` (`auth.zero_knowledge_badge`) with an emerald security lock icon alongside standard Terms and Privacy policy navigation links.
+   - All text content SHALL be 100% localized through single-language translation keys in `en.json` and `vi.json` without bilingual slash combinations.
+
+#### Scenario: User clicks recovery tab in segmented header
+- **WHEN** user clicks the recovery tab in the top segmented switcher
+- **THEN** `authMode` transitions to `forgot-password`
+- **AND** the card smoothly reveals the Account Recovery form without layout blowout.
+
+#### Scenario: User submits email for password recovery
+- **WHEN** user enters a valid email address and clicks "Send Recovery Magic Link"
+- **THEN** the system simulates/invokes the password recovery dispatch and notifies the user with a localized success toast.
+
+#### Scenario: User returns to Sign In from recovery view
+- **WHEN** user clicks "Back to Sign In" or the "Sign In" tab
+- **THEN** `authMode` reverts to `login` and preserves any entered email address.
+
+---
+
+### Requirement: Studio Auth Cockpit Canvas & Ambient Ambiance
+The Studio Auth canvas at `/login` SHALL render an immersive developer cockpit atmosphere utilizing multi-layered ambient elements that eliminate empty black screen voids on wide viewports.
+
+1. **Ambient Background Layers**:
+   - The canvas SHALL display an engineering dot-matrix background pattern (`rgba(255, 255, 255, 0.07)`).
+   - The canvas SHALL project a deep iris violet radial ambient glow behind the central content stage.
+   - Subtle hairline guide lines SHALL delineate the upper and lower boundaries of the view.
+
+2. **Responsive Split Canvas**:
+   - On desktop viewports ($\ge 1024\text{px}$), the canvas SHALL display a balanced 12-column grid (`lg:grid-cols-12`) featuring the telemetry/learning stage on the left (`lg:col-span-6`) and the elevated auth cockpit card on the right (`lg:col-span-6`).
+   - On mobile/tablet viewports ($< 1024\text{px}$), the canvas SHALL stack gracefully into a single-column layout without clipping or horizontal overflow.
+
+#### Scenario: Visitor loads login page on widescreen display
+- **WHEN** user navigates to `/login` on a 1920x1080 display
+- **THEN** the view renders with the engineering dot-matrix grid and iris ambient glow
+- **AND** the content is presented in a balanced two-column layout without unstyled black empty space.
+
+---
+
+### Requirement: Clean Studio Header & Language Controls
+The top navigation header on the Studio Auth canvas SHALL provide a clean, distraction-free branding bar with language and theme switches.
+
+1. **Brand Identity**:
+   - The header SHALL display the TechDaily brand mark and title linking to `/login`.
+
+2. **User Preferences**:
+   - The right side of the header SHALL provide language selection (EN / VI) and color mode (Dark / Light) toggles.
+
+#### Scenario: Visitor inspects header
+- **WHEN** user loads `/login`
+- **THEN** the top header displays the TechDaily brand emblem and title alongside language and theme toggle buttons.
+
+---
+
+### Requirement: Left Telemetry Stage with Metrics & Code Simulation
+The left column of the Studio Auth canvas SHALL showcase TechDaily's technical reading curriculum and spaced repetition practice model through live telemetry gauges and simulated code execution.
+
+1. **Platform Identifiers**:
+   - The stage SHALL display the `● TECHDAILY | SM-2 ACTIVE RECALL` pill badge and `v2.4-SYS` version tag.
+   - The headline SHALL state `Daily Technical Reading & Spaced Learning` with supporting curriculum description.
+
+2. **Progress Metrics Card**:
+   - The metrics card SHALL display `DAILY READING GOAL` with `94% COMPLETED` alongside a green gradient progress bar.
+   - The card SHALL display `SM-2 SPACED REPETITION` with `ACTIVE RECALL` alongside an iris purple gradient progress bar.
+
+3. **Code Simulation Window**:
+   - The code block SHALL feature an editor title bar with three macOS-style window controls, title `>_ TECHDAILY_PRACTICE.TS`, and a lock emblem.
+   - The code view SHALL render the syntax-highlighted `techDaily.getDailySlice` practice invocation snippet.
+
+#### Scenario: Desktop visitor inspects learning preview
+- **WHEN** user views `/login` on desktop
+- **THEN** the left stage renders the progress gauges and the code window simulation.
+
+---
+
+### Requirement: Glitch-Free Full-Width Google Authentication Trigger
+The 1-click Google OAuth button SHALL render as an integrated, full-width element conforming to the card's visual system, eliminating native iframe hover visual artifacts and logo bounding box overflow.
+
+1. **Hover State Stability & Clean Geometry**:
+   - The Google Sign-In button SHALL span 100% width of the card's inner content area (`w-full`).
+   - The Google logo SHALL render with clean SVG geometry without any protruding white background corners ("dư 1 chút ở trên và dưới") when hovered or focused.
+   - The button SHALL display localized copy (`Đăng nhập với Google` in VI, `Sign in with Google` in EN).
+
+2. **Authentication Flow Continuity**:
+   - Clicking the Google button SHALL trigger Google Identity Services (GSI) or initiate the Google OAuth sign-in flow.
+   - In environments where Google Client ID is configured, credential responses SHALL be transmitted to `/api/v1/auth/google`.
+
+#### Scenario: User hovers over Google Sign-In button
+- **WHEN** user hovers over the Google Sign-In button
+- **THEN** the background transitions smoothly to a hover shade
+- **AND** the Google logo remains cleanly bounded with zero white box clipping or corner overflow.
+
+#### Scenario: User clicks Google Sign-In button
+- **WHEN** user clicks the Google Sign-In button
+- **THEN** the system triggers Google Identity Services or opens the Google account selection prompt.
+
+---
+
+### Requirement: Distraction-Free Canvas Footer
+The Studio Auth canvas SHALL maintain a clean layout without redundant bottom telemetry or compliance clutter, keeping the focus entirely on developer authentication and spaced learning preview.
+
+#### Scenario: Visitor views canvas bottom
+- **WHEN** user views `/login`
+- **THEN** the view is clean and distraction-free without bottom telemetry bars or status spam.
