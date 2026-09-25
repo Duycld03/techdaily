@@ -166,7 +166,6 @@ npm --prefix frontend test
 
 | Document | Description |
 |---|---|
-| [**`AGENTS.md`**](AGENTS.md) | Coding conventions, strict architectural rules, and invariants for AI agents and developers. |
 | [**`openspec/specs/`**](openspec/specs/) | Single source of truth for modular capability specifications, requirements, and acceptance criteria. |
 | [**`openspec/changes/`**](openspec/changes/) | Active lifecycle change proposals, delta specs, technical designs, and task checklists. |
 | [**`TechDaily.Api/Endpoints/`**](backend/src/TechDaily.Api/Endpoints/) | Executable Minimal API endpoint contracts with interactive Scalar API Reference at `/scalar/v1`. |
