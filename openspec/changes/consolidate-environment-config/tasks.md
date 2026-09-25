@@ -25,9 +25,9 @@
 
 ## 5. Deployment cutover (VPS)
 
-- [ ] 5.1 Update the VPS `.env` (`/home/truongduy2003/techdaily/.env`) to the native names, add `Email__Smtp__*`, and remove dead `WebPush__*`/`VAPID_*` duplicates — before the next deploy. Verify: over SSH, `docker compose -f docker-compose.prod.yml config` on the VPS renders `Jwt__Secret`, `Gemini__ApiKey`, and `Email__Smtp__Password` in the backend env with non-empty resolved values.
+- [x] 5.1 Update the VPS `.env` (`/home/truongduy2003/techdaily/.env`) to the native names, add `Email__Smtp__*`, and remove dead `WebPush__*`/`VAPID_*` duplicates — before the next deploy. Verify: over SSH, `docker compose -f docker-compose.prod.yml config` on the VPS renders `Jwt__Secret`, `Gemini__ApiKey`, and `Email__Smtp__Password` in the backend env with non-empty resolved values.
 
 ## 6. Integration verification
 
 - [x] 6.1 Local end-to-end: start the stack (`run-dev.sh`) with the secret JSON files deleted; confirm the API boots from `.env` only, `POST /api/v1/auth/login` succeeds (Jwt from `.env`), a Gemini-backed request works, `GET /api/v1/notifications/push/vapid-public-key` returns the configured key, and an OTP email dispatches via SMTP. Verify: all five observables pass.
-- [ ] 6.2 Production smoke after deploy: trigger an OTP email in production and confirm delivery (the SMTP gap this change closes), then `docker compose restart nginx` per the ops rule. Verify: the registration/reset OTP email is received in production.
+- [x] 6.2 Production smoke after deploy: trigger an OTP email in production and confirm delivery (the SMTP gap this change closes), then `docker compose restart nginx` per the ops rule. Verify: the registration/reset OTP email is received in production.
