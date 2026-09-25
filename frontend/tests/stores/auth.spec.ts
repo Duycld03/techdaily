@@ -4,24 +4,37 @@ import { useAuthStore } from '~/stores/useAuthStore'
 
 // Mock useApiClient composable
 const mockRefreshAuthToken = vi.fn()
+const mockPost = vi.fn(async (url: string, body?: Record<string, unknown>) => {
+  const email = typeof body?.email === 'string' ? body.email : 'engineer@techdaily.local'
+  // Session-issuing endpoints
+  if (url.includes('/register/verify') || url.includes('/login') || url.includes('/google')) {
+    return {
+      token: 'mock-jwt-token-123',
+      user: {
+        id: 'u-1',
+        email,
+        name: 'Senior Engineer',
+        preferredLocale: 'en'
+      }
+    }
+  }
+  // Registration step 1: challenge response, no session
+  if (url.includes('/register')) {
+    return { email }
+  }
+  if (url.includes('/forgot-password') || url.includes('/reset-password')) {
+    return { message: 'If the email is registered, a code has been sent.' }
+  }
+  if (url.includes('/otp/resend')) {
+    return { email }
+  }
+  throw new Error('Unknown endpoint')
+})
 
 vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     refreshAuthToken: mockRefreshAuthToken,
-    post: vi.fn(async (url: string, body: any) => {
-      if (url.includes('/login') || url.includes('/register') || url.includes('/google')) {
-        return {
-          token: 'mock-jwt-token-123',
-          user: {
-            id: 'u-1',
-            email: body.email || 'engineer@techdaily.local',
-            name: body.name || 'Senior Engineer',
-            preferredLocale: body.locale || 'en'
-          }
-        }
-      }
-      throw new Error('Unknown endpoint')
-    })
+    post: mockPost
   })
 }))
 
@@ -29,6 +42,8 @@ describe('useAuthStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
+    sessionStorage.clear()
+    mockPost.mockClear()
     useCookie('techdaily_token').value = null
     useCookie('techdaily_user').value = null
   })
@@ -50,14 +65,63 @@ describe('useAuthStore', () => {
     expect(localStorage.getItem('techdaily_token')).toBe('mock-jwt-token-123')
   })
 
-  it('successfully registers new user', async () => {
+  it('registerRequest sends the documented payload and yields no session', async () => {
     const auth = useAuthStore()
-    const res = await auth.register('newuser@techdaily.local', 'password123', 'New Architect', 'vi')
+    const res = await auth.registerRequest('newuser@techdaily.local', 'password123', 'New Architect', 'vi')
 
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/auth/register', {
+      email: 'newuser@techdaily.local',
+      password: 'password123',
+      name: 'New Architect',
+      locale: 'vi'
+    })
+    expect(res.email).toBe('newuser@techdaily.local')
+    expect(auth.isLoggedIn).toBe(false)
+    expect(auth.token).toBeNull()
+  })
+
+  it('registerVerify sends the code payload and establishes a session', async () => {
+    const auth = useAuthStore()
+    const res = await auth.registerVerify('newuser@techdaily.local', '123456', true)
+
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/auth/register/verify', {
+      email: 'newuser@techdaily.local',
+      code: '123456',
+      rememberMe: true
+    })
     expect(res.token).toBe('mock-jwt-token-123')
     expect(auth.isLoggedIn).toBe(true)
-    expect(auth.user?.name).toBe('New Architect')
-    expect(auth.user?.preferredLocale).toBe('vi')
+    expect(auth.user?.email).toBe('newuser@techdaily.local')
+  })
+
+  it('forgotPassword posts only the email and yields no session', async () => {
+    const auth = useAuthStore()
+    await auth.forgotPassword('reset@techdaily.local')
+
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/auth/forgot-password', { email: 'reset@techdaily.local' })
+    expect(auth.isLoggedIn).toBe(false)
+  })
+
+  it('resetPassword posts email, code, and newPassword', async () => {
+    const auth = useAuthStore()
+    await auth.resetPassword('reset@techdaily.local', '654321', 'brandnew123')
+
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/auth/reset-password', {
+      email: 'reset@techdaily.local',
+      code: '654321',
+      newPassword: 'brandnew123'
+    })
+    expect(auth.isLoggedIn).toBe(false)
+  })
+
+  it('resendOtp posts email and purpose', async () => {
+    const auth = useAuthStore()
+    await auth.resendOtp('reset@techdaily.local', 'PasswordReset')
+
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/auth/otp/resend', {
+      email: 'reset@techdaily.local',
+      purpose: 'PasswordReset'
+    })
   })
 
   it('clears token and user on logout', async () => {
@@ -70,6 +134,51 @@ describe('useAuthStore', () => {
     expect(auth.token).toBeNull()
     expect(auth.user).toBeNull()
     expect(localStorage.getItem('techdaily_token')).toBeNull()
+  })
+
+  it('submits rememberMe in the login request body', async () => {
+    const auth = useAuthStore()
+    await auth.login('engineer@techdaily.local', 'password123', false)
+
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/auth/login', {
+      email: 'engineer@techdaily.local',
+      password: 'password123',
+      rememberMe: false
+    })
+  })
+
+  it('defaults rememberMe to true when the login argument is omitted', async () => {
+    const auth = useAuthStore()
+    await auth.login('engineer@techdaily.local', 'password123')
+
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/auth/login', expect.objectContaining({ rememberMe: true }))
+  })
+
+  it('stores a session-scoped login in sessionStorage and not localStorage', async () => {
+    const auth = useAuthStore()
+    await auth.login('engineer@techdaily.local', 'password123', false)
+
+    expect(sessionStorage.getItem('techdaily_token')).toBe('mock-jwt-token-123')
+    expect(localStorage.getItem('techdaily_token')).toBeNull()
+  })
+
+  it('stores a remembered login in localStorage and not sessionStorage', async () => {
+    const auth = useAuthStore()
+    await auth.login('engineer@techdaily.local', 'password123', true)
+
+    expect(localStorage.getItem('techdaily_token')).toBe('mock-jwt-token-123')
+    expect(sessionStorage.getItem('techdaily_token')).toBeNull()
+  })
+
+  it('clearSession clears both localStorage and sessionStorage', async () => {
+    const auth = useAuthStore()
+    await auth.login('engineer@techdaily.local', 'password123', false)
+    expect(sessionStorage.getItem('techdaily_token')).toBe('mock-jwt-token-123')
+
+    auth.clearSession()
+    expect(localStorage.getItem('techdaily_token')).toBeNull()
+    expect(sessionStorage.getItem('techdaily_token')).toBeNull()
+    expect(sessionStorage.getItem('techdaily_user')).toBeNull()
   })
 
   describe('JWT Expiration and Proactive Cleanup', () => {

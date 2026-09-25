@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
+using TechDaily.Api.Http;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Library.CrawlUrl;
 using TechDaily.Application.Features.Library.DeleteBook;
@@ -38,12 +39,15 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(new GetBooksRequest(category, search, page, pageSize, userId), ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .WithName("GetBooks")
         .WithSummary("Get Books")
-        .WithDescription("Retrieves paginated technical books with category filtering, search terms, and reading progress metadata.");
+        .WithDescription("Retrieves paginated technical books with category filtering, search terms, and reading progress metadata.")
+        .Produces<GetBooksResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Public Book Details
         group.MapGet("/books/{id:guid}", async (
@@ -54,14 +58,17 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(new GetBookByIdRequest(id), ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => error == Error.NotFound 
-                    ? Results.NotFound(new { code = error.Code, error = error.Message }) 
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error == Error.NotFound
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .WithName("GetBookById")
         .WithSummary("Get Book Details")
-        .WithDescription("Fetches detailed technical book metadata, chapters, and ingested slice counts.");
+        .WithDescription("Fetches detailed technical book metadata, chapters, and ingested slice counts.")
+        .Produces<GetBookByIdResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Public Book Ingestion Status Polling
         group.MapGet("/books/{id:guid}/status", async (
@@ -73,13 +80,16 @@ public static class LibraryEndpoints
             return result.Match(
                 success => Results.Ok(success),
                 error => error == Error.NotFound
-                    ? Results.NotFound(new { code = error.Code, error = error.Message })
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .WithName("GetBookStatus")
         .WithSummary("Get Ingestion Status")
-        .WithDescription("Polls real-time ingestion, parsing, chunking, and embedding progress for an uploaded book.");
+        .WithDescription("Polls real-time ingestion, parsing, chunking, and embedding progress for an uploaded book.")
+        .Produces<BookIngestionStatusDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
 
         // Public On-Demand Single Slice Retrieval
@@ -93,13 +103,16 @@ public static class LibraryEndpoints
             return result.Match(
                 success => Results.Ok(success),
                 error => error == Error.NotFound
-                    ? Results.NotFound(new { code = error.Code, error = error.Message })
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .WithName("GetBookSlice")
         .WithSummary("Get Book Slice")
-        .WithDescription("Retrieves a single reading slice by book ID and slice sequence order for active reading.");
+        .WithDescription("Retrieves a single reading slice by book ID and slice sequence order for active reading.")
+        .Produces<TechDaily.Application.Features.Library.GetBookSlice.GetBookSliceResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Public On-Demand JIT Slice Curation
         group.MapPost("/books/{id:guid}/slices/{order:int}/curate", async (
@@ -112,13 +125,17 @@ public static class LibraryEndpoints
             return result.Match(
                 success => Results.Ok(success),
                 error => error == Error.NotFound
-                    ? Results.NotFound(new { code = error.Code, error = error.Message })
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .WithName("CurateSlice")
         .WithSummary("Curate Slice Content")
-        .WithDescription("Triggers on-demand just-in-time AI curation, term extraction, and drill scenario generation for a slice.");
+        .WithDescription("Triggers on-demand just-in-time AI curation, term extraction, and drill scenario generation for a slice.")
+        .Produces<TechDaily.Application.Features.Library.CurateSlice.CurateSliceResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Protected Document Import (Requires Authentication)
         group.MapPost("/import", async (
@@ -132,13 +149,16 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(authorizedRequest, ct);
             return result.Match(
                 success => Results.Created($"/api/v1/library/books/{success.Book.Id}", success),
-                error => Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .RequireAuthorization()
         .WithName("ImportDocument")
         .WithSummary("Import Markdown Document")
-        .WithDescription("Ingests user-provided Markdown technical documentation into slices and generates vector embeddings.");
+        .WithDescription("Ingests user-provided Markdown technical documentation into slices and generates vector embeddings.")
+        .Produces<ImportDocumentResponse>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Protected Document Deletion (Requires Authentication and Ownership)
         group.MapDelete("/books/{id:guid}", async (
@@ -156,17 +176,22 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(new DeleteBookRequest(id, userId.Value), ct);
             return result.Match(
                 success => Results.NoContent(),
-                error => error == Error.NotFound 
-                    ? Results.NotFound(new { code = error.Code, error = error.Message }) 
+                error => error == Error.NotFound
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
                     : error.Code == "LIBRARY_FORBIDDEN"
-                        ? Results.Json(new { code = error.Code, error = error.Message }, statusCode: StatusCodes.Status403Forbidden)
-                        : Results.BadRequest(new { code = error.Code, error = error.Message })
+                        ? error.ToProblem(StatusCodes.Status403Forbidden)
+                        : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .RequireAuthorization()
         .WithName("DeleteBook")
         .WithSummary("Delete Book")
-        .WithDescription("Soft-deletes a technical book and all associated slices and cards for the owning user.");
+        .WithDescription("Soft-deletes a technical book and all associated slices and cards for the owning user.")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Protected PDF Upload (Requires Authentication, supports up to 300MB, Zero-LOH streaming)
         group.MapPost("/upload-pdf", async (
@@ -178,14 +203,14 @@ public static class LibraryEndpoints
             var userId = GetUserIdFromClaims(userClaims);
             if (!httpRequest.HasFormContentType)
             {
-                return Results.BadRequest(new { code = Error.MultipartRequired.Code, error = Error.MultipartRequired.Message });
+                return Error.MultipartRequired.ToProblem(StatusCodes.Status400BadRequest);
             }
 
             var form = await httpRequest.ReadFormAsync(ct);
             var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
             if (file == null || file.Length == 0)
             {
-                return Results.BadRequest(new { code = Error.PdfRequired.Code, error = Error.PdfRequired.Message });
+                return Error.PdfRequired.ToProblem(StatusCodes.Status400BadRequest);
             }
 
             var title = form["title"].ToString();
@@ -207,14 +232,17 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Accepted($"/api/v1/library/books/{success.Book.Id}/status", success),
-                error => Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .DisableAntiforgery()
         .RequireAuthorization()
         .WithName("UploadPdfDocument")
         .WithSummary("Upload PDF Document")
-        .WithDescription("Streams and ingests an uploaded technical PDF book up to 300MB with zero large-object-heap pressure.");
+        .WithDescription("Streams and ingests an uploaded technical PDF book up to 300MB with zero large-object-heap pressure.")
+        .Produces<UploadPdfResponse>(StatusCodes.Status202Accepted)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Protected Remote PDF Streaming Ingestion (Requires Authentication, streams directly to temp disk)
         group.MapPost("/import-remote-pdf", async (
@@ -228,13 +256,16 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(authorizedRequest, ct);
             return result.Match(
                 success => Results.Accepted($"/api/v1/library/books/{success.Book.Id}/status", success),
-                error => Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .RequireAuthorization()
         .WithName("ImportRemotePdf")
         .WithSummary("Import Remote PDF")
-        .WithDescription("Asynchronously downloads and streams a remote PDF document from an authorized URL for ingestion.");
+        .WithDescription("Asynchronously downloads and streams a remote PDF document from an authorized URL for ingestion.")
+        .Produces<UploadPdfResponse>(StatusCodes.Status202Accepted)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Protected URL Crawler (Requires Authentication)
         group.MapPost("/crawl-url", async (
@@ -245,13 +276,16 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .RequireAuthorization()
         .WithName("CrawlWebDocument")
         .WithSummary("Crawl Web Documentation")
-        .WithDescription("Crawls and extracts clean Markdown documentation from an external technical URL with anti-SSRF protections.");
+        .WithDescription("Crawls and extracts clean Markdown documentation from an external technical URL with anti-SSRF protections.")
+        .Produces<CrawlUrlResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Protected Book Markdown Export (Requires Authentication)
         group.MapGet("/books/{id:guid}/export-markdown", async (
@@ -270,14 +304,17 @@ public static class LibraryEndpoints
             return result.Match(
                 success => Results.File(Encoding.UTF8.GetBytes(success.MarkdownContent), "text/markdown", success.FileName),
                 error => error == Error.NotFound
-                    ? Results.NotFound(new { code = error.Code, error = error.Message })
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .RequireAuthorization()
         .WithName("ExportBookMarkdown")
         .WithSummary("Export Book Markdown")
-        .WithDescription("Exports the complete assembled book text and notes as a downloadable Markdown document.");
+        .WithDescription("Exports the complete assembled book text and notes as a downloadable Markdown document.")
+        .Produces<string>(StatusCodes.Status200OK, contentType: "text/markdown")
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return app;
     }

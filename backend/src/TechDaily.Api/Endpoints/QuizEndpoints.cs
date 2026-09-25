@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using TechDaily.Api.Http;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.InterviewQuiz.DTOs;
 using TechDaily.Domain.Enums;
@@ -43,12 +44,15 @@ public static class QuizEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("GenerateQuiz")
         .WithSummary("Generate Quiz Batch")
-        .WithDescription("Generates an interactive interview quiz batch tailored to seniority level using Google Gemini Flash Lite and unmastered DB questions.");
+        .WithDescription("Generates an interactive interview quiz batch tailored to seniority level using Google Gemini Flash Lite and unmastered DB questions.")
+        .Produces<GenerateQuizResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // 2. Submit Question Answer
         group.MapPost("/submit", async (
@@ -72,11 +76,14 @@ public static class QuizEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .WithName("SubmitQuizAnswer")
         .WithSummary("Submit Quiz Answer")
-        .WithDescription("Submits an option choice, returns correctness and deep explanation, and updates user mastery status.");
+        .WithDescription("Submits an option choice, returns correctness and deep explanation, and updates user mastery status.")
+        .Produces<SubmitQuizAnswerResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // 3. Get Mistake Review Queue
         group.MapGet("/review-queue", async (
@@ -110,11 +117,14 @@ public static class QuizEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .WithName("GetQuizReviewQueue")
         .WithSummary("Get Quiz Review Queue")
-        .WithDescription("Retrieves all unmastered/failed quiz questions in the user's review queue for iterative practice.");
+        .WithDescription("Retrieves all unmastered/failed quiz questions in the user's review queue for iterative practice.")
+        .Produces<GetQuizReviewQueueResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // 4. Get Quiz Mastery Stats
         group.MapGet("/stats", async (
@@ -133,11 +143,14 @@ public static class QuizEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .WithName("GetQuizStats")
         .WithSummary("Get Quiz Statistics")
-        .WithDescription("Calculates overall interview quiz statistics, mastery counts, accuracy rate, and level breakdown.");
+        .WithDescription("Calculates overall interview quiz statistics, mastery counts, accuracy rate, and level breakdown.")
+        .Produces<GetQuizStatsResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return group;
     }

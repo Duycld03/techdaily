@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using TechDaily.Api.Http;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Notes.CreateHighlight;
 using TechDaily.Application.Features.Notes.DeleteHighlight;
@@ -34,12 +35,14 @@ public static class NotesEndpoints
             var result = await handler.ExecuteAsync(new GetHighlightsRequest(userId.Value, tag, search, page, pageSize), ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .WithName("GetHighlights")
         .WithSummary("Get Highlights")
-        .WithDescription("Retrieves paginated reading highlights, architectural takeaways, and user tags with search filtering.");
+        .WithDescription("Retrieves paginated reading highlights, architectural takeaways, and user tags with search filtering.")
+        .Produces<GetHighlightsResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/highlights", async (
             [FromBody] CreateHighlightApiRequest body,
@@ -63,12 +66,15 @@ public static class NotesEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Created($"/api/v1/notes/highlights/{success.Highlight.Id}", success),
-                error => Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .WithName("CreateHighlight")
         .WithSummary("Create Highlight")
-        .WithDescription("Saves a key technical excerpt, reflection note, and taxonomy tags from a reading slice.");
+        .WithDescription("Saves a key technical excerpt, reflection note, and taxonomy tags from a reading slice.")
+        .Produces<CreateHighlightResponse>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPut("/highlights/{id:guid}", async (
             Guid id,
@@ -87,14 +93,18 @@ public static class NotesEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => error == Error.NotFound 
-                    ? Results.NotFound(new { code = error.Code, error = error.Message }) 
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error == Error.NotFound
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .WithName("UpdateHighlight")
         .WithSummary("Update Highlight")
-        .WithDescription("Updates personal reflection notes and tags for an existing reading highlight.");
+        .WithDescription("Updates personal reflection notes and tags for an existing reading highlight.")
+        .Produces<UpdateHighlightResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapDelete("/highlights/{id:guid}", async (
             Guid id,
@@ -111,14 +121,17 @@ public static class NotesEndpoints
             var result = await handler.ExecuteAsync(new DeleteHighlightRequest(id, userId.Value), ct);
             return result.Match(
                 success => Results.NoContent(),
-                error => error == Error.NotFound 
-                    ? Results.NotFound(new { code = error.Code, error = error.Message }) 
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error == Error.NotFound
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .WithName("DeleteHighlight")
         .WithSummary("Delete Highlight")
-        .WithDescription("Removes a reading highlight and its associated flashcard references.");
+        .WithDescription("Removes a reading highlight and its associated flashcard references.")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return app;
     }

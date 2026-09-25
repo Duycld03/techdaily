@@ -19,6 +19,12 @@ public sealed record Error(string Code, string Message)
     public static readonly Error GoogleTokenInvalid = new("AUTH_GOOGLE_TOKEN_INVALID", "Invalid Google authentication token.");
     public static readonly Error GoogleNotConfigured = new("AUTH_GOOGLE_NOT_CONFIGURED", "Google Client ID is not configured.");
 
+    // One-Time Passcode (OTP) Domain
+    public static readonly Error OtpInvalid = new("AUTH_OTP_INVALID", "The verification code is invalid.");
+    public static readonly Error OtpExpired = new("AUTH_OTP_EXPIRED", "The verification code has expired.");
+    public static readonly Error OtpMaxAttempts = new("AUTH_OTP_MAX_ATTEMPTS", "Too many incorrect attempts. Request a new verification code.");
+    public static readonly Error OtpResendCooldown = new("AUTH_OTP_RESEND_COOLDOWN", "Please wait before requesting another verification code.");
+
     // User Profile Domain
     public static readonly Error CurrentPasswordIncorrect = new("USER_CURRENT_PASSWORD_INCORRECT", "Current password is incorrect.");
     public static readonly Error NewPasswordTooShort = new("USER_NEW_PASSWORD_TOO_SHORT", "New password must be at least 6 characters.");

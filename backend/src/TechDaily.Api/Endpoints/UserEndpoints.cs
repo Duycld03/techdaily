@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TechDaily.Api.Contracts;
+using TechDaily.Api.Http;
 using TechDaily.Application.Common;
 using TechDaily.Infrastructure.Persistence;
 using TechDaily.Infrastructure.Security;
@@ -46,41 +48,37 @@ public static class UserEndpoints
                 ? Math.Round(drills.Average(d => d.Score ?? 0), 1) 
                 : 0.0;
 
-            return Results.Ok(new
-            {
-                user = new
-                {
-                    user.Id,
-                    user.Email,
-                    user.Name,
-                    user.AvatarUrl,
-                    user.PreferredLocale,
-                    user.TargetRole,
-                    user.DailyGoalMinutes,
-                    user.TelegramChatId,
-                    preferredStudyTime = user.PreferredStudyTime?.ToString("HH:mm"),
-                    streakAlertTime = user.StreakAlertTime?.ToString("HH:mm"),
-                    user.TimeZone,
-                    user.IsPushEnabled,
-                    hasPassword = !string.IsNullOrEmpty(user.PasswordHash),
-                    isGoogleLinked = !string.IsNullOrEmpty(user.GoogleSubjectId)
-                },
-                stats = new
-                {
-                    currentStreak = user.StreakRecord?.CurrentStreak ?? 0,
-                    longestStreak = user.StreakRecord?.LongestStreak ?? 0,
-                    freezeCreditsRemaining = user.StreakRecord?.FreezeCreditsRemaining ?? 2,
-                    totalDrillsCompleted = totalDrills,
-                    averageScore = avgScore,
-                    totalCardsInDeck = cardsCount,
-                    totalHighlightsSaved = highlightsCount,
-                    memberSince = user.CreatedAt
-                }
-            });
+            return Results.Ok(new UserProfileResponse(
+                User: new UserProfileDto(
+                    Id: user.Id,
+                    Email: user.Email,
+                    Name: user.Name,
+                    AvatarUrl: user.AvatarUrl,
+                    PreferredLocale: user.PreferredLocale,
+                    TargetRole: user.TargetRole,
+                    DailyGoalMinutes: user.DailyGoalMinutes,
+                    TelegramChatId: user.TelegramChatId,
+                    PreferredStudyTime: user.PreferredStudyTime?.ToString("HH:mm"),
+                    StreakAlertTime: user.StreakAlertTime?.ToString("HH:mm"),
+                    TimeZone: user.TimeZone,
+                    IsPushEnabled: user.IsPushEnabled,
+                    HasPassword: !string.IsNullOrEmpty(user.PasswordHash),
+                    IsGoogleLinked: !string.IsNullOrEmpty(user.GoogleSubjectId)),
+                Stats: new ProfileStatsDto(
+                    CurrentStreak: user.StreakRecord?.CurrentStreak ?? 0,
+                    LongestStreak: user.StreakRecord?.LongestStreak ?? 0,
+                    FreezeCreditsRemaining: user.StreakRecord?.FreezeCreditsRemaining ?? 2,
+                    TotalDrillsCompleted: totalDrills,
+                    AverageScore: avgScore,
+                    TotalCardsInDeck: cardsCount,
+                    TotalHighlightsSaved: highlightsCount,
+                    MemberSince: user.CreatedAt)));
         })
         .WithName("GetUserProfile")
         .WithSummary("Get User Profile")
-        .WithDescription("Fetches current authenticated user profile and aggregated learning statistics.");
+        .WithDescription("Fetches current authenticated user profile and aggregated learning statistics.")
+        .Produces<UserProfileResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Update User Profile
         group.MapPut("/profile", async (
@@ -133,25 +131,26 @@ public static class UserEndpoints
             user.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
-            return Results.Ok(new
-            {
-                user.Id,
-                user.Email,
-                user.Name,
-                user.AvatarUrl,
-                user.PreferredLocale,
-                user.TargetRole,
-                user.DailyGoalMinutes,
-                user.TelegramChatId,
-                preferredStudyTime = user.PreferredStudyTime?.ToString("HH:mm"),
-                streakAlertTime = user.StreakAlertTime?.ToString("HH:mm"),
-                user.TimeZone,
-                user.IsPushEnabled
-            });
+            return Results.Ok(new UpdateUserProfileResponse(
+                Id: user.Id,
+                Email: user.Email,
+                Name: user.Name,
+                AvatarUrl: user.AvatarUrl,
+                PreferredLocale: user.PreferredLocale,
+                TargetRole: user.TargetRole,
+                DailyGoalMinutes: user.DailyGoalMinutes,
+                TelegramChatId: user.TelegramChatId,
+                PreferredStudyTime: user.PreferredStudyTime?.ToString("HH:mm"),
+                StreakAlertTime: user.StreakAlertTime?.ToString("HH:mm"),
+                TimeZone: user.TimeZone,
+                IsPushEnabled: user.IsPushEnabled));
         })
         .WithName("UpdateUserProfile")
         .WithSummary("Update User Profile")
-        .WithDescription("Updates current authenticated user profile metadata.");
+        .WithDescription("Updates current authenticated user profile metadata.")
+        .Produces<UpdateUserProfileResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Change Password
         group.MapPut("/change-password", async (
@@ -167,7 +166,7 @@ public static class UserEndpoints
 
             if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
             {
-                return Results.BadRequest(new { code = Error.NewPasswordTooShort.Code, error = Error.NewPasswordTooShort.Message });
+                return Error.NewPasswordTooShort.ToProblem(StatusCodes.Status400BadRequest);
             }
 
             var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId.Value);
@@ -181,7 +180,7 @@ public static class UserEndpoints
             {
                 if (string.IsNullOrEmpty(request.CurrentPassword) || !PasswordHasher.VerifyPassword(request.CurrentPassword, user.PasswordHash))
                 {
-                    return Results.BadRequest(new { code = Error.CurrentPasswordIncorrect.Code, error = Error.CurrentPasswordIncorrect.Message });
+                    return Error.CurrentPasswordIncorrect.ToProblem(StatusCodes.Status400BadRequest);
                 }
             }
 
@@ -189,11 +188,14 @@ public static class UserEndpoints
             user.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
-            return Results.Ok(new { message = "Password updated successfully." });
+            return Results.Ok(new MessageResponse("Password updated successfully."));
         })
         .WithName("ChangePassword")
         .WithSummary("Change Password")
-        .WithDescription("Changes or sets password for current authenticated user account.");
+        .WithDescription("Changes or sets password for current authenticated user account.")
+        .Produces<MessageResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return group;
     }

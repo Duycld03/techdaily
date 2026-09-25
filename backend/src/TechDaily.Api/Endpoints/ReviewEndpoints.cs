@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using TechDaily.Api.Http;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Review.GetReviewDeck;
 using TechDaily.Application.Features.Review.GradeReviewCard;
@@ -40,12 +41,14 @@ public static class ReviewEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .RequireAuthorization()
         .WithName("GetReviewDeck")
         .WithSummary("Get Review Deck")
-        .WithDescription("Retrieves pending SM-2 spaced repetition cards due for current user.");
+        .WithDescription("Retrieves pending SM-2 spaced repetition cards due for current user.")
+        .Produces<GetReviewDeckResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/cards/{id:guid}/grade", async (
             Guid id,
@@ -65,12 +68,15 @@ public static class ReviewEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .RequireAuthorization()
         .WithName("GradeReviewCard")
         .WithSummary("Grade Review Card")
-        .WithDescription("Grades a review card (0-5) and recalculates next interval using SM-2.");
+        .WithDescription("Grades a review card (0-5) and recalculates next interval using SM-2.")
+        .Produces<GradeReviewCardResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/cards/from-highlight", async (
             [FromBody] CreateCardFromHighlightJsonRequest body,
@@ -88,15 +94,19 @@ public static class ReviewEndpoints
             var result = await handler.ExecuteAsync(request, ct);
 
             return result.IsSuccess
-                ? Results.Ok(result.Value)
+                ? Results.Created($"/api/v1/review/cards/{result.Value.CardId}", result.Value)
                 : result.Error == Error.NotFound
-                    ? Results.NotFound(new { code = result.Error.Code, error = result.Error.Message })
-                    : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                    ? result.Error.ToProblem(StatusCodes.Status404NotFound)
+                    : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .RequireAuthorization()
         .WithName("CreateCardFromHighlight")
         .WithSummary("Create Card From Highlight")
-        .WithDescription("Creates or retrieves an active recall spaced repetition card from a user highlight.");
+        .WithDescription("Creates or retrieves an active recall spaced repetition card from a user highlight.")
+        .Produces<CreateCardFromHighlightResponse>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/cards/from-quiz-mistake", async (
             [FromBody] CreateCardFromQuizMistakeJsonRequest body,
@@ -114,15 +124,19 @@ public static class ReviewEndpoints
             var result = await handler.ExecuteAsync(request, ct);
 
             return result.IsSuccess
-                ? Results.Ok(result.Value)
+                ? Results.Created($"/api/v1/review/cards/{result.Value.CardId}", result.Value)
                 : result.Error == Error.NotFound
-                    ? Results.NotFound(new { code = result.Error.Code, error = result.Error.Message })
-                    : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                    ? result.Error.ToProblem(StatusCodes.Status404NotFound)
+                    : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .RequireAuthorization()
         .WithName("CreateCardFromQuizMistake")
         .WithSummary("Create Card From Quiz Mistake")
-        .WithDescription("Creates or retrieves a spaced repetition card from a failed quiz question.");
+        .WithDescription("Creates or retrieves a spaced repetition card from a failed quiz question.")
+        .Produces<CreateCardFromQuizMistakeResponse>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapGet("/cards", async (
             [FromQuery] string? search,
@@ -144,13 +158,15 @@ public static class ReviewEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => Results.BadRequest(new { code = error.Code, error = error.Message })
+                error => error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .RequireAuthorization()
         .WithName("GetReviewCards")
         .WithSummary("Get Review Cards")
-        .WithDescription("Retrieves paginated flashcards in user's personal deck with search, filtering, and deck statistics.");
+        .WithDescription("Retrieves paginated flashcards in user's personal deck with search, filtering, and deck statistics.")
+        .Produces<GetReviewCardsResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPut("/cards/{id:guid}", async (
             Guid id,
@@ -170,14 +186,18 @@ public static class ReviewEndpoints
             return result.Match(
                 success => Results.Ok(success),
                 error => error == Error.NotFound
-                    ? Results.NotFound(new { code = error.Code, error = error.Message })
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .RequireAuthorization()
         .WithName("UpdateReviewCard")
         .WithSummary("Update Review Card")
-        .WithDescription("Updates front and back markdown content for a flashcard.");
+        .WithDescription("Updates front and back markdown content for a flashcard.")
+        .Produces<UpdateReviewCardResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapDelete("/cards/{id:guid}", async (
             Guid id,
@@ -194,16 +214,19 @@ public static class ReviewEndpoints
             var request = new DeleteReviewCardRequest(id, userId.Value);
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
-                success => Results.Ok(success),
+                success => Results.NoContent(),
                 error => error == Error.NotFound
-                    ? Results.NotFound(new { code = error.Code, error = error.Message })
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .RequireAuthorization()
         .WithName("DeleteReviewCard")
         .WithSummary("Delete Review Card")
-        .WithDescription("Soft-deletes a spaced repetition card from user's personal deck.");
+        .WithDescription("Soft-deletes a spaced repetition card from user's personal deck.")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/cards/{id:guid}/reset", async (
             Guid id,
@@ -222,14 +245,17 @@ public static class ReviewEndpoints
             return result.Match(
                 success => Results.Ok(success),
                 error => error == Error.NotFound
-                    ? Results.NotFound(new { code = error.Code, error = error.Message })
-                    : Results.BadRequest(new { code = error.Code, error = error.Message })
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.ToProblem(StatusCodes.Status400BadRequest)
             );
         })
         .RequireAuthorization()
         .WithName("ResetReviewCardProgress")
         .WithSummary("Reset Card Progress")
-        .WithDescription("Resets SM-2 progression for a review card back to initial learning state.");
+        .WithDescription("Resets SM-2 progression for a review card back to initial learning state.")
+        .Produces<ResetReviewCardProgressResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return group;
     }

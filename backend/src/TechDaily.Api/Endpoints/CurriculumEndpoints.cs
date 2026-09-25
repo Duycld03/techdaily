@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using TechDaily.Api.Http;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Curriculum.DTOs;
 using TechDaily.Application.Features.Curriculum.GetCurriculumRoadmap;
@@ -26,12 +27,15 @@ public static class CurriculumEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .RequireAuthorization()
         .WithName("GetCurriculumRoadmap")
         .WithSummary("Get Curriculum Roadmap")
-        .WithDescription("Retrieves the full 30-day curriculum roadmap grouped into 4 core technical modules with authenticated user progress.");
+        .WithDescription("Retrieves the Senior Engineering Craft Handbook roadmap grouped into 4 core technical pillars with authenticated user progress.")
+        .Produces<CurriculumRoadmapResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return group;
     }

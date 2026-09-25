@@ -26,6 +26,7 @@
     <PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
     <PackageReference Include="ReverseMarkdown" Version="4.6.0" />
     <PackageReference Include="WebPush" Version="1.0.13" />
+    <PackageReference Include="MailKit" Version="4.13.0" />
   </ItemGroup>
 
   <ItemGroup>

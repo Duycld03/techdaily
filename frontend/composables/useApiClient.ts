@@ -290,9 +290,9 @@ export function useApiClient() {
       try {
         const errorJson = await response.json()
         errorData = errorJson
-        errorMessage = errorJson.detail || errorJson.error || errorJson.message || errorJson.title || errorMessage
+        errorMessage = errorJson.detail || errorJson.message || errorJson.title || errorMessage
         errorCode = errorJson.code
-        errorDetails = errorJson.details || errorJson.errors || errorJson.detail
+        errorDetails = errorJson.errors
       } catch {
         // fallback
       }

@@ -22,6 +22,7 @@ public interface ITechDailyDbContext
     DbSet<UserBookPacer> UserBookPacers { get; }
     DbSet<UserPushSubscription> UserPushSubscriptions { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
+    DbSet<EmailOtp> EmailOtps { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

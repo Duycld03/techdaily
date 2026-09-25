@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Scalar.AspNetCore;
 using TechDaily.Api.Endpoints;
+using TechDaily.Api.Contracts;
 using TechDaily.Api.Middleware;
 using TechDaily.Application;
 using Microsoft.AspNetCore.Http.Features;
@@ -20,8 +21,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true)
-    .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
 // Configure 300MB Upload Body Limit (Zero-LOH Disk Spooling)
@@ -57,8 +56,8 @@ if (string.IsNullOrWhiteSpace(jwtSecret) || jwtSecret.Length < 32)
 }
 if (!builder.Environment.IsDevelopment())
 {
-    var vapidPrivate = builder.Configuration["WebPush:PrivateKey"] ?? builder.Configuration["VAPID_PRIVATE_KEY"];
-    var vapidPublic = builder.Configuration["WebPush:PublicKey"] ?? builder.Configuration["VAPID_PUBLIC_KEY"];
+    var vapidPrivate = builder.Configuration["WebPush:PrivateKey"];
+    var vapidPublic = builder.Configuration["WebPush:PublicKey"];
     if (string.IsNullOrWhiteSpace(vapidPrivate) || string.IsNullOrWhiteSpace(vapidPublic))
     {
         throw new InvalidOperationException("WebPush:PrivateKey and WebPush:PublicKey must be configured in non-development environments.");
@@ -118,7 +117,7 @@ builder.Services.AddRateLimiter(options =>
             type = "https://tools.ietf.org/html/rfc6585#section-4",
             title = "Too Many Requests",
             status = 429,
-            detail = "You have exceeded the rate limit of 10 AI requests per minute. Please wait before retrying."
+            detail = "You have exceeded the request rate limit. Please wait before retrying."
         }, cancellationToken: token);
     };
 
@@ -127,6 +126,21 @@ builder.Services.AddRateLimiter(options =>
         var partitionKey = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             ?? httpContext.Connection.RemoteIpAddress?.ToString()
             ?? "anonymous";
+
+        return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 6,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy("OtpEndpointsPolicy", httpContext =>
+    {
+        // OTP endpoints are unauthenticated; partition by client IP to bound abuse.
+        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous";
 
         return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
         {
@@ -312,27 +326,26 @@ app.MapGet("/health", async (TechDailyDbContext db) =>
     try
     {
         var canConnect = await db.Database.CanConnectAsync();
-        return Results.Ok(new
-        {
-            status = canConnect ? "healthy" : "degraded",
-            database = canConnect ? "connected" : "unavailable",
-            timestamp = DateTime.UtcNow
-        });
+        return Results.Ok(new HealthStatusResponse(
+            Status: canConnect ? "healthy" : "degraded",
+            Database: canConnect ? "connected" : "unavailable",
+            Error: null,
+            Timestamp: DateTime.UtcNow));
     }
     catch (Exception ex)
     {
-        return Results.Json(new
-        {
-            status = "unhealthy",
-            database = "error",
-            error = ex.Message,
-            timestamp = DateTime.UtcNow
-        }, statusCode: 503);
+        return Results.Json(new HealthStatusResponse(
+            Status: "unhealthy",
+            Database: "error",
+            Error: ex.Message,
+            Timestamp: DateTime.UtcNow), statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 })
 .WithName("HealthCheck")
 .WithTags("System Diagnostics & Health")
 .WithSummary("System Health & Database Liveness")
-.WithDescription("Checks system health, core API readiness, and live PostgreSQL database connectivity.");
+.WithDescription("Checks system health, core API readiness, and live PostgreSQL database connectivity.")
+.Produces<HealthStatusResponse>(StatusCodes.Status200OK)
+.Produces<HealthStatusResponse>(StatusCodes.Status503ServiceUnavailable);
 
 app.Run();

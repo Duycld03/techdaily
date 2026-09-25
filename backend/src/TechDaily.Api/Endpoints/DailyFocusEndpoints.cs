@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using TechDaily.Api.Http;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.DailyFocus.DTOs;
 using TechDaily.Application.Features.DailyFocus.ExplainTerm;
@@ -42,12 +43,15 @@ public static class DailyFocusEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.NotFound(new { error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status404NotFound);
         })
         .RequireAuthorization()
         .WithName("GetTodayFocus")
         .WithSummary("Get Today Focus")
-        .WithDescription("Retrieves today's reading slice, micro-quiz, and interview scenario challenge.");
+        .WithDescription("Retrieves today's reading slice, micro-quiz, and interview scenario challenge.")
+        .Produces<GetTodayFocusResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Protected Drill Submission (Requires Logged-In User)
         group.MapPost("/drills/{id:guid}/submit", async (
@@ -73,12 +77,15 @@ public static class DailyFocusEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .RequireAuthorization()
         .WithName("SubmitDailyDrill")
         .WithSummary("Submit Daily Drill")
-        .WithDescription("Evaluates multiple-choice senior scenario decision and updates user streak.");
+        .WithDescription("Evaluates multiple-choice senior scenario decision and updates user streak.")
+        .Produces<SubmitDailyDrillResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Protected Term Explanation (Backed by Semantic Cache, Rate Limited)
         group.MapPost("/explain-term", async (
@@ -90,13 +97,16 @@ public static class DailyFocusEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .RequireAuthorization()
         .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("ExplainTerm")
         .WithSummary("Explain Technical Term")
-        .WithDescription("Provides instant AI terminology explanation tooltip backed by semantic vector cache.");
+        .WithDescription("Provides instant AI terminology explanation tooltip backed by semantic vector cache.")
+        .Produces<ExplainTermResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
         // Protected Active Book Switcher (Requires Logged-In User)
         group.MapPost("/switch-book", async (
             [FromBody] SwitchBookBodyRequest body,
@@ -113,12 +123,15 @@ public static class DailyFocusEndpoints
             var result = await handler.ExecuteAsync(new SwitchBookRequest(userId.Value, body.BookId), ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .RequireAuthorization()
         .WithName("SwitchActiveBook")
         .WithSummary("Switch Active Book")
-        .WithDescription("Switches the user's currently active reading book pacer.");
+        .WithDescription("Switches the user's currently active reading book pacer.")
+        .Produces<PacerDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Priority Promotion / On-Demand Challenge Generation for Chunk
         group.MapGet("/chunk-challenge/{chunkId:guid}", async (
@@ -148,7 +161,10 @@ public static class DailyFocusEndpoints
         .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("GetOrGenerateChunkChallenge")
         .WithSummary("Get Chunk Challenge")
-        .WithDescription("Retrieves or triggers high-priority generation for a slice's senior trade-off scenario.");
+        .WithDescription("Retrieves or triggers high-priority generation for a slice's senior trade-off scenario.")
+        .Produces<InterviewQuestionDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
         return group;
     }
 

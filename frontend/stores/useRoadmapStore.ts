@@ -46,7 +46,7 @@ export const useRoadmapStore = defineStore('roadmap', () => {
       const response = await api.get<CurriculumRoadmapData>('/api/v1/curriculum/roadmap')
       roadmapData.value = response
     } catch (err: any) {
-      error.value = err?.data?.error || err?.message || 'Failed to load curriculum roadmap.'
+      error.value = err?.data?.detail || err?.message || 'Failed to load curriculum roadmap.'
     } finally {
       isLoading.value = false
     }

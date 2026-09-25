@@ -292,16 +292,12 @@ describe('pages/login.vue', () => {
     await wrapper.find('input[type="password"]').setValue('password123')
     await wrapper.find('form').trigger('submit.prevent')
 
-    expect(loginSpy).toHaveBeenCalledWith('user@example.com', 'password123')
+    expect(loginSpy).toHaveBeenCalledWith('user@example.com', 'password123', true)
   })
 
-  it('submits register credentials when form is valid', async () => {
+  it('submits register request (step 1) and advances to the OTP code step', async () => {
     const authStore = useAuthStore()
-    const mockAuthResponse = {
-      token: 'mock-token',
-      user: { id: 'u1', email: 'alex@example.com', name: 'Alex Morgan', preferredLocale: 'en' }
-    }
-    const registerSpy = vi.spyOn(authStore, 'register').mockResolvedValue(mockAuthResponse)
+    const registerSpy = vi.spyOn(authStore, 'registerRequest').mockResolvedValue({ email: 'alex@example.com' })
 
     const wrapper = mount(LoginPage, {
       global: {
@@ -322,17 +318,17 @@ describe('pages/login.vue', () => {
     await passwordInputs[1].setValue('SecurePass123!')
 
     await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
 
+    // Step 1 posts the pending registration; no session is issued yet.
     expect(registerSpy).toHaveBeenCalledWith('alex@example.com', 'SecurePass123!', 'Alex Morgan', 'en')
+    // The UI advances to the code-entry sub-step.
+    expect(wrapper.find('#otpCode').exists()).toBe(true)
   })
 
   it('validates required fields before submitting register', async () => {
     const authStore = useAuthStore()
-    const mockAuthResponse = {
-      token: 'mock-token',
-      user: { id: 'u1', email: 'alex@example.com', name: 'Alex Morgan', preferredLocale: 'en' }
-    }
-    const registerSpy = vi.spyOn(authStore, 'register').mockResolvedValue(mockAuthResponse)
+    const registerSpy = vi.spyOn(authStore, 'registerRequest').mockResolvedValue({ email: 'alex@example.com' })
     const wrapper = mount(LoginPage, {
       global: {
         stubs: {
@@ -409,7 +405,11 @@ describe('pages/login.vue', () => {
     expect(wrapper.find('[data-testid="theme-toggle"]').exists()).toBe(true)
   })
 
-  it('switches to forgot-password mode and submits email for password reset', async () => {
+  it('runs the two-step forgot-password OTP flow and returns to sign-in after reset', async () => {
+    const authStore = useAuthStore()
+    const forgotSpy = vi.spyOn(authStore, 'forgotPassword').mockResolvedValue({ message: 'ok' })
+    const resetSpy = vi.spyOn(authStore, 'resetPassword').mockResolvedValue({ message: 'ok' })
+
     const wrapper = mount(LoginPage, {
       global: {
         stubs: {
@@ -420,24 +420,32 @@ describe('pages/login.vue', () => {
       }
     })
 
-    // Click "Forgot password?"
+    // Enter recovery mode
     const forgotLink = wrapper.findAll('button').find(b => b.text().includes('auth.forgot_password_link'))
     expect(forgotLink).toBeDefined()
     await forgotLink!.trigger('click')
     await flushPromises()
-
-    // Header updates to recovery title
     expect(wrapper.text()).toContain('auth.recover_cockpit_title')
-    expect(wrapper.text()).toContain('auth.recover_cockpit_subtitle')
-    // Submit with email
-    const emailInput = wrapper.find('input[type="email"]')
-    await emailInput.setValue('developer@techdaily.io')
 
-    const form = wrapper.find('form')
-    await form.trigger('submit.prevent')
+    // Step 1: submit email -> requests a reset code
+    await wrapper.find('input[type="email"]').setValue('developer@techdaily.io')
+    await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
 
-    // Mode returns to login after reset link is sent
+    expect(forgotSpy).toHaveBeenCalledWith('developer@techdaily.io')
+    // Advances to the OTP + new-password sub-step
+    expect(wrapper.find('#otpCode').exists()).toBe(true)
+    expect(wrapper.find('#newPassword').exists()).toBe(true)
+
+    // Step 2: enter code + new password -> resets and revokes sessions
+    await wrapper.find('#otpCode').setValue('123456')
+    await wrapper.find('#newPassword').setValue('brandnew123')
+    await wrapper.find('#confirmNewPassword').setValue('brandnew123')
+    await wrapper.find('form').trigger('submit.prevent')
+    await flushPromises()
+
+    expect(resetSpy).toHaveBeenCalledWith('developer@techdaily.io', '123456', 'brandnew123')
+    // Returns to sign-in after a successful reset
     expect(wrapper.text()).toContain('auth.welcome_title')
   })
 

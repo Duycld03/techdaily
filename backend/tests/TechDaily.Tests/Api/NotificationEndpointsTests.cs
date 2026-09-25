@@ -344,13 +344,13 @@ public class NotificationEndpointsTests : IAsyncLifetime
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
         var body = await response.Content.ReadFromJsonAsync<TestPushErrorResponse>();
         body.Should().NotBeNull();
         body!.Code.Should().Be("PUSH_SUBSCRIPTION_EXPIRED");
-        body.Details.Should().NotBeNull();
-        body.Details!.Sent.Should().Be(0);
-        body.Details.Total.Should().Be(1);
-        body.Details.StalePurged.Should().Be(1);
+        body.Sent.Should().Be(0);
+        body.Total.Should().Be(1);
+        body.StalePurged.Should().Be(1);
 
         using (var db = CreateDbContext())
         {
@@ -445,16 +445,16 @@ public class NotificationEndpointsTests : IAsyncLifetime
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
         var body = await response.Content.ReadFromJsonAsync<TestPushErrorResponse>();
         body.Should().NotBeNull();
         body!.Code.Should().Be("PUSH_NO_SUBSCRIPTIONS");
-        body.Error.Should().Be("No active push subscriptions found for this device.");
-        body.Details.Should().BeNull();
+        body.Detail.Should().Be("No active push subscriptions found for this device.");
+        body.Sent.Should().BeNull();
     }
 
     private record TestPushSuccessResponse(bool Success, int Sent, int Total, int StalePurged);
-    private record TestPushErrorDetails(int Sent, int Total, int StalePurged);
-    private record TestPushErrorResponse(string Code, string Error, TestPushErrorDetails? Details);
+    private record TestPushErrorResponse(string? Detail, string? Code, int? Sent, int? Total, int? StalePurged);
 
     private class MockWebPushService : IWebPushService
     {

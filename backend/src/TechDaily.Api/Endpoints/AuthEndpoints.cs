@@ -5,6 +5,8 @@ using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using TechDaily.Api.Contracts;
+using TechDaily.Api.Http;
 using TechDaily.Application.Common;
 using TechDaily.Application.Interfaces;
 using TechDaily.Domain.Entities;
@@ -28,68 +30,47 @@ public static class AuthEndpoints
         // Standard Email & Password Registration
         group.MapPost("/register", async (
             [FromBody] RegisterRequest request,
-            HttpContext context,
             TechDailyDbContext db,
-            IRefreshTokenService tokenService,
-            IStarterHandbookService starterHandbookService,
+            IOtpService otpService,
             CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return Results.BadRequest(new { code = Error.EmailPasswordRequired.Code, error = Error.EmailPasswordRequired.Message });
+                return Error.EmailPasswordRequired.ToProblem(StatusCodes.Status400BadRequest);
             }
 
             if (request.Password.Length < 8)
             {
-                return Results.BadRequest(new { code = "AUTH_PASSWORD_TOO_SHORT", error = "Password must be at least 8 characters long." });
+                return new Error("AUTH_PASSWORD_TOO_SHORT", "Password must be at least 8 characters long.").ToProblem(StatusCodes.Status400BadRequest);
             }
 
             var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-            var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
-            if (existingUser != null)
+            var exists = await db.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail, ct);
+            if (exists)
             {
-                return Results.BadRequest(new { code = Error.EmailExists.Code, error = Error.EmailExists.Message });
+                return Error.EmailExists.ToProblem(StatusCodes.Status409Conflict);
             }
 
-            var user = new User
+            var name = string.IsNullOrWhiteSpace(request.Name) ? normalizedEmail.Split('@')[0] : request.Name.Trim();
+            var locale = request.Locale ?? "en";
+            var pending = new PendingRegistration(name, PasswordHasher.HashPassword(request.Password), locale);
+
+            var result = await otpService.RequestAsync(normalizedEmail, OtpPurpose.EmailVerification, pending, locale, ct);
+            if (result.IsFailure)
             {
-                Email = normalizedEmail,
-                Name = string.IsNullOrWhiteSpace(request.Name) ? normalizedEmail.Split('@')[0] : request.Name.Trim(),
-                PasswordHash = PasswordHasher.HashPassword(request.Password),
-                PreferredLocale = request.Locale ?? "en",
-                TargetRole = "Senior Engineer",
-                DailyGoalMinutes = 10
-            };
+                return result.Error.ToProblem();
+            }
 
-            await db.Users.AddAsync(user);
-
-            var streak = StreakRecord.Create(user.Id);
-            await db.StreakRecords.AddAsync(streak);
-
-            await db.SaveChangesAsync(ct);
-
-            await starterHandbookService.ProvisionForUserAsync(user.Id, ct);
-            var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
-            SetRefreshTokenCookie(context, rawRefreshToken);
-
-            var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience, jwtExpiryMinutes);
-            return Results.Ok(new
-            {
-                Token = token,
-                User = new
-                {
-                    user.Id,
-                    user.Email,
-                    user.Name,
-                    user.PreferredLocale,
-                    user.TargetRole,
-                    user.DailyGoalMinutes
-                }
-            });
+            // Step 1 of OTP-first registration: no session is issued until the code is verified.
+            return Results.Ok(new OtpChallengeResponse(normalizedEmail));
         })
         .WithName("Register")
-        .WithSummary("Register User")
-        .WithDescription("Registers a new user with standard email and password.");
+        .WithSummary("Register User (request email verification code)")
+        .WithDescription("Validates the input, stores a pending registration, and emails a verification code. No account or session is created until the code is verified.")
+        .Produces<OtpChallengeResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .RequireRateLimiting("OtpEndpointsPolicy");
 
         // Standard Email & Password Login
         group.MapPost("/login", async (
@@ -100,7 +81,7 @@ public static class AuthEndpoints
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return Results.BadRequest(new { code = Error.EmailPasswordRequired.Code, error = Error.EmailPasswordRequired.Message });
+                return Error.EmailPasswordRequired.ToProblem(StatusCodes.Status400BadRequest);
             }
 
             var normalizedEmail = request.Email.Trim().ToLowerInvariant();
@@ -108,12 +89,12 @@ public static class AuthEndpoints
 
             if (user == null || string.IsNullOrWhiteSpace(user.PasswordHash))
             {
-                return Results.BadRequest(new { code = Error.InvalidCredentials.Code, error = Error.InvalidCredentials.Message });
+                return Error.InvalidCredentials.ToProblem(StatusCodes.Status400BadRequest);
             }
 
             if (!PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
             {
-                return Results.BadRequest(new { code = Error.InvalidCredentials.Code, error = Error.InvalidCredentials.Message });
+                return Error.InvalidCredentials.ToProblem(StatusCodes.Status400BadRequest);
             }
 
             // Automatic password rehash migration if iterations were upgraded
@@ -124,28 +105,26 @@ public static class AuthEndpoints
                 await db.SaveChangesAsync();
             }
 
-            var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id);
-            SetRefreshTokenCookie(context, rawRefreshToken);
+            var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id, isPersistent: request.RememberMe);
+            SetRefreshTokenCookie(context, rawRefreshToken, request.RememberMe);
 
             var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience, jwtExpiryMinutes);
-            return Results.Ok(new
-            {
-                Token = token,
-                User = new
-                {
-                    user.Id,
-                    user.Email,
-                    user.Name,
-                    user.PreferredLocale,
-                    user.TargetRole,
-                    user.DailyGoalMinutes,
-                    user.AvatarUrl
-                }
-            });
+            return Results.Ok(new AuthSessionResponse(
+                Token: token,
+                User: new AuthUserDto(
+                    Id: user.Id,
+                    Email: user.Email,
+                    Name: user.Name,
+                    PreferredLocale: user.PreferredLocale,
+                    TargetRole: user.TargetRole,
+                    DailyGoalMinutes: user.DailyGoalMinutes,
+                    AvatarUrl: user.AvatarUrl)));
         })
         .WithName("Login")
         .WithSummary("Login User")
-        .WithDescription("Authenticates user with standard email and password.");
+        .WithDescription("Authenticates user with standard email and password.")
+        .Produces<AuthSessionResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
 
         // Google OAuth Login
         group.MapPost("/google", async (
@@ -163,7 +142,7 @@ public static class AuthEndpoints
 
             if (string.IsNullOrWhiteSpace(clientId))
             {
-                return Results.BadRequest(new { code = Error.GoogleNotConfigured.Code, error = Error.GoogleNotConfigured.Message });
+                return Error.GoogleNotConfigured.ToProblem(StatusCodes.Status400BadRequest);
             }
 
             GoogleJsonWebSignature.Payload payload;
@@ -179,7 +158,7 @@ public static class AuthEndpoints
             catch (Exception ex)
             {
                 Console.WriteLine($"[GoogleAuth Error] Token validation failed: {ex.Message}");
-                return Results.BadRequest(new { code = Error.GoogleTokenInvalid.Code, error = "Invalid Google token: " + ex.Message });
+                return new Error(Error.GoogleTokenInvalid.Code, "Invalid Google token: " + ex.Message).ToProblem(StatusCodes.Status400BadRequest);
             }
 
             var user = await db.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
@@ -244,24 +223,22 @@ public static class AuthEndpoints
             SetRefreshTokenCookie(context, rawRefreshToken);
 
             var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience, jwtExpiryMinutes);
-            return Results.Ok(new
-            {
-                Token = token,
-                User = new
-                {
-                    user.Id,
-                    user.Email,
-                    user.Name,
-                    user.PreferredLocale,
-                    user.AvatarUrl,
-                    user.TargetRole,
-                    user.DailyGoalMinutes
-                }
-            });
+            return Results.Ok(new AuthSessionResponse(
+                Token: token,
+                User: new AuthUserDto(
+                    Id: user.Id,
+                    Email: user.Email,
+                    Name: user.Name,
+                    PreferredLocale: user.PreferredLocale,
+                    TargetRole: user.TargetRole,
+                    DailyGoalMinutes: user.DailyGoalMinutes,
+                    AvatarUrl: user.AvatarUrl)));
         })
         .WithName("GoogleLogin")
         .WithSummary("Google Login")
-        .WithDescription("Authenticates with Google ID token and returns app JWT.");
+        .WithDescription("Authenticates with Google ID token and returns app JWT.")
+        .Produces<AuthSessionResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest);
 
         // Refresh Token Rotation
         group.MapPost("/refresh", async (
@@ -271,38 +248,36 @@ public static class AuthEndpoints
             var rawToken = context.Request.Cookies["refreshToken"];
             if (string.IsNullOrWhiteSpace(rawToken))
             {
-                return Results.Json(new { code = "AUTH_INVALID_CREDENTIALS", error = "Refresh token is missing." }, statusCode: StatusCodes.Status401Unauthorized);
+                return new Error("AUTH_INVALID_CREDENTIALS", "Refresh token is missing.").ToProblem(StatusCodes.Status401Unauthorized);
             }
 
             var rotateResult = await tokenService.RotateTokenAsync(rawToken);
             if (!rotateResult.IsSuccess)
             {
                 ClearRefreshTokenCookie(context);
-                return Results.Json(new { code = rotateResult.Error.Code, error = rotateResult.Error.Message }, statusCode: StatusCodes.Status401Unauthorized);
+                return rotateResult.Error.ToProblem(StatusCodes.Status401Unauthorized);
             }
 
-            var (newRawToken, _, user) = rotateResult.Value;
-            SetRefreshTokenCookie(context, newRawToken);
+            var (newRawToken, newToken, user) = rotateResult.Value;
+            SetRefreshTokenCookie(context, newRawToken, newToken.IsPersistent);
 
             var newAccessToken = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience, jwtExpiryMinutes);
-            return Results.Ok(new
-            {
-                Token = newAccessToken,
-                User = new
-                {
-                    user.Id,
-                    user.Email,
-                    user.Name,
-                    user.PreferredLocale,
-                    user.TargetRole,
-                    user.DailyGoalMinutes,
-                    user.AvatarUrl
-                }
-            });
+            return Results.Ok(new AuthSessionResponse(
+                Token: newAccessToken,
+                User: new AuthUserDto(
+                    Id: user.Id,
+                    Email: user.Email,
+                    Name: user.Name,
+                    PreferredLocale: user.PreferredLocale,
+                    TargetRole: user.TargetRole,
+                    DailyGoalMinutes: user.DailyGoalMinutes,
+                    AvatarUrl: user.AvatarUrl)));
         })
         .WithName("RefreshToken")
         .WithSummary("Refresh Access Token")
-        .WithDescription("Rotates refresh token and issues a new access token.");
+        .WithDescription("Rotates refresh token and issues a new access token.")
+        .Produces<AuthSessionResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Revoke Token / Logout
         group.MapPost("/revoke", async (
@@ -319,7 +294,194 @@ public static class AuthEndpoints
         })
         .WithName("RevokeToken")
         .WithSummary("Revoke Token")
-        .WithDescription("Revokes refresh token family and clears the cookie.");
+        .WithDescription("Revokes refresh token family and clears the cookie.")
+        .Produces(StatusCodes.Status204NoContent);
+
+        // Register Step 2: verify the emailed code, create the account, and sign in
+        group.MapPost("/register/verify", async (
+            [FromBody] VerifyRegistrationRequest request,
+            HttpContext context,
+            TechDailyDbContext db,
+            IOtpService otpService,
+            IRefreshTokenService tokenService,
+            IStarterHandbookService starterHandbookService,
+            CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Code))
+            {
+                return Error.OtpInvalid.ToProblem();
+            }
+
+            var verify = await otpService.VerifyAsync(request.Email, OtpPurpose.EmailVerification, request.Code, ct);
+            if (verify.IsFailure)
+            {
+                return verify.Error.ToProblem();
+            }
+
+            var otp = verify.Value;
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+            if (await db.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail, ct))
+            {
+                return Error.EmailExists.ToProblem(StatusCodes.Status409Conflict);
+            }
+
+            if (string.IsNullOrWhiteSpace(otp.PendingPasswordHash))
+            {
+                return Error.OtpInvalid.ToProblem();
+            }
+
+            var user = new User
+            {
+                Email = normalizedEmail,
+                Name = string.IsNullOrWhiteSpace(otp.PendingName) ? normalizedEmail.Split('@')[0] : otp.PendingName!,
+                PasswordHash = otp.PendingPasswordHash!,
+                PreferredLocale = otp.PendingLocale ?? "en",
+                TargetRole = "Senior Engineer",
+                DailyGoalMinutes = 10
+            };
+
+            await db.Users.AddAsync(user, ct);
+            await db.StreakRecords.AddAsync(StreakRecord.Create(user.Id), ct);
+            await db.SaveChangesAsync(ct);
+
+            await starterHandbookService.ProvisionForUserAsync(user.Id, ct);
+
+            var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id, isPersistent: request.RememberMe);
+            SetRefreshTokenCookie(context, rawRefreshToken, request.RememberMe);
+
+            var token = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience, jwtExpiryMinutes);
+            return Results.Ok(new AuthSessionResponse(
+                Token: token,
+                User: new AuthUserDto(
+                    Id: user.Id,
+                    Email: user.Email,
+                    Name: user.Name,
+                    PreferredLocale: user.PreferredLocale,
+                    TargetRole: user.TargetRole,
+                    DailyGoalMinutes: user.DailyGoalMinutes,
+                    AvatarUrl: user.AvatarUrl)));
+        })
+        .WithName("RegisterVerify")
+        .WithSummary("Verify Registration Code")
+        .WithDescription("Verifies the email OTP, creates the user, provisions starter content, and returns an authenticated session.")
+        .Produces<AuthSessionResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .RequireRateLimiting("OtpEndpointsPolicy");
+
+        // Forgot Password: always 200 (anti-enumeration); emails a reset code if the account exists
+        group.MapPost("/forgot-password", async (
+            [FromBody] ForgotPasswordRequest request,
+            TechDailyDbContext db,
+            IOtpService otpService,
+            CancellationToken ct) =>
+        {
+            if (!string.IsNullOrWhiteSpace(request.Email))
+            {
+                var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+                var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, ct);
+                if (user != null)
+                {
+                    // Ignore cooldown result to avoid leaking existence; transport failures still surface as 500.
+                    await otpService.RequestAsync(normalizedEmail, OtpPurpose.PasswordReset, null, user.PreferredLocale, ct);
+                }
+            }
+
+            return Results.Ok(new OtpMessageResponse("If the email is registered, a reset code has been sent."));
+        })
+        .WithName("ForgotPassword")
+        .WithSummary("Request Password Reset Code")
+        .WithDescription("Sends a password reset OTP when the email is registered. Always returns 200 to prevent account enumeration.")
+        .Produces<OtpMessageResponse>(StatusCodes.Status200OK)
+        .RequireRateLimiting("OtpEndpointsPolicy");
+
+        // Reset Password: verify code, set new hash, revoke all sessions
+        group.MapPost("/reset-password", async (
+            [FromBody] ResetPasswordRequest request,
+            HttpContext context,
+            TechDailyDbContext db,
+            IOtpService otpService,
+            IRefreshTokenService tokenService,
+            CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Code))
+            {
+                return Error.OtpInvalid.ToProblem();
+            }
+
+            if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8)
+            {
+                return new Error("AUTH_PASSWORD_TOO_SHORT", "Password must be at least 8 characters long.").ToProblem(StatusCodes.Status400BadRequest);
+            }
+
+            var verify = await otpService.VerifyAsync(request.Email, OtpPurpose.PasswordReset, request.Code, ct);
+            if (verify.IsFailure)
+            {
+                return verify.Error.ToProblem();
+            }
+
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, ct);
+            if (user == null)
+            {
+                return Error.InvalidCredentials.ToProblem(StatusCodes.Status400BadRequest);
+            }
+
+            user.PasswordHash = PasswordHasher.HashPassword(request.NewPassword);
+            user.MarkUpdated();
+            await db.SaveChangesAsync(ct);
+
+            // A credential change signs the account out of every device.
+            await tokenService.RevokeAllForUserAsync(user.Id, ct);
+            ClearRefreshTokenCookie(context);
+
+            return Results.Ok(new OtpMessageResponse("Password has been reset. Please sign in again."));
+        })
+        .WithName("ResetPassword")
+        .WithSummary("Reset Password")
+        .WithDescription("Verifies the reset OTP, updates the password, and revokes all refresh token families for the user.")
+        .Produces<OtpMessageResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .RequireRateLimiting("OtpEndpointsPolicy");
+
+        // Resend an OTP (subject to the 60s cooldown)
+        group.MapPost("/otp/resend", async (
+            [FromBody] ResendOtpRequest request,
+            TechDailyDbContext db,
+            IOtpService otpService,
+            CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Email)
+                || string.IsNullOrWhiteSpace(request.Purpose)
+                || !Enum.TryParse<OtpPurpose>(request.Purpose, ignoreCase: true, out var purpose))
+            {
+                return Error.OtpInvalid.ToProblem();
+            }
+
+            var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+            if (purpose == OtpPurpose.PasswordReset)
+            {
+                var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, ct);
+                if (user == null)
+                {
+                    return Results.Ok(new OtpMessageResponse("If the email is registered, a reset code has been sent."));
+                }
+
+                var reset = await otpService.RequestAsync(normalizedEmail, OtpPurpose.PasswordReset, null, user.PreferredLocale, ct);
+                return reset.IsFailure ? reset.Error.ToProblem() : Results.Ok(new OtpChallengeResponse(normalizedEmail));
+            }
+
+            var resend = await otpService.RequestAsync(normalizedEmail, OtpPurpose.EmailVerification, null, null, ct);
+            return resend.IsFailure ? resend.Error.ToProblem() : Results.Ok(new OtpChallengeResponse(normalizedEmail));
+        })
+        .WithName("ResendOtp")
+        .WithSummary("Resend OTP")
+        .WithDescription("Re-issues a verification or password reset code, subject to the resend cooldown.")
+        .Produces<OtpChallengeResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests)
+        .RequireRateLimiting("OtpEndpointsPolicy");
 
         return group;
     }
@@ -330,17 +492,21 @@ public static class AuthEndpoints
                string.Equals(context.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void SetRefreshTokenCookie(HttpContext context, string refreshToken)
+    private static void SetRefreshTokenCookie(HttpContext context, string refreshToken, bool persistent = true)
     {
         var isHttps = IsHttpsRequest(context);
-        context.Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+        var options = new CookieOptions
         {
             HttpOnly = true,
             Secure = isHttps,
             SameSite = SameSiteMode.Lax,
-            Path = "/api/v1/auth",
-            Expires = DateTimeOffset.UtcNow.AddDays(30)
-        });
+            Path = "/api/v1/auth"
+        };
+        if (persistent)
+        {
+            options.MaxAge = TimeSpan.FromDays(30);
+        }
+        context.Response.Cookies.Append("refreshToken", refreshToken, options);
     }
 
     private static void ClearRefreshTokenCookie(HttpContext context)
@@ -379,6 +545,12 @@ public static class AuthEndpoints
     }
 }
 
-public record RegisterRequest(string Email, string Password, string? Name = null, string? Locale = "en");
-public record LoginRequest(string Email, string Password);
+public record RegisterRequest(string Email, string Password, string? Name = null, string? Locale = "en", bool RememberMe = true);
+public record LoginRequest(string Email, string Password, bool RememberMe = true);
 public record GoogleAuthRequest(string IdToken);
+public record VerifyRegistrationRequest(string Email, string Code, bool RememberMe = true);
+public record ForgotPasswordRequest(string Email);
+public record ResetPasswordRequest(string Email, string Code, string NewPassword);
+public record ResendOtpRequest(string Email, string Purpose);
+public record OtpChallengeResponse(string Email);
+public record OtpMessageResponse(string Message);

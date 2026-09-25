@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: techdaily_db
       POSTGRES_USER: techdaily_user
-      POSTGRES_PASSWORD: techdaily_password_secret
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-techdaily_password_secret}"
     ports:
       - "5432:5432"
     volumes:

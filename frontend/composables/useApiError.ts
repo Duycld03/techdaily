@@ -103,10 +103,6 @@ export function useApiError() {
       if (typeof responseData.detail === 'string') {
         return responseData.detail
       }
-      // If responseData?.error (string), return responseData.error
-      if (typeof responseData.error === 'string') {
-        return responseData.error
-      }
     }
 
     // Only if none of the above are present, fall back to fallbackKey ? t(fallbackKey) : t('common.error')

@@ -30,6 +30,7 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
     public DbSet<UserBookPacer> UserBookPacers => Set<UserBookPacer>();
     public DbSet<UserPushSubscription> UserPushSubscriptions => Set<UserPushSubscription>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<EmailOtp> EmailOtps => Set<EmailOtp>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

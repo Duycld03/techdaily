@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using TechDaily.Api.Contracts;
 using TechDaily.Application.Interfaces;
 
 namespace TechDaily.Api.Endpoints;
@@ -21,15 +22,16 @@ public static class SystemEndpoints
 
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                return Results.Json(new
-                {
-                    status = "unhealthy",
-                    textModel = "unhealthy",
-                    embeddingModel = "unhealthy",
-                    dimension = (int?)null,
-                    error = "Gemini API key is not configured.",
-                    timestamp = DateTime.UtcNow
-                }, statusCode: 503);
+                return Results.Json(new AiHealthResponse(
+                    Status: "unhealthy",
+                    TextModel: "unhealthy",
+                    TextLatencyMs: 0,
+                    EmbeddingModel: "unhealthy",
+                    EmbeddingLatencyMs: 0,
+                    Dimension: 0,
+                    Details: null,
+                    Timestamp: DateTime.UtcNow,
+                    Error: "Gemini API key is not configured."), statusCode: StatusCodes.Status503ServiceUnavailable);
             }
 
             long textLatencyMs = 0;
@@ -112,16 +114,14 @@ public static class SystemEndpoints
             if (textError != null || embError != null)
             {
                 var combinedError = string.Join("; ", new[] { textError, embError }.Where(e => !string.IsNullOrEmpty(e)));
-                return Results.Json(new
-                {
-                    status = "unhealthy",
-                    textModel = textError == null ? textModel : "unhealthy",
-                    embeddingModel = embError == null ? embeddingModel : "unhealthy",
-                    textLatencyMs,
-                    embeddingLatencyMs = embLatencyMs,
-                    dimension = returnedDimension,
-                    error = combinedError,
-                    details = new
+                return Results.Json(new AiHealthResponse(
+                    Status: "unhealthy",
+                    TextModel: textError == null ? textModel : "unhealthy",
+                    TextLatencyMs: textLatencyMs,
+                    EmbeddingModel: embError == null ? embeddingModel : "unhealthy",
+                    EmbeddingLatencyMs: embLatencyMs,
+                    Dimension: returnedDimension ?? 0,
+                    Details: new
                     {
                         text = new
                         {
@@ -139,19 +139,18 @@ public static class SystemEndpoints
                             error = embError
                         }
                     },
-                    timestamp = DateTime.UtcNow
-                }, statusCode: 503);
+                    Timestamp: DateTime.UtcNow,
+                    Error: combinedError), statusCode: StatusCodes.Status503ServiceUnavailable);
             }
 
-            return Results.Ok(new
-            {
-                status = "healthy",
-                textModel = "gemini-3.5-flash-lite",
-                textLatencyMs,
-                embeddingModel = "gemini-embedding-001",
-                embeddingLatencyMs = embLatencyMs,
-                dimension = 768,
-                details = new
+            return Results.Ok(new AiHealthResponse(
+                Status: "healthy",
+                TextModel: "gemini-3.5-flash-lite",
+                TextLatencyMs: textLatencyMs,
+                EmbeddingModel: "gemini-embedding-001",
+                EmbeddingLatencyMs: embLatencyMs,
+                Dimension: 768,
+                Details: new
                 {
                     text = new
                     {
@@ -167,13 +166,14 @@ public static class SystemEndpoints
                         latencyMs = embLatencyMs
                     }
                 },
-                timestamp = DateTime.UtcNow
-            });
+                Timestamp: DateTime.UtcNow));
         })
         .WithName("GetAiHealth")
         .WithSummary("Probe AI Health")
         .WithDescription("Probes live Google Gemini text generation and embedding endpoints.")
-        .AllowAnonymous();
+        .AllowAnonymous()
+        .Produces<AiHealthResponse>(StatusCodes.Status200OK)
+        .Produces<AiHealthResponse>(StatusCodes.Status503ServiceUnavailable);
 
         return group;
     }

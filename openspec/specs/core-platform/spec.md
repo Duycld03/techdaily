@@ -217,41 +217,45 @@ All backend C# code, frontend Vue/TypeScript code, variable names, database enti
 - **THEN** all code symbols, class names, variable identifiers, and comments are strictly in English.
 
 ### Requirement: Standardized Machine-Readable Error Response Envelope
-All API endpoints returning error responses (HTTP 4xx and 5xx) SHALL include a structured JSON envelope containing:
-- `code` (string): Unique uppercase snake_case machine-readable identifier (e.g. `RESOURCE_NOT_FOUND`, `AUTH_INVALID_CREDENTIALS`).
-- `error` (string): English developer-facing descriptive error message.
-- `details` (object or null): Optional structured metadata or validation failure details.
+All API endpoints returning error responses (HTTP 4xx and 5xx) SHALL emit an RFC 7807 `application/problem+json` body containing:
+- `type` (string): A URI reference identifying the problem type.
+- `title` (string): A short, human-readable summary of the problem category (e.g. `Bad Request`, `Not Found`, `Conflict`).
+- `status` (number): The HTTP status code.
+- `detail` (string): English developer-facing descriptive message for this specific occurrence.
+- `code` (string, problem extension): Unique uppercase snake_case machine-readable identifier (e.g. `RESOURCE_NOT_FOUND`, `AUTH_INVALID_CREDENTIALS`), carried as a problem-details extension member so clients retain a stable error identifier.
+
+Additional extension members MAY carry structured metadata (for example, push delivery counts) alongside `code`. There SHALL NOT be a separate top-level `error` string or a top-level `details` object; the human-readable message is `detail` and structured metadata rides in problem extensions. Error responses SHALL be served with `Content-Type: application/problem+json`.
 
 #### Scenario: Endpoint returns bad request error
 - **WHEN** client sends an invalid request
-- **THEN** server returns HTTP 400 with body `{ "code": "VALIDATION_FAILED", "error": "...", "details": null }`.
+- **THEN** server returns HTTP 400 with `Content-Type: application/problem+json` and a body containing `"status": 400`, a `"detail"` describing the failure, and `"code": "VALIDATION_FAILED"`.
 
 #### Scenario: Resource not found
 - **WHEN** client queries a non-existent entity
-- **THEN** server returns HTTP 404 with body `{ "code": "RESOURCE_NOT_FOUND", "error": "The requested resource was not found.", "details": null }`.
+- **THEN** server returns HTTP 404 with `Content-Type: application/problem+json` and a body containing `"status": 404`, `"detail": "The requested resource was not found."`, and `"code": "RESOURCE_NOT_FOUND"`.
 
 ---
 
 ### Requirement: Client-Side Dynamic Error Code Localization
-The web client (`useApiError` composable) SHALL resolve API error codes against the active i18n locale (`api_errors.<CODE>`). When an error code is present in the locale dictionary, the translated text SHALL take precedence over raw developer-facing English error messages (`responseData.error`). If no match is found, the system SHALL display the provided localized fallback message or generic localized error message.
+The web client (`useApiError` composable) SHALL resolve API error codes against the active i18n locale (`api_errors.<code>`), reading the `code` extension member from the RFC 7807 problem-details body. When the code is present in the locale dictionary, the translated text SHALL take precedence over the developer-facing problem-details `detail` message. If no match is found, the system SHALL display the problem-details `detail`, the caller-provided localized fallback message, or a generic localized error message.
 
 #### Scenario: API returns AUTH_INVALID_CREDENTIALS with Vietnamese locale
-- **WHEN** API responds with `{ "code": "AUTH_INVALID_CREDENTIALS", "error": "Invalid email or password." }` and client locale is `vi`
+- **WHEN** API responds with a problem-details body `{ "detail": "Invalid email or password.", "code": "AUTH_INVALID_CREDENTIALS" }` and client locale is `vi`
 - **THEN** client renders toast: "Email hoặc mật khẩu không chính xác."
 
 #### Scenario: API returns AUTH_INVALID_CREDENTIALS with English locale
-- **WHEN** API responds with `{ "code": "AUTH_INVALID_CREDENTIALS", "error": "Invalid email or password." }` and client locale is `en`
+- **WHEN** API responds with a problem-details body `{ "detail": "Invalid email or password.", "code": "AUTH_INVALID_CREDENTIALS" }` and client locale is `en`
 - **THEN** client renders toast: "Invalid email or password."
 
 #### Scenario: API returns error code with matching translation in locale dictionary
-- **WHEN** API responds with `{ "code": "PUSH_SUBSCRIPTION_EXPIRED", "error": "Push subscription has expired." }`
+- **WHEN** API responds with a problem-details body `{ "detail": "Push subscription has expired.", "code": "PUSH_SUBSCRIPTION_EXPIRED" }`
 - **AND** the active locale is Vietnamese (`vi`)
-- **THEN** `formatError` returns the localized message `"Đăng ký thông báo đẩy đã hết hạn. Vui lòng tắt và bật lại thông báo để làm mới."` (`api_errors.PUSH_SUBSCRIPTION_EXPIRED`) instead of the English `error` string.
+- **THEN** `formatError` returns the localized message `"Đăng ký thông báo đẩy đã hết hạn. Vui lòng tắt và bật lại thông báo để làm mới."` (`api_errors.PUSH_SUBSCRIPTION_EXPIRED`) instead of the `detail` string.
 
 #### Scenario: API returns error code without translation in locale dictionary
-- **WHEN** API responds with `{ "code": "UNKNOWN_ERROR_CODE", "error": "Something went wrong." }`
+- **WHEN** API responds with a problem-details body `{ "detail": "Something went wrong.", "code": "UNKNOWN_ERROR_CODE" }`
 - **AND** no matching entry exists in `api_errors`
-- **THEN** `formatError` falls back to `responseData.error` or the caller-provided `fallbackKey`.
+- **THEN** `formatError` falls back to the problem-details `detail` or the caller-provided `fallbackKey`.
 
 ---
 
@@ -996,7 +1000,7 @@ The global error boundary page (`frontend/error.vue`) and authentication views (
 ---
 
 ### Requirement: Interactive API Documentation & OpenAPI Explorer
-The backend system SHALL generate OpenAPI 3.1 specification metadata and serve an interactive developer API reference via `Scalar.AspNetCore` at route `/scalar/v1` during development environment runs. The API documentation SHALL support JWT Bearer authorization input, provide clean navigation, enforce concise operation summaries, and support automated TypeScript client generation:
+The backend system SHALL generate OpenAPI 3.1 specification metadata and serve an interactive developer API reference via `Scalar.AspNetCore` at route `/scalar/v1` during development environment runs. The API documentation SHALL support JWT Bearer authorization input, provide clean navigation, enforce concise operation summaries, expose complete and accurate per-operation response contracts (typed bodies and every producible status code), and support automated TypeScript client generation:
 
 1. **OpenAPI Security Requirement & Interactive Authorization**:
    - The OpenAPI document at `/openapi/v1.json` SHALL declare the HTTP Bearer JWT security scheme in `components.securitySchemes.Bearer`.
@@ -1017,6 +1021,24 @@ The backend system SHALL generate OpenAPI 3.1 specification metadata and serve a
 5. **Automated Frontend Client Contract Generation**:
    - The project SHALL provide an automated command (`npm run gen:api` in `frontend/package.json`) utilizing `openapi-typescript` that queries `/openapi/v1.json` and outputs strongly typed TypeScript interfaces to `frontend/types/api.generated.ts`.
 
+6. **Typed Success Response Body Schemas**:
+   - Every Minimal API endpoint that returns a payload SHALL declare its success response body schema in the OpenAPI document, so `/openapi/v1.json` and Scalar render the concrete response shape instead of an empty "No Body".
+   - Each endpoint's declared success schema SHALL reference a concrete named response type (a DTO), not an untyped/anonymous object. Endpoints that currently return inline anonymous objects (authentication, notifications, user profile, system AI health, and `/health`) SHALL expose named response DTOs.
+   - Endpoints producing a non-JSON payload (e.g. `text/markdown` file export) SHALL declare the produced content type and status rather than an inferred empty `200`.
+
+7. **Complete Producible Status-Code Documentation with RFC 7807 Errors**:
+   - Every endpoint SHALL document all status codes it can produce, not solely `200`. Success codes SHALL be documented with their body schema; error codes (`400`, `401`, `404`, `409` as applicable) SHALL be documented with the RFC 7807 `application/problem+json` problem-details schema.
+   - Authenticated endpoints (`.RequireAuthorization()`) SHALL document `401 Unauthorized`. Endpoints performing input validation SHALL document `400 Bad Request` (validation problem). Endpoints resolving a resource by identifier SHALL document `404 Not Found`.
+   - Domain and validation error responses returned by endpoints SHALL be emitted as RFC 7807 problem details (carrying the domain error `code`), replacing ad-hoc anonymous `{ code, error }` JSON bodies, so the documented error schema matches the body actually returned.
+
+8. **REST-Correct Runtime Status Codes & Documentation Parity**:
+   - Endpoints that persist a new domain resource and return its representation SHALL respond with `201 Created` (including a `Location` header where a canonical resource URL exists); mutations with no response body SHALL respond with `204 No Content`; reads and commands that return a payload SHALL respond with `200 OK`.
+   - Authentication/session endpoints (register, login, Google sign-in, token refresh) that return a session token payload SHALL respond with `200 OK` and are not treated as REST resource creation.
+   - The set of status codes documented for an operation SHALL equal the set of status codes the handler can actually emit; documented codes and runtime codes SHALL NOT diverge.
+
+9. **Technology-Agnostic Operation Copy**:
+   - Operation summaries and descriptions SHALL use current technology-agnostic domain language and SHALL NOT reference the retired fixed "30-day" curriculum program; the curriculum roadmap operation SHALL describe the handbook's core technical pillars without a fixed day-count framing.
+
 #### Scenario: Developer accesses interactive API documentation in development
 - **WHEN** a developer navigates to `/scalar/v1` in the development environment
 - **THEN** the system serves the Scalar API explorer rendered with dark theme (`ScalarTheme.Moon`)
@@ -1035,6 +1057,27 @@ The backend system SHALL generate OpenAPI 3.1 specification metadata and serve a
 - **WHEN** a developer runs `npm run gen:api` in the `frontend` directory with the backend running
 - **THEN** the CLI queries `http://localhost:5000/openapi/v1.json`
 - **AND** generates a clean TypeScript type definition file at `frontend/types/api.generated.ts` containing all endpoint paths, request bodies, and response schemas.
+
+#### Scenario: Developer inspects an authenticated read operation in Scalar
+- **WHEN** a developer opens an authenticated read operation (e.g. `GET /api/v1/curriculum/roadmap`) in Scalar
+- **THEN** the operation documents a `200 OK` response whose body schema is the concrete response DTO with its fields
+- **AND** the operation also documents a `401 Unauthorized` response using the RFC 7807 problem-details schema
+- **AND** the response panel is no longer an empty "No Body".
+
+#### Scenario: Developer inspects and calls a resource-creation operation
+- **WHEN** a developer inspects a resource-creation operation that persists a new entity (e.g. `POST /api/v1/insights/generate`, `POST /api/v1/review/cards/from-highlight`, `POST /api/v1/review/cards/from-quiz-mistake`)
+- **THEN** the operation documents a `201 Created` response with the created resource's body schema
+- **AND** invoking the operation at runtime returns HTTP `201`, matching the documented code.
+
+#### Scenario: Endpoint returns a domain error
+- **WHEN** an endpoint returns a domain or validation failure
+- **THEN** the response body is an RFC 7807 `application/problem+json` payload that includes the domain error `code`
+- **AND** the returned status code is one of the codes documented for that operation.
+
+#### Scenario: Curriculum roadmap operation copy is technology-agnostic
+- **WHEN** a developer reads the description of `GET /api/v1/curriculum/roadmap` in Scalar
+- **THEN** the description does not contain the phrase "30-day" or any fixed day-count program framing
+- **AND** it describes the handbook grouped into its core technical pillars.
 ---
 
 ### Requirement: Frontend Composable Utilities & DOM Lifecycle Hygiene

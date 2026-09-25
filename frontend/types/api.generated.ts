@@ -33,7 +33,7 @@ export interface paths {
         };
         /**
          * Get Curriculum Roadmap
-         * @description Retrieves the full 30-day curriculum roadmap grouped into 4 core technical modules with authenticated user progress.
+         * @description Retrieves the Senior Engineering Craft Handbook roadmap grouped into 4 core technical pillars with authenticated user progress.
          */
         get: operations["GetCurriculumRoadmap"];
         put?: never;
@@ -968,23 +968,147 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AiHealthResponse: {
+            status: string;
+            textModel: string;
+            /** Format: int64 */
+            textLatencyMs: number;
+            embeddingModel: string;
+            /** Format: int64 */
+            embeddingLatencyMs: number;
+            /** Format: int32 */
+            dimension: number;
+            details: unknown;
+            /** Format: date-time */
+            timestamp: string;
+            /** @default null */
+            error: string | null;
+        };
+        AuthSessionResponse: {
+            token: string;
+            user: components["schemas"]["AuthUserDto"];
+        };
+        AuthUserDto: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            name: string;
+            preferredLocale: string;
+            targetRole: string;
+            /** Format: int32 */
+            dailyGoalMinutes: number;
+            avatarUrl: string | null;
+        };
+        BookDetailDto: {
+            /** Format: uuid */
+            id?: string;
+            title?: string;
+            slug?: string;
+            sourceType?: components["schemas"]["SourceType"];
+            category?: components["schemas"]["Category"];
+            authorOrSourceUrl?: string | null;
+            /** Format: int32 */
+            totalChunks?: number;
+            isFeatured?: boolean;
+            status?: components["schemas"]["ProcessingStatus"];
+            /** Format: int32 */
+            progressPercentage?: number;
+            statusMessage?: string | null;
+            chunks?: components["schemas"]["ChunkSummaryDto"][];
+        };
+        BookDto: {
+            /** Format: uuid */
+            id?: string;
+            title?: string;
+            slug?: string;
+            sourceType?: components["schemas"]["SourceType"];
+            category?: components["schemas"]["Category"];
+            authorOrSourceUrl?: string | null;
+            /** Format: int32 */
+            totalChunks?: number;
+            isPublished?: boolean;
+            isFeatured?: boolean;
+            status?: components["schemas"]["ProcessingStatus"];
+            /** Format: int32 */
+            progressPercentage?: number;
+            statusMessage?: string | null;
+            errorMessage?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        BookIngestionStatusDto: {
+            /** Format: uuid */
+            id?: string;
+            status?: components["schemas"]["ProcessingStatus"];
+            /** Format: int32 */
+            progressPercentage?: number;
+            statusMessage?: string | null;
+            errorMessage?: string | null;
+            /** Format: int32 */
+            totalChunks?: number;
+        };
+        BookmarkInsightResponse: {
+            /** Format: uuid */
+            insightId: string;
+            isBookmarked: boolean;
+            /** Format: int32 */
+            totalBookmarks: number;
+        };
+        /** @enum {unknown} */
+        CardSourceType: "Topic" | "Highlight" | "QuizMistake";
+        /** @enum {unknown} */
+        CardStatus: "Learning" | "Reviewing" | "Mastered";
         /** @enum {unknown} */
         Category: "FrontendWeb" | "BackendRuntime" | "BackendDotNet" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft";
         ChangePasswordRequest: {
             currentPassword: string | null;
             newPassword: string;
         };
+        ChunkSummaryDto: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: int32 */
+            chunkOrder?: number;
+            chapterTitle?: string;
+            summaryMarkdown?: string;
+            originalTextMarkdown?: string;
+            keyTakeaways?: string[];
+            /** Format: int32 */
+            estimatedReadMinutes?: number;
+            isAiFormatted?: boolean;
+        };
         CrawlUrlRequest: {
             url: string;
+        };
+        CrawlUrlResponse: {
+            title: string;
+            sourceUrl: string;
+            markdownContent: string;
+            /** Format: int32 */
+            estimatedWordCount: number;
+            /** @default false */
+            isPdfDetected: boolean;
+            /** @default null */
+            detectedPdfUrl: string | null;
         };
         CreateCardFromHighlightJsonRequest: {
             /** Format: uuid */
             highlightId?: string;
             locale?: string | null;
         };
+        CreateCardFromHighlightResponse: {
+            /** Format: uuid */
+            cardId?: string;
+            front?: string;
+            back?: string;
+        };
         CreateCardFromQuizMistakeJsonRequest: {
             /** Format: uuid */
             questionId?: string;
+        };
+        CreateCardFromQuizMistakeResponse: {
+            /** Format: uuid */
+            cardId?: string;
         };
         CreateHighlightApiRequest: {
             /** Format: uuid */
@@ -995,12 +1119,99 @@ export interface components {
             /** @default null */
             tags: string[] | null;
         };
+        CreateHighlightResponse: {
+            highlight?: components["schemas"]["HighlightDto"];
+        };
+        CurateSliceResponse: {
+            chunk?: components["schemas"]["ChunkSummaryDto"];
+        };
+        CurriculumModuleDto: {
+            category?: components["schemas"]["Category"];
+            moduleTitle?: string;
+            description?: string;
+            /** Format: int32 */
+            startDay?: number;
+            /** Format: int32 */
+            endDay?: number;
+            /** Format: int32 */
+            completedCount?: number;
+            /** Format: int32 */
+            totalCount?: number;
+            days?: components["schemas"]["RoadmapDayNodeDto"][];
+        };
+        CurriculumRoadmapResponse: {
+            /** Format: int32 */
+            totalDays?: number;
+            /** Format: int32 */
+            completedDaysCount?: number;
+            /** Format: int32 */
+            currentActiveDay?: number;
+            /** Format: double */
+            overallProgressPercentage?: number;
+            modules?: components["schemas"]["CurriculumModuleDto"][];
+        };
+        DailyDrillDto: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: date */
+            scheduledDate?: string;
+            status?: components["schemas"]["DrillStatus"];
+            /** Format: int32 */
+            selectedOptionIndex?: number | null;
+            isCorrect?: boolean | null;
+            /** Format: int32 */
+            score?: number | null;
+            /** Format: int32 */
+            attemptCount?: number;
+            /** Format: date-time */
+            submittedAt?: string | null;
+        };
+        DeckStatisticsDto: {
+            /** Format: int32 */
+            totalCards?: number;
+            /** Format: int32 */
+            learningCount?: number;
+            /** Format: int32 */
+            reviewingCount?: number;
+            /** Format: int32 */
+            masteredCount?: number;
+            /** Format: int32 */
+            learningCards?: number;
+            /** Format: int32 */
+            reviewingCards?: number;
+            /** Format: int32 */
+            masteredCards?: number;
+        };
+        /** @enum {unknown} */
+        Difficulty: "Intermediate" | "Senior" | "Lead";
+        DocumentChunkDto: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: int32 */
+            chunkOrder?: number;
+            chapterTitle?: string;
+            originalTextMarkdown?: string;
+            summaryMarkdown?: string;
+            keyTakeaways?: string[];
+            language?: string;
+            /** Format: int32 */
+            estimatedReadMinutes?: number;
+            isAiFormatted?: boolean;
+        } | null;
+        /** @enum {unknown} */
+        DrillStatus: "Pending" | "Submitted" | "Reviewed" | "Skipped";
         ExplainTermRequest: {
             term: string;
             category: string;
             context: string;
             /** @default en */
             locale: string;
+        };
+        ExplainTermResponse: {
+            term?: string;
+            explanation?: string;
+            locale?: string;
+            isFromCache?: boolean;
         };
         GenerateInsightRequest: {
             preferredCategory?: components["schemas"]["NullableOfCategory"];
@@ -1030,12 +1241,228 @@ export interface components {
             /** @default false */
             isGrounded: boolean;
         };
+        GenerateQuizResponse: {
+            questions: components["schemas"]["QuizQuestionDto"][];
+            topic: string;
+            level: components["schemas"]["QuizLevel"];
+            /** Format: int32 */
+            totalCount: number;
+        };
+        GetBookByIdResponse: {
+            book?: components["schemas"]["BookDetailDto"];
+        };
+        GetBookSliceResponse: {
+            slice?: components["schemas"]["ChunkSummaryDto"];
+        };
+        GetBooksResponse: {
+            books?: components["schemas"]["BookDto"][];
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        GetHighlightsResponse: {
+            highlights?: components["schemas"]["HighlightDto"][];
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            tagCounts?: components["schemas"]["TagCountDto"][];
+        };
+        GetInsightsFeedResponse: {
+            insights: components["schemas"]["TechInsightDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            hasMore: boolean;
+        };
+        GetInsightsMetaResponse: {
+            categories: components["schemas"]["InsightCategoryMetaDto"][];
+            suggestedTopics: {
+                [key: string]: string[];
+            };
+        };
+        GetQuizReviewQueueResponse: {
+            questions: components["schemas"]["QuizQuestionDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        GetQuizStatsResponse: {
+            /** Format: int32 */
+            totalAnswered: number;
+            /** Format: int32 */
+            masteredCount: number;
+            /** Format: int32 */
+            reviewQueueCount: number;
+            /** Format: double */
+            accuracyRate: number;
+            levelBreakdown: components["schemas"]["LevelStatDto"][];
+            topicBreakdown: components["schemas"]["TopicStatDto"][];
+        };
+        GetReviewCardsResponse: {
+            cards?: components["schemas"]["ReviewCardDto"][];
+            /** Format: int32 */
+            totalCount?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            statistics?: components["schemas"]["DeckStatisticsDto"];
+        };
+        GetReviewDeckResponse: {
+            dueCards?: components["schemas"]["ReviewCardDto"][];
+            /** Format: int32 */
+            totalCardsDue?: number;
+        };
+        GetTodayFocusResponse: {
+            topic?: components["schemas"]["TopicDto"];
+            question?: components["schemas"]["InterviewQuestionDto"];
+            documentChunk?: components["schemas"]["DocumentChunkDto"];
+            drill?: components["schemas"]["DailyDrillDto"];
+            /** Format: int32 */
+            currentStreak?: number;
+            /** Format: int32 */
+            longestStreak?: number;
+            /** Format: int32 */
+            freezeCreditsRemaining?: number;
+            pacer?: components["schemas"]["PacerDto"];
+            isGeneratingQuestion?: boolean;
+            hasActiveBook?: boolean;
+        };
         GoogleAuthRequest: {
             idToken: string;
         };
         GradeCardJsonRequest: {
             /** Format: int32 */
             qualityGrade?: number;
+        };
+        GradeReviewCardResponse: {
+            /** Format: uuid */
+            cardId?: string;
+            /** Format: int32 */
+            repetitionCount?: number;
+            /** Format: double */
+            easeFactor?: number;
+            /** Format: int32 */
+            intervalDays?: number;
+            /** Format: date */
+            nextReviewDate?: string;
+            status?: components["schemas"]["CardStatus"];
+        };
+        GraphEdgeDto: {
+            id: string;
+            source: string;
+            target: string;
+            relationType: string;
+            /** @default null */
+            label: string | null;
+            /**
+             * Format: int32
+             * @default null
+             */
+            weight: number | null;
+        };
+        GraphNodeDto: {
+            id: string;
+            label: string;
+            type: string;
+            category: string;
+            /** @default null */
+            subtitle: string | null;
+            /**
+             * Format: int32
+             * @default null
+             */
+            dayOrder: number | null;
+            /** @default null */
+            summary: string | null;
+            /** @default null */
+            difficulty: string | null;
+            /** @default null */
+            status: string | null;
+            /**
+             * Format: int32
+             * @default null
+             */
+            intervalDays: number | null;
+            /**
+             * Format: double
+             * @default null
+             */
+            easeFactor: number | null;
+            /**
+             * Format: int32
+             * @default null
+             */
+            repetitionCount: number | null;
+            /** @default null */
+            documentChunkId: string | null;
+            /** @default null */
+            bookId: string | null;
+            /** @default null */
+            tags: string[] | null;
+            /**
+             * Format: date-time
+             * @default null
+             */
+            createdAt: string | null;
+            /** @default null */
+            embleUrl: string | null;
+            emblemUrl?: string | null;
+        };
+        GraphStatsDto: {
+            /** Format: int32 */
+            totalNodes: number;
+            /** Format: int32 */
+            totalEdges: number;
+            nodeTypeCounts: {
+                [key: string]: number;
+            };
+            pillarCounts: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            masteredCardsCount: number;
+        };
+        HealthStatusResponse: {
+            status: string;
+            database: string;
+            error: string | null;
+            /** Format: date-time */
+            timestamp: string;
+        };
+        HighlightDto: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            documentChunkId?: string;
+            chapterTitle?: string;
+            bookTitle?: string;
+            selectedText?: string;
+            note?: string | null;
+            tags?: string[];
+            /** Format: date-time */
+            createdAt?: string;
+            hasFlashcard?: boolean;
         };
         ImportDocumentRequest: {
             title: string;
@@ -1051,6 +1478,9 @@ export interface components {
              */
             createdByUserId: string | null;
         };
+        ImportDocumentResponse: {
+            book?: components["schemas"]["BookDto"];
+        };
         ImportRemotePdfRequest: {
             pdfUrl: string;
             title: string;
@@ -1063,9 +1493,47 @@ export interface components {
              */
             createdByUserId: string | null;
         };
+        InsightCategoryMetaDto: {
+            /** Format: int32 */
+            id: number;
+            key: string;
+            labelEn: string;
+            labelVi: string;
+            /** Format: int32 */
+            count: number;
+        };
+        InterviewQuestionDto: {
+            /** Format: uuid */
+            id?: string;
+            questionText?: string;
+            options?: string[];
+            /** Format: int32 */
+            correctOptionIndex?: number | null;
+            explanationMarkdown?: string | null;
+            expectedKeyPoints?: string[];
+            modelAnswerMarkdown?: string;
+            difficulty?: components["schemas"]["Difficulty"];
+        };
+        KnowledgeGraphResponse: {
+            nodes: components["schemas"]["GraphNodeDto"][];
+            edges: components["schemas"]["GraphEdgeDto"][];
+            stats: components["schemas"]["GraphStatsDto"];
+        };
+        LevelStatDto: {
+            level: components["schemas"]["QuizLevel"];
+            /** Format: int32 */
+            answeredCount: number;
+            /** Format: int32 */
+            masteredCount: number;
+            /** Format: double */
+            accuracyRate: number;
+        };
         LoginRequest: {
             email: string;
             password: string;
+        };
+        MessageResponse: {
+            message: string;
         };
         /** @enum {unknown} */
         NullableOfCardSourceType: "Topic" | "Highlight" | "QuizMistake" | null;
@@ -1078,9 +1546,114 @@ export interface components {
         NullableOfCategory: "FrontendWeb" | "BackendRuntime" | "BackendDotNet" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft" | null;
         /** @enum {unknown} */
         NullableOfCategory2: "FrontendWeb" | "BackendRuntime" | "BackendDotNet" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft" | null;
+        PacerBookSummaryDto: {
+            /** Format: uuid */
+            id?: string;
+            title?: string;
+            /** Format: int32 */
+            progressPercentage?: number;
+            /** Format: int32 */
+            totalChunks?: number;
+            /** Format: int32 */
+            currentChunkOrder?: number;
+            isActive?: boolean;
+        };
+        PacerDto: {
+            /** Format: uuid */
+            bookId?: string;
+            bookTitle?: string;
+            chapterTitle?: string;
+            /** Format: int32 */
+            currentChunkOrder?: number;
+            /** Format: int32 */
+            totalChunks?: number;
+            /** Format: int32 */
+            progressPercentage?: number;
+            hasPrevious?: boolean;
+            hasNext?: boolean;
+            availableBooks?: components["schemas"]["PacerBookSummaryDto"][];
+        } | null;
+        PacerDto2: {
+            /** Format: uuid */
+            bookId?: string;
+            bookTitle?: string;
+            chapterTitle?: string;
+            /** Format: int32 */
+            currentChunkOrder?: number;
+            /** Format: int32 */
+            totalChunks?: number;
+            /** Format: int32 */
+            progressPercentage?: number;
+            hasPrevious?: boolean;
+            hasNext?: boolean;
+            availableBooks?: components["schemas"]["PacerBookSummaryDto"][];
+        };
+        ProblemDetails: {
+            type?: string | null;
+            title?: string | null;
+            /** Format: int32 */
+            status?: number | null;
+            detail?: string | null;
+            instance?: string | null;
+        };
+        /** @enum {unknown} */
+        ProcessingStatus: "Pending" | "Processing" | "Ready" | "Failed";
+        ProfileStatsDto: {
+            /** Format: int32 */
+            currentStreak: number;
+            /** Format: int32 */
+            longestStreak: number;
+            /** Format: int32 */
+            freezeCreditsRemaining: number;
+            /** Format: int32 */
+            totalDrillsCompleted: number;
+            /** Format: double */
+            averageScore: number;
+            /** Format: int32 */
+            totalCardsInDeck: number;
+            /** Format: int32 */
+            totalHighlightsSaved: number;
+            /** Format: date-time */
+            memberSince: string;
+        };
+        PushAckResponse: {
+            success: boolean;
+        };
         PushSubscriptionKeys: {
             p256dh: string;
             auth: string;
+        };
+        PushTestResponse: {
+            success: boolean;
+            /** Format: int32 */
+            sent: number;
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            stalePurged: number;
+        };
+        /** @enum {unknown} */
+        QuizLevel: "Fresher" | "Junior" | "Middle" | "Senior";
+        QuizQuestionDto: {
+            /** Format: uuid */
+            id?: string;
+            topic?: string;
+            category?: components["schemas"]["Category"];
+            level?: components["schemas"]["QuizLevel"];
+            questionText?: string;
+            options?: string[];
+            /** Format: int32 */
+            correctOptionIndex?: number;
+            explanationMarkdown?: string;
+            tags?: string[];
+            isMastered?: boolean;
+            /** Format: int32 */
+            lastSelectedOptionIndex?: number | null;
+            isLastAnswerCorrect?: boolean | null;
+            /** Format: int32 */
+            correctCount?: number;
+            /** Format: int32 */
+            incorrectCount?: number;
         };
         RegisterRequest: {
             email: string;
@@ -1089,6 +1662,69 @@ export interface components {
             name: string | null;
             /** @default en */
             locale: string | null;
+        };
+        ResetReviewCardProgressResponse: {
+            card?: components["schemas"]["ReviewCardDto"];
+        };
+        ReviewCardDto: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            topicId?: string | null;
+            sourceType?: components["schemas"]["CardSourceType"];
+            frontMarkdown?: string | null;
+            backMarkdown?: string | null;
+            /** Format: uuid */
+            sourceHighlightId?: string | null;
+            /** Format: uuid */
+            sourceQuizQuestionId?: string | null;
+            topicTitle?: string;
+            category?: components["schemas"]["Category"];
+            difficulty?: components["schemas"]["Difficulty"];
+            topicSummary?: string;
+            topicDeepDiveMarkdown?: string;
+            /** Format: int32 */
+            repetitionCount?: number;
+            /** Format: double */
+            easeFactor?: number;
+            /** Format: int32 */
+            intervalDays?: number;
+            /** Format: date */
+            nextReviewDate?: string;
+            status?: components["schemas"]["CardStatus"];
+        };
+        RoadmapDayNodeDto: {
+            /** Format: int32 */
+            dayOrder?: number;
+            slug?: string;
+            title?: string;
+            summary?: string;
+            difficulty?: components["schemas"]["Difficulty"];
+            isCompleted?: boolean;
+            isActiveToday?: boolean;
+            isUnlocked?: boolean;
+            /** Format: int32 */
+            drillScore?: number | null;
+        };
+        /** @enum {unknown} */
+        SourceType: "PdfBook" | "MarkdownSeries" | "WebDocUrl";
+        SubmitDailyDrillResponse: {
+            isCorrect?: boolean;
+            /** Format: int32 */
+            selectedOptionIndex?: number;
+            /** Format: int32 */
+            correctOptionIndex?: number;
+            /** Format: int32 */
+            score?: number;
+            explanationMarkdown?: string;
+            /** Format: int32 */
+            currentStreak?: number;
+            /** Format: int32 */
+            longestStreak?: number;
+            /** Format: int32 */
+            totalDrillsCompleted?: number;
+            /** Format: double */
+            averageScore?: number;
         };
         SubmitDrillJsonRequest: {
             /** Format: int32 */
@@ -1100,6 +1736,17 @@ export interface components {
             questionId: string;
             /** Format: int32 */
             selectedOptionIndex: number;
+        };
+        SubmitQuizAnswerResponse: {
+            isCorrect: boolean;
+            /** Format: int32 */
+            correctOptionIndex: number;
+            explanationMarkdown: string;
+            isMastered: boolean;
+            /** Format: int32 */
+            correctCount: number;
+            /** Format: int32 */
+            incorrectCount: number;
         };
         SubscribePushRequest: {
             endpoint: string;
@@ -1113,6 +1760,53 @@ export interface components {
             /** Format: uuid */
             bookId: string;
         };
+        TagCountDto: {
+            tag: string;
+            /** Format: int32 */
+            count: number;
+        };
+        TechInsightDto: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            title: string;
+            category: components["schemas"]["Category"];
+            tags: string[];
+            summaryMarkdown: string;
+            problemSnippet: string;
+            solutionSnippet: string;
+            underTheHoodMarkdown: string;
+            benchmarkStats: string;
+            sourceUrl: string | null;
+            /** Format: int32 */
+            likesCount: number;
+            /** Format: int32 */
+            bookmarksCount: number;
+            /** @default false */
+            isBookmarkedByUser: boolean;
+        };
+        TopicDto: {
+            /** Format: uuid */
+            id?: string;
+            slug?: string;
+            title?: string;
+            category?: components["schemas"]["Category"];
+            difficulty?: components["schemas"]["Difficulty"];
+            /** Format: int32 */
+            dayOrder?: number;
+            summary?: string;
+            deepDiveMarkdown?: string;
+            benchmarkSnippet?: string | null;
+        };
+        TopicStatDto: {
+            topic: string;
+            /** Format: int32 */
+            answeredCount: number;
+            /** Format: int32 */
+            masteredCount: number;
+            /** Format: double */
+            accuracyRate: number;
+        };
         UnsubscribePushRequest: {
             endpoint: string;
         };
@@ -1121,6 +1815,9 @@ export interface components {
             note: string | null;
             /** @default null */
             tags: string[] | null;
+        };
+        UpdateHighlightResponse: {
+            highlight?: components["schemas"]["HighlightDto"];
         };
         UpdateProfileRequest: {
             name: string | null;
@@ -1139,6 +1836,55 @@ export interface components {
         UpdateReviewCardApiRequest: {
             frontMarkdown: string;
             backMarkdown: string;
+        };
+        UpdateReviewCardResponse: {
+            card?: components["schemas"]["ReviewCardDto"];
+        };
+        UpdateUserProfileResponse: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            name: string;
+            avatarUrl: string | null;
+            preferredLocale: string;
+            targetRole: string;
+            /** Format: int32 */
+            dailyGoalMinutes: number;
+            /** Format: int64 */
+            telegramChatId: number | null;
+            preferredStudyTime: string | null;
+            streakAlertTime: string | null;
+            timeZone: string;
+            isPushEnabled: boolean;
+        };
+        UploadPdfResponse: {
+            book?: components["schemas"]["BookDto"];
+        };
+        UserProfileDto: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            name: string;
+            avatarUrl: string | null;
+            preferredLocale: string;
+            targetRole: string;
+            /** Format: int32 */
+            dailyGoalMinutes: number;
+            /** Format: int64 */
+            telegramChatId: number | null;
+            preferredStudyTime: string | null;
+            streakAlertTime: string | null;
+            timeZone: string;
+            isPushEnabled: boolean;
+            hasPassword: boolean;
+            isGoogleLinked: boolean;
+        };
+        UserProfileResponse: {
+            user: components["schemas"]["UserProfileDto"];
+            stats: components["schemas"]["ProfileStatsDto"];
+        };
+        VapidPublicKeyResponse: {
+            publicKey: string;
         };
     };
     responses: never;
@@ -1163,7 +1909,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["HealthStatusResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthStatusResponse"];
+                };
             };
         };
     };
@@ -1181,7 +1938,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CurriculumRoadmapResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1199,7 +1976,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetInsightsMetaResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1224,7 +2021,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetInsightsFeedResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1241,12 +2058,32 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Created */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["TechInsightDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1266,7 +2103,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BookmarkInsightResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1288,7 +2145,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GenerateQuizResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1310,7 +2187,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SubmitQuizAnswerResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1334,7 +2231,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetQuizReviewQueueResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1352,7 +2269,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetQuizStatsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1376,7 +2313,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetTodayFocusResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1400,7 +2357,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SubmitDailyDrillResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1422,7 +2399,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ExplainTermResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1444,7 +2441,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PacerDto2"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1464,7 +2481,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["InterviewQuestionDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1484,7 +2521,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetReviewDeckResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1508,7 +2556,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GradeReviewCardResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1525,12 +2593,41 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Created */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CreateCardFromHighlightResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1547,12 +2644,41 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Created */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CreateCardFromQuizMistakeResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1576,7 +2702,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetReviewCardsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1600,7 +2737,36 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UpdateReviewCardResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1615,12 +2781,30 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1640,7 +2824,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ResetReviewCardProgressResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1663,7 +2867,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetBooksResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1683,7 +2907,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetBookByIdResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1698,12 +2942,48 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1723,7 +3003,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BookIngestionStatusDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1744,7 +3044,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetBookSliceResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1765,7 +3085,36 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CurateSliceResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1782,12 +3131,32 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Created */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ImportDocumentResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1800,12 +3169,32 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Accepted */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UploadPdfResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1822,12 +3211,32 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Accepted */
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UploadPdfResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1849,7 +3258,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CrawlUrlResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1869,7 +3298,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "text/markdown": string;
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1892,7 +3341,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GetHighlightsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1909,12 +3369,32 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Created */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CreateHighlightResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1938,7 +3418,36 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UpdateHighlightResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1953,12 +3462,30 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1976,7 +3503,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["KnowledgeGraphResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -1998,7 +3545,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2020,7 +3587,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2042,7 +3620,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2060,7 +3649,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2073,8 +3673,8 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2096,7 +3696,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UserProfileResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2118,7 +3729,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["UpdateUserProfileResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2140,7 +3771,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2158,7 +3809,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["VapidPublicKeyResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2180,7 +3842,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PushAckResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2197,12 +3879,30 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
-            200: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2220,7 +3920,27 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PushTestResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };
@@ -2238,7 +3958,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["AiHealthResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiHealthResponse"];
+                };
             };
         };
     };

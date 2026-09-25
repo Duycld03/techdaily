@@ -58,6 +58,9 @@ public static class DependencyInjection
         services.AddSingleton<IWebPushService, WebPushService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<IStarterHandbookService, StarterHandbookService>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<IOtpService, OtpService>();
 
         // Background Workers
         services.AddHostedService<Workers.PdfIngestionWorker>();

@@ -25,9 +25,11 @@ fi
 export NUXT_PUBLIC_GOOGLE_CLIENT_ID="${NUXT_PUBLIC_GOOGLE_CLIENT_ID:-$GOOGLE_CLIENT_ID}"
 export NUXT_PUBLIC_API_BASE_URL="${NUXT_PUBLIC_API_BASE_URL:-http://localhost:5000}"
 
-# Ensure backend receives Google OAuth credentials matching production
+# Derive the backend Google Client ID from the canonical GOOGLE_CLIENT_ID (ClientSecret is native in .env)
 export Authentication__Google__ClientId="${Authentication__Google__ClientId:-$GOOGLE_CLIENT_ID}"
-export Authentication__Google__ClientSecret="${Authentication__Google__ClientSecret:-$GOOGLE_CLIENT_SECRET}"
+
+# Compose the local connection string from the single POSTGRES_PASSWORD source
+export ConnectionStrings__DefaultConnection="${ConnectionStrings__DefaultConnection:-Host=localhost;Port=5432;Database=techdaily_db;Username=techdaily_user;Password=${POSTGRES_PASSWORD}}"
 
 # 1. Check if database container is running
 if ! docker ps --format '{{.Names}}' | grep -q 'techdaily_postgres'; then

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using TechDaily.Api.Http;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.KnowledgeGraph.DTOs;
 using TechDaily.Application.Features.KnowledgeGraph.GetKnowledgeGraph;
@@ -25,12 +26,15 @@ public static class KnowledgeGraphEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : Results.BadRequest(new { code = result.Error.Code, error = result.Error.Message });
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
         })
         .RequireAuthorization()
         .WithName("GetKnowledgeGraph")
         .WithSummary("Get Knowledge Graph")
-        .WithDescription("Retrieves the full architecture knowledge graph with topics, books, cards, and highlights for the authenticated user.");
+        .WithDescription("Retrieves the full architecture knowledge graph with topics, books, cards, and highlights for the authenticated user.")
+        .Produces<KnowledgeGraphResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         return group;
     }

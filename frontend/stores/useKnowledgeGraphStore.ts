@@ -177,8 +177,8 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
       rawData.value = await api.get<KnowledgeGraphResponse>('/api/v1/graph')
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'data' in err) {
-        const apiErr = err as { data?: { error?: string } }
-        error.value = apiErr.data?.error || 'Failed to load knowledge graph.'
+        const apiErr = err as { data?: { detail?: string } }
+        error.value = apiErr.data?.detail || 'Failed to load knowledge graph.'
       } else if (err instanceof Error) {
         error.value = err.message
       } else {

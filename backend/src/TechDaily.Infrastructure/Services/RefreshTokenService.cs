@@ -31,6 +31,7 @@ public class RefreshTokenService : IRefreshTokenService
     public async Task<(string RawToken, RefreshToken TokenEntity)> IssueTokenAsync(
         Guid userId,
         Guid? familyId = null,
+        bool isPersistent = true,
         CancellationToken ct = default)
     {
         var rawToken = GenerateRawToken();
@@ -43,6 +44,7 @@ public class RefreshTokenService : IRefreshTokenService
             FamilyId = familyId ?? Guid.NewGuid(),
             TokenHash = tokenHash,
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(30),
+            IsPersistent = isPersistent,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -115,7 +117,7 @@ public class RefreshTokenService : IRefreshTokenService
         }
 
         // Active unused token: Issue successor and rotate
-        var (newRawToken, newToken) = await IssueTokenAsync(token.UserId, token.FamilyId, ct);
+        var (newRawToken, newToken) = await IssueTokenAsync(token.UserId, token.FamilyId, token.IsPersistent, ct);
 
         token.UsedAt = now;
         token.ReplacedByTokenId = newToken.Id;
@@ -140,6 +142,24 @@ public class RefreshTokenService : IRefreshTokenService
 
         var now = DateTimeOffset.UtcNow;
         foreach (var t in familyTokens)
+        {
+            t.RevokedAt = now;
+            t.MarkUpdated();
+        }
+
+        await _dbContext.SaveChangesAsync(ct);
+    }
+
+    public async Task RevokeAllForUserAsync(Guid userId, CancellationToken ct = default)
+    {
+        var tokens = await _dbContext.RefreshTokens
+            .Where(r => r.UserId == userId && r.RevokedAt == null)
+            .ToListAsync(ct);
+
+        if (tokens.Count == 0) return;
+
+        var now = DateTimeOffset.UtcNow;
+        foreach (var t in tokens)
         {
             t.RevokedAt = now;
             t.MarkUpdated();

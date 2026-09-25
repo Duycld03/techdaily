@@ -39,7 +39,7 @@ describe('useApiClient 401 Interceptor', () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 401,
-      json: async () => ({ error: 'Token expired' })
+      json: async () => ({ detail: 'Token expired', code: 'UNAUTHORIZED' })
     })
 
     const api = useApiClient()
@@ -69,7 +69,7 @@ describe('useApiClient 401 Interceptor', () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 401,
-      json: async () => ({ error: 'Invalid email or password.' })
+      json: async () => ({ detail: 'Invalid email or password.', code: 'AUTH_INVALID_CREDENTIALS' })
     })
 
     const api = useApiClient()

@@ -61,12 +61,16 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.removeItem('techdaily_token')
       localStorage.removeItem('techdaily_user')
       localStorage.removeItem('techdaily_refresh_token')
+      sessionStorage.removeItem('techdaily_token')
+      sessionStorage.removeItem('techdaily_user')
     }
   }
 
   const token = ref<string | null>(tokenCookie.value || null)
   const user = ref<AuthUser | null>(userCookie.value || (token.value ? parseUserFromJwt(token.value) : null))
   const isInitialized = ref(false)
+  // Whether the current session is persistent (Remember me) or session-scoped
+  const isPersistentSession = ref(true)
 
   const isLoggedIn = computed(() => !!token.value && !isTokenExpired(token.value))
   const isAuthenticated = computed(() => !!token.value && !isTokenExpired(token.value))
@@ -81,10 +85,10 @@ export const useAuthStore = defineStore('auth', () => {
 
     if (typeof window !== 'undefined') {
       if (!token.value) {
-        token.value = localStorage.getItem('techdaily_token')
+        token.value = localStorage.getItem('techdaily_token') || sessionStorage.getItem('techdaily_token')
       }
       if (!user.value) {
-        const storedUser = localStorage.getItem('techdaily_user')
+        const storedUser = localStorage.getItem('techdaily_user') || sessionStorage.getItem('techdaily_user')
         if (storedUser) {
           try {
             user.value = JSON.parse(storedUser)
@@ -93,6 +97,8 @@ export const useAuthStore = defineStore('auth', () => {
           }
         }
       }
+      // Session-scoped only when the token lives in sessionStorage and not localStorage
+      isPersistentSession.value = !(sessionStorage.getItem('techdaily_token') !== null && localStorage.getItem('techdaily_token') === null)
     }
 
 
@@ -115,50 +121,93 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string, rememberMe: boolean = true) {
     const api = useApiClient()
     const response = await api.post<{ token?: string; accessToken?: string; user: AuthUser }>('/api/v1/auth/login', {
       email,
-      password
+      password,
+      rememberMe
     })
     const jwt = response.accessToken || response.token || ''
-    setSession(jwt, response.user)
+    setSession(jwt, response.user, rememberMe)
     return { ...response, token: jwt }
   }
 
-  async function register(email: string, password: string, name?: string, locale: string = 'en') {
+  async function registerRequest(email: string, password: string, name?: string, locale: string = 'en') {
     const api = useApiClient()
-    const response = await api.post<{ token?: string; accessToken?: string; user: AuthUser }>('/api/v1/auth/register', {
+    // Step 1: request an email verification code. No session is issued yet.
+    return await api.post<{ email: string }>('/api/v1/auth/register', {
       email,
       password,
       name,
       locale
     })
+  }
+
+  async function registerVerify(email: string, code: string, rememberMe: boolean = true) {
+    const api = useApiClient()
+    // Step 2: verify the code, create the account, and sign in.
+    const response = await api.post<{ token?: string; accessToken?: string; user: AuthUser }>('/api/v1/auth/register/verify', {
+      email,
+      code,
+      rememberMe
+    })
     const jwt = response.accessToken || response.token || ''
-    setSession(jwt, response.user)
+    setSession(jwt, response.user, rememberMe)
     return { ...response, token: jwt }
+  }
+
+  async function forgotPassword(email: string) {
+    const api = useApiClient()
+    // Always resolves 200 server-side (anti-enumeration); issues a reset code if the account exists.
+    return await api.post<{ message?: string }>('/api/v1/auth/forgot-password', { email })
+  }
+
+  async function resetPassword(email: string, code: string, newPassword: string) {
+    const api = useApiClient()
+    return await api.post<{ message?: string }>('/api/v1/auth/reset-password', {
+      email,
+      code,
+      newPassword
+    })
+  }
+
+  async function resendOtp(email: string, purpose: 'EmailVerification' | 'PasswordReset') {
+    const api = useApiClient()
+    return await api.post<{ email?: string }>('/api/v1/auth/otp/resend', { email, purpose })
   }
 
   async function googleLogin(idToken: string) {
     const api = useApiClient()
     const response = await api.post<{ token?: string; accessToken?: string; user: AuthUser }>('/api/v1/auth/google', { idToken })
     const jwt = response.accessToken || response.token || ''
-    setSession(jwt, response.user)
+    setSession(jwt, response.user, true)
     return { ...response, token: jwt }
   }
 
-  function setSession(newToken: string, newUser?: AuthUser | null) {
+  function setSession(newToken: string, newUser?: AuthUser | null, remember: boolean = isPersistentSession.value) {
+    isPersistentSession.value = remember
     token.value = newToken
-    tokenCookie.value = newToken
+
+    const cookieOpts = remember ? { maxAge: 60 * 60 * 24 * 30, path: '/' } : { path: '/' }
+    useCookie<string | null>('techdaily_token', cookieOpts).value = newToken
+
     if (typeof window !== 'undefined') {
-      localStorage.setItem('techdaily_token', newToken)
+      const primary = remember ? window.localStorage : window.sessionStorage
+      const secondary = remember ? window.sessionStorage : window.localStorage
+      primary.setItem('techdaily_token', newToken)
+      secondary.removeItem('techdaily_token')
       localStorage.removeItem('techdaily_refresh_token')
     }
+
     if (newUser) {
       user.value = newUser
-      userCookie.value = newUser
+      useCookie<AuthUser | null>('techdaily_user', cookieOpts).value = newUser
       if (typeof window !== 'undefined') {
-        localStorage.setItem('techdaily_user', JSON.stringify(newUser))
+        const primary = remember ? window.localStorage : window.sessionStorage
+        const secondary = remember ? window.sessionStorage : window.localStorage
+        primary.setItem('techdaily_user', JSON.stringify(newUser))
+        secondary.removeItem('techdaily_user')
       }
     }
   }
@@ -180,9 +229,11 @@ export const useAuthStore = defineStore('auth', () => {
   function updateUser(updated: Partial<AuthUser>) {
     if (user.value) {
       user.value = { ...user.value, ...updated }
-      userCookie.value = user.value
+      const cookieOpts = isPersistentSession.value ? { maxAge: 60 * 60 * 24 * 30, path: '/' } : { path: '/' }
+      useCookie<AuthUser | null>('techdaily_user', cookieOpts).value = user.value
       if (typeof window !== 'undefined') {
-        localStorage.setItem('techdaily_user', JSON.stringify(user.value))
+        const primary = isPersistentSession.value ? window.localStorage : window.sessionStorage
+        primary.setItem('techdaily_user', JSON.stringify(user.value))
       }
     }
   }
@@ -214,7 +265,11 @@ export const useAuthStore = defineStore('auth', () => {
     parseUserFromJwt,
     init,
     login,
-    register,
+    registerRequest,
+    registerVerify,
+    forgotPassword,
+    resetPassword,
+    resendOtp,
     googleLogin,
     updateUser,
     tryRefreshToken,

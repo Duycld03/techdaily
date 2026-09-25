@@ -483,6 +483,7 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
         builder.Property(r => r.FamilyId).IsRequired();
         builder.HasIndex(r => r.FamilyId);
         builder.HasIndex(r => r.UserId);
+        builder.Property(r => r.IsPersistent).IsRequired().HasDefaultValue(true);
 
         builder.HasOne(r => r.User)
             .WithMany(u => u.RefreshTokens)
@@ -493,5 +494,21 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
             .WithMany()
             .HasForeignKey(r => r.ReplacedByTokenId)
             .OnDelete(DeleteBehavior.SetNull);
+    }
+}
+
+public class EmailOtpConfiguration : IEntityTypeConfiguration<EmailOtp>
+{
+    public void Configure(EntityTypeBuilder<EmailOtp> builder)
+    {
+        builder.ToTable("EmailOtps");
+        builder.HasKey(o => o.Id);
+        builder.Property(o => o.Email).HasMaxLength(255).IsRequired();
+        builder.Property(o => o.Purpose).HasConversion<string>().HasMaxLength(30).IsRequired();
+        builder.Property(o => o.CodeHash).HasMaxLength(64).IsRequired();
+        builder.Property(o => o.PendingName).HasMaxLength(255);
+        builder.Property(o => o.PendingPasswordHash).HasMaxLength(500);
+        builder.Property(o => o.PendingLocale).HasMaxLength(10);
+        builder.HasIndex(o => new { o.Email, o.Purpose });
     }
 }

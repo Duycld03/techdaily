@@ -61,12 +61,6 @@ describe('useApiError', () => {
     expect(formatError(err, 'today.error_explain_failed')).toBe('AI term explanation is temporarily unavailable')
   })
 
-  it('returns responseData.error string when present', () => {
-    const { formatError } = useApiError()
-    const err = { response: { _data: { error: 'Invalid payload provided' } } }
-    expect(formatError(err, 'today.error_submit_failed')).toBe('Invalid payload provided')
-  })
-
   it('returns combined title and detail when both are present', () => {
     const { formatError } = useApiError()
     const err = { data: { title: 'Service Unavailable', detail: 'Gemini model is overloaded' } }

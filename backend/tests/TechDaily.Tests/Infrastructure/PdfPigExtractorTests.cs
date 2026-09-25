@@ -293,11 +293,15 @@ Leave the browser open with the Counter page loaded.
         _output.WriteLine($"Slice 3: '{slice3!.ChapterTitle}' ({slice3.ContentMarkdown.Length} chars, est {slice3.EstimatedReadMinutes} min)");
         slice3.EstimatedReadMinutes.Should().BeLessThan(30);
 
-        // Build Gemini service with local settings if available
-        var localSettings = "/home/duycld03/workspace/techdaily/backend/src/TechDaily.Api/appsettings.Local.json";
+        // Build Gemini service from the consolidated environment configuration (.env / env vars).
         var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
-            .AddJsonFile(localSettings, optional: true)
+            .AddEnvironmentVariables()
             .Build();
+        if (string.IsNullOrWhiteSpace(config["Gemini:ApiKey"]))
+        {
+            _output.WriteLine("Gemini:ApiKey not present in environment (source .env before running); skipping live Gemini assertion.");
+            return;
+        }
 
         var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(90) };
         var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<GeminiAiService>();

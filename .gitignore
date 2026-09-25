@@ -19,6 +19,7 @@
 *.DotSettings.user
 _ReSharper*/
 BenchmarkDotNet.Artifacts/
+[Tt]est[Rr]esults/
 
 # --------------------------------------------------------------------
 # Node / Nuxt 4 / Frontend Artifacts

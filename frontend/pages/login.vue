@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useIntervalFn, useEventListener, useDebounceFn } from '@vueuse/core'
 import {
   Lock,
@@ -49,6 +49,42 @@ const errorMessage = ref('')
 const googleBtnContainer = ref<HTMLElement | null>(null)
 const hasGsiRendered = ref(false)
 
+// Two-step OTP sub-flow state (register verify / password reset)
+const RESEND_COOLDOWN_SECONDS = 60
+const otpStep = ref(false)
+const pendingEmail = ref('')
+const otpCode = ref('')
+const resendCooldown = ref(0)
+
+const { pause: pauseResendTimer, resume: resumeResendTimer } = useIntervalFn(() => {
+  if (resendCooldown.value > 0) {
+    resendCooldown.value -= 1
+  } else {
+    pauseResendTimer()
+  }
+}, 1000, { immediate: false })
+
+function startResendCooldown() {
+  resendCooldown.value = RESEND_COOLDOWN_SECONDS
+  resumeResendTimer()
+}
+
+const formTitle = computed(() => {
+  if (otpStep.value) {
+    return authMode.value === 'register' ? t('auth.otp_verify_title') : t('auth.otp_reset_title')
+  }
+  if (authMode.value === 'login') return t('auth.welcome_title')
+  if (authMode.value === 'register') return t('auth.register_title')
+  return t('auth.recover_cockpit_title')
+})
+
+const formSubtitle = computed(() => {
+  if (otpStep.value) {
+    return authMode.value === 'register' ? t('auth.otp_verify_subtitle') : t('auth.otp_reset_subtitle')
+  }
+  return authMode.value === 'forgot-password' ? t('auth.recover_cockpit_subtitle') : t('auth.welcome_subtitle')
+})
+
 function getRedirectTarget() {
   const redirectQuery = route.query?.redirect
   if (typeof redirectQuery === 'string' && redirectQuery.startsWith('/') && !redirectQuery.startsWith('/login')) {
@@ -61,10 +97,28 @@ async function setAuthMode(mode: 'login' | 'register' | 'forgot-password') {
   authMode.value = mode
   errorMessage.value = ''
   confirmPassword.value = ''
+  resetOtpState()
   if (mode === 'login') {
     await nextTick()
     renderGoogleButton()
   }
+}
+
+function resetOtpState() {
+  otpStep.value = false
+  pendingEmail.value = ''
+  otpCode.value = ''
+  resendCooldown.value = 0
+  pauseResendTimer()
+}
+
+// Cancel the code-entry sub-step and return to the base fields for the current mode.
+function cancelOtpStep() {
+  otpStep.value = false
+  otpCode.value = ''
+  errorMessage.value = ''
+  resendCooldown.value = 0
+  pauseResendTimer()
 }
 
 onMounted(() => {
@@ -194,7 +248,7 @@ async function handleGoogleCredentialResponse(response: any) {
     toast.success(t('auth.toast_google_success'))
     await navigateTo(getRedirectTarget())
   } catch (err: any) {
-    const rawError = (err as any)?.data?.error || (err as any)?.response?._data?.error
+    const rawError = (err as any)?.data?.detail || (err as any)?.response?._data?.detail
     console.error('[TechDaily Auth] Google login failed:', err, rawError)
     const formatted = formatError(err, 'auth.toast_google_failed')
     errorMessage.value = rawError ? `${formatted} (${rawError})` : formatted
@@ -207,38 +261,114 @@ async function handleGoogleCredentialResponse(response: any) {
 async function handleSubmit() {
   errorMessage.value = ''
 
-  if (authMode.value === 'forgot-password') {
-    if (!email.value) {
-      errorMessage.value = t('auth.toast_enter_credentials')
-      toast.error(t('auth.toast_enter_credentials'))
-      return
-    }
-    isLoading.value = true
-    try {
-      await Promise.resolve()
-      toast.success(t('auth.toast_reset_link_sent'))
-      setAuthMode('login')
-    } catch (err: any) {
-      const formatted = formatError(err, 'auth.toast_auth_failed')
-      errorMessage.value = formatted
-      toast.error(formatted)
-    } finally {
-      isLoading.value = false
-    }
+  if (otpStep.value) {
+    await handleOtpSubmit()
     return
   }
+  if (authMode.value === 'forgot-password') {
+    await handleForgotRequest()
+    return
+  }
+  if (authMode.value === 'register') {
+    await handleRegisterRequest()
+    return
+  }
+  await handleLogin()
+}
 
+async function handleLogin() {
   if (!email.value || !password.value) {
     errorMessage.value = t('auth.toast_enter_credentials')
     toast.error(t('auth.toast_enter_credentials'))
     return
   }
-  if (authMode.value === 'register') {
-    if (!name.value.trim()) {
-      errorMessage.value = t('auth.toast_name_required')
-      toast.error(t('auth.toast_name_required'))
-      return
-    }
+  isLoading.value = true
+  try {
+    await authStore.login(email.value, password.value, rememberSession.value)
+    toast.success(t('auth.toast_login_success'))
+    await navigateTo(getRedirectTarget())
+  } catch (err: unknown) {
+    const formatted = formatError(err, 'auth.toast_auth_failed')
+    errorMessage.value = formatted
+    toast.error(formatted)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function handleRegisterRequest() {
+  if (!email.value || !password.value) {
+    errorMessage.value = t('auth.toast_enter_credentials')
+    toast.error(t('auth.toast_enter_credentials'))
+    return
+  }
+  if (!name.value.trim()) {
+    errorMessage.value = t('auth.toast_name_required')
+    toast.error(t('auth.toast_name_required'))
+    return
+  }
+  if (password.value.length < 8) {
+    const formatted = t('api_errors.AUTH_PASSWORD_TOO_SHORT')
+    errorMessage.value = formatted
+    toast.error(formatted)
+    return
+  }
+  if (password.value !== confirmPassword.value) {
+    errorMessage.value = t('auth.toast_passwords_mismatch')
+    toast.error(t('auth.toast_passwords_mismatch'))
+    return
+  }
+  isLoading.value = true
+  try {
+    await authStore.registerRequest(email.value, password.value, name.value, locale.value)
+    enterOtpStep(email.value)
+    toast.success(t('auth.toast_otp_sent'))
+  } catch (err: unknown) {
+    const formatted = formatError(err, 'auth.toast_auth_failed')
+    errorMessage.value = formatted
+    toast.error(formatted)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function handleForgotRequest() {
+  if (!email.value) {
+    errorMessage.value = t('auth.toast_enter_credentials')
+    toast.error(t('auth.toast_enter_credentials'))
+    return
+  }
+  isLoading.value = true
+  try {
+    await authStore.forgotPassword(email.value)
+    // The password fields are reused to collect the new password in the reset sub-step.
+    password.value = ''
+    confirmPassword.value = ''
+    enterOtpStep(email.value)
+    toast.success(t('auth.toast_reset_code_sent'))
+  } catch (err: unknown) {
+    const formatted = formatError(err, 'auth.toast_auth_failed')
+    errorMessage.value = formatted
+    toast.error(formatted)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+function enterOtpStep(targetEmail: string) {
+  pendingEmail.value = targetEmail
+  otpCode.value = ''
+  otpStep.value = true
+  startResendCooldown()
+}
+
+async function handleOtpSubmit() {
+  if (!/^\d{6}$/.test(otpCode.value.trim())) {
+    errorMessage.value = t('auth.otp_code_required')
+    toast.error(t('auth.otp_code_required'))
+    return
+  }
+  if (authMode.value === 'forgot-password') {
     if (password.value.length < 8) {
       const formatted = t('api_errors.AUTH_PASSWORD_TOO_SHORT')
       errorMessage.value = formatted
@@ -252,17 +382,38 @@ async function handleSubmit() {
     }
   }
   isLoading.value = true
-
   try {
-    if (authMode.value === 'login') {
-      await authStore.login(email.value, password.value)
-      toast.success(t('auth.toast_login_success'))
-    } else {
-      await authStore.register(email.value, password.value, name.value, locale.value)
+    if (authMode.value === 'register') {
+      await authStore.registerVerify(pendingEmail.value, otpCode.value.trim(), rememberSession.value)
       toast.success(t('auth.toast_register_success'))
+      await navigateTo(getRedirectTarget())
+    } else {
+      await authStore.resetPassword(pendingEmail.value, otpCode.value.trim(), password.value)
+      toast.success(t('auth.toast_password_reset_success'))
+      // Credentials changed: force a manual sign-in with the new password.
+      email.value = pendingEmail.value
+      password.value = ''
+      confirmPassword.value = ''
+      setAuthMode('login')
     }
-    await navigateTo(getRedirectTarget())
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const formatted = formatError(err, 'auth.toast_auth_failed')
+    errorMessage.value = formatted
+    toast.error(formatted)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+async function handleResend() {
+  if (resendCooldown.value > 0 || !pendingEmail.value) return
+  isLoading.value = true
+  try {
+    const purpose = authMode.value === 'register' ? 'EmailVerification' : 'PasswordReset'
+    await authStore.resendOtp(pendingEmail.value, purpose)
+    startResendCooldown()
+    toast.success(t('auth.toast_otp_resent'))
+  } catch (err: unknown) {
     const formatted = formatError(err, 'auth.toast_auth_failed')
     errorMessage.value = formatted
     toast.error(formatted)
@@ -443,10 +594,10 @@ async function handleSubmit() {
             <!-- Form Header -->
             <div class="mb-6 space-y-1.5 text-left">
               <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                {{ authMode === 'login' ? $t('auth.welcome_title') : (authMode === 'register' ? $t('auth.register_title') : $t('auth.recover_cockpit_title')) }}
+                {{ formTitle }}
               </h2>
-              <p class="text-xs text-slate-500 dark:text-zinc-400 leading-normal">
-                {{ authMode === 'forgot-password' ? $t('auth.recover_cockpit_subtitle') : $t('auth.welcome_subtitle') }}
+              <p class="text-sm sm:text-base text-slate-500 dark:text-zinc-400 leading-normal">
+                {{ formSubtitle }}
               </p>
             </div>
 
@@ -503,8 +654,121 @@ async function handleSubmit() {
 
             <!-- Auth Form Fields -->
             <form @submit.prevent="handleSubmit" class="space-y-4">
+              <!-- OTP Code Entry Sub-Step (Register verify / Password reset) -->
+              <div v-if="otpStep" class="space-y-4">
+                <!-- Delivery notice -->
+                <div class="rounded-xl bg-brand-500/10 border border-brand-500/20 p-3 flex items-start gap-2.5 text-sm text-brand-800 dark:text-brand-200">
+                  <Mail class="w-4 h-4 text-brand-500 shrink-0 mt-0.5" :stroke-width="1.75" />
+                  <p class="leading-relaxed">{{ $t('auth.otp_sent_notice', { email: pendingEmail }) }}</p>
+                </div>
+
+                <!-- Verification Code -->
+                <div class="space-y-1.5 text-left">
+                  <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="otpCode">
+                    {{ $t('auth.otp_code_label') }}
+                  </label>
+                  <div class="relative rounded-xl border border-slate-200 dark:border-white/[0.09] bg-slate-50 dark:bg-[#070709] focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500">
+                      <Key class="w-4 h-4" :stroke-width="1.5" />
+                    </span>
+                    <input
+                      id="otpCode"
+                      v-model="otpCode"
+                      required
+                      inputmode="numeric"
+                      autocomplete="one-time-code"
+                      maxlength="6"
+                      :placeholder="$t('auth.otp_code_placeholder')"
+                      class="w-full pl-10 pr-4 py-2.5 bg-transparent border-0 text-base sm:text-lg font-mono text-center tracking-[0.4em] text-slate-900 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-600 placeholder:tracking-normal focus:ring-0 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <!-- New Password (Password Reset Only) -->
+                <div v-if="authMode === 'forgot-password'" class="space-y-1.5 text-left">
+                  <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="newPassword">
+                    {{ $t('auth.otp_new_password_label') }}
+                  </label>
+                  <div class="relative rounded-xl border border-slate-200 dark:border-white/[0.09] bg-slate-50 dark:bg-[#070709] focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500">
+                      <Key class="w-4 h-4" :stroke-width="1.5" />
+                    </span>
+                    <input
+                      id="newPassword"
+                      v-model="password"
+                      required
+                      :type="showPassword ? 'text' : 'password'"
+                      minlength="8"
+                      placeholder="••••••••••••"
+                      class="w-full pl-10 pr-10 py-2.5 bg-transparent border-0 text-sm font-mono text-slate-900 dark:text-zinc-200 tracking-wider placeholder-slate-400 dark:placeholder-zinc-600 focus:ring-0 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      @click="showPassword = !showPassword"
+                      class="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 transition cursor-pointer"
+                      :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                    >
+                      <EyeOff v-if="showPassword" class="w-4 h-4" :stroke-width="1.5" />
+                      <Eye v-else class="w-4 h-4" :stroke-width="1.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Confirm New Password (Password Reset Only) -->
+                <div v-if="authMode === 'forgot-password'" class="space-y-1.5 text-left">
+                  <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="confirmNewPassword">
+                    {{ $t('auth.otp_confirm_password_label') }}
+                  </label>
+                  <div class="relative rounded-xl border border-slate-200 dark:border-white/[0.09] bg-slate-50 dark:bg-[#070709] focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-zinc-500">
+                      <Lock class="w-4 h-4" :stroke-width="1.5" />
+                    </span>
+                    <input
+                      id="confirmNewPassword"
+                      v-model="confirmPassword"
+                      required
+                      :type="showConfirmPassword ? 'text' : 'password'"
+                      minlength="8"
+                      :placeholder="$t('auth.confirm_password_placeholder')"
+                      class="w-full pl-10 pr-10 py-2.5 bg-transparent border-0 text-sm font-mono text-slate-900 dark:text-zinc-200 tracking-wider placeholder-slate-400 dark:placeholder-zinc-600 focus:ring-0 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      @click="showConfirmPassword = !showConfirmPassword"
+                      class="absolute right-3.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 transition cursor-pointer"
+                      :aria-label="showConfirmPassword ? 'Hide password' : 'Show password'"
+                    >
+                      <EyeOff v-if="showConfirmPassword" class="w-4 h-4" :stroke-width="1.5" />
+                      <Eye v-else class="w-4 h-4" :stroke-width="1.5" />
+                    </button>
+                  </div>
+                  <p
+                    v-if="confirmPassword && confirmPassword !== password"
+                    class="text-xs text-rose-500 font-medium flex items-center gap-1.5 pt-0.5"
+                  >
+                    <AlertCircle class="w-3.5 h-3.5 shrink-0" />
+                    <span>{{ $t('auth.passwords_mismatch') }}</span>
+                  </p>
+                </div>
+
+                <!-- Resend control -->
+                <div class="flex items-center justify-between gap-3 text-xs sm:text-sm">
+                  <span class="text-slate-500 dark:text-zinc-400 whitespace-nowrap shrink-0">{{ $t('auth.otp_no_code') }}</span>
+                  <button
+                    type="button"
+                    :disabled="resendCooldown > 0 || isLoading"
+                    @click="handleResend"
+                    class="inline-flex items-center gap-1.5 font-medium text-brand-600 dark:text-brand-400 hover:text-brand-500 transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+                  >
+                    <RefreshCw class="w-3.5 h-3.5" :stroke-width="1.75" />
+                    <span v-if="resendCooldown > 0">{{ $t('auth.otp_resend_in', { seconds: resendCooldown }) }}</span>
+                    <span v-else>{{ $t('auth.otp_resend') }}</span>
+                  </button>
+                </div>
+              </div>
+
               <!-- Register Mode: Additional Name Field -->
-              <div v-if="authMode === 'register'" class="space-y-1.5 text-left">
+              <div v-if="authMode === 'register' && !otpStep" class="space-y-1.5 text-left">
                 <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="name">
                   {{ $t('auth.name_label') }}
                 </label>
@@ -524,7 +788,7 @@ async function handleSubmit() {
               </div>
 
               <!-- Email / Username Input -->
-              <div class="space-y-1.5 text-left">
+              <div v-if="!otpStep" class="space-y-1.5 text-left">
                 <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="email">
                   {{ authMode === 'forgot-password' ? $t('auth.account_email_label') : $t('auth.dev_handle_label') }}
                 </label>
@@ -544,7 +808,7 @@ async function handleSubmit() {
               </div>
 
               <!-- Contextual OAuth / Hardware Security Key Advisory Notice (Forgot Password Mode) -->
-              <div v-if="authMode === 'forgot-password'" class="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-300">
+              <div v-if="authMode === 'forgot-password' && !otpStep" class="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 flex items-start gap-2.5 text-xs sm:text-sm text-amber-800 dark:text-amber-300">
                 <Info class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" :stroke-width="1.75" />
                 <p class="leading-relaxed">
                   {{ $t('auth.oauth_bypass_notice') }}
@@ -552,7 +816,7 @@ async function handleSubmit() {
               </div>
 
               <!-- Password Input with Forgot link -->
-              <div v-if="authMode !== 'forgot-password'" class="space-y-1.5 text-left">
+              <div v-if="authMode !== 'forgot-password' && !otpStep" class="space-y-1.5 text-left">
                 <div class="flex items-center justify-between">
                   <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="password">
                     {{ $t('auth.secret_token_label') }}
@@ -592,7 +856,7 @@ async function handleSubmit() {
               </div>
 
               <!-- Confirm Password (Register Mode Only) -->
-              <div v-if="authMode === 'register'" class="space-y-1.5 text-left">
+              <div v-if="authMode === 'register' && !otpStep" class="space-y-1.5 text-left">
                 <label class="block font-mono text-[11px] font-medium tracking-wider text-slate-600 dark:text-zinc-400" for="confirmPassword">
                   {{ $t('auth.confirm_password_label') }}
                 </label>
@@ -648,6 +912,10 @@ async function handleSubmit() {
                   class="w-full group relative flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 active:scale-[0.99] text-white font-semibold text-sm shadow-lg shadow-brand-600/30 transition-all duration-150 ease-out cursor-pointer disabled:opacity-60"
                 >
                   <span v-if="isLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  <span v-else-if="otpStep" class="flex items-center gap-1.5">
+                    <span>{{ authMode === 'register' ? $t('auth.otp_verify_btn') : $t('auth.otp_reset_btn') }}</span>
+                    <ArrowRight class="w-3.5 h-3.5" :stroke-width="1.75" />
+                  </span>
                   <span v-else-if="authMode === 'forgot-password'" class="flex items-center gap-1.5">
                     <span>{{ $t('auth.send_recovery_link_btn') }}</span>
                     <Send class="w-3.5 h-3.5" :stroke-width="1.75" />
@@ -661,15 +929,15 @@ async function handleSubmit() {
                 </button>
               </div>
 
-              <!-- Back to Sign In button (Forgot Password Mode Only) -->
-              <div v-if="authMode === 'forgot-password'" class="text-center pt-1">
+              <!-- Back / Cancel button (OTP sub-step or Forgot Password base) -->
+              <div v-if="otpStep || authMode === 'forgot-password'" class="text-center pt-1">
                 <button
                   type="button"
-                  @click="setAuthMode('login')"
-                  class="font-mono text-xs text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors inline-flex items-center gap-1.5 cursor-pointer py-1"
+                  @click="otpStep ? cancelOtpStep() : setAuthMode('login')"
+                  class="font-mono text-xs sm:text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors inline-flex items-center gap-1.5 cursor-pointer py-1"
                 >
                   <ArrowLeft class="w-3.5 h-3.5" :stroke-width="1.75" />
-                  <span>{{ $t('auth.back_to_signin_btn') }}</span>
+                  <span>{{ otpStep ? $t('auth.otp_back') : $t('auth.back_to_signin_btn') }}</span>
                 </button>
               </div>
             </form>
