@@ -633,7 +633,8 @@
       "sm2Status": "Flashcard Retention",
       "learning": "Learning (<6d)",
       "reviewing": "Reviewing (6-20d)",
-      "mastered": "Mastered (≥21d)"
+      "mastered": "Mastered (≥21d)",
+      "isolateHint": "Hover item to isolate"
     },
     "filters": {
       "pillars": "Engineering Pillars",

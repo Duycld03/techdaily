@@ -2,6 +2,7 @@
 import { ref, watch, onMounted, onBeforeUnmount, type PropType } from 'vue'
 import type { Core } from 'cytoscape'
 import { Compass } from 'lucide-vue-next'
+import { CATEGORY_PALETTE, NODE_TYPE_COLOR, SM2_STATUS_COLOR, normalizeCategory, normalizeSm2Status } from '~/utils/graphVisualTokens'
 
 const props = defineProps({
   cy: {
@@ -14,23 +15,10 @@ const canvasRef = ref<HTMLCanvasElement | null>(null)
 
 function getNodeColor(category?: string, type?: string, status?: string): string {
   const t = type?.toLowerCase()
-  if (t === 'book') return '#94a3b8'
-  if (t === 'card') {
-    const s = status?.toLowerCase()
-    if (s === 'mastered') return '#7c3aed'
-    if (s === 'learning') return '#f59e0b'
-    return '#3b82f6'
-  }
-  if (t === 'highlight') return '#c4b5fd'
-
-  const cat = category?.toLowerCase() || ''
-  if (cat.includes('dotnet') || cat.includes('backend')) return '#38bdf8'
-  if (cat.includes('postgres') || cat.includes('database') || cat.includes('storage')) return '#22d3ee'
-  if (cat.includes('system') || cat.includes('distributed')) return '#a78bfa'
-  if (cat.includes('frontend') || cat.includes('web')) return '#fbbf24'
-  if (cat.includes('craft')) return '#fb7185'
-
-  return '#0284c7'
+  if (t === 'book') return NODE_TYPE_COLOR.book
+  if (t === 'card') return SM2_STATUS_COLOR[normalizeSm2Status(status)]
+  if (t === 'highlight') return NODE_TYPE_COLOR.highlight
+  return CATEGORY_PALETTE[normalizeCategory(category)].border
 }
 
 function drawMinimap() {

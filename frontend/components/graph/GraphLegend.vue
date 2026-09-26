@@ -8,6 +8,7 @@ import {
   Sparkles
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
+import { NODE_TYPE_COLOR, SM2_STATUS_COLOR } from '~/utils/graphVisualTokens'
 
 const store = useKnowledgeGraphStore()
 const STORAGE_KEY = 'techdaily_graph_legend_collapsed'
@@ -42,7 +43,15 @@ function onHover(type: string | null) {
   store.setHoveredLegendType(type)
 }
 
-const entityItems = [
+interface LegendItem {
+  type: string
+  labelKey: string
+  color: string
+  shape: string
+  hex?: string
+}
+
+const entityItems: LegendItem[] = [
   {
     type: 'pillar',
     labelKey: 'graph.legend.pillar',
@@ -58,34 +67,39 @@ const entityItems = [
   {
     type: 'book',
     labelKey: 'graph.legend.book',
-    color: 'bg-indigo-500',
+    color: '',
+    hex: NODE_TYPE_COLOR.book,
     shape: 'rounded-sm w-3 h-2.5 shadow-sm shadow-indigo-500/30'
   },
   {
     type: 'highlight',
     labelKey: 'graph.legend.highlight',
-    color: 'bg-cyan-500',
+    color: '',
+    hex: NODE_TYPE_COLOR.highlight,
     shape: 'w-2.5 h-2.5 rotate-45 rounded-[2px] shadow-sm shadow-cyan-500/30'
   }
 ]
 
-const masteryItems = [
+const masteryItems: LegendItem[] = [
   {
     type: 'learning',
     labelKey: 'graph.legend.learning',
-    color: 'bg-amber-500',
+    color: '',
+    hex: SM2_STATUS_COLOR.learning,
     shape: 'rounded-full w-2 h-2'
   },
   {
     type: 'reviewing',
     labelKey: 'graph.legend.reviewing',
-    color: 'bg-blue-500',
+    color: '',
+    hex: SM2_STATUS_COLOR.reviewing,
     shape: 'rounded-full w-2 h-2'
   },
   {
     type: 'mastered',
     labelKey: 'graph.legend.mastered',
-    color: 'bg-brand-500',
+    color: '',
+    hex: SM2_STATUS_COLOR.mastered,
     shape: 'rounded-full w-2 h-2'
   }
 ]
@@ -149,8 +163,12 @@ const masteryItems = [
             @mouseenter="onHover(item.type)"
             @mouseleave="onHover(null)"
           >
-            <div :class="[item.color, item.shape, 'shrink-0']" />
+            <div :class="[item.color, item.shape, 'shrink-0']" :style="item.hex ? { backgroundColor: item.hex } : undefined" />
             <span class="text-xs font-medium">{{ $t(item.labelKey) }}</span>
+            <span
+              v-if="store.stats?.nodeTypeCounts?.[item.type] !== undefined"
+              class="ml-auto font-mono-telemetry tabular-nums text-[10px] text-slate-400 dark:text-slate-500"
+            >{{ store.stats?.nodeTypeCounts?.[item.type] }}</span>
           </div>
         </div>
       </div>
@@ -174,10 +192,15 @@ const masteryItems = [
             @mouseenter="onHover(item.type)"
             @mouseleave="onHover(null)"
           >
-            <div :class="[item.color, item.shape, 'shrink-0']" />
+            <div :class="[item.color, item.shape, 'shrink-0']" :style="item.hex ? { backgroundColor: item.hex } : undefined" />
             <span class="text-xs font-medium">{{ $t(item.labelKey) }}</span>
           </div>
         </div>
+      </div>
+      <!-- Footer: isolate hint & keyboard shortcut -->
+      <div class="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-white/[0.06] text-[10px] text-slate-400 dark:text-slate-500">
+        <span class="whitespace-nowrap">{{ $t('graph.legend.isolateHint') }}</span>
+        <kbd class="px-1.5 py-0.5 rounded border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.04] font-mono-telemetry text-[9px] shrink-0">L</kbd>
       </div>
     </div>
   </div>

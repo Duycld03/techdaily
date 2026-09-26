@@ -633,7 +633,8 @@
       "sm2Status": "Mức Độ Ghi Nhớ SM-2",
       "learning": "Đang Học (<6d)",
       "reviewing": "Ôn Tập (6-20d)",
-      "mastered": "Thành Thạo (≥21d)"
+      "mastered": "Thành Thạo (≥21d)",
+      "isolateHint": "Di chuột để tách biệt"
     },
     "filters": {
       "pillars": "Trụ Cột Kỹ Thuật",

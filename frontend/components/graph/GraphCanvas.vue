@@ -3,6 +3,7 @@ import { ref, shallowRef, watch, onMounted, onBeforeUnmount, computed } from 'vu
 import { useEventListener, useDebounceFn } from '@vueuse/core'
 import cytoscape, { type Core, type EventObject, type Stylesheet, type CoseLayoutOptions } from 'cytoscape'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
+import { CATEGORY_PALETTE, MASTERED_BORDER, NODE_TYPE_COLOR } from '~/utils/graphVisualTokens'
 
 const emit = defineEmits<{
   (e: 'cy-ready', cy: Core): void
@@ -61,36 +62,36 @@ function getStylesheet(dark: boolean): Stylesheet[] {
     {
       selector: 'node[type = "pillar"][category = "FrontendWeb"], node[type = "pillar"][category = "Frontend"]',
       style: {
-        'background-color': '#f59e0b',
-        'border-color': '#fbbf24'
+        'background-color': CATEGORY_PALETTE.FrontendWeb.fill,
+        'border-color': CATEGORY_PALETTE.FrontendWeb.border
       }
     },
     {
       selector: 'node[type = "pillar"][category = "BackendRuntime"], node[type = "pillar"][category = "BackendDotNet"], node[type = "pillar"][category = "DotNet"]',
       style: {
-        'background-color': '#0284c7',
-        'border-color': '#38bdf8'
+        'background-color': CATEGORY_PALETTE.BackendDotNet.fill,
+        'border-color': CATEGORY_PALETTE.BackendDotNet.border
       }
     },
     {
       selector: 'node[type = "pillar"][category = "DatabaseStorage"], node[type = "pillar"][category = "Postgres"]',
       style: {
-        'background-color': '#0891b2',
-        'border-color': '#22d3ee'
+        'background-color': CATEGORY_PALETTE.DatabaseStorage.fill,
+        'border-color': CATEGORY_PALETTE.DatabaseStorage.border
       }
     },
     {
       selector: 'node[type = "pillar"][category = "SystemDesign"], node[type = "pillar"][category = "DistributedSystems"]',
       style: {
-        'background-color': '#8b5cf6',
-        'border-color': '#a78bfa'
+        'background-color': CATEGORY_PALETTE.SystemDesign.fill,
+        'border-color': CATEGORY_PALETTE.SystemDesign.border
       }
     },
     {
       selector: 'node[type = "pillar"][category = "EngineeringCraft"], node[type = "pillar"][category = "Craft"]',
       style: {
-        'background-color': '#ec4899',
-        'border-color': '#f472b6'
+        'background-color': CATEGORY_PALETTE.EngineeringCraft.fill,
+        'border-color': CATEGORY_PALETTE.EngineeringCraft.border
       }
     },
     // Topic nodes (default fallback)
@@ -100,38 +101,38 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'shape': 'ellipse',
         'width': 36,
         'height': 36,
-        'background-color': '#0284c7'
+        'background-color': CATEGORY_PALETTE.BackendDotNet.fill
       }
     },
-    // Topic colors by pillar: DotNet (#38bdf8), Postgres (#34d399), DistributedSystems (#a78bfa), Frontend (#fbbf24), Craft (#fb7185)
+    // Topic colors by pillar (tones sourced from graphVisualTokens CATEGORY_PALETTE)
     {
       selector: 'node[type = "topic"][category = "BackendRuntime"], node[type = "topic"][category = "BackendDotNet"], node[type = "topic"][category = "DotNet"]',
       style: {
-        'background-color': '#38bdf8'
+        'background-color': CATEGORY_PALETTE.BackendDotNet.border
       }
     },
     {
       selector: 'node[type = "topic"][category = "DatabaseStorage"], node[type = "topic"][category = "Postgres"]',
       style: {
-        'background-color': '#34d399'
+        'background-color': CATEGORY_PALETTE.DatabaseStorage.border
       }
     },
     {
       selector: 'node[type = "topic"][category = "SystemDesign"], node[type = "topic"][category = "DistributedSystems"]',
       style: {
-        'background-color': '#a78bfa'
+        'background-color': CATEGORY_PALETTE.SystemDesign.border
       }
     },
     {
       selector: 'node[type = "topic"][category = "FrontendWeb"], node[type = "topic"][category = "Frontend"]',
       style: {
-        'background-color': '#fbbf24'
+        'background-color': CATEGORY_PALETTE.FrontendWeb.border
       }
     },
     {
       selector: 'node[type = "topic"][category = "EngineeringCraft"], node[type = "topic"][category = "Craft"]',
       style: {
-        'background-color': '#fb7185'
+        'background-color': CATEGORY_PALETTE.EngineeringCraft.border
       }
     },
     // Book nodes
@@ -141,7 +142,7 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'shape': 'round-rectangle',
         'width': 34,
         'height': 26,
-        'background-color': dark ? '#94a3b8' : '#475569'
+        'background-color': NODE_TYPE_COLOR.book
       }
     },
     // Card nodes
@@ -172,19 +173,19 @@ function getStylesheet(dark: boolean): Stylesheet[] {
       selector: 'node[type = "card"][status = "Mastered"], node[type = "card"][status = "mastered"]',
       style: {
         'background-color': '#7c3aed',
-        'border-color': '#c4b5fd',
-        'width': 28,
-        'height': 28
+        'border-color': MASTERED_BORDER,
+        'width': 26,
+        'height': 26
       }
     },
     // Highlight nodes
     {
       selector: 'node[type = "highlight"]',
       style: {
-        'shape': 'hexagon',
+        'shape': 'diamond',
         'width': 22,
         'height': 22,
-        'background-color': dark ? '#c4b5fd' : '#8b5cf6',
+        'background-color': NODE_TYPE_COLOR.highlight,
         'label': ''
       }
     },
@@ -222,7 +223,9 @@ function getStylesheet(dark: boolean): Stylesheet[] {
     {
       selector: 'edge[relationType = "TopicToPillar"], edge[relationType = "BookToPillar"], edge[relationType = "topictopillar"], edge[relationType = "booktopillar"]',
       style: {
-        'curve-style': 'bezier',
+        'curve-style': 'unbundled-bezier',
+        'control-point-distances': 40,
+        'control-point-weights': 0.35,
         'opacity': 0.85,
         'width': 2.0,
         'line-color': edgeClr
@@ -230,17 +233,18 @@ function getStylesheet(dark: boolean): Stylesheet[] {
     },
     // Card edges to highlight or pillar
     {
-      selector: 'edge[relationType = "CardToHighlight"], edge[relationType = "CardToPillar"]',
+      selector: 'edge[relationType = "CardToHighlight"], edge[relationType = "CardToPillar"], edge[relationType = "CardToTopic"]',
       style: {
         'curve-style': 'bezier',
         'line-style': 'dotted',
+        'line-dash-pattern': [3, 4],
         'width': 1.2,
         'line-color': edgeClr,
         'opacity': 0.6
       }
     },
     {
-      selector: 'edge[relationType = "SharedTag"]',
+      selector: 'edge[relationType = "SharedTag"], edge[relationType = "BookToTopic"], edge[relationType = "HighlightToBook"], edge[relationType = "HighlightToTopic"]',
       style: {
         'line-style': 'dashed',
         'line-dash-pattern': [4, 4],
@@ -258,7 +262,7 @@ function getStylesheet(dark: boolean): Stylesheet[] {
     {
       selector: 'edge.search-dimmed',
       style: {
-        'opacity': 0.05
+        'opacity': 0.15
       }
     },
     {
@@ -280,7 +284,7 @@ function getStylesheet(dark: boolean): Stylesheet[] {
     {
       selector: 'edge.legend-dimmed',
       style: {
-        'opacity': 0.05
+        'opacity': 0.15
       }
     }
   ]

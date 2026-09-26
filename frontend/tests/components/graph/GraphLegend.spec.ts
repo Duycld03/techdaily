@@ -96,4 +96,41 @@ describe('GraphLegend.vue', () => {
       window.innerWidth = originalInnerWidth
     }
   })
+
+  it('renders entity node-type counts from store stats.nodeTypeCounts', () => {
+    const store = useKnowledgeGraphStore()
+    store.rawData = {
+      nodes: [],
+      edges: [],
+      stats: {
+        totalNodes: 256,
+        totalEdges: 300,
+        nodeTypeCounts: { pillar: 5, topic: 48, book: 19, highlight: 184 },
+        pillarCounts: {},
+        masteredCardsCount: 0
+      }
+    }
+    const wrapper = mount(GraphLegend)
+
+    expect(wrapper.find('[data-testid="legend-item-pillar"]').text()).toContain('5')
+    expect(wrapper.find('[data-testid="legend-item-topic"]').text()).toContain('48')
+    expect(wrapper.find('[data-testid="legend-item-book"]').text()).toContain('19')
+    expect(wrapper.find('[data-testid="legend-item-highlight"]').text()).toContain('184')
+  })
+
+  it('omits entity counts when graph stats are unavailable', () => {
+    const wrapper = mount(GraphLegend)
+    const pillar = wrapper.find('[data-testid="legend-item-pillar"]')
+
+    expect(pillar.text()).not.toContain('undefined')
+    expect(pillar.text()).not.toContain('NaN')
+  })
+
+  it('renders the footer isolate hint and an L keyboard chip', () => {
+    const wrapper = mount(GraphLegend)
+
+    expect(wrapper.text()).toContain('graph.legend.isolateHint')
+    expect(wrapper.find('kbd').exists()).toBe(true)
+    expect(wrapper.find('kbd').text()).toBe('L')
+  })
 })

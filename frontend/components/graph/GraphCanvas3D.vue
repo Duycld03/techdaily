@@ -10,6 +10,16 @@ import {
   Type
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore, type GraphNode, type GraphEdge } from '~/stores/useKnowledgeGraphStore'
+import {
+  CATEGORY_PALETTE,
+  EDGE_FAMILY_LINK_WIDTH_3D,
+  EDGE_PARTICLE_SPEED,
+  NODE_TYPE_COLOR,
+  SM2_STATUS_COLOR,
+  normalizeCategory,
+  normalizeSm2Status,
+  resolveEdgeFamily
+} from '~/utils/graphVisualTokens'
 
 const emit = defineEmits<{
   (e: 'ready', graph: any): void
@@ -34,25 +44,6 @@ function toggleAllLabels() {
   if (graphInstance.value) {
     graphInstance.value.refresh()
   }
-}
-
-// Category Colors matching 2D palette
-function getCategoryColor(category?: string | null): string {
-  const cat = (category || '').toLowerCase()
-  if (cat === 'backendruntime' || cat === 'backenddotnet' || cat === 'dotnet') return '#0284c7' // Sky
-  if (cat === 'databasestorage' || cat === 'database') return '#0891b2' // Cyan
-  if (cat === 'systemdesign') return '#7c3aed' // Purple
-  if (cat === 'frontendweb' || cat === 'frontend') return '#f59e0b' // Amber
-  if (cat === 'engineeringcraft') return '#e11d48' // Rose
-  return '#64748b' // Slate
-}
-
-// Card SM-2 Status Colors
-function getCardStatusColor(status?: string | null): string {
-  const s = (status || '').toLowerCase()
-  if (s === 'mastered') return '#7c3aed'
-  if (s === 'reviewing') return '#3b82f6'
-  return '#f59e0b' // Learning
 }
 
 // Node sizing by entity hierarchy
@@ -95,10 +86,10 @@ function hexToRgba(hex: string, alpha: number): string {
 
 function getBaseNodeColor(node: GraphNode): string {
   const type = (node.type || '').toLowerCase()
-  if (type === 'card') return getCardStatusColor(node.status)
-  if (type === 'highlight') return '#06b6d4'
-  if (type === 'book') return '#6366f1'
-  return getCategoryColor(node.category)
+  if (type === 'card') return SM2_STATUS_COLOR[normalizeSm2Status(node.status)]
+  if (type === 'highlight') return NODE_TYPE_COLOR.highlight
+  if (type === 'book') return NODE_TYPE_COLOR.book
+  return CATEGORY_PALETTE[normalizeCategory(node.category)].fill
 }
 
 // Node color resolver with interactive legend hover dimming
@@ -330,7 +321,9 @@ onMounted(async () => {
       })
       .linkWidth((edge: any) => {
         const activeNodeId = hoveredNode.value?.id || store.selectedNodeId
-        return activeNodeId && isEdgeConnectedToNode(edge, activeNodeId) ? 2.5 : 0.8
+        return activeNodeId && isEdgeConnectedToNode(edge, activeNodeId)
+          ? 2.5
+          : EDGE_FAMILY_LINK_WIDTH_3D[resolveEdgeFamily(edge.relationType)]
       })
       .linkOpacity(0.35)
       .linkDirectionalParticles((edge: any) => {
@@ -338,7 +331,7 @@ onMounted(async () => {
         return activeNodeId && isEdgeConnectedToNode(edge, activeNodeId) ? 4 : 0
       })
       .linkDirectionalParticleWidth(1.8)
-      .linkDirectionalParticleSpeed(0.007)
+      .linkDirectionalParticleSpeed(EDGE_PARTICLE_SPEED)
       // Bounded physics warmup to avoid UI freeze and save mobile battery
       .warmupTicks(70)
       .cooldownTicks(120)
