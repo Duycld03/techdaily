@@ -43,7 +43,8 @@ public class GetBookByIdHandler : IUseCase<GetBookByIdRequest, GetBookByIdRespon
                 ChunkOrder = c.ChunkOrder,
                 ChapterTitle = c.ChapterTitle,
                 EstimatedReadMinutes = c.EstimatedReadMinutes,
-                IsAiFormatted = c.IsAiFormatted
+                IsAiFormatted = c.IsAiFormatted,
+                Language = c.Language
             })
             .AsNoTracking()
             .ToListAsync(cancellationToken);

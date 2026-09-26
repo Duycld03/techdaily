@@ -42,6 +42,40 @@ export default defineNuxtConfig({
     }
   },
 
+  // Cross-origin isolation on reader routes only, so on-device narration can
+  // use multi-threaded WASM (SharedArrayBuffer). Scoped to /read/** so the
+  // Google OAuth popup on /login (which relies on window.opener) is unaffected.
+  // COEP `credentialless` keeps cross-origin no-credential assets (fonts, the
+  // model CDN, public document images) loading without per-origin CORP headers.
+  routeRules: {
+    '/read/**': {
+      headers: {
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Cross-Origin-Embedder-Policy': 'credentialless'
+      }
+    },
+    // Under COEP the reader's ES module worker must itself opt into COEP and
+    // carry CORP, or the browser blocks it (ERR_BLOCKED_BY_RESPONSE). This
+    // covers production; the dev server sets the same headers via `vite` below.
+    '/_nuxt/**': {
+      headers: {
+        'Cross-Origin-Embedder-Policy': 'credentialless',
+        'Cross-Origin-Resource-Policy': 'cross-origin'
+      }
+    }
+  },
+
+  // Dev server (Vite) must send COEP + CORP on the served worker/asset responses
+  // so the reader's module worker loads under COEP; route rules cover prod.
+  vite: {
+    server: {
+      headers: {
+        'Cross-Origin-Embedder-Policy': 'credentialless',
+        'Cross-Origin-Resource-Policy': 'cross-origin'
+      }
+    }
+  },
+
   runtimeConfig: {
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:5000',

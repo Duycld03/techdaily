@@ -418,6 +418,51 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(wrapper.text()).not.toContain('Look-Ahead Buffer Synthesis')
   })
 
+  it('sends the selected document language (overriding the interface locale) in the PDF upload payload', async () => {
+    const wrapper = mount(LibraryPage, {
+      global: {
+        stubs: {
+          NuxtLink: true,
+          Teleport: true
+        }
+      }
+    })
+    await flushPromises()
+
+    // Open the import modal and switch to the PDF Upload tab.
+    await wrapper.find('button.bg-brand-600').trigger('click')
+    await flushPromises()
+    const pdfTabBtn = wrapper.findAll('button').find(b => b.text().includes('library.tab_pdf'))
+    expect(pdfTabBtn).toBeDefined()
+    await pdfTabBtn!.trigger('click')
+    await flushPromises()
+
+    // Attach a PDF file.
+    const file = new File(['dummy-pdf-content'], 'sample.pdf', { type: 'application/pdf' })
+    const fileInput = wrapper.find('input[type="file"]')
+    Object.defineProperty(fileInput.element, 'files', { value: [file] })
+    await fileInput.trigger('change')
+    await flushPromises()
+
+    // Choose Vietnamese explicitly, overriding the 'en' interface locale.
+    const languageSelect = wrapper.findAllComponents(AppSelect)
+      .find(s => s.props('ariaLabel') === 'library.document_language')
+    expect(languageSelect).toBeDefined()
+    languageSelect!.vm.$emit('update:modelValue', 'vi')
+    await flushPromises()
+
+    // Submit the PDF upload form.
+    const pdfForm = wrapper.findAll('form').find(f => f.text().includes('library.upload_pdf_action'))
+    expect(pdfForm).toBeDefined()
+    await pdfForm!.trigger('submit.prevent')
+    await flushPromises()
+
+    // The upload payload carries the chosen language, not the interface locale.
+    expect(mockPostRaw).toHaveBeenCalled()
+    const sentForm = mockPostRaw.mock.calls[0]![1]
+    expect(sentForm.get('language')).toBe('vi')
+  })
+
   it('renders book cards with title and slice progress', async () => {
     const wrapper = mount(LibraryPage, {
       global: {

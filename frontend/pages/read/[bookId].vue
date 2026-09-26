@@ -20,6 +20,7 @@ import type { BookDetail, ChunkSummary } from "~/stores/useLibraryStore";
 import ReaderHeaderBar from "~/components/reader/ReaderHeaderBar.vue";
 import ReaderTocSidebar from "~/components/reader/ReaderTocSidebar.vue";
 import ReaderNavigationCards from "~/components/reader/ReaderNavigationCards.vue";
+import ReaderAudioPlayer from "~/components/reader/ReaderAudioPlayer.vue";
 import TermExplainerModal from "~/components/today/TermExplainerModal.vue";
 import { extractSurroundingContext } from "~/utils/contextExtractor";
 
@@ -767,6 +768,8 @@ async function handleHighlightAndNote() {
             >
               {{ currentChunk.chapterTitle }}
             </h1>
+
+            <ReaderAudioPlayer :chunk="currentChunk" />
           </div>
 
           <!-- Markdown Body -->

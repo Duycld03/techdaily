@@ -285,15 +285,21 @@ The library API SHALL provide authenticated endpoints for book details and slice
 2. `GET /api/v1/library/books/{id}/status`: Returns ingestion progress (`ProcessingStatus`, `ProgressPercentage`, `StatusMessage`, `TotalChunks`).
 3. `GET /api/v1/library/books/{id}/slices/{chunkOrder}`: Returns the complete markdown, takeaways, and quiz for a specific slice.
 
+Each chunk summary and single-slice response SHALL include the slice's content `language` (a short code such as `en` or `vi`, defaulting to `en` only when unknown), so that language-dependent reader features — such as on-device narration voice selection — can act on the document's language without issuing a separate request.
+
 All of the above endpoints SHALL enforce `.RequireAuthorization()` and reject unauthenticated requests with `HTTP 401 Unauthorized`.
 
 #### Scenario: Client requests book details for reader
 - **WHEN** client requests `GET /api/v1/library/books/{id}` with JWT authorization header
-- **THEN** response contains book metadata and an array of chunk summaries containing IDs, titles, chunk orders, and reading times, without heavy markdown content.
+- **THEN** response contains book metadata and an array of chunk summaries containing IDs, titles, chunk orders, reading times, and each slice's `language`, without heavy markdown content.
 
 #### Scenario: Client requests a specific slice
 - **WHEN** client requests `GET /api/v1/library/books/{id}/slices/{chunkOrder}` with JWT authorization header
-- **THEN** response contains the full `originalTextMarkdown`, `summaryMarkdown`, `keyTakeaways`, and `microQuiz` for that slice.
+- **THEN** response contains the full `originalTextMarkdown`, `summaryMarkdown`, `keyTakeaways`, `microQuiz`, and the slice's `language` for that slice.
+
+#### Scenario: Slice language reflects the document's ingested language
+- **WHEN** a book was ingested with content language `vi` and the client requests its book details or any of its slices
+- **THEN** the returned chunk summary and slice carry `language == "vi"`, and the value is not silently replaced by the `en` default.
 
 #### Scenario: Client requests a non-existent slice
 - **WHEN** client requests `GET /api/v1/library/books/{id}/slices/{chunkOrder}` with an invalid slice order or book ID
@@ -714,3 +720,19 @@ A user SHALL have full authorization to delete their provisioned starter handboo
 - **THEN** the server returns `HTTP 200 OK` with `{ "success": true }`
 - **AND** subsequent queries to `GET /api/v1/library/books` return an empty list with `totalCount = 0`
 - **AND** the `/library` view displays the zero-book empty state prompting document ingestion.
+
+### Requirement: Explicit Document Language Selection at Import
+
+The document import experience (PDF upload and remote-PDF / URL import) SHALL let the user explicitly select the document's content language (English or Vietnamese) as a first-class field. The selector SHALL default to the current interface locale but SHALL be user-overridable, and the import SHALL send the selected language as the document's language rather than silently using the interface locale. The selected language SHALL be applied to the document's slices so language-dependent downstream behavior (such as narration voice) matches the document's actual language regardless of the interface locale at import time. The selector SHALL be an accessible in-page control (not a native browser `<select>`) with localized `en`/`vi` labels.
+
+#### Scenario: Language selector shown and defaulted to interface locale
+- **WHEN** a user opens the PDF upload or URL import form
+- **THEN** a document-language selector is shown, defaulting to the current interface locale.
+
+#### Scenario: English document uploaded under a Vietnamese interface
+- **WHEN** a user whose interface is Vietnamese uploads an English document and sets the language selector to English
+- **THEN** the document and its slices are tagged English, not Vietnamese.
+
+#### Scenario: Narration voice follows the chosen import language
+- **WHEN** a document imported with a chosen language is later narrated
+- **THEN** the narration voice matches the language chosen at import, independent of the current interface locale.

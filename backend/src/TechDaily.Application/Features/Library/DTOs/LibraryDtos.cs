@@ -56,4 +56,5 @@ public class ChunkSummaryDto
     public List<string> KeyTakeaways { get; set; } = new();
     public int EstimatedReadMinutes { get; set; }
     public bool IsAiFormatted { get; set; }
+    public string Language { get; set; } = "en";
 }

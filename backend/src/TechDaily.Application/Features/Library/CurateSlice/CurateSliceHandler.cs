@@ -152,7 +152,8 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
             OriginalTextMarkdown = chunk.OriginalTextMarkdown,
             KeyTakeaways = chunk.KeyTakeaways,
             EstimatedReadMinutes = chunk.EstimatedReadMinutes,
-            IsAiFormatted = chunk.IsAiFormatted
+            IsAiFormatted = chunk.IsAiFormatted,
+            Language = chunk.Language
         };
 
         return new CurateSliceResponse { Chunk = dto };

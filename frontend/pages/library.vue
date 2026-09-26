@@ -58,6 +58,10 @@ const crawlSuccess = ref(false)
 const isPdfDetected = ref(false)
 const detectedPdfUrl = ref<string | null>(null)
 
+// Document language selection (defaults to the interface locale, user-overridable)
+const uploadLanguage = ref(locale.value || 'vi')
+const importLanguage = ref(locale.value || 'vi')
+
 // Delete modal state
 const bookToDelete = ref<{ id: string; title: string } | null>(null)
 const isDeleteModalOpen = ref(false)
@@ -78,6 +82,10 @@ const formCategoryOptions = computed(() => [
   { value: 2, label: t('library.categories.database') },
   { value: 3, label: t('library.categories.system_design') },
   { value: 4, label: t('library.categories.craft') }
+])
+const languageOptions = computed(() => [
+  { value: 'en', label: t('library.language_english') },
+  { value: 'vi', label: t('library.language_vietnamese') }
 ])
 function getCategoryLabel(category: number | string | undefined | null): string {
   if (category === undefined || category === null) {
@@ -462,7 +470,7 @@ async function handlePdfUpload() {
     formData.append('file', pdfFile.value, pdfFile.value.name)
     if (pdfTitle.value) formData.append('title', pdfTitle.value)
     formData.append('category', pdfCategory.value.toString())
-    formData.append('language', locale.value || 'vi')
+    formData.append('language', uploadLanguage.value)
 
     const book = await libraryStore.uploadPdf(formData)
     isUploadingPdf.value = false
@@ -537,7 +545,7 @@ async function handleImportRemotePdf() {
       pdfUrl: detectedPdfUrl.value,
       title: importTitle.value || 'PDF Document',
       category: importCategory.value,
-      language: locale.value || 'vi'
+      language: importLanguage.value
     })
     isImportModalOpen.value = false
     toast.success(t('library.upload_success_async'))
@@ -965,6 +973,15 @@ async function confirmDeleteBook() {
               :aria-label="$t('library.category_label')"
             />
           </div>
+
+          <div>
+            <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.document_language') }}</label>
+            <AppSelect
+              v-model="uploadLanguage"
+              :options="languageOptions"
+              :aria-label="$t('library.document_language')"
+            />
+          </div>
         </div>
 
         <div v-show="!isProcessingPdf" class="p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
@@ -1015,6 +1032,16 @@ async function confirmDeleteBook() {
             <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
             <span>{{ $t('library.verbatim_category_hint') }}</span>
           </div>
+        </div>
+
+        <!-- Document Language Selector for URL import -->
+        <div>
+          <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">{{ $t('library.document_language') }}</label>
+          <AppSelect
+            v-model="importLanguage"
+            :options="languageOptions"
+            :aria-label="$t('library.document_language')"
+          />
         </div>
 
         <!-- Embedded PDF Preview Card -->

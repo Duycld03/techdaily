@@ -45,7 +45,8 @@ public class GetBookSliceHandler : IUseCase<GetBookSliceRequest, GetBookSliceRes
             OriginalTextMarkdown = chunk.OriginalTextMarkdown,
             KeyTakeaways = chunk.KeyTakeaways,
             EstimatedReadMinutes = chunk.EstimatedReadMinutes,
-            IsAiFormatted = chunk.IsAiFormatted
+            IsAiFormatted = chunk.IsAiFormatted,
+            Language = chunk.Language
         };
 
         return new GetBookSliceResponse { Slice = sliceDto };

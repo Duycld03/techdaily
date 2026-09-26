@@ -1156,6 +1156,7 @@ export interface components {
             /** Format: int32 */
             estimatedReadMinutes?: number;
             isAiFormatted?: boolean;
+            language?: string;
         };
         CrawlUrlRequest: {
             url: string;
