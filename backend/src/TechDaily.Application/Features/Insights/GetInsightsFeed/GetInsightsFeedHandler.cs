@@ -77,7 +77,6 @@ public class GetInsightsFeedHandler : IUseCase<GetInsightsFeedRequest, GetInsigh
                 i.UnderTheHoodMarkdown,
                 i.BenchmarkStats,
                 i.SourceUrl,
-                i.LikesCount,
                 i.BookmarksCount,
                 bookmarkedSet.Contains(i.Id)
             ))

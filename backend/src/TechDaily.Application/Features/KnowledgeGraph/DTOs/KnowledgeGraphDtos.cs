@@ -16,12 +16,8 @@ public sealed record GraphNodeDto(
     string? DocumentChunkId = null,
     string? BookId = null,
     List<string>? Tags = null,
-    DateTime? CreatedAt = null,
-    string? EmbleUrl = null
-)
-{
-    public string? EmblemUrl => EmbleUrl;
-}
+    DateTime? CreatedAt = null
+);
 
 public sealed record GraphEdgeDto(
     string Id,

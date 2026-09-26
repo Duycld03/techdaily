@@ -11,7 +11,6 @@ const mockProfile = {
     preferredLocale: 'en',
     targetRole: 'Principal Architect',
     dailyGoalMinutes: 15,
-    telegramChatId: 987654321,
     hasPassword: true,
     isGoogleLinked: false
   },
@@ -45,7 +44,6 @@ vi.mock('~/composables/useApiClient', () => ({
           targetRole: body.targetRole || 'Principal Architect',
           dailyGoalMinutes: body.dailyGoalMinutes || 15,
           preferredLocale: body.preferredLocale || 'vi',
-          telegramChatId: body.telegramChatId
         }
       }
       throw new Error('Not found')

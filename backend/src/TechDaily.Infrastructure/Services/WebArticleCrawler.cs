@@ -411,7 +411,6 @@ public class WebArticleCrawler : IWebArticleCrawler
         return cleaned.Trim();
     }
 
-    public static (Uri ValidatedUri, IPAddress[] ResolvedIps) ValidateSafeUrl(string url) => UrlSecurityValidator.ValidateSafeUrl(url);
     public static Category InferCategoryFromContext(string title, string url, string? content = null)
     {
         var combined = $"{title} {url} {content}".ToLowerInvariant();

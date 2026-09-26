@@ -730,8 +730,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Register User
-         * @description Registers a new user with standard email and password.
+         * Register User (request email verification code)
+         * @description Validates the input, stores a pending registration, and emails a verification code. No account or session is created until the code is verified.
          */
         post: operations["Register"];
         delete?: never;
@@ -814,6 +814,86 @@ export interface paths {
          * @description Revokes refresh token family and clears the cookie.
          */
         post: operations["RevokeToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify Registration Code
+         * @description Verifies the email OTP, creates the user, provisions starter content, and returns an authenticated session.
+         */
+        post: operations["RegisterVerify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Password Reset Code
+         * @description Sends a password reset OTP when the email is registered. Always returns 200 to prevent account enumeration.
+         */
+        post: operations["ForgotPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Password
+         * @description Verifies the reset OTP, updates the password, and revokes all refresh token families for the user.
+         */
+        post: operations["ResetPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/otp/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resend OTP
+         * @description Re-issues a verification or password reset code, subject to the resend cooldown.
+         */
+        post: operations["ResendOtp"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1059,7 +1139,7 @@ export interface components {
         /** @enum {unknown} */
         CardStatus: "Learning" | "Reviewing" | "Mastered";
         /** @enum {unknown} */
-        Category: "FrontendWeb" | "BackendRuntime" | "BackendDotNet" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft";
+        Category: "FrontendWeb" | "BackendRuntime" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft";
         ChangePasswordRequest: {
             currentPassword: string | null;
             newPassword: string;
@@ -1212,6 +1292,9 @@ export interface components {
             explanation?: string;
             locale?: string;
             isFromCache?: boolean;
+        };
+        ForgotPasswordRequest: {
+            email: string;
         };
         GenerateInsightRequest: {
             preferredCategory?: components["schemas"]["NullableOfCategory"];
@@ -1425,9 +1508,6 @@ export interface components {
              * @default null
              */
             createdAt: string | null;
-            /** @default null */
-            embleUrl: string | null;
-            emblemUrl?: string | null;
         };
         GraphStatsDto: {
             /** Format: int32 */
@@ -1531,21 +1611,20 @@ export interface components {
         LoginRequest: {
             email: string;
             password: string;
+            /** @default true */
+            rememberMe: boolean;
         };
         MessageResponse: {
             message: string;
         };
-        /** @enum {unknown} */
-        NullableOfCardSourceType: "Topic" | "Highlight" | "QuizMistake" | null;
-        /** @enum {unknown} */
-        NullableOfCardStatus: "Learning" | "Reviewing" | "Mastered" | null;
         /**
          * @default null
          * @enum {unknown|null}
          */
-        NullableOfCategory: "FrontendWeb" | "BackendRuntime" | "BackendDotNet" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft" | null;
-        /** @enum {unknown} */
-        NullableOfCategory2: "FrontendWeb" | "BackendRuntime" | "BackendDotNet" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft" | null;
+        NullableOfCategory: "FrontendWeb" | "BackendRuntime" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft" | null;
+        OtpChallengeResponse: {
+            email: string;
+        };
         PacerBookSummaryDto: {
             /** Format: uuid */
             id?: string;
@@ -1662,6 +1741,17 @@ export interface components {
             name: string | null;
             /** @default en */
             locale: string | null;
+            /** @default true */
+            rememberMe: boolean;
+        };
+        ResendOtpRequest: {
+            email: string;
+            purpose: string;
+        };
+        ResetPasswordRequest: {
+            email: string;
+            code: string;
+            newPassword: string;
         };
         ResetReviewCardProgressResponse: {
             card?: components["schemas"]["ReviewCardDto"];
@@ -1779,8 +1869,6 @@ export interface components {
             benchmarkStats: string;
             sourceUrl: string | null;
             /** Format: int32 */
-            likesCount: number;
-            /** Format: int32 */
             bookmarksCount: number;
             /** @default false */
             isBookmarkedByUser: boolean;
@@ -1826,8 +1914,6 @@ export interface components {
             targetRole: string | null;
             /** Format: int32 */
             dailyGoalMinutes: number | null;
-            /** Format: int64 */
-            telegramChatId: number | null;
             preferredStudyTime: string | null;
             streakAlertTime: string | null;
             timeZone: string | null;
@@ -1850,8 +1936,6 @@ export interface components {
             targetRole: string;
             /** Format: int32 */
             dailyGoalMinutes: number;
-            /** Format: int64 */
-            telegramChatId: number | null;
             preferredStudyTime: string | null;
             streakAlertTime: string | null;
             timeZone: string;
@@ -1870,8 +1954,6 @@ export interface components {
             targetRole: string;
             /** Format: int32 */
             dailyGoalMinutes: number;
-            /** Format: int64 */
-            telegramChatId: number | null;
             preferredStudyTime: string | null;
             streakAlertTime: string | null;
             timeZone: string;
@@ -1885,6 +1967,12 @@ export interface components {
         };
         VapidPublicKeyResponse: {
             publicKey: string;
+        };
+        VerifyRegistrationRequest: {
+            email: string;
+            code: string;
+            /** @default true */
+            rememberMe: boolean;
         };
     };
     responses: never;
@@ -2686,8 +2774,8 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string;
-                status?: components["schemas"]["NullableOfCardStatus"];
-                sourceType?: components["schemas"]["NullableOfCardSourceType"];
+                status?: "Learning" | "Reviewing" | "Mastered" | null;
+                sourceType?: "Topic" | "Highlight" | "QuizMistake" | null;
                 page?: number;
                 pageSize?: number;
             };
@@ -2851,7 +2939,7 @@ export interface operations {
     GetBooks: {
         parameters: {
             query?: {
-                category?: components["schemas"]["NullableOfCategory2"];
+                category?: "FrontendWeb" | "BackendRuntime" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft" | null;
                 search?: string;
                 page?: number;
                 pageSize?: number;
@@ -3546,7 +3634,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuthSessionResponse"];
+                    "application/json": components["schemas"]["OtpChallengeResponse"];
                 };
             };
             /** @description Bad Request */
@@ -3679,6 +3767,138 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    RegisterVerify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyRegistrationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ForgotPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ForgotPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+        };
+    };
+    ResetPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ResendOtp: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResendOtpRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OtpChallengeResponse"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
             };
         };
     };

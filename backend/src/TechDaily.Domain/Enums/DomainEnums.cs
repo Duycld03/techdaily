@@ -4,8 +4,6 @@ public enum Category
 {
     FrontendWeb = 0,
     BackendRuntime = 1,
-    [Obsolete("Use BackendRuntime instead.")]
-    BackendDotNet = 1,
     DatabaseStorage = 2,
     SystemDesign = 3,
     EngineeringCraft = 4

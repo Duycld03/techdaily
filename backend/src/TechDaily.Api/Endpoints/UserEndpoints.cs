@@ -57,7 +57,6 @@ public static class UserEndpoints
                     PreferredLocale: user.PreferredLocale,
                     TargetRole: user.TargetRole,
                     DailyGoalMinutes: user.DailyGoalMinutes,
-                    TelegramChatId: user.TelegramChatId,
                     PreferredStudyTime: user.PreferredStudyTime?.ToString("HH:mm"),
                     StreakAlertTime: user.StreakAlertTime?.ToString("HH:mm"),
                     TimeZone: user.TimeZone,
@@ -113,9 +112,6 @@ public static class UserEndpoints
             if (request.DailyGoalMinutes.HasValue && request.DailyGoalMinutes.Value > 0)
                 user.DailyGoalMinutes = request.DailyGoalMinutes.Value;
 
-            if (request.TelegramChatId.HasValue)
-                user.TelegramChatId = request.TelegramChatId.Value;
-
             if (!string.IsNullOrWhiteSpace(request.PreferredStudyTime) && TimeOnly.TryParse(request.PreferredStudyTime, out var studyTime))
                 user.PreferredStudyTime = studyTime;
 
@@ -139,7 +135,6 @@ public static class UserEndpoints
                 PreferredLocale: user.PreferredLocale,
                 TargetRole: user.TargetRole,
                 DailyGoalMinutes: user.DailyGoalMinutes,
-                TelegramChatId: user.TelegramChatId,
                 PreferredStudyTime: user.PreferredStudyTime?.ToString("HH:mm"),
                 StreakAlertTime: user.StreakAlertTime?.ToString("HH:mm"),
                 TimeZone: user.TimeZone,
@@ -218,7 +213,6 @@ public record UpdateProfileRequest(
     string? PreferredLocale,
     string? TargetRole,
     int? DailyGoalMinutes,
-    long? TelegramChatId,
     string? PreferredStudyTime,
     string? StreakAlertTime,
     string? TimeZone,

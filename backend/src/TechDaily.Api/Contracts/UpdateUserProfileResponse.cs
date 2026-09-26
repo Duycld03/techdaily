@@ -11,7 +11,6 @@ public record UpdateUserProfileResponse(
     string PreferredLocale,
     string TargetRole,
     int DailyGoalMinutes,
-    long? TelegramChatId,
     string? PreferredStudyTime,
     string? StreakAlertTime,
     string TimeZone,

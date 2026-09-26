@@ -11,7 +11,6 @@ export interface UserProfile {
   preferredLocale: string
   targetRole: string
   dailyGoalMinutes: number
-  telegramChatId?: number
   preferredStudyTime?: string
   streakAlertTime?: string
   timeZone?: string
@@ -29,16 +28,6 @@ export interface UserLearningStats {
   totalCardsInDeck: number
   totalHighlightsSaved: number
   memberSince: string
-}
-
-export interface DomainMasteryProgress {
-  category: number
-  titleKey: string
-  defaultTitle: string
-  completedCount: number
-  totalCount: number
-  percentage: number
-  accentColor: string
 }
 
 export const useProfileStore = defineStore('profile', () => {
@@ -71,7 +60,6 @@ export const useProfileStore = defineStore('profile', () => {
     preferredLocale?: string
     targetRole?: string
     dailyGoalMinutes?: number
-    telegramChatId?: number
     preferredStudyTime?: string
     streakAlertTime?: string
     timeZone?: string
@@ -90,7 +78,6 @@ export const useProfileStore = defineStore('profile', () => {
         preferredLocale: string
         targetRole: string
         dailyGoalMinutes: number
-        telegramChatId?: number
         preferredStudyTime?: string
         streakAlertTime?: string
         timeZone?: string

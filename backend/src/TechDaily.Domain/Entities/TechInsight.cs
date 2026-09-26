@@ -15,7 +15,6 @@ public class TechInsight : BaseEntity
     public string UnderTheHoodMarkdown { get; set; } = string.Empty;
     public string BenchmarkStats { get; set; } = string.Empty;
     public string? SourceUrl { get; set; }
-    public int LikesCount { get; set; } = 0;
     public int BookmarksCount { get; set; } = 0;
     public bool IsPublished { get; set; } = true;
 }

@@ -9,7 +9,6 @@ import {
   BookOpen,
   Highlighter,
   Network,
-  User,
   Settings,
   Palette,
   FlaskConical

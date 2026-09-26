@@ -14,7 +14,6 @@ public record TechInsightDto(
     string UnderTheHoodMarkdown,
     string BenchmarkStats,
     string? SourceUrl,
-    int LikesCount,
     int BookmarksCount,
     bool IsBookmarkedByUser = false
 );

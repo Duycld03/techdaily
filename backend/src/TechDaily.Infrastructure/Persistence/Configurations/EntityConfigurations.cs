@@ -59,7 +59,6 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Name).HasMaxLength(255).IsRequired();
         builder.Property(u => u.AvatarUrl).HasMaxLength(500);
         builder.Property(u => u.GoogleSubjectId).HasMaxLength(255);
-        builder.Property(u => u.TelegramChatId);
         builder.Property(u => u.PreferredLocale).HasMaxLength(10).HasDefaultValue("en");
         builder.Property(u => u.TimeZone).HasMaxLength(100).HasDefaultValue("UTC");
         builder.Property(u => u.IsPushEnabled).HasDefaultValue(false);
@@ -353,7 +352,6 @@ public class TechInsightConfiguration : IEntityTypeConfiguration<TechInsight>
         builder.Property(t => t.UnderTheHoodMarkdown).IsRequired();
         builder.Property(t => t.BenchmarkStats).HasMaxLength(255);
         builder.Property(t => t.SourceUrl).HasMaxLength(500);
-        builder.Property(t => t.LikesCount).HasDefaultValue(0);
         builder.Property(t => t.BookmarksCount).HasDefaultValue(0);
         builder.Property(t => t.IsPublished).HasDefaultValue(true);
 

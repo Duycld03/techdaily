@@ -17,7 +17,6 @@ public record UserProfileDto(
     string PreferredLocale,
     string TargetRole,
     int DailyGoalMinutes,
-    long? TelegramChatId,
     string? PreferredStudyTime,
     string? StreakAlertTime,
     string TimeZone,

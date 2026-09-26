@@ -14,21 +14,6 @@ public interface ITermExplanationService
         CancellationToken cancellationToken = default);
 }
 
-public interface ITelegramNotifier
-{
-    Task<bool> SendDailyDispatchAsync(
-        long chatId,
-        string topicTitle,
-        string locale = "en",
-        CancellationToken cancellationToken = default);
-
-    Task<bool> SendStreakWarningAsync(
-        long chatId,
-        int currentStreak,
-        string locale = "en",
-        CancellationToken cancellationToken = default);
-}
-
 public interface ITechInsightGenerator
 {
     Task<Result<TechDaily.Domain.Entities.TechInsight>> GenerateInsightAsync(

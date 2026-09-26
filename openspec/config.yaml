@@ -12,7 +12,7 @@ context: |
   - Frontend: Nuxt 3 (Vue 3.5, SSR/PWA), Tailwind CSS, Pinia, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode (Dark/Light), Markdown-it + Shiki Syntax Highlighter, Cytoscape.js Knowledge Graph, Lucide Icons
   - AI Engine: Gemini 3.5 Flash Lite (<5s low latency for scenarios & quizzes), gemini-embedding-001 (768-D vectors), Structured JSON Output, Semantic Term Cache
   - Background Jobs: BackgroundService with PeriodicTimer for notifications & async PDF ingestion
-  - Notifications: Web Push (VAPID) with auto-detected IANA timezones (primary) + Telegram Bot API (secondary)
+  - Notifications: Web Push (VAPID) with auto-detected IANA timezones
 
 rules:
   proposal:

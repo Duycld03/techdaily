@@ -122,8 +122,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 DocumentChunkId: null,
                 BookId: null,
                 Tags: null,
-                CreatedAt: null,
-                EmbleUrl: null
+                CreatedAt: null
             ));
         }
 
@@ -146,8 +145,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 DocumentChunkId: null,
                 BookId: null,
                 Tags: null,
-                CreatedAt: topic.CreatedAt.UtcDateTime,
-                EmbleUrl: null
+                CreatedAt: topic.CreatedAt.UtcDateTime
             ));
         }
 
@@ -171,8 +169,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 DocumentChunkId: null,
                 BookId: book.Id.ToString(),
                 Tags: null,
-                CreatedAt: book.CreatedAt.UtcDateTime,
-                EmbleUrl: null
+                CreatedAt: book.CreatedAt.UtcDateTime
             ));
         }
 
@@ -231,8 +228,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 DocumentChunkId: card.SourceHighlightId?.ToString(),
                 BookId: card.TopicId?.ToString(),
                 Tags: null,
-                CreatedAt: card.CreatedAt.UtcDateTime,
-                EmbleUrl: null
+                CreatedAt: card.CreatedAt.UtcDateTime
             ));
         }
 
@@ -262,8 +258,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 DocumentChunkId: highlight.DocumentChunkId.ToString(),
                 BookId: highlight.DocumentChunk?.DocumentBookId.ToString(),
                 Tags: highlight.Tags,
-                CreatedAt: highlight.CreatedAt.UtcDateTime,
-                EmbleUrl: null
+                CreatedAt: highlight.CreatedAt.UtcDateTime
             ));
         }
 

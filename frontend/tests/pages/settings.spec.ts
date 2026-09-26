@@ -250,9 +250,6 @@ describe('SettingsPage Unified Navigation & Account Tabs', () => {
           LocaleSelector: true,
           AppSelect: true,
           AppTimePicker: true,
-          EngineerIdentityPassport: true,
-          EngineerMilestonesCard: true,
-          DomainGoalTracker: true
         }
       }
     })
@@ -272,9 +269,6 @@ describe('SettingsPage Unified Navigation & Account Tabs', () => {
           LocaleSelector: true,
           AppSelect: true,
           AppTimePicker: true,
-          EngineerIdentityPassport: true,
-          EngineerMilestonesCard: true,
-          DomainGoalTracker: true
         }
       }
     })
@@ -317,9 +311,6 @@ describe('SettingsPage Unified Navigation & Account Tabs', () => {
           LocaleSelector: true,
           AppSelect: true,
           AppTimePicker: true,
-          EngineerIdentityPassport: true,
-          EngineerMilestonesCard: true,
-          DomainGoalTracker: true
         }
       }
     })

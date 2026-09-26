@@ -32,7 +32,7 @@ TechDaily (Clean Architecture)
 | **AI Synthesis Engine** | **Gemini 3.5 Flash Lite API** | Structured Output (JSON Schema), High-Speed Quiz & Challenge Synthesis (<5s), Semantic Term Cache, JIT Look-Ahead Buffer Pre-generation |
 | **Document Ingestion** | **PdfPig + ReverseMarkdown** | Asynchronous Channel-based queue with zero-LOH disk spooling for PDFs up to 300MB (8,000+ pages), native PDF Bookmarks/Outline segmentation, HTML-to-Markdown Web Crawler |
 | **Frontend Web** | **Nuxt 3 + Vue 3.5** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
-| **Notifications** | **Web Push (VAPID) + Telegram** | Real-time browser push notifications (VAPID, Service Worker) and Telegram Bot alerts for Morning Curriculum and Streak Preservation with auto-detected IANA timezones |
+| **Notifications** | **Web Push (VAPID)** | Real-time browser push notifications (VAPID, Service Worker) for Morning Curriculum and Streak Preservation with auto-detected IANA timezones |
 | **Identity & Security** | **JWT + Rotating Refresh Tokens + Email OTP** | PBKDF2 password hashing (16-byte salt, 100,000 SHA-256 iterations), OTP-verified email registration & password reset (SMTP transactional email), refresh-token family rotation with reuse detection, opt-in 30-day "Remember Me" persistence, Google OAuth 2.0 |
 
 ---

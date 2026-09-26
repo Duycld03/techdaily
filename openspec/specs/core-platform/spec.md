@@ -191,15 +191,6 @@ The system SHALL increment active streak upon daily completion and provide month
 
 ---
 
-### Requirement: Telegram Push Notifications
-The system SHALL provide notification dispatches for morning curriculum reminders (08:00 AM) and evening streak preservation alerts (20:00 PM).
-
-#### Scenario: Morning dispatch worker runs
-- **WHEN** background scheduler triggers 08:00 AM dispatch
-- **THEN** worker sends telegram message with today's reading title and link to users with configured `TelegramChatId`.
-
----
-
 ### Requirement: Internationalization (i18n) & Dark Mode
 The web frontend SHALL support seamless switching between English (`en-US`) and Vietnamese (`vi-VN`) via `@nuxtjs/i18n` and provide persistent dark/light theme switching without visual flashing.
 
@@ -267,11 +258,15 @@ All toast notifications, confirmation dialog texts, action button loading states
 - **THEN** the emitted toast or inline message reflects the active locale using defined i18n dictionary keys.
 
 ### Requirement: Notification Dispatch Multi-Channel Support
-The system SHALL support multi-channel notifications, giving precedence to native browser Web Push while maintaining optional Telegram integration for users who explicitly configure a `TelegramChatId`. Notification dispatches SHALL strictly respect the user's localized timezone and preferred time slots rather than firing at hardcoded server hours.
+The system SHALL dispatch study reminders and streak-preservation notifications exclusively via native browser Web Push (VAPID). Notification dispatches SHALL strictly respect the user's localized timezone and preferred time slots rather than firing at hardcoded server hours.
 
 #### Scenario: User receives reminder via Web Push
 - **WHEN** the background scheduler triggers a study reminder for a user with active web push subscriptions
 - **THEN** the system sends a VAPID-encrypted Web Push notification to all active devices registered by that user, delivering the message directly to the operating system notification center.
+
+#### Scenario: Dispatch respects user timezone and preferred slots
+- **WHEN** the background scheduler evaluates users for reminder dispatch
+- **THEN** it sends notifications aligned to each user's stored IANA timezone and preferred time slots, not fixed server-local hours.
 
 ---
 

@@ -66,7 +66,6 @@ public class GenerateInsightHandler : IUseCase<GenerateInsightRequest, TechInsig
             insight.UnderTheHoodMarkdown,
             insight.BenchmarkStats,
             insight.SourceUrl,
-            insight.LikesCount,
             insight.BookmarksCount,
             false
         );

@@ -31,7 +31,6 @@ public static class DependencyInjection
         services.AddHttpClient<GeminiAiService>(client => client.Timeout = TimeSpan.FromSeconds(90));
         services.AddHttpClient<GeminiEmbeddingService>(client => client.Timeout = TimeSpan.FromSeconds(30));
         services.AddHttpClient<TermExplanationService>(client => client.Timeout = TimeSpan.FromSeconds(30));
-        services.AddHttpClient<TelegramNotifier>();
         services.AddHttpClient<IWebArticleCrawler, WebArticleCrawler>()
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
@@ -51,7 +50,6 @@ public static class DependencyInjection
         services.AddScoped<IAiMarkdownFormatter, GeminiAiService>();
         services.AddScoped<IGeminiAiService, GeminiAiService>();
         services.AddScoped<ITermExplanationService, TermExplanationService>();
-        services.AddScoped<ITelegramNotifier, TelegramNotifier>();
         services.AddScoped<IPdfExtractor, PdfPigExtractor>();
         services.AddSingleton<IPdfIngestionQueue, PdfIngestionQueue>();
         services.AddScoped<ILookAheadBufferService, LookAheadBufferService>();

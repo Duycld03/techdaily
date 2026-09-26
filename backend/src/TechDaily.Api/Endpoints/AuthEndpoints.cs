@@ -388,12 +388,12 @@ public static class AuthEndpoints
                 }
             }
 
-            return Results.Ok(new OtpMessageResponse("If the email is registered, a reset code has been sent."));
+            return Results.Ok(new MessageResponse("If the email is registered, a reset code has been sent."));
         })
         .WithName("ForgotPassword")
         .WithSummary("Request Password Reset Code")
         .WithDescription("Sends a password reset OTP when the email is registered. Always returns 200 to prevent account enumeration.")
-        .Produces<OtpMessageResponse>(StatusCodes.Status200OK)
+        .Produces<MessageResponse>(StatusCodes.Status200OK)
         .RequireRateLimiting("OtpEndpointsPolicy");
 
         // Reset Password: verify code, set new hash, revoke all sessions
@@ -436,12 +436,12 @@ public static class AuthEndpoints
             await tokenService.RevokeAllForUserAsync(user.Id, ct);
             ClearRefreshTokenCookie(context);
 
-            return Results.Ok(new OtpMessageResponse("Password has been reset. Please sign in again."));
+            return Results.Ok(new MessageResponse("Password has been reset. Please sign in again."));
         })
         .WithName("ResetPassword")
         .WithSummary("Reset Password")
         .WithDescription("Verifies the reset OTP, updates the password, and revokes all refresh token families for the user.")
-        .Produces<OtpMessageResponse>(StatusCodes.Status200OK)
+        .Produces<MessageResponse>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .RequireRateLimiting("OtpEndpointsPolicy");
 
@@ -466,7 +466,7 @@ public static class AuthEndpoints
                 var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, ct);
                 if (user == null)
                 {
-                    return Results.Ok(new OtpMessageResponse("If the email is registered, a reset code has been sent."));
+                    return Results.Ok(new MessageResponse("If the email is registered, a reset code has been sent."));
                 }
 
                 var reset = await otpService.RequestAsync(normalizedEmail, OtpPurpose.PasswordReset, null, user.PreferredLocale, ct);
@@ -553,4 +553,3 @@ public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Email, string Code, string NewPassword);
 public record ResendOtpRequest(string Email, string Purpose);
 public record OtpChallengeResponse(string Email);
-public record OtpMessageResponse(string Message);
