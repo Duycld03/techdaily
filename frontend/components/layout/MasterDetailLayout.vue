@@ -6,13 +6,15 @@
  */
 defineProps<{
   maxHeight?: string
+  /** Full-bleed variant: drops the glass-card chrome (rounded corners, border, shadow) so the surface fills its container to all four edges. */
+  flush?: boolean
 }>()
 </script>
 
 <template>
   <div
-    class="glass-card flex min-h-0 flex-col overflow-hidden"
-    :class="{ 'flex-1': !maxHeight }"
+    class="flex min-h-0 flex-col overflow-hidden"
+    :class="[flush ? 'bg-slate-50 dark:bg-canvas' : 'glass-card', { 'flex-1': !maxHeight }]"
     :style="maxHeight ? { height: maxHeight } : {}"
   >
     <!-- Header -->

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import {
   Settings as SettingsIcon,
+  SlidersHorizontal,
   Globe,
   Bell,
   Loader2,
@@ -361,9 +362,9 @@ async function handleTimezoneChange(newTz: string | number) {
 </script>
 
 <template>
-  <div class="py-4 sm:py-6 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-canvas min-h-[calc(100dvh-3.5rem)] sm:min-h-[calc(100dvh-3.75rem)] transition-colors duration-200">
-    <div class="max-w-5xl mx-auto">
-      <MasterDetailLayout class="w-full">
+  <div class="bg-slate-50 dark:bg-canvas h-full flex flex-col transition-colors duration-200">
+    <div class="w-full flex-1 flex flex-col min-h-0">
+      <MasterDetailLayout flush class="w-full">
         <!-- Header -->
         <template #header>
           <div class="flex items-center gap-2.5">
@@ -391,7 +392,7 @@ async function handleTimezoneChange(newTz: string | number) {
               ]"
             >
               <span class="flex items-center gap-2.5">
-                <SettingsIcon class="w-4 h-4 shrink-0" :stroke-width="1.5" />
+                <SlidersHorizontal class="w-4 h-4 shrink-0" :stroke-width="1.5" />
                 <span>{{ $t('settings.tab_general') }}</span>
               </span>
             </button>
