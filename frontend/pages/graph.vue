@@ -5,6 +5,7 @@ import {
   Network,
   RotateCcw,
   AlertTriangle,
+  BookOpen,
   Loader2
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
@@ -84,12 +85,38 @@ onMounted(() => {
       </button>
     </div>
 
-    <!-- Empty State Guidance (when filtered down to 0 visible nodes) -->
+    <!-- Empty State Guidance (no visible nodes) -->
     <div
       v-else-if="!store.isLoading && !store.error && store.filteredNodes.length === 0"
       class="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 text-center space-y-3 pointer-events-none"
     >
+      <!-- The user has not learned anything yet: no raw nodes returned by the API -->
       <div
+        v-if="!store.hasAnyNodes"
+        class="pointer-events-auto glass-panel p-6 sm:p-8 max-w-md shadow-2xl flex flex-col items-center space-y-3 border border-slate-200/90 dark:border-white/[0.08] dark:bg-canvas-subtle"
+      >
+        <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-center text-slate-400 dark:text-slate-300">
+          <Network class="w-6 h-6" />
+        </div>
+        <h3 class="text-base font-bold text-slate-900 dark:text-white">
+          {{ $t('graph.empty.no_knowledge_title') }}
+        </h3>
+        <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-relaxed">
+          {{ $t('graph.empty.no_knowledge_description') }}
+        </p>
+        <NuxtLink
+          to="/library"
+          data-testid="graph-empty-cta"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-semibold transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-md shadow-brand-500/20"
+        >
+          <BookOpen class="w-4 h-4 shrink-0" />
+          <span class="whitespace-nowrap shrink-0">{{ $t('graph.empty.start_learning_cta') }}</span>
+        </NuxtLink>
+      </div>
+
+      <!-- Raw nodes exist but the active filters hid them all -->
+      <div
+        v-else
         class="pointer-events-auto glass-panel p-6 sm:p-8 max-w-md shadow-2xl flex flex-col items-center space-y-3 border border-slate-200/90 dark:border-white/[0.08] dark:bg-canvas-subtle"
       >
         <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-center text-slate-400 dark:text-slate-300">
@@ -142,7 +169,7 @@ onMounted(() => {
     />
 
     <!-- Interactive Visual Graph Legend (Bottom Left, 2D & 3D) -->
-    <div class="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-3 sm:left-5 z-20 pointer-events-none">
+    <div v-if="store.filteredNodes.length > 0" class="absolute bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-3 sm:left-5 z-20 pointer-events-none">
       <GraphLegend />
     </div>
     <!-- Slide-Over / Bottom-Sheet Detail Drawer -->

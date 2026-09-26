@@ -119,12 +119,17 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
                 Title = "Under the Hood of CLR Generational GC",
                 Slug = "clr-gc-book",
                 Category = Category.BackendRuntime,
-                IsPublished = true
+                IsPublished = true,
+                CreatedByUserId = _userId
             };
+
+            // A card links the topic so it is a touched (emitted) node.
+            var card = SpacedRepetitionCard.Create(_userId, topic.Id);
 
             await db.Users.AddAsync(user);
             await db.Topics.AddAsync(topic);
             await db.DocumentBooks.AddAsync(book);
+            await db.SpacedRepetitionCards.AddAsync(card);
             await db.SaveChangesAsync();
         }
 
@@ -135,13 +140,14 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var payload = await response.Content.ReadFromJsonAsync<KnowledgeGraphResponse>();
         payload.Should().NotBeNull();
-        payload!.Nodes.Should().HaveCount(7);
+        payload!.Nodes.Should().HaveCount(4);
         payload.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar);
         payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar);
         payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar);
         payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToTopic);
-        payload.Stats.TotalNodes.Should().Be(7);
-        payload.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(5);
+        payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToTopic);
+        payload.Stats.TotalNodes.Should().Be(4);
+        payload.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(1);
     }
 
     public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>

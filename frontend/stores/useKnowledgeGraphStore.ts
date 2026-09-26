@@ -139,6 +139,10 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     )
   })
 
+  // True when the API returned at least one raw node (before client-side filters).
+  // Distinguishes "user has learned nothing yet" from "filters hid every node".
+  const hasAnyNodes = computed<boolean>(() => (rawData.value?.nodes?.length ?? 0) > 0)
+
   const selectedNode = computed<GraphNode | null>(() => {
     if (!rawData.value?.nodes || !selectedNodeId.value) return null
     return rawData.value.nodes.find((n) => n.id === selectedNodeId.value) ?? null
@@ -243,6 +247,7 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     viewMode,
     filteredNodes,
     filteredEdges,
+    hasAnyNodes,
     selectedNode,
     stats,
     nodeStats,

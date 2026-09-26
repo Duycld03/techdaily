@@ -678,7 +678,10 @@
     },
     "empty": {
       "title": "No Nodes Match Filters",
-      "description": "Adjust your category or search filter to explore your knowledge graph."
+      "description": "Adjust your category or search filter to explore your knowledge graph.",
+      "no_knowledge_title": "No Learned Knowledge Yet",
+      "no_knowledge_description": "Your personal knowledge graph maps what you have actually studied. Import a document and start highlighting or reviewing to grow your graph.",
+      "start_learning_cta": "Start Learning"
     },
     "error": {
       "title": "Failed to Load Knowledge Graph",

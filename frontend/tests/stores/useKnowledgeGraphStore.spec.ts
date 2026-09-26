@@ -146,6 +146,30 @@ describe('useKnowledgeGraphStore', () => {
     )
   })
 
+  it('reports hasAnyNodes false when the API returned no raw nodes', () => {
+    const store = useKnowledgeGraphStore()
+    expect(store.hasAnyNodes).toBe(false)
+
+    store.rawData = {
+      nodes: [],
+      edges: [],
+      stats: {
+        totalNodes: 0,
+        totalEdges: 0,
+        nodeTypeCounts: {},
+        pillarCounts: {},
+        masteredCardsCount: 0
+      }
+    }
+    expect(store.hasAnyNodes).toBe(false)
+  })
+
+  it('reports hasAnyNodes true once the API returns at least one node', async () => {
+    const store = useKnowledgeGraphStore()
+    await store.fetchGraph()
+    expect(store.hasAnyNodes).toBe(true)
+  })
+
   it('filters nodes by category pillar', async () => {
     const store = useKnowledgeGraphStore()
     await store.fetchGraph()

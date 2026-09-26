@@ -31,7 +31,7 @@ public static class KnowledgeGraphEndpoints
         .RequireAuthorization()
         .WithName("GetKnowledgeGraph")
         .WithSummary("Get Knowledge Graph")
-        .WithDescription("Retrieves the full architecture knowledge graph with topics, books, cards, and highlights for the authenticated user.")
+        .WithDescription("Retrieves the authenticated user's personal knowledge graph, derived strictly from their own learned artifacts: books they imported, curriculum topics they have touched (via their flashcards or highlight tags), their personal highlights and spaced-repetition cards, and only the pillar hubs those nodes connect to. It does not project the global seeded curriculum or content owned by other users.")
         .Produces<KnowledgeGraphResponse>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized);

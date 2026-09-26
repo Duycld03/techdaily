@@ -678,7 +678,10 @@
     },
     "empty": {
       "title": "Không Có Nút Nào Phù Hợp Bộ Lọc",
-      "description": "Điều chỉnh danh mục hoặc từ khóa tìm kiếm để khám phá sơ đồ tri thức của bạn."
+      "description": "Điều chỉnh danh mục hoặc từ khóa tìm kiếm để khám phá sơ đồ tri thức của bạn.",
+      "no_knowledge_title": "Chưa Có Kiến Thức Đã Học",
+      "no_knowledge_description": "Sơ đồ tri thức cá nhân thể hiện những gì bạn đã thực sự học. Hãy nhập một tài liệu rồi bắt đầu tô sáng hoặc ôn tập để mở rộng sơ đồ của bạn.",
+      "start_learning_cta": "Bắt Đầu Học"
     },
     "error": {
       "title": "Không Thể Tải Sơ Đồ Tri Thức",

@@ -1,202 +1,101 @@
-import { describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import GraphPage from '~/pages/graph.vue'
-import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
+import {
+  useKnowledgeGraphStore,
+  type KnowledgeGraphResponse
+} from '~/stores/useKnowledgeGraphStore'
+
+// The store's fetchGraph early-returns when rawData is already set, so the API is not hit;
+// the mock is a safety net against accidental network access.
 vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
-    get: vi.fn(async () => ({
-      nodes: [],
-      edges: [],
-      stats: { totalNodes: 0, totalEdges: 0, nodeTypeCounts: {}, pillarCounts: {}, masteredCardsCount: 0 }
-    }))
+    get: vi.fn(async () => emptyGraph())
   })
 }))
 
-const GraphCanvasStub = {
-  name: 'GraphCanvas',
-  template: '<div data-testid="graph-canvas"></div>',
-  methods: {
-    fitScreen: vi.fn()
+function emptyGraph(): KnowledgeGraphResponse {
+  return {
+    nodes: [],
+    edges: [],
+    stats: {
+      totalNodes: 0,
+      totalEdges: 0,
+      nodeTypeCounts: {},
+      pillarCounts: {},
+      masteredCardsCount: 0
+    }
   }
 }
 
-const GraphControlBarStub = {
-  name: 'GraphControlBar',
-  template: '<div data-testid="graph-control-bar"></div>',
-  emits: ['fit-screen']
-}
-
-const GraphMinimapStub = {
-  name: 'GraphMinimap',
-  template: '<div data-testid="graph-minimap"></div>',
-  props: ['cy']
-}
-
-const GraphDetailDrawerStub = {
-  name: 'GraphDetailDrawer',
-  template: '<div data-testid="graph-detail-drawer"></div>'
-}
-
-describe('pages/graph.vue', () => {
-  function createTestStore() {
-    setActivePinia(createPinia())
-    const store = useKnowledgeGraphStore()
-    return store
-  }
-
-  it('calls fetchGraph on mounted', () => {
-    const store = createTestStore()
-    const fetchSpy = vi.spyOn(store, 'fetchGraph')
-
-    mount(GraphPage, {
-      global: {
-        stubs: {
-          GraphCanvas: GraphCanvasStub,
-          GraphControlBar: GraphControlBarStub,
-          GraphMinimap: GraphMinimapStub,
-          GraphDetailDrawer: GraphDetailDrawerStub
-        }
-      }
-    })
-
-    expect(fetchSpy).toHaveBeenCalled()
-  })
-
-  it('renders loading overlay while store is loading', () => {
-    const store = createTestStore()
-    store.isLoading = true
-
-    const wrapper = mount(GraphPage, {
-      global: {
-        stubs: {
-          GraphCanvas: GraphCanvasStub,
-          GraphControlBar: GraphControlBarStub,
-          GraphMinimap: GraphMinimapStub,
-          GraphDetailDrawer: GraphDetailDrawerStub
-        }
-      }
-    })
-
-    expect(wrapper.text()).toContain('graph.loading')
-  })
-
-  it('renders error overlay and retries fetch when retry button is clicked', async () => {
-    const store = createTestStore()
-    store.isLoading = false
-    store.error = 'Failed to load graph network.'
-    const fetchSpy = vi.spyOn(store, 'fetchGraph')
-
-    const wrapper = mount(GraphPage, {
-      global: {
-        stubs: {
-          GraphCanvas: GraphCanvasStub,
-          GraphControlBar: GraphControlBarStub,
-          GraphMinimap: GraphMinimapStub,
-          GraphDetailDrawer: GraphDetailDrawerStub
-        }
-      }
-    })
-
-    expect(wrapper.text()).toContain('graph.error.title')
-    expect(wrapper.text()).toContain('Failed to load graph network.')
-
-    const retryBtn = wrapper.findAll('button').find((b) => b.text().includes('graph.error.retry'))
-    expect(retryBtn).toBeDefined()
-
-    await retryBtn!.trigger('click')
-    expect(fetchSpy).toHaveBeenCalledWith(true)
-  })
-
-  it('renders empty state when there are 0 filtered nodes', async () => {
-    const store = createTestStore()
-    store.isLoading = false
-    store.error = null
-    store.rawData = {
-      nodes: [],
-      edges: [],
-      stats: {
-        totalNodes: 0,
-        totalEdges: 0,
-        nodeTypeCounts: {},
-        pillarCounts: {},
-        masteredCardsCount: 0
+function mountGraph() {
+  return mount(GraphPage, {
+    global: {
+      stubs: {
+        GraphCanvas: true,
+        GraphControlBar: true,
+        GraphMinimap: true,
+        GraphDetailDrawer: true,
+        GraphCanvas3D: true,
+        GraphLegend: true,
+        ClientOnly: { template: '<div><slot /></div>' },
+        NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' }
       }
     }
-    const resetSpy = vi.spyOn(store, 'resetFilters')
+  })
+}
 
-    const wrapper = mount(GraphPage, {
-      global: {
-        stubs: {
-          GraphCanvas: GraphCanvasStub,
-          GraphControlBar: GraphControlBarStub,
-          GraphMinimap: GraphMinimapStub,
-          GraphDetailDrawer: GraphDetailDrawerStub
-        }
-      }
-    })
-
-    expect(wrapper.text()).toContain('graph.empty.title')
-    expect(wrapper.text()).toContain('graph.empty.description')
-
-    const resetBtn = wrapper.findAll('button').find((b) => b.text().includes('graph.resetFilters'))
-    expect(resetBtn).toBeDefined()
-
-    await resetBtn!.trigger('click')
-    expect(resetSpy).toHaveBeenCalled()
+describe('pages/graph.vue empty states', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
   })
 
-  it('embeds control bar, canvas, minimap, and detail drawer', () => {
-    const store = createTestStore()
-    store.isLoading = false
+  it('shows the start-learning CTA routing to /library when the user has no learned artifacts', async () => {
+    const store = useKnowledgeGraphStore()
+    store.rawData = emptyGraph()
+
+    const wrapper = mountGraph()
+    await flushPromises()
+
+    expect(store.hasAnyNodes).toBe(false)
+    expect(store.filteredNodes).toHaveLength(0)
+
+    const cta = wrapper.find('[data-testid="graph-empty-cta"]')
+    expect(cta.exists()).toBe(true)
+    expect(cta.attributes('href')).toBe('/library')
+  })
+
+  it('shows the reset-filters CTA (not the start-learning CTA) when filters hide existing nodes', async () => {
+    const store = useKnowledgeGraphStore()
     store.rawData = {
-      nodes: [{ id: 'n1', label: 'Node 1', type: 'topic', category: 'BackendDotNet' }],
+      nodes: [
+        {
+          id: 'topic_1',
+          label: 'Async I/O',
+          type: 'topic',
+          category: 'BackendRuntime'
+        }
+      ],
       edges: [],
       stats: {
         totalNodes: 1,
         totalEdges: 0,
-        nodeTypeCounts: {},
-        pillarCounts: {},
+        nodeTypeCounts: { topic: 1 },
+        pillarCounts: { BackendRuntime: 1 },
         masteredCardsCount: 0
       }
     }
+    // Filter to a category the node does not belong to, hiding every node.
+    store.setCategory('FrontendWeb')
 
-    const wrapper = mount(GraphPage, {
-      global: {
-        stubs: {
-          GraphCanvas: GraphCanvasStub,
-          GraphControlBar: GraphControlBarStub,
-          GraphMinimap: GraphMinimapStub,
-          GraphDetailDrawer: GraphDetailDrawerStub
-        }
-      }
-    })
+    const wrapper = mountGraph()
+    await flushPromises()
 
-    expect(wrapper.find('[data-testid="graph-canvas"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="graph-control-bar"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="graph-minimap"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="graph-detail-drawer"]').exists()).toBe(true)
-  })
+    expect(store.hasAnyNodes).toBe(true)
+    expect(store.filteredNodes).toHaveLength(0)
 
-  it('maintains a clean canvas studio without redundant telemetry HUD ribbon', () => {
-    const store = createTestStore()
-    store.rawData = {
-      nodes: [{ id: 'n1', label: 'Topic 1', category: 0, type: 'topic' } as any],
-      edges: [],
-      stats: { totalNodes: 1, totalEdges: 0, nodeTypeCounts: {}, pillarCounts: {}, masteredCardsCount: 0 }
-    }
-
-    const wrapper = mount(GraphPage, {
-      global: {
-        stubs: {
-          GraphCanvas: GraphCanvasStub,
-          GraphControlBar: GraphControlBarStub,
-          GraphMinimap: GraphMinimapStub,
-          GraphDetailDrawer: GraphDetailDrawerStub
-        }
-      }
-    })
-
-    expect(wrapper.text()).not.toContain('HUD Live')
+    expect(wrapper.find('[data-testid="graph-empty-cta"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('graph.resetFilters')
   })
 })

@@ -53,7 +53,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhenAuthenticatedUserRequestsGraph_ShouldReturnAllNodeTypesAndEdges()
+    public async Task ExecuteAsync_WhenAuthenticatedUserRequestsGraph_ShouldReturnScopedNodesAndEdges()
     {
         // Arrange
         var user = new User { Id = Guid.NewGuid(), Email = "user@techdaily.local", Name = "Senior Dev" };
@@ -79,7 +79,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Category = Category.DatabaseStorage,
             AuthorOrSourceUrl = "Martin Kleppmann",
             IsPublished = true,
-            IsDeleted = false
+            IsDeleted = false,
+            CreatedByUserId = user.Id
         };
         await _db.DocumentBooks.AddAsync(book);
 
@@ -117,7 +118,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeTrue();
         var response = result.Value;
-        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar);
+        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar && n.Id == "pillar-DatabaseStorage");
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Topic && n.Id == topic.Id.ToString());
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Book && n.Id == book.Id.ToString());
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Card && n.Id == card.Id.ToString());
@@ -141,8 +142,9 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             && e.Source == highlight.Id.ToString()
             && e.Target == topic.Id.ToString());
 
-        response.Stats.TotalNodes.Should().Be(9);
-        response.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(5);
+        // Every artifact is DatabaseStorage, so exactly one pillar hub is emitted.
+        response.Stats.TotalNodes.Should().Be(5);
+        response.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(1);
         response.Stats.NodeTypeCounts[GraphNodeType.Topic].Should().Be(1);
         response.Stats.NodeTypeCounts[GraphNodeType.Book].Should().Be(1);
         response.Stats.NodeTypeCounts[GraphNodeType.Card].Should().Be(1);
@@ -174,7 +176,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Title = "CLR via C#",
             Slug = "clr-via-csharp",
             Category = Category.BackendRuntime,
-            IsPublished = true
+            IsPublished = true,
+            CreatedByUserId = userA.Id
         };
         await _db.DocumentBooks.AddAsync(book);
 
@@ -228,6 +231,306 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
 
         resultA.Value.Stats.NodeTypeCounts[GraphNodeType.Card].Should().Be(1);
         resultA.Value.Stats.NodeTypeCounts[GraphNodeType.Highlight].Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_BookNodes_ShouldExcludeBooksOwnedByOtherUsers()
+    {
+        // Arrange — task 1.1: books are scoped to the caller (parity with the Library page).
+        var owner = new User { Id = Guid.NewGuid(), Email = "owner@techdaily.local", Name = "Owner" };
+        var stranger = new User { Id = Guid.NewGuid(), Email = "stranger@techdaily.local", Name = "Stranger" };
+        await _db.Users.AddRangeAsync(owner, stranger);
+
+        var ownBook = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "My Imported Book",
+            Slug = "my-book",
+            Category = Category.SystemDesign,
+            IsPublished = true,
+            CreatedByUserId = owner.Id
+        };
+        var strangerBook = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Someone Else's Book",
+            Slug = "stranger-book",
+            Category = Category.SystemDesign,
+            IsPublished = true,
+            CreatedByUserId = stranger.Id
+        };
+        await _db.DocumentBooks.AddRangeAsync(ownBook, strangerBook);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(owner.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var bookNodes = result.Value.Nodes.Where(n => n.Type == GraphNodeType.Book).ToList();
+        bookNodes.Should().Contain(n => n.Id == ownBook.Id.ToString());
+        bookNodes.Should().NotContain(n => n.Id == strangerBook.Id.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_OwnerBooks_ShouldExcludeUnpublishedAndSoftDeleted()
+    {
+        // Arrange — book nodes require owned + published + not-deleted.
+        var user = new User { Id = Guid.NewGuid(), Email = "filter@techdaily.local", Name = "Filter Tester" };
+        await _db.Users.AddAsync(user);
+
+        var publishedBook = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Published Book",
+            Slug = "pub-book",
+            Category = Category.BackendRuntime,
+            IsPublished = true,
+            IsDeleted = false,
+            CreatedByUserId = user.Id
+        };
+
+        var unpublishedBook = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Draft Book",
+            Slug = "draft-book",
+            Category = Category.BackendRuntime,
+            IsPublished = false,
+            IsDeleted = false,
+            CreatedByUserId = user.Id
+        };
+
+        var deletedBook = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Deleted Book",
+            Slug = "deleted-book",
+            Category = Category.BackendRuntime,
+            IsPublished = true,
+            IsDeleted = true,
+            CreatedByUserId = user.Id
+        };
+
+        await _db.DocumentBooks.AddRangeAsync(publishedBook, unpublishedBook, deletedBook);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var bookNodes = result.Value.Nodes.Where(n => n.Type == GraphNodeType.Book).ToList();
+
+        bookNodes.Should().Contain(n => n.Id == publishedBook.Id.ToString());
+        bookNodes.Should().NotContain(n => n.Id == unpublishedBook.Id.ToString());
+        bookNodes.Should().NotContain(n => n.Id == deletedBook.Id.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_TopicNodes_ShouldEmitOnlyTopicsTheUserHasTouched()
+    {
+        // Arrange — task 1.2: a topic is emitted only when a card links it or a highlight tag matches.
+        var user = new User { Id = Guid.NewGuid(), Email = "touched@techdaily.local", Name = "Touched" };
+        await _db.Users.AddAsync(user);
+
+        var touchedTopic = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Topic A",
+            Slug = "topic-a",
+            Category = Category.BackendRuntime,
+            Difficulty = Difficulty.Senior,
+            DayOrder = 1
+        };
+        var untouchedTopic = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Topic B",
+            Slug = "topic-b",
+            Category = Category.BackendRuntime,
+            Difficulty = Difficulty.Senior,
+            DayOrder = 2
+        };
+        await _db.Topics.AddRangeAsync(touchedTopic, untouchedTopic);
+
+        var card = SpacedRepetitionCard.Create(user.Id, touchedTopic.Id);
+        await _db.SpacedRepetitionCards.AddAsync(card);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var topicNodes = result.Value.Nodes.Where(n => n.Type == GraphNodeType.Topic).ToList();
+
+        topicNodes.Should().Contain(n => n.Id == touchedTopic.Id.ToString());
+        topicNodes.Should().NotContain(n => n.Id == untouchedTopic.Id.ToString());
+
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar
+            && e.Source == touchedTopic.Id.ToString());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PillarHubs_ShouldEmitOnlyForActiveCategories()
+    {
+        // Arrange — task 1.3: only Backend & Runtime activity, so exactly one pillar hub is returned.
+        var user = new User { Id = Guid.NewGuid(), Email = "pillar@techdaily.local", Name = "Pillar User" };
+        await _db.Users.AddAsync(user);
+
+        var topic = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Async I/O and Threads",
+            Slug = "async-io-threads",
+            Category = Category.BackendRuntime,
+            Difficulty = Difficulty.Senior,
+            DayOrder = 5
+        };
+        await _db.Topics.AddAsync(topic);
+
+        var card = SpacedRepetitionCard.Create(user.Id, topic.Id);
+        await _db.SpacedRepetitionCards.AddAsync(card);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var pillars = result.Value.Nodes.Where(n => n.Type == GraphNodeType.Pillar).ToList();
+
+        pillars.Should().ContainSingle();
+        pillars.Single().Id.Should().Be("pillar-BackendRuntime");
+        result.Value.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(1);
+
+        pillars.Should().NotContain(p => p.Id == "pillar-FrontendWeb");
+        pillars.Should().NotContain(p => p.Id == "pillar-DatabaseStorage");
+        pillars.Should().NotContain(p => p.Id == "pillar-SystemDesign");
+        pillars.Should().NotContain(p => p.Id == "pillar-EngineeringCraft");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CurriculumTitledBook_ShouldConnectOnlyToItsOwnPillar_NoFanOut()
+    {
+        // Arrange — task 1.4: the removed master-curriculum fan-out no longer links a book to all pillars.
+        var user = new User { Id = Guid.NewGuid(), Email = "curriculum@techdaily.local", Name = "Curriculum User" };
+        await _db.Users.AddAsync(user);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "30-Day Senior Engineer Curriculum",
+            Slug = "30-day-senior-curriculum",
+            Category = Category.EngineeringCraft,
+            IsPublished = true,
+            CreatedByUserId = user.Id
+        };
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var bookToPillar = result.Value.Edges
+            .Where(e => e.RelationType == GraphRelationType.BookToPillar && e.Source == book.Id.ToString())
+            .ToList();
+
+        bookToPillar.Should().ContainSingle();
+        bookToPillar.Single().Target.Should().Be("pillar-EngineeringCraft");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_BookCategory_ShouldUseStoredCategoryWithoutCrossPillarRemap()
+    {
+        // Arrange — task 1.4: GetEffectiveBookCategory's FrontendWeb->BackendRuntime remap is removed.
+        var user = new User { Id = Guid.NewGuid(), Email = "category@techdaily.local", Name = "Category User" };
+        await _db.Users.AddAsync(user);
+
+        // Historically remapped to BackendRuntime by keyword; now kept as stored.
+        var aspnetBook = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "ASP.NET Core Web APIs",
+            Slug = "aspnet-core-10.0",
+            Category = Category.FrontendWeb,
+            IsPublished = true,
+            CreatedByUserId = user.Id
+        };
+        await _db.DocumentBooks.AddAsync(aspnetBook);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var node = result.Value.Nodes.Single(n => n.Id == aspnetBook.Id.ToString());
+        node.Category.Should().Be(Category.FrontendWeb.ToString());
+
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
+            && e.Source == aspnetBook.Id.ToString()
+            && e.Target == "pillar-FrontendWeb");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_BookToTopic_ShouldConnectMatchingTopicWithoutCartesianBlowout()
+    {
+        // Arrange — a book links only the touched topic its content matches, not every same-category topic.
+        var user = new User { Id = Guid.NewGuid(), Email = "cartesian@techdaily.local", Name = "Cartesian User" };
+        await _db.Users.AddAsync(user);
+
+        var gcTopic = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Garbage Collection",
+            Slug = "garbage-collection",
+            Category = Category.BackendRuntime,
+            DayOrder = 1
+        };
+        var unrelatedTopic = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Kubernetes Networking",
+            Slug = "kubernetes-networking",
+            Category = Category.BackendRuntime,
+            DayOrder = 2
+        };
+        await _db.Topics.AddRangeAsync(gcTopic, unrelatedTopic);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Pro .NET Garbage Collection",
+            Slug = "pro-dotnet-gc",
+            Category = Category.BackendRuntime,
+            IsPublished = true,
+            CreatedByUserId = user.Id
+        };
+        await _db.DocumentBooks.AddAsync(book);
+
+        // Both topics are touched (so both are emitted nodes) via cards.
+        var gcCard = SpacedRepetitionCard.Create(user.Id, gcTopic.Id);
+        var unrelatedCard = SpacedRepetitionCard.Create(user.Id, unrelatedTopic.Id);
+        await _db.SpacedRepetitionCards.AddRangeAsync(gcCard, unrelatedCard);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToTopic
+            && e.Source == book.Id.ToString()
+            && e.Target == gcTopic.Id.ToString());
+
+        result.Value.Edges.Should().NotContain(e => e.RelationType == GraphRelationType.BookToTopic
+            && e.Source == book.Id.ToString()
+            && e.Target == unrelatedTopic.Id.ToString());
     }
 
     [Fact]
@@ -316,7 +619,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Title = "Database Internals",
             Slug = "db-internals",
             Category = Category.DatabaseStorage,
-            IsPublished = true
+            IsPublished = true,
+            CreatedByUserId = user.Id
         };
         await _db.DocumentBooks.AddAsync(book);
 
@@ -380,63 +684,6 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_NewUserWithZeroCardsOrHighlights_ShouldReturnTopicsAndBooksWithEmptyUserCollections()
-    {
-        // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "newbie@techdaily.local", Name = "New User" };
-        await _db.Users.AddAsync(user);
-
-        var topic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Web Vitals & Performance",
-            Slug = "web-vitals",
-            Category = Category.FrontendWeb,
-            Difficulty = Difficulty.Intermediate,
-            DayOrder = 1
-        };
-        await _db.Topics.AddAsync(topic);
-
-        var book = new DocumentBook
-        {
-            Id = Guid.NewGuid(),
-            Title = "High Performance Browser Networking",
-            Slug = "hpbn",
-            Category = Category.FrontendWeb,
-            IsPublished = true
-        };
-        await _db.DocumentBooks.AddAsync(book);
-
-        await _db.SaveChangesAsync();
-
-        // Act
-        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        var response = result.Value;
-
-        response.Nodes.Should().HaveCount(7);
-        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar);
-        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Topic);
-        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Book);
-        response.Nodes.Should().NotContain(n => n.Type == GraphNodeType.Card);
-        response.Nodes.Should().NotContain(n => n.Type == GraphNodeType.Highlight);
-
-        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar);
-        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar);
-        response.Edges.Should().NotContain(e => e.RelationType == GraphRelationType.BookToTopic);
-
-        response.Stats.TotalNodes.Should().Be(7);
-        response.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(5);
-        response.Stats.NodeTypeCounts[GraphNodeType.Topic].Should().Be(1);
-        response.Stats.NodeTypeCounts[GraphNodeType.Book].Should().Be(1);
-        response.Stats.NodeTypeCounts[GraphNodeType.Card].Should().Be(0);
-        response.Stats.NodeTypeCounts[GraphNodeType.Highlight].Should().Be(0);
-        response.Stats.MasteredCardsCount.Should().Be(0);
-    }
-
-    [Fact]
     public async Task ExecuteAsync_HighlightToTopic_ShouldDeriveEdgeWhenTagMatchesTopicTitleOrSlug()
     {
         // Arrange
@@ -460,7 +707,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Title = "Pro .NET Memory Management",
             Slug = "pro-dotnet-memory",
             Category = Category.BackendRuntime,
-            IsPublished = true
+            IsPublished = true,
+            CreatedByUserId = user.Id
         };
         await _db.DocumentBooks.AddAsync(book);
 
@@ -487,304 +735,96 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         // Act
         var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
 
-        // Assert
+        // Assert — the tag-matched topic is now emitted, and the HighlightToTopic edge is derived.
         result.IsSuccess.Should().BeTrue();
+        result.Value.Nodes.Should().Contain(n => n.Type == GraphNodeType.Topic && n.Id == topic.Id.ToString());
         result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.HighlightToTopic
             && e.Source == highlight.Id.ToString()
             && e.Target == topic.Id.ToString());
     }
 
     [Fact]
-    public async Task ExecuteAsync_UnpublishedOrDeletedBooks_ShouldBeExcludedFromGraph()
+    public async Task ExecuteAsync_UserWithNoArtifacts_ShouldReturnEmptyGraph()
     {
-        // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "filter@techdaily.local", Name = "Filter Tester" };
-        await _db.Users.AddAsync(user);
+        // Arrange — task 1.6: a brand-new user with no owned artifacts gets an empty personal graph,
+        // even when seeded topics and other users' books exist.
+        var newUser = new User { Id = Guid.NewGuid(), Email = "newbie@techdaily.local", Name = "New User" };
+        var otherUser = new User { Id = Guid.NewGuid(), Email = "other@techdaily.local", Name = "Other" };
+        await _db.Users.AddRangeAsync(newUser, otherUser);
 
-        var publishedBook = new DocumentBook
+        var seededTopic = new Topic
         {
             Id = Guid.NewGuid(),
-            Title = "Published Book",
-            Slug = "pub-book",
-            Category = Category.BackendRuntime,
-            IsPublished = true,
-            IsDeleted = false
-        };
-
-        var unpublishedBook = new DocumentBook
-        {
-            Id = Guid.NewGuid(),
-            Title = "Draft Book",
-            Slug = "draft-book",
-            Category = Category.BackendRuntime,
-            IsPublished = false,
-            IsDeleted = false
-        };
-
-        var deletedBook = new DocumentBook
-        {
-            Id = Guid.NewGuid(),
-            Title = "Deleted Book",
-            Slug = "deleted-book",
-            Category = Category.BackendRuntime,
-            IsPublished = true,
-            IsDeleted = true
-        };
-
-        await _db.DocumentBooks.AddRangeAsync(publishedBook, unpublishedBook, deletedBook);
-        await _db.SaveChangesAsync();
-
-        // Act
-        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        var bookNodes = result.Value.Nodes.Where(n => n.Type == GraphNodeType.Book).ToList();
-
-        bookNodes.Should().Contain(n => n.Id == publishedBook.Id.ToString());
-        bookNodes.Should().NotContain(n => n.Id == unpublishedBook.Id.ToString());
-        bookNodes.Should().NotContain(n => n.Id == deletedBook.Id.ToString());
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_ShouldReturnExactlyFivePillarNodes_WithCorrectMetadata()
-    {
-        // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "pillar@techdaily.local", Name = "Pillar User" };
-        await _db.Users.AddAsync(user);
-        await _db.SaveChangesAsync();
-
-        // Act
-        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        var pillars = result.Value.Nodes.Where(n => n.Type == GraphNodeType.Pillar).ToList();
-        pillars.Should().HaveCount(5);
-
-        var expectedPillars = new[]
-        {
-            ("pillar-FrontendWeb", "Frontend & Web", "FrontendWeb"),
-            ("pillar-BackendRuntime", "Backend & Runtime", "BackendRuntime"),
-            ("pillar-DatabaseStorage", "Database & Storage", "DatabaseStorage"),
-            ("pillar-SystemDesign", "Distributed Systems", "SystemDesign"),
-            ("pillar-EngineeringCraft", "Engineering Craft", "EngineeringCraft")
-        };
-
-        foreach (var (id, label, category) in expectedPillars)
-        {
-            var pillar = pillars.SingleOrDefault(p => p.Id == id);
-            pillar.Should().NotBeNull();
-            pillar!.Label.Should().Be(label);
-            pillar.Category.Should().Be(category);
-            pillar.Subtitle.Should().NotBeNullOrWhiteSpace();
-            pillar.Summary.Should().NotBeNullOrWhiteSpace();
-        }
-
-        result.Value.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(5);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_TopicToPillar_EveryTopicShouldConnectToItsPillarWithZeroOrphans()
-    {
-        // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "orphans@techdaily.local", Name = "Zero Orphans" };
-        await _db.Users.AddAsync(user);
-
-        var topic1 = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Topic Frontend",
-            Slug = "topic-frontend",
+            Title = "Web Vitals & Performance",
+            Slug = "web-vitals",
             Category = Category.FrontendWeb,
+            Difficulty = Difficulty.Intermediate,
             DayOrder = 1
         };
-        var topic2 = new Topic
+        await _db.Topics.AddAsync(seededTopic);
+
+        var othersBook = new DocumentBook
         {
             Id = Guid.NewGuid(),
-            Title = "Topic Backend",
-            Slug = "topic-backend",
-            Category = Category.BackendRuntime,
-            DayOrder = 2
-        };
-        var topic3 = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Topic DB",
-            Slug = "topic-db",
-            Category = Category.DatabaseStorage,
-            DayOrder = 3
-        };
-        var topic4 = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Topic System Design",
-            Slug = "topic-sysdesign",
-            Category = Category.SystemDesign,
-            DayOrder = 4
-        };
-        var topic5 = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Topic Craft",
-            Slug = "topic-craft",
-            Category = Category.EngineeringCraft,
-            DayOrder = 5
-        };
-        await _db.Topics.AddRangeAsync(topic1, topic2, topic3, topic4, topic5);
-        await _db.SaveChangesAsync();
-
-        // Act
-        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        var edges = result.Value.Edges;
-
-        var allTopics = new[] { topic1, topic2, topic3, topic4, topic5 };
-        foreach (var t in allTopics)
-        {
-            edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar
-                && e.Source == t.Id.ToString()
-                && e.Target == $"pillar-{t.Category}");
-
-            // Zero orphans invariant: degree >= 1
-            var degree = edges.Count(e => e.Source == t.Id.ToString() || e.Target == t.Id.ToString());
-            degree.Should().BeGreaterThanOrEqualTo(1);
-        }
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_MasterCurriculumBook_ShouldConnectToAllFourTechnicalPillars()
-    {
-        // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "curriculum@techdaily.local", Name = "Curriculum User" };
-        await _db.Users.AddAsync(user);
-
-        var book = new DocumentBook
-        {
-            Id = Guid.NewGuid(),
-            Title = "30-Day Senior Engineer Curriculum",
-            Slug = "30-day-senior-curriculum",
+            Title = "High Performance Browser Networking",
+            Slug = "hpbn",
             Category = Category.FrontendWeb,
-            IsPublished = true
+            IsPublished = true,
+            CreatedByUserId = otherUser.Id
         };
-        await _db.DocumentBooks.AddAsync(book);
-        await _db.SaveChangesAsync();
-
-        // Act
-        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        var edges = result.Value.Edges;
-
-        var technicalPillars = new[]
-        {
-            "pillar-FrontendWeb",
-            "pillar-BackendRuntime",
-            "pillar-DatabaseStorage",
-            "pillar-SystemDesign"
-        };
-
-        foreach (var pillarId in technicalPillars)
-        {
-            edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
-                && e.Source == book.Id.ToString()
-                && e.Target == pillarId);
-        }
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_CartesianBlowoutPrevention_AndCategoryCorrection()
-    {
-        // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "cartesian@techdaily.local", Name = "Cartesian User" };
-        await _db.Users.AddAsync(user);
-
-        var vueTopic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Vue 3 Composition API & Reactivity",
-            Slug = "vue-3-reactivity",
-            Category = Category.FrontendWeb,
-            DayOrder = 1
-        };
-        await _db.Topics.AddAsync(vueTopic);
-
-        // Book incorrectly saved with Category.FrontendWeb in DB, but is an ASP.NET book
-        var aspnetBook = new DocumentBook
-        {
-            Id = Guid.NewGuid(),
-            Title = "ASP.NET Core Web APIs",
-            Slug = "aspnet-core-10.0",
-            Category = Category.FrontendWeb, // Needs auto-correction to BackendRuntime!
-            IsPublished = true
-        };
-        await _db.DocumentBooks.AddAsync(aspnetBook);
-
-        // Another Frontend book that does NOT mention Vue
-        var cssBook = new DocumentBook
-        {
-            Id = Guid.NewGuid(),
-            Title = "CSS Grid & Flexbox",
-            Slug = "css-grid-flexbox",
-            Category = Category.FrontendWeb,
-            IsPublished = true
-        };
-        await _db.DocumentBooks.AddAsync(cssBook);
+        await _db.DocumentBooks.AddAsync(othersBook);
 
         await _db.SaveChangesAsync();
 
         // Act
-        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(newUser.Id));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+        var response = result.Value;
 
-        // 1. Check Category correction on aspnetBook
-        var aspnetNode = result.Value.Nodes.Single(n => n.Id == aspnetBook.Id.ToString());
-        aspnetNode.Category.Should().Be(Category.BackendRuntime.ToString());
+        response.Nodes.Should().BeEmpty();
+        response.Edges.Should().BeEmpty();
 
-        // 2. Check BookToPillar for aspnetBook connects to pillar-BackendRuntime, not FrontendWeb
-        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
-            && e.Source == aspnetBook.Id.ToString()
-            && e.Target == "pillar-BackendRuntime");
-
-        // 3. No Cartesian blowout: Neither aspnetBook nor cssBook should have BookToTopic edge to vueTopic!
-        result.Value.Edges.Should().NotContain(e => e.RelationType == GraphRelationType.BookToTopic
-            && e.Source == aspnetBook.Id.ToString()
-            && e.Target == vueTopic.Id.ToString());
-
-        result.Value.Edges.Should().NotContain(e => e.RelationType == GraphRelationType.BookToTopic
-            && e.Source == cssBook.Id.ToString()
-            && e.Target == vueTopic.Id.ToString());
+        response.Stats.TotalNodes.Should().Be(0);
+        response.Stats.TotalEdges.Should().Be(0);
+        response.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(0);
+        response.Stats.NodeTypeCounts[GraphNodeType.Topic].Should().Be(0);
+        response.Stats.NodeTypeCounts[GraphNodeType.Book].Should().Be(0);
+        response.Stats.NodeTypeCounts[GraphNodeType.Card].Should().Be(0);
+        response.Stats.NodeTypeCounts[GraphNodeType.Highlight].Should().Be(0);
+        response.Stats.MasteredCardsCount.Should().Be(0);
     }
 
     [Fact]
-    public async Task ExecuteAsync_BookToTopic_ShouldConnectWhenChunkMatchesTopic()
+    public async Task ExecuteAsync_SoftDeletedHighlight_ShouldBeExcludedAndUnanchoredNodesDropped()
     {
-        // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "chunkmatch@techdaily.local", Name = "Chunk User" };
-        await _db.Users.AddAsync(user);
+        // Arrange — task 1.7: soft-deleting the only artifact that anchored a topic and pillar
+        // drops the highlight node, its edges, the now-untouched topic, and the now-unanchored pillar.
+        var user = new User { Id = Guid.NewGuid(), Email = "softdelete@techdaily.local", Name = "Soft Delete" };
+        var otherUser = new User { Id = Guid.NewGuid(), Email = "seedowner@techdaily.local", Name = "Seed Owner" };
+        await _db.Users.AddRangeAsync(user, otherUser);
 
         var topic = new Topic
         {
             Id = Guid.NewGuid(),
-            Title = "PostgreSQL Indexing & B-Trees",
-            Slug = "postgresql-indexing",
-            Category = Category.DatabaseStorage,
-            DayOrder = 15
+            Title = "Garbage Collection",
+            Slug = "garbage-collection",
+            Category = Category.BackendRuntime,
+            Difficulty = Difficulty.Senior,
+            DayOrder = 3
         };
         await _db.Topics.AddAsync(topic);
 
+        // Book is NOT owned by the caller, so it never becomes a node and cannot keep the pillar alive.
         var book = new DocumentBook
         {
             Id = Guid.NewGuid(),
-            Title = "Database Internals",
-            Slug = "db-internals-deep",
-            Category = Category.DatabaseStorage,
-            IsPublished = true
+            Title = "CLR Internals",
+            Slug = "clr-internals",
+            Category = Category.BackendRuntime,
+            IsPublished = true,
+            CreatedByUserId = otherUser.Id
         };
         await _db.DocumentBooks.AddAsync(book);
 
@@ -792,44 +832,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         {
             Id = Guid.NewGuid(),
             DocumentBookId = book.Id,
-            ChapterTitle = "PostgreSQL Indexing & B-Trees",
-            ChunkOrder = 1
-        };
-        await _db.DocumentChunks.AddAsync(chunk);
-        await _db.SaveChangesAsync();
-
-        // Act
-        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToTopic
-            && e.Source == book.Id.ToString()
-            && e.Target == topic.Id.ToString());
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_OrphanCards_ShouldDeriveCardToHighlightOrCardToPillarEdges()
-    {
-        // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "orphancards@techdaily.local", Name = "Orphan Cards User" };
-        await _db.Users.AddAsync(user);
-
-        var book = new DocumentBook
-        {
-            Id = Guid.NewGuid(),
-            Title = "Pragmatic Architecture",
-            Slug = "pragmatic-arch",
-            Category = Category.EngineeringCraft,
-            IsPublished = true
-        };
-        await _db.DocumentBooks.AddAsync(book);
-
-        var chunk = new DocumentChunk
-        {
-            Id = Guid.NewGuid(),
-            DocumentBookId = book.Id,
-            ChapterTitle = "Clean Boundaries",
+            ChapterTitle = "GC Roots",
             ChunkOrder = 1
         };
         await _db.DocumentChunks.AddAsync(chunk);
@@ -839,19 +842,96 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             UserId = user.Id,
             DocumentChunkId = chunk.Id,
-            SelectedText = "Dependency Inversion is vital",
-            Note = "Important rule"
+            SelectedText = "Roots keep objects alive",
+            Tags = new List<string> { "garbage-collection" }
         };
         await _db.UserHighlights.AddAsync(highlight);
+        await _db.SaveChangesAsync();
 
-        // Card 1: Created from Highlight (no TopicId)
-        var highlightCard = SpacedRepetitionCard.CreateFromHighlight(
-            user.Id,
-            highlight.Id,
-            "What is DIP?",
-            "Depend upon abstractions"
-        );
-        await _db.SpacedRepetitionCards.AddAsync(highlightCard);
+        // Sanity check before deletion: highlight, touched topic, and pillar are all present.
+        var before = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+        before.IsSuccess.Should().BeTrue();
+        before.Value.Nodes.Should().Contain(n => n.Id == highlight.Id.ToString());
+        before.Value.Nodes.Should().Contain(n => n.Id == topic.Id.ToString());
+        before.Value.Nodes.Should().Contain(n => n.Id == "pillar-BackendRuntime");
+
+        // Act — soft-delete the highlight.
+        highlight.SoftDelete();
+        await _db.SaveChangesAsync();
+
+        var after = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        after.IsSuccess.Should().BeTrue();
+        var response = after.Value;
+
+        response.Nodes.Should().NotContain(n => n.Id == highlight.Id.ToString());
+        response.Edges.Should().NotContain(e => e.Source == highlight.Id.ToString() || e.Target == highlight.Id.ToString());
+
+        // The topic was touched only by the deleted highlight's tag, so it and its pillar are dropped.
+        response.Nodes.Should().NotContain(n => n.Id == topic.Id.ToString());
+        response.Nodes.Should().NotContain(n => n.Id == "pillar-BackendRuntime");
+        response.Nodes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AllEdges_ShouldReferenceOnlyPresentNodes_AndOrphanCardForcesPillar()
+    {
+        // Arrange — task 1.5: exercise every edge type and assert no edge dangles to a missing node.
+        var user = new User { Id = Guid.NewGuid(), Email = "edges@techdaily.local", Name = "Edge User" };
+        await _db.Users.AddAsync(user);
+
+        var topic = new Topic
+        {
+            Id = Guid.NewGuid(),
+            Title = "Garbage Collection",
+            Slug = "garbage-collection",
+            Category = Category.BackendRuntime,
+            Difficulty = Difficulty.Senior,
+            DayOrder = 3
+        };
+        await _db.Topics.AddAsync(topic);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Pro .NET Memory",
+            Slug = "pro-dotnet-memory",
+            Category = Category.BackendRuntime,
+            IsPublished = true,
+            CreatedByUserId = user.Id
+        };
+        await _db.DocumentBooks.AddAsync(book);
+
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChapterTitle = "Garbage Collection",
+            ChunkOrder = 1
+        };
+        await _db.DocumentChunks.AddAsync(chunk);
+
+        var highlight1 = new UserHighlight
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            DocumentChunkId = chunk.Id,
+            SelectedText = "Roots keep objects alive",
+            Tags = new List<string> { "garbage-collection", "memory" }
+        };
+        var highlight2 = new UserHighlight
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            DocumentChunkId = chunk.Id,
+            SelectedText = "The LOH is collected in gen 2",
+            Tags = new List<string> { "memory" }
+        };
+        await _db.UserHighlights.AddRangeAsync(highlight1, highlight2);
+
+        var topicCard = SpacedRepetitionCard.Create(user.Id, topic.Id);
+        var highlightCard = SpacedRepetitionCard.CreateFromHighlight(user.Id, highlight1.Id, "What are GC roots?", "References that keep objects alive");
 
         var question = new QuizQuestion
         {
@@ -865,16 +945,9 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             CorrectOptionIndex = 0
         };
         await _db.QuizQuestions.AddAsync(question);
+        var orphanCard = SpacedRepetitionCard.CreateFromQuizMistake(user.Id, question.Id, "What is MVCC?", "Multi-version concurrency control");
 
-        // Card 2: Created from Quiz Mistake (no TopicId, no HighlightId)
-        var quizCard = SpacedRepetitionCard.CreateFromQuizMistake(
-            user.Id,
-            question.Id,
-            "What is MVCC?",
-            "Multi-version concurrency control"
-        );
-        await _db.SpacedRepetitionCards.AddAsync(quizCard);
-
+        await _db.SpacedRepetitionCards.AddRangeAsync(topicCard, highlightCard, orphanCard);
         await _db.SaveChangesAsync();
 
         // Act
@@ -882,22 +955,25 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+        var response = result.Value;
 
-        // 1. highlightCard connects via CardToHighlight
-        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToHighlight
-            && e.Source == highlightCard.Id.ToString()
-            && e.Target == highlight.Id.ToString());
-
-        // 2. quizCard connects via CardToPillar (EngineeringCraft fallback)
-        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToPillar
-            && e.Source == quizCard.Id.ToString()
-            && e.Target == "pillar-EngineeringCraft");
-
-        // 3. Both cards have edge degree >= 1 (no orphan cards)
-        var allCardIds = new[] { highlightCard.Id.ToString(), quizCard.Id.ToString() };
-        foreach (var cardId in allCardIds)
+        var nodeIds = response.Nodes.Select(n => n.Id).ToHashSet();
+        foreach (var edge in response.Edges)
         {
-            result.Value.Edges.Any(e => e.Source == cardId || e.Target == cardId).Should().BeTrue();
+            nodeIds.Should().Contain(edge.Source, $"edge {edge.Id} source must be a present node");
+            nodeIds.Should().Contain(edge.Target, $"edge {edge.Id} target must be a present node");
+        }
+
+        // The orphan quiz card is anchored via CardToPillar, forcing its pillar hub to exist.
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToPillar
+            && e.Source == orphanCard.Id.ToString()
+            && e.Target == "pillar-EngineeringCraft");
+        response.Nodes.Should().Contain(n => n.Id == "pillar-EngineeringCraft");
+
+        // No card is a degree-0 node.
+        foreach (var cardId in new[] { topicCard.Id.ToString(), highlightCard.Id.ToString(), orphanCard.Id.ToString() })
+        {
+            response.Edges.Any(e => e.Source == cardId || e.Target == cardId).Should().BeTrue();
         }
     }
 }
