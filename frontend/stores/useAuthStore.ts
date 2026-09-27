@@ -177,9 +177,11 @@ export const useAuthStore = defineStore('auth', () => {
     return await api.post<{ email?: string }>('/api/v1/auth/otp/resend', { email, purpose })
   }
 
-  async function googleLogin(idToken: string) {
+  async function googleLogin(token: string) {
     const api = useApiClient()
-    const response = await api.post<{ token?: string; accessToken?: string; user: AuthUser }>('/api/v1/auth/google', { idToken })
+    const isAccessToken = token.startsWith('ya29.') || !token.includes('.')
+    const payload = isAccessToken ? { accessToken: token } : { idToken: token }
+    const response = await api.post<{ token?: string; accessToken?: string; user: AuthUser }>('/api/v1/auth/google', payload)
     const jwt = response.accessToken || response.token || ''
     setSession(jwt, response.user, true)
     return { ...response, token: jwt }

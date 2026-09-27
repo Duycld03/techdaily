@@ -46,9 +46,6 @@ const showConfirmPassword = ref(false)
 const rememberSession = ref(true)
 const isLoading = ref(false)
 const errorMessage = ref('')
-const googleBtnContainer = ref<HTMLElement | null>(null)
-const hasGsiRendered = ref(false)
-
 // Two-step OTP sub-flow state (register verify / password reset)
 const RESEND_COOLDOWN_SECONDS = 60
 const otpStep = ref(false)
@@ -98,10 +95,6 @@ async function setAuthMode(mode: 'login' | 'register' | 'forgot-password') {
   errorMessage.value = ''
   confirmPassword.value = ''
   resetOtpState()
-  if (mode === 'login') {
-    await nextTick()
-    renderGoogleButton()
-  }
 }
 
 function resetOtpState() {
@@ -128,7 +121,7 @@ onMounted(() => {
     return
   }
 
-  initGoogleButton()
+  startGooglePoll()
 })
 
 watch(() => authStore.isLoggedIn, (loggedIn) => {
@@ -137,106 +130,92 @@ watch(() => authStore.isLoggedIn, (loggedIn) => {
   }
 })
 
-let googleInitAttempts = 0
-const { pause: stopGooglePoll, resume: startGooglePoll } = useIntervalFn(() => {
-  googleInitAttempts++
-  if (typeof window !== 'undefined' && (window as any).google?.accounts?.id) {
-    stopGooglePoll()
-    if (!config.public.googleClientId) {
-      console.warn('[TechDaily Auth] Google Client ID is not configured. Google Sign-In is disabled.')
-      return
-    }
+let tokenClient: any = null
+
+function initGoogleAuth() {
+  if (typeof window === 'undefined') return
+  if (!config.public.googleClientId) {
+    console.warn('[TechDaily Auth] Google Client ID is not configured. Google Sign-In is disabled.')
+    return
+  }
+  const google = (window as any).google
+  if (google?.accounts?.oauth2) {
     try {
-      ;(window as any).google.accounts.id.initialize({
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: config.public.googleClientId,
+        scope: 'openid email profile',
+        callback: async (tokenResponse: any) => {
+          if (tokenResponse?.access_token) {
+            isLoading.value = true
+            try {
+              await authStore.googleLogin(tokenResponse.access_token)
+              toast.success(t('auth.toast_google_success'))
+              await navigateTo(getRedirectTarget())
+            } catch (err: any) {
+              const rawError = (err as any)?.data?.detail || (err as any)?.response?._data?.detail
+              console.error('[TechDaily Auth] Google login failed:', err, rawError)
+              const formatted = formatError(err, 'auth.toast_google_failed')
+              errorMessage.value = rawError ? `${formatted} (${rawError})` : formatted
+              toast.error(errorMessage.value)
+            } finally {
+              isLoading.value = false
+            }
+          } else if (tokenResponse?.error) {
+            console.warn('[TechDaily Auth] Google OAuth error:', tokenResponse.error)
+          }
+        }
+      })
+    } catch (e) {
+      console.warn('[TechDaily Auth] OAuth2 initTokenClient failed:', e)
+    }
+  }
+
+  if (google?.accounts?.id) {
+    try {
+      google.accounts.id.initialize({
         client_id: config.public.googleClientId,
         callback: handleGoogleCredentialResponse,
         auto_select: false,
         cancel_on_tap_outside: true
       })
-      renderGoogleButton()
-    } catch (e) {
-      console.warn('Google Sign-In initialization:', e)
-    }
-  } else if (googleInitAttempts >= 50) {
+    } catch {}
+  }
+}
+
+let googlePollAttempts = 0
+const { pause: stopGooglePoll, resume: startGooglePoll } = useIntervalFn(() => {
+  googlePollAttempts++
+  if (typeof window !== 'undefined' && ((window as any).google?.accounts?.oauth2 || (window as any).google?.accounts?.id)) {
+    stopGooglePoll()
+    initGoogleAuth()
+  } else if (googlePollAttempts >= 50) {
     stopGooglePoll()
   }
 }, 200, { immediate: false })
 
-useEventListener('resize', useDebounceFn(() => {
-  if (hasGsiRendered.value) {
-    renderGoogleButton()
-  }
-}, 150))
-
-function renderGoogleButton() {
-  if (typeof window === 'undefined') return
-  const gsi = (window as any).google?.accounts?.id
-  const btnContainer = googleBtnContainer.value
-  if (!config.public.googleClientId || !gsi || !btnContainer) {
-    hasGsiRendered.value = false
-    return
-  }
-  btnContainer.innerHTML = ''
-  try {
-    const containerWidth = Math.min(Math.max(btnContainer.clientWidth || 400, 200), 400)
-    gsi.renderButton(btnContainer, {
-      theme: colorMode.value === 'dark' ? 'filled_black' : 'outline',
-      size: 'large',
-      width: containerWidth,
-      text: 'signin',
-      shape: 'rectangular',
-      logo_alignment: 'left'
-    })
-    nextTick(() => {
-      if (btnContainer.children.length > 0) {
-        hasGsiRendered.value = true
-      }
-    })
-  } catch (err) {
-    console.warn('[TechDaily Auth] GSI renderButton fallback:', err)
-    hasGsiRendered.value = false
-  }
-}
-
 function triggerGoogleSignIn() {
-  const btnContainer = googleBtnContainer.value
-  const googleBtn = btnContainer?.querySelector('div[role="button"]') as HTMLElement | null
-  if (googleBtn) {
-    googleBtn.click()
+  if (tokenClient) {
+    tokenClient.requestAccessToken({ prompt: 'select_account' })
     return
   }
 
-  const gsi = (window as any).google?.accounts?.id
-  if (gsi && config.public.googleClientId) {
-    try {
-      gsi.prompt((notification: any) => {
-        if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
-          console.warn('[TechDaily Auth] GSI prompt not displayed:', notification.getNotDisplayedReason?.() || notification.getSkippedReason?.())
-        }
-      })
+  const google = (window as any).google
+  if (google?.accounts?.oauth2 && config.public.googleClientId) {
+    initGoogleAuth()
+    if (tokenClient) {
+      tokenClient.requestAccessToken({ prompt: 'select_account' })
       return
-    } catch (e) {
-      console.warn('[TechDaily Auth] GSI prompt failed:', e)
     }
   }
-  toast.info(t('auth.toast_google_failed'))
-}
 
-watch(() => colorMode.value, () => {
-  renderGoogleButton()
-})
-
-watch(() => authMode.value, async (mode) => {
-  if (mode === 'login') {
-    await nextTick()
-    renderGoogleButton()
+  if (google?.accounts?.id && config.public.googleClientId) {
+    try {
+      google.accounts.id.prompt()
+      return
+    } catch {}
   }
-})
 
-function initGoogleButton() {
-  if (typeof window === 'undefined') return
-  googleInitAttempts = 0
-  startGooglePoll()
+  toast.info(t('auth.toast_google_failed'))
 }
 
 async function handleGoogleCredentialResponse(response: any) {
@@ -603,31 +582,21 @@ async function handleResend() {
 
             <!-- OAuth Provider (Google SSO) -->
             <div v-if="authMode === 'login'" class="mb-5">
-              <div class="relative w-full flex items-center justify-center min-h-[44px]">
-                <!-- Native Google Identity Services Button -->
-                <div
-                  v-show="hasGsiRendered"
-                  ref="googleBtnContainer"
-                  class="w-full flex items-center justify-center overflow-hidden rounded-xl"
-                  style="color-scheme: light;"
-                ></div>
-                <!-- Fallback button while GSI script loads or if blocked -->
-                <button
-                  v-if="!hasGsiRendered"
-                  type="button"
-                  @click="triggerGoogleSignIn"
-                  class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-[#202024] hover:bg-slate-200 dark:hover:bg-zinc-800 text-sm font-medium text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-white/[0.08] transition shadow-sm hover:border-slate-300 dark:hover:border-white/15 cursor-pointer"
-                >
-                  <!-- Official Google Icon SVG with Transparent Background -->
-                  <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                    <path d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" fill="#4285F4"></path>
-                    <path d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z" fill="#34A853"></path>
-                    <path d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z" fill="#FBBC05"></path>
-                    <path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z" fill="#EA4335"></path>
-                  </svg>
-                  <span>{{ $t('auth.google_sign_in_with') }}</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                @click="triggerGoogleSignIn"
+                :disabled="isLoading"
+                class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-[#202024] hover:bg-slate-200 dark:hover:bg-zinc-800 text-sm font-medium text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-white/[0.08] transition shadow-sm hover:border-slate-300 dark:hover:border-white/15 cursor-pointer disabled:opacity-50"
+              >
+                <!-- Official Google Icon SVG with Transparent Background -->
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" fill="#4285F4"></path>
+                  <path d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z" fill="#34A853"></path>
+                  <path d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z" fill="#FBBC05"></path>
+                  <path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z" fill="#EA4335"></path>
+                </svg>
+                <span>{{ $t('auth.google_sign_in_with') }}</span>
+              </button>
 
               <!-- Divider -->
               <div class="relative my-5 flex items-center justify-center">

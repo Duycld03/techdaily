@@ -1,10 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.DependencyInjection;
 using TechDaily.Api.Contracts;
 using TechDaily.Api.Http;
 using TechDaily.Application.Common;
@@ -145,31 +147,73 @@ public static class AuthEndpoints
                 return Error.GoogleNotConfigured.ToProblem(StatusCodes.Status400BadRequest);
             }
 
-            GoogleJsonWebSignature.Payload payload;
-            try
+            var rawToken = !string.IsNullOrWhiteSpace(request.AccessToken) ? request.AccessToken : request.IdToken;
+            if (string.IsNullOrWhiteSpace(rawToken))
             {
-                payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, new GoogleJsonWebSignature.ValidationSettings
-                {
-                    Audience = new[] { clientId.Trim() },
-                    IssuedAtClockTolerance = TimeSpan.FromMinutes(5),
-                    ExpirationTimeClockTolerance = TimeSpan.FromMinutes(5)
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[GoogleAuth Error] Token validation failed: {ex.Message}");
-                return new Error(Error.GoogleTokenInvalid.Code, "Invalid Google token: " + ex.Message).ToProblem(StatusCodes.Status400BadRequest);
+                return Error.GoogleTokenInvalid.ToProblem(StatusCodes.Status400BadRequest);
             }
 
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+            string? email = null;
+            string? name = null;
+            string? avatarUrl = null;
+            string? subject = null;
+
+            if (rawToken.StartsWith("ya29.") || !rawToken.Contains('.'))
+            {
+                var factory = context.RequestServices.GetService<IHttpClientFactory>();
+                using var httpClient = factory?.CreateClient() ?? new HttpClient();
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", rawToken);
+                var userInfoRes = await httpClient.GetAsync("https://www.googleapis.com/oauth2/v3/userinfo", ct);
+                if (!userInfoRes.IsSuccessStatusCode)
+                {
+                    return Error.GoogleTokenInvalid.ToProblem(StatusCodes.Status400BadRequest);
+                }
+
+                var userInfoJson = await userInfoRes.Content.ReadAsStringAsync(ct);
+                using var doc = JsonDocument.Parse(userInfoJson);
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("email", out var emailProp) || string.IsNullOrWhiteSpace(emailProp.GetString()))
+                {
+                    return Error.GoogleTokenInvalid.ToProblem(StatusCodes.Status400BadRequest);
+                }
+
+                email = emailProp.GetString()!;
+                name = root.TryGetProperty("name", out var nameProp) ? nameProp.GetString() : email.Split('@')[0];
+                avatarUrl = root.TryGetProperty("picture", out var picProp) ? picProp.GetString() : null;
+                subject = root.TryGetProperty("sub", out var subProp) ? subProp.GetString() : null;
+            }
+            else
+            {
+                GoogleJsonWebSignature.Payload payload;
+                try
+                {
+                    payload = await GoogleJsonWebSignature.ValidateAsync(rawToken, new GoogleJsonWebSignature.ValidationSettings
+                    {
+                        Audience = new[] { clientId.Trim() },
+                        IssuedAtClockTolerance = TimeSpan.FromMinutes(5),
+                        ExpirationTimeClockTolerance = TimeSpan.FromMinutes(5)
+                    });
+                    email = payload.Email;
+                    name = payload.Name ?? payload.Email.Split('@')[0];
+                    avatarUrl = payload.Picture;
+                    subject = payload.Subject;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[GoogleAuth Error] Token validation failed: {ex.Message}");
+                    return new Error(Error.GoogleTokenInvalid.Code, "Invalid Google token: " + ex.Message).ToProblem(StatusCodes.Status400BadRequest);
+                }
+            }
+
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
             {
                 user = new User
                 {
-                    Email = payload.Email,
-                    Name = payload.Name ?? payload.Email.Split('@')[0],
-                    AvatarUrl = payload.Picture,
-                    GoogleSubjectId = payload.Subject,
+                    Email = email!,
+                    Name = name ?? email!.Split('@')[0],
+                    AvatarUrl = avatarUrl,
+                    GoogleSubjectId = subject,
                     PreferredLocale = "vi",
                     TargetRole = "Senior Engineer",
                     DailyGoalMinutes = 10
@@ -186,19 +230,19 @@ public static class AuthEndpoints
             else
             {
                 bool updated = false;
-                if (string.IsNullOrWhiteSpace(user.GoogleSubjectId) && !string.IsNullOrWhiteSpace(payload.Subject))
+                if (string.IsNullOrWhiteSpace(user.GoogleSubjectId) && !string.IsNullOrWhiteSpace(subject))
                 {
-                    user.GoogleSubjectId = payload.Subject;
+                    user.GoogleSubjectId = subject;
                     updated = true;
                 }
-                if (!string.IsNullOrWhiteSpace(payload.Picture) && user.AvatarUrl != payload.Picture)
+                if (!string.IsNullOrWhiteSpace(avatarUrl) && user.AvatarUrl != avatarUrl)
                 {
-                    user.AvatarUrl = payload.Picture;
+                    user.AvatarUrl = avatarUrl;
                     updated = true;
                 }
-                if (string.IsNullOrWhiteSpace(user.Name) && !string.IsNullOrWhiteSpace(payload.Name))
+                if (string.IsNullOrWhiteSpace(user.Name) && !string.IsNullOrWhiteSpace(name))
                 {
-                    user.Name = payload.Name;
+                    user.Name = name;
                     updated = true;
                 }
                 if (string.IsNullOrWhiteSpace(user.TargetRole))
@@ -547,7 +591,7 @@ public static class AuthEndpoints
 
 public record RegisterRequest(string Email, string Password, string? Name = null, string? Locale = "en", bool RememberMe = true);
 public record LoginRequest(string Email, string Password, bool RememberMe = true);
-public record GoogleAuthRequest(string IdToken);
+public record GoogleAuthRequest(string? IdToken = null, string? AccessToken = null);
 public record VerifyRegistrationRequest(string Email, string Code, bool RememberMe = true);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string Email, string Code, string NewPassword);

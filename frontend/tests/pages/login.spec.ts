@@ -77,6 +77,9 @@ describe('pages/login.vue', () => {
     const renderButtonSpy = vi.fn()
     win.google = {
       accounts: {
+        oauth2: {
+          initTokenClient: vi.fn()
+        },
         id: {
           initialize: initializeSpy,
           renderButton: renderButtonSpy
@@ -107,18 +110,20 @@ describe('pages/login.vue', () => {
   it('initializes and renders Google Sign-In button when googleClientId is configured', async () => {
     globalObj.useRuntimeConfig().public.googleClientId = 'test-google-client-id.apps.googleusercontent.com'
 
+    const initTokenClientSpy = vi.fn()
     const initializeSpy = vi.fn()
-    const renderButtonSpy = vi.fn()
     win.google = {
       accounts: {
+        oauth2: {
+          initTokenClient: initTokenClientSpy
+        },
         id: {
-          initialize: initializeSpy,
-          renderButton: renderButtonSpy
+          initialize: initializeSpy
         }
       }
     }
 
-    mount(LoginPage, {
+    const wrapper = mount(LoginPage, {
       attachTo: document.body,
       global: {
         stubs: {
@@ -128,14 +133,14 @@ describe('pages/login.vue', () => {
     })
 
     await vi.waitFor(() => {
-      expect(initializeSpy).toHaveBeenCalledWith(
+      expect(initTokenClientSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           client_id: 'test-google-client-id.apps.googleusercontent.com'
         })
       )
     }, { timeout: 1000 })
 
-    expect(renderButtonSpy).toHaveBeenCalled()
+    expect(wrapper.find('button[type="button"]').exists()).toBe(true)
   })
 
   it('redirects to /today when user is already logged in on mount', async () => {
@@ -579,7 +584,7 @@ describe('pages/login.vue', () => {
       expect(wrapper.text()).toContain('↵ RETURN')
     })
 
-    it('renders Google sign-in container and triggers fallback when button is clicked', async () => {
+    it('renders Google sign-in button and triggers fallback when button is clicked', async () => {
       const wrapper = mount(LoginPage, {
         global: {
           stubs: {
@@ -587,9 +592,6 @@ describe('pages/login.vue', () => {
           }
         }
       })
-
-      const googleContainer = wrapper.find({ ref: 'googleBtnContainer' })
-      expect(googleContainer.exists()).toBe(true)
 
       const btn = wrapper.find('button[type="button"]')
       expect(btn.exists()).toBe(true)
