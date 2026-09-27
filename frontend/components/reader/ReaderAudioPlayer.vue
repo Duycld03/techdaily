@@ -28,6 +28,7 @@ const {
   synthTotal,
   targetBufferCount,
   errorMessage,
+  errorInfo,
   speed,
   engineMode,
   selectedVoice,
@@ -103,9 +104,39 @@ watch(() => props.chunk?.id, () => {
   loadedId.value = null
 })
 
+const formattedErrorMessage = computed(() => {
+  if (errorInfo?.value?.code === 'DEVICE_OOM') {
+    return t('reader.audio_error_oom')
+  }
+  if (errorInfo?.value?.code === 'DEVICE_INIT_FAILED') {
+    return t('reader.audio_error_device')
+  }
+  if (errorInfo?.value?.code === 'NETWORK_ERROR') {
+    return t('reader.audio_error_network')
+  }
+  if (errorMessage.value && errorMessage.value !== 'QUOTA_EXHAUSTED') {
+    return t('reader.audio_error_with_reason', { message: errorMessage.value })
+  }
+  return t('reader.audio_error')
+})
+
+const canFallbackToCloud = computed(() => {
+  return (
+    status.value === 'error' &&
+    engineMode.value === 'device' &&
+    !isNearQuota.value &&
+    !isQuotaExhausted.value &&
+    (errorInfo?.value?.suggestCloudFallback ?? true)
+  )
+})
+
+function onFallbackToCloud(): void {
+  onToggleEngine('cloud')
+}
+
 watch(errorMessage, (message) => {
   if (message && message !== 'QUOTA_EXHAUSTED') {
-    toast.error(t('reader.audio_error'))
+    toast.error(formattedErrorMessage.value)
   }
 })
 
@@ -271,6 +302,24 @@ onMounted(() => {
       {{ statusLabel }}
     </span>
 
+    <!-- Error status & Cloud fallback button -->
+    <template v-else-if="status === 'error'">
+      <span
+        class="text-xs text-rose-500 dark:text-rose-400 truncate max-w-[180px] sm:max-w-xs"
+        :title="formattedErrorMessage"
+      >
+        {{ formattedErrorMessage }}
+      </span>
+      <button
+        v-if="canFallbackToCloud"
+        type="button"
+        class="h-7 inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-semibold px-2.5 transition-all active:scale-95"
+        @click="onFallbackToCloud"
+      >
+        <Cloud class="w-3.5 h-3.5" :stroke-width="2" />
+        <span>{{ t('reader.audio_fallback_to_cloud') }}</span>
+      </button>
+    </template>
     <!-- Scrubber + time (once we have audio) -->
     <template v-else-if="loadedId === chunk?.id && duration > 0">
       <input

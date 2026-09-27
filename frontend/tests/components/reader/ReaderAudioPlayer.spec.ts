@@ -20,8 +20,9 @@ vi.mock('~/composables/useSliceAudio', async () => {
     synthIndex: ref(0),
     synthTotal: ref(0),
     targetBufferCount: ref(0),
-    errorMessage: ref(null),
-    device: ref(null),
+    errorMessage: ref<string | null>(null),
+    errorInfo: ref<any>(null),
+    device: ref<string | null>(null),
     speed: ref(1),
     engineMode,
     selectedVoice,
@@ -66,6 +67,12 @@ const MESSAGES: Record<string, string> = {
   'reader.audio_synthesizing': 'Generating audio… {current}/{total}',
   'reader.audio_buffering': 'Buffering audio… {current}/{total}',
   'reader.audio_speed': 'Speed',
+  'reader.audio_error': 'Could not generate audio.',
+  'reader.audio_error_oom': 'Device memory limit reached. Try Cloud engine.',
+  'reader.audio_error_device': 'On-device narration unavailable on this device. Try Cloud engine.',
+  'reader.audio_error_network': 'Network error while loading audio. Please try again.',
+  'reader.audio_error_with_reason': 'Could not generate audio: {message}',
+  'reader.audio_fallback_to_cloud': 'Switch to Google Cloud',
   'reader.audio_engine_cloud': 'Cloud',
   'reader.audio_engine_device': 'Device',
   'reader.audio_engine_cloud_hint': 'Google Cloud high-speed narration',
@@ -128,6 +135,10 @@ describe('ReaderAudioPlayer.vue', () => {
     audio.synthIndex.value = 0
     audio.synthTotal.value = 0
     audio.targetBufferCount.value = 0
+    audio.errorMessage.value = null
+    audio.errorInfo.value = null
+    audio.isNearQuota.value = false
+    audio.isQuotaExhausted.value = false
     originalUseI18n = Reflect.get(globalThis, 'useI18n')
     Reflect.set(globalThis, 'useI18n', () => ({ t: interpolate, locale: { value: 'en' } }))
   })
@@ -243,5 +254,41 @@ describe('ReaderAudioPlayer.vue', () => {
     expect(text).not.toContain('AI')
     expect(text).not.toContain('Google AI')
     expect(wrapper.html()).not.toContain('lucide-zap')
+  })
+
+  it('renders diagnostic error and 1-tap Cloud fallback button on device failure', async () => {
+    audio.engineMode.value = 'device'
+    audio.status.value = 'error'
+    audio.errorMessage.value = 'model load failed'
+    audio.errorInfo.value = {
+      code: 'DEVICE_INIT_FAILED',
+      rawMessage: 'model load failed',
+      suggestCloudFallback: true,
+    }
+    const wrapper = mountPlayer({ chunk: chunk() })
+    await nextTick()
+
+    expect(wrapper.text()).toContain('On-device narration unavailable on this device')
+    expect(wrapper.text()).toContain('Switch to Google Cloud')
+
+    const fallbackBtn = wrapper.findAll('button').find(b => b.text().includes('Switch to Google Cloud'))
+    expect(fallbackBtn).toBeDefined()
+    await fallbackBtn!.trigger('click')
+    expect(audio.setEngineMode).toHaveBeenCalledWith('cloud')
+  })
+
+  it('hides the 1-tap Cloud fallback button when cloud quota is exhausted', async () => {
+    audio.engineMode.value = 'device'
+    audio.status.value = 'error'
+    audio.isQuotaExhausted.value = true
+    audio.errorInfo.value = {
+      code: 'DEVICE_OOM',
+      rawMessage: 'OOM',
+      suggestCloudFallback: true,
+    }
+    const wrapper = mountPlayer({ chunk: chunk() })
+    await nextTick()
+
+    expect(wrapper.text()).not.toContain('Switch to Google Cloud')
   })
 })

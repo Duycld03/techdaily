@@ -240,7 +240,32 @@ describe('useSliceAudio', () => {
 
     expect(player.status.value).toBe('error')
     expect(player.errorMessage.value).toBe('model load failed')
+    expect(player.errorInfo.value).toEqual({
+      code: 'DEVICE_INIT_FAILED',
+      rawMessage: 'model load failed',
+      suggestCloudFallback: true,
+    })
     expect(cache.set).not.toHaveBeenCalled()
+  })
+
+  it('categorizes out of memory errors and suggests cloud fallback on device', async () => {
+    const engine: TtsEngine = {
+      synthesize: vi.fn(() => Promise.reject(new Error('RangeError: WebAssembly.Memory(): could not allocate memory'))),
+      dispose: vi.fn(),
+    }
+    const { cache } = memoryCache()
+    const player = useSliceAudio({ engine, cache, createAudio: createFakeAudio })
+
+    await player.loadAndPlay(source())
+
+    expect(player.status.value).toBe('error')
+    expect(player.errorInfo.value?.code).toBe('DEVICE_OOM')
+    expect(player.errorInfo.value?.suggestCloudFallback).toBe(true)
+
+    // Switching engine mode clears error state
+    player.setEngineMode('cloud')
+    expect(player.errorMessage.value).toBeNull()
+    expect(player.errorInfo.value).toBeNull()
   })
 
   it('persists playback speed and applies it to the audio element', async () => {

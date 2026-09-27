@@ -23,14 +23,24 @@ interface CancelRequest {
 type WorkerIncomingMessage = SynthRequest | CancelRequest
 type SynthFn = (text: string) => Promise<{ audio: Float32Array, sampling_rate: number }>
 type Backend = 'webgpu' | 'wasm'
-// Precision per backend, chosen for lowest synthesis latency (benchmarked in a
-// cross-origin-isolated reader). WebGPU uses fp16 (native half-precision). WASM
-// (CPU) uses fp32: ORT-web has no fast int8 kernels for this VITS model, so the
-// quantized (q8) weights transformers.js loads by default run ~4x SLOWER than
-// fp32 on WASM. fp32 is also the universal fallback if a preferred build fails.
-type Dtype = 'fp32' | 'fp16'
+// Precision per backend, chosen for lowest synthesis latency. WebGPU uses fp16
+// (native half-precision). Desktop WASM uses fp32 (~4x faster than int8 VITS kernels
+// on desktop CPUs). Mobile WASM uses quantized q8 (model_quantized.onnx, 36.6 MB vs
+// 109 MB) to fit mobile memory ceilings and avoid out-of-memory browser tab crashes.
+type Dtype = 'fp32' | 'fp16' | 'q8'
 const PREFERRED_DTYPE: Record<Backend, Dtype> = { webgpu: 'fp16', wasm: 'fp32' }
 
+const isMobile = typeof navigator !== 'undefined' && (
+  /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1)
+)
+
+function getPreferredDtype(device: Backend): Dtype {
+  if (isMobile && device === 'wasm') {
+    return 'q8'
+  }
+  return PREFERRED_DTYPE[device]
+}
 interface PipelineEntry {
   device: Backend
   synth: SynthFn
@@ -38,16 +48,15 @@ interface PipelineEntry {
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope
 
-// Utilize a many-core CPU: run the WASM (CPU) backend across as many threads as
-// the machine reports when the browsing context is cross-origin isolated.
-// Guarding behind self.crossOriginIsolated avoids ONNX Runtime Web warnings
-// and errors when crossOriginIsolated is false, while fully exploiting multi-core
-// concurrency when cross-origin isolation is enabled.
+// Utilize a many-core CPU on desktop: run the WASM (CPU) backend across worker
+// threads when the browsing context is cross-origin isolated. On mobile devices
+// (iOS Safari, mobile Chromium), spawning multi-threaded WASM workers inside a
+// Web Worker exhausts process thread and memory bounds; force 1 thread on mobile.
 const onnxWasm = env.backends.onnx.wasm
 const isIsolated = typeof self !== 'undefined' && 'crossOriginIsolated' in self && Boolean(self.crossOriginIsolated)
 if (onnxWasm) {
-  if (isIsolated && typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number') {
-    onnxWasm.numThreads = Math.max(1, navigator.hardwareConcurrency)
+  if (!isMobile && isIsolated && typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number') {
+    onnxWasm.numThreads = Math.min(4, Math.max(1, navigator.hardwareConcurrency))
   } else {
     onnxWasm.numThreads = 1
   }
@@ -106,10 +115,10 @@ function buildEntry(model: string, device: Backend, dtype: Dtype, reqId: number)
 // to build — at most two dtype attempts per device.
 async function buildForDevice(model: string, device: Backend, reqId: number): Promise<PipelineEntry> {
   try {
-    return await buildEntry(model, device, PREFERRED_DTYPE[device], reqId)
+    return await buildEntry(model, device, getPreferredDtype(device), reqId)
   }
   catch {
-    return buildEntry(model, device, 'fp32', reqId)
+    return await buildEntry(model, device, 'fp32', reqId)
   }
 }
 

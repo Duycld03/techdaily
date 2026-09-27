@@ -83,6 +83,36 @@ export function resolveCloudVoiceForLanguage(lang?: string | null, customVoiceId
   const matches = isVi ? customVoiceId.startsWith('vi-') : customVoiceId.startsWith('en-')
   return matches ? customVoiceId : defaultVoice
 }
+
+export interface AudioErrorInfo {
+  code: 'QUOTA_EXHAUSTED' | 'DEVICE_OOM' | 'DEVICE_INIT_FAILED' | 'NETWORK_ERROR' | 'UNKNOWN'
+  rawMessage: string
+  suggestCloudFallback?: boolean
+}
+
+function categorizeAudioError(err: unknown, engine: AudioEngine): AudioErrorInfo {
+  const rawMessage = err instanceof Error ? err.message : String(err)
+  const lower = rawMessage.toLowerCase()
+
+  if (rawMessage === 'QUOTA_EXHAUSTED') {
+    return { code: 'QUOTA_EXHAUSTED', rawMessage, suggestCloudFallback: false }
+  }
+
+  if (lower.includes('out of memory') || lower.includes('allocation failed') || lower.includes('oom') || lower.includes('memory')) {
+    return { code: 'DEVICE_OOM', rawMessage, suggestCloudFallback: engine === 'device' }
+  }
+
+  if (lower.includes('network') || lower.includes('failed to fetch') || lower.includes('econnrefused')) {
+    return { code: 'NETWORK_ERROR', rawMessage, suggestCloudFallback: engine === 'device' }
+  }
+
+  if (engine === 'device') {
+    return { code: 'DEVICE_INIT_FAILED', rawMessage, suggestCloudFallback: true }
+  }
+
+  return { code: 'UNKNOWN', rawMessage, suggestCloudFallback: false }
+}
+
 interface WorkerMessage {
   type: 'progress' | 'chunk' | 'done' | 'error' | 'device'
   reqId: number
@@ -105,6 +135,13 @@ function createWorkerEngine(): TtsEngine {
   function ensureWorker(): Worker {
     if (!worker) {
       worker = new Worker(new URL('../workers/ttsSynth.worker.ts', import.meta.url), { type: 'module' })
+      worker.onerror = (event: ErrorEvent) => {
+        const err = new Error(event.message || 'Worker initialization failed')
+        for (const p of pending.values()) {
+          p.reject(err)
+        }
+        pending.clear()
+      }
       worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
         const m = event.data
         const p = pending.get(m.reqId)
@@ -181,8 +218,8 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   const synthTotal = ref(0)
   const targetBufferCount = ref(0)
   const errorMessage = ref<string | null>(null)
+  const errorInfo = ref<AudioErrorInfo | null>(null)
   const device = ref<ComputeDevice | null>(null)
-
   const initialEngine: AudioEngine =
     deps.defaultEngine
     ?? (isClient ? (localStorage.getItem(AUDIO_ENGINE_STORAGE_KEY) as AudioEngine) : null)
@@ -326,6 +363,8 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
   function setEngineMode(mode: AudioEngine): void {
     engineMode.value = mode
+    errorMessage.value = null
+    errorInfo.value = null
     if (mode === 'cloud') {
       cancelWorkerSynthesis()
     }
@@ -364,8 +403,8 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
   async function loadAndPlay(source: NarrationSource): Promise<void> {
     errorMessage.value = null
+    errorInfo.value = null
     device.value = null
-    onChunkEndedCallback = null
     const cache = getCache()
     if (!source.isAiFormatted || !source.markdown || !cache) return
 
@@ -415,7 +454,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
           if (audioQuota.value) {
             audioQuota.value.isExhausted = true
           }
+          const info = categorizeAudioError(new Error('QUOTA_EXHAUSTED'), 'cloud')
           errorMessage.value = 'QUOTA_EXHAUSTED'
+          errorInfo.value = info
           // Automatic fallback to On-Device Web Worker
           await synthesizeOnDevice(source, script, contentHash, cache)
           return
@@ -423,10 +464,11 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
         if (!response.ok) {
           status.value = 'error'
-          errorMessage.value = `Synthesis failed (${response.status})`
+          const info = categorizeAudioError(new Error(`Synthesis failed (${response.status})`), 'cloud')
+          errorMessage.value = info.rawMessage
+          errorInfo.value = info
           return
         }
-
         const blob = await response.blob()
         if (activeKey !== key) return
 
@@ -436,7 +478,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
         await play()
       } catch (err) {
         status.value = 'error'
-        errorMessage.value = err instanceof Error ? err.message : String(err)
+        const info = categorizeAudioError(err, 'cloud')
+        errorMessage.value = info.rawMessage
+        errorInfo.value = info
       }
     } else {
       await synthesizeOnDevice(source, script, contentHash, cache)
@@ -568,10 +612,11 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     } catch (error) {
       onChunkEndedCallback = null
       status.value = 'error'
-      errorMessage.value = error instanceof Error ? error.message : String(error)
+      const info = categorizeAudioError(error, 'device')
+      errorMessage.value = info.rawMessage
+      errorInfo.value = info
       return
     }
-
     if (activeKey !== key) {
       onChunkEndedCallback = null
       return
@@ -580,9 +625,11 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     if (buffers.length === 0) {
       onChunkEndedCallback = null
       status.value = 'error'
+      const info = categorizeAudioError(new Error('Synthesis returned empty audio buffer'), 'device')
+      errorMessage.value = info.rawMessage
+      errorInfo.value = info
       return
     }
-
     isStreaming = false
     onChunkEndedCallback = null
 
@@ -653,8 +700,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     onChunkEndedCallback = null
     status.value = 'idle'
     device.value = null
+    errorMessage.value = null
+    errorInfo.value = null
   }
-
   if (getCurrentScope()) onScopeDispose(() => dispose())
 
   return {
@@ -667,6 +715,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     synthTotal,
     targetBufferCount,
     errorMessage,
+    errorInfo,
     device,
     speed,
     engineMode,
