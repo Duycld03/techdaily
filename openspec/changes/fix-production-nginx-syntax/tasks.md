@@ -6,5 +6,5 @@
 
 ## 2. Deployment & Verification
 
-- [ ] 2.1 Commit and push the repaired `nginx/nginx.conf` to trigger GitHub Actions CI/CD deployment to Google Cloud VPS.
-- [ ] 2.2 Verify that the Nginx container starts cleanly and `https://techdaily.duckdns.org` returns HTTP 200 without connection refusal.
+- [x] 2.1 Commit and push the repaired `nginx/nginx.conf` to trigger GitHub Actions CI/CD deployment to Google Cloud VPS.
+- [x] 2.2 Verify that the Nginx container starts cleanly and `https://techdaily.duckdns.org` returns HTTP 200 without connection refusal.
