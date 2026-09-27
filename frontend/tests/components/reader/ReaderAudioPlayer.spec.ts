@@ -175,6 +175,29 @@ describe('ReaderAudioPlayer.vue', () => {
     expect(wrapper.text()).toContain('Buffering audio… 1/2')
   })
 
+  it('hides synthesis progress badge when engineMode is cloud and shows it when device', async () => {
+    audio.engineMode.value = 'cloud'
+    audio.duration.value = 100
+    audio.synthTotal.value = 45
+    audio.synthIndex.value = 2
+    audio.status.value = 'ready'
+
+    const testChunk = chunk({ id: 'chunk-badge-test' })
+    const wrapper = mountPlayer({ chunk: testChunk })
+
+    // Trigger listen to set loadedId
+    await wrapper.find('button').trigger('click')
+    await nextTick()
+
+    // In Cloud mode, (2/45) should NOT be rendered
+    expect(wrapper.text()).not.toContain('2/45')
+
+    // Switch to Device mode
+    audio.engineMode.value = 'device'
+    await nextTick()
+    expect(wrapper.text()).toContain('2/45')
+  })
+
   it('forwards the slice language into the narration source on play', async () => {
     const wrapper = mountPlayer({ chunk: chunk({ language: 'vi' }) })
     await wrapper.find('button').trigger('click')

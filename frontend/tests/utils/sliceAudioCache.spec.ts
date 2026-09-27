@@ -68,4 +68,19 @@ describe('sliceAudioCache', () => {
     expect(await cache.get('a')).toBeUndefined()
     expect(await cache.get('b')).toBeDefined()
   })
+
+  it('saves, retrieves, and deletes partial audio chunks', async () => {
+    const cache = createSliceAudioCache(createMemoryBackend())
+    const partialData = {
+      chunks: [new Float32Array([0.1, 0.2]), new Float32Array([0.3, 0.4])],
+      sampleRate: 16000,
+      total: 5,
+    }
+    await cache.savePartial?.('chunk-1::voice::hash1', partialData)
+    const retrieved = await cache.getPartial?.('chunk-1::voice::hash1')
+    expect(retrieved).toEqual(partialData)
+
+    await cache.deletePartial?.('chunk-1::voice::hash1')
+    expect(await cache.getPartial?.('chunk-1::voice::hash1')).toBeUndefined()
+  })
 })

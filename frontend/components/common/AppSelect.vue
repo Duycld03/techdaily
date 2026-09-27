@@ -56,7 +56,7 @@ const selectedLabel = computed(() => {
 
 const sizeClasses = computed(() => {
   if (props.size === 'sm') {
-    return 'px-3 py-1.5 gap-2 text-xs sm:text-sm'
+    return 'h-8 px-3 gap-2 text-xs sm:text-sm'
   }
   return 'px-3.5 py-2.5 gap-2.5 text-xs sm:text-sm'
 })

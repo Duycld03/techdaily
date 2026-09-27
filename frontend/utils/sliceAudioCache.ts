@@ -21,9 +21,18 @@ export interface SliceAudioCacheOptions {
   maxEntries?: number
 }
 
+export interface PartialSliceAudio {
+  chunks: Float32Array[]
+  sampleRate: number
+  total: number
+}
+
 export interface SliceAudioCache {
   get: (key: string) => Promise<Blob | undefined>
   set: (key: string, blob: Blob) => Promise<void>
+  getPartial?: (key: string) => Promise<PartialSliceAudio | undefined>
+  savePartial?: (key: string, data: PartialSliceAudio) => Promise<void>
+  deletePartial?: (key: string) => Promise<void>
 }
 
 interface LruEntry {
@@ -88,7 +97,19 @@ export function createSliceAudioCache(backend: KvBackend, opts: SliceAudioCacheO
     await writeMeta(meta)
   }
 
-  return { get, set }
+  async function getPartial(key: string): Promise<PartialSliceAudio | undefined> {
+    return await backend.get<PartialSliceAudio>(`partial::${key}`)
+  }
+
+  async function savePartial(key: string, data: PartialSliceAudio): Promise<void> {
+    await backend.set(`partial::${key}`, data)
+  }
+
+  async function deletePartial(key: string): Promise<void> {
+    await backend.del(`partial::${key}`)
+  }
+
+  return { get, set, getPartial, savePartial, deletePartial }
 }
 
 /** In-memory backend for tests. */

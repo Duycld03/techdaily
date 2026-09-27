@@ -45,10 +45,22 @@ The reader SHALL synthesize a slice's narration sentence by sentence, surfacing 
 
 Once this pre-roll threshold is satisfied, audio playback SHALL begin immediately with the assembled initial sentences, while the worker continues synthesizing the remaining sentences in the background. As subsequent sentences finish synthesis, they SHALL be queued seamlessly for uninterrupted continuous playback without audio underruns or restarting from the beginning.
 
-Upon completing synthesis of all sentences in a slice, the reader SHALL assemble the sentences into a **single complete audio object** and SHALL transition to using that complete audio as the **sole** playback source, so that playback of the whole slice is continuous and the user can seek to any position within the slice **without re-synthesizing**. The reader SHALL NOT leave playback stalled on a partial fragment, and the reported total duration SHALL reflect the complete slice audio once assembled.
+While synthesizing on-device sentences, the reader SHALL persist intermediate generated sentence chunks in the browser's on-device storage (IndexedDB) keyed by `(chunkId, voice, contentHash)`. If on-device synthesis is interrupted (such as by pausing, navigating away, or switching to the Cloud engine) and later re-initiated:
+1. The reader SHALL inspect IndexedDB for existing partial chunks matching `(chunkId, voice, contentHash)`.
+2. If matching partial chunks are found and the slice's `contentHash` matches, the reader SHALL restore the already-synthesized chunks ($0 \dots K-1$), update the synthesis progress indicator to reflect $K/N$, immediately start pre-roll playback if $K \ge \text{targetBufferCount}$, and dispatch synthesis to the worker for only the remaining ungenerated sentences ($K \dots N-1$), eliminating redundant computation.
+3. If the slice's content has changed such that its `contentHash` differs, the stale partial cache entries SHALL NOT be used, any stale partial entries SHALL be deleted, and synthesis SHALL restart from sentence 0.
+
+Upon completing synthesis of all sentences in a slice, the reader SHALL assemble the sentences into a **single complete audio object** and SHALL transition to using that complete audio as the **sole** playback source, so that playback of the whole slice is continuous and the user can seek to any position within the slice **without re-synthesizing**. The reader SHALL persist the complete audio in IndexedDB, clear the temporary partial chunks for that key, and ensure the reported total duration reflects the complete slice audio once assembled.
 
 The reader SHALL persist the complete slice audio in the browser's on-device storage (IndexedDB), keyed by `(chunkId, voice, contentHash)`, where `voice` is the language's on-device voice and `contentHash` is derived from the normalized narration script. A subsequent request to narrate the same `(chunkId, voice, contentHash)` — including in a later session — SHALL load the cached audio and SHALL NOT re-synthesize. When a slice's formatted content changes so its `contentHash` differs, the stale cache entry SHALL NOT be used and the audio SHALL be re-synthesized once. The audio cache SHALL enforce a bounded size (an entry or total-size cap) and evict least-recently-used entries; an evicted slice re-synthesizes on next play.
 
+#### Scenario: Resuming interrupted on-device synthesis from partial cache
+- **WHEN** on-device synthesis was previously interrupted after synthesizing 5 of 15 sentences, and the user re-initiates on-device narration for the identical slice
+- **THEN** the reader loads the 5 cached sentence chunks from IndexedDB, sets synthesis progress to 5/15, immediately starts playback if pre-roll threshold is satisfied, and requests the worker to synthesize only sentences 6 through 15.
+
+#### Scenario: Modified slice invalidates stale partial chunks
+- **WHEN** a slice with partial cached chunks (e.g. 5 of 15 sentences) has its content revised such that its `contentHash` changes, and the user plays on-device narration
+- **THEN** the reader detects the hash mismatch, discards the stale partial chunks, and synthesizes all sentences starting from index 0 under the new `contentHash`.
 #### Scenario: Pre-roll buffer threshold reached before playback begins
 - **WHEN** a user plays on-device narration for a slice with 19 sentences
 - **THEN** the reader buffers at least 7 sentences (33%) before initiating playback, ensuring sufficient playback runway while remaining sentences synthesize.
@@ -247,6 +259,11 @@ When a slice's content changes such that its `ContentHash` changes, the existing
 
 The `/read/[bookId]` reader audio player SHALL provide an in-player toggle switch allowing the user to select between **Google Cloud** (cloud-accelerated) and **On-Device** (local Web Worker) synthesis engines. The default engine SHALL be Google Cloud, and the user's preference SHALL persist in `localStorage`.
 
+The system SHALL enforce strict isolation between the two engines:
+1. When switching from On-Device to Google Cloud, or when Google Cloud narration playback begins, the reader SHALL immediately cancel any active on-device Web Worker synthesis tasks, ceasing worker inference and preventing further chunk emissions.
+2. Any on-device sentence chunks completed prior to cancellation SHALL be preserved in the partial cache in IndexedDB under the matching `contentHash`, allowing later resumption if the user switches back.
+3. The reader audio player SHALL display on-device synthesis progress indicators (`current/total`) strictly when the On-Device engine is active. The player SHALL NOT render on-device synthesis badges or ghost loading labels when Google Cloud audio is active or playing.
+
 The frontend client applications SHALL consume audio narration quota models (`AudioQuotaInfo`) from a centralized TypeScript type definition without duplicating exported interface declarations across composable functions or Pinia store modules, preventing auto-import collision and symbol shadowing during compilation.
 
 The backend SHALL track cumulative characters synthesized via Google Cloud TTS during the current calendar month. To protect the free-tier monthly allowance (hard-capped at 950,000 characters to ensure a safe buffer below Google's 1,000,000 allowance):
@@ -258,6 +275,15 @@ The backend SHALL track cumulative characters synthesized via Google Cloud TTS d
 #### Scenario: Default engine is Google Cloud
 - **WHEN** a reader opens an AI-formatted slice for the first time without a saved preference
 - **THEN** the audio player selects Google Cloud as the active engine.
+
+#### Scenario: Switching to Cloud engine cancels on-device worker and hides device progress
+- **WHEN** on-device synthesis is in progress and the user switches the toggle to Google Cloud or initiates Cloud playback
+- **THEN** the active on-device Web Worker synthesis task is cancelled immediately, the on-device progress badge (e.g. `2/45`) is hidden, and Cloud playback proceeds without ghost progress labels.
+
+#### Scenario: Partially synthesized chunks are preserved on engine switch
+- **WHEN** on-device synthesis is cancelled at 5 of 15 sentences due to switching to Google Cloud
+- **THEN** the 5 completed chunks remain stored in IndexedDB under the current `contentHash`.
+- **AND** when the user subsequently switches back to On-Device mode for that slice, synthesis resumes from sentence 6.
 
 #### Scenario: User toggles to On-Device engine
 - **WHEN** a user switches the audio toggle from Google Cloud to On-Device
@@ -283,8 +309,7 @@ The backend SHALL track cumulative characters synthesized via Google Cloud TTS d
 
 When the Google Cloud engine is active, the reader audio player SHALL provide a voice selector restricted to Google Cloud Free-Tier voices (Neural2 and WaveNet tiers) for the slice's content language, supporting at least one female and one male voice for Vietnamese (`vi-VN`) and English (`en-US`). Voice selection SHALL NOT be shown when the On-Device engine is active.
 
-The voice selection dropdown trigger SHALL match the compact height, vertical padding, and border radius of the adjacent "Listen" action button (`py-1.5`, ~32px rendered height), ensuring that switching between On-Device and Google Cloud narration engines does not vertically expand or distort the height of the reader audio player bar.
-
+The voice selection dropdown trigger SHALL match the exact compact rendered height, vertical alignment, and border radius of the adjacent "Listen" action button (`h-8`, exactly 32px rendered height), and the reader audio player container SHALL maintain a stable, non-shifting minimum height (`min-h-[50px]`), ensuring that switching between On-Device and Google Cloud narration engines produces zero layout shift, vertical expansion, or jitter in the reader audio player bar or the content below it.
 The system (both frontend client and backend synthesis handler) SHALL strictly enforce language compatibility between the document slice's content language and the selected voice model:
 1. Slices in English (`en`) SHALL only be synthesized with English voice models (`en-US-*`).
 2. Slices in Vietnamese (`vi`) SHALL only be synthesized with Vietnamese voice models (`vi-VN-*`).
@@ -293,6 +318,10 @@ The system (both frontend client and backend synthesis handler) SHALL strictly e
 5. If the client submits a voice ID that does not match the slice's content language, the backend SHALL reject the request with an RFC 7807 validation error (`VOICE_LANGUAGE_MISMATCH`).
 
 All audio controls, buttons, tooltips, and status indicators SHALL use clean, professional, descriptive copy and SHALL NOT use hype or buzzword labels such as "AI", "AI Audio", or "Google AI". The UI SHALL use standard, subtle iconography (e.g. cloud icon or plain toggle switch) and SHALL NOT use mismatched or aggressive icons such as lightning bolts (`Zap`).
+
+#### Scenario: Zero layout shift when toggling between Cloud and Device engines
+- **WHEN** the user switches between On-Device and Google Cloud engine modes in the reader audio player
+- **THEN** the total outer container height of the player bar remains constant (50px) without any vertical jump, expansion, or cumulative layout shift.
 
 #### Scenario: Voice selector matches Listen button height
 - **WHEN** the user switches between On-Device and Google Cloud engine modes in the reader audio player

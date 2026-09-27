@@ -40,7 +40,8 @@ export interface SynthHandlers {
 }
 
 export interface TtsEngine {
-  synthesize: (model: string, sentences: string[], handlers: SynthHandlers) => Promise<void>
+  synthesize: (model: string, sentences: string[], handlers: SynthHandlers, offsetIndex?: number) => Promise<void>
+  cancel?: (reqId?: number) => void
   dispose: () => void
 }
 
@@ -131,13 +132,30 @@ function createWorkerEngine(): TtsEngine {
   }
 
   return {
-    synthesize(model, sentences, handlers) {
+    synthesize(model, sentences, handlers, offsetIndex = 0) {
       return new Promise<void>((resolve, reject) => {
         const w = ensureWorker()
         const reqId = ++reqCounter
         pending.set(reqId, { handlers, resolve, reject })
-        w.postMessage({ type: 'synth', reqId, model, sentences })
+        w.postMessage({ type: 'synth', reqId, model, sentences, offsetIndex })
       })
+    },
+    cancel(reqId) {
+      if (worker) {
+        worker.postMessage({ type: 'cancel', reqId })
+      }
+      if (reqId != null) {
+        const p = pending.get(reqId)
+        if (p) {
+          pending.delete(reqId)
+          p.resolve()
+        }
+      } else {
+        for (const p of pending.values()) {
+          p.resolve()
+        }
+        pending.clear()
+      }
     },
     dispose() {
       worker?.terminate()
@@ -294,13 +312,27 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     audio.value?.pause()
   }
 
+  function cancelWorkerSynthesis(): void {
+    if (engineInstance?.cancel) {
+      engineInstance.cancel()
+    }
+    if (deps.engine?.cancel) {
+      deps.engine.cancel()
+    }
+    synthIndex.value = 0
+    synthTotal.value = 0
+    targetBufferCount.value = 0
+  }
+
   function setEngineMode(mode: AudioEngine): void {
     engineMode.value = mode
+    if (mode === 'cloud') {
+      cancelWorkerSynthesis()
+    }
     if (isClient) {
       localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, mode)
     }
   }
-
   function setVoice(voiceId: string): void {
     selectedVoice.value = voiceId
     if (isClient) {
@@ -343,6 +375,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     const contentHash = await computeContentHash(script)
 
     if (engineMode.value === 'cloud') {
+      cancelWorkerSynthesis()
       const langKey = (source.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en'
       const scopedVoice = isClient ? localStorage.getItem(`${AUDIO_VOICE_STORAGE_KEY}_${langKey}`) : null
       const requestedVoice = selectedVoice.value || scopedVoice
@@ -432,7 +465,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       return
     }
 
-    // Cache miss -> synthesize via worker
+    // Cache miss -> synthesize via worker (check partial cache first)
     status.value = 'loading'
     const sentences = splitSentences(script)
     const target = sentences.length <= 3
@@ -440,10 +473,25 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       : Math.max(2, Math.ceil(sentences.length / 3))
     targetBufferCount.value = target
     synthTotal.value = sentences.length
-    synthIndex.value = 0
-    const buffers: Float32Array[] = []
+
+    let buffers: Float32Array[] = []
     let sampleRate = 16000
 
+    const cachedPartial = cache.getPartial ? await cache.getPartial(key) : undefined
+    if (
+      cachedPartial
+      && cachedPartial.total === sentences.length
+      && cachedPartial.chunks.length > 0
+      && cachedPartial.chunks.length < sentences.length
+    ) {
+      buffers = [...cachedPartial.chunks]
+      sampleRate = cachedPartial.sampleRate
+      synthIndex.value = buffers.length
+    } else {
+      synthIndex.value = 0
+    }
+
+    const startIndex = buffers.length
     let currentPlayingIndex = 0
     let isPlayingPreRoll = false
     let isStreaming = true
@@ -468,6 +516,10 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       void play()
     }
 
+    if (buffers.length >= target) {
+      playPreRoll()
+    }
+
     onChunkEndedCallback = () => {
       if (!isStreaming) {
         playing.value = false
@@ -481,27 +533,38 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     }
 
     try {
-      await engine.synthesize(voice.model, sentences, {
-        onProgress: (progress) => {
-          if (progress.stage === 'download' && progress.progress != null) {
-            downloadProgress.value = progress.progress
-          }
-        },
-        onChunk: (samples, sr) => {
-          sampleRate = sr
-          buffers.push(samples)
-          synthIndex.value += 1
+      const remainingSentences = sentences.slice(startIndex)
+      if (remainingSentences.length > 0) {
+        await engine.synthesize(voice.model, remainingSentences, {
+          onProgress: (progress) => {
+            if (progress.stage === 'download' && progress.progress != null) {
+              downloadProgress.value = progress.progress
+            }
+          },
+          onChunk: (samples, sr) => {
+            sampleRate = sr
+            buffers.push(samples)
+            synthIndex.value = buffers.length
 
-          if (buffers.length === target && activeKey === key) {
-            playPreRoll()
-          } else if (isStreaming && !playing.value && buffers.length > target && currentPlayingIndex === buffers.length - 2) {
-            playChunk(buffers.length - 1)
-          }
-        },
-        onDevice: (d) => {
-          device.value = d
-        },
-      })
+            if (cache.savePartial) {
+              void cache.savePartial(key, {
+                chunks: buffers,
+                sampleRate,
+                total: sentences.length,
+              })
+            }
+
+            if (buffers.length === target && activeKey === key && !isPlayingPreRoll) {
+              playPreRoll()
+            } else if (isStreaming && !playing.value && buffers.length > target && currentPlayingIndex === buffers.length - 2) {
+              playChunk(buffers.length - 1)
+            }
+          },
+          onDevice: (d) => {
+            device.value = d
+          },
+        }, startIndex)
+      }
     } catch (error) {
       onChunkEndedCallback = null
       status.value = 'error'
@@ -525,6 +588,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
     const complete = encodeWav(concatFloat32(buffers), sampleRate)
     await cache.set(key, complete)
+    if (cache.deletePartial) {
+      await cache.deletePartial(key)
+    }
 
     if (buffers.length > 1) {
       const el = ensureAudio()

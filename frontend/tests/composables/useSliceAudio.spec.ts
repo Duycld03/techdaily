@@ -7,12 +7,12 @@ import {
   AUDIO_SPEED_STORAGE_KEY,
   AUDIO_ENGINE_STORAGE_KEY,
   useSliceAudio,
-  type NarrationSource,
   type SynthHandlers,
-  type TtsEngine
+  type TtsEngine,
+  type NarrationSource,
 } from '~/composables/useSliceAudio'
-type MockAudio = HTMLAudioElement & { play: Mock, pause: Mock }
-
+import type { PartialSliceAudio, SliceAudioCache } from '~/utils/sliceAudioCache'
+import type { AudioQuotaInfo } from '~/types/audio'
 function createFakeAudio(): MockAudio {
   const listeners: Record<string, Array<() => void>> = {}
   const fire = (type: string) => (listeners[type] || []).forEach(cb => cb())
@@ -54,14 +54,24 @@ function streamingEngine() {
 
 function memoryCache() {
   const store = new Map<string, Blob>()
-  const cache = {
+  const partialStore = new Map<string, PartialSliceAudio>()
+  const cache: SliceAudioCache = {
     get: vi.fn((key: string) => Promise.resolve(store.get(key))),
     set: vi.fn((key: string, blob: Blob) => {
       store.set(key, blob)
       return Promise.resolve()
-    })
+    }),
+    getPartial: vi.fn((key: string) => Promise.resolve(partialStore.get(key))),
+    savePartial: vi.fn((key: string, data: PartialSliceAudio) => {
+      partialStore.set(key, data)
+      return Promise.resolve()
+    }),
+    deletePartial: vi.fn((key: string) => {
+      partialStore.delete(key)
+      return Promise.resolve()
+    }),
   }
-  return { store, cache }
+  return { store, partialStore, cache }
 }
 
 const MARKDOWN = '# Heading\n\nFirst sentence. Second sentence.\n\n```ts\nconst x = 1\n```'
@@ -607,5 +617,119 @@ describe('useSliceAudio', () => {
 
     await loadPromise
     expect(cache.set).toHaveBeenCalledTimes(1)
+  })
+
+  it('resumes on-device synthesis from partial cache and cleans up partial cache on completion', async () => {
+    const { cache } = memoryCache()
+    const audio = createFakeAudio()
+
+    // Pre-populate partial cache with 2 sentences out of 4
+    const initialMarkdown = 'First sentence. Second sentence. Third sentence. Fourth sentence.'
+    const src = source({ chunkId: 'chunk-resumable-1', markdown: initialMarkdown })
+    const script = extractNarrationScript(initialMarkdown)
+    const contentHash = await computeContentHash(script)
+    const key = `chunk-resumable-1::mms-eng::${contentHash}`
+
+    await cache.savePartial?.(key, {
+      chunks: [new Float32Array([0.1, 0.1]), new Float32Array([0.2, 0.2])],
+      sampleRate: 16000,
+      total: 4,
+    })
+
+    const engine: TtsEngine = {
+      synthesize: vi.fn(async (_model: string, sentences: string[], handlers: SynthHandlers) => {
+        // Expect only remaining 2 sentences passed
+        expect(sentences).toEqual(['Third sentence.', 'Fourth sentence.'])
+        handlers.onChunk(new Float32Array([0.3, 0.3]), 16000)
+        handlers.onChunk(new Float32Array([0.4, 0.4]), 16000)
+      }),
+      cancel: vi.fn(),
+      dispose: vi.fn(),
+    }
+
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine,
+      cache,
+      createAudio: () => audio,
+    })
+
+    await player.loadAndPlay(src)
+
+    expect(engine.synthesize).toHaveBeenCalledTimes(1)
+    expect(cache.set).toHaveBeenCalledTimes(1)
+    expect(cache.deletePartial).toHaveBeenCalledWith(key)
+  })
+
+  it('invalidates partial cache and synthesizes from sentence 0 when slice content changes', async () => {
+    const { cache } = memoryCache()
+    const audio = createFakeAudio()
+
+    // Pre-populate partial cache under old content
+    const oldMarkdown = 'Old content sentence one. Old content sentence two.'
+    const oldScript = extractNarrationScript(oldMarkdown)
+    const oldContentHash = await computeContentHash(oldScript)
+    const oldKey = `chunk-hash-test::mms-eng::${oldContentHash}`
+
+    await cache.savePartial?.(oldKey, {
+      chunks: [new Float32Array([0.1, 0.1])],
+      sampleRate: 16000,
+      total: 2,
+    })
+
+    const engine: TtsEngine = {
+      synthesize: vi.fn(async (_model: string, sentences: string[], handlers: SynthHandlers) => {
+        // New content -> all 3 sentences synthesized from start
+        expect(sentences.length).toBe(3)
+        for (let i = 0; i < sentences.length; i++) {
+          handlers.onChunk(new Float32Array([0.1 * (i + 1)]), 16000)
+        }
+      }),
+      cancel: vi.fn(),
+      dispose: vi.fn(),
+    }
+
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine,
+      cache,
+      createAudio: () => audio,
+    })
+
+    const newMarkdown = 'New content sentence one. New content sentence two. New content sentence three.'
+    await player.loadAndPlay(source({ chunkId: 'chunk-hash-test', markdown: newMarkdown }))
+
+    expect(engine.synthesize).toHaveBeenCalledTimes(1)
+    expect(cache.set).toHaveBeenCalledTimes(1)
+  })
+
+  it('cancels active on-device synthesis and resets progress counters when switching to Cloud engine', () => {
+    const cancelMock = vi.fn()
+    const engine: TtsEngine = {
+      synthesize: vi.fn(),
+      cancel: cancelMock,
+      dispose: vi.fn(),
+    }
+    const { cache } = memoryCache()
+    const audio = createFakeAudio()
+
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine,
+      cache,
+      createAudio: () => audio,
+    })
+
+    player.synthIndex.value = 5
+    player.synthTotal.value = 15
+    player.targetBufferCount.value = 5
+
+    player.setEngineMode('cloud')
+
+    expect(cancelMock).toHaveBeenCalledTimes(1)
+    expect(player.synthIndex.value).toBe(0)
+    expect(player.synthTotal.value).toBe(0)
+    expect(player.targetBufferCount.value).toBe(0)
+    expect(player.engineMode.value).toBe('cloud')
   })
 })

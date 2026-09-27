@@ -12,8 +12,15 @@ interface SynthRequest {
   reqId: number
   model: string
   sentences: string[]
+  offsetIndex?: number
 }
 
+interface CancelRequest {
+  type: 'cancel'
+  reqId?: number
+}
+
+type WorkerIncomingMessage = SynthRequest | CancelRequest
 type SynthFn = (text: string) => Promise<{ audio: Float32Array, sampling_rate: number }>
 type Backend = 'webgpu' | 'wasm'
 // Precision per backend, chosen for lowest synthesis latency (benchmarked in a
@@ -132,14 +139,44 @@ function getPipeline(model: string, reqId: number): Promise<PipelineEntry> {
   return existing
 }
 
-ctx.onmessage = async (event: MessageEvent<SynthRequest>) => {
+const cancelledReqIds = new Set<number>()
+let activeReqId: number | null = null
+
+ctx.onmessage = async (event: MessageEvent<WorkerIncomingMessage>) => {
   const msg = event.data
-  if (msg?.type !== 'synth') return
-  const { reqId, model, sentences } = msg
+  if (!msg) return
+
+  if (msg.type === 'cancel') {
+    if (msg.reqId != null) {
+      cancelledReqIds.add(msg.reqId)
+    } else if (activeReqId != null) {
+      cancelledReqIds.add(activeReqId)
+    }
+    return
+  }
+
+  if (msg.type !== 'synth') return
+  const { reqId, model, sentences, offsetIndex = 0 } = msg
+  activeReqId = reqId
+
   try {
     let entry = await getPipeline(model, reqId)
+    if (cancelledReqIds.has(reqId)) {
+      cancelledReqIds.delete(reqId)
+      if (activeReqId === reqId) activeReqId = null
+      ctx.postMessage({ type: 'done', reqId })
+      return
+    }
+
     ctx.postMessage({ type: 'device', reqId, device: entry.device })
     for (let i = 0; i < sentences.length; i++) {
+      if (cancelledReqIds.has(reqId)) {
+        cancelledReqIds.delete(reqId)
+        if (activeReqId === reqId) activeReqId = null
+        ctx.postMessage({ type: 'done', reqId })
+        return
+      }
+
       const sentence = sentences[i]
       if (!sentence) continue
       let out: { audio: Float32Array, sampling_rate: number }
@@ -147,6 +184,12 @@ ctx.onmessage = async (event: MessageEvent<SynthRequest>) => {
         out = await entry.synth(sentence)
       }
       catch (inferError) {
+        if (cancelledReqIds.has(reqId)) {
+          cancelledReqIds.delete(reqId)
+          if (activeReqId === reqId) activeReqId = null
+          ctx.postMessage({ type: 'done', reqId })
+          return
+        }
         // A WebGPU pipeline can initialize yet fail at inference on some
         // browsers. Rebuild once on CPU WASM and retry this sentence; later
         // sentences then reuse the fallback without re-probing.
@@ -157,15 +200,39 @@ ctx.onmessage = async (event: MessageEvent<SynthRequest>) => {
         ctx.postMessage({ type: 'device', reqId, device: entry.device })
         out = await entry.synth(sentence)
       }
+
+      if (cancelledReqIds.has(reqId)) {
+        cancelledReqIds.delete(reqId)
+        if (activeReqId === reqId) activeReqId = null
+        ctx.postMessage({ type: 'done', reqId })
+        return
+      }
+
       const samples = out.audio
+      const chunkIndex = offsetIndex + i
       ctx.postMessage(
-        { type: 'chunk', reqId, index: i, count: sentences.length, sampleRate: out.sampling_rate, samples },
+        { type: 'chunk', reqId, index: chunkIndex, count: offsetIndex + sentences.length, sampleRate: out.sampling_rate, samples },
         [samples.buffer],
       )
     }
+
+    if (cancelledReqIds.has(reqId)) {
+      cancelledReqIds.delete(reqId)
+      if (activeReqId === reqId) activeReqId = null
+      ctx.postMessage({ type: 'done', reqId })
+      return
+    }
+
+    if (activeReqId === reqId) activeReqId = null
     ctx.postMessage({ type: 'done', reqId })
   }
   catch (error) {
+    if (activeReqId === reqId) activeReqId = null
+    if (cancelledReqIds.has(reqId)) {
+      cancelledReqIds.delete(reqId)
+      ctx.postMessage({ type: 'done', reqId })
+      return
+    }
     ctx.postMessage({ type: 'error', reqId, message: error instanceof Error ? error.message : String(error) })
   }
 }

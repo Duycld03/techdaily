@@ -194,13 +194,12 @@ onMounted(() => {
 <template>
   <div
     v-if="available"
-    class="flex flex-wrap items-center gap-2 sm:gap-3 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/80 dark:bg-canvas-subtle/70 px-3 py-2"
+    class="flex flex-wrap items-center min-h-[50px] gap-2 sm:gap-3 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/80 dark:bg-canvas-subtle/70 px-3 py-2"
   >
     <!-- Play / Pause -->
     <button
       type="button"
-      class="flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-3 py-1.5 transition-all active:scale-95 disabled:opacity-60"
-      :disabled="isLoading"
+      class="h-8 inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-3 transition-all active:scale-95 disabled:opacity-60"
       :aria-label="playing ? t('reader.audio_pause') : t('reader.audio_play')"
       @click="onToggle"
     >
@@ -288,7 +287,7 @@ onMounted(() => {
         {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
       </span>
       <span
-        v-if="synthTotal > 0 && synthIndex > 0 && synthIndex < synthTotal"
+        v-if="engineMode === 'device' && synthTotal > 0 && synthIndex > 0 && synthIndex < synthTotal"
         class="text-xs text-brand-600 dark:text-brand-400 shrink-0 whitespace-nowrap font-medium"
       >
         ({{ t('reader.audio_synthesizing', { current: synthIndex, total: synthTotal }) }})
