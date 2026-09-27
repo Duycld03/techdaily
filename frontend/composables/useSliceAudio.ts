@@ -197,11 +197,23 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       let baseUrl = ''
       try {
         const config = useRuntimeConfig()
-        baseUrl = (config?.public?.apiBaseUrl as string | undefined)?.trim() || 'http://localhost:5000'
+        const configuredUrl = (config?.public?.apiBaseUrl as string | undefined)?.trim()
+        if (configuredUrl && configuredUrl !== 'http://localhost:5000') {
+          baseUrl = configuredUrl
+        } else if (typeof window !== 'undefined') {
+          if (window.location?.port === '3000') {
+            const protocol = window.location.protocol || 'http:'
+            const hostname = window.location.hostname || 'localhost'
+            baseUrl = `${protocol}//${hostname}:5000`
+          } else {
+            baseUrl = ''
+          }
+        } else {
+          baseUrl = configuredUrl || ''
+        }
       } catch {
-        baseUrl = 'http://localhost:5000'
+        baseUrl = ''
       }
-
       if (url.startsWith('/')) {
         url = `${baseUrl}${url}`
       }

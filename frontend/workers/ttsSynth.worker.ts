@@ -32,12 +32,18 @@ interface PipelineEntry {
 const ctx = self as unknown as DedicatedWorkerGlobalScope
 
 // Utilize a many-core CPU: run the WASM (CPU) backend across as many threads as
-// the machine reports. ONNX Runtime Web only spawns threads when the page is
-// cross-origin isolated (SharedArrayBuffer available); otherwise it clamps to a
-// single thread automatically, so the non-isolated path still completes on one.
+// the machine reports when the browsing context is cross-origin isolated.
+// Guarding behind self.crossOriginIsolated avoids ONNX Runtime Web warnings
+// and errors when crossOriginIsolated is false, while fully exploiting multi-core
+// concurrency when cross-origin isolation is enabled.
 const onnxWasm = env.backends.onnx.wasm
-if (onnxWasm && typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number') {
-  onnxWasm.numThreads = Math.max(1, navigator.hardwareConcurrency)
+const isIsolated = typeof self !== 'undefined' && 'crossOriginIsolated' in self && Boolean(self.crossOriginIsolated)
+if (onnxWasm) {
+  if (isIsolated && typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number') {
+    onnxWasm.numThreads = Math.max(1, navigator.hardwareConcurrency)
+  } else {
+    onnxWasm.numThreads = 1
+  }
 }
 
 // One pipeline per model, cached for the worker lifetime. The resolved backend

@@ -392,4 +392,51 @@ describe('useSliceAudio', () => {
     expect(player.isQuotaExhausted.value).toBe(false)
     expect(player.engineMode.value).toBe('device')
   })
+
+  it('resolves relative URLs in production environments when no custom fetchClient is provided', async () => {
+    const originalFetch = globalThis.fetch
+    const fetchSpy = vi.fn(async () => {
+      return new Response(JSON.stringify({
+        monthlyLimit: 950000,
+        usedCharacters: 100000,
+        remainingCharacters: 850000,
+        isExhausted: false,
+        isNearLimit: false
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    })
+    globalThis.fetch = fetchSpy
+
+    const originalLocation = window.location
+    try {
+      Object.defineProperty(window, 'location', {
+        value: {
+          protocol: 'https:',
+          hostname: 'techdaily.duckdns.org',
+          port: ''
+        },
+        writable: true,
+        configurable: true
+      })
+
+      const player = useSliceAudio({
+        defaultEngine: 'cloud'
+      })
+
+      await player.fetchQuota()
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+      const calledUrl = fetchSpy.mock.calls[0]![0] as string
+      expect(calledUrl).toBe('/api/v1/library/audio/quota')
+      expect(calledUrl).not.toContain('localhost:5000')
+    } finally {
+      globalThis.fetch = originalFetch
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        writable: true,
+        configurable: true
+      })
+    }
+  })
 })
