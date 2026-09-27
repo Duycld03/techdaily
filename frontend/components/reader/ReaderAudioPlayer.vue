@@ -27,6 +27,7 @@ const {
   synthIndex,
   synthTotal,
   targetBufferCount,
+  device,
   errorMessage,
   errorInfo,
   speed,
@@ -191,16 +192,16 @@ function formatTime(seconds: number): string {
 
 const statusLabel = computed(() => {
   if (status.value !== 'loading') return ''
+  if (downloadProgress.value > 0 && synthIndex.value === 0) {
+    const pct = Math.min(100, Math.max(0, Math.round(downloadProgress.value)))
+    return t('reader.audio_downloading', { progress: pct })
+  }
   const target = targetBufferCount?.value ?? 0
   if (target > 0 && synthIndex.value < target && synthTotal.value > 0) {
     return t('reader.audio_buffering', { current: synthIndex.value, total: target })
   }
   if (synthTotal.value > 0 && synthIndex.value > 0) {
     return t('reader.audio_synthesizing', { current: synthIndex.value, total: synthTotal.value })
-  }
-  if (downloadProgress.value > 0) {
-    const pct = Math.min(100, Math.max(0, Math.round(downloadProgress.value)))
-    return t('reader.audio_downloading', { progress: pct })
   }
   return t('reader.audio_preparing')
 })

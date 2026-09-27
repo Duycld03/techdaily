@@ -41,7 +41,7 @@ The narration model for a language SHALL be downloaded lazily on first use and c
 
 ### Requirement: Seekable Full-Slice Audio Cache
 
-The reader SHALL synthesize a slice's narration sentence by sentence, surfacing synthesis progress (for example, sentences completed of the total). When on-device synthesis begins for a multi-sentence slice, the reader SHALL buffer an initial pre-roll threshold of sentences (at least 33% of the slice's total sentences, or 100% of sentences for slices with 3 or fewer sentences) before starting audible playback, preventing audio playback from exhausting its buffer and stalling when earlier sentences are shorter than the computation time of subsequent sentences.
+The reader SHALL synthesize a slice's narration sentence by sentence, surfacing synthesis progress (for example, sentences completed of the total). When on-device synthesis begins, the reader SHALL enforce a low-latency pre-roll threshold: for slices with 2 or fewer sentences, the reader SHALL buffer all sentences (`sentences.length`), and for slices with more than 2 sentences, the reader SHALL cap the pre-roll buffer target at a maximum of 2 sentences (`Math.min(2, sentences.length)`), initiating audible playback within seconds while continuing background streaming synthesis for subsequent sentences.
 
 Once this pre-roll threshold is satisfied, audio playback SHALL begin immediately with the assembled initial sentences, while the worker continues synthesizing the remaining sentences in the background. As subsequent sentences finish synthesis, they SHALL be queued seamlessly for uninterrupted continuous playback without audio underruns or restarting from the beginning.
 
@@ -61,14 +61,13 @@ The reader SHALL persist the complete slice audio in the browser's on-device sto
 #### Scenario: Modified slice invalidates stale partial chunks
 - **WHEN** a slice with partial cached chunks (e.g. 5 of 15 sentences) has its content revised such that its `contentHash` changes, and the user plays on-device narration
 - **THEN** the reader detects the hash mismatch, discards the stale partial chunks, and synthesizes all sentences starting from index 0 under the new `contentHash`.
-#### Scenario: Pre-roll buffer threshold reached before playback begins
-- **WHEN** a user plays on-device narration for a slice with 19 sentences
-- **THEN** the reader buffers at least 7 sentences (33%) before initiating playback, ensuring sufficient playback runway while remaining sentences synthesize.
+#### Scenario: Long slice begins playback after 2 sentences
+- **WHEN** a user initiates on-device narration on a 36-sentence reading slice
+- **THEN** the reader audio engine sets the pre-roll buffer target to exactly 2 sentences and starts audio playback as soon as sentence 2 completes, rather than delaying playback until 12 or more sentences are synthesized.
 
-#### Scenario: Short slices buffer fully before playback
-- **WHEN** a user plays on-device narration for a slice with 3 or fewer sentences
-- **THEN** the reader buffers all sentences before playback begins.
-
+#### Scenario: Short slice buffers all sentences
+- **WHEN** a user initiates on-device narration on a 2-sentence reading slice
+- **THEN** the reader audio engine sets the pre-roll buffer target to 2 sentences and starts playback once all 2 sentences are synthesized.
 #### Scenario: Continuous playback across chunk boundaries without stutter
 - **WHEN** playback reaches the end of the initial buffered sentences while background synthesis continues
 - **THEN** subsequent sentence audio chunks play sequentially without gaps, audio dropouts, or resetting back to the start of the audio.
@@ -381,3 +380,18 @@ The reader audio player SHALL provide clear, actionable diagnostic feedback when
 #### Scenario: Mobile on-device failure offers 1-tap switch to Google Cloud TTS
 - **WHEN** on-device synthesis encounters an error on a mobile device and the user's monthly cloud quota is not exhausted
 - **THEN** the player displays a localized notification recommending Google Cloud narration with an action button that immediately switches to Cloud mode and plays the audio.
+
+### Requirement: Model Download Progress Precedence & Compute Device Status Presentation
+
+The reader audio player SHALL provide accurate visual feedback during on-device model initialization and compute execution:
+
+1. **Download Progress Precedence**: While model weights are actively being downloaded over the network (`downloadProgress > 0` and `< 100`), the status display SHALL show the download percentage (`Downloading voice model… X%` / `Đang tải giọng đọc… X%`). The buffering indicator (`0/N`) SHALL NOT mask or shadow the download progress.
+2. **Compute Device Badge Rendering**: The player SHALL bind and render the active compute backend badge (`[GPU]` or `[CPU]`) without emitting component instance template warnings, clearly informing the user whether narration is executing on hardware-accelerated WebGPU or multi-threaded CPU WebAssembly.
+
+#### Scenario: Model download percentage takes visual precedence over buffering counter
+- **WHEN** an on-device narration model is downloading 100 MB of ONNX weights over the network
+- **THEN** the player displays "Downloading voice model… X%" (or "Đang tải giọng đọc… X%") with the live percentage, and does not display "Buffering audio… 0/N".
+
+#### Scenario: Compute device badge displays active hardware backend
+- **WHEN** on-device synthesis resolves the active device backend (WebGPU or WASM CPU)
+- **THEN** the player displays the corresponding device badge and tooltip without logging property access errors in the browser console.

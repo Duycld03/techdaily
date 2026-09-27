@@ -56,7 +56,7 @@ const onnxWasm = env.backends.onnx.wasm
 const isIsolated = typeof self !== 'undefined' && 'crossOriginIsolated' in self && Boolean(self.crossOriginIsolated)
 if (onnxWasm) {
   if (!isMobile && isIsolated && typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number') {
-    onnxWasm.numThreads = Math.min(4, Math.max(1, navigator.hardwareConcurrency))
+    onnxWasm.numThreads = Math.min(8, Math.max(1, navigator.hardwareConcurrency))
   } else {
     onnxWasm.numThreads = 1
   }

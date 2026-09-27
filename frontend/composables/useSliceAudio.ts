@@ -512,9 +512,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     // Cache miss -> synthesize via worker (check partial cache first)
     status.value = 'loading'
     const sentences = splitSentences(script)
-    const target = sentences.length <= 3
-      ? sentences.length
-      : Math.max(2, Math.ceil(sentences.length / 3))
+    const target = Math.min(2, sentences.length)
     targetBufferCount.value = target
     synthTotal.value = sentences.length
 

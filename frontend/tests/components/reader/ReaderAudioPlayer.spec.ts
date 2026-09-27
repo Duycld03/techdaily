@@ -81,7 +81,11 @@ const MESSAGES: Record<string, string> = {
   'reader.audio_quota_near_limit_tooltip': 'Monthly cloud quota reached, using on-device narration',
   'reader.audio_voice_select_placeholder': 'Select voice',
   'reader.audio_voice_female': 'Female',
-  'reader.audio_voice_male': 'Male'
+  'reader.audio_voice_male': 'Male',
+  'reader.audio_device_gpu': 'GPU',
+  'reader.audio_device_cpu': 'CPU',
+  'reader.audio_device_gpu_hint': 'Narration running on GPU',
+  'reader.audio_device_cpu_hint': 'Narration running on CPU'
 }
 
 function interpolate(key: string, params?: Record<string, unknown>): string {
@@ -184,6 +188,30 @@ describe('ReaderAudioPlayer.vue', () => {
     audio.synthIndex.value = 1
     await nextTick()
     expect(wrapper.text()).toContain('Buffering audio… 1/2')
+  })
+
+  it('prioritizes model download progress over buffering status', async () => {
+    const wrapper = mountPlayer({ chunk: chunk() })
+    audio.status.value = 'loading'
+    audio.synthTotal.value = 12
+    audio.targetBufferCount.value = 2
+    audio.synthIndex.value = 0
+    audio.downloadProgress.value = 45
+    await nextTick()
+    expect(wrapper.text()).toContain('45%')
+    expect(wrapper.text()).not.toContain('0/2')
+  })
+
+  it('renders compute device badge for webgpu and wasm without warnings', async () => {
+    audio.engineMode.value = 'device'
+    const wrapper = mountPlayer({ chunk: chunk() })
+    audio.device.value = 'webgpu'
+    await nextTick()
+    expect(wrapper.text()).toContain('GPU')
+
+    audio.device.value = 'wasm'
+    await nextTick()
+    expect(wrapper.text()).toContain('CPU')
   })
 
   it('hides synthesis progress badge when engineMode is cloud and shows it when device', async () => {

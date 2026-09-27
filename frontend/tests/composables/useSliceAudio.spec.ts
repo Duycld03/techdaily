@@ -533,14 +533,13 @@ describe('useSliceAudio', () => {
     }
   })
 
-  it('buffers 100% of sentences before playback begins for short slices (<= 3 sentences)', async () => {
-    const { promise, resolve: resolveChunk2 } = Promise.withResolvers<void>()
+  it('buffers all sentences before playback begins for slices with 1 or 2 sentences', async () => {
+    const { promise: p1, resolve: resolveChunk1 } = Promise.withResolvers<void>()
     const delayedEngine: TtsEngine = {
       synthesize: vi.fn(async (_model: string, _sentences: string[], handlers: SynthHandlers) => {
         handlers.onChunk(new Float32Array([0.1, -0.1]), 16000)
+        await p1
         handlers.onChunk(new Float32Array([0.2, -0.2]), 16000)
-        await promise
-        handlers.onChunk(new Float32Array([0.3, -0.3]), 16000)
       }),
       dispose: vi.fn()
     }
@@ -554,29 +553,49 @@ describe('useSliceAudio', () => {
       createAudio: () => audio
     })
 
-    // source() has 3 sentences -> targetBufferCount = 3
-    const loadPromise = player.loadAndPlay(source())
+    const loadPromise = player.loadAndPlay(source({ markdown: 'Sentence 1. Sentence 2.' }))
 
-    await nextTick()
-    await new Promise(r => setTimeout(r, 10))
+    await vi.waitFor(() => {
+      expect(player.targetBufferCount.value).toBe(2)
+    })
 
-    // Only 2 of 3 chunks arrived -> still buffering!
+    // Only 1 of 2 chunks arrived -> still buffering!
     expect(player.status.value).toBe('loading')
     expect(audio.play).not.toHaveBeenCalled()
-    expect(player.synthIndex.value).toBe(2)
-    expect(player.targetBufferCount.value).toBe(3)
-
-    // Deliver chunk 2 (third sentence) -> completes buffer threshold
-    resolveChunk2()
+    expect(player.synthIndex.value).toBe(1)
+    resolveChunk1()
     await loadPromise
 
     expect(player.status.value).toBe('ready')
     expect(audio.play).toHaveBeenCalled()
-    expect(player.synthIndex.value).toBe(3)
+    expect(player.synthIndex.value).toBe(2)
     expect(cache.set).toHaveBeenCalledTimes(1)
   })
 
-  it('buffers at least 33% of sentences before playback begins for longer slices and chains sequential chunks', async () => {
+  it('buffers 1 sentence for single-sentence slices', async () => {
+    const delayedEngine: TtsEngine = {
+      synthesize: vi.fn(async (_model: string, _sentences: string[], handlers: SynthHandlers) => {
+        handlers.onChunk(new Float32Array([0.1, -0.1]), 16000)
+      }),
+      dispose: vi.fn()
+    }
+
+    const { cache } = memoryCache()
+    const audio = createFakeAudio()
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine: delayedEngine,
+      cache,
+      createAudio: () => audio
+    })
+
+    await player.loadAndPlay(source({ markdown: 'Single sentence only.' }))
+    expect(player.targetBufferCount.value).toBe(1)
+    expect(player.status.value).toBe('ready')
+    expect(audio.play).toHaveBeenCalled()
+  })
+
+  it('caps buffer threshold at 2 sentences for longer slices and chains sequential chunks', async () => {
     const listeners: Record<string, Array<() => void>> = {}
     const fire = (type: string) => (listeners[type] || []).forEach(cb => cb())
     const audioState = {
@@ -622,12 +641,10 @@ describe('useSliceAudio', () => {
     const longMarkdown = 'Sentence 1. Sentence 2. Sentence 3. Sentence 4. Sentence 5. Sentence 6.'
     const loadPromise = player.loadAndPlay(source({ markdown: longMarkdown }))
 
-    await nextTick()
-    await new Promise(r => setTimeout(r, 10))
-
-    // Target buffer count is 2 (33% of 6)
-    expect(player.targetBufferCount.value).toBe(2)
-    expect(player.status.value).toBe('ready')
+    await vi.waitFor(() => {
+      expect(player.targetBufferCount.value).toBe(2)
+      expect(player.status.value).toBe('ready')
+    })
     expect(audioState.play).toHaveBeenCalledTimes(1)
 
     // Simulate pre-roll audio ending while chunk 2 arrives
