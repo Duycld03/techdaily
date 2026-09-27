@@ -221,6 +221,8 @@ When a slice's content changes such that its `ContentHash` changes, the existing
 
 The `/read/[bookId]` reader audio player SHALL provide an in-player toggle switch allowing the user to select between **Google Cloud** (cloud-accelerated) and **On-Device** (local Web Worker) synthesis engines. The default engine SHALL be Google Cloud, and the user's preference SHALL persist in `localStorage`.
 
+The frontend client applications SHALL consume audio narration quota models (`AudioQuotaInfo`) from a centralized TypeScript type definition without duplicating exported interface declarations across composable functions or Pinia store modules, preventing auto-import collision and symbol shadowing during compilation.
+
 The backend SHALL track cumulative characters synthesized via Google Cloud TTS during the current calendar month. To protect the free-tier monthly allowance (hard-capped at 950,000 characters to ensure a safe buffer below Google's 1,000,000 allowance):
 1. The backend SHALL expose current monthly quota utilization.
 2. When monthly quota consumption reaches or exceeds the threshold (900,000 characters), the reader frontend SHALL disable the Google Cloud toggle switch with an informative tooltip and automatically select the On-Device engine.
@@ -242,6 +244,14 @@ The backend SHALL track cumulative characters synthesized via Google Cloud TTS d
 #### Scenario: Quota-exhausted API call rejected and client alerted
 - **WHEN** a client submits a synthesis request to the backend after the monthly quota is exhausted
 - **THEN** the backend responds with an RFC 7807 `AudioQuotaExhausted` error, and the client displays a toast notification and reverts to the On-Device engine.
+
+#### Scenario: Clean compilation without auto-import collisions
+- **WHEN** the frontend application is built or type-checked via `npm test` or `npx nuxi typecheck`
+- **THEN** the compiler completes without emitting duplicate auto-import collision warnings for `AudioQuotaInfo`.
+
+#### Scenario: Audio quota utilization tracking and threshold enforcement
+- **WHEN** a reader queries the monthly audio quota utilization
+- **THEN** the server returns the current monthly character usage, remaining characters, and limit flags (`isNearLimit`, `isExhausted`) according to the canonical contract.
 
 ### Requirement: Free-Tier Voice Selection and Polished Presentation
 
