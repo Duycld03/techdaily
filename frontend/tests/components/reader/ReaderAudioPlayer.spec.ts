@@ -300,6 +300,21 @@ describe('ReaderAudioPlayer.vue', () => {
     expect(audio.loadAndPlay).not.toHaveBeenCalled()
   })
 
+  it('does not trigger duplicate loadAndPlay when user clicks play button while audio is loading or buffering', async () => {
+    audio.engineMode.value = 'device'
+    audio.playing.value = false
+    audio.status.value = 'loading'
+    audio.synthIndex.value = 1
+    audio.synthTotal.value = 15
+    const wrapper = mountPlayer({ chunk: chunk() })
+
+    // Click play button while in loading state
+    await wrapper.find('button').trigger('click')
+
+    expect(audio.loadAndPlay).not.toHaveBeenCalled()
+    expect(audio.play).not.toHaveBeenCalled()
+  })
+
   it('automatically continues playback when toggling engine while actively playing', async () => {
     audio.engineMode.value = 'cloud'
     audio.playing.value = false

@@ -65,7 +65,7 @@ function streamingEngine() {
       handlers.onChunk(new Float32Array([0.2, -0.2, 0.1]), 16000)
     }
   })
-  const engine = { synthesize, dispose: vi.fn() }
+  const engine = { synthesize, cancel: vi.fn(), dispose: vi.fn() }
   return engine
 }
 
@@ -174,6 +174,7 @@ describe('useSliceAudio', () => {
     await player.loadAndPlay(first)
     await player.loadAndPlay(second)
 
+    expect(engine.cancel).toHaveBeenCalled()
     expect(engine.synthesize).toHaveBeenCalledTimes(2)
     expect(store.has(await expectedKey(first))).toBe(true)
     expect(store.has(await expectedKey(second))).toBe(true)

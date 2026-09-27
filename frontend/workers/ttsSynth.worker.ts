@@ -150,36 +150,42 @@ function getPipeline(model: string, reqId: number): Promise<PipelineEntry> {
 
 const cancelledReqIds = new Set<number>()
 let activeReqId: number | null = null
+let currentJobId = 0
+let inferenceQueue: Promise<unknown> = Promise.resolve()
 
 ctx.onmessage = async (event: MessageEvent<WorkerIncomingMessage>) => {
   const msg = event.data
   if (!msg) return
 
   if (msg.type === 'cancel') {
-    if (msg.reqId != null) {
-      cancelledReqIds.add(msg.reqId)
-    } else if (activeReqId != null) {
-      cancelledReqIds.add(activeReqId)
+    const targetId = msg.reqId ?? activeReqId
+    if (targetId != null) {
+      cancelledReqIds.add(targetId)
     }
     return
   }
 
   if (msg.type !== 'synth') return
   const { reqId, model, sentences, offsetIndex = 0 } = msg
+
+  // Automatically cancel any previous active request if a new synth starts
+  if (activeReqId != null && activeReqId !== reqId) {
+    cancelledReqIds.add(activeReqId)
+  }
   activeReqId = reqId
+  const jobId = ++currentJobId
 
   try {
     let entry = await getPipeline(model, reqId)
-    if (cancelledReqIds.has(reqId)) {
+    if (jobId !== currentJobId || cancelledReqIds.has(reqId)) {
       cancelledReqIds.delete(reqId)
       if (activeReqId === reqId) activeReqId = null
       ctx.postMessage({ type: 'done', reqId })
       return
     }
-
     ctx.postMessage({ type: 'device', reqId, device: entry.device })
     for (let i = 0; i < sentences.length; i++) {
-      if (cancelledReqIds.has(reqId)) {
+      if (jobId !== currentJobId || cancelledReqIds.has(reqId)) {
         cancelledReqIds.delete(reqId)
         if (activeReqId === reqId) activeReqId = null
         ctx.postMessage({ type: 'done', reqId })
@@ -188,12 +194,15 @@ ctx.onmessage = async (event: MessageEvent<WorkerIncomingMessage>) => {
 
       const sentence = sentences[i]
       if (!sentence) continue
-      let out: { audio: Float32Array, sampling_rate: number }
+      let out: { audio: Float32Array, sampling_rate: number } | null = null
       try {
-        out = await entry.synth(sentence)
+        out = await (inferenceQueue = inferenceQueue.catch(() => {}).then(async () => {
+          if (jobId !== currentJobId || cancelledReqIds.has(reqId)) return null
+          return await entry.synth(sentence)
+        })) as { audio: Float32Array, sampling_rate: number } | null
       }
       catch (inferError) {
-        if (cancelledReqIds.has(reqId)) {
+        if (jobId !== currentJobId || cancelledReqIds.has(reqId)) {
           cancelledReqIds.delete(reqId)
           if (activeReqId === reqId) activeReqId = null
           ctx.postMessage({ type: 'done', reqId })
@@ -207,10 +216,13 @@ ctx.onmessage = async (event: MessageEvent<WorkerIncomingMessage>) => {
         pipelines.set(model, fallback)
         entry = await fallback
         ctx.postMessage({ type: 'device', reqId, device: entry.device })
-        out = await entry.synth(sentence)
+        out = await (inferenceQueue = inferenceQueue.catch(() => {}).then(async () => {
+          if (jobId !== currentJobId || cancelledReqIds.has(reqId)) return null
+          return await entry.synth(sentence)
+        })) as { audio: Float32Array, sampling_rate: number } | null
       }
 
-      if (cancelledReqIds.has(reqId)) {
+      if (!out || jobId !== currentJobId || cancelledReqIds.has(reqId)) {
         cancelledReqIds.delete(reqId)
         if (activeReqId === reqId) activeReqId = null
         ctx.postMessage({ type: 'done', reqId })
@@ -225,19 +237,14 @@ ctx.onmessage = async (event: MessageEvent<WorkerIncomingMessage>) => {
       )
     }
 
-    if (cancelledReqIds.has(reqId)) {
-      cancelledReqIds.delete(reqId)
+    if (jobId === currentJobId && !cancelledReqIds.has(reqId)) {
       if (activeReqId === reqId) activeReqId = null
       ctx.postMessage({ type: 'done', reqId })
-      return
     }
-
-    if (activeReqId === reqId) activeReqId = null
-    ctx.postMessage({ type: 'done', reqId })
   }
   catch (error) {
     if (activeReqId === reqId) activeReqId = null
-    if (cancelledReqIds.has(reqId)) {
+    if (jobId !== currentJobId || cancelledReqIds.has(reqId)) {
       cancelledReqIds.delete(reqId)
       ctx.postMessage({ type: 'done', reqId })
       return

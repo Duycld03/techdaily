@@ -158,6 +158,9 @@ function onToggle(): void {
     pause()
     return
   }
+  if (isLoading.value) {
+    return
+  }
   if (loadedId.value === source.value.chunkId && status.value === 'ready') {
     void play()
     return

@@ -141,6 +141,7 @@ function createWorkerEngine(): TtsEngine {
           p.reject(err)
         }
         pending.clear()
+        worker = null
       }
       worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
         const m = event.data
@@ -439,9 +440,8 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     if (!script) return
 
     const contentHash = await computeContentHash(script)
-
+    cancelWorkerSynthesis()
     if (engineMode.value === 'cloud') {
-      cancelWorkerSynthesis()
       const langKey = (source.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en'
       const scopedVoice = isClient ? localStorage.getItem(`${AUDIO_VOICE_STORAGE_KEY}_${langKey}`) : null
       const requestedVoice = selectedVoice.value || scopedVoice
@@ -565,10 +565,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     } else {
       synthIndex.value = 0
     }
-
+    const startIndex = buffers.length
     targetBufferCount.value = target
     synthTotal.value = sentences.length
-    const startIndex = buffers.length
     let currentPlayingIndex = 0
     let isPlayingPreRoll = false
     let isStreaming = true
@@ -576,7 +575,6 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     cancelWaitingForChunk = () => {
       isWaitingForNextChunk = false
     }
-
     const playPreRoll = (count = target) => {
       if (activeKey !== key || buffers.length < count) return
       isPlayingPreRoll = true
@@ -632,7 +630,6 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
             sampleRate = sr
             buffers.push(samples)
             synthIndex.value = buffers.length
-
             if (cache.savePartial) {
               void cache.savePartial(key, {
                 chunks: buffers,
@@ -657,7 +654,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       const isCancelled = error instanceof Error && error.message === 'Synthesis cancelled'
       if (isCancelled) {
         if (cache.savePartial && buffers.length > 0 && buffers.length < sentences.length) {
-          void cache.savePartial(key, {
+          await cache.savePartial(key, {
             chunks: buffers,
             sampleRate,
             total: sentences.length,
