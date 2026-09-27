@@ -192,4 +192,27 @@ describe('AppSelect.vue', () => {
 
     wrapper.unmount()
   })
+
+  it('supports size="sm" variant while preserving combobox accessibility contracts', async () => {
+    const wrapper = defaultMount({
+      size: 'sm',
+      modelValue: 'senior'
+    })
+
+    const trigger = wrapper.find('[data-testid="app-select-trigger"]')
+    expect(trigger.exists()).toBe(true)
+    expect(trigger.attributes('role')).toBe('combobox')
+    expect(trigger.attributes('aria-expanded')).toBe('false')
+
+    // Open and select option
+    await trigger.trigger('click')
+    expect(trigger.attributes('aria-expanded')).toBe('true')
+
+    const option = wrapper.find('[data-testid="app-select-option-staff"]')
+    expect(option.exists()).toBe(true)
+    await option.trigger('click')
+
+    expect(wrapper.emitted('update:modelValue')?.[0]).toEqual(['staff'])
+    expect(wrapper.emitted('change')?.[0]).toEqual(['staff'])
+  })
 })

@@ -50,6 +50,14 @@ public class GetOrSynthesizeChunkAudioHandler : IUseCase<SynthesizeChunkAudioReq
         {
             return Error.NotFound;
         }
+        var isViChunk = (chunk.Language ?? "").StartsWith("vi", StringComparison.OrdinalIgnoreCase);
+        var isViVoice = request.VoiceId.Trim().StartsWith("vi-", StringComparison.OrdinalIgnoreCase);
+        if (isViChunk != isViVoice)
+        {
+            return Error.Custom("VOICE_LANGUAGE_MISMATCH",
+                $"Voice '{request.VoiceId}' is incompatible with chunk language '{chunk.Language}'.");
+        }
+
 
         var textToSynthesize = !string.IsNullOrWhiteSpace(request.NarrationScript)
             ? request.NarrationScript.Trim()

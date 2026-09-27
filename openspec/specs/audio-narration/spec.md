@@ -41,10 +41,25 @@ The narration model for a language SHALL be downloaded lazily on first use and c
 
 ### Requirement: Seekable Full-Slice Audio Cache
 
-The reader SHALL synthesize a slice's narration sentence by sentence, surfacing synthesis progress (for example, sentences completed of the total). Upon completing synthesis of a slice, the reader SHALL assemble the sentences into a **single complete audio object** and SHALL use that complete audio as the **sole** playback source, so that playback of the whole slice is continuous and the user can seek to any position within the slice **without re-synthesizing**. The reader SHALL NOT leave playback stalled on a partial (single-sentence) fragment, and the reported total duration SHALL reflect the complete slice audio rather than an intermediate fragment.
+The reader SHALL synthesize a slice's narration sentence by sentence, surfacing synthesis progress (for example, sentences completed of the total). When on-device synthesis begins for a multi-sentence slice, the reader SHALL buffer an initial pre-roll threshold of sentences (at least 33% of the slice's total sentences, or 100% of sentences for slices with 3 or fewer sentences) before starting audible playback, preventing audio playback from exhausting its buffer and stalling when earlier sentences are shorter than the computation time of subsequent sentences.
+
+Once this pre-roll threshold is satisfied, audio playback SHALL begin immediately with the assembled initial sentences, while the worker continues synthesizing the remaining sentences in the background. As subsequent sentences finish synthesis, they SHALL be queued seamlessly for uninterrupted continuous playback without audio underruns or restarting from the beginning.
+
+Upon completing synthesis of all sentences in a slice, the reader SHALL assemble the sentences into a **single complete audio object** and SHALL transition to using that complete audio as the **sole** playback source, so that playback of the whole slice is continuous and the user can seek to any position within the slice **without re-synthesizing**. The reader SHALL NOT leave playback stalled on a partial fragment, and the reported total duration SHALL reflect the complete slice audio once assembled.
 
 The reader SHALL persist the complete slice audio in the browser's on-device storage (IndexedDB), keyed by `(chunkId, voice, contentHash)`, where `voice` is the language's on-device voice and `contentHash` is derived from the normalized narration script. A subsequent request to narrate the same `(chunkId, voice, contentHash)` — including in a later session — SHALL load the cached audio and SHALL NOT re-synthesize. When a slice's formatted content changes so its `contentHash` differs, the stale cache entry SHALL NOT be used and the audio SHALL be re-synthesized once. The audio cache SHALL enforce a bounded size (an entry or total-size cap) and evict least-recently-used entries; an evicted slice re-synthesizes on next play.
 
+#### Scenario: Pre-roll buffer threshold reached before playback begins
+- **WHEN** a user plays on-device narration for a slice with 19 sentences
+- **THEN** the reader buffers at least 7 sentences (33%) before initiating playback, ensuring sufficient playback runway while remaining sentences synthesize.
+
+#### Scenario: Short slices buffer fully before playback
+- **WHEN** a user plays on-device narration for a slice with 3 or fewer sentences
+- **THEN** the reader buffers all sentences before playback begins.
+
+#### Scenario: Continuous playback across chunk boundaries without stutter
+- **WHEN** playback reaches the end of the initial buffered sentences while background synthesis continues
+- **THEN** subsequent sentence audio chunks play sequentially without gaps, audio dropouts, or resetting back to the start of the audio.
 #### Scenario: Whole slice plays continuously
 - **WHEN** a slice's narration has finished synthesizing and the user starts playback
 - **THEN** playback proceeds continuously through the entire slice and does not stop after the first sentence.
@@ -123,14 +138,19 @@ When the browser exposes a choice of GPU adapters, the worker SHALL request a hi
 
 ### Requirement: Multi-Threaded Synthesis Enabled on Reader Routes Only
 
-On reader routes, the application SHALL be cross-origin isolated so on-device synthesis can use multi-threaded execution. This isolation SHALL be established across all deployment tiers, including Nginx proxy headers and Nuxt Nitro route response headers. This isolation SHALL be confined to reader routes and SHALL NOT be applied to the authentication route or other routes, so cross-origin sign-in — which depends on cross-window communication — continues to function. Cross-origin resources the reader legitimately needs (web fonts, document images) SHALL continue to load under the isolation policy.
+On reader routes, the application SHALL be cross-origin isolated so on-device synthesis can use multi-threaded execution. This isolation SHALL be established across deployment tiers without duplicate or conflicting response headers. Response headers `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` SHALL be emitted cleanly without repetition. This isolation SHALL be confined to reader routes and SHALL NOT be applied to the authentication route or other routes, so cross-origin sign-in — which depends on cross-window communication — continues to function. Cross-origin resources the reader legitimately needs (web fonts, document images) SHALL continue to load under the isolation policy.
+
+When entering a reader route from an unisolated browsing context (such as post-login or client-side navigation from library routes), the client application SHALL ensure the browsing context acquires cross-origin isolation (executing a full document navigation if `self.crossOriginIsolated` is not yet active), so that `self.crossOriginIsolated === true` reliably holds on reader views.
 
 When cross-origin isolation is active (`self.crossOriginIsolated === true`), the synthesis worker SHALL configure the CPU (WASM) execution backend to run across multiple threads, scaling the thread count to the machine's available logical cores (`navigator.hardwareConcurrency`), so that a many-core CPU without a usable GPU is fully utilized for synthesis rather than running on a single thread. The configured thread count SHALL be bounded by the reported hardware concurrency to avoid oversubscription. When cross-origin isolation or multi-threaded execution is unavailable, the worker SHALL clamp thread allocation to 1 without emitting console errors; thread configuration SHALL NOT change the produced audio.
 
-#### Scenario: Reader route is cross-origin isolated
-- **WHEN** a reader route (`/read/...`) is loaded
-- **THEN** the page reports cross-origin isolation, enabling multi-threaded synthesis.
+#### Scenario: Clean non-duplicate cross-origin headers delivered
+- **WHEN** a client requests a `/read/**` document
+- **THEN** the HTTP response contains single instances of `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` without duplicate header values.
 
+#### Scenario: Navigation into reader ensures active cross-origin isolation
+- **WHEN** a user navigates to `/read/[bookId]` from an unisolated route
+- **THEN** the reader browsing context establishes `window.crossOriginIsolated === true`.
 #### Scenario: Sign-in route is not isolated and OAuth still works
 - **WHEN** the sign-in route is loaded and the user completes cross-origin sign-in
 - **THEN** the page is not cross-origin isolated and sign-in completes successfully.
@@ -263,8 +283,32 @@ The backend SHALL track cumulative characters synthesized via Google Cloud TTS d
 
 When the Google Cloud engine is active, the reader audio player SHALL provide a voice selector restricted to Google Cloud Free-Tier voices (Neural2 and WaveNet tiers) for the slice's content language, supporting at least one female and one male voice for Vietnamese (`vi-VN`) and English (`en-US`). Voice selection SHALL NOT be shown when the On-Device engine is active.
 
+The voice selection dropdown trigger SHALL match the compact height, vertical padding, and border radius of the adjacent "Listen" action button (`py-1.5`, ~32px rendered height), ensuring that switching between On-Device and Google Cloud narration engines does not vertically expand or distort the height of the reader audio player bar.
+
+The system (both frontend client and backend synthesis handler) SHALL strictly enforce language compatibility between the document slice's content language and the selected voice model:
+1. Slices in English (`en`) SHALL only be synthesized with English voice models (`en-US-*`).
+2. Slices in Vietnamese (`vi`) SHALL only be synthesized with Vietnamese voice models (`vi-VN-*`).
+3. The system SHALL NOT synthesize English documentation with a Vietnamese voice model or Vietnamese documentation with an English voice model, even if a user previously selected a voice in another language.
+4. Voice preference persistence in client storage SHALL be partitioned by language (e.g. separate storage keys for `en` and `vi`), ensuring that selecting a preferred voice in one language does not overwrite or corrupt the voice selection when reading documents in another language.
+5. If the client submits a voice ID that does not match the slice's content language, the backend SHALL reject the request with an RFC 7807 validation error (`VOICE_LANGUAGE_MISMATCH`).
+
 All audio controls, buttons, tooltips, and status indicators SHALL use clean, professional, descriptive copy and SHALL NOT use hype or buzzword labels such as "AI", "AI Audio", or "Google AI". The UI SHALL use standard, subtle iconography (e.g. cloud icon or plain toggle switch) and SHALL NOT use mismatched or aggressive icons such as lightning bolts (`Zap`).
 
+#### Scenario: Voice selector matches Listen button height
+- **WHEN** the user switches between On-Device and Google Cloud engine modes in the reader audio player
+- **THEN** the voice selector trigger button height matches the height of the "Listen" button (`~32px`), preventing the player bar container from expanding or changing height vertically.
+
+#### Scenario: Switching to Cloud engine on English slice selects English voice
+- **WHEN** a user who previously selected a Vietnamese voice (`vi-VN-Neural2-A`) on a Vietnamese book switches to Cloud mode on an English book slice
+- **THEN** the player resolves and uses an English voice (`en-US-Neural2-F`), never the persisted Vietnamese voice.
+
+#### Scenario: Voice preferences persist independently per language
+- **WHEN** a user selects a male voice (`en-US-Neural2-D`) for English documents and later selects a female voice (`vi-VN-Neural2-A`) for Vietnamese documents
+- **THEN** returning to an English document restores the male English voice (`en-US-Neural2-D`), while opening a Vietnamese document uses the female Vietnamese voice (`vi-VN-Neural2-A`).
+
+#### Scenario: Backend rejects voice ID conflicting with chunk language
+- **WHEN** an API request arrives to synthesize an English document chunk with a `vi-VN-*` voice ID
+- **THEN** the backend responds with HTTP 400 Bad Request and error code `VOICE_LANGUAGE_MISMATCH`.
 #### Scenario: Free-tier voice selection for Vietnamese slice
 - **WHEN** a user views a Vietnamese slice with Google Cloud engine active
 - **THEN** the player provides a choice between curated Vietnamese Neural2 female (`vi-VN-Neural2-A`) and male (`vi-VN-Neural2-D`) voices.

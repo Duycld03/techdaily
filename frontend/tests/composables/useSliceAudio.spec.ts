@@ -108,10 +108,10 @@ describe('useSliceAudio', () => {
     expect(engine.synthesize.mock.calls[0]![1]).toEqual(
       expect.arrayContaining(['First sentence.', 'Second sentence.'])
     )
-    // Single complete-file source: exactly one object URL is created (no
-    // per-sentence clip swap).
-    expect(createObjectUrl).toHaveBeenCalledTimes(1)
-    expect(audio.play).toHaveBeenCalledTimes(1)
+    // Progressive streaming: chunk 0 is loaded and played immediately, then
+    // cutover to the complete assembled file occurs once all sentences resolve.
+    expect(createObjectUrl).toHaveBeenCalledTimes(2)
+    expect(audio.play).toHaveBeenCalledTimes(2)
     expect(player.status.value).toBe('ready')
 
     const key = await expectedKey(src)
@@ -312,6 +312,64 @@ describe('useSliceAudio', () => {
     expect(audio.play).toHaveBeenCalledTimes(1)
   })
 
+  it('enforces that English slices never use Vietnamese voices even if previously saved in localStorage', async () => {
+    localStorage.setItem('techdaily_reader_audio_voice', 'vi-VN-Neural2-A')
+    localStorage.setItem('techdaily_reader_audio_voice_vi', 'vi-VN-Neural2-A')
+
+    const { cache } = memoryCache()
+    const audio = createFakeAudio()
+    const mockBlob = new Blob(['mock-mp3-bytes'], { type: 'audio/mpeg' })
+
+    const fetchClient = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => {
+      return new Response(mockBlob, {
+        status: 200,
+        headers: { 'Content-Type': 'audio/mpeg' }
+      })
+    })
+
+    const player = useSliceAudio({
+      defaultEngine: 'cloud',
+      cache,
+      createAudio: () => audio,
+      fetchClient
+    })
+
+    const src = source({ chunkId: 'chunk-en-1', language: 'en' })
+    await player.loadAndPlay(src)
+
+    expect(fetchClient).toHaveBeenCalledTimes(1)
+    const requestBody = JSON.parse(fetchClient.mock.calls[0]![1]?.body as string)
+    expect(requestBody.voiceId).toBe('en-US-Neural2-F')
+    expect(requestBody.voiceId).not.toContain('vi-VN')
+  })
+
+  it('selects Vietnamese voice when source language is Vietnamese', async () => {
+    const { cache } = memoryCache()
+    const audio = createFakeAudio()
+    const mockBlob = new Blob(['mock-mp3-bytes'], { type: 'audio/mpeg' })
+
+    const fetchClient = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => {
+      return new Response(mockBlob, {
+        status: 200,
+        headers: { 'Content-Type': 'audio/mpeg' }
+      })
+    })
+
+    const player = useSliceAudio({
+      defaultEngine: 'cloud',
+      cache,
+      createAudio: () => audio,
+      fetchClient
+    })
+
+    const src = source({ chunkId: 'chunk-vi-1', language: 'vi' })
+    await player.loadAndPlay(src)
+
+    expect(fetchClient).toHaveBeenCalledTimes(1)
+    const requestBody = JSON.parse(fetchClient.mock.calls[0]![1]?.body as string)
+    expect(requestBody.voiceId).toBe('vi-VN-Neural2-A')
+  })
+
   it('dispatches to Device mode via Web Worker and caches in IndexedDB', async () => {
     const engine = streamingEngine()
     const { cache } = memoryCache()
@@ -331,7 +389,7 @@ describe('useSliceAudio', () => {
     expect(cache.set).toHaveBeenCalledTimes(1)
     expect(cache.set.mock.calls[0]![0]).toContain('chunk-device-1')
     expect(player.status.value).toBe('ready')
-    expect(audio.play).toHaveBeenCalledTimes(1)
+    expect(audio.play).toHaveBeenCalled()
   })
 
   it('handles 429 AudioQuotaExhausted in Cloud mode by falling back to Device mode and synthesizing on-device', async () => {
@@ -364,7 +422,7 @@ describe('useSliceAudio', () => {
     expect(player.engineMode.value).toBe('device')
     expect(engine.synthesize).toHaveBeenCalledTimes(1)
     expect(player.status.value).toBe('ready')
-    expect(audio.play).toHaveBeenCalledTimes(1)
+    expect(audio.play).toHaveBeenCalled()
   })
 
   it('fetches quota and flags near-limit and exhausted states', async () => {
@@ -438,5 +496,116 @@ describe('useSliceAudio', () => {
         configurable: true
       })
     }
+  })
+
+  it('buffers 100% of sentences before playback begins for short slices (<= 3 sentences)', async () => {
+    const { promise, resolve: resolveChunk2 } = Promise.withResolvers<void>()
+    const delayedEngine: TtsEngine = {
+      synthesize: vi.fn(async (_model: string, _sentences: string[], handlers: SynthHandlers) => {
+        handlers.onChunk(new Float32Array([0.1, -0.1]), 16000)
+        handlers.onChunk(new Float32Array([0.2, -0.2]), 16000)
+        await promise
+        handlers.onChunk(new Float32Array([0.3, -0.3]), 16000)
+      }),
+      dispose: vi.fn()
+    }
+
+    const { cache } = memoryCache()
+    const audio = createFakeAudio()
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine: delayedEngine,
+      cache,
+      createAudio: () => audio
+    })
+
+    // source() has 3 sentences -> targetBufferCount = 3
+    const loadPromise = player.loadAndPlay(source())
+
+    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
+
+    // Only 2 of 3 chunks arrived -> still buffering!
+    expect(player.status.value).toBe('loading')
+    expect(audio.play).not.toHaveBeenCalled()
+    expect(player.synthIndex.value).toBe(2)
+    expect(player.targetBufferCount.value).toBe(3)
+
+    // Deliver chunk 2 (third sentence) -> completes buffer threshold
+    resolveChunk2()
+    await loadPromise
+
+    expect(player.status.value).toBe('ready')
+    expect(audio.play).toHaveBeenCalled()
+    expect(player.synthIndex.value).toBe(3)
+    expect(cache.set).toHaveBeenCalledTimes(1)
+  })
+
+  it('buffers at least 33% of sentences before playback begins for longer slices and chains sequential chunks', async () => {
+    const listeners: Record<string, Array<() => void>> = {}
+    const fire = (type: string) => (listeners[type] || []).forEach(cb => cb())
+    const audioState = {
+      src: '',
+      currentTime: 0,
+      duration: 0,
+      paused: true,
+      playbackRate: 1,
+      addEventListener(type: string, cb: () => void) {
+        (listeners[type] ||= []).push(cb)
+      },
+      play: vi.fn(async () => {
+        audioState.paused = false
+        fire('play')
+      }),
+      pause: vi.fn(() => {
+        audioState.paused = true
+        fire('pause')
+      })
+    }
+
+    const { promise, resolve: resolveChunk3 } = Promise.withResolvers<void>()
+    const delayedEngine: TtsEngine = {
+      synthesize: vi.fn(async (_model: string, _sentences: string[], handlers: SynthHandlers) => {
+        // Emit chunk 0 and chunk 1 (2 sentences = ceil(6 / 3) = 2)
+        handlers.onChunk(new Float32Array([0.1, -0.1]), 16000)
+        handlers.onChunk(new Float32Array([0.2, -0.2]), 16000)
+        await promise
+        handlers.onChunk(new Float32Array([0.3, -0.3]), 16000)
+      }),
+      dispose: vi.fn()
+    }
+
+    const { cache } = memoryCache()
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine: delayedEngine,
+      cache,
+      createAudio: () => audioState as unknown as MockAudio
+    })
+
+    // 6-sentence slice -> targetBufferCount = ceil(6 / 3) = 2
+    const longMarkdown = 'Sentence 1. Sentence 2. Sentence 3. Sentence 4. Sentence 5. Sentence 6.'
+    const loadPromise = player.loadAndPlay(source({ markdown: longMarkdown }))
+
+    await nextTick()
+    await new Promise(r => setTimeout(r, 10))
+
+    // Target buffer count is 2 (33% of 6)
+    expect(player.targetBufferCount.value).toBe(2)
+    expect(player.status.value).toBe('ready')
+    expect(audioState.play).toHaveBeenCalledTimes(1)
+
+    // Simulate pre-roll audio ending while chunk 2 arrives
+    resolveChunk3()
+    await new Promise(r => setTimeout(r, 10))
+
+    fire('ended')
+    await nextTick()
+
+    // Advances to next chunk
+    expect(audioState.play).toHaveBeenCalledTimes(2)
+
+    await loadPromise
+    expect(cache.set).toHaveBeenCalledTimes(1)
   })
 })

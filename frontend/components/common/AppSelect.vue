@@ -23,12 +23,14 @@ const props = withDefaults(
     name?: string
     dropdownClass?: string
     teleport?: boolean
+    size?: 'sm' | 'md'
   }>(),
   {
     placeholder: 'Select option...',
     disabled: false,
     options: () => [],
-    teleport: true
+    teleport: true,
+    size: 'md'
   }
 )
 
@@ -50,6 +52,17 @@ const selectedOption = computed(() => {
 
 const selectedLabel = computed(() => {
   return selectedOption.value?.label ?? ''
+})
+
+const sizeClasses = computed(() => {
+  if (props.size === 'sm') {
+    return 'px-3 py-1.5 gap-2 text-xs sm:text-sm'
+  }
+  return 'px-3.5 py-2.5 gap-2.5 text-xs sm:text-sm'
+})
+
+const iconSizeClasses = computed(() => {
+  return props.size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4'
 })
 
 const componentId = computed(() => props.id || `app-select-${Math.random().toString(36).slice(2, 9)}`)
@@ -265,7 +278,8 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (ev
       @click="toggleDropdown"
       @keydown="handleTriggerKeydown"
       :class="[
-        'w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-xl text-left text-xs sm:text-sm font-semibold transition-all border border-slate-200/90 dark:border-white/[0.08] shadow-sm select-none',
+        'w-full flex items-center justify-between rounded-xl text-left font-semibold transition-all border border-slate-200/90 dark:border-white/[0.08] shadow-sm select-none',
+        sizeClasses,
         disabled
           ? 'bg-slate-100/60 dark:bg-canvas-subtle/40 text-slate-400 dark:text-slate-600 cursor-not-allowed border-slate-200/60 dark:border-white/[0.04]'
           : isOpen
@@ -274,11 +288,12 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (ev
       ]"
       data-testid="app-select-trigger"
     >
-      <div class="flex items-center gap-2.5 min-w-0 flex-1">
+      <div class="flex items-center gap-2 min-w-0 flex-1">
         <component
           :is="selectedOption?.icon || icon"
           v-if="selectedOption?.icon || icon"
-          class="w-4 h-4 text-slate-400 shrink-0"
+          class="text-slate-400 shrink-0"
+          :class="iconSizeClasses"
           aria-hidden="true"
         />
         <span
@@ -290,8 +305,8 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (ev
       </div>
 
       <ChevronDown
-        class="w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0"
-        :class="{ 'rotate-180': isOpen }"
+        class="text-slate-400 transition-transform duration-200 shrink-0"
+        :class="[iconSizeClasses, { 'rotate-180': isOpen }]"
         :stroke-width="1.5"
         aria-hidden="true"
       />

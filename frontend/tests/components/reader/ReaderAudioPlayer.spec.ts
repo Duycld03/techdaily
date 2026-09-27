@@ -19,6 +19,7 @@ vi.mock('~/composables/useSliceAudio', async () => {
     downloadProgress: ref(0),
     synthIndex: ref(0),
     synthTotal: ref(0),
+    targetBufferCount: ref(0),
     errorMessage: ref(null),
     device: ref(null),
     speed: ref(1),
@@ -63,8 +64,8 @@ const MESSAGES: Record<string, string> = {
   'reader.audio_downloading': 'Downloading voice… {progress}%',
   'reader.audio_preparing': 'Preparing audio…',
   'reader.audio_synthesizing': 'Generating audio… {current}/{total}',
+  'reader.audio_buffering': 'Buffering audio… {current}/{total}',
   'reader.audio_speed': 'Speed',
-  'reader.audio_error': 'Could not generate audio.',
   'reader.audio_engine_cloud': 'Cloud',
   'reader.audio_engine_device': 'Device',
   'reader.audio_engine_cloud_hint': 'Google Cloud high-speed narration',
@@ -126,6 +127,7 @@ describe('ReaderAudioPlayer.vue', () => {
     audio.downloadProgress.value = 0
     audio.synthIndex.value = 0
     audio.synthTotal.value = 0
+    audio.targetBufferCount.value = 0
     originalUseI18n = Reflect.get(globalThis, 'useI18n')
     Reflect.set(globalThis, 'useI18n', () => ({ t: interpolate, locale: { value: 'en' } }))
   })
@@ -161,6 +163,16 @@ describe('ReaderAudioPlayer.vue', () => {
     audio.synthIndex.value = 1
     await nextTick()
     expect(wrapper.text()).toContain('1/2')
+  })
+
+  it('renders buffering progress while synthIndex < targetBufferCount', async () => {
+    const wrapper = mountPlayer({ chunk: chunk() })
+    audio.status.value = 'loading'
+    audio.synthTotal.value = 6
+    audio.targetBufferCount.value = 2
+    audio.synthIndex.value = 1
+    await nextTick()
+    expect(wrapper.text()).toContain('Buffering audio… 1/2')
   })
 
   it('forwards the slice language into the narration source on play', async () => {

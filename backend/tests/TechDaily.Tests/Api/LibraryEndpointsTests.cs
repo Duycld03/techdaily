@@ -193,6 +193,7 @@ public class LibraryEndpointsTests : IAsyncLifetime
             ChapterTitle = "Intro",
             OriginalTextMarkdown = "Welcome to TechDaily audio narration.",
             SummaryMarkdown = "Summary",
+            Language = "vi",
             IsAiFormatted = true
         };
         await db.DocumentChunks.AddAsync(chunk);

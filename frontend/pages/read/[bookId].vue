@@ -24,6 +24,24 @@ import ReaderAudioPlayer from "~/components/reader/ReaderAudioPlayer.vue";
 import TermExplainerModal from "~/components/today/TermExplainerModal.vue";
 import { extractSurroundingContext } from "~/utils/contextExtractor";
 
+definePageMeta({
+  middleware: [
+    (to) => {
+      if (import.meta.client && !window.crossOriginIsolated) {
+        const reloaded = sessionStorage.getItem('reader_isolated_reload');
+        if (!reloaded) {
+          sessionStorage.setItem('reader_isolated_reload', '1');
+          window.location.assign(to.fullPath);
+          return abortNavigation();
+        }
+        sessionStorage.removeItem('reader_isolated_reload');
+      } else if (import.meta.client && window.crossOriginIsolated) {
+        sessionStorage.removeItem('reader_isolated_reload');
+      }
+    },
+  ],
+});
+
 const { t, locale } = useI18n();
 const toast = useToast();
 const route = useRoute();
@@ -250,6 +268,10 @@ onMounted(async () => {
     }
   } catch (e) {
     // ignore
+  }
+
+  if (typeof window !== 'undefined' && window.crossOriginIsolated) {
+    sessionStorage.removeItem('reader_isolated_reload');
   }
 
   // Fetch book details

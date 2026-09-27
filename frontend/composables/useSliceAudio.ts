@@ -75,9 +75,12 @@ export const CLOUD_VOICES: Record<'vi' | 'en', CloudVoiceOption[]> = {
   ],
 }
 
-export function resolveCloudVoiceForLanguage(lang?: string | null): string {
-  const isVi = lang?.toLowerCase().startsWith('vi')
-  return isVi ? 'vi-VN-Neural2-A' : 'en-US-Neural2-F'
+export function resolveCloudVoiceForLanguage(lang?: string | null, customVoiceId?: string | null): string {
+  const isVi = (lang || '').toLowerCase().startsWith('vi')
+  const defaultVoice = isVi ? 'vi-VN-Neural2-A' : 'en-US-Neural2-F'
+  if (!customVoiceId) return defaultVoice
+  const matches = isVi ? customVoiceId.startsWith('vi-') : customVoiceId.startsWith('en-')
+  return matches ? customVoiceId : defaultVoice
 }
 interface WorkerMessage {
   type: 'progress' | 'chunk' | 'done' | 'error' | 'device'
@@ -158,6 +161,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   const downloadProgress = ref(0)
   const synthIndex = ref(0)
   const synthTotal = ref(0)
+  const targetBufferCount = ref(0)
   const errorMessage = ref<string | null>(null)
   const device = ref<ComputeDevice | null>(null)
 
@@ -178,6 +182,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   const audio = shallowRef<HTMLAudioElement | null>(null)
   let objectUrl: string | null = null
   let activeKey: string | null = null
+  let onChunkEndedCallback: (() => void) | null = null
 
   // Engine and cache are created lazily on first playback so merely rendering
   // the reader never opens IndexedDB or instantiates the worker.
@@ -253,7 +258,13 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       el.addEventListener('durationchange', () => { duration.value = Number.isFinite(el.duration) ? el.duration : 0 })
       el.addEventListener('play', () => { playing.value = true })
       el.addEventListener('pause', () => { playing.value = false })
-      el.addEventListener('ended', () => { playing.value = false })
+      el.addEventListener('ended', () => {
+        if (onChunkEndedCallback) {
+          onChunkEndedCallback()
+        } else {
+          playing.value = false
+        }
+      })
       el.playbackRate = speed.value
     }
     return audio.value
@@ -293,6 +304,8 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   function setVoice(voiceId: string): void {
     selectedVoice.value = voiceId
     if (isClient) {
+      const isVi = voiceId.startsWith('vi-')
+      localStorage.setItem(`${AUDIO_VOICE_STORAGE_KEY}_${isVi ? 'vi' : 'en'}`, voiceId)
       localStorage.setItem(AUDIO_VOICE_STORAGE_KEY, voiceId)
     }
   }
@@ -320,6 +333,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   async function loadAndPlay(source: NarrationSource): Promise<void> {
     errorMessage.value = null
     device.value = null
+    onChunkEndedCallback = null
     const cache = getCache()
     if (!source.isAiFormatted || !source.markdown || !cache) return
 
@@ -329,7 +343,11 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     const contentHash = await computeContentHash(script)
 
     if (engineMode.value === 'cloud') {
-      const voiceId = selectedVoice.value || resolveCloudVoiceForLanguage(source.language)
+      const langKey = (source.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en'
+      const scopedVoice = isClient ? localStorage.getItem(`${AUDIO_VOICE_STORAGE_KEY}_${langKey}`) : null
+      const requestedVoice = selectedVoice.value || scopedVoice
+      const voiceId = resolveCloudVoiceForLanguage(source.language, requestedVoice)
+      selectedVoice.value = voiceId
       const key = buildAudioKey(source.chunkId, voiceId, contentHash)
       activeKey = key
 
@@ -416,12 +434,51 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
     // Cache miss -> synthesize via worker
     status.value = 'loading'
-    downloadProgress.value = 0
     const sentences = splitSentences(script)
+    const target = sentences.length <= 3
+      ? sentences.length
+      : Math.max(2, Math.ceil(sentences.length / 3))
+    targetBufferCount.value = target
     synthTotal.value = sentences.length
     synthIndex.value = 0
     const buffers: Float32Array[] = []
     let sampleRate = 16000
+
+    let currentPlayingIndex = 0
+    let isPlayingPreRoll = false
+    let isStreaming = true
+
+    const playPreRoll = () => {
+      if (activeKey !== key || buffers.length < target) return
+      isPlayingPreRoll = true
+      currentPlayingIndex = target - 1
+      const preRollWav = encodeWav(concatFloat32(buffers.slice(0, target)), sampleRate)
+      setSource(preRollWav)
+      status.value = 'ready'
+      void play()
+    }
+
+    const playChunk = (index: number) => {
+      if (activeKey !== key || index >= buffers.length) return
+      isPlayingPreRoll = false
+      currentPlayingIndex = index
+      const chunkWav = encodeWav(buffers[index], sampleRate)
+      setSource(chunkWav)
+      status.value = 'ready'
+      void play()
+    }
+
+    onChunkEndedCallback = () => {
+      if (!isStreaming) {
+        playing.value = false
+        return
+      }
+      if (currentPlayingIndex + 1 < buffers.length) {
+        playChunk(currentPlayingIndex + 1)
+      } else {
+        playing.value = false
+      }
+    }
 
     try {
       await engine.synthesize(voice.model, sentences, {
@@ -434,31 +491,66 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
           sampleRate = sr
           buffers.push(samples)
           synthIndex.value += 1
+
+          if (buffers.length === target && activeKey === key) {
+            playPreRoll()
+          } else if (isStreaming && !playing.value && buffers.length > target && currentPlayingIndex === buffers.length - 2) {
+            playChunk(buffers.length - 1)
+          }
         },
         onDevice: (d) => {
           device.value = d
         },
       })
     } catch (error) {
+      onChunkEndedCallback = null
       status.value = 'error'
       errorMessage.value = error instanceof Error ? error.message : String(error)
       return
     }
 
-    if (activeKey !== key) return
+    if (activeKey !== key) {
+      onChunkEndedCallback = null
+      return
+    }
 
     if (buffers.length === 0) {
+      onChunkEndedCallback = null
       status.value = 'error'
       return
     }
 
+    isStreaming = false
+    onChunkEndedCallback = null
+
     const complete = encodeWav(concatFloat32(buffers), sampleRate)
     await cache.set(key, complete)
-    setSource(complete)
-    status.value = 'ready'
-    await play()
-  }
 
+    if (buffers.length > 1) {
+      const el = ensureAudio()
+      if (el) {
+        let offsetSec = 0
+        if (isPlayingPreRoll) {
+          offsetSec = el.currentTime
+        } else {
+          for (let i = 0; i < currentPlayingIndex; i++) {
+            offsetSec += buffers[i].length / sampleRate
+          }
+          offsetSec += el.currentTime
+        }
+
+        const wasPlaying = playing.value
+        setSource(complete)
+        el.currentTime = offsetSec
+        status.value = 'ready'
+        if (wasPlaying) {
+          void play()
+        }
+      }
+    } else {
+      status.value = 'ready'
+    }
+  }
   function toggle(source: NarrationSource): void {
     if (playing.value) {
       pause()
@@ -492,6 +584,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     }
     audio.value?.pause()
     activeKey = null
+    onChunkEndedCallback = null
     status.value = 'idle'
     device.value = null
   }
@@ -506,6 +599,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     downloadProgress,
     synthIndex,
     synthTotal,
+    targetBufferCount,
     errorMessage,
     device,
     speed,

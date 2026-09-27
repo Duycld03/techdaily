@@ -79,6 +79,7 @@ public class GetOrSynthesizeChunkAudioHandlerTests : IDisposable
             ChapterTitle = "Chapter 1",
             OriginalTextMarkdown = "Cached narration sentence.",
             SummaryMarkdown = "Summary",
+            Language = "vi",
             IsAiFormatted = true
         };
         await _db.DocumentChunks.AddAsync(chunk);
@@ -347,5 +348,44 @@ public class GetOrSynthesizeChunkAudioHandlerTests : IDisposable
         quotaResult.Value.RemainingCharacters.Should().Be(30_000);
         quotaResult.Value.IsNearLimit.Should().BeTrue();
         quotaResult.Value.IsExhausted.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenVoiceLanguageMismatchesChunk_ReturnsVoiceLanguageMismatchError()
+    {
+        // Arrange
+        var book = new DocumentBook
+        {
+            Title = "English Book",
+            Slug = "english-book",
+            Category = Category.BackendRuntime,
+            Status = ProcessingStatus.Ready,
+            TotalChunks = 1
+        };
+        await _db.DocumentBooks.AddAsync(book);
+
+        var enChunk = new DocumentChunk
+        {
+            DocumentBookId = book.Id,
+            ChunkOrder = 1,
+            ChapterTitle = "Chapter 1",
+            OriginalTextMarkdown = "This is English documentation.",
+            Language = "en",
+            IsAiFormatted = true
+        };
+        await _db.DocumentChunks.AddAsync(enChunk);
+        await _db.SaveChangesAsync();
+
+        var ttsMock = new MockGoogleCloudTtsService();
+        var handler = new GetOrSynthesizeChunkAudioHandler(_db, ttsMock, NullLogger<GetOrSynthesizeChunkAudioHandler>.Instance);
+
+        // Act: request Vietnamese voice on English chunk
+        var request = new SynthesizeChunkAudioRequest(enChunk.Id, "vi-VN-Neural2-A", null, "This is English documentation.");
+        var result = await handler.ExecuteAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("VOICE_LANGUAGE_MISMATCH");
+        ttsMock.CallCount.Should().Be(0);
     }
 }

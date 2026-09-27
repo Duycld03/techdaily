@@ -26,8 +26,8 @@ const {
   downloadProgress,
   synthIndex,
   synthTotal,
+  targetBufferCount,
   errorMessage,
-  device,
   speed,
   engineMode,
   selectedVoice,
@@ -76,11 +76,9 @@ const availableVoiceOptions = computed(() => {
 
 const currentVoice = computed({
   get(): string {
-    if (selectedVoice.value) {
-      const matchesLang = isVi.value ? selectedVoice.value.startsWith('vi-') : selectedVoice.value.startsWith('en-')
-      if (matchesLang) return selectedVoice.value
-    }
-    return resolveCloudVoiceForLanguage(props.chunk?.language)
+    const langKey = isVi.value ? 'vi' : 'en'
+    const scoped = typeof localStorage !== 'undefined' ? localStorage.getItem(`techdaily_reader_audio_voice_${langKey}`) : null
+    return resolveCloudVoiceForLanguage(props.chunk?.language, selectedVoice.value || scoped)
   },
   set(val: string | number) {
     const voiceId = String(val)
@@ -162,6 +160,10 @@ function formatTime(seconds: number): string {
 
 const statusLabel = computed(() => {
   if (status.value !== 'loading') return ''
+  const target = targetBufferCount?.value ?? 0
+  if (target > 0 && synthIndex.value < target && synthTotal.value > 0) {
+    return t('reader.audio_buffering', { current: synthIndex.value, total: target })
+  }
   if (synthTotal.value > 0 && synthIndex.value > 0) {
     return t('reader.audio_synthesizing', { current: synthIndex.value, total: synthTotal.value })
   }
@@ -256,6 +258,7 @@ onMounted(() => {
       <AppSelect
         v-model="currentVoice"
         :options="availableVoiceOptions"
+        size="sm"
         :placeholder="t('reader.audio_voice_select_placeholder')"
         :aria-label="t('reader.audio_voice_select_placeholder')"
       />
@@ -283,6 +286,12 @@ onMounted(() => {
       />
       <span class="text-xs text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap tabular-nums">
         {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+      </span>
+      <span
+        v-if="synthTotal > 0 && synthIndex > 0 && synthIndex < synthTotal"
+        class="text-xs text-brand-600 dark:text-brand-400 shrink-0 whitespace-nowrap font-medium"
+      >
+        ({{ t('reader.audio_synthesizing', { current: synthIndex, total: synthTotal }) }})
       </span>
     </template>
 

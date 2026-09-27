@@ -565,6 +565,7 @@
     "audio_downloading": "Downloading voice… {progress}%",
     "audio_preparing": "Preparing audio…",
     "audio_synthesizing": "Generating audio… {current}/{total}",
+    "audio_buffering": "Buffering audio… {current}/{total}",
     "audio_speed": "Speed",
     "audio_error": "Couldn't generate audio. Please try again.",
     "audio_device_gpu": "GPU",
