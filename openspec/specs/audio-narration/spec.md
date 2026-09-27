@@ -61,7 +61,21 @@ When on-device synthesis is initiated on a slice with existing partial progress 
 While background synthesis is active (`isStreaming === true`), if audio playback reaches the end of the currently buffered chunks before the next chunk has finished synthesis, the player SHALL NOT terminate playback, SHALL NOT set `playing = false`, and SHALL NOT freeze the time display. The player SHALL transition to a buffering state (`status = 'loading'`) and automatically transition to playing the next sentence chunk as soon as it arrives from the Web Worker.
 
 When a user clicks "Listen" on a slice whose on-device synthesis has not completed (`synthIndex < synthTotal` or when only partial pre-roll audio is loaded), the reader SHALL resume worker synthesis for all remaining ungenerated sentences ($K \dots N-1$) rather than merely looping the partial pre-roll buffer. Pausing playback SHALL NOT discard background synthesis progress (`synthIndex`, `synthTotal`), enabling the worker to continue or cleanly resume generation.
+
+While on-device narration is streaming sentence chunks and has not finished synthesizing the entire slice (`synthIndex < synthTotal`):
+1. The reader SHALL compute an estimated total duration for the slice based on average sentence duration.
+2. The player time display SHALL present the estimated total duration alongside the currently buffered duration (e.g. `2:08 (~6:40)` on desktop viewports) and render the active sentence synthesis progress count (`(18/67)` on mobile, `(Đang tạo 18/67 câu...)` on desktop).
+3. Completed audio SHALL strictly only be committed to the permanent full-slice cache (`cache.set`) when all sentences of the slice have finished synthesis (`buffers.length === sentences.length`), preventing premature cache pollution.
+
 The reader SHALL persist the complete slice audio in the browser's on-device storage (IndexedDB), keyed by `(chunkId, voice, contentHash)`, where `voice` is the language's on-device voice and `contentHash` is derived from the normalized narration script. A subsequent request to narrate the same `(chunkId, voice, contentHash)` — including in a later session — SHALL load the cached audio and SHALL NOT re-synthesize. When a slice's formatted content changes so its `contentHash` differs, the stale cache entry SHALL NOT be used and the audio SHALL be re-synthesized once. The audio cache SHALL enforce a bounded size (an entry or total-size cap) and evict least-recently-used entries; an evicted slice re-synthesizes on next play.
+
+#### Scenario: Displaying total slice scope during streaming synthesis
+- **WHEN** a user views an on-device slice where 18 of 67 sentences have been synthesized (2:08 of audio)
+- **THEN** the player displays a synthesis progress indicator `(18/67)` and estimated duration `(~6:40)` indicating that 18 of the total 67 sentences are buffered and the remaining sentences will continue generating.
+
+#### Scenario: Uninterrupted playback across pre-roll to completion
+- **WHEN** a user listens to on-device narration on a 6-minute document slice
+- **THEN** playback starts immediately with the buffered pre-roll and continuously plays through sentence 67 without halting or terminating at the initial pre-roll duration.
 #### Scenario: Resuming interrupted on-device synthesis from partial cache
 - **WHEN** on-device synthesis was previously interrupted after synthesizing 5 of 15 sentences, and the user re-initiates on-device narration for the identical slice
 - **THEN** the reader loads the 5 cached sentence chunks from IndexedDB, sets synthesis progress to 5/15, immediately starts playback if pre-roll threshold is satisfied, and requests the worker to synthesize only sentences 6 through 15.

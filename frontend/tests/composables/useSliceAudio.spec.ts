@@ -641,7 +641,9 @@ describe('useSliceAudio', () => {
         handlers.onChunk(new Float32Array([0.1, -0.1]), 16000)
         handlers.onChunk(new Float32Array([0.2, -0.2]), 16000)
         await promise
-        handlers.onChunk(new Float32Array([0.3, -0.3]), 16000)
+        for (let i = 2; i < 6; i++) {
+          handlers.onChunk(new Float32Array([0.1 * (i + 1), -0.1 * (i + 1)]), 16000)
+        }
       }),
       dispose: vi.fn()
     }
@@ -666,8 +668,8 @@ describe('useSliceAudio', () => {
 
     // Simulate pre-roll audio ending while chunk 2 arrives
     resolveChunk3()
-    await new Promise(r => setTimeout(r, 10))
-
+    await nextTick()
+    await new Promise(r => setTimeout(r, 20))
     fire('ended')
     await nextTick()
 
@@ -686,9 +688,7 @@ describe('useSliceAudio', () => {
     const initialMarkdown = 'First sentence. Second sentence. Third sentence. Fourth sentence.'
     const src = source({ chunkId: 'chunk-resumable-1', markdown: initialMarkdown })
     const script = extractNarrationScript(initialMarkdown)
-    const contentHash = await computeContentHash(script)
-    const key = `chunk-resumable-1::mms-eng::${contentHash}`
-
+    const key = await expectedKey(src)
     await cache.savePartial?.(key, {
       chunks: [new Float32Array([0.1, 0.1]), new Float32Array([0.2, 0.2])],
       sampleRate: 16000,
@@ -728,8 +728,7 @@ describe('useSliceAudio', () => {
     const oldMarkdown = 'Old content sentence one. Old content sentence two.'
     const oldScript = extractNarrationScript(oldMarkdown)
     const oldContentHash = await computeContentHash(oldScript)
-    const oldKey = `chunk-hash-test::mms-eng::${oldContentHash}`
-
+    const oldKey = buildAudioKey('chunk-hash-test', 'mms-eng', oldContentHash)
     await cache.savePartial?.(oldKey, {
       chunks: [new Float32Array([0.1, 0.1])],
       sampleRate: 16000,
@@ -827,8 +826,7 @@ describe('useSliceAudio', () => {
     const src = source({ chunkId: 'chunk-15-sentences', markdown: fifteenSentences })
     const script = extractNarrationScript(fifteenSentences)
     const contentHash = await computeContentHash(script)
-    const key = `chunk-15-sentences::mms-eng::${contentHash}`
-
+    const key = await expectedKey(src)
     // Pre-populate partial cache with 5 chunks out of 15
     const partialChunks = Array.from({ length: 5 }, (_, i) => new Float32Array([0.1 * (i + 1), 0.1 * (i + 1)]))
     await cache.savePartial?.(key, {
@@ -966,5 +964,41 @@ describe('useSliceAudio', () => {
 
     expect(player.status.value).toBe('ready')
     expect(audio.play).not.toHaveBeenCalled()
+  })
+
+  it('does not save to full cache when synthesis is cancelled and preserves partial cache', async () => {
+    const audio = createFakeAudio()
+    const { cache } = memoryCache()
+
+    const { promise, reject } = Promise.withResolvers<void>()
+    promise.catch(() => {})
+    const cancellingEngine: TtsEngine = {
+      synthesize: vi.fn(async (_model: string, _sentences: string[], handlers: SynthHandlers) => {
+        handlers.onChunk(new Float32Array([0.1, 0.1]), 16000)
+        await promise
+      }),
+      cancel: vi.fn(() => {
+        reject(new Error('Synthesis cancelled'))
+      }),
+      dispose: vi.fn()
+    }
+
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine: cancellingEngine,
+      cache,
+      createAudio: () => audio,
+    })
+
+    const src = source({ markdown: 'Sentence 1. Sentence 2. Sentence 3.' })
+    const loadPromise = player.loadAndPlay(src)
+    await nextTick()
+
+    cancellingEngine.cancel?.()
+    await loadPromise
+
+    expect(cache.set).not.toHaveBeenCalled()
+    expect(cache.savePartial).toHaveBeenCalled()
+    expect(cache.deletePartial).not.toHaveBeenCalled()
   })
 })

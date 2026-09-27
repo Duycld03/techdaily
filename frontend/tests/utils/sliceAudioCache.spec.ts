@@ -15,8 +15,8 @@ describe('sliceAudioCache', () => {
   })
 
   describe('buildAudioKey', () => {
-    it('composes the key from chunk, voice, and content hash', () => {
-      expect(buildAudioKey('chunk-1', 'mms-eng', 'abc123')).toBe('chunk-1::mms-eng::abc123')
+    it('composes the key from chunk, voice, and content hash with v2 prefix', () => {
+      expect(buildAudioKey('chunk-1', 'mms-eng', 'abc123')).toBe('chunk-1::mms-eng::v2::abc123')
     })
   })
 

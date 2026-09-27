@@ -235,6 +235,7 @@ describe('ReaderAudioPlayer.vue', () => {
     audio.engineMode.value = 'device'
     await nextTick()
     expect(wrapper.text()).toContain('2/45')
+    expect(wrapper.text()).toContain('~37:30')
   })
 
   it('forwards the slice language into the narration source on play', async () => {
@@ -279,7 +280,7 @@ describe('ReaderAudioPlayer.vue', () => {
     )
   })
 
-  it('invokes loadAndPlay to resume synthesis when clicking Listen on an incomplete slice', async () => {
+  it('invokes play directly without restarting loadAndPlay when audio is already loaded and ready', async () => {
     audio.engineMode.value = 'device'
     audio.playing.value = false
     audio.synthIndex.value = 5
@@ -288,15 +289,15 @@ describe('ReaderAudioPlayer.vue', () => {
 
     // First click to load
     await wrapper.find('button').trigger('click')
+    expect(audio.loadAndPlay).toHaveBeenCalledTimes(1)
     audio.loadAndPlay.mockClear()
 
-    // Audio is paused/ended mid-slice with incomplete synthesis
+    // Audio is loaded and ready
     audio.status.value = 'ready'
     await wrapper.find('button').trigger('click')
 
-    expect(audio.loadAndPlay).toHaveBeenCalledWith(
-      expect.objectContaining({ chunkId: 'chunk-1' })
-    )
+    expect(audio.play).toHaveBeenCalled()
+    expect(audio.loadAndPlay).not.toHaveBeenCalled()
   })
 
   it('automatically continues playback when toggling engine while actively playing', async () => {

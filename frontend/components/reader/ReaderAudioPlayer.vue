@@ -143,15 +143,22 @@ watch(errorMessage, (message) => {
 
 const isLoading = computed(() => status.value === 'loading')
 
+const isStreamingIncomplete = computed(() => {
+  return engineMode.value === 'device' && synthTotal.value > 0 && synthIndex.value > 0 && synthIndex.value < synthTotal.value
+})
+
+const estimatedTotalDuration = computed(() => {
+  if (!isStreamingIncomplete.value || duration.value <= 0 || synthIndex.value <= 0) return duration.value
+  return Math.round((duration.value / synthIndex.value) * synthTotal.value)
+})
+
 function onToggle(): void {
   if (!source.value || !available.value) return
   if (playing.value) {
     pause()
     return
   }
-  const isSynthesisIncomplete = engineMode.value === 'device'
-    && (synthTotal.value === 0 || (synthIndex.value > 0 && synthIndex.value < synthTotal.value))
-  if (loadedId.value === source.value.chunkId && !isSynthesisIncomplete && status.value === 'ready') {
+  if (loadedId.value === source.value.chunkId && status.value === 'ready') {
     void play()
     return
   }
@@ -331,18 +338,19 @@ onMounted(() => {
         :max="duration"
         step="0.1"
         :value="currentTime"
-        class="flex-1 min-w-[80px] h-1.5 bg-slate-200 dark:bg-white/[0.12] rounded-lg appearance-none cursor-pointer accent-brand-600"
+        class="flex-1 min-w-[40px] sm:min-w-[80px] h-1.5 bg-slate-200 dark:bg-white/[0.12] rounded-lg appearance-none cursor-pointer accent-brand-600"
         :aria-label="t('reader.audio_play')"
         @input="onSeek"
       />
       <span class="text-xs text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap tabular-nums">
-        {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+        {{ formatTime(currentTime) }} / {{ formatTime(duration) }}<span v-if="isStreamingIncomplete && estimatedTotalDuration > duration" class="hidden sm:inline"> (~{{ formatTime(estimatedTotalDuration) }})</span>
       </span>
       <span
-        v-if="engineMode === 'device' && synthTotal > 0 && synthIndex > 0 && synthIndex < synthTotal"
+        v-if="isStreamingIncomplete"
         class="text-xs text-brand-600 dark:text-brand-400 shrink-0 whitespace-nowrap font-medium"
       >
-        ({{ t('reader.audio_synthesizing', { current: synthIndex, total: synthTotal }) }})
+        <span class="hidden sm:inline">({{ t('reader.audio_synthesizing', { current: synthIndex, total: synthTotal }) }})</span>
+        <span class="sm:hidden">({{ synthIndex }}/{{ synthTotal }})</span>
       </span>
     </template>
 
@@ -351,11 +359,11 @@ onMounted(() => {
     <!-- Active compute device (GPU/CPU) when in Device mode -->
     <span
       v-if="engineMode === 'device' && device"
-      class="shrink-0 whitespace-nowrap inline-flex items-center gap-1 rounded-lg border border-slate-200/80 dark:border-white/[0.08] text-slate-500 dark:text-slate-400 text-xs font-medium px-2 py-1"
+      class="shrink-0 whitespace-nowrap hidden sm:inline-flex items-center gap-1 rounded-lg border border-slate-200/80 dark:border-white/[0.08] text-slate-500 dark:text-slate-400 text-xs font-medium px-2 py-1"
       :title="deviceHint"
     >
       <component :is="device === 'webgpu' ? Laptop : Cpu" class="w-3.5 h-3.5" :stroke-width="2" />
-      <span class="hidden sm:inline">{{ deviceLabel }}</span>
+      <span>{{ deviceLabel }}</span>
     </span>
 
     <!-- Speed -->

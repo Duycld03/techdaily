@@ -45,9 +45,9 @@ const META_KEY = '__slice_audio_lru__'
 const DEFAULT_MAX_BYTES = 300 * 1024 * 1024
 const DEFAULT_MAX_ENTRIES = 60
 
-/** Compose the cache key from the slice, its voice, and the content hash. */
+/** Compose the cache key from the slice, its voice, and the content hash (v2 avoids stale partial caches). */
 export function buildAudioKey(chunkId: string, voice: string, contentHash: string): string {
-  return `${chunkId}::${voice}::${contentHash}`
+  return `${chunkId}::${voice}::v2::${contentHash}`
 }
 
 export function createSliceAudioCache(backend: KvBackend, opts: SliceAudioCacheOptions = {}): SliceAudioCache {

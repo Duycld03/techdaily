@@ -181,15 +181,16 @@ function createWorkerEngine(): TtsEngine {
       if (worker) {
         worker.postMessage({ type: 'cancel', reqId })
       }
+      const cancelError = new Error('Synthesis cancelled')
       if (reqId != null) {
         const p = pending.get(reqId)
         if (p) {
           pending.delete(reqId)
-          p.resolve()
+          p.reject(cancelError)
         }
       } else {
         for (const p of pending.values()) {
-          p.resolve()
+          p.reject(cancelError)
         }
         pending.clear()
       }
@@ -642,6 +643,17 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
         }, startIndex)
       }
     } catch (error) {
+      const isCancelled = error instanceof Error && error.message === 'Synthesis cancelled'
+      if (isCancelled) {
+        if (cache.savePartial && buffers.length > 0 && buffers.length < sentences.length) {
+          void cache.savePartial(key, {
+            chunks: buffers,
+            sampleRate,
+            total: sentences.length,
+          })
+        }
+        return
+      }
       onChunkEndedCallback = null
       status.value = 'error'
       const info = categorizeAudioError(error, 'device')
@@ -649,7 +661,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       errorInfo.value = info
       return
     }
-    if (activeKey !== key) {
+    if (activeKey !== key || buffers.length < sentences.length) {
       onChunkEndedCallback = null
       return
     }
@@ -665,34 +677,36 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     isStreaming = false
     onChunkEndedCallback = null
 
-    const complete = encodeWav(concatFloat32(buffers), sampleRate)
-    await cache.set(key, complete)
-    if (cache.deletePartial) {
-      await cache.deletePartial(key)
-    }
-
-    if (buffers.length > 1) {
-      const el = ensureAudio()
-      if (el) {
-        let offsetSec = 0
-        if (isPlayingPreRoll) {
-          offsetSec = el.currentTime
-        } else {
-          for (let i = 0; i < currentPlayingIndex; i++) {
-            offsetSec += buffers[i].length / sampleRate
-          }
-          offsetSec += el.currentTime
-        }
-
-        const wasPlaying = playing.value
-        setSource(complete, offsetSec)
-        status.value = 'ready'
-        if (wasPlaying) {
-          void play()
-        }
+    if (buffers.length === sentences.length) {
+      const complete = encodeWav(concatFloat32(buffers), sampleRate)
+      await cache.set(key, complete)
+      if (cache.deletePartial) {
+        await cache.deletePartial(key)
       }
-    } else {
-      status.value = 'ready'
+
+      if (buffers.length > 1) {
+        const el = ensureAudio()
+        if (el) {
+          let offsetSec = 0
+          if (isPlayingPreRoll) {
+            offsetSec = el.currentTime
+          } else {
+            for (let i = 0; i < currentPlayingIndex; i++) {
+              offsetSec += buffers[i].length / sampleRate
+            }
+            offsetSec += el.currentTime
+          }
+
+          const wasPlaying = playing.value
+          setSource(complete, offsetSec)
+          status.value = 'ready'
+          if (wasPlaying) {
+            void play()
+          }
+        }
+      } else {
+        status.value = 'ready'
+      }
     }
   }
   function toggle(source: NarrationSource): void {
