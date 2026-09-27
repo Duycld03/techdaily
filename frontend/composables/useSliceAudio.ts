@@ -239,7 +239,8 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   let objectUrl: string | null = null
   let activeKey: string | null = null
   let onChunkEndedCallback: (() => void) | null = null
-
+  let isUserPaused = false
+  let cancelWaitingForChunk: (() => void) | null = null
   // Engine and cache are created lazily on first playback so merely rendering
   // the reader never opens IndexedDB or instantiates the worker.
   let engineInstance: TtsEngine | null = null
@@ -351,6 +352,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   }
 
   async function play(): Promise<void> {
+    isUserPaused = false
     const el = ensureAudio()
     if (!el) return
     try {
@@ -365,7 +367,13 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   }
 
   function pause(): void {
+    isUserPaused = true
+    cancelWaitingForChunk?.()
     audio.value?.pause()
+    playing.value = false
+    if (status.value === 'loading') {
+      status.value = 'ready'
+    }
   }
 
   function cancelWorkerSynthesis(): void {
@@ -424,9 +432,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     errorMessage.value = null
     errorInfo.value = null
     device.value = null
+    isUserPaused = !autoPlay
     const cache = getCache()
     if (!source.isAiFormatted || !source.markdown || !cache) return
-
     const script = extractNarrationScript(source.markdown)
     if (!script) return
 
@@ -565,6 +573,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     let isPlayingPreRoll = false
     let isStreaming = true
     let isWaitingForNextChunk = false
+    cancelWaitingForChunk = () => {
+      isWaitingForNextChunk = false
+    }
 
     const playPreRoll = (count = target) => {
       if (activeKey !== key || buffers.length < count) return
@@ -573,19 +584,19 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       const preRollWav = encodeWav(concatFloat32(buffers.slice(0, count)), sampleRate)
       setSource(preRollWav)
       status.value = 'ready'
-      if (autoPlay) {
+      if (autoPlay && !isUserPaused) {
         void play()
       }
     }
 
-    const playChunk = (index: number) => {
+    const playChunk = (index: number, shouldPlay = playing.value) => {
       if (activeKey !== key || index >= buffers.length) return
       isPlayingPreRoll = false
       currentPlayingIndex = index
       const chunkWav = encodeWav(buffers[index], sampleRate)
       setSource(chunkWav)
       status.value = 'ready'
-      if (autoPlay || isWaitingForNextChunk || playing.value) {
+      if (shouldPlay && !isUserPaused) {
         void play()
       }
     }
@@ -595,19 +606,19 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     }
 
     onChunkEndedCallback = () => {
-      if (!isStreaming) {
+      if (!isStreaming || isUserPaused) {
         playing.value = false
         return
       }
       if (currentPlayingIndex + 1 < buffers.length) {
         isWaitingForNextChunk = false
-        playChunk(currentPlayingIndex + 1)
+        isPlayingPreRoll = false
+        playChunk(currentPlayingIndex + 1, true)
       } else {
         isWaitingForNextChunk = true
         status.value = 'loading'
       }
     }
-
     try {
       const remainingSentences = sentences.slice(startIndex)
       if (remainingSentences.length > 0) {
@@ -632,9 +643,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
             if (buffers.length === target && activeKey === key && !isPlayingPreRoll) {
               playPreRoll()
-            } else if (isStreaming && (isWaitingForNextChunk || !playing.value) && currentPlayingIndex + 1 < buffers.length) {
+            } else if (isStreaming && isWaitingForNextChunk && !isUserPaused && currentPlayingIndex + 1 < buffers.length) {
               isWaitingForNextChunk = false
-              playChunk(currentPlayingIndex + 1)
+              playChunk(currentPlayingIndex + 1, true)
             }
           },
           onDevice: (d) => {
@@ -676,7 +687,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     }
     isStreaming = false
     onChunkEndedCallback = null
-
+    cancelWaitingForChunk = null
     if (buffers.length === sentences.length) {
       const complete = encodeWav(concatFloat32(buffers), sampleRate)
       await cache.set(key, complete)

@@ -1001,4 +1001,49 @@ describe('useSliceAudio', () => {
     expect(cache.savePartial).toHaveBeenCalled()
     expect(cache.deletePartial).not.toHaveBeenCalled()
   })
+  it('does not auto-play when a new chunk arrives if the user has paused', async () => {
+    const audio = createFakeAudio()
+    let emitChunk3: (() => void) | null = null
+    const asyncEngine: TtsEngine = {
+      synthesize: vi.fn(async (_model: string, _sentences: string[], handlers: SynthHandlers) => {
+        handlers.onChunk(new Float32Array([0.1, 0.1]), 16000)
+        handlers.onChunk(new Float32Array([0.2, 0.2]), 16000)
+        await new Promise<void>((resolve) => {
+          emitChunk3 = () => {
+            handlers.onChunk(new Float32Array([0.3, 0.3]), 16000)
+            resolve()
+          }
+        })
+      }),
+      cancel: vi.fn(),
+      dispose: vi.fn()
+    }
+
+    const { cache } = memoryCache()
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine: asyncEngine,
+      cache,
+      createAudio: () => audio
+    })
+    const src = source({ markdown: 'Sentence 1. Sentence 2. Sentence 3.' })
+    const loadPromise = player.loadAndPlay(src)
+    await vi.waitFor(() => {
+      expect(audio.play).toHaveBeenCalledTimes(1)
+      expect(player.playing.value).toBe(true)
+    })
+    // User explicitly clicks pause
+    player.pause()
+    expect(audio.pause).toHaveBeenCalled()
+    expect(player.playing.value).toBe(false)
+
+    // Worker finishes chunk 3 while user is paused
+    emitChunk3?.()
+    await nextTick()
+    await loadPromise
+
+    // Audio MUST NOT auto-play chunk 3! Play call count remains 1!
+    expect(audio.play).toHaveBeenCalledTimes(1)
+    expect(player.playing.value).toBe(false)
+  })
 })
