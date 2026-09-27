@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { useApiClient } from "~/composables/useApiClient";
+import type { AudioQuotaInfo } from "~/types/audio";
 
 export interface Book {
   id: string;
@@ -45,14 +46,6 @@ export interface BookIngestionStatus {
   statusMessage?: string;
   errorMessage?: string;
   totalChunks: number;
-}
-
-export interface AudioQuotaInfo {
-  monthlyLimit: number;
-  usedCharacters: number;
-  remainingCharacters: number;
-  isNearLimit: boolean;
-  isExhausted: boolean;
 }
 
 export const useLibraryStore = defineStore("library", () => {

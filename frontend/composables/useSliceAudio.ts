@@ -10,6 +10,7 @@ import { resolveVoiceForLanguage } from '~/utils/ttsVoices'
 import { concatFloat32, encodeWav } from '~/utils/audioWav'
 import { buildAudioKey, createIdbBackend, createSliceAudioCache } from '~/utils/sliceAudioCache'
 import type { SliceAudioCache } from '~/utils/sliceAudioCache'
+import type { AudioQuotaInfo } from '~/types/audio'
 
 export type AudioEngine = 'cloud' | 'device'
 
@@ -41,14 +42,6 @@ export interface SynthHandlers {
 export interface TtsEngine {
   synthesize: (model: string, sentences: string[], handlers: SynthHandlers) => Promise<void>
   dispose: () => void
-}
-
-export interface AudioQuotaInfo {
-  monthlyLimit: number
-  usedCharacters: number
-  remainingCharacters: number
-  isNearLimit: boolean
-  isExhausted: boolean
 }
 
 export interface SliceAudioDeps {
