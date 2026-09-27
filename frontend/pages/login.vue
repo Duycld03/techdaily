@@ -603,13 +603,20 @@ async function handleResend() {
 
             <!-- OAuth Provider (Google SSO) -->
             <div v-if="authMode === 'login'" class="mb-5">
-              <!-- Interactive Wrapper with Invisible Native GSI Overlay (Guarantees Native Flow & Zero Overflow) -->
-              <div class="relative w-full overflow-hidden rounded-xl group">
-                <!-- Visual Custom Google Button -->
-                <button 
+              <div class="relative w-full flex items-center justify-center min-h-[44px]">
+                <!-- Native Google Identity Services Button -->
+                <div
+                  v-show="hasGsiRendered"
+                  ref="googleBtnContainer"
+                  class="w-full flex items-center justify-center overflow-hidden rounded-xl"
+                  style="color-scheme: light;"
+                ></div>
+                <!-- Fallback button while GSI script loads or if blocked -->
+                <button
+                  v-if="!hasGsiRendered"
                   type="button"
                   @click="triggerGoogleSignIn"
-                  class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-[#202024] group-hover:bg-slate-200 dark:group-hover:bg-zinc-800 text-sm font-medium text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-white/[0.08] transition shadow-sm group-hover:border-slate-300 dark:group-hover:border-white/15 cursor-pointer"
+                  class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-slate-100 dark:bg-[#202024] hover:bg-slate-200 dark:hover:bg-zinc-800 text-sm font-medium text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-white/[0.08] transition shadow-sm hover:border-slate-300 dark:hover:border-white/15 cursor-pointer"
                 >
                   <!-- Official Google Icon SVG with Transparent Background -->
                   <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -620,13 +627,6 @@ async function handleResend() {
                   </svg>
                   <span>{{ $t('auth.google_sign_in_with') }}</span>
                 </button>
-
-                <!-- Transparent GSI Native Target Overlay -->
-                <div
-                  ref="googleBtnContainer"
-                  class="absolute inset-0 opacity-0 cursor-pointer overflow-hidden flex items-center justify-center pointer-events-auto"
-                  style="z-index: 10;"
-                ></div>
               </div>
 
               <!-- Divider -->

@@ -579,7 +579,7 @@ describe('pages/login.vue', () => {
       expect(wrapper.text()).toContain('↵ RETURN')
     })
 
-    it('provides transparent native Google GSI overlay and triggers sign in flow', async () => {
+    it('renders Google sign-in container and triggers fallback when button is clicked', async () => {
       const wrapper = mount(LoginPage, {
         global: {
           stubs: {
@@ -588,15 +588,12 @@ describe('pages/login.vue', () => {
         }
       })
 
-      const googleBtnWrapper = wrapper.find('.group.relative')
-      expect(googleBtnWrapper.exists()).toBe(true)
+      const googleContainer = wrapper.find({ ref: 'googleBtnContainer' })
+      expect(googleContainer.exists()).toBe(true)
 
-      const overlay = googleBtnWrapper.find('.absolute.inset-0')
-      expect(overlay.exists()).toBe(true)
-      expect(overlay.classes()).toContain('opacity-0')
-
-      const customBtn = googleBtnWrapper.find('button')
-      await customBtn.trigger('click')
+      const btn = wrapper.find('button[type="button"]')
+      expect(btn.exists()).toBe(true)
+      await btn.trigger('click')
     })
 
     it('does not render bottom compliance telemetry bar or redundant status lines', () => {
