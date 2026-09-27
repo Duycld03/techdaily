@@ -50,10 +50,15 @@ While synthesizing on-device sentences, the reader SHALL persist intermediate ge
 2. If matching partial chunks are found and the slice's `contentHash` matches, the reader SHALL restore the already-synthesized chunks ($0 \dots K-1$), update the synthesis progress indicator to reflect $K/N$, immediately start pre-roll playback if $K \ge \text{targetBufferCount}$, and dispatch synthesis to the worker for only the remaining ungenerated sentences ($K \dots N-1$), eliminating redundant computation.
 3. If the slice's content has changed such that its `contentHash` differs, the stale partial cache entries SHALL NOT be used, any stale partial entries SHALL be deleted, and synthesis SHALL restart from sentence 0.
 
-Upon completing synthesis of all sentences in a slice, the reader SHALL assemble the sentences into a **single complete audio object** and SHALL transition to using that complete audio as the **sole** playback source, so that playback of the whole slice is continuous and the user can seek to any position within the slice **without re-synthesizing**. The reader SHALL persist the complete audio in IndexedDB, clear the temporary partial chunks for that key, and ensure the reported total duration reflects the complete slice audio once assembled.
+Upon completing synthesis of all sentences in a slice, the reader SHALL assemble the sentences into a **single complete audio object** and SHALL transition to using that complete audio as the **sole** playback source, so that playback of the whole slice is continuous and the user can seek to any position within the slice **without re-synthesizing**. The reader SHALL preserve the current playback offset using the media element's `loadedmetadata` event. If the user was paused when background synthesis completed, the player SHALL set the playback offset on the complete audio file and remain paused without resetting or discarding the paused position. When the user pauses on-device narration and subsequently resumes playback, audio playback SHALL continue seamlessly from the exact paused second without stalling or remaining frozen at an earlier timestamp. If playback is initiated on an audio source that has reached its end (`ended` is true or `currentTime >= duration`), the reader SHALL reset the playback position to 0 and begin playback from the start.
+
+When on-device synthesis is initiated on a slice with existing partial progress ($K$ of $N$ sentences, where $K \ge 1$ and $K < N$):
+1. The engine SHALL concatenate all $K$ available sentence chunks into the initial playable audio segment, enabling immediate playback of all $K$ sentences without re-synthesizing.
+2. The synthesis progress indicator SHALL immediately display $K/N$.
+3. The Web Worker SHALL be dispatched to synthesize only sentences $K \dots N-1$.
+4. As subsequent sentences $K, K+1, \dots$ finish synthesis, they SHALL be chained seamlessly for uninterrupted playback.
 
 The reader SHALL persist the complete slice audio in the browser's on-device storage (IndexedDB), keyed by `(chunkId, voice, contentHash)`, where `voice` is the language's on-device voice and `contentHash` is derived from the normalized narration script. A subsequent request to narrate the same `(chunkId, voice, contentHash)` — including in a later session — SHALL load the cached audio and SHALL NOT re-synthesize. When a slice's formatted content changes so its `contentHash` differs, the stale cache entry SHALL NOT be used and the audio SHALL be re-synthesized once. The audio cache SHALL enforce a bounded size (an entry or total-size cap) and evict least-recently-used entries; an evicted slice re-synthesizes on next play.
-
 #### Scenario: Resuming interrupted on-device synthesis from partial cache
 - **WHEN** on-device synthesis was previously interrupted after synthesizing 5 of 15 sentences, and the user re-initiates on-device narration for the identical slice
 - **THEN** the reader loads the 5 cached sentence chunks from IndexedDB, sets synthesis progress to 5/15, immediately starts playback if pre-roll threshold is satisfied, and requests the worker to synthesize only sentences 6 through 15.
@@ -94,6 +99,18 @@ The reader SHALL persist the complete slice audio in the browser's on-device sto
 #### Scenario: Cache eviction bounds device storage
 - **WHEN** cached audio exceeds the configured cap
 - **THEN** the reader evicts least-recently-used slice audio, and a subsequently re-opened evicted slice re-synthesizes once and is re-cached.
+
+#### Scenario: Resuming local TTS playback after pause
+- **WHEN** a user pauses on-device TTS narration mid-sentence (e.g. at 0:15) while synthesis finishes in the background, and later clicks "Listen" to resume
+- **THEN** audio playback resumes playing from 0:15 and continues through the remainder of the slice without freezing.
+
+#### Scenario: Playing completed audio restarts from beginning
+- **WHEN** a user clicks "Listen" on a slice whose playback has already reached the end
+- **THEN** the audio restarts playing from 0:00 rather than remaining frozen at the end duration.
+
+#### Scenario: Resuming on-device synthesis from 5/15 partial cache on page refresh
+- **WHEN** a user refreshes the page on a 15-sentence slice where 5 sentences were previously synthesized and cached in IndexedDB, and initiates on-device narration
+- **THEN** all 5 sentences are assembled into the initial playable audio, synthesis progress indicates 5/15, playback of the 5 sentences is immediately available, and the Web Worker synthesizes only sentences 5 through 14.
 
 ### Requirement: Reader Audio Playback Controls
 
@@ -318,6 +335,10 @@ The system (both frontend client and backend synthesis handler) SHALL strictly e
 
 All audio controls, buttons, tooltips, and status indicators SHALL use clean, professional, descriptive copy and SHALL NOT use hype or buzzword labels such as "AI", "AI Audio", or "Google AI". The UI SHALL use standard, subtle iconography (e.g. cloud icon or plain toggle switch) and SHALL NOT use mismatched or aggressive icons such as lightning bolts (`Zap`).
 
+The reader audio engine selection controls SHALL respect the user's current playback state during engine transitions:
+1. **No Autoplay When Paused**: If audio playback is currently paused or inactive (`playing === false`), switching between Google Cloud and On-Device engine modes SHALL update the selected engine mode and reset loaded slice state to idle, but SHALL NOT start audio synthesis or playback. The player SHALL remain paused until the user explicitly clicks the "Listen" / "Play" button.
+2. **Continuous Playback When Active**: If audio playback is currently active (`playing === true`), switching between engine modes SHALL pause the previous engine and immediately begin synthesis and playback with the newly selected engine.
+3. **Explicit Fallback Recovery Exception**: Activating the 1-tap `[☁ Switch to Google Cloud]` fallback button from an error state SHALL always switch to Cloud mode and initiate playback immediately.
 #### Scenario: Zero layout shift when toggling between Cloud and Device engines
 - **WHEN** the user switches between On-Device and Google Cloud engine modes in the reader audio player
 - **THEN** the total outer container height of the player bar remains constant (50px) without any vertical jump, expansion, or cumulative layout shift.
@@ -348,6 +369,14 @@ All audio controls, buttons, tooltips, and status indicators SHALL use clean, pr
 #### Scenario: UI copy and icons avoid buzzwords
 - **WHEN** viewing the audio narration player in any state
 - **THEN** the controls render clean labels ("Google Cloud", "Thiết bị" / "Device") without "AI" prefixes, and no lightning bolt icons are rendered in the audio control.
+
+#### Scenario: Switching engine mode while paused does not autoplay
+- **WHEN** audio playback is currently paused on an on-device narration slice and the user clicks the "Cloud" engine button
+- **THEN** the active engine mode switches to Cloud, but audio playback does NOT start automatically and the player remains in a paused state showing "Listen" ("Nghe").
+
+#### Scenario: Switching engine mode while playing transitions seamlessly
+- **WHEN** audio is actively playing on an on-device narration slice and the user clicks the "Cloud" engine button
+- **THEN** on-device playback stops, the engine mode switches to Cloud, and Cloud narration begins playing automatically.
 
 ### Requirement: Mobile Device Resource Safeguards & Single-Threaded WASM
 

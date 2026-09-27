@@ -325,19 +325,37 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     return audio.value
   }
 
-  function setSource(blob: Blob): void {
+  function setSource(blob: Blob, initialOffset = 0): void {
     const el = ensureAudio()
     if (!el) return
     if (objectUrl) URL.revokeObjectURL(objectUrl)
     objectUrl = URL.createObjectURL(blob)
     el.src = objectUrl
     el.playbackRate = speed.value
+
+    if (initialOffset > 0) {
+      const applyOffset = () => {
+        try {
+          el.currentTime = initialOffset
+        } catch {
+          // Ignored if media element prevents seeking
+        }
+      }
+      if (el.readyState >= 1) {
+        applyOffset()
+      } else {
+        el.addEventListener('loadedmetadata', applyOffset, { once: true })
+      }
+    }
   }
 
   async function play(): Promise<void> {
     const el = ensureAudio()
     if (!el) return
     try {
+      if (el.ended || (el.duration > 0 && el.currentTime >= el.duration)) {
+        el.currentTime = 0
+      }
       await el.play()
     }
     catch {
@@ -512,9 +530,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     // Cache miss -> synthesize via worker (check partial cache first)
     status.value = 'loading'
     const sentences = splitSentences(script)
-    const target = Math.min(2, sentences.length)
-    targetBufferCount.value = target
-    synthTotal.value = sentences.length
+    let target = Math.min(2, sentences.length)
 
     let buffers: Float32Array[] = []
     let sampleRate = 16000
@@ -529,20 +545,23 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       buffers = [...cachedPartial.chunks]
       sampleRate = cachedPartial.sampleRate
       synthIndex.value = buffers.length
+      target = Math.max(target, buffers.length)
     } else {
       synthIndex.value = 0
     }
 
+    targetBufferCount.value = target
+    synthTotal.value = sentences.length
     const startIndex = buffers.length
     let currentPlayingIndex = 0
     let isPlayingPreRoll = false
     let isStreaming = true
 
-    const playPreRoll = () => {
-      if (activeKey !== key || buffers.length < target) return
+    const playPreRoll = (count = target) => {
+      if (activeKey !== key || buffers.length < count) return
       isPlayingPreRoll = true
-      currentPlayingIndex = target - 1
-      const preRollWav = encodeWav(concatFloat32(buffers.slice(0, target)), sampleRate)
+      currentPlayingIndex = count - 1
+      const preRollWav = encodeWav(concatFloat32(buffers.slice(0, count)), sampleRate)
       setSource(preRollWav)
       status.value = 'ready'
       void play()
@@ -559,7 +578,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     }
 
     if (buffers.length >= target) {
-      playPreRoll()
+      playPreRoll(buffers.length)
     }
 
     onChunkEndedCallback = () => {
@@ -651,8 +670,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
         }
 
         const wasPlaying = playing.value
-        setSource(complete)
-        el.currentTime = offsetSec
+        setSource(complete, offsetSec)
         status.value = 'ready'
         if (wasPlaying) {
           void play()

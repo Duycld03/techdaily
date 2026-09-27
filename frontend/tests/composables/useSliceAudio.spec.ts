@@ -13,6 +13,20 @@ import {
 } from '~/composables/useSliceAudio'
 import type { PartialSliceAudio, SliceAudioCache } from '~/utils/sliceAudioCache'
 import type { AudioQuotaInfo } from '~/types/audio'
+interface MockAudio {
+  src: string
+  currentTime: number
+  duration: number
+  paused: boolean
+  ended: boolean
+  readyState: number
+  playbackRate: number
+  addEventListener: (type: string, cb: () => void, options?: any) => void
+  play: () => Promise<void>
+  pause: () => void
+  _fire: (type: string) => void
+}
+
 function createFakeAudio(): MockAudio {
   const listeners: Record<string, Array<() => void>> = {}
   const fire = (type: string) => (listeners[type] || []).forEach(cb => cb())
@@ -21,20 +35,23 @@ function createFakeAudio(): MockAudio {
     currentTime: 0,
     duration: 0,
     paused: true,
+    ended: false,
+    readyState: 1,
     playbackRate: 1,
     addEventListener(type: string, cb: () => void) {
       (listeners[type] ||= []).push(cb)
     },
     play: vi.fn(async () => {
       state.paused = false
+      state.ended = false
       fire('play')
     }),
     pause: vi.fn(() => {
       state.paused = true
       fire('pause')
-    })
+    }),
+    _fire: fire,
   }
-  // Boundary cast: the composable touches only this subset of HTMLAudioElement.
   return state as unknown as MockAudio
 }
 
@@ -773,5 +790,112 @@ describe('useSliceAudio', () => {
     expect(player.synthTotal.value).toBe(0)
     expect(player.targetBufferCount.value).toBe(0)
     expect(player.engineMode.value).toBe('cloud')
+  })
+
+  it('restarts playback from 0:00 when play is invoked on ended audio', async () => {
+    const audio = createFakeAudio()
+    const engine = streamingEngine()
+    const { cache } = memoryCache()
+
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine,
+      cache,
+      createAudio: () => audio,
+    })
+
+    await player.loadAndPlay(source())
+    expect(player.status.value).toBe('ready')
+
+    // Simulate audio ended
+    audio.ended = true
+    audio.currentTime = 42
+    audio.duration = 42
+
+    // Calling play again should reset currentTime to 0
+    await player.play()
+    expect(audio.currentTime).toBe(0)
+    expect(audio.play).toHaveBeenCalled()
+  })
+
+  it('restores 5 of 15 sentences from partial cache, plays all 5 sentences immediately, and synthesizes remaining 10 sentences', async () => {
+    const { cache } = memoryCache()
+    const audio = createFakeAudio()
+
+    // 15 sentences markdown
+    const fifteenSentences = Array.from({ length: 15 }, (_, i) => `Sentence ${i + 1}.`).join(' ')
+    const src = source({ chunkId: 'chunk-15-sentences', markdown: fifteenSentences })
+    const script = extractNarrationScript(fifteenSentences)
+    const contentHash = await computeContentHash(script)
+    const key = `chunk-15-sentences::mms-eng::${contentHash}`
+
+    // Pre-populate partial cache with 5 chunks out of 15
+    const partialChunks = Array.from({ length: 5 }, (_, i) => new Float32Array([0.1 * (i + 1), 0.1 * (i + 1)]))
+    await cache.savePartial?.(key, {
+      chunks: partialChunks,
+      sampleRate: 16000,
+      total: 15,
+    })
+
+    const synthesizedSentences: string[][] = []
+    const engine: TtsEngine = {
+      synthesize: vi.fn(async (_model: string, sentences: string[], handlers: SynthHandlers) => {
+        synthesizedSentences.push(sentences)
+        // Emit the remaining 10 sentences
+        for (let i = 0; i < sentences.length; i++) {
+          handlers.onChunk(new Float32Array([0.5 + 0.05 * i]), 16000)
+        }
+      }),
+      cancel: vi.fn(),
+      dispose: vi.fn(),
+    }
+
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine,
+      cache,
+      createAudio: () => audio,
+    })
+
+    await player.loadAndPlay(src)
+
+    // Verify only the remaining 10 sentences were passed to engine.synthesize
+    expect(synthesizedSentences).toHaveLength(1)
+    expect(synthesizedSentences[0]).toHaveLength(10)
+    expect(synthesizedSentences[0]![0]).toBe('Sentence 6.')
+    expect(synthesizedSentences[0]![9]).toBe('Sentence 15.')
+
+    // Verify pre-roll played all 5 restored chunks
+    expect(player.targetBufferCount.value).toBe(5)
+    expect(player.synthTotal.value).toBe(15)
+    expect(player.synthIndex.value).toBe(15)
+    expect(cache.set).toHaveBeenCalledTimes(1)
+    expect(cache.deletePartial).toHaveBeenCalledWith(key)
+  })
+
+  it('preserves playback offset via loadedmetadata when transitioning to complete assembled file', async () => {
+    const audio = createFakeAudio()
+    // Start with readyState 0 (metadata not yet loaded)
+    audio.readyState = 0
+
+    const engine = streamingEngine()
+    const { cache } = memoryCache()
+
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine,
+      cache,
+      createAudio: () => audio,
+    })
+
+    // Simulate playback reaching 12.5 seconds
+    audio.currentTime = 12.5
+    await player.loadAndPlay(source())
+
+    // Trigger loadedmetadata event
+    audio._fire('loadedmetadata')
+
+    // Offset should be preserved on the audio element
+    expect(audio.currentTime).toBe(12.5)
   })
 })

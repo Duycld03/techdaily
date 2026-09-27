@@ -259,6 +259,45 @@ describe('ReaderAudioPlayer.vue', () => {
     expect(audio.setEngineMode).toHaveBeenCalledWith('device')
   })
 
+  it('does not autoplay or invoke loadAndPlay when toggling engine while paused', async () => {
+    audio.engineMode.value = 'cloud'
+    audio.playing.value = false
+    const wrapper = mountPlayer({ chunk: chunk() })
+
+    // Simulate loaded slice
+    await wrapper.find('button').trigger('click')
+    audio.loadAndPlay.mockClear()
+
+    // Find device toggle button
+    const deviceBtn = wrapper.findAll('button').find(b => b.text().includes('Device'))
+    await deviceBtn!.trigger('click')
+
+    expect(audio.setEngineMode).toHaveBeenCalledWith('device')
+    expect(audio.loadAndPlay).not.toHaveBeenCalled()
+    expect(audio.currentTime.value).toBe(0)
+    expect(audio.duration.value).toBe(0)
+  })
+
+  it('automatically continues playback when toggling engine while actively playing', async () => {
+    audio.engineMode.value = 'cloud'
+    audio.playing.value = false
+    const wrapper = mountPlayer({ chunk: chunk() })
+
+    // Simulate loaded slice
+    await wrapper.find('button').trigger('click')
+    audio.loadAndPlay.mockClear()
+
+    // Now actively playing
+    audio.playing.value = true
+
+    // Find device toggle button
+    const deviceBtn = wrapper.findAll('button').find(b => b.text().includes('Device'))
+    await deviceBtn!.trigger('click')
+
+    expect(audio.setEngineMode).toHaveBeenCalledWith('device')
+    expect(audio.loadAndPlay).toHaveBeenCalledTimes(1)
+  })
+
   it('disables Cloud toggle with tooltip when quota is near limit', async () => {
     audio.isNearQuota.value = true
     const wrapper = mountPlayer({ chunk: chunk() })

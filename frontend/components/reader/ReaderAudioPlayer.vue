@@ -132,7 +132,7 @@ const canFallbackToCloud = computed(() => {
 })
 
 function onFallbackToCloud(): void {
-  onToggleEngine('cloud')
+  onToggleEngine('cloud', true)
 }
 
 watch(errorMessage, (message) => {
@@ -157,7 +157,7 @@ function onToggle(): void {
   void loadAndPlay(source.value)
 }
 
-function onToggleEngine(mode: AudioEngine): void {
+function onToggleEngine(mode: AudioEngine, autoPlay = playing.value): void {
   if (mode === 'cloud' && (isNearQuota.value || isQuotaExhausted.value)) {
     return
   }
@@ -165,9 +165,13 @@ function onToggleEngine(mode: AudioEngine): void {
   if (loadedId.value) {
     pause()
     loadedId.value = null
-    if (source.value) {
+    if (autoPlay && source.value) {
       loadedId.value = source.value.chunkId
       void loadAndPlay(source.value)
+    } else {
+      currentTime.value = 0
+      duration.value = 0
+      status.value = 'idle'
     }
   }
 }
