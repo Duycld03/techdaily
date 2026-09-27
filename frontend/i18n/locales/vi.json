@@ -570,7 +570,16 @@
     "audio_device_gpu": "GPU",
     "audio_device_cpu": "CPU",
     "audio_device_gpu_hint": "Giọng đọc đang chạy trên GPU",
-    "audio_device_cpu_hint": "Giọng đọc đang chạy trên CPU"
+    "audio_device_cpu_hint": "Giọng đọc đang chạy trên CPU",
+    "audio_engine_cloud": "Cloud",
+    "audio_engine_device": "Thiết bị",
+    "audio_engine_cloud_hint": "Giọng đọc tốc độ cao Google Cloud",
+    "audio_engine_device_hint": "Tạo giọng đọc trực tiếp trên trình duyệt",
+    "audio_quota_exhausted_toast": "Đã đạt giới hạn tháng của giọng đọc Cloud. Tự động chuyển sang thiết bị.",
+    "audio_quota_near_limit_tooltip": "Đã đạt giới hạn tháng, tự động dùng giọng thiết bị",
+    "audio_voice_select_placeholder": "Chọn giọng đọc",
+    "audio_voice_female": "Nữ",
+    "audio_voice_male": "Nam"
   },
   "notes": {
     "title": "Trích Dẫn & Ghi Chú",

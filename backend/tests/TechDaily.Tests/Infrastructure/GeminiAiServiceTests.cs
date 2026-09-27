@@ -127,5 +127,68 @@ public class GeminiAiServiceTests
         result.Value.KeyTakeaways.Should().HaveCount(3);
         result.Value.ScenarioDrill.Should().NotBeNull();
         result.Value.ScenarioDrill!.CorrectOptionIndex.Should().Be(1);
+        systemInstructionText.Should().Contain("CRITICAL LANGUAGE INVARIANT");
+        systemInstructionText.Should().Contain("The document is written in VIETNAMESE");
+        systemInstructionText.Should().Contain("### Ý chính cốt lõi");
+    }
+
+    [Fact]
+    public async Task FormatSliceAsync_WhenEnglishTechnicalBook_ShouldUseEnglishInstructions()
+    {
+        // Arrange
+        var handler = new MockHttpMessageHandler();
+        var client = new HttpClient(handler);
+        var inMemoryConfig = new Dictionary<string, string?>
+        {
+            ["Gemini:ApiKey"] = "test-gemini-key",
+            ["Gemini:Model"] = "gemini-3.5-flash-lite"
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
+        var service = new GeminiAiService(client, config, NullLogger<GeminiAiService>.Instance);
+
+        var geminiResponseJson = JsonSerializer.Serialize(new
+        {
+            candidates = new[]
+            {
+                new
+                {
+                    content = new
+                    {
+                        parts = new[]
+                        {
+                            new
+                            {
+                                text = JsonSerializer.Serialize(new
+                                {
+                                    formattedMarkdown = "# Title\n\n> [!NOTE]\n> Context\n\nBody",
+                                    summaryMarkdown = "Summary",
+                                    keyTakeaways = new[] { "P1", "P2", "P3" },
+                                    estimatedReadMinutes = 3
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        handler.ResponseToReturn = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(geminiResponseJson, Encoding.UTF8, "application/json")
+        };
+
+        // Act
+        var result = await service.FormatSliceAsync("Content", "Title", "en", Category.BackendRuntime);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        handler.CapturedRequestBody.Should().NotBeNull();
+
+        using var requestDoc = JsonDocument.Parse(handler.CapturedRequestBody!);
+        var systemInstructionText = requestDoc.RootElement.GetProperty("systemInstruction").GetProperty("parts")[0].GetProperty("text").GetString();
+
+        systemInstructionText.Should().Contain("You are a Principal Software Architect");
+        systemInstructionText.Should().Contain("### Key Takeaways");
+        systemInstructionText.Should().NotContain("CRITICAL LANGUAGE INVARIANT");
     }
 }

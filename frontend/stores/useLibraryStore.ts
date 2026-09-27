@@ -47,6 +47,14 @@ export interface BookIngestionStatus {
   totalChunks: number;
 }
 
+export interface AudioQuotaInfo {
+  monthlyLimit: number;
+  usedCharacters: number;
+  remainingCharacters: number;
+  isNearLimit: boolean;
+  isExhausted: boolean;
+}
+
 export const useLibraryStore = defineStore("library", () => {
   const books = ref<Book[]>([]);
   const selectedBook = ref<BookDetail | null>(null);
@@ -54,6 +62,19 @@ export const useLibraryStore = defineStore("library", () => {
   const isImporting = ref(false);
   const error = ref<string | null>(null);
 
+  const audioQuota = ref<AudioQuotaInfo | null>(null);
+
+  async function fetchAudioQuota(): Promise<AudioQuotaInfo | null> {
+    try {
+      const api = useApiClient();
+      const res = await api.get<AudioQuotaInfo>("/api/v1/library/audio/quota");
+      audioQuota.value = res;
+      return res;
+    } catch (err) {
+      console.error("Failed to fetch audio quota:", err);
+      return null;
+    }
+  }
   const currentPage = ref(1);
   const pageSize = ref(12);
   const totalCount = ref(0);
@@ -354,5 +375,7 @@ export const useLibraryStore = defineStore("library", () => {
     deleteBook,
     curateSlice,
     exportBookMarkdown,
+    audioQuota,
+    fetchAudioQuota,
   };
 });

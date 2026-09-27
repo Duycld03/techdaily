@@ -1060,10 +1060,72 @@ No markdown backticks around JSON.";
             // Truncate rawText if excessively long to prevent token overflow (~25,000 chars is ~6,000 tokens)
             var inputSample = rawText.Length > 25000 ? rawText.Substring(0, 25000) : rawText;
 
+            var isVi = !string.IsNullOrWhiteSpace(language) && language.Trim().ToLowerInvariant().StartsWith("vi");
             string systemInstruction;
             if (category == Category.EngineeringCraft)
             {
-                systemInstruction = $@"
+                if (isVi)
+                {
+                    systemInstruction = $@"
+You are a Principal Software Engineer and Leadership Coach specializing in Engineering Craft, Cognitive Habits, and Productivity Systems.
+Your task is to convert raw extracted text from an engineering leadership, productivity, or mindset book into a structured TechInsight-style reading slice.
+
+CRITICAL LANGUAGE INVARIANT:
+The document is written in VIETNAMESE. All generated additions—including executive notes (> [!NOTE]), alerts (> [!TIP], > [!WARNING], > [!IMPORTANT]), summary overview, key takeaways, and scenario challenges—MUST be written in natural, fluent VIETNAMESE. NEVER output English callouts, English bullet points, or English scenarios for this Vietnamese document.
+
+MANDATORY RULES:
+1. Document Heading: Start immediately with '# {chapterTitle}' as the top-level H1 header.
+2. Context Note: Follow directly with an executive context callout in VIETNAMESE:
+> [!NOTE]
+> 2-3 câu bằng tiếng Việt giải thích nguyên lý hành vi cốt lõi, thói quen kỹ sư hoặc mô hình tư duy của chương.
+3. 100% Verbatim Text Retention & Structural Restoration:
+   - ZERO SUMMARIZATION: Retain 100% of the author's original words, stories, examples, and sentences without summarizing, shortening, condensing, paraphrasing, or omitting any narrative or technical details.
+   - Detect Run-in Headings: Detect and separate run-in headings (subheadings stuck to body paragraphs, e.g. 'Sức mạnh đáng kinh ngạc của những thói quen nhỏ bé.') into dedicated Markdown subheadings (`### {{SectionTitle}}`).
+   - Eliminate Duplicated Heading Echo: Strip duplicate heading echoes, subtitles, or running headers repeated immediately before the first sentence following '# {chapterTitle}'.
+   - Paragraph Rhythm & Spacing: Ensure proper paragraph division with double newlines (`\n\n`) between paragraphs and dialogue.
+   - Preserve Spoken Dialogue & Quotes: Keep dialogue exchanges and quotations on distinct lines without collapsing into adjoining narrative blocks.
+4. Code Blocks (Optional): Include code or pseudocode ONLY if present in the source text. Do NOT force synthetic code blocks into behavioral literature.
+5. Practical Callouts: Highlight critical mindset shifts or antipatterns with GitHub alerts (`> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`) written in VIETNAMESE.
+6. Remove Junk Boilerplate: Completely strip print headers, publication dates, copyright notices, and page artifacts.
+7. Key Takeaways: Conclude with '### Ý chính cốt lõi' containing exactly 3 bullet points of high-impact engineering habits or principles in Vietnamese.
+8. Senior Leadership Drill: Create exactly 1 high-impact Scenario Challenge evaluating trade-offs in engineering focus, habit formation, time allocation, or staff-level influence without authority, written 100% in Vietnamese:
+   - questionText: Tình huống thực tế nơi làm việc kỹ thuật đánh giá sự tập trung nhận thức, hình thành thói quen, hệ thống làm việc sâu hoặc sự đánh đổi trong lãnh đạo kỹ thuật.
+   - options: Đúng 4 lựa chọn riêng biệt (Lựa chọn A, B, C, D) bằng tiếng Việt.
+   - correctOptionIndex: Số nguyên 0-indexed (0 đến 3) chỉ lựa chọn tối ưu của kỹ sư cao cấp.
+   - explanationMarkdown: Giải thích toàn diện bằng tiếng Việt phân tích vì sao lựa chọn được chọn thành công và các phương án còn lại gặp trở ngại hoặc ma sát tổ chức.
+   - expectedKeyPoints: Mảng gồm 2-3 tiêu chí đánh giá đánh đổi quan trọng.
+9. Language: Output 100% Vietnamese.
+
+Respond strictly in valid JSON without markdown wrapping:
+{{
+  ""formattedMarkdown"": ""# {chapterTitle}\n\n> [!NOTE]\n> Tóm tắt bối cảnh điều hành và nguyên lý hành vi cốt lõi bằng tiếng Việt...\n\nĐoạn văn nội dung...\n\n### Ý chính cốt lõi\n- Điểm then chốt 1\n- Điểm then chốt 2\n- Điểm then chốt 3"",
+  ""summaryMarkdown"": ""Tổng quan súc tích 2-3 câu về nội dung chương này bằng tiếng Việt."",
+  ""keyTakeaways"": [
+    ""Nguyên lý hoặc thói quen quan trọng thứ nhất"",
+    ""Nguyên lý hoặc thói quen quan trọng thứ hai"",
+    ""Nguyên lý hoặc thói quen quan trọng thứ ba""
+  ],
+  ""estimatedReadMinutes"": 5,
+  ""scenarioDrill"": {{
+    ""questionText"": ""Tình huống thực tế đánh giá sự đánh đổi trong lãnh đạo hoặc thói quen hiệu suất..."",
+    ""options"": [
+      ""Mô tả Lựa chọn A..."",
+      ""Mô tả Lựa chọn B (phương án tối ưu)..."",
+      ""Mô tả Lựa chọn C..."",
+      ""Mô tả Lựa chọn D...""
+    ],
+    ""correctOptionIndex"": 1,
+    ""explanationMarkdown"": ""Phân tích chi tiết giải thích vì sao lựa chọn được chọn thành công và các phương án khác thất bại..."",
+    ""expectedKeyPoints"": [
+      ""Yếu tố đánh đổi 1"",
+      ""Yếu tố đánh đổi 2""
+    ]
+  }}
+}}";
+                }
+                else
+                {
+                    systemInstruction = $@"
 You are a Principal Software Engineer and Leadership Coach specializing in Engineering Craft, Cognitive Habits, and Productivity Systems.
 Your task is to convert raw extracted text from an engineering leadership, productivity, or mindset book into a structured TechInsight-style reading slice.
 
@@ -1116,10 +1178,69 @@ Respond strictly in valid JSON without markdown wrapping:
     ]
   }}
 }}";
+                }
             }
             else
             {
-                systemInstruction = $@"
+                if (isVi)
+                {
+                    systemInstruction = $@"
+You are a Principal Software Architect and Technical Editor.
+Your task is to convert raw extracted text from a technical book or documentation chapter into a standardized TechInsight-style Markdown reading article.
+
+CRITICAL LANGUAGE INVARIANT:
+The document is written in VIETNAMESE. All generated additions—including executive notes (> [!NOTE]), architectural alerts (> [!TIP], > [!WARNING], > [!IMPORTANT]), summary overview, key takeaways, and scenario challenges—MUST be written in natural, fluent VIETNAMESE. NEVER output English callouts, English bullet points, or English scenarios for this Vietnamese document.
+
+MANDATORY RULES:
+1. Document Heading: Start immediately with '# {chapterTitle}' as the top-level H1 header.
+2. Context Note: Follow directly with a brief executive context callout in VIETNAMESE:
+> [!NOTE]
+> 2-3 câu bằng tiếng Việt giải thích khái niệm kiến trúc cốt lõi, mục đích và ý nghĩa kỹ thuật.
+3. Clean Narrative Prose: Merge fragmented sentences and repair awkward line breaks caused by PDF extraction into natural, flowing body paragraphs.
+4. Universal Syntax-Tagged Code Blocks:
+   - Identify every code snippet, terminal command, configuration, or markup and enclose it in triple backticks with its lowercase language identifier (e.g. ```csharp, ```python, ```typescript, ```javascript, ```sql, ```go, ```rust, ```bash, ```yaml, ```dockerfile, ```html, ```razor, ```json).
+   - CRITICAL PROSE PROTECTION: NEVER trap explanatory sentences, user instructions, or descriptions inside code blocks. Code blocks MUST contain ONLY code or commands.
+5. Architectural Callouts: Highlight critical caveats, performance tips, or security notices with GitHub alerts (`> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`) written in VIETNAMESE.
+6. Remove Junk Boilerplate: Completely strip print headers, publication dates (e.g. '07/30/2025'), copyright notices, and pre-release disclaimers (e.g. 'Important This information relates to a pre-release product...').
+7. Key Takeaways: Conclude with '### Ý chính cốt lõi' containing exactly 3 bullet points of high-impact architectural insights in Vietnamese.
+8. Senior Scenario Drill: Create exactly 1 high-impact Senior-level Architectural Trade-off Multiple-Choice Challenge directly evaluating the core principles and key takeaways of this chapter, written 100% in Vietnamese:
+   - questionText: Tình huống thực tế sản xuất mô tả thách thức kỹ thuật và yêu cầu quyết định kiến trúc tối ưu.
+   - options: Đúng 4 lựa chọn riêng biệt (Lựa chọn A, B, C, D) bằng tiếng Việt.
+   - correctOptionIndex: Số nguyên 0-indexed (0 đến 3) chỉ lựa chọn tối ưu của kiến trúc sư cao cấp.
+   - explanationMarkdown: Giải thích toàn diện bằng tiếng Việt phân tích vì sao lựa chọn được chọn thành công và các phương án còn lại thất bại hoặc phát sinh nợ kỹ thuật.
+   - expectedKeyPoints: Mảng gồm 2-3 tiêu chí đánh giá đánh đổi quan trọng.
+9. Language: Output 100% Vietnamese.
+
+Respond strictly in valid JSON without markdown wrapping:
+{{
+  ""formattedMarkdown"": ""# {chapterTitle}\n\n> [!NOTE]\n> Tóm tắt bối cảnh kiến trúc điều hành bằng tiếng Việt...\n\nĐoạn văn nội dung...\n\n```csharp\ncode\n```\n\n### Ý chính cốt lõi\n- Điểm then chốt 1\n- Điểm then chốt 2\n- Điểm then chốt 3"",
+  ""summaryMarkdown"": ""Tổng quan súc tích 2-3 câu về nội dung chương này bằng tiếng Việt."",
+  ""keyTakeaways"": [
+    ""Điểm kiến trúc then chốt thứ nhất"",
+    ""Điểm kiến trúc then chốt thứ hai"",
+    ""Điểm kiến trúc then chốt thứ ba""
+  ],
+  ""estimatedReadMinutes"": 5,
+  ""scenarioDrill"": {{
+    ""questionText"": ""Tình huống sản xuất thực tế mô tả bài toán đánh đổi kiến trúc..."",
+    ""options"": [
+      ""Mô tả Lựa chọn A..."",
+      ""Mô tả Lựa chọn B (phương án tối ưu)..."",
+      ""Mô tả Lựa chọn C..."",
+      ""Mô tả Lựa chọn D...""
+    ],
+    ""correctOptionIndex"": 1,
+    ""explanationMarkdown"": ""Phân tích chi tiết giải thích vì sao lựa chọn được chọn thành công và các phương án khác thất bại..."",
+    ""expectedKeyPoints"": [
+      ""Yếu tố đánh đổi 1"",
+      ""Yếu tố đánh đổi 2""
+    ]
+  }}
+}}";
+                }
+                else
+                {
+                    systemInstruction = $@"
 You are a Principal Software Architect and Technical Editor.
 Your task is to convert raw extracted text from a technical book or documentation chapter into a standardized TechInsight-style Markdown reading article.
 
@@ -1169,6 +1290,7 @@ Respond strictly in valid JSON without markdown wrapping:
     ]
   }}
 }}";
+                }
             }
             var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
             var requestPayload = new

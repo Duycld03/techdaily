@@ -18,6 +18,7 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
     public DbSet<InterviewQuestion> InterviewQuestions => Set<InterviewQuestion>();
     public DbSet<DocumentBook> DocumentBooks => Set<DocumentBook>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
+    public DbSet<DocumentChunkAudio> DocumentChunkAudios => Set<DocumentChunkAudio>();
     public DbSet<DailyDrill> DailyDrills => Set<DailyDrill>();
     public DbSet<SpacedRepetitionCard> SpacedRepetitionCards => Set<SpacedRepetitionCard>();
     public DbSet<StreakRecord> StreakRecords => Set<StreakRecord>();

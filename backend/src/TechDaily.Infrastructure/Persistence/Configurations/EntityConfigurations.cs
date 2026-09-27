@@ -510,3 +510,28 @@ public class EmailOtpConfiguration : IEntityTypeConfiguration<EmailOtp>
         builder.HasIndex(o => new { o.Email, o.Purpose });
     }
 }
+
+public class DocumentChunkAudioConfiguration : IEntityTypeConfiguration<DocumentChunkAudio>
+{
+    public void Configure(EntityTypeBuilder<DocumentChunkAudio> builder)
+    {
+        builder.ToTable("DocumentChunkAudios");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.ContentHash).HasMaxLength(128).IsRequired();
+        builder.Property(a => a.VoiceId).HasMaxLength(100).IsRequired();
+        builder.Property(a => a.MimeType).HasMaxLength(100).HasDefaultValue("audio/mpeg").IsRequired();
+        builder.Property(a => a.AudioData).IsRequired();
+        builder.Property(a => a.CharacterCount).IsRequired();
+        builder.Property(a => a.DurationSeconds).HasDefaultValue(0.0);
+
+        builder.HasIndex(a => new { a.DocumentChunkId, a.ContentHash, a.VoiceId })
+            .IsUnique()
+            .HasDatabaseName("IX_DocumentChunkAudios_Lookup")
+            .HasFilter("\"IsDeleted\" = false");
+
+        builder.HasOne(a => a.DocumentChunk)
+            .WithMany(c => c.Audios)
+            .HasForeignKey(a => a.DocumentChunkId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}

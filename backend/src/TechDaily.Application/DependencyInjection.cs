@@ -28,6 +28,7 @@ using TechDaily.Application.Features.Review.DeleteReviewCard;
 using TechDaily.Application.Features.Review.ResetReviewCardProgress;
 using TechDaily.Application.Features.KnowledgeGraph.DTOs;
 using TechDaily.Application.Features.KnowledgeGraph.GetKnowledgeGraph;
+using TechDaily.Application.Features.Library.SynthesizeAudio;
 
 namespace TechDaily.Application;
 
@@ -68,6 +69,8 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<Features.Library.GetBookSlice.GetBookSliceRequest, Features.Library.GetBookSlice.GetBookSliceResponse>, Features.Library.GetBookSlice.GetBookSliceHandler>();
         services.AddScoped<IUseCase<ExportBookMarkdownRequest, ExportBookMarkdownResponse>, ExportBookMarkdownHandler>();
         services.AddScoped<IUseCase<ImportRemotePdfRequest, UploadPdfResponse>, ImportRemotePdfHandler>();
+        services.AddScoped<IUseCase<SynthesizeChunkAudioRequest, SynthesizeChunkAudioResponse>, GetOrSynthesizeChunkAudioHandler>();
+        services.AddScoped<IUseCase<GetAudioQuotaRequest, AudioQuotaResponse>, GetAudioQuotaHandler>();
 
         // Notes / Highlights Handlers
         services.AddScoped<IUseCase<GetHighlightsRequest, GetHighlightsResponse>, GetHighlightsHandler>();

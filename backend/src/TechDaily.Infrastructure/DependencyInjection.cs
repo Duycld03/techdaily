@@ -42,6 +42,7 @@ public static class DependencyInjection
             {
                 AllowAutoRedirect = false
             });
+        services.AddHttpClient<IGoogleCloudTtsService, GoogleCloudTtsService>(client => client.Timeout = TimeSpan.FromSeconds(30));
 
         // Service Registrations
         services.AddScoped<IEmbeddingService, GeminiEmbeddingService>();

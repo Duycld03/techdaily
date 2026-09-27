@@ -231,7 +231,7 @@ const renderedMarkdown = computed(() => {
   // Key Takeaways deduplication: suppress trailing Key Takeaways section if structured takeaways are displayed in the callout
   if (hasValidTakeaways.value) {
     text = text.replace(
-      /\s*#{1,4}\s+Key\s+Takeaways\s*(?:\r?\n\s*[-*+]\s+[^\r\n]+)*\s*$/i,
+      /\s*#{1,4}\s+(?:Key\s+Takeaways|Ý\s+chính\s+cốt\s+lõi)\s*(?:\r?\n\s*[-*+]\s+[^\r\n]+)*\s*$/i,
       ""
     );
   }

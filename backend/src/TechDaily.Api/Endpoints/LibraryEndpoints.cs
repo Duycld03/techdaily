@@ -13,6 +13,7 @@ using TechDaily.Application.Features.Library.ImportDocument;
 using TechDaily.Application.Features.Library.UploadPdf;
 using TechDaily.Application.Features.Library.ExportBookMarkdown;
 using TechDaily.Application.Features.Library.ImportRemotePdf;
+using TechDaily.Application.Features.Library.SynthesizeAudio;
 using TechDaily.Domain.Enums;
 
 namespace TechDaily.Api.Endpoints;
@@ -316,6 +317,58 @@ public static class LibraryEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
+        // Synthesize Chunk Audio (Requires Authentication)
+        group.MapPost("/chunks/{chunkId:guid}/audio", async (
+            Guid chunkId,
+            [FromBody] SynthesizeChunkAudioApiRequest? body,
+            [FromServices] IUseCase<SynthesizeChunkAudioRequest, SynthesizeChunkAudioResponse> handler,
+            CancellationToken ct) =>
+        {
+            var voiceId = string.IsNullOrWhiteSpace(body?.VoiceId) ? "en-US-Neural2-F" : body.VoiceId;
+            var request = new SynthesizeChunkAudioRequest(
+                chunkId,
+                voiceId,
+                body?.ContentHash,
+                body?.NarrationScript);
+
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.Match(
+                success => Results.File(success.AudioBytes, success.MimeType, enableRangeProcessing: true),
+                error => error == Error.NotFound
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.Code == Error.AudioQuotaExhausted.Code
+                        ? error.ToProblem(StatusCodes.Status429TooManyRequests)
+                        : error.ToProblem(StatusCodes.Status400BadRequest)
+            );
+        })
+        .RequireAuthorization()
+        .WithName("SynthesizeChunkAudio")
+        .WithSummary("Synthesize Chunk Audio")
+        .WithDescription("Synthesizes or retrieves cached audio narration MP3 for a specific document chunk.")
+        .Produces(StatusCodes.Status200OK, contentType: "audio/mpeg")
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
+        // Get Audio Quota (Requires Authentication)
+        group.MapGet("/audio/quota", async (
+            [FromServices] IUseCase<GetAudioQuotaRequest, AudioQuotaResponse> handler,
+            CancellationToken ct) =>
+        {
+            var result = await handler.ExecuteAsync(new GetAudioQuotaRequest(), ct);
+            return result.Match(
+                success => Results.Ok(success),
+                error => error.ToProblem(StatusCodes.Status400BadRequest)
+            );
+        })
+        .RequireAuthorization()
+        .WithName("GetAudioQuota")
+        .WithSummary("Get Audio Narration Quota")
+        .WithDescription("Retrieves the monthly character usage and limits for cloud audio narration synthesis.")
+        .Produces<AudioQuotaResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
+
         return app;
     }
 
@@ -329,4 +382,6 @@ public static class LibraryEndpoints
         return null;
     }
 }
+
+public record SynthesizeChunkAudioApiRequest(string? VoiceId, string? ContentHash = null, string? NarrationScript = null);
 

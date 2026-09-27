@@ -5,12 +5,12 @@ import { computeContentHash, extractNarrationScript } from '~/utils/narrationScr
 import { resolveVoiceForLanguage } from '~/utils/ttsVoices'
 import {
   AUDIO_SPEED_STORAGE_KEY,
+  AUDIO_ENGINE_STORAGE_KEY,
   useSliceAudio,
   type NarrationSource,
   type SynthHandlers,
   type TtsEngine
 } from '~/composables/useSliceAudio'
-
 type MockAudio = HTMLAudioElement & { play: Mock, pause: Mock }
 
 function createFakeAudio(): MockAudio {
@@ -278,5 +278,118 @@ describe('useSliceAudio', () => {
 
     expect(audio.play).not.toHaveBeenCalled()
     expect(createObjectUrl).not.toHaveBeenCalled()
+  })
+
+  it('dispatches to Cloud mode via POST endpoint and caches in IndexedDB', async () => {
+    const { cache, store } = memoryCache()
+    const audio = createFakeAudio()
+    const mockBlob = new Blob(['mock-mp3-bytes'], { type: 'audio/mpeg' })
+
+    const fetchClient = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      return new Response(mockBlob, {
+        status: 200,
+        headers: { 'Content-Type': 'audio/mpeg' }
+      })
+    })
+
+    const player = useSliceAudio({
+      defaultEngine: 'cloud',
+      cache,
+      createAudio: () => audio,
+      fetchClient
+    })
+
+    const src = source({ chunkId: 'chunk-cloud-1' })
+    await player.loadAndPlay(src)
+
+    expect(fetchClient).toHaveBeenCalledTimes(1)
+    expect(fetchClient.mock.calls[0]![0]).toBe('/api/v1/library/chunks/chunk-cloud-1/audio')
+    expect(fetchClient.mock.calls[0]![1]?.method).toBe('POST')
+
+    expect(cache.set).toHaveBeenCalledTimes(1)
+    expect(cache.set.mock.calls[0]![0]).toContain('chunk-cloud-1')
+    expect(player.status.value).toBe('ready')
+    expect(audio.play).toHaveBeenCalledTimes(1)
+  })
+
+  it('dispatches to Device mode via Web Worker and caches in IndexedDB', async () => {
+    const engine = streamingEngine()
+    const { cache } = memoryCache()
+    const audio = createFakeAudio()
+
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine,
+      cache,
+      createAudio: () => audio
+    })
+
+    const src = source({ chunkId: 'chunk-device-1' })
+    await player.loadAndPlay(src)
+
+    expect(engine.synthesize).toHaveBeenCalledTimes(1)
+    expect(cache.set).toHaveBeenCalledTimes(1)
+    expect(cache.set.mock.calls[0]![0]).toContain('chunk-device-1')
+    expect(player.status.value).toBe('ready')
+    expect(audio.play).toHaveBeenCalledTimes(1)
+  })
+
+  it('handles 429 AudioQuotaExhausted in Cloud mode by falling back to Device mode and synthesizing on-device', async () => {
+    const engine = streamingEngine()
+    const { cache } = memoryCache()
+    const audio = createFakeAudio()
+    const onQuotaExhausted = vi.fn()
+
+    const fetchClient = vi.fn(async () => {
+      return new Response(JSON.stringify({ code: 'AudioQuotaExhausted' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/problem+json' }
+      })
+    })
+
+    const player = useSliceAudio({
+      defaultEngine: 'cloud',
+      engine,
+      cache,
+      createAudio: () => audio,
+      fetchClient,
+      onQuotaExhausted
+    })
+
+    const src = source({ chunkId: 'chunk-quota-fallback-1' })
+    await player.loadAndPlay(src)
+
+    expect(fetchClient).toHaveBeenCalledTimes(1)
+    expect(onQuotaExhausted).toHaveBeenCalledTimes(1)
+    expect(player.engineMode.value).toBe('device')
+    expect(engine.synthesize).toHaveBeenCalledTimes(1)
+    expect(player.status.value).toBe('ready')
+    expect(audio.play).toHaveBeenCalledTimes(1)
+  })
+
+  it('fetches quota and flags near-limit and exhausted states', async () => {
+    const fetchClient = vi.fn(async () => {
+      return new Response(JSON.stringify({
+        monthlyLimit: 950000,
+        usedCharacters: 920000,
+        remainingCharacters: 30000,
+        isNearLimit: true,
+        isExhausted: false
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    })
+
+    const player = useSliceAudio({
+      defaultEngine: 'cloud',
+      fetchClient
+    })
+
+    const quota = await player.fetchQuota()
+    expect(quota).not.toBeNull()
+    expect(player.isNearQuota.value).toBe(true)
+    expect(player.isQuotaExhausted.value).toBe(false)
+    expect(player.engineMode.value).toBe('device')
   })
 })

@@ -10,6 +10,7 @@ public interface ITechDailyDbContext
     DbSet<InterviewQuestion> InterviewQuestions { get; }
     DbSet<DocumentBook> DocumentBooks { get; }
     DbSet<DocumentChunk> DocumentChunks { get; }
+    DbSet<DocumentChunkAudio> DocumentChunkAudios { get; }
     DbSet<DailyDrill> DailyDrills { get; }
     DbSet<SpacedRepetitionCard> SpacedRepetitionCards { get; }
     DbSet<StreakRecord> StreakRecords { get; }

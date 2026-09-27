@@ -5,7 +5,12 @@ import { nextTick } from 'vue'
 // Control the audio composable so we can drive loading/progress state and assert
 // what the control renders and forwards - without running real synthesis.
 vi.mock('~/composables/useSliceAudio', async () => {
-  const { ref } = await import('vue')
+  const { ref, computed } = await import('vue')
+  const engineMode = ref('cloud')
+  const selectedVoice = ref('')
+  const audioQuota = ref(null)
+  const isNearQuota = ref(false)
+  const isQuotaExhausted = ref(false)
   const state = {
     status: ref('idle'),
     playing: ref(false),
@@ -15,14 +20,36 @@ vi.mock('~/composables/useSliceAudio', async () => {
     synthIndex: ref(0),
     synthTotal: ref(0),
     errorMessage: ref(null),
+    device: ref(null),
     speed: ref(1),
+    engineMode,
+    selectedVoice,
+    audioQuota,
+    isNearQuota,
+    isQuotaExhausted,
+    setEngineMode: vi.fn((m) => { engineMode.value = m }),
+    setVoice: vi.fn((v) => { selectedVoice.value = v }),
+    fetchQuota: vi.fn(async () => null),
     loadAndPlay: vi.fn(),
     play: vi.fn(),
     pause: vi.fn(),
     setSpeed: vi.fn(),
     seek: vi.fn()
   }
-  return { useSliceAudio: () => state }
+  return {
+    useSliceAudio: () => state,
+    CLOUD_VOICES: {
+      vi: [
+        { id: 'vi-VN-Neural2-A', label: 'vi-VN-Neural2-A', gender: 'female', language: 'vi' },
+        { id: 'vi-VN-Neural2-D', label: 'vi-VN-Neural2-D', gender: 'male', language: 'vi' },
+      ],
+      en: [
+        { id: 'en-US-Neural2-F', label: 'en-US-Neural2-F', gender: 'female', language: 'en' },
+        { id: 'en-US-Neural2-D', label: 'en-US-Neural2-D', gender: 'male', language: 'en' },
+      ],
+    },
+    resolveCloudVoiceForLanguage: (lang?: string | null) => (lang === 'vi' ? 'vi-VN-Neural2-A' : 'en-US-Neural2-F'),
+  }
 })
 
 import ReaderAudioPlayer from '~/components/reader/ReaderAudioPlayer.vue'
@@ -37,7 +64,16 @@ const MESSAGES: Record<string, string> = {
   'reader.audio_preparing': 'Preparing audio…',
   'reader.audio_synthesizing': 'Generating audio… {current}/{total}',
   'reader.audio_speed': 'Speed',
-  'reader.audio_error': 'Could not generate audio.'
+  'reader.audio_error': 'Could not generate audio.',
+  'reader.audio_engine_cloud': 'Cloud',
+  'reader.audio_engine_device': 'Device',
+  'reader.audio_engine_cloud_hint': 'Google Cloud high-speed narration',
+  'reader.audio_engine_device_hint': 'On-device Web Worker synthesis',
+  'reader.audio_quota_exhausted_toast': 'Monthly cloud audio quota reached. Switched to on-device narration.',
+  'reader.audio_quota_near_limit_tooltip': 'Monthly cloud quota reached, using on-device narration',
+  'reader.audio_voice_select_placeholder': 'Select voice',
+  'reader.audio_voice_female': 'Female',
+  'reader.audio_voice_male': 'Male'
 }
 
 function interpolate(key: string, params?: Record<string, unknown>): string {
@@ -48,7 +84,16 @@ function interpolate(key: string, params?: Record<string, unknown>): string {
   return out
 }
 
-const iconStubs = { Loader2: true, Pause: true, Play: true, Volume2: true }
+const iconStubs = {
+  Loader2: true,
+  Pause: true,
+  Play: true,
+  Volume2: true,
+  Cloud: true,
+  Laptop: true,
+  Cpu: true,
+  AppSelect: true
+}
 
 function chunk(overrides: Partial<ChunkSummary> = {}): ChunkSummary {
   return {
@@ -124,5 +169,44 @@ describe('ReaderAudioPlayer.vue', () => {
     expect(audio.loadAndPlay).toHaveBeenCalledWith(
       expect.objectContaining({ chunkId: 'chunk-1', language: 'vi', isAiFormatted: true })
     )
+  })
+
+  it('renders engine switch and toggles between Cloud and Device mode', async () => {
+    audio.engineMode.value = 'cloud'
+    const wrapper = mountPlayer({ chunk: chunk() })
+    expect(wrapper.text()).toContain('Cloud')
+    expect(wrapper.text()).toContain('Device')
+
+    // Find device button and click
+    const buttons = wrapper.findAll('button')
+    const deviceBtn = buttons.find(b => b.text().includes('Device'))
+    expect(deviceBtn).toBeDefined()
+    await deviceBtn!.trigger('click')
+    expect(audio.setEngineMode).toHaveBeenCalledWith('device')
+  })
+
+  it('disables Cloud toggle with tooltip when quota is near limit', async () => {
+    audio.isNearQuota.value = true
+    const wrapper = mountPlayer({ chunk: chunk() })
+    const buttons = wrapper.findAll('button')
+    const cloudBtn = buttons.find(b => b.text().includes('Cloud'))
+    expect(cloudBtn).toBeDefined()
+    expect(cloudBtn!.attributes('disabled')).toBeDefined()
+    expect(cloudBtn!.attributes('title')).toBe('Monthly cloud quota reached, using on-device narration')
+  })
+
+  it('renders voice selector when Cloud mode is active', async () => {
+    audio.engineMode.value = 'cloud'
+    audio.isNearQuota.value = false
+    const wrapper = mountPlayer({ chunk: chunk({ language: 'vi' }) })
+    expect(wrapper.findComponent({ name: 'AppSelect' }).exists()).toBe(true)
+  })
+
+  it('does not render "AI" buzzword labels or Zap icons', () => {
+    const wrapper = mountPlayer({ chunk: chunk() })
+    const text = wrapper.text()
+    expect(text).not.toContain('AI')
+    expect(text).not.toContain('Google AI')
+    expect(wrapper.html()).not.toContain('lucide-zap')
   })
 })

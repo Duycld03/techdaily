@@ -24,6 +24,7 @@ public static class ResultHttpExtensions
         "CONFLICT" => StatusCodes.Status409Conflict,
         "AUTH_EMAIL_EXISTS" => StatusCodes.Status409Conflict,
         "AUTH_OTP_RESEND_COOLDOWN" => StatusCodes.Status429TooManyRequests,
+        "AudioQuotaExhausted" => StatusCodes.Status429TooManyRequests,
         _ => StatusCodes.Status400BadRequest,
     };
 

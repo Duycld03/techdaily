@@ -570,7 +570,16 @@
     "audio_device_gpu": "GPU",
     "audio_device_cpu": "CPU",
     "audio_device_gpu_hint": "Narration is running on the GPU",
-    "audio_device_cpu_hint": "Narration is running on the CPU"
+    "audio_device_cpu_hint": "Narration is running on the CPU",
+    "audio_engine_cloud": "Cloud",
+    "audio_engine_device": "Device",
+    "audio_engine_cloud_hint": "Google Cloud high-speed narration",
+    "audio_engine_device_hint": "On-device Web Worker synthesis",
+    "audio_quota_exhausted_toast": "Monthly cloud audio quota reached. Switched to on-device narration.",
+    "audio_quota_near_limit_tooltip": "Monthly cloud quota reached, using on-device narration",
+    "audio_voice_select_placeholder": "Select voice",
+    "audio_voice_female": "Female",
+    "audio_voice_male": "Male"
   },
   "notes": {
     "title": "Highlights & Notes",

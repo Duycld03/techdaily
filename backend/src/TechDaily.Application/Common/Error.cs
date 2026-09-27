@@ -27,5 +27,10 @@ public sealed record Error(string Code, string Message)
     public static readonly Error PdfRequired = new("LIBRARY_PDF_REQUIRED", "A valid PDF file is required.");
     public static readonly Error MultipartRequired = new("LIBRARY_MULTIPART_REQUIRED", "Multipart form data is required.");
 
+    // Audio Narration Domain
+    public static readonly Error GoogleTtsNotConfigured = new("GOOGLE_TTS_NOT_CONFIGURED", "Google Cloud TTS API key is not configured.");
+    public static readonly Error GoogleTtsFailed = new("GOOGLE_TTS_FAILED", "Google Cloud TTS synthesis failed.");
+    public static readonly Error AudioQuotaExhausted = new("AudioQuotaExhausted", "Monthly Google Cloud audio narration quota has been reached.");
+
     public static Error Custom(string code, string message) => new(code, message);
 }
