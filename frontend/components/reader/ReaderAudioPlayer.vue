@@ -149,7 +149,9 @@ function onToggle(): void {
     pause()
     return
   }
-  if (loadedId.value === source.value.chunkId) {
+  const isSynthesisIncomplete = engineMode.value === 'device'
+    && (synthTotal.value === 0 || (synthIndex.value > 0 && synthIndex.value < synthTotal.value))
+  if (loadedId.value === source.value.chunkId && !isSynthesisIncomplete && status.value === 'ready') {
     void play()
     return
   }
@@ -165,13 +167,9 @@ function onToggleEngine(mode: AudioEngine, autoPlay = playing.value): void {
   if (loadedId.value) {
     pause()
     loadedId.value = null
-    if (autoPlay && source.value) {
+    if (source.value) {
       loadedId.value = source.value.chunkId
-      void loadAndPlay(source.value)
-    } else {
-      currentTime.value = 0
-      duration.value = 0
-      status.value = 'idle'
+      void loadAndPlay(source.value, autoPlay)
     }
   }
 }

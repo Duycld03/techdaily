@@ -898,4 +898,73 @@ describe('useSliceAudio', () => {
     // Offset should be preserved on the audio element
     expect(audio.currentTime).toBe(12.5)
   })
+
+  it('handles stream underrun by entering buffering status and resumes playback when next chunk arrives', async () => {
+    const audio = createFakeAudio()
+    const { cache } = memoryCache()
+
+    const { promise, resolve: resolveSynthesis } = Promise.withResolvers<void>()
+    let emitChunk3: () => void = () => {}
+    const engine: TtsEngine = {
+      synthesize: vi.fn(async (_model: string, _sentences: string[], handlers: SynthHandlers) => {
+        // Emit chunks 0 and 1 (pre-roll)
+        handlers.onChunk(new Float32Array([0.1, 0.1]), 16000)
+        handlers.onChunk(new Float32Array([0.2, 0.2]), 16000)
+        // Store callback to emit chunk 2 later
+        emitChunk3 = () => {
+          handlers.onChunk(new Float32Array([0.3, 0.3]), 16000)
+          resolveSynthesis()
+        }
+        await promise
+      }),
+      cancel: vi.fn(),
+      dispose: vi.fn(),
+    }
+
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine,
+      cache,
+      createAudio: () => audio,
+    })
+
+    const markdown = 'Sentence one. Sentence two. Sentence three.'
+    const loadPromise = player.loadAndPlay(source({ markdown }))
+    await vi.waitFor(() => {
+      expect(player.status.value).toBe('ready')
+    })
+    expect(audio.play).toHaveBeenCalledTimes(1)
+    // Simulate pre-roll audio ending before chunk 3 has arrived (stream underrun)
+    audio._fire('ended')
+    expect(player.status.value).toBe('loading') // buffering state
+    expect(player.playing.value).toBe(true) // still in playing state
+
+    // Now chunk 3 arrives from the worker
+    emitChunk3()
+    await nextTick()
+
+    // Player should automatically resume playing chunk 3
+    expect(player.status.value).toBe('ready')
+    expect(audio.play).toHaveBeenCalledTimes(2)
+
+    await loadPromise
+  })
+
+  it('prepares audio source and metadata without playing when autoPlay is false', async () => {
+    const audio = createFakeAudio()
+    const engine = streamingEngine()
+    const { cache } = memoryCache()
+
+    const player = useSliceAudio({
+      defaultEngine: 'device',
+      engine,
+      cache,
+      createAudio: () => audio,
+    })
+
+    await player.loadAndPlay(source(), false)
+
+    expect(player.status.value).toBe('ready')
+    expect(audio.play).not.toHaveBeenCalled()
+  })
 })

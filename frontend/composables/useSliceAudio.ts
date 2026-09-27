@@ -419,7 +419,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     return null
   }
 
-  async function loadAndPlay(source: NarrationSource): Promise<void> {
+  async function loadAndPlay(source: NarrationSource, autoPlay = true): Promise<void> {
     errorMessage.value = null
     errorInfo.value = null
     device.value = null
@@ -446,7 +446,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       if (cached) {
         setSource(cached)
         status.value = 'ready'
-        await play()
+        if (autoPlay) {
+          await play()
+        }
         return
       }
 
@@ -493,7 +495,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
         await cache.set(key, blob)
         setSource(blob)
         status.value = 'ready'
-        await play()
+        if (autoPlay) {
+          await play()
+        }
       } catch (err) {
         status.value = 'error'
         const info = categorizeAudioError(err, 'cloud')
@@ -501,7 +505,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
         errorInfo.value = info
       }
     } else {
-      await synthesizeOnDevice(source, script, contentHash, cache)
+      await synthesizeOnDevice(source, script, contentHash, cache, autoPlay)
     }
   }
 
@@ -510,6 +514,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     script: string,
     contentHash: string,
     cache: SliceAudioCache,
+    autoPlay = true,
   ): Promise<void> {
     const engine = getEngine()
     if (!engine) return
@@ -523,7 +528,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     if (cached) {
       setSource(cached)
       status.value = 'ready'
-      await play()
+      if (autoPlay) {
+        await play()
+      }
       return
     }
 
@@ -556,6 +563,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     let currentPlayingIndex = 0
     let isPlayingPreRoll = false
     let isStreaming = true
+    let isWaitingForNextChunk = false
 
     const playPreRoll = (count = target) => {
       if (activeKey !== key || buffers.length < count) return
@@ -564,7 +572,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       const preRollWav = encodeWav(concatFloat32(buffers.slice(0, count)), sampleRate)
       setSource(preRollWav)
       status.value = 'ready'
-      void play()
+      if (autoPlay) {
+        void play()
+      }
     }
 
     const playChunk = (index: number) => {
@@ -574,10 +584,12 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       const chunkWav = encodeWav(buffers[index], sampleRate)
       setSource(chunkWav)
       status.value = 'ready'
-      void play()
+      if (autoPlay || isWaitingForNextChunk || playing.value) {
+        void play()
+      }
     }
 
-    if (buffers.length >= target) {
+    if (buffers.length >= target && !isPlayingPreRoll) {
       playPreRoll(buffers.length)
     }
 
@@ -587,9 +599,11 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
         return
       }
       if (currentPlayingIndex + 1 < buffers.length) {
+        isWaitingForNextChunk = false
         playChunk(currentPlayingIndex + 1)
       } else {
-        playing.value = false
+        isWaitingForNextChunk = true
+        status.value = 'loading'
       }
     }
 
@@ -617,8 +631,9 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
             if (buffers.length === target && activeKey === key && !isPlayingPreRoll) {
               playPreRoll()
-            } else if (isStreaming && !playing.value && buffers.length > target && currentPlayingIndex === buffers.length - 2) {
-              playChunk(buffers.length - 1)
+            } else if (isStreaming && (isWaitingForNextChunk || !playing.value) && currentPlayingIndex + 1 < buffers.length) {
+              isWaitingForNextChunk = false
+              playChunk(currentPlayingIndex + 1)
             }
           },
           onDevice: (d) => {

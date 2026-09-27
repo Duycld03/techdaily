@@ -58,6 +58,9 @@ When on-device synthesis is initiated on a slice with existing partial progress 
 3. The Web Worker SHALL be dispatched to synthesize only sentences $K \dots N-1$.
 4. As subsequent sentences $K, K+1, \dots$ finish synthesis, they SHALL be chained seamlessly for uninterrupted playback.
 
+While background synthesis is active (`isStreaming === true`), if audio playback reaches the end of the currently buffered chunks before the next chunk has finished synthesis, the player SHALL NOT terminate playback, SHALL NOT set `playing = false`, and SHALL NOT freeze the time display. The player SHALL transition to a buffering state (`status = 'loading'`) and automatically transition to playing the next sentence chunk as soon as it arrives from the Web Worker.
+
+When a user clicks "Listen" on a slice whose on-device synthesis has not completed (`synthIndex < synthTotal` or when only partial pre-roll audio is loaded), the reader SHALL resume worker synthesis for all remaining ungenerated sentences ($K \dots N-1$) rather than merely looping the partial pre-roll buffer. Pausing playback SHALL NOT discard background synthesis progress (`synthIndex`, `synthTotal`), enabling the worker to continue or cleanly resume generation.
 The reader SHALL persist the complete slice audio in the browser's on-device storage (IndexedDB), keyed by `(chunkId, voice, contentHash)`, where `voice` is the language's on-device voice and `contentHash` is derived from the normalized narration script. A subsequent request to narrate the same `(chunkId, voice, contentHash)` — including in a later session — SHALL load the cached audio and SHALL NOT re-synthesize. When a slice's formatted content changes so its `contentHash` differs, the stale cache entry SHALL NOT be used and the audio SHALL be re-synthesized once. The audio cache SHALL enforce a bounded size (an entry or total-size cap) and evict least-recently-used entries; an evicted slice re-synthesizes on next play.
 #### Scenario: Resuming interrupted on-device synthesis from partial cache
 - **WHEN** on-device synthesis was previously interrupted after synthesizing 5 of 15 sentences, and the user re-initiates on-device narration for the identical slice
@@ -111,6 +114,14 @@ The reader SHALL persist the complete slice audio in the browser's on-device sto
 #### Scenario: Resuming on-device synthesis from 5/15 partial cache on page refresh
 - **WHEN** a user refreshes the page on a 15-sentence slice where 5 sentences were previously synthesized and cached in IndexedDB, and initiates on-device narration
 - **THEN** all 5 sentences are assembled into the initial playable audio, synthesis progress indicates 5/15, playback of the 5 sentences is immediately available, and the Web Worker synthesizes only sentences 5 through 14.
+
+#### Scenario: Audio catches up to worker without freezing
+- **WHEN** audio playback reaches the end of the initial buffered sentences while the next sentence is still being synthesized by the Web Worker
+- **THEN** playback enters a buffering state instead of stopping, and as soon as the next sentence chunk arrives, playback automatically continues.
+
+#### Scenario: Replaying an incomplete slice resumes synthesis
+- **WHEN** on-device playback is sitting paused at the end of an incomplete pre-roll and the user clicks "Listen"
+- **THEN** the reader initiates synthesis of the remaining sentences while playing, updating the progress indicator until all sentences are complete.
 
 ### Requirement: Reader Audio Playback Controls
 
@@ -338,7 +349,8 @@ All audio controls, buttons, tooltips, and status indicators SHALL use clean, pr
 The reader audio engine selection controls SHALL respect the user's current playback state during engine transitions:
 1. **No Autoplay When Paused**: If audio playback is currently paused or inactive (`playing === false`), switching between Google Cloud and On-Device engine modes SHALL update the selected engine mode and reset loaded slice state to idle, but SHALL NOT start audio synthesis or playback. The player SHALL remain paused until the user explicitly clicks the "Listen" / "Play" button.
 2. **Continuous Playback When Active**: If audio playback is currently active (`playing === true`), switching between engine modes SHALL pause the previous engine and immediately begin synthesis and playback with the newly selected engine.
-3. **Explicit Fallback Recovery Exception**: Activating the 1-tap `[☁ Switch to Google Cloud]` fallback button from an error state SHALL always switch to Cloud mode and initiate playback immediately.
+3. **Engine Toggle Audio Preparation**: Switching between Google Cloud and On-Device engine modes while playback is inactive SHALL update the selected engine mode and prepare the newly active engine's audio without starting audible autoplay, leaving the player ready to play when "Listen" is clicked.
+4. **Explicit Fallback Recovery Exception**: Activating the 1-tap `[☁ Switch to Google Cloud]` fallback button from an error state SHALL always switch to Cloud mode and initiate playback immediately.
 #### Scenario: Zero layout shift when toggling between Cloud and Device engines
 - **WHEN** the user switches between On-Device and Google Cloud engine modes in the reader audio player
 - **THEN** the total outer container height of the player bar remains constant (50px) without any vertical jump, expansion, or cumulative layout shift.
@@ -378,6 +390,10 @@ The reader audio engine selection controls SHALL respect the user's current play
 - **WHEN** audio is actively playing on an on-device narration slice and the user clicks the "Cloud" engine button
 - **THEN** on-device playback stops, the engine mode switches to Cloud, and Cloud narration begins playing automatically.
 
+
+#### Scenario: Switching to Cloud while inactive loads Cloud audio state
+- **WHEN** playback is inactive on an on-device slice and the user clicks the "Cloud" engine button
+- **THEN** the active engine mode switches to Cloud and loads the slice's Cloud audio information without starting audible autoplay, leaving the player ready to play when "Listen" is clicked.
 ### Requirement: Mobile Device Resource Safeguards & Single-Threaded WASM
 
 On mobile browser environments (including iOS Safari, WebKit webviews, and Android mobile browsers), the reader's on-device text-to-speech engine SHALL adapt its execution parameters to respect mobile memory ceilings and process threading restrictions:

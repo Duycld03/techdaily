@@ -259,7 +259,7 @@ describe('ReaderAudioPlayer.vue', () => {
     expect(audio.setEngineMode).toHaveBeenCalledWith('device')
   })
 
-  it('does not autoplay or invoke loadAndPlay when toggling engine while paused', async () => {
+  it('prepares audio with autoPlay=false when toggling engine while paused', async () => {
     audio.engineMode.value = 'cloud'
     audio.playing.value = false
     const wrapper = mountPlayer({ chunk: chunk() })
@@ -273,9 +273,30 @@ describe('ReaderAudioPlayer.vue', () => {
     await deviceBtn!.trigger('click')
 
     expect(audio.setEngineMode).toHaveBeenCalledWith('device')
-    expect(audio.loadAndPlay).not.toHaveBeenCalled()
-    expect(audio.currentTime.value).toBe(0)
-    expect(audio.duration.value).toBe(0)
+    expect(audio.loadAndPlay).toHaveBeenCalledWith(
+      expect.objectContaining({ chunkId: 'chunk-1' }),
+      false
+    )
+  })
+
+  it('invokes loadAndPlay to resume synthesis when clicking Listen on an incomplete slice', async () => {
+    audio.engineMode.value = 'device'
+    audio.playing.value = false
+    audio.synthIndex.value = 5
+    audio.synthTotal.value = 15
+    const wrapper = mountPlayer({ chunk: chunk() })
+
+    // First click to load
+    await wrapper.find('button').trigger('click')
+    audio.loadAndPlay.mockClear()
+
+    // Audio is paused/ended mid-slice with incomplete synthesis
+    audio.status.value = 'ready'
+    await wrapper.find('button').trigger('click')
+
+    expect(audio.loadAndPlay).toHaveBeenCalledWith(
+      expect.objectContaining({ chunkId: 'chunk-1' })
+    )
   })
 
   it('automatically continues playback when toggling engine while actively playing', async () => {
