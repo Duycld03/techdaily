@@ -158,6 +158,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerIncomingMessage>) => {
   if (!msg) return
 
   if (msg.type === 'cancel') {
+    ++currentJobId
     const targetId = msg.reqId ?? activeReqId
     if (targetId != null) {
       cancelledReqIds.add(targetId)

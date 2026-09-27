@@ -180,6 +180,21 @@ describe('useSliceAudio', () => {
     expect(store.has(await expectedKey(second))).toBe(true)
   })
 
+  it('unconditionally cancels any in-flight worker synthesis when loadAndPlay is called', async () => {
+    const engine = streamingEngine()
+    const { cache } = memoryCache()
+    const player = useSliceAudio({ engine, cache, createAudio: createFakeAudio })
+
+    const chunkA = source({ markdown: 'Sentence A. Sentence B.' })
+    await player.loadAndPlay(chunkA)
+    expect(engine.cancel).toHaveBeenCalled()
+
+    engine.cancel.mockClear()
+    const chunkB = source({ markdown: 'Sentence C. Sentence D.' })
+    await player.loadAndPlay(chunkB)
+    expect(engine.cancel).toHaveBeenCalled()
+  })
+
   it('tracks per-sentence synth progress and stores the raw download percentage', async () => {
     const engine = streamingEngine()
     const { cache } = memoryCache()
