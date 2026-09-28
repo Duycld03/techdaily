@@ -254,4 +254,55 @@ describe('HomeBentoDashboard.vue', () => {
 
     expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/today')
   })
+  it('renders failed drill with needs review status badge when score is 0', () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = {
+      documentChunk: { id: 'chunk-1', chapterTitle: 'Concurrency & Channels', summaryMarkdown: 'Channels summary' },
+      drill: { status: 'Submitted', isCorrect: false, score: 0 }
+    } as any
+
+    const wrapper = mount(HomeBentoDashboard, {
+      global: {
+        stubs: {
+          ConcentricMetricCard: true,
+          DomainConstellationCard: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    expect(wrapper.text()).toContain('dashboard.status_needs_review: 0/10')
+    expect(wrapper.text()).not.toContain('dashboard.status_completed')
+  })
+
+  it('renders Card A and Card B as distinct cards in action-stage without drill badges in Card A', () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = {
+      documentChunk: { id: 'chunk-1', chapterTitle: 'Kafka Partitions', summaryMarkdown: 'Kafka summary' },
+      pacer: { bookId: 'b-1', bookTitle: 'Kafka Internals', currentChunkOrder: 2, totalChunks: 10 },
+      scenario: { title: 'Consumer Rebalance Storm', situation: 'High consumer lag scenario' },
+      drill: { status: 'Submitted', isCorrect: true, score: 10 }
+    } as any
+
+    const wrapper = mount(HomeBentoDashboard, {
+      global: {
+        stubs: {
+          ConcentricMetricCard: true,
+          DomainConstellationCard: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    // Both action buttons exist
+    const continueBtn = wrapper.findAll('button').find(b => b.text().includes('dashboard.continue_reading'))
+    const practiceBtn = wrapper.findAll('button').find(b => b.text().includes('dashboard.review_today_practice'))
+    expect(continueBtn).toBeDefined()
+    expect(practiceBtn).toBeDefined()
+
+    // Scenario title in Card B
+    expect(wrapper.text()).toContain('Consumer Rebalance Storm')
+    // Drill status in Card B
+    expect(wrapper.text()).toContain('dashboard.status_completed: 10/10')
+  })
 })

@@ -65,6 +65,7 @@
     "continue_reading": "Đọc Tiếp",
     "today_practice_badge": "Luyện Tập Hôm Nay",
     "status_completed": "Đã Hoàn Thành",
+    "status_needs_review": "Chưa Đạt",
     "status_ready": "Sẵn Sàng",
     "itinerary_reading": "1 Bài đọc cốt lõi",
     "itinerary_scenario": "1 Thử thách tình huống",
@@ -93,7 +94,13 @@
     "connected_nodes": "Khái Niệm Liên Kết",
     "active_relations": "Mối Quan Hệ",
     "view_bento": "Tổng Quan",
-    "view_split": "Chế Độ Đọc & Làm"
+    "view_split": "Chế Độ Đọc & Làm",
+    "stat_flashcards": "Thẻ ghi nhớ SM-2",
+    "stat_highlights": "Ghi chú & Trích đoạn",
+    "stat_learned_chunks": "Lát cắt đã học",
+    "stat_books": "Tài liệu đang học",
+    "knowledge_breakdown_title": "Phân Bố Tri Thức",
+    "scenario_challenge_badge": "Thử Thách Tình Huống"
   },
   "today": {
     "title": "Luyện Tập Hằng Ngày",

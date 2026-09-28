@@ -1,9 +1,15 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { setActivePinia, createPinia } from 'pinia'
 import DomainConstellationCard from '~/components/dashboard/DomainConstellationCard.vue'
+import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
 
 describe('DomainConstellationCard.vue', () => {
-  it('renders default node and edge counts', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('renders default fallback node and edge counts', () => {
     const wrapper = mount(DomainConstellationCard, {
       global: {
         stubs: {
@@ -22,11 +28,14 @@ describe('DomainConstellationCard.vue', () => {
     expect(wrapper.text()).toContain('210')
   })
 
-  it('renders custom node and edge counts correctly', () => {
+  it('renders custom node and edge counts correctly via props', () => {
     const wrapper = mount(DomainConstellationCard, {
       props: {
         nodeCount: 320,
-        edgeCount: 540
+        edgeCount: 540,
+        cardCount: 42,
+        highlightCount: 18,
+        chunkCount: 9
       },
       global: {
         stubs: {
@@ -43,6 +52,9 @@ describe('DomainConstellationCard.vue', () => {
 
     expect(wrapper.text()).toContain('320')
     expect(wrapper.text()).toContain('540')
+    expect(wrapper.text()).toContain('42')
+    expect(wrapper.text()).toContain('18')
+    expect(wrapper.text()).toContain('9')
   })
 
   it('contains navigation link to /graph', () => {
@@ -65,7 +77,24 @@ describe('DomainConstellationCard.vue', () => {
     expect(link.attributes('href')).toBe('/graph')
   })
 
-  it('renders constellation SVG nodes and edges', () => {
+  it('renders knowledge graph metrics from store when props are omitted', () => {
+    const store = useKnowledgeGraphStore()
+    store.rawData = {
+      nodes: [],
+      edges: [],
+      stats: {
+        totalNodes: 85,
+        totalEdges: 120,
+        nodeTypeCounts: {
+          card: 35,
+          highlight: 12,
+          chunk: 7
+        },
+        pillarCounts: {},
+        masteredCardsCount: 20
+      }
+    }
+
     const wrapper = mount(DomainConstellationCard, {
       global: {
         stubs: {
@@ -77,15 +106,14 @@ describe('DomainConstellationCard.vue', () => {
       }
     })
 
-    const svg = wrapper.find('svg')
-    expect(svg.exists()).toBe(true)
-    const lines = wrapper.findAll('line')
-    expect(lines.length).toBeGreaterThan(0)
-    expect(wrapper.text()).toContain('Distributed')
-    expect(wrapper.text()).toContain('Database')
+    expect(wrapper.text()).toContain('85')
+    expect(wrapper.text()).toContain('120')
+    expect(wrapper.text()).toContain('35')
+    expect(wrapper.text()).toContain('12')
+    expect(wrapper.text()).toContain('7')
   })
 
-  it('renders clean static constellation nodes without any animated pulse or ping halos', () => {
+  it('does NOT render static SVG constellation vertices or lines', () => {
     const wrapper = mount(DomainConstellationCard, {
       global: {
         stubs: {
@@ -97,9 +125,11 @@ describe('DomainConstellationCard.vue', () => {
       }
     })
 
-    expect(wrapper.find('circle.animate-pulse').exists()).toBe(false)
-    expect(wrapper.find('circle.animate-ping').exists()).toBe(false)
+    // Assert that the old static SVG constellation canvas is eliminated
+    expect(wrapper.find('svg.overflow-visible').exists()).toBe(false)
+    expect(wrapper.findAll('line').length).toBe(0)
   })
+
   it('header link has stable positioning without hover translation jitter', () => {
     const wrapper = mount(DomainConstellationCard, {
       global: {

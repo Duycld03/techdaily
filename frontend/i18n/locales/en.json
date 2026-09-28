@@ -65,6 +65,7 @@
     "continue_reading": "Continue Reading",
     "today_practice_badge": "Today's Practice",
     "status_completed": "Completed",
+    "status_needs_review": "Needs Review",
     "status_ready": "Ready",
     "itinerary_reading": "1 Core Reading",
     "itinerary_scenario": "1 Architecture Drill",
@@ -93,7 +94,13 @@
     "connected_nodes": "Connected Concepts",
     "active_relations": "Associative Relations",
     "view_bento": "Dashboard",
-    "view_split": "Focus Studio"
+    "view_split": "Focus Studio",
+    "stat_flashcards": "SM-2 Flashcards",
+    "stat_highlights": "Notes & Highlights",
+    "stat_learned_chunks": "Learned Slices",
+    "stat_books": "Studied Documents",
+    "knowledge_breakdown_title": "Knowledge Breakdown",
+    "scenario_challenge_badge": "Scenario Challenge"
   },
   "today": {
     "title": "Daily Practice",
