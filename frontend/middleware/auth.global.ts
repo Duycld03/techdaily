@@ -21,15 +21,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // Default-Deny: all routes require authentication unless explicitly exempted
   const isAuthRequired = !isGuestAuthPath && !isDevExempt
 
-  // On SSR (server-side rendering), if no token is present, redirect to login
-  if (import.meta.server && isAuthRequired) {
-    if (authStore.token) {
-      return
-    }
-    return navigateTo({
-      path: '/login',
-      query: { redirect: to.fullPath }
-    })
+  // On SSR (server-side rendering), defer auth validation to client-side hydration.
+  // In SSR mode, localStorage credentials and browser locks cannot be accessed,
+  // so an immediate server abort causes false-positive logouts before client silent-refresh runs.
+  if ((import.meta.server || (process as any)?.server) && isAuthRequired) {
+    return
   }
 
   // Client-side: if auth is required and user is not currently logged in,

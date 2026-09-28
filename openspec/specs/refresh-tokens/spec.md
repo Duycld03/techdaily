@@ -47,8 +47,8 @@ If the update affects zero rows, the system SHALL inspect the token state:
 - Token has `RevokedAt != null` → return `HTTP 401`
 - Token has `ExpiresAt <= @now` → return `HTTP 401` with `AUTH_REFRESH_TOKEN_EXPIRED`
 - Token has `UsedAt != null`:
-  - **Within Grace Window (`@now - UsedAt <= 10 seconds`)**: The system SHALL treat this as a legitimate concurrent request (e.g. from racing browser tabs or network retries). The system SHALL NOT revoke the family; it SHALL issue and return a valid access token corresponding to the successor token (`ReplacedByTokenId`).
-  - **Outside Grace Window (`@now - UsedAt > 10 seconds`)**: The system SHALL treat this as token reuse/theft. It SHALL revoke all tokens in the family (including any successor tokens) by setting `RevokedAt` on all unrevoked family members and return `HTTP 401` with `AUTH_TOKEN_REUSE_DETECTED`.
+  - **Within Grace Window (`@now - UsedAt <= 60 seconds`)**: The system SHALL treat this as a legitimate concurrent request (e.g. from racing browser tabs, rapid HMR page reloads, or parallel API calls during dashboard load). The system SHALL NOT revoke the family; it SHALL issue and return a valid access token corresponding to the successor token (`ReplacedByTokenId`).
+  - **Outside Grace Window (`@now - UsedAt > 60 seconds`)**: The system SHALL treat this as token reuse/theft. It SHALL revoke all tokens in the family (including any successor tokens) by setting `RevokedAt` on all unrevoked family members and return `HTTP 401` with `AUTH_TOKEN_REUSE_DETECTED`.
 
 #### Scenario: Valid refresh token rotation
 - **WHEN** client sends `POST /api/v1/auth/refresh` with a valid, unused, unexpired refresh token cookie
@@ -60,11 +60,11 @@ If the update affects zero rows, the system SHALL inspect the token state:
 - **AND** when the family was issued as persistent, the re-issued cookie again carries `Max-Age=2592000`
 
 #### Scenario: Concurrent rotation of the same token within grace window
-- **WHEN** two requests simultaneously present the same refresh token to `POST /api/v1/auth/refresh` within 10 seconds of initial rotation
+- **WHEN** two requests simultaneously present the same refresh token to `POST /api/v1/auth/refresh` within 60 seconds of initial rotation
 - **THEN** the first request rotates the token and receives the successor token; the second request receives a valid access token without triggering family revocation
 
 #### Scenario: Reuse of a rotated refresh token outside grace window
-- **WHEN** client sends `POST /api/v1/auth/refresh` with a refresh token that was consumed more than 10 seconds ago (`UsedAt != null`)
+- **WHEN** client sends `POST /api/v1/auth/refresh` with a refresh token that was consumed more than 60 seconds ago (`UsedAt != null`)
 - **THEN** the system revokes all unrevoked tokens in that family (including any successor tokens) and returns `HTTP 401` with `{ "code": "AUTH_TOKEN_REUSE_DETECTED" }`
 
 #### Scenario: Expired refresh token
@@ -90,7 +90,11 @@ The system SHALL expose `POST /api/v1/auth/revoke` that reads the refresh token 
 ### Requirement: Frontend transparent token refresh with cross-tab coordination
 The HTTP client composable and frontend route middleware SHALL detect access token expiry and coordinate `POST /api/v1/auth/refresh` transparently across browser tabs and client-side navigations.
 
-When a protected page is accessed and the in-memory access token is expired or missing, the route middleware SHALL NOT synchronously purge user credentials. Instead, it SHALL asynchronously invoke token refresh via the auth store. Only if the refresh attempt yields a terminal failure (such as `401 Unauthorized`, expired refresh token, or network rejection) SHALL the client purge local session state, show an expiration notification, and redirect to `/login`.
+1. **Proactive Refresh Lead Time**: The HTTP client SHALL proactively initiate background token refresh when the access token has less than **5 minutes (300 seconds)** remaining before expiration (`exp * 1000 - Date.now() <= 300_000 ms`), ensuring seamless rotation before requests encounter hard expiration.
+2. **SSR Route Guard Resilience**: The Nuxt route middleware (`auth.global.ts`) SHALL NOT execute an immediate server-side hard redirect to `/login` if client-side session credentials or refresh token cookies may be present. SSR SHALL yield to client hydration to allow `tryRefreshToken()` to verify or restore the session before rejecting navigation.
+3. **Transient Network Error Resilience**: Transient network failures, server restarts, or `502`/`503` gateway responses encountered by the HTTP client SHALL NOT clear the user's session credentials (`clearSession`) or trigger an unprompted logout; only an authentic terminal `401 Unauthorized` with failed refresh rotation SHALL invalidate the session.
+
+When a protected page is accessed and the in-memory access token is expired or missing, the route middleware SHALL NOT synchronously purge user credentials. Instead, it SHALL asynchronously invoke token refresh via the auth store. Only if the refresh attempt yields a terminal failure (such as `401 Unauthorized`, expired refresh token, or invalid token) SHALL the client purge local session state, show an expiration notification, and redirect to `/login`.
 
 The Web Locks API (`navigator.locks`) SHALL guard token refresh attempts so that concurrent API calls or simultaneous route navigations share a single refresh network transaction.
 
@@ -113,6 +117,13 @@ The Web Locks API (`navigator.locks`) SHALL guard token refresh attempts so that
 #### Scenario: Refresh token also expired or invalid during navigation
 - **WHEN** both the access token and refresh token are expired or refresh fails with `401 Unauthorized`
 - **THEN** the client clears session state, shows the session-expired notification, and redirects to `/login` with the attempted route preserved in query parameter `redirect`
+#### Scenario: Client proactively refreshes token 5 minutes before expiration
+- **WHEN** an authenticated user issues an API request and the access token has less than 5 minutes remaining before expiration
+- **THEN** the client proactively initiates background token refresh and updates stored tokens without interrupting the user's workflow.
+
+#### Scenario: Transient backend restart during development does not log out user
+- **WHEN** the backend API restarts (e.g. during code watch or compilation) and returns a connection error or 502/503
+- **THEN** the frontend client preserves existing session tokens and does NOT purge credentials or redirect to `/login`.
 ### Requirement: Credential logging prohibition
 Application logs SHALL NOT contain raw values of access tokens, refresh tokens, JWT strings, Authorization header values, OAuth client secrets, database connection strings containing passwords, or VAPID private keys. Logs MAY contain user IDs, token family IDs, request IDs, failure reason codes (without embedded credentials), and token expiry timestamps.
 

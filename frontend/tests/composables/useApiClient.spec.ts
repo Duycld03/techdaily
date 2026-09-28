@@ -111,4 +111,34 @@ describe('useApiClient 401 Interceptor', () => {
       })
     )
   })
+  it('does not purge session credentials when token refresh encounters a network drop or 502/503 during server restart', async () => {
+    _resetRedirectingToLogin()
+    const auth = useAuthStore()
+    auth.token = 'active-jwt-token'
+    auth.user = { id: 'u-1', email: 'test@example.com', name: 'Test', preferredLocale: 'en' }
+    localStorage.setItem('techdaily_token', 'active-jwt-token')
+
+    // Initial request returns 401, but the subsequent refresh call throws a network error (server restarting)
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/api/v1/auth/refresh')) {
+        return Promise.reject(new TypeError('Failed to fetch'))
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Token expired', code: 'UNAUTHORIZED' })
+      })
+    })
+
+    const api = useApiClient()
+
+    await expect(api.get('/api/v1/daily/today')).rejects.toThrow()
+    // Session credentials must NOT be purged on network error
+    expect(auth.token).toBe('active-jwt-token')
+    expect(auth.user?.email).toBe('test@example.com')
+    expect(localStorage.getItem('techdaily_token')).toBe('active-jwt-token')
+
+    // Must NOT navigate to /login
+    expect((globalThis as unknown as GlobalWithNavigateTo).navigateTo).not.toHaveBeenCalled()
+  })
 })

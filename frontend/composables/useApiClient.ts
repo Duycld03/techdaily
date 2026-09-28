@@ -102,18 +102,26 @@ export function useApiClient() {
 
   async function executeRefresh(): Promise<string | null> {
     const refreshUrl = `${baseUrl}/api/v1/auth/refresh`
-    const res = await fetch(refreshUrl, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-
-    if (!res.ok) {
-      throw new Error(`Token refresh failed with status ${res.status}`)
+    let res: Response
+    try {
+      res = await fetch(refreshUrl, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+    } catch (networkErr: any) {
+      const error: any = new Error('Token refresh network error: ' + (networkErr?.message || 'Failed to fetch'))
+      error.isNetworkError = true
+      throw error
     }
 
+    if (!res.ok) {
+      const error: any = new Error(`Token refresh failed with status ${res.status}`)
+      error.status = res.status
+      throw error
+    }
     const rawData: unknown = await res.json()
     let newToken: string | null = null
     let returnedUser: any = null
@@ -146,13 +154,13 @@ export function useApiClient() {
   }
 
   async function refreshAuthToken(): Promise<string | null> {
-    if (typeof navigator !== 'undefined' && 'locks' in navigator) {
+    if (typeof navigator !== 'undefined' && (navigator as any).locks && typeof (navigator as any).locks.request === 'function') {
       const nav = navigator as unknown as NavigatorWithLocks
       return await nav.locks.request('techdaily_auth_refresh', async () => {
         const token = getAuthToken()
         if (token) {
           const exp = parseJwtExp(token)
-          if (exp && exp * 1000 - Date.now() > 30 * 1000) {
+          if (exp && exp * 1000 - Date.now() > 5 * 60 * 1000) {
             return token
           }
         }
@@ -180,7 +188,7 @@ export function useApiClient() {
       const currentToken = getAuthToken()
       if (currentToken) {
         const exp = parseJwtExp(currentToken)
-        if (exp && exp * 1000 - Date.now() <= 30 * 1000) {
+        if (exp && exp * 1000 - Date.now() <= 5 * 60 * 1000) {
           try {
             await refreshAuthToken()
           } catch {
@@ -218,12 +226,12 @@ export function useApiClient() {
         !endpoint.includes('/api/v1/auth/google')
       ) {
         let refreshedToken: string | null = null
+        let refreshError: any = null
         try {
           refreshedToken = await refreshAuthToken()
-        } catch {
-          // Token refresh failed
+        } catch (err: any) {
+          refreshError = err
         }
-
         if (refreshedToken) {
           const retryHeaders: Record<string, string> = {
             ...(options.headers as Record<string, string> || {}),
@@ -250,6 +258,11 @@ export function useApiClient() {
             }
             return JSON.parse(text)
           }
+        }
+        // If the refresh failure was due to transient network failure or server 502/503 (e.g. backend restarting),
+        // do NOT purge session credentials or redirect to login.
+        if (refreshError?.isNetworkError || (typeof refreshError?.status === 'number' && refreshError.status >= 500)) {
+          throw new ApiError('Authentication service temporarily unavailable', 503, 'SERVICE_UNAVAILABLE')
         }
 
         try {

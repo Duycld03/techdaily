@@ -249,7 +249,11 @@ export const useAuthStore = defineStore('auth', () => {
       }
       clearSession()
       return false
-    } catch {
+    } catch (err: any) {
+      // If it's a network drop / 502 / server restart, do NOT wipe local credentials!
+      if (err?.isNetworkError || (typeof err?.status === 'number' && err.status >= 500)) {
+        return false
+      }
       clearSession()
       return false
     }

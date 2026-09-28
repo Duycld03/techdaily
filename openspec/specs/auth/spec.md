@@ -588,3 +588,18 @@ The refresh token's server-side absolute expiry SHALL remain 30 days in both mod
 #### Scenario: Google OAuth login is persistent regardless of the checkbox
 - **WHEN** a user authenticates via the Google button on `/login`
 - **THEN** the server issues a persistent refresh token cookie and the client persists the session for 30 days.
+
+---
+
+### Requirement: Standard Access Token Expiration & Clock Skew Tolerance
+The system SHALL issue short-lived JWT access tokens with a lifespan of 60 minutes (`Jwt:ExpiryMinutes = 60`), bounding the window of credential exposure. The backend JWT validation middleware SHALL enforce `ClockSkew = TimeSpan.FromMinutes(1)` to absorb minor client-server clock drift and eliminate boundary-second authentication rejections during token rotation.
+
+#### Scenario: User receives standard short-lived access token on login
+- **WHEN** user authenticates via `POST /api/v1/auth/login`
+- **THEN** the issued JWT access token has an expiration claim (`exp`) set to 60 minutes into the future
+- **AND** the token validation middleware accepts requests within a 1-minute clock skew window of expiration.
+
+#### Scenario: Client session persists across page reloads and HMR
+- **WHEN** an authenticated user with a persistent session experiences a page reload or hot module replacement (HMR) update
+- **THEN** the client preserves stored access token and user metadata
+- **AND** maintains `isLoggedIn = true` without forcing an unprompted logout or redirection to `/login`.

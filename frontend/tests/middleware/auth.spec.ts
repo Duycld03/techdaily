@@ -156,4 +156,19 @@ describe('auth.global route middleware', () => {
       })
     })
   })
+  describe('SSR hydration deferral', () => {
+    it('defers auth verification to client hydration during SSR instead of aborting to /login', async () => {
+      const originalServer = (process as any).server
+      ;(process as any).server = true
+      try {
+        const to = { path: '/library', fullPath: '/library' } as any
+        const result = await (authMiddleware as any)(to)
+
+        expect((globalThis as any).navigateTo).not.toHaveBeenCalled()
+        expect(result).toBeUndefined()
+      } finally {
+        ;(process as any).server = originalServer
+      }
+    })
+  })
 })

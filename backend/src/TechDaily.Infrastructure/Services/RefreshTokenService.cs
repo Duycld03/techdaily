@@ -88,8 +88,8 @@ public class RefreshTokenService : IRefreshTokenService
         // Check if token was already used
         if (token.UsedAt != null)
         {
-            // 10-second multi-tab grace window
-            if (now - token.UsedAt.Value <= TimeSpan.FromSeconds(10) && token.ReplacedByTokenId.HasValue)
+            // 60-second multi-tab grace window
+            if (now - token.UsedAt.Value <= TimeSpan.FromSeconds(60) && token.ReplacedByTokenId.HasValue)
             {
                 var successor = await _dbContext.RefreshTokens
                     .FirstOrDefaultAsync(r => r.Id == token.ReplacedByTokenId.Value, ct);
