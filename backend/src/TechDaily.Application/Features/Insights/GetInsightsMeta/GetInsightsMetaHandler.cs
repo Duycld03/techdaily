@@ -92,12 +92,11 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
             )
         };
 
-        var activeTopics = await _dbContext.Topics
+        var activeTopics = await _dbContext.DocumentChunks
             .AsNoTracking()
-            .Where(t => !t.IsDeleted)
-            .Select(t => new { t.Category, t.Title })
+            .Where(c => !c.IsDeleted && !c.DocumentBook.IsDeleted && c.DocumentBook.Status == ProcessingStatus.Ready)
+            .Select(c => new { c.DocumentBook.Category, Title = c.ChapterTitle })
             .ToListAsync(cancellationToken);
-
         var dbTopicGroups = activeTopics
             .GroupBy(t => (int)t.Category)
             .ToDictionary(

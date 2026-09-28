@@ -4,17 +4,15 @@ import { useApiClient } from '~/composables/useApiClient'
 
 export interface ReviewCard {
   id: string
-  topicId?: string
   sourceType?: number
   frontMarkdown?: string
   backMarkdown?: string
   sourceHighlightId?: string
   sourceQuizQuestionId?: string
-  topicTitle: string
+  sourceDocumentChunkId?: string
+  title?: string
   category: number
   difficulty: number
-  topicSummary: string
-  topicDeepDiveMarkdown: string
   repetitionCount: number
   easeFactor: number
   intervalDays: number

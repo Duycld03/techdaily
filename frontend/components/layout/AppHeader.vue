@@ -83,14 +83,11 @@ onUnmounted(() => {
         <Search class="w-4 h-4" :stroke-width="1.5" />
       </button>
 
-      <span v-if="focusStore.data?.topic" class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-slate-200">
+      <span v-if="focusStore.data?.pacer?.totalChunks || focusStore.data?.documentChunk" class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-canvas-subtle border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-slate-200">
         <span class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></span>
-        <template v-if="focusStore.data?.pacer?.totalChunks">
-          {{ $t('dashboard.active_slice_badge', { current: focusStore.data.pacer.currentChunkOrder, total: focusStore.data.pacer.totalChunks }) }}
-        </template>
-        <template v-else>
-          {{ $t('dashboard.curriculum_day') }} {{ focusStore.data.topic.dayOrder }}
-        </template>
+        <span>
+          {{ $t('dashboard.active_slice_badge', { current: focusStore.data?.pacer?.currentChunkOrder || focusStore.data?.documentChunk?.chunkOrder || 1, total: focusStore.data?.pacer?.totalChunks || 1 }) }}
+        </span>
       </span>
     </div>
 

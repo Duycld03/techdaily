@@ -57,14 +57,13 @@ describe('HomeBentoDashboard.vue', () => {
     expect(wrapper.text()).toContain('Alex')
   })
 
-  it('renders curriculum slice and scenario drill when focusStore has data', () => {
+  it('renders active reading slice and scenario drill when focusStore has data', () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
-      topic: {
-        id: 'top-1',
-        title: 'Distributed Consensus & Raft',
-        summary: 'Deep dive into state machine replication and log entries.',
-        dayOrder: 5
+      documentChunk: {
+        id: 'chunk-1',
+        chapterTitle: 'Distributed Consensus & Raft',
+        summaryMarkdown: 'Deep dive into state machine replication and log entries.'
       },
       pacer: {
         bookId: 'b-1',
@@ -95,7 +94,6 @@ describe('HomeBentoDashboard.vue', () => {
 
     expect(wrapper.text()).toContain('Distributed Consensus & Raft')
     expect(wrapper.text()).toContain('Distributed Systems Patterns')
-    expect(wrapper.text()).toContain('Handling Network Partitions in Cluster')
     expect(wrapper.text()).toContain('7')
     expect(wrapper.text()).toContain('2/2')
   })
@@ -159,11 +157,10 @@ describe('HomeBentoDashboard.vue', () => {
   it('renders dynamic slice progress badge and routes to gitbook reader on start reading', async () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
-      topic: { id: 'top-1', title: 'ASP.NET Core Architecture', dayOrder: 3 },
+      documentChunk: { id: 'chunk-1', chapterTitle: 'ASP.NET Core Architecture', summaryMarkdown: 'Architecture summary' },
       pacer: { bookId: 'aspnet-doc', currentChunkOrder: 4, totalChunks: 23 },
       scenario: { title: 'Middleware Pipeline Debugging' }
     } as any
-
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
@@ -190,10 +187,9 @@ describe('HomeBentoDashboard.vue', () => {
   it('routes to /today when start today practice is clicked', async () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
-      topic: { id: 'top-1', title: 'ASP.NET Core Architecture', dayOrder: 3 },
+      documentChunk: { id: 'chunk-1', chapterTitle: 'ASP.NET Core Architecture', summaryMarkdown: 'Architecture summary' },
       scenario: { title: 'Middleware Pipeline Debugging' }
     } as any
-
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
@@ -211,10 +207,10 @@ describe('HomeBentoDashboard.vue', () => {
     expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/today')
   })
 
-  it('renders Today\'s Practice card with curriculum day and pending status badge', () => {
+  it('renders unified focus card with pending drill status badge', () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
-      topic: { id: 'top-1', title: 'ASP.NET Core Architecture', dayOrder: 12 },
+      documentChunk: { id: 'chunk-1', chapterTitle: 'ASP.NET Core Architecture', summaryMarkdown: 'Architecture summary' },
       drill: { status: 'Pending' }
     } as any
 
@@ -228,17 +224,14 @@ describe('HomeBentoDashboard.vue', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('dashboard.today_practice_badge')
     expect(wrapper.text()).toContain('+10 dashboard.points_reward')
-    expect(wrapper.text()).toContain('dashboard.itinerary_reading')
-    expect(wrapper.text()).toContain('dashboard.itinerary_scenario')
     expect(wrapper.text()).toContain('dashboard.start_today_practice')
   })
 
-  it('renders Today\'s Practice card with completed drill status and review CTA', async () => {
+  it('renders unified focus card with completed drill status and review CTA', async () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
-      topic: { id: 'top-1', title: 'Concurrency & Channels', dayOrder: 14 },
+      documentChunk: { id: 'chunk-1', chapterTitle: 'Concurrency & Channels', summaryMarkdown: 'Channels summary' },
       drill: { status: 'Submitted', isCorrect: true, score: 10 }
     } as any
 

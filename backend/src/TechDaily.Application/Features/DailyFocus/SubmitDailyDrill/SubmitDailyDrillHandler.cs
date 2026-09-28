@@ -96,16 +96,62 @@ public class SubmitDailyDrillHandler : IUseCase<SubmitDailyDrillRequest, SubmitD
         drill.SubmitOption(selectedIndex, isCorrect, score);
         streak.RecordCompletion(today, score);
 
-        if (!isCorrect && question.TopicId.HasValue)
+        if (!isCorrect)
         {
-            var topicId = question.TopicId.Value;
-            var card = await _dbContext.SpacedRepetitionCards
-                .FirstOrDefaultAsync(c => c.UserId == request.UserId && c.TopicId == topicId, cancellationToken);
-
-            if (card == null)
+            if (question.DocumentChunkId.HasValue)
             {
-                card = SpacedRepetitionCard.Create(request.UserId, topicId, today.AddDays(1));
-                await _dbContext.SpacedRepetitionCards.AddAsync(card, cancellationToken);
+                var chunkId = question.DocumentChunkId.Value;
+                var card = await _dbContext.SpacedRepetitionCards
+                    .FirstOrDefaultAsync(c => c.UserId == request.UserId && c.SourceDocumentChunkId == chunkId, cancellationToken);
+
+                var sbFront = new System.Text.StringBuilder();
+                sbFront.AppendLine(question.QuestionText);
+                if (question.Options != null && question.Options.Count > 0)
+                {
+                    sbFront.AppendLine();
+                    for (int i = 0; i < question.Options.Count; i++)
+                    {
+                        var label = (char)('A' + i);
+                        sbFront.AppendLine($"- **{label}.** {question.Options[i]}");
+                    }
+                }
+                var front = sbFront.ToString().Trim();
+
+                var sbBack = new System.Text.StringBuilder();
+                if (question.Options != null && question.CorrectOptionIndex >= 0 && question.CorrectOptionIndex < question.Options.Count)
+                {
+                    var label = (char)('A' + question.CorrectOptionIndex);
+                    sbBack.AppendLine($"**Correct Option: {label}. {question.Options[question.CorrectOptionIndex]}**");
+                    sbBack.AppendLine();
+                }
+                if (!string.IsNullOrWhiteSpace(question.ExplanationMarkdown))
+                {
+                    sbBack.AppendLine(question.ExplanationMarkdown);
+                }
+                var back = sbBack.ToString().Trim();
+
+                if (card == null)
+                {
+                    card = SpacedRepetitionCard.CreateFromDrillMistake(request.UserId, chunkId, front, back, today.AddDays(1));
+                    await _dbContext.SpacedRepetitionCards.AddAsync(card, cancellationToken);
+                }
+                else
+                {
+                    card.UpdateContent(front, back);
+                    card.ResetProgression(today.AddDays(1));
+                }
+            }
+            else if (question.TopicId.HasValue)
+            {
+                var topicId = question.TopicId.Value;
+                var card = await _dbContext.SpacedRepetitionCards
+                    .FirstOrDefaultAsync(c => c.UserId == request.UserId && c.TopicId == topicId, cancellationToken);
+
+                if (card == null)
+                {
+                    card = SpacedRepetitionCard.Create(request.UserId, topicId, today.AddDays(1));
+                    await _dbContext.SpacedRepetitionCards.AddAsync(card, cancellationToken);
+                }
             }
         }
 

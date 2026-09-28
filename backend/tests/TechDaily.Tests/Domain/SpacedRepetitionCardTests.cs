@@ -149,4 +149,30 @@ public class SpacedRepetitionCardTests
         card.NextReviewDate.Should().Be(resetDate);
         card.UpdatedAt.Should().NotBeNull();
     }
+
+    [Fact]
+    public void CreateFromDrillMistake_ShouldInitializeCorrectly()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var chunkId = Guid.NewGuid();
+        var front = "Question markdown";
+        var back = "Explanation markdown";
+        var today = new DateOnly(2026, 3, 1);
+
+        // Act
+        var card = SpacedRepetitionCard.CreateFromDrillMistake(userId, chunkId, front, back, today);
+
+        // Assert
+        card.UserId.Should().Be(userId);
+        card.SourceType.Should().Be(CardSourceType.DocumentChunk);
+        card.SourceDocumentChunkId.Should().Be(chunkId);
+        card.FrontMarkdown.Should().Be(front);
+        card.BackMarkdown.Should().Be(back);
+        card.RepetitionCount.Should().Be(0);
+        card.EaseFactor.Should().Be(2.50m);
+        card.IntervalDays.Should().Be(1);
+        card.Status.Should().Be(CardStatus.Learning);
+        card.NextReviewDate.Should().Be(today);
+    }
 }

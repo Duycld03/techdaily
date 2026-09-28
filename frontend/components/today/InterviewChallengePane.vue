@@ -148,11 +148,6 @@ async function handleOptionSubmit() {
 
         <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <span
-            class="px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-brand-500/10 text-brand-400 border border-brand-500/20"
-          >
-            Senior Drill
-          </span>
-          <span
             v-if="isReviewed"
             :class="[
               'px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 border',

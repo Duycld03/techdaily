@@ -567,6 +567,9 @@ namespace TechDaily.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<Guid?>("SourceDocumentChunkId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("SourceHighlightId")
                         .HasColumnType("uuid");
 
@@ -594,6 +597,8 @@ namespace TechDaily.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SourceDocumentChunkId");
+
                     b.HasIndex("SourceHighlightId");
 
                     b.HasIndex("SourceQuizQuestionId");
@@ -601,6 +606,8 @@ namespace TechDaily.Infrastructure.Migrations
                     b.HasIndex("TopicId");
 
                     b.HasIndex("UserId", "NextReviewDate");
+
+                    b.HasIndex("UserId", "SourceDocumentChunkId");
 
                     b.HasIndex("UserId", "SourceHighlightId");
 
@@ -1271,6 +1278,11 @@ namespace TechDaily.Infrastructure.Migrations
 
             modelBuilder.Entity("TechDaily.Domain.Entities.SpacedRepetitionCard", b =>
                 {
+                    b.HasOne("TechDaily.Domain.Entities.DocumentChunk", "SourceDocumentChunk")
+                        .WithMany()
+                        .HasForeignKey("SourceDocumentChunkId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("TechDaily.Domain.Entities.UserHighlight", "SourceHighlight")
                         .WithMany()
                         .HasForeignKey("SourceHighlightId")
@@ -1291,6 +1303,8 @@ namespace TechDaily.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("SourceDocumentChunk");
 
                     b.Navigation("SourceHighlight");
 

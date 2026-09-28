@@ -83,21 +83,8 @@ const sessionProgress = computed(() => {
 })
 const cleanTopicTitle = computed(() => {
   if (!currentCard.value) return t('review.title')
-  const title = currentCard.value.topicTitle?.trim() || ''
-  if (!title) return t('review.title')
-  if (title.length > 50) {
-    if (title.toLowerCase().includes('vue 3') || title.toLowerCase().includes('proxy')) {
-      return 'Vue 3 Reactivity & JavaScript Proxy Engine'
-    }
-    if (title.toLowerCase().includes('separation')) {
-      return 'Separation of Concerns in ASP.NET Core'
-    }
-    if (title.toLowerCase().includes('mvcc') || title.toLowerCase().includes('vacuum')) {
-      return 'PostgreSQL MVCC & VACUUM Internals'
-    }
-    return title.split('?')[0].slice(0, 50).trim()
-  }
-  return title
+  const title = (currentCard.value as any).title?.trim() || currentCard.value.frontMarkdown?.slice(0, 50)?.trim() || ''
+  return title || t('review.title')
 })
 
 const cleanSourceSubtitle = computed(() => {
@@ -138,11 +125,11 @@ const cardSourceContext = computed(() => {
   if (!currentCard.value) return null
   const card = currentCard.value as any
   const bookTitle = card.bookTitle || card.sourceBookTitle || (card.sourceType === 1 ? 'Reading Highlight' : null)
-  const chapterTitle = card.chapterTitle || card.sourceChapterTitle || (card.sourceType === 1 && card.topicTitle ? card.topicTitle : null)
+  const chapterTitle = card.chapterTitle || card.sourceChapterTitle
   if (!bookTitle && !chapterTitle) return null
   return {
     bookTitle: bookTitle || 'Technical Monograph',
-    chapterTitle: chapterTitle || card.topicTitle || 'Reference Chapter'
+    chapterTitle: chapterTitle || 'Reference Chapter'
   }
 })
 
@@ -321,8 +308,8 @@ const isSavingCard = ref(false)
 
 function openEditModal(card: ReviewCard) {
   cardToEdit.value = card
-  editFrontMarkdown.value = card.frontMarkdown || card.topicTitle || ''
-  editBackMarkdown.value = card.backMarkdown || card.topicSummary || ''
+  editFrontMarkdown.value = card.frontMarkdown || ''
+  editBackMarkdown.value = card.backMarkdown || ''
   editActiveTab.value = 'edit'
 }
 

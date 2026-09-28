@@ -33,12 +33,11 @@ describe('pages/index.vue', () => {
   it('renders HomeBentoDashboard component when data exists', async () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
-      topic: {
-        id: 't-1',
-        title: 'System Design Patterns',
-        dayOrder: 1,
-        category: 'Architecture',
-        summary: 'Core patterns'
+      documentChunk: {
+        id: 'c-1',
+        chapterTitle: 'System Design Patterns',
+        chunkOrder: 1,
+        summaryMarkdown: 'Core patterns'
       }
     } as any
 

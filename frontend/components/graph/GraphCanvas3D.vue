@@ -50,7 +50,7 @@ function toggleAllLabels() {
 function getNodeVal(node: GraphNode): number {
   const type = (node.type || '').toLowerCase()
   if (type === 'pillar') return 24
-  if (type === 'topic') return 10
+  if (type === 'chunk') return 10
   if (type === 'book') return 8
   if (type === 'card') return 5
   return 4 // highlight
@@ -61,7 +61,7 @@ function matchesLegendType(node: GraphNode, legendType: string): boolean {
   const status = (node.status || 'learning').toLowerCase()
 
   if (legendType === 'pillar') return nodeType === 'pillar'
-  if (legendType === 'topic') return nodeType === 'topic'
+  if (legendType === 'chunk') return nodeType === 'chunk'
   if (legendType === 'book') return nodeType === 'book'
   if (legendType === 'highlight') return nodeType === 'highlight'
   if (legendType === 'card') return nodeType === 'card'
@@ -125,8 +125,8 @@ function getTooltipHtml(node: GraphNode): string {
   let extra = ''
   if (node.type === 'card') {
     extra = `<div style="font-size: 11px; margin-top: 4px; color: #a78bfa;">Interval: ${node.intervalDays ?? 1}d • EF: ${(node.easeFactor ?? 2.5).toFixed(2)}</div>`
-  } else if (node.type === 'topic' && node.difficulty) {
-    extra = `<div style="font-size: 11px; margin-top: 4px; color: #38bdf8;">Difficulty: ${node.difficulty} • Day ${node.dayOrder ?? 1}</div>`
+  } else if (node.type === 'chunk' && node.subtitle) {
+    extra = `<div style="font-size: 11px; margin-top: 4px; color: #38bdf8;">${node.subtitle}</div>`
   } else if (node.type === 'highlight' && node.tags?.length) {
     extra = `<div style="font-size: 11px; margin-top: 4px; color: #38bdf8;">Tags: ${node.tags.slice(0, 3).join(', ')}</div>`
   }
@@ -290,7 +290,7 @@ onMounted(async () => {
       .nodeThreeObject((node: any) => {
         const isPillar = node.type === 'pillar'
         const isBook = node.type === 'book'
-        const isTopic = node.type === 'topic'
+        const isChunk = node.type === 'chunk'
         const isSelected = store.selectedNodeId === node.id
         const isHovered = hoveredNode.value?.id === node.id
 

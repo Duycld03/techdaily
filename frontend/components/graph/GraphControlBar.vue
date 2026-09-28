@@ -72,7 +72,7 @@ const categoryPills = [
 // Node type toggles
 const nodeTypes = [
   { id: 'all', key: 'graph.filters.allTypes', defaultLabel: 'All Types' },
-  { id: 'topic', key: 'graph.filters.topics', defaultLabel: 'Topics' },
+  { id: 'chunk', key: 'graph.filters.chunks', defaultLabel: 'Chapters' },
   { id: 'book', key: 'graph.filters.books', defaultLabel: 'Books' },
   { id: 'card', key: 'graph.filters.cards', defaultLabel: 'Flashcards' },
   { id: 'highlight', key: 'graph.filters.highlights', defaultLabel: 'Highlights' }

@@ -6,12 +6,10 @@ import type { ReviewCard } from '~/stores/useReviewStore'
 
 const mockCard: ReviewCard = {
   id: 'card-123',
-  topicId: 'topic-456',
-  topicTitle: 'Why is separation of concerns critical for maintainability?',
+  frontMarkdown: 'Why is separation of concerns critical for maintainability?',
+  backMarkdown: 'Separation of concerns isolates responsibilities, preventing cascading changes across architectural boundaries.',
   category: 1, // BackendRuntime
   difficulty: 2, // Senior
-  topicSummary: 'Separation of concerns isolates responsibilities, preventing cascading changes across architectural boundaries.',
-  topicDeepDiveMarkdown: '```csharp\npublic interface IOrderService { void ProcessOrder(); }\n```',
   repetitionCount: 3,
   easeFactor: 2.5,
   intervalDays: 6,
@@ -142,7 +140,7 @@ describe('FlashcardDeck.vue', () => {
     const nextCard: ReviewCard = {
       ...mockCard,
       id: 'card-999',
-      topicTitle: 'Next Question Challenge'
+      frontMarkdown: 'Next Question Challenge'
     }
     await wrapper.setProps({ card: nextCard })
     await wrapper.vm.$nextTick()

@@ -95,10 +95,11 @@ function getStylesheet(dark: boolean): Stylesheet[] {
       }
     },
     // Topic nodes (default fallback)
+    // Chunk nodes (document chapters)
     {
-      selector: 'node[type = "topic"]',
+      selector: 'node[type = "chunk"]',
       style: {
-        'shape': 'ellipse',
+        'shape': 'round-rectangle',
         'width': 36,
         'height': 36,
         'background-color': CATEGORY_PALETTE.BackendDotNet.fill
@@ -106,31 +107,31 @@ function getStylesheet(dark: boolean): Stylesheet[] {
     },
     // Topic colors by pillar (tones sourced from graphVisualTokens CATEGORY_PALETTE)
     {
-      selector: 'node[type = "topic"][category = "BackendRuntime"], node[type = "topic"][category = "BackendDotNet"], node[type = "topic"][category = "DotNet"]',
+      selector: 'node[type = "chunk"][category = "BackendRuntime"], node[type = "chunk"][category = "BackendDotNet"], node[type = "chunk"][category = "DotNet"]',
       style: {
         'background-color': CATEGORY_PALETTE.BackendDotNet.border
       }
     },
     {
-      selector: 'node[type = "topic"][category = "DatabaseStorage"], node[type = "topic"][category = "Postgres"]',
+      selector: 'node[type = "chunk"][category = "DatabaseStorage"], node[type = "chunk"][category = "Postgres"]',
       style: {
         'background-color': CATEGORY_PALETTE.DatabaseStorage.border
       }
     },
     {
-      selector: 'node[type = "topic"][category = "SystemDesign"], node[type = "topic"][category = "DistributedSystems"]',
+      selector: 'node[type = "chunk"][category = "SystemDesign"], node[type = "chunk"][category = "DistributedSystems"]',
       style: {
         'background-color': CATEGORY_PALETTE.SystemDesign.border
       }
     },
     {
-      selector: 'node[type = "topic"][category = "FrontendWeb"], node[type = "topic"][category = "Frontend"]',
+      selector: 'node[type = "chunk"][category = "FrontendWeb"], node[type = "chunk"][category = "Frontend"]',
       style: {
         'background-color': CATEGORY_PALETTE.FrontendWeb.border
       }
     },
     {
-      selector: 'node[type = "topic"][category = "EngineeringCraft"], node[type = "topic"][category = "Craft"]',
+      selector: 'node[type = "chunk"][category = "EngineeringCraft"], node[type = "chunk"][category = "Craft"]',
       style: {
         'background-color': CATEGORY_PALETTE.EngineeringCraft.border
       }
@@ -221,7 +222,7 @@ function getStylesheet(dark: boolean): Stylesheet[] {
     },
     // Constellation edges linking curriculum topics and library books to parent pillar hubs
     {
-      selector: 'edge[relationType = "TopicToPillar"], edge[relationType = "BookToPillar"], edge[relationType = "topictopillar"], edge[relationType = "booktopillar"]',
+      selector: 'edge[relationType = "ChunkToBook"], edge[relationType = "BookToPillar"], edge[relationType = "chunktobook"], edge[relationType = "booktopillar"]',
       style: {
         'curve-style': 'unbundled-bezier',
         'control-point-distances': 40,
@@ -336,7 +337,7 @@ function syncElements() {
       data: {
         id: node.id,
         label: node.label,
-        type: (node.type || 'topic').toLowerCase(),
+        type: (node.type || 'chunk').toLowerCase(),
         category: node.category,
         status: node.status,
         summary: node.summary
@@ -517,7 +518,7 @@ function matchesLegendType(nodeData: any, legendType: string): boolean {
   const status = (nodeData.status || 'learning').toLowerCase()
 
   if (legendType === 'pillar') return nodeType === 'pillar'
-  if (legendType === 'topic') return nodeType === 'topic'
+  if (legendType === 'chunk') return nodeType === 'chunk'
   if (legendType === 'book') return nodeType === 'book'
   if (legendType === 'highlight') return nodeType === 'highlight'
   if (legendType === 'card') return nodeType === 'card'

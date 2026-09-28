@@ -135,7 +135,6 @@ public static class AuthEndpoints
             TechDailyDbContext db,
             IRefreshTokenService tokenService,
             IConfiguration config,
-            IStarterHandbookService starterHandbookService,
             CancellationToken ct) =>
         {
             var clientId = (!string.IsNullOrWhiteSpace(config["Authentication:Google:ClientId"]) ? config["Authentication:Google:ClientId"] : null)
@@ -225,7 +224,6 @@ public static class AuthEndpoints
 
                 await db.SaveChangesAsync(ct);
 
-                await starterHandbookService.ProvisionForUserAsync(user.Id, ct);
             }
             else
             {
@@ -348,7 +346,6 @@ public static class AuthEndpoints
             TechDailyDbContext db,
             IOtpService otpService,
             IRefreshTokenService tokenService,
-            IStarterHandbookService starterHandbookService,
             CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Code))
@@ -389,7 +386,6 @@ public static class AuthEndpoints
             await db.StreakRecords.AddAsync(StreakRecord.Create(user.Id), ct);
             await db.SaveChangesAsync(ct);
 
-            await starterHandbookService.ProvisionForUserAsync(user.Id, ct);
 
             var (rawRefreshToken, _) = await tokenService.IssueTokenAsync(user.Id, isPersistent: request.RememberMe);
             SetRefreshTokenCookie(context, rawRefreshToken, request.RememberMe);
@@ -408,7 +404,7 @@ public static class AuthEndpoints
         })
         .WithName("RegisterVerify")
         .WithSummary("Verify Registration Code")
-        .WithDescription("Verifies the email OTP, creates the user, provisions starter content, and returns an authenticated session.")
+        .WithDescription("Verifies the email OTP, creates the user, and returns an authenticated session.")
         .Produces<AuthSessionResponse>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status409Conflict)

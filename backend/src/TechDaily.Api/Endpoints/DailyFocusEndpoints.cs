@@ -19,7 +19,6 @@ public static class DailyFocusEndpoints
         group.MapGet("/today", async (
             [FromQuery] Guid? bookId,
             [FromQuery] int? chunkOrder,
-            [FromQuery] int? dayOrder,
             [FromQuery] string? date,
             [FromQuery] string? locale,
             ClaimsPrincipal userClaims,
@@ -37,8 +36,7 @@ public static class DailyFocusEndpoints
             {
                 parsedDate = d;
             }
-
-            var request = new GetTodayFocusRequest(userId, bookId, chunkOrder, dayOrder, parsedDate, locale ?? "en");
+            var request = new GetTodayFocusRequest(userId, bookId, chunkOrder, parsedDate, locale ?? "en");
             var result = await handler.ExecuteAsync(request, ct);
 
             return result.IsSuccess

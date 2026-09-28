@@ -179,10 +179,14 @@ describe('AdvancedFilterModal.vue', () => {
       }
     })
 
-    // Click on a source filter (e.g. source_topic)
+    // Assert source_topic does not exist
     const sourceTopicBtn = wrapper.findAll('button').find((b) => b.text().includes('review.source_topic'))
-    expect(sourceTopicBtn).toBeDefined()
-    await sourceTopicBtn!.trigger('click')
+    expect(sourceTopicBtn).toBeUndefined()
+
+    // Click on source chunk filter (review.source_chunk)
+    const sourceChunkBtn = wrapper.findAll('button').find((b) => b.text().includes('review.source_chunk'))
+    expect(sourceChunkBtn).toBeDefined()
+    await sourceChunkBtn!.trigger('click')
 
     // Click apply button
     const applyBtn = wrapper.findAll('button').find((b) => b.text().includes('review.apply_filters'))
@@ -191,7 +195,7 @@ describe('AdvancedFilterModal.vue', () => {
 
     expect(wrapper.emitted('apply')).toBeTruthy()
     const applied = wrapper.emitted('apply')![0]![0] as { sourceType: number }
-    expect(applied.sourceType).toBe(0)
+    expect(applied.sourceType).toBe(3)
     expect(wrapper.emitted('close')).toBeTruthy()
   })
 
@@ -226,7 +230,7 @@ describe('AdvancedFilterModal.vue', () => {
         isOpen: true,
         currentFilters: {
           status: 1,
-          sourceType: 0,
+          sourceType: 3,
           urgency: 'due',
           sortBy: 'difficulty'
         }
@@ -238,7 +242,7 @@ describe('AdvancedFilterModal.vue', () => {
       }
     })
 
-    const selectedSourceBtn = wrapper.findAll('button').find((b) => b.text().includes('review.source_topic'))
+    const selectedSourceBtn = wrapper.findAll('button').find((b) => b.text().includes('review.source_chunk'))
     expect(selectedSourceBtn?.exists()).toBe(true)
 
     const selectedStatusBtn = wrapper.findAll('button').find((b) => b.text().includes('review.status_reviewing'))
@@ -260,11 +264,8 @@ describe('FlashcardBentoCard.vue', () => {
     id: 'bento-1',
     sourceType: 1, // Reading Highlight
     status: 1, // Reviewing
-    topicTitle: 'PostgreSQL MVCC & VACUUM',
     category: 1,
     difficulty: 2,
-    topicSummary: 'How PostgreSQL handles multi-version concurrency control.',
-    topicDeepDiveMarkdown: 'Deep dive markdown',
     frontMarkdown: 'Explain how MVCC works in PostgreSQL.',
     backMarkdown: 'PostgreSQL uses xmin/xmax tuple headers to determine visibility.',
     repetitionCount: 3,

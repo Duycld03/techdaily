@@ -103,16 +103,6 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
         using (var db = new TechDailyDbContext(_dbOptions))
         {
             var user = new User { Id = _userId, Email = "graph@techdaily.local", Name = "Graph User" };
-            var topic = new Topic
-            {
-                Id = Guid.NewGuid(),
-                Title = "CLR Generational GC",
-                Slug = "clr-gc",
-                Category = Category.BackendRuntime,
-                Difficulty = Difficulty.Senior,
-                DayOrder = 4,
-                Summary = "Generational garbage collection"
-            };
             var book = new DocumentBook
             {
                 Id = Guid.NewGuid(),
@@ -122,13 +112,23 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
                 IsPublished = true,
                 CreatedByUserId = _userId
             };
-
-            // A card links the topic so it is a touched (emitted) node.
-            var card = SpacedRepetitionCard.Create(_userId, topic.Id);
+            var chunk = new DocumentChunk
+            {
+                Id = Guid.NewGuid(),
+                DocumentBookId = book.Id,
+                ChunkOrder = 1,
+                ChapterTitle = "Generational GC Mechanics"
+            };
+            var card = SpacedRepetitionCard.CreateFromDrillMistake(
+                _userId,
+                chunk.Id,
+                "What trigger GC generation 2?",
+                "Allocation budget exceeded in generation 1.",
+                DateOnly.FromDateTime(DateTime.UtcNow));
 
             await db.Users.AddAsync(user);
-            await db.Topics.AddAsync(topic);
             await db.DocumentBooks.AddAsync(book);
+            await db.DocumentChunks.AddAsync(chunk);
             await db.SpacedRepetitionCards.AddAsync(card);
             await db.SaveChangesAsync();
         }
@@ -142,10 +142,13 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
         payload.Should().NotBeNull();
         payload!.Nodes.Should().HaveCount(4);
         payload.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar);
-        payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar);
+        payload.Nodes.Should().Contain(n => n.Type == GraphNodeType.Book);
+        payload.Nodes.Should().Contain(n => n.Type == GraphNodeType.Chunk);
+        payload.Nodes.Should().Contain(n => n.Type == GraphNodeType.Card);
+        payload.Nodes.Should().NotContain(n => n.Type == "topic");
         payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar);
-        payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToTopic);
-        payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToTopic);
+        payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.ChunkToBook);
+        payload.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToChunk);
         payload.Stats.TotalNodes.Should().Be(4);
         payload.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(1);
     }

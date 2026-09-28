@@ -2,7 +2,9 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { onClickOutside, useEventListener } from '@vueuse/core'
 import { BookOpen, Clock, Tag, Sparkles, Copy, Check, Highlighter, Cpu } from 'lucide-vue-next'
-import type { Topic, DocumentChunk } from '~/stores/useDailyFocusStore'
+import type { DocumentChunk } from '~/stores/useDailyFocusStore'
+
+export type DocumentChunkDto = DocumentChunk
 import { useNotesStore } from '~/stores/useNotesStore'
 import { useToast } from '~/composables/useToast'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
@@ -16,8 +18,7 @@ const toast = useToast()
 const { render: renderMarkdown, isHighlighterReady } = useMarkdownRenderer()
 
 const props = defineProps<{
-  topic: Topic
-  documentChunk?: DocumentChunk
+  chunk: DocumentChunkDto
 }>()
 const {
   typography,
@@ -52,13 +53,13 @@ useEventListener(typeof document !== 'undefined' ? document : null, 'click', han
 useEventListener(typeof document !== 'undefined' ? document : null, 'keydown', handleKeyDown)
 
 const cleanSummary = computed(() => {
-  if (!props.topic.summary) return ''
-  let s = props.topic.summary
+  if (!props.chunk?.summaryMarkdown) return ''
+  let s = props.chunk.summaryMarkdown
   // Strip leading '#+ Heading' if present
   s = s.replace(/^\s*#{1,6}\s+[^\n\r]+(?:\r?\n)*/gm, '').trim()
   // Strip pre-release notices if present
   s = s.replace(/(?:Important\s+)?This information relates to a pre-release product[^\n.]*\.[^\n.]*\./gi, '').trim()
-  return s || props.topic.title
+  return s || props.chunk.chapterTitle
 })
 
 function suppressDuplicateHeading(text: string, title?: string): string {
@@ -75,25 +76,11 @@ function suppressDuplicateHeading(text: string, title?: string): string {
 }
 
 const renderedDeepDiveHtml = computed(() => {
-  const rawContent = props.topic.deepDiveMarkdown || props.documentChunk?.originalTextMarkdown || props.topic.summary || ''
-  const title = props.topic.title || props.documentChunk?.chapterTitle
+  const rawContent = props.chunk?.originalTextMarkdown || props.chunk?.summaryMarkdown || ''
+  const title = props.chunk?.chapterTitle
   const content = suppressDuplicateHeading(rawContent, title)
   const _ = isHighlighterReady.value
   return renderMarkdown(content)
-})
-
-const renderedChunkHtml = computed(() => {
-  if (
-    props.documentChunk?.originalTextMarkdown &&
-    props.topic.deepDiveMarkdown &&
-    props.documentChunk.originalTextMarkdown !== props.topic.deepDiveMarkdown
-  ) {
-    const _ = isHighlighterReady.value
-    const title = props.documentChunk.chapterTitle || props.topic.title
-    const content = suppressDuplicateHeading(props.documentChunk.originalTextMarkdown, title)
-    return renderMarkdown(content)
-  }
-  return ''
 })
 
 // Floating Action Bar state
@@ -169,7 +156,7 @@ function triggerExplainWithAi() {
   if (!floatingMenu.value.text) return
   selectedTerm.value = floatingMenu.value.text
   selectedContext.value = floatingMenu.value.context
-  selectedCategory.value = props.topic.title
+  selectedCategory.value = props.chunk.chapterTitle
   isExplainerOpen.value = true
   floatingMenu.value.visible = false
 }
@@ -186,7 +173,7 @@ function copySelectedText() {
 }
 
 async function handleHighlightSelection() {
-  const chunkId = props.documentChunk?.id
+  const chunkId = props.chunk?.id
   if (!floatingMenu.value.text || !chunkId) {
     toast.error(t('today.toast_no_document_chunk'))
     return
@@ -223,7 +210,7 @@ onUnmounted(() => {
           <span class="text-slate-400 dark:text-slate-600">•</span>
           <span class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
             <Clock class="w-3.5 h-3.5" />
-            {{ documentChunk?.estimatedReadMinutes || 3 }} {{ $t('today.estimated_read') }}
+            {{ chunk.estimatedReadMinutes || 3 }} {{ $t('today.estimated_read') }}
           </span>
         </div>
 
@@ -381,7 +368,7 @@ onUnmounted(() => {
       </div>
 
       <h1 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-snug mb-3">
-        {{ topic.title }}
+        {{ chunk.chapterTitle }}
       </h1>
 
       <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-canvas-subtle/80 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] font-normal">
@@ -389,9 +376,9 @@ onUnmounted(() => {
       </p>
 
       <!-- Key Takeaways -->
-      <div v-if="documentChunk?.keyTakeaways?.length" class="mt-3.5 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2">
+      <div v-if="chunk.keyTakeaways?.length" class="mt-3.5 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2">
         <span
-          v-for="(takeaway, i) in documentChunk.keyTakeaways"
+          v-for="(takeaway, i) in chunk.keyTakeaways"
           :key="i"
           class="inline-flex items-center gap-1.5 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-canvas-elevated text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08] shadow-sm"
         >
@@ -411,24 +398,6 @@ onUnmounted(() => {
       :style="{ fontSize: fontSizePx, lineHeight: lineHeightValue }"
       v-html="renderedDeepDiveHtml"
     ></div>
-
-    <!-- Authoritative Source Excerpt (if distinct) -->
-    <div v-if="renderedChunkHtml" class="mt-6 p-4 sm:p-5 rounded-2xl glass-panel dark:bg-canvas-subtle/80 border border-slate-200/80 dark:border-white/[0.08] space-y-2">
-      <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-        <BookOpen class="w-3.5 h-3.5" />
-        <span>{{ $t('today.source_context') }}</span>
-      </div>
-      <div class="markdown-body text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed min-w-0 max-w-full" v-html="renderedChunkHtml"></div>
-    </div>
-
-    <!-- Benchmark Snippet (if available) -->
-    <div v-if="topic.benchmarkSnippet" class="mt-6 p-4 sm:p-5 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-mono text-xs sm:text-sm text-brand-700 dark:text-brand-300 shadow-sm">
-      <div class="text-slate-700 dark:text-slate-400 font-bold mb-2 font-sans flex items-center gap-1.5">
-        <Cpu class="w-4 h-4 text-brand-600 dark:text-brand-400" :stroke-width="1.5" />
-        <span>Performance Benchmark Context:</span>
-      </div>
-      <pre class="overflow-x-auto p-0 m-0 bg-transparent border-0">{{ topic.benchmarkSnippet }}</pre>
-    </div>
 
     <!-- Discreet Floating Action Bar on Selection -->
     <Teleport to="body">

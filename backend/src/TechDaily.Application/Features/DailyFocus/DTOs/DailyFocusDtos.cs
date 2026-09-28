@@ -2,18 +2,6 @@ using TechDaily.Domain.Enums;
 
 namespace TechDaily.Application.Features.DailyFocus.DTOs;
 
-public class TopicDto
-{
-    public Guid Id { get; set; }
-    public string Slug { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
-    public Category Category { get; set; }
-    public Difficulty Difficulty { get; set; }
-    public int DayOrder { get; set; }
-    public string Summary { get; set; } = string.Empty;
-    public string DeepDiveMarkdown { get; set; } = string.Empty;
-    public string? BenchmarkSnippet { get; set; }
-}
 
 public class InterviewQuestionDto
 {

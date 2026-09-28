@@ -12,6 +12,7 @@ public class SpacedRepetitionCard : BaseEntity
     public string? BackMarkdown { get; set; }
     public Guid? SourceHighlightId { get; set; }
     public Guid? SourceQuizQuestionId { get; set; }
+    public Guid? SourceDocumentChunkId { get; set; }
     public int RepetitionCount { get; private set; } = 0;
     public decimal EaseFactor { get; private set; } = 2.50m;
     public int IntervalDays { get; private set; } = 1;
@@ -24,6 +25,7 @@ public class SpacedRepetitionCard : BaseEntity
     public Topic? Topic { get; set; }
     public UserHighlight? SourceHighlight { get; set; }
     public QuizQuestion? SourceQuizQuestion { get; set; }
+    public DocumentChunk? SourceDocumentChunk { get; set; }
 
     public SpacedRepetitionCard()
     {
@@ -72,6 +74,25 @@ public class SpacedRepetitionCard : BaseEntity
             UserId = userId,
             SourceType = CardSourceType.QuizMistake,
             SourceQuizQuestionId = questionId,
+            FrontMarkdown = frontMarkdown,
+            BackMarkdown = backMarkdown,
+            NextReviewDate = initialDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
+            Status = CardStatus.Learning
+        };
+    }
+
+    public static SpacedRepetitionCard CreateFromDrillMistake(
+        Guid userId,
+        Guid documentChunkId,
+        string frontMarkdown,
+        string backMarkdown,
+        DateOnly? initialDate = null)
+    {
+        return new SpacedRepetitionCard
+        {
+            UserId = userId,
+            SourceType = CardSourceType.DocumentChunk,
+            SourceDocumentChunkId = documentChunkId,
             FrontMarkdown = frontMarkdown,
             BackMarkdown = backMarkdown,
             NextReviewDate = initialDate ?? DateOnly.FromDateTime(DateTime.UtcNow),

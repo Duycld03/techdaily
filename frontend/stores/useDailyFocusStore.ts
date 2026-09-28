@@ -4,18 +4,6 @@ import { useApiClient } from '~/composables/useApiClient'
 import { useToast } from '~/composables/useToast'
 import { useApiError } from '~/composables/useApiError'
 
-export interface Topic {
-  id: string
-  slug: string
-  title: string
-  category: number
-  difficulty: number
-  dayOrder: number
-  summary: string
-  deepDiveMarkdown: string
-  benchmarkSnippet?: string
-}
-
 export interface InterviewQuestion {
   id: string
   questionText: string
@@ -73,7 +61,6 @@ export interface PacerInfo {
 }
 
 export interface TodayFocusResponse {
-  topic?: Topic
   question: InterviewQuestion
   documentChunk?: DocumentChunk
   drill: DailyDrill
@@ -95,26 +82,28 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
   const { formatError } = useApiError()
 
   async function fetchTodayFocus(
-    params?: { bookId?: string; chunkOrder?: number; dayOrder?: number; date?: string; locale?: string } | number,
+    params?: { bookId?: string; chunkOrder?: number; date?: string; locale?: string } | string,
     legacyDate?: string,
     legacyLocale: string = 'en'
   ) {
     let bookId: string | undefined
     let chunkOrder: number | undefined
-    let dayOrder: number | undefined
-    let date: string | undefined = legacyDate
-    let locale: string = legacyLocale
+    let date: string | undefined
+    let locale: string = 'en'
 
-    if (typeof params === 'number') {
-      dayOrder = params
-    } else if (params) {
+    if (typeof params === 'string') {
+      bookId = params
+      date = legacyDate
+      locale = legacyLocale
+    } else if (params && typeof params === 'object') {
       bookId = params.bookId
       chunkOrder = params.chunkOrder
-      dayOrder = params.dayOrder
       date = params.date
       locale = params.locale ?? 'en'
+    } else {
+      date = legacyDate
+      locale = legacyLocale
     }
-
     isLoading.value = true
     error.value = null
     try {
@@ -122,7 +111,6 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
       const query = new URLSearchParams()
       if (bookId) query.append('bookId', bookId)
       if (chunkOrder !== undefined && chunkOrder !== null) query.append('chunkOrder', chunkOrder.toString())
-      if (dayOrder !== undefined && dayOrder !== null) query.append('dayOrder', dayOrder.toString())
       if (date) query.append('date', date)
       if (locale) query.append('locale', locale)
 

@@ -48,12 +48,12 @@ const urgencyBadge = computed(() => {
 
 const renderedQuestion = computed(() => {
   const _ = isHighlighterReady.value
-  const content = props.card.frontMarkdown || props.card.topicTitle || ''
+  const content = props.card.frontMarkdown || ''
   return renderMarkdown(content)
 })
 
 const plainAnswer = computed(() => {
-  const content = props.card.backMarkdown || props.card.topicSummary || ''
+  const content = props.card.backMarkdown || ''
   return content.replace(/[#*`_~>[\]()]/g, '').trim()
 })
 
@@ -63,8 +63,10 @@ const sourceLabel = computed(() => {
       return t('review.source_highlight')
     case 2:
       return t('review.source_quiz_mistake')
+    case 3:
+      return t('review.source_chunk')
     default:
-      return t('review.source_topic')
+      return t('review.source_chunk')
   }
 })
 </script>

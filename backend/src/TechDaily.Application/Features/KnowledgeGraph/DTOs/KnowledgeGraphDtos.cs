@@ -46,6 +46,7 @@ public static class GraphNodeType
 {
     public const string Pillar = "pillar";
     public const string Topic = "topic";
+    public const string Chunk = "chunk";
     public const string Book = "book";
     public const string Card = "card";
     public const string Highlight = "highlight";
@@ -62,6 +63,9 @@ public static class GraphRelationType
 {
     public const string TopicToPillar = "TopicToPillar";
     public const string BookToPillar = "BookToPillar";
+    public const string ChunkToBook = "ChunkToBook";
+    public const string CardToChunk = "CardToChunk";
+    public const string HighlightToChunk = "HighlightToChunk";
     public const string CardToTopic = "CardToTopic";
     public const string CardToHighlight = "CardToHighlight";
     public const string CardToPillar = "CardToPillar";

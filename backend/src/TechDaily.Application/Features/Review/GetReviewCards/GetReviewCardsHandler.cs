@@ -128,6 +128,7 @@ public class GetReviewCardsHandler : IUseCase<GetReviewCardsRequest, GetReviewCa
                 SourceType = c.SourceType,
                 SourceHighlightId = c.SourceHighlightId,
                 SourceQuizQuestionId = c.SourceQuizQuestionId,
+                SourceDocumentChunkId = c.SourceDocumentChunkId,
                 FrontMarkdown = !string.IsNullOrWhiteSpace(c.FrontMarkdown) ? c.FrontMarkdown : (c.Topic != null ? c.Topic.Title : string.Empty),
                 BackMarkdown = !string.IsNullOrWhiteSpace(c.BackMarkdown) ? c.BackMarkdown : (c.Topic != null ? c.Topic.Summary : string.Empty),
                 TopicTitle = c.Topic != null ? c.Topic.Title : (c.FrontMarkdown ?? string.Empty),

@@ -113,15 +113,16 @@ function handleBackdropClick(e: MouseEvent) {
             </button>
             <button
               type="button"
-              @click="localSourceType = 0"
+              data-testid="filter-source-chunk"
+              @click="localSourceType = 3"
               :class="[
                 'px-3 py-2 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap',
-                localSourceType === 0
+                localSourceType === 3
                   ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.04]'
               ]"
             >
-              <span>{{ $t('review.source_topic') }}</span>
+              <span>{{ $t('review.source_chunk') }}</span>
             </button>
             <button
               type="button"

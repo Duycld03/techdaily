@@ -92,32 +92,27 @@ const formattedInterval = computed(() => {
 })
 
 const questionText = computed(() => {
-  return props.card.frontMarkdown?.trim() || props.card.topicTitle
+  return props.card.frontMarkdown?.trim() || ''
 })
 
 const answerText = computed(() => {
-  return props.card.backMarkdown?.trim() || props.card.topicSummary
+  return props.card.backMarkdown?.trim() || ''
 })
 
 const hasDistinctDeepDive = computed(() => {
-  const dd = props.card.topicDeepDiveMarkdown?.trim()
-  const ans = answerText.value?.trim()
-  return !!dd && dd !== ans
+  return false
 })
 
 const renderedDeepDive = computed(() => {
-  const _ = isHighlighterReady.value
-  if (!hasDistinctDeepDive.value) return ''
-  return renderMarkdown(props.card.topicDeepDiveMarkdown)
+  return ''
 })
-
 const conceptTags = computed(() => {
   const card = props.card as any
   if (Array.isArray(card.conceptTags) && card.conceptTags.length) {
     return card.conceptTags
   }
   const tags: string[] = []
-  const title = (card.topicTitle || '').toLowerCase()
+  const title = (card.frontMarkdown || '').toLowerCase()
   if (title.includes('proxy')) tags.push('Proxy', 'Object.defineProperty')
   if (title.includes('reactivity')) tags.push('Reactivity', 'Trap Handler')
   if (title.includes('vue')) tags.push('Vue 3 Engine')

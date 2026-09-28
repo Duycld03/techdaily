@@ -14,7 +14,8 @@ import {
   ExternalLink,
   Tag,
   Landmark,
-  Filter
+  Filter,
+  FileText
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore, type GraphNode } from '~/stores/useKnowledgeGraphStore'
 
@@ -70,25 +71,6 @@ function onTouchEnd() {
 // Node type detection
 const nodeType = computed(() => node.value?.type?.toLowerCase() || '')
 
-// Helper for topic slug
-const topicSlug = computed(() => {
-  if (!node.value?.label) return ''
-  return node.value.label
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-})
-
-// Navigation bridge links
-const quizRoute = computed(() => `/quiz?topic=${topicSlug.value}`)
-const roadmapRoute = computed(() => {
-  if (node.value?.dayOrder) {
-    return `/roadmap#${node.value.dayOrder}`
-  }
-  return '/roadmap'
-})
-
 const libraryRoute = '/library'
 const readBookRoute = computed(() => {
   const bId = node.value?.bookId || node.value?.id || ''
@@ -116,20 +98,12 @@ const highlightNotesRoute = computed(() => {
 })
 
 // Connected entities for architectural pillar nodes
-const connectedTopicsCount = computed(() => {
+const connectedChunksCount = computed(() => {
   if (!node.value || nodeType.value !== 'pillar') return 0
   const nodeId = node.value.id
-  const edges = store.rawData?.edges || []
-  const edgeCount = edges.filter(
-    (e) => (e.target === nodeId || e.source === nodeId) &&
-      (e.relationType?.toLowerCase() === 'topictopillar' ||
-       store.rawData?.nodes?.some(n => (n.id === e.source || n.id === e.target) && n.id !== nodeId && n.type?.toLowerCase() === 'topic'))
-  ).length
-  if (edgeCount > 0) return edgeCount
-
   if (node.value.category && store.rawData?.nodes) {
     return store.rawData.nodes.filter(
-      (n) => n.id !== nodeId && n.type?.toLowerCase() === 'topic' && n.category?.toLowerCase() === node.value?.category?.toLowerCase()
+      (n) => n.id !== nodeId && n.type?.toLowerCase() === 'chunk' && n.category?.toLowerCase() === node.value?.category?.toLowerCase()
     ).length
   }
   return 0
@@ -240,7 +214,7 @@ function getMasteryBadgeClass(status?: string | null): string {
           <span
             class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-canvas-elevated text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-white/[0.08] whitespace-nowrap shrink-0"
           >
-            <Map v-if="nodeType === 'topic'" class="w-3.5 h-3.5 text-sky-500 shrink-0" />
+            <FileText v-if="nodeType === 'chunk'" class="w-3.5 h-3.5 text-sky-500 shrink-0" />
             <BookOpen v-else-if="nodeType === 'book'" class="w-3.5 h-3.5 text-slate-500 shrink-0" />
             <Layers v-else-if="nodeType === 'card'" class="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <Highlighter v-else-if="nodeType === 'highlight'" class="w-3.5 h-3.5 text-violet-500 shrink-0" />
@@ -307,12 +281,6 @@ function getMasteryBadgeClass(status?: string | null): string {
           >
             {{ node.subtitle }}
           </p>
-          <p
-            v-if="node?.dayOrder && nodeType === 'topic'"
-            class="text-xs text-brand-600 dark:text-brand-400 font-medium mt-1 flex items-center gap-1.5"
-          >
-            <span>Curriculum Day {{ node.dayOrder }}</span>
-          </p>
         </div>
 
         <!-- Pillar Section: Domain Summary & Metrics -->
@@ -337,7 +305,7 @@ function getMasteryBadgeClass(status?: string | null): string {
                   {{ $t('graph.drawer.connectedTopics') }}
                 </span>
                 <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 block tabular-nums" data-test="pillar-topics-count">
-                  {{ connectedTopicsCount }}
+                  {{ connectedChunksCount }}
                 </span>
               </div>
               <div class="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] min-w-0">
@@ -353,7 +321,7 @@ function getMasteryBadgeClass(status?: string | null): string {
         </div>
 
         <!-- Topic Section: Key Takeaways -->
-        <div v-if="nodeType === 'topic' && node?.summary" class="space-y-1.5">
+        <div v-if="nodeType === 'chunk' && node?.summary" class="space-y-1.5">
           <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('graph.drawer.takeaways') }}
           </h4>
@@ -462,20 +430,14 @@ function getMasteryBadgeClass(status?: string | null): string {
         class="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-slate-200/80 dark:border-white/[0.06] bg-slate-50/70 dark:bg-canvas-subtle/90 flex flex-wrap gap-2 items-center justify-end"
       >
         <!-- Topic Actions -->
-        <template v-if="nodeType === 'topic'">
+        <template v-if="nodeType === 'chunk'">
           <NuxtLink
-            :to="quizRoute"
+            v-if="node?.bookId"
+            :to="readBookRoute"
             class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-600 hover:bg-brand-500 text-white shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0"
           >
-            <HelpCircle class="w-4 h-4 shrink-0" />
-            <span class="whitespace-nowrap shrink-0">{{ $t('graph.drawer.practiceQuiz') }}</span>
-          </NuxtLink>
-          <NuxtLink
-            :to="roadmapRoute"
-            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-200/80 hover:bg-slate-300 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] border border-transparent dark:border-white/[0.08] text-slate-800 dark:text-slate-200 transition-all active:scale-95 whitespace-nowrap shrink-0"
-          >
-            <Map class="w-4 h-4 shrink-0" />
-            <span class="whitespace-nowrap shrink-0">{{ $t('graph.drawer.viewRoadmap') }}</span>
+            <BookOpen class="w-4 h-4 shrink-0" />
+            <span class="whitespace-nowrap shrink-0">{{ $t('graph.drawer.readBook') }}</span>
           </NuxtLink>
         </template>
 

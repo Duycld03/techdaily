@@ -11,13 +11,11 @@ public record GetTodayFocusRequest(
     Guid? UserId = null,
     Guid? BookId = null,
     int? ChunkOrder = null,
-    int? DayOrder = null,
     DateOnly? TargetDate = null,
     string Locale = "en");
 
 public class GetTodayFocusResponse
 {
-    public TopicDto Topic { get; set; } = null!;
     public InterviewQuestionDto Question { get; set; } = null!;
     public DocumentChunkDto? DocumentChunk { get; set; }
     public DailyDrillDto Drill { get; set; } = null!;
@@ -71,35 +69,21 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         {
             return await HandleBookPacerModeAsync(request, readyBooks, userId, isAuthenticated, today, cancellationToken);
         }
-        // If the system has books, an authenticated user without ready books has an empty library
-        var anyBooksExist = await _dbContext.DocumentBooks.IgnoreQueryFilters().AnyAsync(cancellationToken);
-        if (isAuthenticated && anyBooksExist)
+        var streak = isAuthenticated
+            ? await _dbContext.StreakRecords.FirstOrDefaultAsync(s => s.UserId == userId, cancellationToken)
+            : null;
+
+        return new GetTodayFocusResponse
         {
-            // User has no active books in their library (e.g. deleted their handbook)
-            var streak = await _dbContext.StreakRecords
-                .FirstOrDefaultAsync(s => s.UserId == userId, cancellationToken);
-
-            return new GetTodayFocusResponse
-            {
-                HasActiveBook = false,
-                CurrentStreak = streak?.CurrentStreak ?? 0,
-                LongestStreak = streak?.LongestStreak ?? 0,
-                FreezeCreditsRemaining = streak?.FreezeCreditsRemaining ?? 0,
-                Topic = new TopicDto { Title = "Empty Library", Summary = "No active books found in your library." },
-                Question = new InterviewQuestionDto(),
-                Drill = new DailyDrillDto()
-            };
-        }
-
-        // Fallback for unauthenticated guests: check if topics exist (e.g. in test fixtures or demo instances)
-        var hasTopics = await _dbContext.Topics.AnyAsync(t => !t.IsDeleted, cancellationToken);
-        if (hasTopics)
-        {
-            return await HandleLegacyTopicModeAsync(request, userId, isAuthenticated, today, cancellationToken);
-        }
-
-        // Fallback: Legacy Topic Mode (when no DocumentBooks exist yet for unauthenticated guests)
-        return await HandleLegacyTopicModeAsync(request, userId, isAuthenticated, today, cancellationToken);
+            HasActiveBook = false,
+            CurrentStreak = streak?.CurrentStreak ?? 0,
+            LongestStreak = streak?.LongestStreak ?? 0,
+            FreezeCreditsRemaining = streak?.FreezeCreditsRemaining ?? 0,
+            Question = new InterviewQuestionDto(),
+            Drill = new DailyDrillDto(),
+            DocumentChunk = null,
+            Pacer = null
+        };
     }
     private async Task<Result<GetTodayFocusResponse>> HandleBookPacerModeAsync(
         GetTodayFocusRequest request,
@@ -184,7 +168,6 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
 
         int targetChunkOrder = request.ChunkOrder
             ?? (activePacer?.CurrentChunkOrder)
-            ?? request.DayOrder
             ?? 1;
 
         if (targetBook.TotalChunks > 0)
@@ -404,141 +387,16 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         return response;
     }
 
-    private async Task<Result<GetTodayFocusResponse>> HandleLegacyTopicModeAsync(
-        GetTodayFocusRequest request,
-        Guid userId,
-        bool isAuthenticated,
-        DateOnly today,
-        CancellationToken cancellationToken)
-    {
-        if (!isAuthenticated)
-        {
-            var requestedDay = request.DayOrder ?? 1;
-            var previewTopic = await _dbContext.Topics
-                .Include(t => t.InterviewQuestions)
-                .FirstOrDefaultAsync(t => t.DayOrder == requestedDay, cancellationToken)
-                ?? await _dbContext.Topics.Include(t => t.InterviewQuestions).FirstOrDefaultAsync(cancellationToken);
-
-            if (previewTopic == null || !previewTopic.InterviewQuestions.Any())
-            {
-                return Error.NotFound;
-            }
-
-            var previewQuestion = previewTopic.InterviewQuestions.First();
-            var masterBookId = Guid.Parse("10000000-0000-0000-0000-000000000001");
-            var previewChunk = await _dbContext.DocumentChunks
-                .FirstOrDefaultAsync(c => !c.IsDeleted && c.DocumentBookId == masterBookId && c.ChunkOrder == previewTopic.DayOrder, cancellationToken)
-                ?? await _dbContext.DocumentChunks
-                    .FirstOrDefaultAsync(c => !c.IsDeleted && c.ChunkOrder == previewTopic.DayOrder, cancellationToken);
-
-            var previewDrill = new DailyDrill
-            {
-                Id = Guid.Empty,
-                UserId = Guid.Empty,
-                QuestionId = previewQuestion.Id,
-                DocumentChunkId = previewChunk?.Id,
-                ScheduledDate = today,
-                Status = DrillStatus.Pending,
-                Question = previewQuestion,
-                DocumentChunk = previewChunk
-            };
-            previewDrill.Question.Topic = previewTopic;
-
-            return MapResponse(previewDrill, StreakRecord.Create(Guid.Empty), previewQuestion, previewChunk, previewTopic);
-        }
-
-        var streak = await _dbContext.StreakRecords
-            .FirstOrDefaultAsync(s => s.UserId == userId, cancellationToken);
-
-        if (streak == null)
-        {
-            streak = StreakRecord.Create(userId);
-            await _dbContext.StreakRecords.AddAsync(streak, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        int targetDayOrder;
-        if (request.DayOrder.HasValue && request.DayOrder.Value >= 1 && request.DayOrder.Value <= 30)
-        {
-            targetDayOrder = request.DayOrder.Value;
-        }
-        else
-        {
-            var totalCompleted = streak.TotalDrillsCompleted;
-            targetDayOrder = (totalCompleted % 30) + 1;
-        }
-
-        var topic = await _dbContext.Topics
-            .Include(t => t.InterviewQuestions)
-            .FirstOrDefaultAsync(t => t.DayOrder == targetDayOrder, cancellationToken)
-            ?? await _dbContext.Topics.Include(t => t.InterviewQuestions).FirstOrDefaultAsync(cancellationToken);
-
-        if (topic == null || !topic.InterviewQuestions.Any())
-        {
-            return Error.NotFound;
-        }
-
-        var question = topic.InterviewQuestions.First();
-        var masterBookGuid = Guid.Parse("10000000-0000-0000-0000-000000000001");
-        var documentChunk = await _dbContext.DocumentChunks
-            .FirstOrDefaultAsync(c => !c.IsDeleted && c.DocumentBookId == masterBookGuid && c.ChunkOrder == targetDayOrder, cancellationToken)
-            ?? await _dbContext.DocumentChunks
-                .FirstOrDefaultAsync(c => !c.IsDeleted && c.ChunkOrder == targetDayOrder, cancellationToken);
-
-        var existingDrill = await _dbContext.DailyDrills
-            .Include(d => d.Question)
-                .ThenInclude(q => q.Topic)
-            .Include(d => d.DocumentChunk)
-            .FirstOrDefaultAsync(d => d.UserId == userId && d.QuestionId == question.Id, cancellationToken);
-
-        if (existingDrill != null)
-        {
-            return MapResponse(existingDrill, streak, question, documentChunk, topic);
-        }
-
-        var newDrill = new DailyDrill
-        {
-            UserId = userId,
-            QuestionId = question.Id,
-            DocumentChunkId = documentChunk?.Id,
-            ScheduledDate = today,
-            Status = DrillStatus.Pending
-        };
-
-        await _dbContext.DailyDrills.AddAsync(newDrill, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        newDrill.Question = question;
-        newDrill.Question.Topic = topic;
-        newDrill.DocumentChunk = documentChunk;
-
-        return MapResponse(newDrill, streak, question, documentChunk, topic);
-    }
-
     private static GetTodayFocusResponse MapResponse(
         DailyDrill drill,
         StreakRecord streak,
         InterviewQuestion question,
-        DocumentChunk? chunk,
-        Topic? explicitTopic = null)
+        DocumentChunk? chunk)
     {
-        var topic = explicitTopic ?? question.Topic;
         var isReviewed = drill.Status == DrillStatus.Reviewed;
 
         return new GetTodayFocusResponse
         {
-            Topic = new TopicDto
-            {
-                Id = topic?.Id ?? chunk?.Id ?? Guid.Empty,
-                Slug = topic?.Slug ?? "doc-slice",
-                Title = topic?.Title ?? chunk?.ChapterTitle ?? "Technical Guide",
-                Category = topic?.Category ?? chunk?.DocumentBook?.Category ?? Category.BackendRuntime,
-                Difficulty = topic?.Difficulty ?? question.Difficulty,
-                DayOrder = topic?.DayOrder ?? chunk?.ChunkOrder ?? 1,
-                Summary = topic?.Summary ?? chunk?.SummaryMarkdown ?? string.Empty,
-                DeepDiveMarkdown = topic?.DeepDiveMarkdown ?? chunk?.OriginalTextMarkdown ?? string.Empty,
-                BenchmarkSnippet = topic?.BenchmarkSnippet
-            },
             Question = new InterviewQuestionDto
             {
                 Id = question.Id,

@@ -3,12 +3,10 @@ import {
   computeBezierPath,
   computeRoadmapTreeLayout,
   convertBookMilestonesToTree,
-  convertCurriculumToTree,
   DEFAULT_LAYOUT_CONFIG,
   type TreeRoot,
   type TreeChapterBranch
 } from '~/utils/roadmapTreeLayout'
-import type { CurriculumRoadmapData } from '~/stores/useRoadmapStore'
 
 describe('utils/roadmapTreeLayout', () => {
   describe('computeBezierPath', () => {
@@ -273,90 +271,4 @@ describe('utils/roadmapTreeLayout', () => {
     })
   })
 
-  describe('convertCurriculumToTree', () => {
-    it('converts 30-day curriculum roadmap data into tree format', () => {
-      const curriculumData: CurriculumRoadmapData = {
-        totalDays: 30,
-        completedDaysCount: 5,
-        currentActiveDay: 6,
-        overallProgressPercentage: 17,
-        modules: [
-          {
-            category: 0,
-            moduleTitle: 'Frontend & Architecture',
-            description: 'Vue, Nuxt and Web Vitals',
-            startDay: 1,
-            endDay: 7,
-            completedCount: 5,
-            totalCount: 7,
-            days: [
-              {
-                dayOrder: 1,
-                slug: 'vue-reactivity',
-                title: 'Vue 3 Reactivity Engine',
-                summary: 'Deep dive into proxies.',
-                difficulty: 1,
-                isCompleted: true,
-                isActiveToday: false,
-                isUnlocked: true,
-                drillScore: 90
-              },
-              {
-                dayOrder: 6,
-                slug: 'nuxt-ssr-hydration',
-                title: 'Nuxt SSR Hydration Internals',
-                summary: 'Hydration mismatches and streaming.',
-                difficulty: 2,
-                isCompleted: false,
-                isActiveToday: true,
-                isUnlocked: true,
-                drillScore: null
-              }
-            ]
-          }
-        ]
-      }
-
-      const { root, chapters } = convertCurriculumToTree(curriculumData)
-
-      expect(root.id).toBe('curriculum-root')
-      expect(root.title).toBe('30-Day Senior Curriculum')
-      expect(root.totalCount).toBe(30)
-      expect(root.completedCount).toBe(5)
-      expect(root.progressPercentage).toBe(17)
-      expect(root.trackType).toBe('curriculum')
-
-      expect(chapters).toHaveLength(1)
-      const firstChapter = chapters[0]!
-      expect(firstChapter.id).toBe('0')
-      expect(firstChapter.index).toBe(1)
-      expect(firstChapter.title).toBe('Frontend & Architecture')
-      expect(firstChapter.isActive).toBe(true)
-      expect(firstChapter.slices).toHaveLength(2)
-      expect(firstChapter.slices[0]?.status).toBe('completed')
-      expect(firstChapter.slices[1]?.status).toBe('active_today')
-    })
-
-    it('safely assigns clean integer indexes (1, 2, 3, 4) without string concatenation when categories are strings', () => {
-      const curriculumData: any = {
-        totalDays: 30,
-        completedDaysCount: 0,
-        overallProgressPercentage: 0,
-        modules: [
-          { category: 'FrontendWeb', moduleTitle: 'Frontend & Browser Internals', days: [] },
-          { category: 'BackendRuntime', moduleTitle: 'Backend & Runtime Systems', days: [] },
-          { category: 'DatabaseStorage', moduleTitle: 'Database & Storage Engines', days: [] },
-          { category: 'SystemDesign', moduleTitle: 'System Design & Distributed Systems', days: [] }
-        ]
-      }
-
-      const { chapters } = convertCurriculumToTree(curriculumData)
-      expect(chapters).toHaveLength(4)
-      expect(chapters[0].index).toBe(1)
-      expect(chapters[1].index).toBe(2)
-      expect(chapters[2].index).toBe(3)
-      expect(chapters[3].index).toBe(4)
-      expect(typeof chapters[0].index).toBe('number')
-    })
-  })
 })

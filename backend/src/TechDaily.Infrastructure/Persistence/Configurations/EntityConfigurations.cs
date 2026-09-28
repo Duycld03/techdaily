@@ -257,6 +257,7 @@ public class SpacedRepetitionCardConfiguration : IEntityTypeConfiguration<Spaced
         builder.HasIndex(c => new { c.UserId, c.NextReviewDate });
         builder.HasIndex(c => new { c.UserId, c.SourceHighlightId });
         builder.HasIndex(c => new { c.UserId, c.SourceQuizQuestionId });
+        builder.HasIndex(c => new { c.UserId, c.SourceDocumentChunkId });
 
         builder.HasOne(c => c.User)
             .WithMany(u => u.SpacedRepetitionCards)
@@ -277,6 +278,11 @@ public class SpacedRepetitionCardConfiguration : IEntityTypeConfiguration<Spaced
         builder.HasOne(c => c.SourceQuizQuestion)
             .WithMany()
             .HasForeignKey(c => c.SourceQuizQuestionId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(c => c.SourceDocumentChunk)
+            .WithMany()
+            .HasForeignKey(c => c.SourceDocumentChunkId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

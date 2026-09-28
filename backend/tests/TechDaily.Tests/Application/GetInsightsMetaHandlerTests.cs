@@ -125,32 +125,39 @@ public class GetInsightsMetaHandlerTests : IDisposable
             }
         );
 
-        // Add 2 curriculum topics for BackendDotNet (>= 2, so should not fall back to defaults)
-        await _db.Topics.AddRangeAsync(
-            new Topic
+        // Add ready DocumentBook and chunks for BackendRuntime (>= 2, so should not fall back to defaults)
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Backend Architecture Guide",
+            Slug = "backend-arch",
+            Category = Category.BackendRuntime,
+            Status = ProcessingStatus.Ready
+        };
+        await _db.DocumentBooks.AddAsync(book);
+
+        await _db.DocumentChunks.AddRangeAsync(
+            new DocumentChunk
             {
                 Id = Guid.NewGuid(),
-                Slug = "topic-1",
-                Title = "Curriculum Topic Alpha",
-                Category = Category.BackendRuntime,
-                DayOrder = 1
+                DocumentBookId = book.Id,
+                ChunkOrder = 1,
+                ChapterTitle = "Kestrel Connection Pooling"
             },
-            new Topic
+            new DocumentChunk
             {
                 Id = Guid.NewGuid(),
-                Slug = "topic-2",
-                Title = "Curriculum Topic Beta",
-                Category = Category.BackendRuntime,
-                DayOrder = 2
+                DocumentBookId = book.Id,
+                ChunkOrder = 2,
+                ChapterTitle = "Garbage Collection Latency Tuning"
             },
-            new Topic
+            new DocumentChunk
             {
                 Id = Guid.NewGuid(),
-                Slug = "topic-deleted",
-                Title = "Deleted Topic",
-                Category = Category.BackendRuntime,
-                IsDeleted = true,
-                DayOrder = 3
+                DocumentBookId = book.Id,
+                ChunkOrder = 3,
+                ChapterTitle = "Deleted Chapter",
+                IsDeleted = true
             }
         );
 
@@ -169,10 +176,9 @@ public class GetInsightsMetaHandlerTests : IDisposable
         var frontendCat = response.Categories.First(c => c.Id == (int)Category.FrontendWeb);
         frontendCat.Count.Should().Be(1);
 
-        // BackendRuntime had 2 topics, so its suggested topics should contain the DB topics and not need defaults
-        response.SuggestedTopics[(int)Category.BackendRuntime].Should().Contain(new[] { "Curriculum Topic Alpha", "Curriculum Topic Beta" });
-        response.SuggestedTopics[(int)Category.BackendRuntime].Should().NotContain("Deleted Topic");
-
+        // BackendRuntime had 2 chunks, so its suggested topics should contain the chapter titles and not need defaults
+        response.SuggestedTopics[(int)Category.BackendRuntime].Should().Contain(new[] { "Kestrel Connection Pooling", "Garbage Collection Latency Tuning" });
+        response.SuggestedTopics[(int)Category.BackendRuntime].Should().NotContain("Deleted Chapter");
         // DatabaseStorage had 0 topics, so should have default topics
         response.SuggestedTopics[(int)Category.DatabaseStorage].Should().Contain("PostgreSQL Index-Only Scan & INCLUDE");
     }

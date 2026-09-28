@@ -11,6 +11,7 @@ public class ReviewCardDto
     public string? BackMarkdown { get; set; }
     public Guid? SourceHighlightId { get; set; }
     public Guid? SourceQuizQuestionId { get; set; }
+    public Guid? SourceDocumentChunkId { get; set; }
     public string TopicTitle { get; set; } = string.Empty;
     public Category Category { get; set; }
     public Difficulty Difficulty { get; set; }
@@ -31,6 +32,7 @@ public class ReviewCardDto
             SourceType = card.SourceType,
             SourceHighlightId = card.SourceHighlightId,
             SourceQuizQuestionId = card.SourceQuizQuestionId,
+            SourceDocumentChunkId = card.SourceDocumentChunkId,
             FrontMarkdown = !string.IsNullOrWhiteSpace(card.FrontMarkdown) ? card.FrontMarkdown : (card.Topic != null ? card.Topic.Title : string.Empty),
             BackMarkdown = !string.IsNullOrWhiteSpace(card.BackMarkdown) ? card.BackMarkdown : (card.Topic != null ? card.Topic.Summary : string.Empty),
             TopicTitle = card.Topic != null ? card.Topic.Title : (card.FrontMarkdown ?? string.Empty),

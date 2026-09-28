@@ -19,7 +19,7 @@ describe('GraphLegend.vue', () => {
 
     // Check entity items exist
     expect(wrapper.find('[data-testid="legend-item-pillar"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="legend-item-topic"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="legend-item-chunk"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="legend-item-book"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="legend-item-highlight"]').exists()).toBe(true)
 
@@ -82,7 +82,7 @@ describe('GraphLegend.vue', () => {
     const wrapper = mount(GraphLegend)
     const card = wrapper.find('[data-testid="legend-card"]')
     expect(card.exists()).toBe(true)
-    expect(wrapper.text()).toContain('graph.legend.topic')
+    expect(wrapper.text()).toContain('graph.legend.chunk')
   })
 
   it('defaults to collapsed on tablet/mobile screens (< 1024px) when no localStorage is set', () => {
@@ -105,7 +105,7 @@ describe('GraphLegend.vue', () => {
       stats: {
         totalNodes: 256,
         totalEdges: 300,
-        nodeTypeCounts: { pillar: 5, topic: 48, book: 19, highlight: 184 },
+        nodeTypeCounts: { pillar: 5, chunk: 48, book: 19, highlight: 184 },
         pillarCounts: {},
         masteredCardsCount: 0
       }
@@ -113,7 +113,7 @@ describe('GraphLegend.vue', () => {
     const wrapper = mount(GraphLegend)
 
     expect(wrapper.find('[data-testid="legend-item-pillar"]').text()).toContain('5')
-    expect(wrapper.find('[data-testid="legend-item-topic"]').text()).toContain('48')
+    expect(wrapper.find('[data-testid="legend-item-chunk"]').text()).toContain('48')
     expect(wrapper.find('[data-testid="legend-item-book"]').text()).toContain('19')
     expect(wrapper.find('[data-testid="legend-item-highlight"]').text()).toContain('184')
   })

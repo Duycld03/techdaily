@@ -13,14 +13,14 @@ import {
 describe('graphVisualTokens', () => {
   describe('resolveEdgeFamily', () => {
     it('maps structural anchors to the solid family', () => {
-      expect(resolveEdgeFamily('TopicToPillar')).toBe('solid')
+      expect(resolveEdgeFamily('ChunkToBook')).toBe('solid')
       expect(resolveEdgeFamily('BookToPillar')).toBe('solid')
     })
 
     it('maps atomic card links to the dotted family', () => {
       expect(resolveEdgeFamily('CardToHighlight')).toBe('dotted')
       expect(resolveEdgeFamily('CardToPillar')).toBe('dotted')
-      expect(resolveEdgeFamily('CardToTopic')).toBe('dotted')
+      expect(resolveEdgeFamily('CardToChunk')).toBe('dotted')
     })
 
     it('maps SharedTag and other associative links to the dashed family', () => {
@@ -38,8 +38,8 @@ describe('graphVisualTokens', () => {
     })
 
     it('is case-insensitive', () => {
-      expect(resolveEdgeFamily('topictopillar')).toBe('solid')
-      expect(resolveEdgeFamily('cardtotopic')).toBe('dotted')
+      expect(resolveEdgeFamily('chunktobook')).toBe('solid')
+      expect(resolveEdgeFamily('cardtochunk')).toBe('dotted')
     })
   })
 

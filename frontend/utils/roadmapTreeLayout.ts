@@ -1,4 +1,3 @@
-import type { CurriculumRoadmapData } from '~/stores/useRoadmapStore'
 
 export type NodeStatus = 'completed' | 'active_today' | 'upcoming'
 
@@ -34,7 +33,7 @@ export interface TreeRoot {
   totalCount: number
   completedCount: number
   progressPercentage: number
-  trackType: 'book' | 'curriculum'
+  trackType: 'book'
 }
 
 export interface PositionedNode<T> {
@@ -380,56 +379,3 @@ export function convertBookMilestonesToTree(
   return { root, chapters }
 }
 
-/**
- * Converts Curriculum Roadmap Data into unified Tree data.
- */
-export function convertCurriculumToTree(
-  curriculum: CurriculumRoadmapData
-): { root: TreeRoot; chapters: TreeChapterBranch[] } {
-  const root: TreeRoot = {
-    id: 'curriculum-root',
-    title: '30-Day Senior Curriculum',
-    subtitle: 'Core fullstack architecture skill tree',
-    totalCount: curriculum.totalDays || 30,
-    completedCount: curriculum.completedDaysCount || 0,
-    progressPercentage: curriculum.overallProgressPercentage || 0,
-    trackType: 'curriculum'
-  }
-
-  const chapters: TreeChapterBranch[] = (curriculum.modules || []).map((mod, idx) => {
-    const isCompleted = mod.completedCount === mod.totalCount && mod.totalCount > 0
-    const isActive = mod.days ? mod.days.some(d => d.isActiveToday) : false
-
-    const slices: TreeSliceLeaf[] = (mod.days || []).map(d => {
-      let status: NodeStatus = 'upcoming'
-      if (d.isActiveToday) status = 'active_today'
-      else if (d.isCompleted) status = 'completed'
-
-      return {
-        id: String(d.dayOrder),
-        order: d.dayOrder,
-        title: d.title,
-        subtitle: d.summary,
-        status,
-        isCompleted: d.isCompleted,
-        isActiveToday: d.isActiveToday,
-        isUpcoming: !d.isCompleted && !d.isActiveToday,
-        raw: d
-      }
-    })
-
-    return {
-      id: String(mod.category),
-      index: idx + 1,
-      title: mod.moduleTitle,
-      subtitle: `Days ${mod.startDay}–${mod.endDay} • ${mod.description}`,
-      totalCount: mod.totalCount,
-      completedCount: mod.completedCount,
-      isCompleted,
-      isActive,
-      slices
-    }
-  })
-
-  return { root, chapters }
-}

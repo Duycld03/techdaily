@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import RoadmapMindmapCanvas from '~/components/roadmap/RoadmapMindmapCanvas.vue'
 import type { BookDetail } from '~/stores/useLibraryStore'
-import type { CurriculumRoadmapData } from '~/stores/useRoadmapStore'
 
 const mockPush = vi.fn()
 
@@ -92,7 +91,6 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
       props: {
         selectedBook: mockBook,
         chapterMilestones: mockMilestones,
-        isCurriculumSelected: false,
         activeBookId: 'book-123',
         currentChunkOrder: 2
       }
@@ -121,7 +119,6 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
       props: {
         selectedBook: mockBook,
         chapterMilestones: mockMilestones,
-        isCurriculumSelected: false,
         activeBookId: 'book-123',
         currentChunkOrder: 2
       }
@@ -146,7 +143,6 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
       props: {
         selectedBook: mockBook,
         chapterMilestones: mockMilestones,
-        isCurriculumSelected: false,
         activeBookId: 'book-123',
         currentChunkOrder: 2
       }
@@ -185,7 +181,6 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
       props: {
         selectedBook: mockBook,
         chapterMilestones: mockMilestones,
-        isCurriculumSelected: false,
         activeBookId: 'book-123',
         currentChunkOrder: 2
       }
@@ -203,7 +198,6 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
       props: {
         selectedBook: mockBook,
         chapterMilestones: mockMilestones,
-        isCurriculumSelected: false,
         activeBookId: 'book-123',
         currentChunkOrder: 2
       }
@@ -216,73 +210,11 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
     expect(mockPush).toHaveBeenCalledWith('/read/book-123?slice=3')
   })
 
-  it('renders curriculum track and navigates to /today?day={dayOrder} when curriculum day is clicked', async () => {
-    const mockCurriculumData: CurriculumRoadmapData = {
-      totalDays: 30,
-      completedDaysCount: 1,
-      currentActiveDay: 2,
-      overallProgressPercentage: 3,
-      modules: [
-        {
-          category: 0,
-          moduleTitle: 'Frontend Architecture',
-          description: 'Web performance',
-          startDay: 1,
-          endDay: 2,
-          completedCount: 1,
-          totalCount: 2,
-          days: [
-            {
-              dayOrder: 1,
-              slug: 'vue-internals',
-              title: 'Reactivity System',
-              summary: 'Proxies and effects',
-              difficulty: 1,
-              isCompleted: true,
-              isActiveToday: false,
-              isUnlocked: true,
-              drillScore: 85
-            },
-            {
-              dayOrder: 2,
-              slug: 'nuxt-ssr',
-              title: 'Universal Hydration',
-              summary: 'Hydration flow',
-              difficulty: 1,
-              isCompleted: false,
-              isActiveToday: true,
-              isUnlocked: true,
-              drillScore: null
-            }
-          ]
-        }
-      ]
-    }
-
-    const wrapper = mount(RoadmapMindmapCanvas, {
-      props: {
-        roadmapData: mockCurriculumData,
-        isCurriculumSelected: true
-      }
-    })
-
-    const rootNode = wrapper.find('[data-testid="root-node"]')
-    expect(rootNode.text()).toContain('30-Day Senior Curriculum')
-
-    // Day 2 is active today -> expanded by default
-    const day2Node = wrapper.find('[data-testid="slice-node-2"]')
-    expect(day2Node.exists()).toBe(true)
-
-    await day2Node.trigger('click')
-    expect(mockPush).toHaveBeenCalledWith('/today?day=2')
-  })
-
   it('centers view on active milestone when focus active button is clicked', async () => {
     const wrapper = mount(RoadmapMindmapCanvas, {
       props: {
         selectedBook: mockBook,
         chapterMilestones: mockMilestones,
-        isCurriculumSelected: false,
         activeBookId: 'book-123',
         currentChunkOrder: 2
       }
@@ -322,7 +254,6 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
       props: {
         selectedBook: mockBook,
         chapterMilestones: fifteenMilestones,
-        isCurriculumSelected: false,
         activeBookId: 'book-123',
         currentChunkOrder: 1
       }
@@ -345,7 +276,6 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
       props: {
         selectedBook: mockBook,
         chapterMilestones: mockMilestones,
-        isCurriculumSelected: false,
         activeBookId: 'book-123',
         currentChunkOrder: 2
       }
@@ -379,7 +309,6 @@ describe('components/roadmap/RoadmapMindmapCanvas.vue', () => {
       props: {
         selectedBook: mockBook,
         chapterMilestones: mockMilestones,
-        isCurriculumSelected: false,
         activeBookId: 'book-123',
         currentChunkOrder: 2
       }

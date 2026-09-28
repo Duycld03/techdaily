@@ -8,7 +8,6 @@ export interface GraphNode {
   type: string
   category: string
   subtitle?: string | null
-  dayOrder?: number | null
   summary?: string | null
   difficulty?: string | null
   status?: string | null
@@ -91,15 +90,10 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
           }
         }
       }
-
-      // Node type filter: if 'topic' is selected, include 'pillar' nodes as the hubs
+      // Node type filter: include 'pillar' nodes as the hubs
       if (selectedNodeType.value && selectedNodeType.value.toLowerCase() !== 'all') {
         const selType = selectedNodeType.value.toLowerCase()
-        if (selType === 'topic') {
-          if (nodeType !== 'topic' && nodeType !== 'pillar') {
-            return false
-          }
-        } else if (nodeType !== selType) {
+        if (nodeType !== selType && nodeType !== 'pillar') {
           return false
         }
       }

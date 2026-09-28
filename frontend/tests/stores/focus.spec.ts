@@ -3,16 +3,6 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
 
 const mockFocusData = {
-  topic: {
-    id: 't-1',
-    slug: 'vue3-reactivity',
-    title: 'Vue 3 Reactivity Engine',
-    category: 0,
-    difficulty: 1,
-    dayOrder: 1,
-    summary: 'Deep dive into Proxy and Reflect',
-    deepDiveMarkdown: '### Proxy Mechanisms'
-  },
   question: {
     id: 'q-1',
     questionText: 'When does destructuring reactive() lose reactivity?',
@@ -101,7 +91,7 @@ describe('useDailyFocusStore', () => {
 
     await focus.fetchTodayFocus()
     expect(focus.data).not.toBeNull()
-    expect(focus.data?.topic?.title).toBe('Vue 3 Reactivity Engine')
+    expect(focus.data?.documentChunk?.chapterTitle).toBe('Reactivity Engine')
     expect(focus.data?.question.options).toHaveLength(4)
     expect(focus.data?.currentStreak).toBe(5)
   })
@@ -149,5 +139,15 @@ describe('useDailyFocusStore', () => {
     expect(focus.error).toBeNull()
     expect(focus.data).not.toBeNull()
     expect(focus.data?.question.options).toHaveLength(4)
+  })
+
+  it('consumes chunk fields and does not expose topic', async () => {
+    const focus = useDailyFocusStore()
+    await focus.fetchTodayFocus()
+
+    expect(focus.data?.documentChunk).toBeDefined()
+    expect(focus.data?.documentChunk?.chapterTitle).toBe('Reactivity Engine')
+    expect(focus.data?.documentChunk?.keyTakeaways).toEqual(['Proxy tracks get/set'])
+    expect((focus.data as any)?.topic).toBeUndefined()
   })
 })

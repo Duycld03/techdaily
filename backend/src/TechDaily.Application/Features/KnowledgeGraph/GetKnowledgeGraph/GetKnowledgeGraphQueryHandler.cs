@@ -15,6 +15,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
     {
         _dbContext = dbContext;
     }
+
     private static readonly (string Id, string Label, Category Category, string Subtitle, string Summary)[] CanonicalPillars =
     [
         ("pillar-FrontendWeb", "Frontend & Web", Category.FrontendWeb, "Vue 3, Nuxt 4, Browser Pipeline, Web Vitals", "Modern web architecture, client-side rendering, performance optimization, and browser lifecycle mechanics."),
@@ -23,32 +24,6 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
         ("pillar-SystemDesign", "Distributed Systems", Category.SystemDesign, "Event-Driven, Consistency & Fault Tolerance", "Scalable distributed patterns, transactional outbox, idempotency, event sourcing, and resilience engineering."),
         ("pillar-EngineeringCraft", "Engineering Craft", Category.EngineeringCraft, "Architecture, Clean Code, Testing", "Foundational engineering practices, clean architecture, automated testing, and software design principles.")
     ];
-
-    // Free-text containment match used to link a book (title/slug/chunk text) to a topic.
-    private static bool MatchesTopic(string? text, string topicTitle, string topicSlug)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return false;
-
-        var slugSpaced = topicSlug.Replace("-", " ");
-        return text.Contains(topicTitle, StringComparison.OrdinalIgnoreCase)
-            || text.Contains(topicSlug, StringComparison.OrdinalIgnoreCase)
-            || text.Contains(slugSpaced, StringComparison.OrdinalIgnoreCase);
-    }
-
-    // Normalized-equality match between a highlight tag and a topic slug/title.
-    // Shared by the touched-topic gate and the HighlightToTopic edge so both stay consistent.
-    private static bool TagMatchesTopic(string? tag, Topic topic)
-    {
-        if (string.IsNullOrWhiteSpace(tag))
-            return false;
-
-        var trimmedTag = tag.Trim();
-        return string.Equals(trimmedTag, topic.Slug, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(trimmedTag, topic.Title, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(trimmedTag.Replace("-", " "), topic.Title, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(trimmedTag.Replace(" ", "-"), topic.Slug, StringComparison.OrdinalIgnoreCase);
-    }
 
     public async Task<Result<KnowledgeGraphResponse>> ExecuteAsync(
         GetKnowledgeGraphQuery request,
@@ -59,110 +34,76 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             return Result<KnowledgeGraphResponse>.Failure(Error.Unauthorized);
         }
 
-        // Phase 1 — load the authenticated user's own artifacts only.
-        // Books are scoped to the owner, matching the Library page (GET /api/v1/library/books).
+        // 1. Load user's own books (only published, non-deleted, created by this user) with their Chunks
         var books = await _dbContext.DocumentBooks
             .AsNoTracking()
-            .Include(b => b.Chunks)
+            .Include(b => b.Chunks.Where(c => !c.IsDeleted))
             .Where(b => b.CreatedByUserId == request.UserId && b.IsPublished && !b.IsDeleted)
             .ToListAsync(cancellationToken);
 
+        // 2. Load user's cards
         var cards = await _dbContext.SpacedRepetitionCards
             .AsNoTracking()
-            .Where(c => c.UserId == request.UserId)
+            .Where(c => c.UserId == request.UserId && !c.IsDeleted)
             .ToListAsync(cancellationToken);
 
+        // 3. Load user's highlights
         var highlights = await _dbContext.UserHighlights
             .AsNoTracking()
             .Include(h => h.DocumentChunk)
-            .Where(h => h.UserId == request.UserId)
+            .Where(h => h.UserId == request.UserId && !h.IsDeleted)
             .OrderBy(h => h.CreatedAt)
             .ThenBy(h => h.Id)
             .ToListAsync(cancellationToken);
 
-        // The seeded Topics table is small and is still needed to resolve card/highlight links
-        // and topic metadata, but only touched topics become nodes.
-        var allTopics = await _dbContext.Topics
-            .AsNoTracking()
-            .OrderBy(t => t.DayOrder)
-            .ToListAsync(cancellationToken);
+        var bookMap = books.ToDictionary(b => b.Id);
+        var allUserChunks = books.SelectMany(b => b.Chunks).ToDictionary(c => c.Id);
+        var highlightMap = highlights.ToDictionary(h => h.Id);
 
-        // Phase 2 — derive the set of topics the user has actually touched:
-        //   distinct non-null card.TopicId  ∪  topics matched by any user highlight tag.
-        var touchedTopicIds = new HashSet<Guid>();
+        // 4. A chunk SHALL be emitted if and only if it belongs to a surviving user book
+        //    AND is referenced by at least one of the user's own cards or highlights.
+        var referencedChunkIds = new HashSet<Guid>();
         foreach (var card in cards)
         {
-            if (card.TopicId.HasValue)
+            if (card.SourceDocumentChunkId.HasValue && allUserChunks.ContainsKey(card.SourceDocumentChunkId.Value))
             {
-                touchedTopicIds.Add(card.TopicId.Value);
+                referencedChunkIds.Add(card.SourceDocumentChunkId.Value);
             }
         }
         foreach (var highlight in highlights)
         {
-            if (highlight.Tags == null || highlight.Tags.Count == 0)
-                continue;
-
-            foreach (var tag in highlight.Tags)
+            if (allUserChunks.ContainsKey(highlight.DocumentChunkId))
             {
-                foreach (var topic in allTopics)
-                {
-                    if (TagMatchesTopic(tag, topic))
-                    {
-                        touchedTopicIds.Add(topic.Id);
-                    }
-                }
+                referencedChunkIds.Add(highlight.DocumentChunkId);
             }
         }
 
-        var topics = allTopics.Where(t => touchedTopicIds.Contains(t.Id)).ToList();
-
-        var topicMap = topics.ToDictionary(t => t.Id);
-        var bookMap = books.ToDictionary(b => b.Id);
-        var highlightMap = highlights.ToDictionary(h => h.Id);
+        var emittedChunks = allUserChunks.Values
+            .Where(c => referencedChunkIds.Contains(c.Id))
+            .ToList();
+        var chunkMap = emittedChunks.ToDictionary(c => c.Id);
 
         var nodes = new List<GraphNodeDto>();
         var edges = new List<GraphEdgeDto>();
+        var referencedPillars = new HashSet<Category>();
 
-        // Resolves the effective category of a card from its linked topic/highlight, else Engineering Craft.
+        // Resolves the effective category of a card from its chunk/highlight/book, else EngineeringCraft
         Category ResolveCardCategory(SpacedRepetitionCard card)
         {
-            if (card.TopicId.HasValue && topicMap.TryGetValue(card.TopicId.Value, out var linkedTopic))
+            if (card.SourceDocumentChunkId.HasValue && allUserChunks.TryGetValue(card.SourceDocumentChunkId.Value, out var c))
             {
-                return linkedTopic.Category;
+                if (bookMap.TryGetValue(c.DocumentBookId, out var b))
+                    return b.Category;
             }
-            if (card.SourceHighlightId.HasValue && highlightMap.TryGetValue(card.SourceHighlightId.Value, out var linkedHl))
+            if (card.SourceHighlightId.HasValue && highlightMap.TryGetValue(card.SourceHighlightId.Value, out var h))
             {
-                return linkedHl.DocumentChunk != null && bookMap.TryGetValue(linkedHl.DocumentChunk.DocumentBookId, out var linkedBook)
-                    ? linkedBook.Category
-                    : Category.EngineeringCraft;
+                if (h.DocumentChunk != null && bookMap.TryGetValue(h.DocumentChunk.DocumentBookId, out var b))
+                    return b.Category;
             }
             return Category.EngineeringCraft;
         }
 
-        // 1. Topic Nodes: only topics the user has touched.
-        foreach (var topic in topics)
-        {
-            nodes.Add(new GraphNodeDto(
-                Id: topic.Id.ToString(),
-                Label: topic.Title,
-                Type: GraphNodeType.Topic,
-                Category: topic.Category.ToString(),
-                Subtitle: $"Day {topic.DayOrder}",
-                DayOrder: topic.DayOrder,
-                Summary: topic.Summary,
-                Difficulty: topic.Difficulty.ToString(),
-                Status: null,
-                IntervalDays: null,
-                EaseFactor: null,
-                RepetitionCount: null,
-                DocumentChunkId: null,
-                BookId: null,
-                Tags: null,
-                CreatedAt: topic.CreatedAt.UtcDateTime
-            ));
-        }
-
-        // 2. Book Nodes: only books the user imported (category as stored, no cross-pillar remap).
+        // 1. Book Nodes
         foreach (var book in books)
         {
             nodes.Add(new GraphNodeDto(
@@ -185,7 +126,31 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             ));
         }
 
-        // 3. Card Nodes: type "card", status derived from SM-2 metrics.
+        // 2. Chunk Nodes
+        foreach (var chunk in emittedChunks)
+        {
+            var parentBook = bookMap[chunk.DocumentBookId];
+            nodes.Add(new GraphNodeDto(
+                Id: chunk.Id.ToString(),
+                Label: chunk.ChapterTitle,
+                Type: GraphNodeType.Chunk,
+                Category: parentBook.Category.ToString(),
+                Subtitle: $"Chapter {chunk.ChunkOrder}",
+                DayOrder: chunk.ChunkOrder,
+                Summary: chunk.SummaryMarkdown,
+                Difficulty: null,
+                Status: null,
+                IntervalDays: null,
+                EaseFactor: null,
+                RepetitionCount: null,
+                DocumentChunkId: chunk.Id.ToString(),
+                BookId: chunk.DocumentBookId.ToString(),
+                Tags: null,
+                CreatedAt: chunk.CreatedAt.UtcDateTime
+            ));
+        }
+
+        // 3. Card Nodes
         int masteredCardsCount = 0;
         foreach (var card in cards)
         {
@@ -205,7 +170,6 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             }
 
             var category = ResolveCardCategory(card).ToString();
-
             string label = !string.IsNullOrWhiteSpace(card.FrontMarkdown)
                 ? (card.FrontMarkdown.Length > 80 ? card.FrontMarkdown[..80].Trim() + "..." : card.FrontMarkdown.Trim())
                 : "Flashcard";
@@ -223,14 +187,14 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 IntervalDays: card.IntervalDays,
                 EaseFactor: card.EaseFactor,
                 RepetitionCount: card.RepetitionCount,
-                DocumentChunkId: card.SourceHighlightId?.ToString(),
-                BookId: card.TopicId?.ToString(),
+                DocumentChunkId: card.SourceDocumentChunkId?.ToString() ?? card.SourceHighlightId?.ToString(),
+                BookId: null,
                 Tags: null,
                 CreatedAt: card.CreatedAt.UtcDateTime
             ));
         }
 
-        // 4. Highlight Nodes: type "highlight", label truncated selected text, note, tags.
+        // 4. Highlight Nodes
         foreach (var highlight in highlights)
         {
             var rawText = highlight.SelectedText?.Trim() ?? string.Empty;
@@ -260,25 +224,8 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             ));
         }
 
-        // Edge derivation — edges only reference nodes present in the payload.
-        // A pillar hub is emitted only when at least one edge targets it (see referencedPillars).
-        var referencedPillars = new HashSet<Category>();
-
-        // 0. TopicToPillar: each touched topic -> its pillar hub (guarantees topic degree >= 1).
-        foreach (var topic in topics)
-        {
-            referencedPillars.Add(topic.Category);
-            edges.Add(new GraphEdgeDto(
-                Id: $"edge-topic-{topic.Id}-pillar-{topic.Category}",
-                Source: topic.Id.ToString(),
-                Target: $"pillar-{topic.Category}",
-                RelationType: GraphRelationType.TopicToPillar,
-                Label: "Pillar",
-                Weight: 2
-            ));
-        }
-
-        // 1. BookToPillar: each user book -> the pillar hub for its own category (no fan-out).
+        // Edge derivation:
+        // 1. BookToPillar: each user book -> the pillar hub for its category
         foreach (var book in books)
         {
             referencedPillars.Add(book.Category);
@@ -292,17 +239,30 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             ));
         }
 
-        // 2. Card edges: CardToTopic, CardToHighlight, or CardToPillar (guarantees card degree >= 1).
+        // 2. ChunkToBook: each emitted chunk -> its parent book
+        foreach (var chunk in emittedChunks)
+        {
+            edges.Add(new GraphEdgeDto(
+                Id: $"edge-chunk-{chunk.Id}-book-{chunk.DocumentBookId}",
+                Source: chunk.Id.ToString(),
+                Target: chunk.DocumentBookId.ToString(),
+                RelationType: GraphRelationType.ChunkToBook,
+                Label: "Chapter",
+                Weight: 2
+            ));
+        }
+
+        // 3. Card edges:
         foreach (var card in cards)
         {
-            if (card.TopicId.HasValue && topicMap.ContainsKey(card.TopicId.Value))
+            if (card.SourceDocumentChunkId.HasValue && chunkMap.ContainsKey(card.SourceDocumentChunkId.Value))
             {
                 edges.Add(new GraphEdgeDto(
-                    Id: $"edge-card-{card.Id}-topic-{card.TopicId.Value}",
+                    Id: $"edge-card-{card.Id}-chunk-{card.SourceDocumentChunkId.Value}",
                     Source: card.Id.ToString(),
-                    Target: card.TopicId.Value.ToString(),
-                    RelationType: GraphRelationType.CardToTopic,
-                    Label: "Topic",
+                    Target: card.SourceDocumentChunkId.Value.ToString(),
+                    RelationType: GraphRelationType.CardToChunk,
+                    Label: "Recall",
                     Weight: 1
                 ));
             }
@@ -332,45 +292,23 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             }
         }
 
-        // 3. BookToTopic: refined matching against touched topics only (NO naive Cartesian product).
-        foreach (var book in books)
-        {
-            foreach (var topic in topics)
-            {
-                bool isMatch = MatchesTopic(book.Title, topic.Title, topic.Slug)
-                    || MatchesTopic(book.Slug, topic.Title, topic.Slug);
-
-                if (!isMatch && book.Chunks != null && book.Chunks.Count > 0)
-                {
-                    foreach (var chunk in book.Chunks)
-                    {
-                        if (MatchesTopic(chunk.ChapterTitle, topic.Title, topic.Slug)
-                            || MatchesTopic(chunk.OriginalTextMarkdown, topic.Title, topic.Slug)
-                            || (!string.IsNullOrWhiteSpace(chunk.ChapterTitle) && chunk.ChapterTitle.Length >= 4 && topic.Title.Contains(chunk.ChapterTitle, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            isMatch = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (isMatch)
-                {
-                    edges.Add(new GraphEdgeDto(
-                        Id: $"edge-book-{book.Id}-topic-{topic.Id}",
-                        Source: book.Id.ToString(),
-                        Target: topic.Id.ToString(),
-                        RelationType: GraphRelationType.BookToTopic,
-                        Label: topic.Category.ToString(),
-                        Weight: 1
-                    ));
-                }
-            }
-        }
-
-        // 4. HighlightToBook: highlight -> its source book, when that book is present.
+        // 4. Highlight edges:
         foreach (var highlight in highlights)
         {
+            // HighlightToChunk: when chunk is emitted
+            if (chunkMap.ContainsKey(highlight.DocumentChunkId))
+            {
+                edges.Add(new GraphEdgeDto(
+                    Id: $"edge-highlight-{highlight.Id}-chunk-{highlight.DocumentChunkId}",
+                    Source: highlight.Id.ToString(),
+                    Target: highlight.DocumentChunkId.ToString(),
+                    RelationType: GraphRelationType.HighlightToChunk,
+                    Label: "Highlight",
+                    Weight: 1
+                ));
+            }
+
+            // HighlightToBook: when parent book is present
             if (highlight.DocumentChunk != null && bookMap.ContainsKey(highlight.DocumentChunk.DocumentBookId))
             {
                 edges.Add(new GraphEdgeDto(
@@ -384,37 +322,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             }
         }
 
-        // 5. HighlightToTopic: highlight tag matches a touched topic slug or title.
-        var addedHighlightTopicEdges = new HashSet<string>();
-        foreach (var highlight in highlights)
-        {
-            if (highlight.Tags == null || highlight.Tags.Count == 0)
-                continue;
-
-            foreach (var tag in highlight.Tags)
-            {
-                foreach (var topic in topics)
-                {
-                    if (TagMatchesTopic(tag, topic))
-                    {
-                        var edgeKey = $"{highlight.Id}-{topic.Id}";
-                        if (addedHighlightTopicEdges.Add(edgeKey))
-                        {
-                            edges.Add(new GraphEdgeDto(
-                                Id: $"edge-highlight-{highlight.Id}-topic-{topic.Id}",
-                                Source: highlight.Id.ToString(),
-                                Target: topic.Id.ToString(),
-                                RelationType: GraphRelationType.HighlightToTopic,
-                                Label: tag.Trim(),
-                                Weight: 1
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-
-        // 6. SharedTag: pairwise between highlights sharing common normalized tags.
+        // 5. SharedTag: pairwise between highlights sharing common normalized tags
         for (int i = 0; i < highlights.Count; i++)
         {
             var h1 = highlights[i];
@@ -457,8 +365,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             }
         }
 
-        // Pillar Hub Nodes: emit only pillars that at least one edge targets (0..5 hubs),
-        // preserving canonical order at the front of the node list.
+        // Pillar Hub Nodes: emit only pillars that at least one edge targets (0..5 hubs)
         var pillarNodes = new List<GraphNodeDto>();
         foreach (var (id, label, cat, subtitle, summary) in CanonicalPillars)
         {
@@ -486,12 +393,13 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
         }
         nodes.InsertRange(0, pillarNodes);
 
-        // Compute stats.
+        // Stats
         var nodeTypeCounts = new Dictionary<string, int>
         {
             [GraphNodeType.Pillar] = pillarNodes.Count,
-            [GraphNodeType.Topic] = topics.Count,
+            [GraphNodeType.Topic] = 0,
             [GraphNodeType.Book] = books.Count,
+            [GraphNodeType.Chunk] = emittedChunks.Count,
             [GraphNodeType.Card] = cards.Count,
             [GraphNodeType.Highlight] = highlights.Count
         };
@@ -515,7 +423,6 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             MasteredCardsCount: masteredCardsCount
         );
 
-        var response = new KnowledgeGraphResponse(nodes, edges, stats);
-        return Result<KnowledgeGraphResponse>.Success(response);
+        return Result<KnowledgeGraphResponse>.Success(new KnowledgeGraphResponse(nodes, edges, stats));
     }
 }

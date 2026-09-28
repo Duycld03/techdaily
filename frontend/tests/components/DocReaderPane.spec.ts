@@ -17,25 +17,13 @@ vi.mock('~/composables/useMarkdownRenderer', () => ({
   })
 }))
 
-const mockTopic = {
-  id: 'topic-day-5',
-  dayOrder: 5,
-  slug: 'state-management-server-caching',
-  title: 'State Management & Server State Caching',
-  category: 0,
-  difficulty: 'Senior',
-  summary: 'Client State vs Server State Caching',
-  deepDiveMarkdown: '```ts\nqueryClient.setQueryData([\'items\'], (old) => updateLocal(old, itemId));\n```',
-  benchmarkSnippet: 'Stale-While-Revalidate Flow'
-}
-
 const mockDocumentChunk = {
   id: 'chunk-day-5',
   documentBookId: 'book-1',
   chunkOrder: 5,
   chapterTitle: 'State Management & Server State Caching',
-  originalTextMarkdown: 'Original context',
-  summaryMarkdown: 'Summary',
+  originalTextMarkdown: "```ts\nqueryClient.setQueryData(['items'], (old) => updateLocal(old, itemId));\n```",
+  summaryMarkdown: 'Client State vs Server State Caching',
   keyTakeaways: ['Key Takeaway 1', 'Key Takeaway 2'],
   language: 'en',
   estimatedReadMinutes: 3
@@ -46,11 +34,10 @@ describe('DocReaderPane.vue', () => {
     setActivePinia(createPinia())
   })
 
-  it('renders topic title and key takeaways properly', () => {
+  it('renders chunk title, summary, and key takeaways properly', () => {
     const wrapper = mount(DocReaderPane, {
       props: {
-        topic: mockTopic,
-        documentChunk: mockDocumentChunk
+        chunk: mockDocumentChunk
       },
       global: {
         mocks: {
@@ -70,8 +57,7 @@ describe('DocReaderPane.vue', () => {
   it('renders code snippet with full content', () => {
     const wrapper = mount(DocReaderPane, {
       props: {
-        topic: mockTopic,
-        documentChunk: mockDocumentChunk
+        chunk: mockDocumentChunk
       },
       global: {
         mocks: {
@@ -90,8 +76,7 @@ describe('DocReaderPane.vue', () => {
   it('does not render micro quiz container, providing distraction-free reading', () => {
     const wrapper = mount(DocReaderPane, {
       props: {
-        topic: mockTopic,
-        documentChunk: mockDocumentChunk
+        chunk: mockDocumentChunk
       },
       global: {
         mocks: {
@@ -108,8 +93,7 @@ describe('DocReaderPane.vue', () => {
   it('renders Aa button, toggles popover, and dynamically binds typography styles', async () => {
     const wrapper = mount(DocReaderPane, {
       props: {
-        topic: mockTopic,
-        documentChunk: mockDocumentChunk
+        chunk: mockDocumentChunk
       },
       global: {
         mocks: {

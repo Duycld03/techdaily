@@ -45,7 +45,9 @@ export function normalizeCategory(category?: string | null): PillarCategory {
 /** Fixed per-type node fills that are not derived from a pillar category. */
 export const NODE_TYPE_COLOR = {
   book: '#6366f1',
-  highlight: '#06b6d4'
+  chunk: '#0ea5e9',
+  highlight: '#06b6d4',
+  card: '#f59e0b'
 } as const
 
 export type Sm2Status = 'learning' | 'reviewing' | 'mastered'
@@ -71,14 +73,15 @@ export type EdgeFamily = 'solid' | 'dotted' | 'dashed'
 
 // Structural anchors to a hub/parent.
 const SOLID_RELATIONS: Record<string, true> = {
-  topictopillar: true,
-  booktopillar: true
+  booktopillar: true,
+  chunktobook: true
 }
 // Atomic flashcard links.
 const DOTTED_RELATIONS: Record<string, true> = {
-  cardtohighlight: true,
+  cardtochunk: true,
   cardtopillar: true,
-  cardtotopic: true
+  cardtohighlight: true,
+  highlighttochunk: true
 }
 // Everything else (SharedTag, BookToTopic, HighlightToBook, HighlightToTopic,
 // and any unknown relation) falls back to the associative dashed family.

@@ -22,12 +22,10 @@ import {
 import {
   computeRoadmapTreeLayout,
   convertBookMilestonesToTree,
-  convertCurriculumToTree,
   type TreeSliceLeaf,
   type TreeChapterBranch,
   type TreeRoot
 } from '~/utils/roadmapTreeLayout'
-import type { CurriculumRoadmapData } from '~/stores/useRoadmapStore'
 import type { BookDetail } from '~/stores/useLibraryStore'
 
 interface ChapterSliceItem {
@@ -55,11 +53,8 @@ interface ChapterMilestoneItem {
 const props = defineProps<{
   selectedBook?: BookDetail | null
   chapterMilestones?: ChapterMilestoneItem[]
-  roadmapData?: CurriculumRoadmapData | null
-  isCurriculumSelected: boolean
   activeBookId?: string | null
   currentChunkOrder?: number
-  activeDayOrder?: number
 }>()
 
 const router = useRouter()
@@ -74,9 +69,6 @@ const expandedChapterIds = ref<Set<string>>(new Set())
 
 // Convert input dataset to unified tree structure
 const treeData = computed<{ root: TreeRoot; chapters: TreeChapterBranch[] }>(() => {
-  if (props.isCurriculumSelected && props.roadmapData) {
-    return convertCurriculumToTree(props.roadmapData)
-  }
   if (props.chapterMilestones && props.chapterMilestones.length > 0) {
     const bookTitle = props.selectedBook?.title || 'Active Document'
     const pacer = props.selectedBook
@@ -91,11 +83,11 @@ const treeData = computed<{ root: TreeRoot; chapters: TreeChapterBranch[] }>(() 
   return {
     root: {
       id: 'empty-root',
-      title: props.isCurriculumSelected ? '30-Day Senior Curriculum' : 'Active Document',
+      title: props.selectedBook?.title || 'Active Document',
       totalCount: 0,
       completedCount: 0,
       progressPercentage: 0,
-      trackType: props.isCurriculumSelected ? 'curriculum' : 'book'
+      trackType: 'book'
     },
     chapters: []
   }
@@ -365,11 +357,6 @@ onMounted(() => {
 })
 // 1-Click action bridges
 function handleSliceClick(slice: TreeSliceLeaf) {
-  if (props.isCurriculumSelected) {
-    router.push(`/today?day=${slice.order}`)
-    return
-  }
-
   const bookId = props.activeBookId || props.selectedBook?.id
   if (!bookId) return
 
@@ -532,12 +519,9 @@ function handleSliceClick(slice: TreeSliceLeaf) {
           >
             <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-2 min-w-0">
-                <component
-                  :is="isCurriculumSelected ? Compass : BookOpen"
-                  class="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0"
-                />
+                <BookOpen class="w-4 h-4 text-brand-600 dark:text-brand-400 shrink-0" />
                 <span class="text-xs font-extrabold uppercase tracking-wider text-brand-700 dark:text-brand-300 truncate">
-                  {{ isCurriculumSelected ? $t('roadmap.curriculum_track') : $t('roadmap.active_book') }}
+                  {{ $t('roadmap.active_book') }}
                 </span>
               </div>
               <span class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-brand-600 text-white whitespace-nowrap shrink-0">

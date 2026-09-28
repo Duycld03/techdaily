@@ -495,8 +495,8 @@ watch(locale, (newLocale) => {
         ]"
       >
         <DocReaderPane
-          :topic="focusStore.data.topic"
-          :document-chunk="focusStore.data.documentChunk"
+          v-if="focusStore.data.documentChunk"
+          :chunk="focusStore.data.documentChunk"
         />
       </div>
 

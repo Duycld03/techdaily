@@ -59,17 +59,6 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         var user = new User { Id = Guid.NewGuid(), Email = "user@techdaily.local", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
-        var topic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "PostgreSQL MVCC Mechanics",
-            Slug = "postgresql-mvcc",
-            Category = Category.DatabaseStorage,
-            Difficulty = Difficulty.Senior,
-            DayOrder = 7,
-            Summary = "Snapshot isolation and multi-version concurrency."
-        };
-        await _db.Topics.AddAsync(topic);
 
         var book = new DocumentBook
         {
@@ -94,7 +83,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         };
         await _db.DocumentChunks.AddAsync(chunk);
 
-        var card = SpacedRepetitionCard.Create(user.Id, topic.Id);
+        var card = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, chunk.Id, "MVCC Question", "MVCC Answer");
         await _db.SpacedRepetitionCards.AddAsync(card);
 
         var highlight = new UserHighlight
@@ -119,33 +108,33 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         var response = result.Value;
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar && n.Id == "pillar-DatabaseStorage");
-        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Topic && n.Id == topic.Id.ToString());
+        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Chunk && n.Id == chunk.Id.ToString());
+        response.Nodes.Should().NotContain(n => n.Type == "topic");
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Book && n.Id == book.Id.ToString());
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Card && n.Id == card.Id.ToString());
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Highlight && n.Id == highlight.Id.ToString());
 
-        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar);
         response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar);
-        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToTopic
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.ChunkToBook
+            && e.Source == chunk.Id.ToString()
+            && e.Target == book.Id.ToString());
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToChunk
             && e.Source == card.Id.ToString()
-            && e.Target == topic.Id.ToString());
-
-        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToTopic
-            && e.Source == book.Id.ToString()
-            && e.Target == topic.Id.ToString());
+            && e.Target == chunk.Id.ToString());
 
         response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.HighlightToBook
             && e.Source == highlight.Id.ToString()
             && e.Target == book.Id.ToString());
 
-        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.HighlightToTopic
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.HighlightToChunk
             && e.Source == highlight.Id.ToString()
-            && e.Target == topic.Id.ToString());
+            && e.Target == chunk.Id.ToString());
 
         // Every artifact is DatabaseStorage, so exactly one pillar hub is emitted.
         response.Stats.TotalNodes.Should().Be(5);
         response.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(1);
-        response.Stats.NodeTypeCounts[GraphNodeType.Topic].Should().Be(1);
+        response.Stats.NodeTypeCounts[GraphNodeType.Chunk].Should().Be(1);
+        response.Stats.NodeTypeCounts[GraphNodeType.Topic].Should().Be(0);
         response.Stats.NodeTypeCounts[GraphNodeType.Book].Should().Be(1);
         response.Stats.NodeTypeCounts[GraphNodeType.Card].Should().Be(1);
         response.Stats.NodeTypeCounts[GraphNodeType.Highlight].Should().Be(1);
@@ -328,33 +317,40 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_TopicNodes_ShouldEmitOnlyTopicsTheUserHasTouched()
+    public async Task ExecuteAsync_ChunkNodes_ShouldEmitOnlyChunksTheUserHasTouched()
     {
-        // Arrange — task 1.2: a topic is emitted only when a card links it or a highlight tag matches.
+        // Arrange — a chunk is emitted only when a card or highlight references it.
         var user = new User { Id = Guid.NewGuid(), Email = "touched@techdaily.local", Name = "Touched" };
         await _db.Users.AddAsync(user);
 
-        var touchedTopic = new Topic
+        var book = new DocumentBook
         {
             Id = Guid.NewGuid(),
-            Title = "Topic A",
-            Slug = "topic-a",
+            Title = "Backend Book",
+            Slug = "backend-book",
             Category = Category.BackendRuntime,
-            Difficulty = Difficulty.Senior,
-            DayOrder = 1
+            IsPublished = true,
+            CreatedByUserId = user.Id
         };
-        var untouchedTopic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Topic B",
-            Slug = "topic-b",
-            Category = Category.BackendRuntime,
-            Difficulty = Difficulty.Senior,
-            DayOrder = 2
-        };
-        await _db.Topics.AddRangeAsync(touchedTopic, untouchedTopic);
+        await _db.DocumentBooks.AddAsync(book);
 
-        var card = SpacedRepetitionCard.Create(user.Id, touchedTopic.Id);
+        var touchedChunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChapterTitle = "Chunk A",
+            ChunkOrder = 1
+        };
+        var untouchedChunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChapterTitle = "Chunk B",
+            ChunkOrder = 2
+        };
+        await _db.DocumentChunks.AddRangeAsync(touchedChunk, untouchedChunk);
+
+        var card = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, touchedChunk.Id, "Question", "Answer");
         await _db.SpacedRepetitionCards.AddAsync(card);
         await _db.SaveChangesAsync();
 
@@ -363,13 +359,14 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var topicNodes = result.Value.Nodes.Where(n => n.Type == GraphNodeType.Topic).ToList();
+        var chunkNodes = result.Value.Nodes.Where(n => n.Type == GraphNodeType.Chunk).ToList();
 
-        topicNodes.Should().Contain(n => n.Id == touchedTopic.Id.ToString());
-        topicNodes.Should().NotContain(n => n.Id == untouchedTopic.Id.ToString());
+        chunkNodes.Should().Contain(n => n.Id == touchedChunk.Id.ToString());
+        chunkNodes.Should().NotContain(n => n.Id == untouchedChunk.Id.ToString());
 
-        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.TopicToPillar
-            && e.Source == touchedTopic.Id.ToString());
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.ChunkToBook
+            && e.Source == touchedChunk.Id.ToString()
+            && e.Target == book.Id.ToString());
     }
 
     [Fact]
@@ -379,18 +376,27 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         var user = new User { Id = Guid.NewGuid(), Email = "pillar@techdaily.local", Name = "Pillar User" };
         await _db.Users.AddAsync(user);
 
-        var topic = new Topic
+        var book = new DocumentBook
         {
             Id = Guid.NewGuid(),
-            Title = "Async I/O and Threads",
-            Slug = "async-io-threads",
+            Title = "Backend Book",
+            Slug = "backend-book",
             Category = Category.BackendRuntime,
-            Difficulty = Difficulty.Senior,
-            DayOrder = 5
+            IsPublished = true,
+            CreatedByUserId = user.Id
         };
-        await _db.Topics.AddAsync(topic);
+        await _db.DocumentBooks.AddAsync(book);
 
-        var card = SpacedRepetitionCard.Create(user.Id, topic.Id);
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChapterTitle = "Async I/O and Threads",
+            ChunkOrder = 1
+        };
+        await _db.DocumentChunks.AddAsync(chunk);
+
+        var card = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, chunk.Id, "Question", "Answer");
         await _db.SpacedRepetitionCards.AddAsync(card);
         await _db.SaveChangesAsync();
 
@@ -477,31 +483,13 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_BookToTopic_ShouldConnectMatchingTopicWithoutCartesianBlowout()
+    public async Task ExecuteAsync_ChunkToBook_ShouldConnectChunksWithoutCartesianBlowout()
     {
-        // Arrange — a book links only the touched topic its content matches, not every same-category topic.
+        // Arrange — direct ChunkToBook edges are generated only for that book's own emitted chunks.
         var user = new User { Id = Guid.NewGuid(), Email = "cartesian@techdaily.local", Name = "Cartesian User" };
         await _db.Users.AddAsync(user);
 
-        var gcTopic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Garbage Collection",
-            Slug = "garbage-collection",
-            Category = Category.BackendRuntime,
-            DayOrder = 1
-        };
-        var unrelatedTopic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Kubernetes Networking",
-            Slug = "kubernetes-networking",
-            Category = Category.BackendRuntime,
-            DayOrder = 2
-        };
-        await _db.Topics.AddRangeAsync(gcTopic, unrelatedTopic);
-
-        var book = new DocumentBook
+        var book1 = new DocumentBook
         {
             Id = Guid.NewGuid(),
             Title = "Pro .NET Garbage Collection",
@@ -510,12 +498,36 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             IsPublished = true,
             CreatedByUserId = user.Id
         };
-        await _db.DocumentBooks.AddAsync(book);
+        var book2 = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Kubernetes in Action",
+            Slug = "k8s-action",
+            Category = Category.BackendRuntime,
+            IsPublished = true,
+            CreatedByUserId = user.Id
+        };
+        await _db.DocumentBooks.AddRangeAsync(book1, book2);
 
-        // Both topics are touched (so both are emitted nodes) via cards.
-        var gcCard = SpacedRepetitionCard.Create(user.Id, gcTopic.Id);
-        var unrelatedCard = SpacedRepetitionCard.Create(user.Id, unrelatedTopic.Id);
-        await _db.SpacedRepetitionCards.AddRangeAsync(gcCard, unrelatedCard);
+        var chunk1 = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book1.Id,
+            ChapterTitle = "Garbage Collection",
+            ChunkOrder = 1
+        };
+        var chunk2 = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book2.Id,
+            ChapterTitle = "Kubernetes Networking",
+            ChunkOrder = 1
+        };
+        await _db.DocumentChunks.AddRangeAsync(chunk1, chunk2);
+
+        var card1 = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, chunk1.Id, "Q1", "A1");
+        var card2 = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, chunk2.Id, "Q2", "A2");
+        await _db.SpacedRepetitionCards.AddRangeAsync(card1, card2);
         await _db.SaveChangesAsync();
 
         // Act
@@ -524,13 +536,18 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeTrue();
 
-        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToTopic
-            && e.Source == book.Id.ToString()
-            && e.Target == gcTopic.Id.ToString());
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.ChunkToBook
+            && e.Source == chunk1.Id.ToString()
+            && e.Target == book1.Id.ToString());
 
-        result.Value.Edges.Should().NotContain(e => e.RelationType == GraphRelationType.BookToTopic
-            && e.Source == book.Id.ToString()
-            && e.Target == unrelatedTopic.Id.ToString());
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.ChunkToBook
+            && e.Source == chunk2.Id.ToString()
+            && e.Target == book2.Id.ToString());
+
+        // No cross-linking between chunk1 and book2
+        result.Value.Edges.Should().NotContain(e => e.RelationType == GraphRelationType.ChunkToBook
+            && e.Source == chunk1.Id.ToString()
+            && e.Target == book2.Id.ToString());
     }
 
     [Fact]
@@ -684,22 +701,11 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_HighlightToTopic_ShouldDeriveEdgeWhenTagMatchesTopicTitleOrSlug()
+    public async Task ExecuteAsync_HighlightToChunk_ShouldDeriveEdgeWhenHighlightTargetsChunk()
     {
         // Arrange
         var user = new User { Id = Guid.NewGuid(), Email = "tagmatch@techdaily.local", Name = "Matcher" };
         await _db.Users.AddAsync(user);
-
-        var topic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Garbage Collection & LOH",
-            Slug = "garbage-collection-loh",
-            Category = Category.BackendRuntime,
-            Difficulty = Difficulty.Senior,
-            DayOrder = 3
-        };
-        await _db.Topics.AddAsync(topic);
 
         var book = new DocumentBook
         {
@@ -735,12 +741,15 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         // Act
         var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
 
-        // Assert — the tag-matched topic is now emitted, and the HighlightToTopic edge is derived.
+        // Assert — the chunk is emitted (referenced by highlight), and HighlightToChunk + HighlightToBook edges are derived.
         result.IsSuccess.Should().BeTrue();
-        result.Value.Nodes.Should().Contain(n => n.Type == GraphNodeType.Topic && n.Id == topic.Id.ToString());
-        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.HighlightToTopic
+        result.Value.Nodes.Should().Contain(n => n.Type == GraphNodeType.Chunk && n.Id == chunk.Id.ToString());
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.HighlightToChunk
             && e.Source == highlight.Id.ToString()
-            && e.Target == topic.Id.ToString());
+            && e.Target == chunk.Id.ToString());
+        result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.HighlightToBook
+            && e.Source == highlight.Id.ToString()
+            && e.Target == book.Id.ToString());
     }
 
     [Fact]
@@ -799,22 +808,10 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_SoftDeletedHighlight_ShouldBeExcludedAndUnanchoredNodesDropped()
     {
-        // Arrange — task 1.7: soft-deleting the only artifact that anchored a topic and pillar
-        // drops the highlight node, its edges, the now-untouched topic, and the now-unanchored pillar.
+        // Arrange — soft-deleting the only artifact referencing a chunk drops the highlight, its edges, and unreferenced chunk.
         var user = new User { Id = Guid.NewGuid(), Email = "softdelete@techdaily.local", Name = "Soft Delete" };
         var otherUser = new User { Id = Guid.NewGuid(), Email = "seedowner@techdaily.local", Name = "Seed Owner" };
         await _db.Users.AddRangeAsync(user, otherUser);
-
-        var topic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Garbage Collection",
-            Slug = "garbage-collection",
-            Category = Category.BackendRuntime,
-            Difficulty = Difficulty.Senior,
-            DayOrder = 3
-        };
-        await _db.Topics.AddAsync(topic);
 
         // Book is NOT owned by the caller, so it never becomes a node and cannot keep the pillar alive.
         var book = new DocumentBook
@@ -848,12 +845,10 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         await _db.UserHighlights.AddAsync(highlight);
         await _db.SaveChangesAsync();
 
-        // Sanity check before deletion: highlight, touched topic, and pillar are all present.
+        // Sanity check before deletion: highlight is present.
         var before = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
         before.IsSuccess.Should().BeTrue();
         before.Value.Nodes.Should().Contain(n => n.Id == highlight.Id.ToString());
-        before.Value.Nodes.Should().Contain(n => n.Id == topic.Id.ToString());
-        before.Value.Nodes.Should().Contain(n => n.Id == "pillar-BackendRuntime");
 
         // Act — soft-delete the highlight.
         highlight.SoftDelete();
@@ -867,10 +862,6 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
 
         response.Nodes.Should().NotContain(n => n.Id == highlight.Id.ToString());
         response.Edges.Should().NotContain(e => e.Source == highlight.Id.ToString() || e.Target == highlight.Id.ToString());
-
-        // The topic was touched only by the deleted highlight's tag, so it and its pillar are dropped.
-        response.Nodes.Should().NotContain(n => n.Id == topic.Id.ToString());
-        response.Nodes.Should().NotContain(n => n.Id == "pillar-BackendRuntime");
         response.Nodes.Should().BeEmpty();
     }
 

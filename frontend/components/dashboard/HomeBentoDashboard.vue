@@ -51,16 +51,20 @@ const graphStore = useKnowledgeGraphStore()
 const userName = computed(() => authStore.user?.name?.split(' ')[0] || 'Engineer')
 const targetRole = computed(() => (authStore.user as any)?.targetRole || 'Senior Software Engineer')
 
-const topic = computed(() => focusStore.data?.topic)
 const pacer = computed(() => focusStore.data?.pacer)
 const scenario = computed(() => (focusStore.data as any)?.scenario)
 const drill = computed(() => focusStore.data?.drill)
 const streak = computed(() => focusStore.data?.currentStreak ?? 0)
 const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 2)
 
-const curriculumDay = computed(() => topic.value?.dayOrder || 1)
-const curriculumDayText = computed(() => {
-  return t('dashboard.curriculum_day_badge', { day: curriculumDay.value, total: 30 })
+const activeSliceTitle = computed(() => {
+  if (focusStore.data?.hasActiveBook === false) {
+    return t('roadmap.no_active_books')
+  }
+  return focusStore.data?.documentChunk?.chapterTitle || pacer.value?.chapterTitle || t('dashboard.loading_dashboard')
+})
+const activeSliceSummary = computed(() => {
+  return focusStore.data?.documentChunk?.summaryMarkdown || t('dashboard.slice_summary_placeholder')
 })
 
 const isDrillCompleted = computed(() => {
@@ -83,7 +87,7 @@ const sliceBadgeText = computed(() => {
     }
     return text
   }
-  return `${t('dashboard.curriculum_day')} ${topic.value?.dayOrder || 1}`
+  return `Slice ${focusStore.data?.documentChunk?.chunkOrder || 1}`
 })
 
 const slicePercentage = computed(() => {
@@ -174,40 +178,61 @@ onMounted(() => {
 
     <!-- 2. Core Practice Action Stage (Left 2 Columns) -->
     <template #action-stage>
-      <!-- Card A: Today's Focus Bento Hero -->
-      <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-brand-500/30 transition-all border border-slate-200/80 dark:border-white/[0.06] min-h-0">
-        <div>
-          <div class="flex items-center justify-between gap-3 mb-3">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-center shrink-0">
+      <!-- Unified Focus Card (Active Slice & Scenario Challenge) -->
+      <div class="glass-card p-5 sm:p-6 flex flex-col justify-between group hover:border-brand-500/30 transition-all border border-slate-200/80 dark:border-white/[0.06] min-h-0 h-full">
+        <div class="space-y-4">
+          <!-- Card Header: Book Info & Drill Status -->
+          <div class="flex items-start sm:items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
                 <BookOpen class="w-4 h-4" :stroke-width="1.5" />
               </div>
-              <div>
-                <span class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  {{ $t('dashboard.active_reading_slice') }}
+              <div class="min-w-0">
+                <span class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">
+                  {{ pacer?.bookTitle || $t('dashboard.active_reading_slice') }}
                 </span>
-                <div class="text-xs text-slate-500 dark:text-slate-400">
-                  {{ pacer?.bookTitle || 'Senior Fullstack Architecture' }}
+                <div class="text-xs text-brand-600 dark:text-brand-400 font-semibold truncate">
+                  {{ sliceBadgeText }}
                 </div>
               </div>
             </div>
 
-            <div class="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <Clock class="w-3.5 h-3.5" :stroke-width="1.5" />
-              <span>{{ estimatedMinutes }} {{ $t('today.estimated_read') }}</span>
+            <div class="flex items-center gap-2 shrink-0">
+              <!-- Drill Status Badge -->
+              <span
+                v-if="isDrillCompleted"
+                class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap flex items-center gap-1.5"
+              >
+                <CheckCircle2 class="w-3.5 h-3.5" :stroke-width="1.5" />
+                <span>{{ $t('dashboard.status_completed') }}: {{ drillScore }}/10</span>
+              </span>
+              <span
+                v-else
+                class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap flex items-center gap-1"
+              >
+                <Target class="w-3.5 h-3.5 text-amber-500" :stroke-width="1.5" />
+                <span>+10 {{ $t('dashboard.points_reward') }}</span>
+              </span>
+
+              <div class="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-canvas-subtle px-2.5 py-1 rounded-full border border-slate-200/60 dark:border-white/[0.06]">
+                <Clock class="w-3.5 h-3.5" :stroke-width="1.5" />
+                <span>{{ estimatedMinutes }} {{ $t('today.estimated_read') }}</span>
+              </div>
             </div>
           </div>
 
-          <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-brand-300 transition-colors">
-            {{ topic?.title || $t('dashboard.loading_topic') }}
-          </h2>
+          <!-- Slice Title & Summary -->
+          <div>
+            <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-brand-400 transition-colors">
+              {{ activeSliceTitle }}
+            </h2>
+            <p class="text-sm text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed">
+              {{ activeSliceSummary }}
+            </p>
+          </div>
 
-          <p class="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mb-4">
-            {{ topic?.summary || $t('dashboard.slice_summary_placeholder') }}
-          </p>
-
-          <!-- Progress Bar -->
-          <div class="space-y-1.5 mb-4">
+          <!-- Slice Progress Bar -->
+          <div class="space-y-1.5">
             <div class="flex items-center justify-between text-xs font-semibold">
               <span class="text-slate-500 dark:text-slate-400">
                 {{ $t('dashboard.slice_progress') }} ({{ pacer?.currentChunkOrder || 1 }}/{{ pacer?.totalChunks || 1 }})
@@ -223,98 +248,31 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Primary Action CTA -->
-        <div class="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between">
-          <span class="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
-            {{ $t('dashboard.press_enter_to_continue') }}
-          </span>
-
-          <button
-            @click="handleStartReading"
-            type="button"
-            class="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-md shadow-brand-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
-          >
-            <span>{{ $t('dashboard.continue_reading') }}</span>
-            <ArrowRight class="w-4 h-4" :stroke-width="1.5" />
-          </button>
-        </div>
-      </div>
-
-      <!-- Card B: Today's Practice Session Cockpit -->
-      <div class="glass-card p-4 sm:p-5 flex flex-col justify-between group hover:border-brand-500/30 transition-all border border-slate-200/80 dark:border-white/[0.06] min-h-0">
-        <div>
-          <!-- Header: Icon, Category Badge, Curriculum Day & Status -->
-          <div class="flex items-center justify-between gap-3 mb-3">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <div class="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
-                <Target class="w-4 h-4" :stroke-width="1.5" />
-              </div>
-              <div class="min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
-                    {{ $t('dashboard.today_practice_badge') }}
-                  </span>
-                </div>
-                <div class="text-xs text-slate-500 dark:text-slate-400 truncate">
-                  {{ curriculumDayText }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Drill Completion Status Pill -->
-            <div class="shrink-0">
-              <span
-                v-if="isDrillCompleted"
-                class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap flex items-center gap-1"
-              >
-                <CheckCircle2 class="w-3 h-3" :stroke-width="1.5" />
-                <span>{{ $t('dashboard.status_completed') }}</span>
-              </span>
-              <span
-                v-else
-                class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap"
-              >
-                +10 {{ $t('dashboard.points_reward') }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Title: Daily Topic / Scenario -->
-          <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white mb-2 group-hover:text-brand-300 transition-colors line-clamp-1">
-            {{ topic?.title || scenario?.title || $t('dashboard.loading_topic') }}
-          </h3>
-
-          <p class="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mb-3">
-            {{ topic?.summary || scenario?.situation || $t('dashboard.slice_summary_placeholder') }}
-          </p>
-
-          <!-- Today's Session Itinerary Strip -->
-          <div class="grid grid-cols-2 gap-2 mb-4">
-            <div class="px-2.5 py-1.5 rounded-xl bg-slate-100/80 dark:bg-canvas-elevated/60 border border-slate-200/60 dark:border-white/[0.04] flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 min-w-0">
-              <BookOpen class="w-3.5 h-3.5 text-brand-500 shrink-0" :stroke-width="1.5" />
-              <span class="truncate">{{ $t('dashboard.itinerary_reading') }}</span>
-            </div>
-            <div class="px-2.5 py-1.5 rounded-xl bg-slate-100/80 dark:bg-canvas-elevated/60 border border-slate-200/60 dark:border-white/[0.04] flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 min-w-0">
-              <Terminal class="w-3.5 h-3.5 text-emerald-500 shrink-0" :stroke-width="1.5" />
-              <span class="truncate">{{ scenario?.title || $t('dashboard.itinerary_scenario') }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Footer Action CTA -->
-        <div class="pt-3 border-t border-slate-200/80 dark:border-white/[0.06] flex items-center justify-between">
-          <span class="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
+        <!-- Action CTAs: Continue Reading (Primary) & Today's Practice (Secondary) -->
+        <div class="pt-4 mt-4 border-t border-slate-200/80 dark:border-white/[0.06] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <span class="text-xs text-slate-500 dark:text-slate-400 hidden lg:inline">
             {{ isDrillCompleted ? $t('dashboard.today_drill_finished_hint') : $t('dashboard.today_drill_ready_hint') }}
           </span>
 
-          <button
-            @click="handleStartScenario"
-            type="button"
-            class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/[0.04] hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 font-semibold text-xs sm:text-sm border border-slate-200/80 dark:border-white/[0.06] transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0"
-          >
-            <span>{{ isDrillCompleted ? $t('dashboard.review_today_practice') : $t('dashboard.start_today_practice') }}</span>
-            <ArrowRight class="w-4 h-4 text-slate-400" :stroke-width="1.5" />
-          </button>
+          <div class="flex items-center gap-2.5 sm:self-auto self-stretch">
+            <button
+              @click="handleStartReading"
+              type="button"
+              class="flex-1 sm:flex-initial px-4 sm:px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0 whitespace-nowrap"
+            >
+              <span>{{ $t('dashboard.continue_reading') }}</span>
+              <ArrowRight class="w-4 h-4" :stroke-width="1.5" />
+            </button>
+
+            <button
+              @click="handleStartScenario"
+              type="button"
+              class="flex-1 sm:flex-initial px-4 sm:px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-canvas-elevated hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/[0.08] font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 active:scale-95 shrink-0 whitespace-nowrap"
+            >
+              <Target class="w-4 h-4 text-amber-500" :stroke-width="1.5" />
+              <span>{{ isDrillCompleted ? $t('dashboard.review_today_practice') : $t('dashboard.start_today_practice') }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </template>

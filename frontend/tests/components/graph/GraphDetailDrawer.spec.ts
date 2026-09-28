@@ -4,18 +4,17 @@ import { setActivePinia, createPinia } from 'pinia'
 import GraphDetailDrawer from '~/components/graph/GraphDetailDrawer.vue'
 import { useKnowledgeGraphStore, type GraphNode } from '~/stores/useKnowledgeGraphStore'
 
-const mockTopicNode: GraphNode = {
-  id: 'topic_1',
+const mockChunkNode: GraphNode = {
+  id: 'chunk_1',
   label: 'PostgreSQL MVCC & Vacuum',
-  type: 'topic',
-  category: 'DatabaseStorage',
-  subtitle: 'Day 3',
-  dayOrder: 3,
+  type: 'chunk',
+  category: 'BackendDotNet',
+  subtitle: 'Chapter 3: Storage Internals',
   summary: 'Multi-version concurrency control mechanics and autovacuum tuning',
   difficulty: 'Advanced',
+  bookId: 'book_1',
   tags: ['database', 'postgres', 'concurrency']
 }
-
 const mockBookNode: GraphNode = {
   id: 'book_1',
   label: 'Designing Data-Intensive Applications',
@@ -69,9 +68,9 @@ describe('GraphDetailDrawer.vue', () => {
     setActivePinia(createPinia())
     const store = useKnowledgeGraphStore()
     store.rawData = {
-      nodes: [mockTopicNode, mockBookNode, mockCardNode, mockHighlightNode, mockPillarNode],
+      nodes: [mockChunkNode, mockBookNode, mockCardNode, mockHighlightNode, mockPillarNode],
       edges: [
-        { id: 'edge_pillar_topic', source: 'topic_1', target: 'pillar-BackendDotNet', relationType: 'TopicToPillar' },
+        { id: 'edge_pillar_chunk', source: 'chunk_1', target: 'pillar-BackendDotNet', relationType: 'ChunkToBook' },
         { id: 'edge_pillar_book', source: 'book_1', target: 'pillar-BackendDotNet', relationType: 'BookToPillar' }
       ],
       stats: {
@@ -97,9 +96,9 @@ describe('GraphDetailDrawer.vue', () => {
     expect(wrapper.find('aside').exists()).toBe(false)
   })
 
-  it('renders topic node metadata and 1-click action bridges with whitespace-nowrap shrink-0', () => {
+  it('renders chunk node metadata and 1-click action bridges with whitespace-nowrap shrink-0', () => {
     const store = createTestStore()
-    store.selectNode('topic_1')
+    store.selectNode('chunk_1')
     const wrapper = mount(GraphDetailDrawer, {
       global: {
         stubs: { NuxtLink: NuxtLinkStub }
@@ -108,23 +107,15 @@ describe('GraphDetailDrawer.vue', () => {
 
     expect(wrapper.find('aside').exists()).toBe(true)
     expect(wrapper.text()).toContain('PostgreSQL MVCC & Vacuum')
-    expect(wrapper.text()).toContain('DatabaseStorage')
+    expect(wrapper.text()).toContain('BackendDotNet')
     expect(wrapper.text()).toContain('Advanced')
-    expect(wrapper.text()).toContain('Curriculum Day 3')
+    expect(wrapper.text()).toContain('Chapter 3: Storage Internals')
     expect(wrapper.text()).toContain('Multi-version concurrency control mechanics and autovacuum tuning')
 
-    // Verify action bridge buttons
+    // Verify action bridge button
     const links = wrapper.findAllComponents(NuxtLinkStub)
-    expect(links.length).toBeGreaterThanOrEqual(2)
-
-    // Practice quiz link
-    const quizLink = links.find((l) => l.props('to')?.includes('/quiz?topic='))
-    expect(quizLink).toBeDefined()
-    expect(quizLink?.props('to')).toContain('/quiz?topic=postgresql-mvcc-vacuum')
-
-    // View roadmap link
-    const roadmapLink = links.find((l) => l.props('to')?.includes('/roadmap#3'))
-    expect(roadmapLink).toBeDefined()
+    const readLink = links.find((l) => l.props('to')?.includes('/read/book_1'))
+    expect(readLink).toBeDefined()
   })
 
   it('renders book node metadata and navigation links with whitespace-nowrap shrink-0', () => {
@@ -211,14 +202,14 @@ describe('GraphDetailDrawer.vue', () => {
 
   it('closes the drawer when close button is clicked', async () => {
     const store = createTestStore()
-    store.selectNode('topic_1')
+    store.selectNode('chunk_1')
     const wrapper = mount(GraphDetailDrawer, {
       global: {
         stubs: { NuxtLink: NuxtLinkStub }
       }
     })
 
-    expect(store.selectedNodeId).toBe('topic_1')
+    expect(store.selectedNodeId).toBe('chunk_1')
     const closeBtn = wrapper.find('button[aria-label="Close detail drawer"]')
     expect(closeBtn.exists()).toBe(true)
 

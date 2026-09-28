@@ -59,17 +59,18 @@ const entityItems: LegendItem[] = [
     shape: 'rounded-full w-3.5 h-3.5 ring-2 ring-sky-400/40 shadow-sm shadow-sky-500/40'
   },
   {
-    type: 'topic',
-    labelKey: 'graph.legend.topic',
-    color: 'bg-amber-500',
-    shape: 'rounded-full w-2.5 h-2.5 shadow-sm shadow-amber-500/30'
-  },
-  {
     type: 'book',
     labelKey: 'graph.legend.book',
     color: '',
     hex: NODE_TYPE_COLOR.book,
     shape: 'rounded-sm w-3 h-2.5 shadow-sm shadow-indigo-500/30'
+  },
+  {
+    type: 'chunk',
+    labelKey: 'graph.legend.chunk',
+    color: '',
+    hex: NODE_TYPE_COLOR.chunk,
+    shape: 'rounded-sm w-2.5 h-2.5 shadow-sm shadow-sky-500/30'
   },
   {
     type: 'highlight',
