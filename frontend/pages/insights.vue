@@ -284,7 +284,7 @@ function getCategoryBadge(cat: number) {
                 :key="String(cat.id)"
                 @click="handleCategorySelect(cat.id)"
                 :class="[
-                  'px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 border whitespace-nowrap cursor-pointer',
+                  'px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-150 shrink-0 border whitespace-nowrap cursor-pointer',
                   insightsStore.selectedCategory === cat.id
                     ? 'bg-brand-600 text-white border-transparent shadow-sm shadow-brand-500/20'
                     : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
@@ -415,7 +415,7 @@ function getCategoryBadge(cat: number) {
                     type="button"
                     @click="activeCodeTab = 'solution'"
                     :class="[
-                      'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer',
+                      'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-colors duration-150 cursor-pointer',
                       activeCodeTab === 'solution'
                         ? 'bg-brand-500/20 text-brand-700 dark:text-brand-300 border border-brand-500/30 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'
@@ -428,7 +428,7 @@ function getCategoryBadge(cat: number) {
                     type="button"
                     @click="activeCodeTab = 'problem'"
                     :class="[
-                      'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer',
+                      'inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-colors duration-150 cursor-pointer',
                       activeCodeTab === 'problem'
                         ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'

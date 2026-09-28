@@ -637,10 +637,10 @@ async function confirmDeleteBook() {
               :key="cat.label"
               @click="handleCategorySelect(cat.id)"
               :class="[
-                'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm border transition-all outline-none focus:outline-none whitespace-nowrap shrink-0 cursor-pointer',
+                'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-colors duration-150 outline-none focus:outline-none whitespace-nowrap shrink-0 cursor-pointer',
                 selectedCategory === cat.id
-                  ? 'bg-slate-100 dark:bg-canvas-elevated border-slate-300 dark:border-white/[0.12] text-brand-600 dark:text-brand-400 font-bold shadow-sm'
-                  : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-white/[0.16] font-medium'
+                  ? 'bg-slate-100 dark:bg-canvas-elevated border-slate-300 dark:border-white/[0.12] text-brand-600 dark:text-brand-400 shadow-sm'
+                  : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-white/[0.16]'
               ]"
             >
               {{ cat.label }}

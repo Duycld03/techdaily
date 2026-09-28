@@ -666,7 +666,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
             type="button"
             @click="setQuickFilter('all')"
             :class="[
-              'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
+              'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer',
               selectedStatus === null && selectedUrgency === null
                 ? 'bg-brand-600 text-white border-transparent shadow-sm'
                 : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08]'
@@ -679,7 +679,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
             type="button"
             @click="setQuickFilter('due')"
             :class="[
-              'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
+              'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer',
               selectedUrgency === 'due'
                 ? 'bg-amber-600 text-white border-transparent shadow-sm'
                 : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08]'
@@ -692,7 +692,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
             type="button"
             @click="setQuickFilter('mastered')"
             :class="[
-              'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer',
+              'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer',
               selectedStatus === 2
                 ? 'bg-emerald-600 text-white border-transparent shadow-sm'
                 : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08]'
@@ -804,9 +804,9 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
               <button
                 @click="editActiveTab = 'edit'"
                 :class="[
-                  'px-3 py-1 rounded-lg transition-all cursor-pointer',
+                  'px-3 py-1 rounded-lg font-semibold transition-colors duration-150 cursor-pointer',
                   editActiveTab === 'edit'
-                    ? 'bg-white dark:bg-white/[0.1] text-brand-600 dark:text-brand-300 font-bold shadow-sm'
+                    ? 'bg-white dark:bg-white/[0.1] text-brand-600 dark:text-brand-300 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 ]"
               >
@@ -815,9 +815,9 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
               <button
                 @click="editActiveTab = 'preview'"
                 :class="[
-                  'px-3 py-1 rounded-lg transition-all cursor-pointer',
+                  'px-3 py-1 rounded-lg font-semibold transition-colors duration-150 cursor-pointer',
                   editActiveTab === 'preview'
-                    ? 'bg-white dark:bg-white/[0.1] text-brand-600 dark:text-brand-300 font-bold shadow-sm'
+                    ? 'bg-white dark:bg-white/[0.1] text-brand-600 dark:text-brand-300 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 ]"
               >

@@ -600,9 +600,9 @@ async function confirmDeleteHighlight() {
               type="button"
               @click="activeModalTab = 'preview'"
               :class="[
-                'px-2.5 py-1 rounded-lg transition-all whitespace-nowrap cursor-pointer',
+                'px-2.5 py-1 rounded-lg font-semibold transition-colors duration-150 whitespace-nowrap cursor-pointer',
                 activeModalTab === 'preview'
-                  ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-xs font-bold'
+                  ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
@@ -612,9 +612,9 @@ async function confirmDeleteHighlight() {
               type="button"
               @click="activeModalTab = 'edit'"
               :class="[
-                'px-2.5 py-1 rounded-lg transition-all whitespace-nowrap cursor-pointer',
+                'px-2.5 py-1 rounded-lg font-semibold transition-colors duration-150 whitespace-nowrap cursor-pointer',
                 activeModalTab === 'edit'
-                  ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-xs font-bold'
+                  ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
