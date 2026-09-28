@@ -56,7 +56,6 @@ public static class DependencyInjection
         services.AddScoped<ILookAheadBufferService, LookAheadBufferService>();
         services.AddSingleton<IWebPushService, WebPushService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
-        services.AddScoped<IStarterHandbookService, StarterHandbookService>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<IOtpService, OtpService>();

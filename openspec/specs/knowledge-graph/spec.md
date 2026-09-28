@@ -6,7 +6,7 @@ Provides an interactive associative knowledge graph extracting relational learni
 ## Requirements
 
 ### Requirement: Knowledge Graph Relational Extraction API
-The system SHALL expose a protected HTTP GET endpoint `GET /api/v1/graph` that extracts and returns an associative **personal** knowledge graph for the authenticated user, derived strictly from that user's own learning artifacts in relational PostgreSQL 17 without introducing auxiliary graph databases or continuous server-side vector calculations. The graph SHALL represent only knowledge the user has actually engaged with — books the user imported, curriculum topics the user has touched, the user's personal highlights, and the user's spaced-repetition cards — and SHALL NOT project the global seeded curriculum or content owned by other users. Rendering the full prescriptive curriculum outline remains the responsibility of the `/roadmap` timeline and mindmap views.
+The system SHALL expose a protected HTTP GET endpoint `GET /api/v1/graph` that extracts and returns an associative **personal** knowledge graph for the authenticated user, derived strictly from that user's own learning artifacts in relational PostgreSQL 17 without introducing auxiliary graph databases or continuous server-side vector calculations. The graph SHALL represent only knowledge the user has actually engaged with — books the user imported, the chunks within those books, the user's personal highlights, and the user's spaced-repetition cards — and SHALL NOT project content owned by other users.
 
 The endpoint SHALL require valid JWT Bearer authentication (`.RequireAuthorization()`) and SHALL return `HTTP 401 Unauthorized` with RFC 7807 problem details when invoked without a valid token.
 
@@ -14,26 +14,25 @@ All node source queries SHALL honor the global soft-delete query filter (`IsDele
 
 The returned response payload (`KnowledgeGraphResponse`) SHALL consist of:
 1. `nodes`: An array of `GraphNodeDto` items representing:
-   - **Card Nodes:** Spaced repetition flashcards from `SpacedRepetitionCards` owned by the authenticated user (`UserId == currentUser.Id`), containing `id`, `label`, `topicId`, `status` (`Learning`, `Reviewing`, `Mastered`), `intervalDays`, `easeFactor`, and `repetitionCount`.
+   - **Card Nodes:** Spaced repetition flashcards from `SpacedRepetitionCards` owned by the authenticated user (`UserId == currentUser.Id`), containing `id`, `label`, `documentChunkId`, `status` (`Learning`, `Reviewing`, `Mastered`), `intervalDays`, `easeFactor`, and `repetitionCount`.
    - **Highlight Nodes:** Personal reading highlights from `UserHighlights` owned by the authenticated user (`UserId == currentUser.Id`), containing `id`, `label` (truncated quote), `documentChunkId`, `bookId`, `note`, `tags`, and `createdAt`.
-   - **Book Nodes:** Only books the authenticated user imported — from `DocumentBooks` where `CreatedByUserId == currentUser.Id` and the book is published and not deleted — containing `id`, `label`, `category`, `totalChunks`, and `authorOrSourceUrl`. Books created by other accounts or seeded globally SHALL NOT appear (parity with the Library page `GET /api/v1/library/books`).
-   - **Topic Nodes:** Only curriculum topics the user has actually touched. A topic SHALL be emitted if and only if it is referenced by at least one of the user's own flashcards (`SpacedRepetitionCard.TopicId`) or matched by at least one of the user's highlight tags (a normalized tag equal to the topic slug or title). Untouched curriculum topics SHALL NOT appear. Each emitted topic node contains `id`, `label`, `category`, `dayOrder`, `summary`, and `difficulty`.
-   - **Pillar Hub Nodes:** Canonical architectural pillar anchors (id pattern `pillar-{Category}` for the five pillars Frontend & Web, Backend & Runtime, Database & Storage, Distributed Systems, Engineering Craft), containing `id`, `label`, `category`, and `type: "pillar"`. A pillar hub SHALL be emitted only when it anchors at least one surviving user node — a user book, a touched topic, or a user card of that category. Pillars with no user activity SHALL be omitted; the graph therefore contains between zero and five pillar hubs depending on the breadth of the user's learning.
+   - **Book Nodes:** Only books the authenticated user imported — from `DocumentBooks` where `CreatedByUserId == currentUser.Id` and the book is published and not deleted — containing `id`, `label`, `category`, `totalChunks`, and `authorOrSourceUrl`. Books created by other accounts SHALL NOT appear (parity with the Library page `GET /api/v1/library/books`).
+   - **Chunk Nodes:** Reading slices from `DocumentChunks` belonging to the user's imported books, containing `id`, `label` (chunk/chapter title), `bookId`, `chunkOrder`, and `summary`. A chunk SHALL be emitted if and only if it belongs to a surviving user book and is referenced by at least one of the user's own cards or highlights, avoiding a blind projection of every slice.
+   - **Pillar Hub Nodes:** Canonical architectural pillar anchors (id pattern `pillar-{Category}` for the five pillars Frontend & Web, Backend & Runtime, Database & Storage, Distributed Systems, Engineering Craft), containing `id`, `label`, `category`, and `type: "pillar"`. A pillar hub SHALL be emitted only when it anchors at least one surviving user node — a user book or a user card of that category. Pillars with no user activity SHALL be omitted; the graph therefore contains between zero and five pillar hubs depending on the breadth of the user's learning.
 
 2. `edges`: An array of `GraphEdgeDto` items connecting only nodes present in `nodes`:
-   - `TopicToPillar`: Connecting each emitted topic to its parent pillar hub (`Topic.Id -> pillar-{Category}`).
    - `BookToPillar`: Connecting each user book to the pillar hub for the book's own category (`Book.Id -> pillar-{Category}`).
-   - `CardToTopic`: Connecting a user flashcard to its target topic (`Card.TopicId -> Topic.Id`) when that topic is present.
+   - `ChunkToBook`: Connecting each emitted chunk to its parent book (`Chunk.Id -> Book.Id`).
+   - `CardToChunk`: Connecting a user flashcard to its source `DocumentChunk` (`Card.DocumentChunkId -> Chunk.Id`) when that chunk is present.
    - `CardToHighlight`: Connecting a highlight-sourced flashcard (`SourceType = Highlight`, `SourceHighlightId != null`) to its source highlight.
-   - `CardToPillar`: Connecting a flashcard with `TopicId == null` and `SourceHighlightId == null` to `pillar-{card.Category}`.
-   - `BookToTopic`: Connecting a user book to specific emitted topics when explicitly referenced in book chapter titles, chunk summaries, or matching topic slugs/titles, rather than through a blind Cartesian product of all topics within the category.
+   - `CardToPillar`: Connecting a flashcard with `DocumentChunkId == null` and `SourceHighlightId == null` to `pillar-{card.Category}`.
+   - `HighlightToChunk`: Connecting a user highlight to its source `DocumentChunk` (`Highlight.DocumentChunkId -> Chunk.Id`) when that chunk is present.
    - `HighlightToBook`: Connecting a user highlight to its source book via `DocumentChunk.DocumentBookId` when that book is present.
-   - `HighlightToTopic`: Connecting a user highlight to an emitted topic when highlight tags match the topic slug or title.
    - `SharedTag`: Connecting user highlights that share one or more normalized tag keywords.
 
-3. `stats`: Metadata containing `totalNodes`, `totalEdges`, `nodeTypeCounts` (including counts for `pillar`, `topic`, `book`, `card`, `highlight`), and `pillarCounts`.
+3. `stats`: Metadata containing `totalNodes`, `totalEdges`, `nodeTypeCounts` (including counts for `pillar`, `book`, `chunk`, `card`, `highlight`), and `pillarCounts`.
 
-The query execution SHALL execute in a single consolidated read pass using EF Core `AsNoTracking()`, utilizing indexes on foreign keys (`UserId`, `TopicId`, `DocumentChunkId`, `CreatedByUserId`) to keep database query time low on production PostgreSQL 17. Because the projection is scoped to a single user's artifacts, the uncompressed JSON payload SHALL remain well under 100 KB.
+The query execution SHALL execute in a single consolidated read pass using EF Core `AsNoTracking()`, utilizing indexes on foreign keys (`UserId`, `DocumentChunkId`, `CreatedByUserId`) to keep database query time low on production PostgreSQL 17. Because the projection is scoped to a single user's artifacts, the uncompressed JSON payload SHALL remain well under 100 KB.
 
 #### Scenario: Unauthenticated request to knowledge graph endpoint
 - **WHEN** an unauthenticated client sends `GET /api/v1/graph` without a JWT Bearer token
@@ -42,14 +41,14 @@ The query execution SHALL execute in a single consolidated read pass using EF Co
 #### Scenario: Authenticated user requests knowledge graph
 - **WHEN** an authenticated user who has imported books and created highlights and flashcards sends `GET /api/v1/graph` with a valid JWT Bearer token
 - **THEN** the system returns `HTTP 200 OK` with `KnowledgeGraphResponse`
-- **AND** the `nodes` array contains the user's own book nodes, the topics touched by the user's cards or highlight tags, and the user's card and highlight nodes
-- **AND** the `edges` array links cards to topics, highlights to books, and highlights sharing common tags
-- **AND** the payload excludes books, cards, and highlights belonging to other users, and excludes curriculum topics the user has not touched.
+- **AND** the `nodes` array contains the user's own book nodes, the chunks referenced by the user's cards or highlights, and the user's card and highlight nodes
+- **AND** the `edges` array links cards to chunks, highlights to books and chunks, and highlights sharing common tags
+- **AND** the payload excludes books, cards, and highlights belonging to other users.
 
 #### Scenario: New user with zero flashcards or highlights requests graph
 - **WHEN** an authenticated user who has not imported any book and has no highlights or flashcards sends `GET /api/v1/graph`
 - **THEN** the system returns `HTTP 200 OK`
-- **AND** the `nodes` array contains no book, topic, card, or highlight nodes and no pillar hub nodes (all node collections are empty arrays without causing null reference errors)
+- **AND** the `nodes` array contains no book, chunk, card, or highlight nodes and no pillar hub nodes (all node collections are empty arrays without causing null reference errors)
 - **AND** the client renders the graph empty state rather than a populated canvas.
 
 #### Scenario: Flashcard created from highlight links to highlight node
@@ -57,8 +56,13 @@ The query execution SHALL execute in a single consolidated read pass using EF Co
 - **THEN** the backend graph projection derives an edge with `relationType: "CardToHighlight"` connecting `card.Id` to `card.SourceHighlightId`
 - **AND** the card node is positioned relative to its source highlight cluster.
 
+#### Scenario: Flashcard sourced from a document chunk links to chunk node
+- **WHEN** an authenticated user has a flashcard whose `DocumentChunkId` references a surviving chunk of an imported book
+- **THEN** the backend graph projection derives an edge with `relationType: "CardToChunk"` connecting `card.Id` to `chunk.Id`
+- **AND** the chunk node is emitted and connected to its parent book via a `ChunkToBook` edge.
+
 #### Scenario: Flashcard with no linked topic or highlight links to pillar hub
-- **WHEN** an authenticated user has a flashcard with `TopicId == null` and `SourceHighlightId == null` (e.g. quiz mistake card)
+- **WHEN** an authenticated user has a flashcard with `DocumentChunkId == null` and `SourceHighlightId == null` (e.g. quiz mistake card)
 - **THEN** the backend graph projection derives an edge with `relationType: "CardToPillar"` connecting `card.Id` to `pillar-{card.Category}`
 - **AND** the pillar hub for that category is emitted so the card node does not become an isolated degree-0 node.
 
@@ -69,19 +73,19 @@ The query execution SHALL execute in a single consolidated read pass using EF Co
 #### Scenario: Authenticated user receives pillar hub nodes and guaranteed connected topics
 - **WHEN** an authenticated user whose artifacts span only some technical domains sends `GET /api/v1/graph` with a valid JWT Bearer token
 - **THEN** the system returns `HTTP 200 OK` with `KnowledgeGraphResponse`
-- **AND** the `nodes` array contains a `type: "pillar"` hub only for each category that has at least one user book, touched topic, or card (between 0 and 5 hubs), and omits pillars with no user activity
-- **AND** the `edges` array contains a `TopicToPillar` edge for every emitted topic, connecting it to its respective pillar hub
-- **AND** no emitted topic node has an edge degree of 0.
+- **AND** the `nodes` array contains a `type: "pillar"` hub only for each category that has at least one user book or card (between 0 and 5 hubs), and omits pillars with no user activity
+- **AND** the `edges` array contains a `BookToPillar` edge for every emitted book, connecting it to its respective pillar hub
+- **AND** no emitted book or chunk node has an edge degree of 0.
 
 #### Scenario: Universal multi-disciplinary book connections
 - **WHEN** a user-imported book spans multiple technical domains
-- **THEN** the backend graph projection generates a `BookToPillar` edge only to the pillar hub of the book's own category, plus `BookToTopic` edges to matching touched topics
+- **THEN** the backend graph projection generates a `BookToPillar` edge only to the pillar hub of the book's own category, plus `ChunkToBook` edges from the book's referenced chunks
 - **AND** no automatic fan-out to all four core technical pillars is generated for that book.
 
 #### Scenario: Specific book-to-topic linking without Cartesian blowout
-- **WHEN** a user-imported book belongs to `Category.BackendRuntime` and covers topics on GC and memory allocation
-- **THEN** direct `BookToTopic` edges are generated only for emitted topics whose titles or slugs match the book's contents
-- **AND** no automatic Cartesian product edges are created to unrelated topics solely because they share `Category.BackendRuntime`.
+- **WHEN** a user-imported book belongs to `Category.BackendRuntime` and covers GC and memory allocation across several chunks
+- **THEN** direct `ChunkToBook` edges are generated only for that book's own emitted chunks referenced by the user's cards or highlights
+- **AND** no automatic Cartesian product edges are created to unrelated books or chunks solely because they share `Category.BackendRuntime`.
 
 #### Scenario: Only user-imported books appear as book nodes
 - **WHEN** an authenticated user has imported exactly one book while a different account has published a separate book
@@ -89,14 +93,14 @@ The query execution SHALL execute in a single consolidated read pass using EF Co
 - **AND** the other account's published book is absent from the response.
 
 #### Scenario: Only touched curriculum topics appear
-- **WHEN** an authenticated user has a flashcard linked to Topic A but has no card or matching highlight tag for Topic B
-- **THEN** Topic A is emitted as a topic node with a `TopicToPillar` edge to its pillar hub
-- **AND** Topic B is absent from the graph.
+- **WHEN** an authenticated user has a flashcard linked to Chunk A but has no card or highlight referencing Chunk B
+- **THEN** Chunk A is emitted as a chunk node with a `ChunkToBook` edge to its parent book
+- **AND** Chunk B is absent from the graph.
 
 #### Scenario: Deleted highlight or flashcard is excluded from the graph
 - **WHEN** an authenticated user soft-deletes a highlight or flashcard and then requests `GET /api/v1/graph`
 - **THEN** the deleted node and all of its edges are absent from the response
-- **AND** any topic or pillar hub that no longer anchors a surviving user node is also omitted.
+- **AND** any chunk or pillar hub that no longer anchors a surviving user node is also omitted.
 ---
 
 ### Requirement: Client-Side Canvas 2D Force Layout Visualization
@@ -111,7 +115,7 @@ The visualization SHALL execute an asynchronous force-directed layout (such as C
 
 The canvas SHALL visually differentiate node types and retention status:
 - **Pillar Hub Nodes:** Prominent circular nodes ($54\times 54\text{px}$) with a $3.5\text{px}$ neon halo ring (blur $18\text{px}$), bold typography ($13\text{px}$ font weight 700), the highest stacking rank (z 50), and color-coded backgrounds matching their respective domain palette.
-- **Topic Nodes:** Circular nodes ($36\times 36\text{px}$) carrying a `Day N` curriculum-index badge and color-coded by their engineering pillar:
+- **Chunk Nodes:** Small circular nodes ($30\times 30\text{px}$) color-coded by their parent book's engineering pillar, representing individual reading slices/chapters:
   - Backend Runtime: Cyan/Sky (`#0284c7` / `#38bdf8`)
   - Data Storage: Cyan/Teal (`#0891b2` / `#22d3ee`)
   - Distributed Systems: Violet/Purple (`#7c3aed` / `#a78bfa`)
@@ -137,7 +141,7 @@ The canvas SHALL support smooth mouse and touch pan, zoom (bounded between 0.2x 
 #### Scenario: Level-of-Detail label decluttering at overview zoom
 - **WHEN** the user views the graph canvas at default overview zoom ($zoom < 1.1\times$)
 - **THEN** text labels for Card (diamond) and Highlight (diamond-cut) nodes are hidden to avoid label collision
-- **AND** text labels for Pillar hubs, Books, and Topics remain legible.
+- **AND** text labels for Pillar hubs, Books, and Chunks remain legible.
 
 #### Scenario: Card label reveals on hover or selection
 - **WHEN** the user hovers over or taps a Card node whose label is hidden
@@ -156,9 +160,9 @@ The canvas SHALL support smooth mouse and touch pan, zoom (bounded between 0.2x 
 
 #### Scenario: Pillar node rendering and visual prominence
 - **WHEN** the graph canvas renders in the browser
-- **THEN** each pillar hub node is rendered at $54\times 54\text{px}$, larger than topic ($36\times 36\text{px}$), book ($34\times 26\text{px}$), card ($26\times 26\text{px}$), and highlight ($22\times 22\text{px}$) nodes
+- **THEN** each pillar hub node is rendered at $54\times 54\text{px}$, larger than book ($34\times 26\text{px}$), chunk ($30\times 30\text{px}$), card ($26\times 26\text{px}$), and highlight ($22\times 22\text{px}$) nodes
 - **AND** the pillar hub node displays a bold label and distinct accent halo
-- **AND** connected topics form a surrounding orbital constellation around their parent pillar hub.
+- **AND** connected books form a surrounding orbital constellation around their parent pillar hub.
 
 #### Scenario: Highlight and Book node colors unified across renderers
 - **WHEN** the 2D canvas renders Highlight and Book nodes
@@ -166,10 +170,9 @@ The canvas SHALL support smooth mouse and touch pan, zoom (bounded between 0.2x 
 - **AND** no Highlight node renders the legacy violet fill and no Book node renders the legacy slate fill.
 
 #### Scenario: Stable CoSE layout without collapsed horizontal stacking
-- **WHEN** a user navigates to `/graph` with categories that contain zero book nodes and zero user highlights
-- **THEN** the topics belonging to those categories remain anchored to their respective Pillar Hub via `TopicToPillar` edges
+- **WHEN** a user navigates to `/graph` with a book that has chunks but zero user highlights
+- **THEN** the chunks belonging to that book remain anchored to it via `ChunkToBook` edges and to their pillar via the book's `BookToPillar` edge
 - **AND** the CoSE simulation settles without stacking unconnected nodes into a horizontal line at the viewport perimeter.
-
 #### Scenario: Obsidian 2D canvas background and hairline border styling
 - **WHEN** the 2D canvas renders in dark mode
 - **THEN** the canvas container background renders with neutral obsidian `#09090b` (`dark:bg-canvas`)
@@ -181,7 +184,7 @@ The canvas SHALL support smooth mouse and touch pan, zoom (bounded between 0.2x 
 The knowledge graph view SHALL include a floating glassmorphic control bar (`GraphControlBar.vue`) positioned above the canvas, providing real-time client-side filtering across multiple dimensions and engine modes without triggering backend network requests:
 1. **Engine Mode Switcher (2D / 3D):** A prominent dual-button toggle allowing the user to seamlessly switch between the **2D Planar Canvas** (Cytoscape.js) and the **3D WebGL Cosmos** (`3d-force-graph` / Three.js). The active mode SHALL persist in `localStorage` under key `techdaily_graph_view_mode`.
 2. **Pillar Category Filter:** Filter chips allowing the user to view all nodes or isolate a specific pillar (`All`, `Backend Runtime`, `Data Storage`, `Distributed Systems`, `Frontend Engineering`, `Engineering Craft`). The filter container SHALL employ a responsive wrapping layout (`flex-wrap gap-1.5`) without hidden scrollbars or box-model clipping across both English and Vietnamese locales, ensuring that all 6 pill options remain 100% visible and discoverable. All category pills SHALL resolve explicit localization keys without falling back to raw untranslated strings.
-3. **Node Type Toggles:** Toggle buttons to show or hide specific node types (`Topics`, `Books`, `Flashcards`, `Highlights`).
+3. **Node Type Toggles:** Toggle buttons to show or hide specific node types (`Books`, `Chunks`, `Flashcards`, `Highlights`).
 4. **Mastery Status Filter:** Dropdown or pill selector to filter flashcard nodes by SM-2 status (`All`, `Learning`, `Reviewing`, `Mastered`). When `Mastered` is selected, the active indicator SHALL display primary brand violet styling (`bg-brand-600 text-white`) instead of emerald green.
 5. **Live Search Input:** Text input that dynamically matches node titles, tags, and summary keywords. Matching nodes SHALL remain fully opaque and highlighted, while non-matching nodes SHALL fade to 15% opacity with edges dimmed in both 2D and 3D modes.
 6. **Reset Filters CTA:** A button to immediately reset all filters, search inputs, and node opacities back to the default global view.
@@ -196,13 +199,18 @@ All control bar action buttons, mode switches, and filter chips SHALL utilize `.
 
 #### Scenario: Filtering by pillar category
 - **WHEN** the user clicks the "Data Storage & Persistence" pillar filter chip
-- **THEN** all topic, book, card, and highlight nodes associated with other categories are hidden from the canvas
+- **THEN** all book, chunk, card, and highlight nodes associated with other categories are hidden from the canvas
 - **AND** the viewport smoothly animates to focus on the Data Storage cluster.
+
+#### Scenario: Toggling node types via type filters
+- **WHEN** the user disables the `Books`, `Chunks`, `Flashcards`, or `Highlights` toggle
+- **THEN** nodes of that type and their connecting edges are hidden from the canvas
+- **AND** no legacy `Topics` toggle is present in the control bar.
 
 #### Scenario: Filtering by flashcard mastery level
 - **WHEN** the user selects "Mastered" in the mastery status filter
 - **THEN** card nodes with status `Learning` or `Reviewing` are hidden from the canvas
-- **AND** only cards with SM-2 interval $\ge 21$ days (`Mastered`) remain visible alongside their connected topic nodes.
+- **AND** only cards with SM-2 interval $\ge 21$ days (`Mastered`) remain visible alongside their connected chunk nodes.
 
 #### Scenario: Live search node focus
 - **WHEN** the user types `"MVCC"` into the search input
@@ -232,27 +240,31 @@ The drawer container and internal metrics/takeaways containers SHALL utilize `da
 The detail drawer SHALL present:
 1. **Node Header:** Node type badge with icon, pillar category tag, node title, and creation/review timestamp.
 2. **Body Content:**
-   - For Topic nodes: Key takeaways, curriculum day order, and difficulty level.
    - For Book nodes: Book cover/emblem, total chapters/slices, source URL, and reading progress.
+   - For Chunk nodes: Chunk/chapter title, chunk order, summary, and parent book reference.
    - For Card nodes: Spaced repetition metrics including current interval, ease factor, repetition count, and next due date.
    - For Highlight nodes: Verbatim quote block with quotation styling, chapter source reference, and personal reflection note.
 3. **Action Bridges (1-Click CTAs):**
-   - Topic node: "Practice Quiz" (`/quiz?topic={slug}`) and "View Roadmap" (`/roadmap#{dayOrder}`).
    - Book node: "Browse in Library" (`/library`) and "Read Slices" (`/read/{bookId}`).
+   - Chunk node: "Read Slice" (`/read/{bookId}?slice={chunkOrder}`).
    - Card node: "Review Flashcard" (`/review?cardId={id}`).
    - Highlight node: "Read Chapter" (`/read/{bookId}#slice-{chunkOrder}`) and "View in Notes" (`/notes?highlightId={id}`).
-4. **Connected Relations List:** A list of adjacent connected nodes (e.g. connected flashcards, source book, related topics) with clickable chips that select and center that node on the canvas.
+4. **Connected Relations List:** A list of adjacent connected nodes (e.g. connected flashcards, source book, related chunks) with clickable chips that select and center that node on the canvas.
 
 All action buttons, badges, and status pills SHALL enforce the Bilingual Responsive Layout Invariant (`whitespace-nowrap shrink-0`) and responsive padding to eliminate text wrapping, truncation, or layout breaking in both English and Vietnamese.
 
 The drawer SHALL support closing via an explicit close button, pressing the `Escape` keyboard key, or clicking the canvas backdrop outside the drawer.
 
-#### Scenario: User selects a topic node
-- **WHEN** the user clicks a topic node on the canvas
+#### Scenario: User selects a book node
+- **WHEN** the user clicks a book node on the canvas
 - **THEN** the node becomes visually highlighted with an active outline
 - **AND** the detail drawer slides in from the right edge
-- **AND** the drawer displays the topic's title, pillar badge, summary markdown, and action buttons for "Practice Quiz" and "View Roadmap".
+- **AND** the drawer displays the book's title, pillar badge, total chapters/slices, and action buttons for "Browse in Library" and "Read Slices" bridging to `/read/{bookId}`.
 
+#### Scenario: User selects a topic node
+- **WHEN** the user clicks a chunk node on the canvas
+- **THEN** the detail drawer displays the chunk/chapter title, chunk order, summary, and parent book reference
+- **AND** displays an action button "Read Slice" linking to `/read/{bookId}?slice={chunkOrder}`.
 #### Scenario: User selects a flashcard node
 - **WHEN** the user clicks a flashcard node
 - **THEN** the detail drawer displays the card's question/prompt, current SM-2 interval, ease factor, and repetition count
@@ -312,15 +324,15 @@ The 3D WebGL cosmos canvas background SHALL strictly render with neutral dark ob
 
 The 3D visualization SHALL represent architectural entities in an interactive spherical cosmos:
 1. **Pillar Hub Nodes:** Rendered as glowing primary celestial bodies with large radii and pillar-specific emissive glow colors.
-2. **Topic Nodes:** Rendered as medium planetary spheres color-coded by their parent engineering pillar category.
+2. **Chunk Nodes:** Rendered as medium planetary spheres color-coded by their parent book's engineering pillar category, orbiting their parent book.
 3. **Book Nodes:** Rendered as textured or emblem-accented spherical bodies orbiting their parent pillar hubs.
 4. **Card Nodes:** Rendered as compact glowing spheres color-coded by SM-2 retention status (Learning: amber `#f59e0b`, Reviewing: blue `#3b82f6`, Mastered: primary brand violet `#7c3aed`).
-5. **Highlight Nodes:** Rendered as crystalline or accent-colored satellites orbiting source books and topics.
+5. **Highlight Nodes:** Rendered as crystalline or accent-colored satellites orbiting source books and chunks.
 6. **Relational Edges:** Rendered as glowing 3D vector splines or translucent beams linking interconnected nodes across $(x, y, z)$ space.
 
 The 3D visualization SHALL provide 360-degree OrbitControls supporting rotation around arbitrary axes, smooth pan, pinch-zoom, and a camera reset button. The 3D visualization SHALL provide a functional 360-degree Auto-Rotate mode driven by an active orbital camera trajectory, rotating the camera smoothly around the constellation center at the current altitude and distance, and pausing automatically upon user drag interaction. The 3D engine SHALL implement strict distance-based Level-of-Detail (LOD) label culling:
 - At default galaxy overview camera distances, text labels SHALL be strictly restricted to the 5 primary Pillar Hubs, preventing overlapping text clusters from obscuring the constellation.
-- Topic, Book, Card, and Highlight labels SHALL be culled at overview distance, and SHALL dynamically reveal when the camera zooms within close range ($d < 250$), when the user hovers over or taps the node, or when the user toggles the HUD label switch.
+- Book, Chunk, Card, and Highlight labels SHALL be culled at overview distance, and SHALL dynamically reveal when the camera zooms within close range ($d < 250$), when the user hovers over or taps the node, or when the user toggles the HUD label switch.
 - The floating HUD SHALL provide a 1-click label visibility toggle button allowing users to switch between Clean Cosmos mode (Hubs only) and Full Inspection mode (All labels).
 To conserve user device battery and eliminate main-thread lag:
 - The 3D force simulation SHALL settle node positions within a bounded warmup tick threshold (max 120 ticks) and halt physics calculations.

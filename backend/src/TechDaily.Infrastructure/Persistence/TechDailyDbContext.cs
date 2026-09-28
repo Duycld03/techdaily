@@ -14,7 +14,6 @@ public class TechDailyDbContext : DbContext, ITechDailyDbContext
     }
 
     public DbSet<User> Users => Set<User>();
-    public DbSet<Topic> Topics => Set<Topic>();
     public DbSet<InterviewQuestion> InterviewQuestions => Set<InterviewQuestion>();
     public DbSet<DocumentBook> DocumentBooks => Set<DocumentBook>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();

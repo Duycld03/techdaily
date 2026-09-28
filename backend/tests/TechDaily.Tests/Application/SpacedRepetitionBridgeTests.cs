@@ -110,7 +110,6 @@ public class SpacedRepetitionBridgeTests : IDisposable
         cardInDb.Should().NotBeNull();
         cardInDb!.SourceType.Should().Be(CardSourceType.Highlight);
         cardInDb.SourceHighlightId.Should().Be(highlight.Id);
-        cardInDb.TopicId.Should().BeNull();
     }
     [Fact]
     public async Task CreateCardFromHighlight_WhenRecallSynthesisFails_ShouldReturnFailureAndNotPersistCard()
@@ -239,7 +238,6 @@ public class SpacedRepetitionBridgeTests : IDisposable
         cardInDb.Should().NotBeNull();
         cardInDb!.SourceType.Should().Be(CardSourceType.QuizMistake);
         cardInDb.SourceQuizQuestionId.Should().Be(question.Id);
-        cardInDb.TopicId.Should().BeNull();
         cardInDb.FrontMarkdown.Should().Contain("How does PostgreSQL handle dead tuples created by updates?");
         cardInDb.FrontMarkdown.Should().Contain("- **A.** It immediately deletes them from disk");
         cardInDb.FrontMarkdown.Should().Contain("- **B.** AUTOVACUUM marks them as reusable for new inserts");
@@ -356,10 +354,7 @@ public class SpacedRepetitionBridgeTests : IDisposable
         result.Value.TotalCardsDue.Should().Be(1);
         var dueCard = result.Value.DueCards.First();
         dueCard.SourceType.Should().Be(CardSourceType.Highlight);
-        dueCard.TopicId.Should().BeNull();
         dueCard.FrontMarkdown.Should().Be("Custom Front Question");
         dueCard.BackMarkdown.Should().Be("Custom Back Explanation");
-        dueCard.TopicTitle.Should().Be("Custom Front Question");
-        dueCard.TopicSummary.Should().Be("Custom Back Explanation");
     }
 }

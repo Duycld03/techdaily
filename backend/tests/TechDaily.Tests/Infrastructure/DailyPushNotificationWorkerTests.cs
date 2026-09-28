@@ -205,21 +205,31 @@ public class DailyPushNotificationWorkerTests : IDisposable
             };
             await db.Users.AddAsync(user);
 
-            var topic = new Topic
+            var book = new DocumentBook
             {
                 Id = Guid.NewGuid(),
                 Title = "Kafka Internals",
                 Slug = "kafka-internals",
+                SourceType = SourceType.MarkdownSeries,
                 Category = Category.SystemDesign,
-                Difficulty = Difficulty.Senior,
-                DayOrder = 10
+                TotalChunks = 1,
+                Status = ProcessingStatus.Ready
             };
-            await db.Topics.AddAsync(topic);
-
+            var chunk = new DocumentChunk
+            {
+                Id = Guid.NewGuid(),
+                DocumentBookId = book.Id,
+                ChunkOrder = 1,
+                ChapterTitle = "Kafka Internals",
+                OriginalTextMarkdown = "Kafka replication",
+                SummaryMarkdown = "Summary"
+            };
+            await db.DocumentBooks.AddAsync(book);
+            await db.DocumentChunks.AddAsync(chunk);
             var question = new InterviewQuestion
             {
                 Id = Guid.NewGuid(),
-                TopicId = topic.Id,
+                DocumentChunkId = chunk.Id,
                 QuestionText = "How does partition replication work in Kafka?",
                 Options = ["Leader-Follower ISR", "Paxos", "Raft", "2PC"],
                 CorrectOptionIndex = 0,

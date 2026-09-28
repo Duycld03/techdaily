@@ -89,7 +89,6 @@ public class GetReviewCardsHandler : IUseCase<GetReviewCardsRequest, GetReviewCa
 
         // Apply filters
         var query = activeCardsQuery
-            .Include(c => c.Topic)
             .AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -97,8 +96,7 @@ public class GetReviewCardsHandler : IUseCase<GetReviewCardsRequest, GetReviewCa
             var search = request.Search.Trim().ToLower();
             query = query.Where(c =>
                 (c.FrontMarkdown != null && c.FrontMarkdown.ToLower().Contains(search)) ||
-                (c.BackMarkdown != null && c.BackMarkdown.ToLower().Contains(search)) ||
-                (c.Topic != null && c.Topic.Title.ToLower().Contains(search)));
+                (c.BackMarkdown != null && c.BackMarkdown.ToLower().Contains(search)));
         }
 
         if (request.Status.HasValue)
@@ -124,18 +122,17 @@ public class GetReviewCardsHandler : IUseCase<GetReviewCardsRequest, GetReviewCa
             .Select(c => new ReviewCardDto
             {
                 Id = c.Id,
-                TopicId = c.TopicId,
                 SourceType = c.SourceType,
                 SourceHighlightId = c.SourceHighlightId,
                 SourceQuizQuestionId = c.SourceQuizQuestionId,
                 SourceDocumentChunkId = c.SourceDocumentChunkId,
-                FrontMarkdown = !string.IsNullOrWhiteSpace(c.FrontMarkdown) ? c.FrontMarkdown : (c.Topic != null ? c.Topic.Title : string.Empty),
-                BackMarkdown = !string.IsNullOrWhiteSpace(c.BackMarkdown) ? c.BackMarkdown : (c.Topic != null ? c.Topic.Summary : string.Empty),
-                TopicTitle = c.Topic != null ? c.Topic.Title : (c.FrontMarkdown ?? string.Empty),
-                Category = c.Topic != null ? c.Topic.Category : Category.FrontendWeb,
-                Difficulty = c.Topic != null ? c.Topic.Difficulty : Difficulty.Senior,
-                TopicSummary = c.Topic != null ? c.Topic.Summary : (c.BackMarkdown ?? string.Empty),
-                TopicDeepDiveMarkdown = c.Topic != null ? c.Topic.DeepDiveMarkdown : (c.BackMarkdown ?? string.Empty),
+                FrontMarkdown = c.FrontMarkdown ?? string.Empty,
+                BackMarkdown = c.BackMarkdown ?? string.Empty,
+                TopicTitle = c.FrontMarkdown ?? string.Empty,
+                Category = Category.FrontendWeb,
+                Difficulty = Difficulty.Senior,
+                TopicSummary = c.BackMarkdown ?? string.Empty,
+                TopicDeepDiveMarkdown = c.BackMarkdown ?? string.Empty,
                 RepetitionCount = c.RepetitionCount,
                 EaseFactor = c.EaseFactor,
                 IntervalDays = c.IntervalDays,

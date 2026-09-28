@@ -30,10 +30,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Data\senior-engineering-craft-handbook.json" />
-    <None Update="Data\senior-engineering-craft-handbook.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <EmbeddedResource Include="Data\tech-insights.json" />
     <None Update="Data\tech-insights.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

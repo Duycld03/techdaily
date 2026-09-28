@@ -252,7 +252,6 @@ Respond strictly in valid JSON adhering to this exact schema:
         return new InterviewQuestion
         {
             DocumentChunkId = chunk.Id,
-            TopicId = null,
             Difficulty = Difficulty.Senior,
             QuestionText = parsed.QuestionText.Trim(),
             Options = parsed.Options,
@@ -269,7 +268,6 @@ Respond strictly in valid JSON adhering to this exact schema:
         return new InterviewQuestion
         {
             DocumentChunkId = chunk.Id,
-            TopicId = null,
             Difficulty = Difficulty.Senior,
             QuestionText = $"In the context of '{chapter}', when designing for high availability and low latency under production workloads, which trade-off strategy is most appropriate?",
             Options = new List<string>

@@ -7,32 +7,35 @@ namespace TechDaily.Tests.Domain;
 
 public class SpacedRepetitionCardTests
 {
+    private static SpacedRepetitionCard CreateTestCard(DateOnly? initialDate = null) =>
+        SpacedRepetitionCard.CreateFromDrillMistake(Guid.NewGuid(), Guid.NewGuid(), "front", "back", initialDate);
+
     [Fact]
-    public void Create_ShouldInitializeWithDefaultValues()
+    public void CreateFromHighlight_ShouldInitializeWithDefaultSM2Values()
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var topicId = Guid.NewGuid();
+        var highlightId = Guid.NewGuid();
         var today = new DateOnly(2026, 1, 1);
 
         // Act
-        var card = SpacedRepetitionCard.Create(userId, topicId, today);
+        var card = SpacedRepetitionCard.CreateFromHighlight(userId, highlightId, "front", "back", today);
 
         // Assert
         card.UserId.Should().Be(userId);
-        card.TopicId.Should().Be(topicId);
+        card.SourceHighlightId.Should().Be(highlightId);
+        card.SourceType.Should().Be(CardSourceType.Highlight);
         card.RepetitionCount.Should().Be(0);
         card.EaseFactor.Should().Be(2.50m);
         card.IntervalDays.Should().Be(1);
         card.Status.Should().Be(CardStatus.Learning);
         card.NextReviewDate.Should().Be(today);
     }
-
     [Fact]
     public void ApplyReview_Grade5_ShouldFollowSM2Progression()
     {
         // Arrange
-        var card = SpacedRepetitionCard.Create(Guid.NewGuid(), Guid.NewGuid(), new DateOnly(2026, 1, 1));
+        var card = CreateTestCard(new DateOnly(2026, 1, 1));
 
         // First successful review (Repetition 0 -> 1)
         card.ApplyReview(5, new DateOnly(2026, 1, 1));
@@ -63,7 +66,7 @@ public class SpacedRepetitionCardTests
     public void ApplyReview_GradeBelow3_ShouldResetStreakToLearning()
     {
         // Arrange
-        var card = SpacedRepetitionCard.Create(Guid.NewGuid(), Guid.NewGuid(), new DateOnly(2026, 1, 1));
+        var card = CreateTestCard(new DateOnly(2026, 1, 1));
         card.ApplyReview(5, new DateOnly(2026, 1, 1));
         card.ApplyReview(5, new DateOnly(2026, 1, 2));
         card.RepetitionCount.Should().Be(2);
@@ -83,7 +86,7 @@ public class SpacedRepetitionCardTests
     public void ApplyReview_EaseFactor_ShouldNeverDropBelowMinimum1Point30()
     {
         // Arrange
-        var card = SpacedRepetitionCard.Create(Guid.NewGuid(), Guid.NewGuid(), new DateOnly(2026, 1, 1));
+        var card = CreateTestCard(new DateOnly(2026, 1, 1));
 
         // Act - Repeatedly fail
         for (int i = 0; i < 15; i++)
@@ -100,7 +103,7 @@ public class SpacedRepetitionCardTests
     [InlineData(6)]
     public void ApplyReview_InvalidGrade_ShouldThrowException(int invalidGrade)
     {
-        var card = SpacedRepetitionCard.Create(Guid.NewGuid(), Guid.NewGuid());
+        var card = CreateTestCard();
         var act = () => card.ApplyReview(invalidGrade);
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
@@ -109,7 +112,7 @@ public class SpacedRepetitionCardTests
     public void UpdateContent_ShouldUpdateMarkdownAndSetUpdatedAt()
     {
         // Arrange
-        var card = SpacedRepetitionCard.Create(Guid.NewGuid(), Guid.NewGuid());
+        var card = CreateTestCard();
         var before = DateTimeOffset.UtcNow.AddSeconds(-1);
 
         // Act
@@ -126,7 +129,7 @@ public class SpacedRepetitionCardTests
     public void ResetProgression_ShouldResetSM2MetricsBackToInitialLearningState()
     {
         // Arrange
-        var card = SpacedRepetitionCard.Create(Guid.NewGuid(), Guid.NewGuid(), new DateOnly(2026, 1, 1));
+        var card = CreateTestCard(new DateOnly(2026, 1, 1));
         card.ApplyReview(5, new DateOnly(2026, 1, 1));
         card.ApplyReview(5, new DateOnly(2026, 1, 2));
         card.ApplyReview(5, new DateOnly(2026, 1, 8));

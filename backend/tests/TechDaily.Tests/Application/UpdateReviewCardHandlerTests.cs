@@ -48,19 +48,7 @@ public class UpdateReviewCardHandlerTests : IDisposable
         };
         await _db.Users.AddAsync(user);
 
-        var topic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Database Durability",
-            Slug = "db-durability",
-            Category = Category.DatabaseStorage,
-            Difficulty = Difficulty.Senior
-        };
-        await _db.Topics.AddAsync(topic);
-
-        var card = SpacedRepetitionCard.Create(userId, topic.Id);
-        card.FrontMarkdown = "Old front question";
-        card.BackMarkdown = "Old back answer";
+        var card = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Old front question", "Old back answer");
 
         await _db.SpacedRepetitionCards.AddAsync(card);
         await _db.SaveChangesAsync();

@@ -237,17 +237,9 @@ using (var scope = app.Services.CreateScope())
         {
             await context.Database.MigrateAsync();
             logger.LogInformation("PostgreSQL database migrations applied successfully.");
-            await CurriculumSeeder.SeedAsync(context);
-            logger.LogInformation("Master 30-Day Curriculum seeded successfully.");
             await TechInsightsSeeder.SeedAsync(context);
             logger.LogInformation("Tech Insights Catalog seeded successfully.");
 
-            var embeddingService = services.GetService<IEmbeddingService>();
-            if (embeddingService != null)
-            {
-                await CurriculumSeeder.BackfillEmbeddingsAsync(context, embeddingService, logger);
-                logger.LogInformation("Curriculum vector embeddings verified and backfilled.");
-            }
 
             try
             {

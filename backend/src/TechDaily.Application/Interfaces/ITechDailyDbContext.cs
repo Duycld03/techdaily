@@ -6,7 +6,6 @@ namespace TechDaily.Application.Interfaces;
 public interface ITechDailyDbContext
 {
     DbSet<User> Users { get; }
-    DbSet<Topic> Topics { get; }
     DbSet<InterviewQuestion> InterviewQuestions { get; }
     DbSet<DocumentBook> DocumentBooks { get; }
     DbSet<DocumentChunk> DocumentChunks { get; }

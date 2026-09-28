@@ -36,7 +36,6 @@ public class ResetReviewCardProgressHandler : IUseCase<ResetReviewCardProgressRe
         CancellationToken cancellationToken = default)
     {
         var card = await _dbContext.SpacedRepetitionCards
-            .Include(c => c.Topic)
             .FirstOrDefaultAsync(
                 c => c.Id == request.CardId && c.UserId == request.UserId && !c.IsDeleted,
                 cancellationToken);

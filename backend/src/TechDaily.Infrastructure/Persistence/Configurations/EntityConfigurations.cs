@@ -72,35 +72,13 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     }
 }
 
-public class TopicConfiguration : IEntityTypeConfiguration<Topic>
-{
-    public void Configure(EntityTypeBuilder<Topic> builder)
-    {
-        builder.HasKey(t => t.Id);
-        builder.Property(t => t.Slug).HasMaxLength(255).IsRequired();
-        builder.HasIndex(t => t.Slug).IsUnique();
-        builder.Property(t => t.Title).HasMaxLength(255).IsRequired();
-        builder.Property(t => t.Category).HasConversion(ConfigurationHelpers.CategoryStringConverter).HasMaxLength(50).IsRequired();
-        builder.Property(t => t.Difficulty).HasConversion<string>().HasMaxLength(50).IsRequired();
-        builder.Property(t => t.DayOrder).IsRequired();
-        builder.HasIndex(t => t.DayOrder);
-
-        builder.HasMany(t => t.InterviewQuestions)
-            .WithOne(q => q.Topic)
-            .HasForeignKey(q => q.TopicId)
-            .IsRequired(false)
-            .OnDelete(DeleteBehavior.Cascade);
-    }
-}
 
 public class InterviewQuestionConfiguration : IEntityTypeConfiguration<InterviewQuestion>
 {
     public void Configure(EntityTypeBuilder<InterviewQuestion> builder)
     {
         builder.HasKey(q => q.Id);
-        builder.Property(q => q.TopicId).IsRequired(false);
         builder.Property(q => q.DocumentChunkId).IsRequired(false);
-        builder.HasIndex(q => q.TopicId);
         builder.HasIndex(q => q.DocumentChunkId);
 
         builder.HasOne(q => q.DocumentChunk)
@@ -243,7 +221,6 @@ public class SpacedRepetitionCardConfiguration : IEntityTypeConfiguration<Spaced
     public void Configure(EntityTypeBuilder<SpacedRepetitionCard> builder)
     {
         builder.HasKey(c => c.Id);
-        builder.Property(c => c.TopicId).IsRequired(false);
         builder.Property(c => c.SourceType).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(c => c.FrontMarkdown);
         builder.Property(c => c.BackMarkdown);
@@ -253,7 +230,6 @@ public class SpacedRepetitionCardConfiguration : IEntityTypeConfiguration<Spaced
         builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(c => c.NextReviewDate).IsRequired();
 
-        builder.HasIndex(c => new { c.UserId, c.TopicId }).IsUnique();
         builder.HasIndex(c => new { c.UserId, c.NextReviewDate });
         builder.HasIndex(c => new { c.UserId, c.SourceHighlightId });
         builder.HasIndex(c => new { c.UserId, c.SourceQuizQuestionId });
@@ -264,11 +240,6 @@ public class SpacedRepetitionCardConfiguration : IEntityTypeConfiguration<Spaced
             .HasForeignKey(c => c.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne(c => c.Topic)
-            .WithMany(t => t.SpacedRepetitionCards)
-            .HasForeignKey(c => c.TopicId)
-            .OnDelete(DeleteBehavior.Cascade)
-            .IsRequired(false);
 
         builder.HasOne(c => c.SourceHighlight)
             .WithMany()

@@ -45,15 +45,10 @@ public class ReviewHandlerTests : IDisposable
 
         var today = new DateOnly(2026, 3, 15);
 
-        var topic1 = new Topic { Id = Guid.NewGuid(), Title = "Postgres WAL", Slug = "wal", Category = Category.DatabaseStorage, Difficulty = Difficulty.Senior, DayOrder = 16 };
-        var topic2 = new Topic { Id = Guid.NewGuid(), Title = "Vue Reactivity", Slug = "vue", Category = Category.FrontendWeb, Difficulty = Difficulty.Senior, DayOrder = 1 };
-
-        await _db.Topics.AddRangeAsync(topic1, topic2);
-
         // Due card (due today)
-        var dueCard = SpacedRepetitionCard.Create(userId, topic1.Id, today);
+        var dueCard = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Postgres WAL", "Write-ahead logging", today);
         // Future card (due in 5 days)
-        var futureCard = SpacedRepetitionCard.Create(userId, topic2.Id, today.AddDays(5));
+        var futureCard = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Vue Reactivity", "Proxy engine", today.AddDays(5));
 
         await _db.SpacedRepetitionCards.AddRangeAsync(dueCard, futureCard);
         await _db.SaveChangesAsync();
@@ -67,7 +62,7 @@ public class ReviewHandlerTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.TotalCardsDue.Should().Be(1);
-        result.Value.DueCards.First().TopicTitle.Should().Be("Postgres WAL");
+        result.Value.DueCards.First().FrontMarkdown.Should().Be("Postgres WAL");
     }
 
     [Fact]
@@ -78,10 +73,7 @@ public class ReviewHandlerTests : IDisposable
         var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
-        var topic = new Topic { Id = Guid.NewGuid(), Title = "Topic", Slug = "slug", Category = Category.SystemDesign, Difficulty = Difficulty.Senior, DayOrder = 24 };
-        await _db.Topics.AddAsync(topic);
-
-        var card = SpacedRepetitionCard.Create(userId, topic.Id, new DateOnly(2026, 3, 15));
+        var card = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Front", "Back", new DateOnly(2026, 3, 15));
         await _db.SpacedRepetitionCards.AddAsync(card);
         await _db.SaveChangesAsync();
 
@@ -138,7 +130,6 @@ public class ReviewHandlerTests : IDisposable
         var dueCard = result.Value.DueCards.First();
         dueCard.SourceType.Should().Be(CardSourceType.DocumentChunk);
         dueCard.SourceDocumentChunkId.Should().Be(chunk.Id);
-        dueCard.TopicId.Should().BeNull();
         dueCard.FrontMarkdown.Should().Be("What is write amplification?");
         dueCard.BackMarkdown.Should().Be("Write amplification is data written to storage vs data written by user.");
     }
@@ -179,7 +170,6 @@ public class ReviewHandlerTests : IDisposable
         var fetchedCard = result.Value.Cards.First();
         fetchedCard.SourceType.Should().Be(CardSourceType.DocumentChunk);
         fetchedCard.SourceDocumentChunkId.Should().Be(chunk2.Id);
-        fetchedCard.TopicId.Should().BeNull();
         fetchedCard.FrontMarkdown.Should().Be("What is LSM compaction?");
         fetchedCard.BackMarkdown.Should().Be("LSM compaction merges SSTables to reclaim space.");
     }

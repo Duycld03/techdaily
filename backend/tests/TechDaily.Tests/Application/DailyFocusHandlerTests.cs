@@ -88,7 +88,6 @@ public class DailyFocusHandlerTests : IDisposable
         {
             Id = Guid.NewGuid(),
             DocumentChunkId = chunk.Id,
-            TopicId = null,
             QuestionText = "Explain fault tolerance vs failure",
             ModelAnswerMarkdown = "Model answer",
             Difficulty = Difficulty.Senior
@@ -185,14 +184,30 @@ public class DailyFocusHandlerTests : IDisposable
         var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
-        var topicId = Guid.NewGuid();
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "GC Book",
+            Slug = "gc-book",
+            SourceType = SourceType.MarkdownSeries,
+            Category = Category.BackendRuntime,
+            TotalChunks = 1,
+            Status = ProcessingStatus.Ready
+        };
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = 1,
+            ChapterTitle = "Garbage Collection Internals",
+            OriginalTextMarkdown = "GC text",
+            SummaryMarkdown = "GC summary"
+        };
         var questionId = Guid.NewGuid();
-
-        var topic = new Topic { Id = topicId, Title = "GC", Slug = "gc", Category = Category.BackendRuntime, Difficulty = Difficulty.Senior, DayOrder = 1 };
         var question = new InterviewQuestion
         {
             Id = questionId,
-            TopicId = topicId,
+            DocumentChunkId = chunk.Id,
             QuestionText = "How to mitigate LOH fragmentation?",
             Options = new() { "GC.Collect()", "ArrayPool<byte>.Shared", "String concatenation", "32-bit runtime" },
             CorrectOptionIndex = 1,
@@ -201,7 +216,8 @@ public class DailyFocusHandlerTests : IDisposable
         };
         var drill = new DailyDrill { Id = Guid.NewGuid(), UserId = userId, QuestionId = questionId, ScheduledDate = DateOnly.FromDateTime(DateTime.UtcNow) };
 
-        await _db.Topics.AddAsync(topic);
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.DocumentChunks.AddAsync(chunk);
         await _db.InterviewQuestions.AddAsync(question);
         await _db.DailyDrills.AddAsync(drill);
         await _db.SaveChangesAsync();
@@ -236,14 +252,30 @@ public class DailyFocusHandlerTests : IDisposable
         var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
-        var topicId = Guid.NewGuid();
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "GC Book",
+            Slug = "gc-book-2",
+            SourceType = SourceType.MarkdownSeries,
+            Category = Category.BackendRuntime,
+            TotalChunks = 1,
+            Status = ProcessingStatus.Ready
+        };
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = 1,
+            ChapterTitle = "Garbage Collection Internals",
+            OriginalTextMarkdown = "GC text",
+            SummaryMarkdown = "GC summary"
+        };
         var questionId = Guid.NewGuid();
-
-        var topic = new Topic { Id = topicId, Title = "GC", Slug = "gc", Category = Category.BackendRuntime, Difficulty = Difficulty.Senior, DayOrder = 1 };
         var question = new InterviewQuestion
         {
             Id = questionId,
-            TopicId = topicId,
+            DocumentChunkId = chunk.Id,
             QuestionText = "How to mitigate LOH fragmentation?",
             Options = new() { "GC.Collect()", "ArrayPool<byte>.Shared", "String concatenation", "32-bit runtime" },
             CorrectOptionIndex = 1,
@@ -252,11 +284,11 @@ public class DailyFocusHandlerTests : IDisposable
         };
         var drill = new DailyDrill { Id = Guid.NewGuid(), UserId = userId, QuestionId = questionId, ScheduledDate = DateOnly.FromDateTime(DateTime.UtcNow) };
 
-        await _db.Topics.AddAsync(topic);
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.DocumentChunks.AddAsync(chunk);
         await _db.InterviewQuestions.AddAsync(question);
         await _db.DailyDrills.AddAsync(drill);
         await _db.SaveChangesAsync();
-
         var validator = new SubmitDailyDrillValidator();
         var handler = new SubmitDailyDrillHandler(_db, validator);
         var request = new SubmitDailyDrillRequest(drill.Id, userId, SelectedOptionIndex: 0); // Chose wrong option 0
@@ -276,7 +308,7 @@ public class DailyFocusHandlerTests : IDisposable
         updatedDrill.Score.Should().Be(0);
 
         // Verify SM-2 card was created for unmastered concept
-        var sm2Card = await _db.SpacedRepetitionCards.FirstOrDefaultAsync(c => c.UserId == userId && c.TopicId == topicId);
+        var sm2Card = await _db.SpacedRepetitionCards.FirstOrDefaultAsync(c => c.UserId == userId && c.SourceDocumentChunkId == chunk.Id);
         sm2Card.Should().NotBeNull();
         sm2Card!.NextReviewDate.Should().Be(DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1));
     }
@@ -310,7 +342,6 @@ public class DailyFocusHandlerTests : IDisposable
         {
             Id = questionId,
             DocumentChunkId = chunk.Id,
-            TopicId = null,
             QuestionText = "What defines fault tolerance in distributed systems?",
             Options = new() { "Zero downtime under any failure", "Ability to anticipate faults and cope with them", "Instant auto-recovery", "Infinite redundancy" },
             CorrectOptionIndex = 1,

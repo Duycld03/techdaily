@@ -148,16 +148,6 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         var userB = new User { Id = Guid.NewGuid(), Email = "userB@techdaily.local", Name = "User B" };
         await _db.Users.AddRangeAsync(userA, userB);
 
-        var topic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Memory Allocations",
-            Slug = "memory-allocations",
-            Category = Category.BackendRuntime,
-            Difficulty = Difficulty.Intermediate,
-            DayOrder = 2
-        };
-        await _db.Topics.AddAsync(topic);
 
         var book = new DocumentBook
         {
@@ -180,7 +170,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         await _db.DocumentChunks.AddAsync(chunk);
 
         // User A items
-        var cardA = SpacedRepetitionCard.Create(userA.Id, topic.Id);
+        var cardA = SpacedRepetitionCard.CreateFromDrillMistake(userA.Id, chunk.Id, "Front A", "Back A");
         var highlightA = new UserHighlight
         {
             Id = Guid.NewGuid(),
@@ -191,7 +181,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         };
 
         // User B items
-        var cardB = SpacedRepetitionCard.Create(userB.Id, topic.Id);
+        var cardB = SpacedRepetitionCard.CreateFromDrillMistake(userB.Id, chunk.Id, "Front B", "Back B");
         var highlightB = new UserHighlight
         {
             Id = Guid.NewGuid(),
@@ -557,45 +547,17 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         var user = new User { Id = Guid.NewGuid(), Email = "sm2@techdaily.local", Name = "SM2 Tester" };
         await _db.Users.AddAsync(user);
 
-        var topic1 = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Topic 1",
-            Slug = "topic-1",
-            Category = Category.SystemDesign,
-            Difficulty = Difficulty.Senior,
-            DayOrder = 10
-        };
-        var topic2 = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Topic 2",
-            Slug = "topic-2",
-            Category = Category.SystemDesign,
-            Difficulty = Difficulty.Senior,
-            DayOrder = 11
-        };
-        var topic3 = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Topic 3",
-            Slug = "topic-3",
-            Category = Category.SystemDesign,
-            Difficulty = Difficulty.Senior,
-            DayOrder = 12
-        };
-        await _db.Topics.AddRangeAsync(topic1, topic2, topic3);
 
         // Card 1: Default new card -> Interval=1, EF=2.50 -> "Learning"
-        var cardLearning = SpacedRepetitionCard.Create(user.Id, topic1.Id);
+        var cardLearning = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, null, "F1", "B1");
 
         // Card 2: 2 successful reviews -> Interval=6, EF=2.50 -> "Reviewing"
-        var cardReviewing = SpacedRepetitionCard.Create(user.Id, topic2.Id);
+        var cardReviewing = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, null, "F2", "B2");
         cardReviewing.ApplyReview(5);
         cardReviewing.ApplyReview(5);
 
         // Card 3: 4 successful reviews -> Interval >= 21, EF >= 2.2 -> "Mastered"
-        var cardMastered = SpacedRepetitionCard.Create(user.Id, topic3.Id);
+        var cardMastered = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, null, "F3", "B3");
         cardMastered.ApplyReview(5);
         cardMastered.ApplyReview(5);
         cardMastered.ApplyReview(5);
@@ -761,16 +723,6 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         var otherUser = new User { Id = Guid.NewGuid(), Email = "other@techdaily.local", Name = "Other" };
         await _db.Users.AddRangeAsync(newUser, otherUser);
 
-        var seededTopic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Web Vitals & Performance",
-            Slug = "web-vitals",
-            Category = Category.FrontendWeb,
-            Difficulty = Difficulty.Intermediate,
-            DayOrder = 1
-        };
-        await _db.Topics.AddAsync(seededTopic);
 
         var othersBook = new DocumentBook
         {
@@ -872,16 +824,6 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         var user = new User { Id = Guid.NewGuid(), Email = "edges@techdaily.local", Name = "Edge User" };
         await _db.Users.AddAsync(user);
 
-        var topic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Garbage Collection",
-            Slug = "garbage-collection",
-            Category = Category.BackendRuntime,
-            Difficulty = Difficulty.Senior,
-            DayOrder = 3
-        };
-        await _db.Topics.AddAsync(topic);
 
         var book = new DocumentBook
         {
@@ -921,7 +863,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         };
         await _db.UserHighlights.AddRangeAsync(highlight1, highlight2);
 
-        var topicCard = SpacedRepetitionCard.Create(user.Id, topic.Id);
+        var chunkCard = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, chunk.Id, "What is GC?", "Memory management");
         var highlightCard = SpacedRepetitionCard.CreateFromHighlight(user.Id, highlight1.Id, "What are GC roots?", "References that keep objects alive");
 
         var question = new QuizQuestion
@@ -938,7 +880,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         await _db.QuizQuestions.AddAsync(question);
         var orphanCard = SpacedRepetitionCard.CreateFromQuizMistake(user.Id, question.Id, "What is MVCC?", "Multi-version concurrency control");
 
-        await _db.SpacedRepetitionCards.AddRangeAsync(topicCard, highlightCard, orphanCard);
+        await _db.SpacedRepetitionCards.AddRangeAsync(chunkCard, highlightCard, orphanCard);
         await _db.SaveChangesAsync();
 
         // Act
@@ -962,7 +904,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         response.Nodes.Should().Contain(n => n.Id == "pillar-EngineeringCraft");
 
         // No card is a degree-0 node.
-        foreach (var cardId in new[] { topicCard.Id.ToString(), highlightCard.Id.ToString(), orphanCard.Id.ToString() })
+        foreach (var cardId in new[] { chunkCard.Id.ToString(), highlightCard.Id.ToString(), orphanCard.Id.ToString() })
         {
             response.Edges.Any(e => e.Source == cardId || e.Target == cardId).Should().BeTrue();
         }

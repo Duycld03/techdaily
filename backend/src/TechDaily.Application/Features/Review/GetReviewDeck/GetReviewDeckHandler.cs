@@ -30,24 +30,22 @@ public class GetReviewDeckHandler : IUseCase<GetReviewDeckRequest, GetReviewDeck
         var today = request.TargetDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
 
         var dueCards = await _dbContext.SpacedRepetitionCards
-            .Include(c => c.Topic)
             .Where(c => c.UserId == request.UserId && c.NextReviewDate <= today)
             .OrderBy(c => c.NextReviewDate)
             .Select(c => new ReviewCardDto
             {
                 Id = c.Id,
-                TopicId = c.TopicId,
                 SourceType = c.SourceType,
                 SourceHighlightId = c.SourceHighlightId,
                 SourceQuizQuestionId = c.SourceQuizQuestionId,
                 SourceDocumentChunkId = c.SourceDocumentChunkId,
-                FrontMarkdown = !string.IsNullOrWhiteSpace(c.FrontMarkdown) ? c.FrontMarkdown : (c.Topic != null ? c.Topic.Title : string.Empty),
-                BackMarkdown = !string.IsNullOrWhiteSpace(c.BackMarkdown) ? c.BackMarkdown : (c.Topic != null ? c.Topic.Summary : string.Empty),
-                TopicTitle = c.Topic != null ? c.Topic.Title : (c.FrontMarkdown ?? string.Empty),
-                Category = c.Topic != null ? c.Topic.Category : Category.FrontendWeb,
-                Difficulty = c.Topic != null ? c.Topic.Difficulty : Difficulty.Senior,
-                TopicSummary = c.Topic != null ? c.Topic.Summary : (c.BackMarkdown ?? string.Empty),
-                TopicDeepDiveMarkdown = c.Topic != null ? c.Topic.DeepDiveMarkdown : (c.BackMarkdown ?? string.Empty),
+                FrontMarkdown = c.FrontMarkdown ?? string.Empty,
+                BackMarkdown = c.BackMarkdown ?? string.Empty,
+                TopicTitle = c.FrontMarkdown ?? string.Empty,
+                Category = Category.FrontendWeb,
+                Difficulty = Difficulty.Senior,
+                TopicSummary = c.BackMarkdown ?? string.Empty,
+                TopicDeepDiveMarkdown = c.BackMarkdown ?? string.Empty,
                 RepetitionCount = c.RepetitionCount,
                 EaseFactor = c.EaseFactor,
                 IntervalDays = c.IntervalDays,

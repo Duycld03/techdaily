@@ -63,7 +63,6 @@ public class SubmitDailyDrillHandler : IUseCase<SubmitDailyDrillRequest, SubmitD
 
         var drill = await _dbContext.DailyDrills
             .Include(d => d.Question)
-                .ThenInclude(q => q.Topic)
             .FirstOrDefaultAsync(d => d.Id == request.DrillId && d.UserId == request.UserId, cancellationToken);
 
         if (drill == null)
@@ -139,18 +138,6 @@ public class SubmitDailyDrillHandler : IUseCase<SubmitDailyDrillRequest, SubmitD
                 {
                     card.UpdateContent(front, back);
                     card.ResetProgression(today.AddDays(1));
-                }
-            }
-            else if (question.TopicId.HasValue)
-            {
-                var topicId = question.TopicId.Value;
-                var card = await _dbContext.SpacedRepetitionCards
-                    .FirstOrDefaultAsync(c => c.UserId == request.UserId && c.TopicId == topicId, cancellationToken);
-
-                if (card == null)
-                {
-                    card = SpacedRepetitionCard.Create(request.UserId, topicId, today.AddDays(1));
-                    await _dbContext.SpacedRepetitionCards.AddAsync(card, cancellationToken);
                 }
             }
         }

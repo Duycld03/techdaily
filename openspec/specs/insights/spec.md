@@ -52,9 +52,9 @@ The system SHALL maintain a standalone `TechInsight` catalog decoupled from libr
 #### Scenario: Client requests insights metadata and dynamic topic suggestions
 - **WHEN** client sends `GET /api/v1/insights/meta`
 - **THEN** system queries `TechInsights` to compile category metadata including category IDs, keys, localized English and Vietnamese labels, and published card counts
-- **AND** queries active `Topics` (from the 30-Day Curriculum) in PostgreSQL to extract curated topic titles grouped by category
+- **AND** queries the authenticated user's library `DocumentBooks` in PostgreSQL to extract suggested inspiration seeds from book categories and `DocumentChunk` chapter titles, grouped by category
 - **AND** returns HTTP 200 with `{ categories, suggestedTopics }`
-- **AND** client dynamically populates filter chips and the AI generation modal suggestion pool without relying on hardcoded arrays.
+- **AND** client dynamically populates filter chips and the AI generation modal suggestion pool from the user's ingested library documents without relying on hardcoded arrays or the removed `Topics` table.
 
 #### Scenario: User toggles between Explore and Saved view modes
 - **GIVEN** an authenticated user on `/insights` with 5 bookmarked insights

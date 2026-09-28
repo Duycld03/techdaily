@@ -45,19 +45,7 @@ public class DeleteReviewCardHandlerTests : IDisposable
         };
         await _db.Users.AddAsync(user);
 
-        var topic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Topic for Card",
-            Slug = "topic-for-card",
-            Category = Category.BackendRuntime,
-            Difficulty = Difficulty.Senior
-        };
-        await _db.Topics.AddAsync(topic);
-
-        var card = SpacedRepetitionCard.Create(userId, topic.Id);
-        card.FrontMarkdown = "Card front";
-        card.BackMarkdown = "Card back";
+        var card = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Card front", "Card back");
 
         await _db.SpacedRepetitionCards.AddAsync(card);
         await _db.SaveChangesAsync();

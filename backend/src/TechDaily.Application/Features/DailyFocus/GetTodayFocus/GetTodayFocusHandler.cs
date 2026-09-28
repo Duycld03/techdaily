@@ -302,7 +302,6 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
 
             var existingDrill = await _dbContext.DailyDrills
                 .Include(d => d.Question)
-                    .ThenInclude(q => q.Topic)
                 .Include(d => d.DocumentChunk)
                 .FirstOrDefaultAsync(d => d.UserId == userId && d.QuestionId == question.Id, cancellationToken);
 

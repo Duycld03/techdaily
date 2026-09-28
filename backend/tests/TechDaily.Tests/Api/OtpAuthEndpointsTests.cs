@@ -54,7 +54,6 @@ public class OtpAuthEndpointsTests : IAsyncLifetime
         builder.Services.AddScoped<TechDailyDbContext>(_ => new TechDailyDbContext(_dbOptions));
         builder.Services.AddScoped<ITechDailyDbContext>(sp => sp.GetRequiredService<TechDailyDbContext>());
         builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
-        builder.Services.AddScoped<IStarterHandbookService, NoOpStarterHandbookService>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<IEmailSender>(_email);
         builder.Services.AddScoped<IOtpService, OtpService>();
@@ -266,10 +265,6 @@ public class OtpAuthEndpointsTests : IAsyncLifetime
         (await ErrorCodeAsync(resend)).Should().Be("AUTH_OTP_RESEND_COOLDOWN");
     }
 
-    private sealed class NoOpStarterHandbookService : IStarterHandbookService
-    {
-        public Task ProvisionForUserAsync(Guid userId, CancellationToken ct = default) => Task.CompletedTask;
-    }
 
     private sealed class CapturingEmailSender : IEmailSender
     {

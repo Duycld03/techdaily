@@ -33,14 +33,14 @@
 
 ## 4. Phase 4 — Destructive removal (after checkpoint tag)
 
-- [ ] 4.1 Create the pre-destruction restore point: `git tag pre-curriculum-schema-drop`; verify `git tag --list` shows it.
-- [ ] 4.2 Delete `Topic.cs`, remove the `Topics` `DbSet` from `ITechDailyDbContext` and `TechDailyDbContext`, and remove the Topic entity configuration plus the `IX_SpacedRepetitionCards_UserId_TopicId` index from `EntityConfigurations.cs`; verify the solution no longer references `Topic` (grep) — build deferred to 4.5.
-- [ ] 4.3 Remove `InterviewQuestion.TopicId` (+ config/navigation) and `SpacedRepetitionCard.TopicId`, `CardSourceType.Topic`, the `Create(userId, topicId, …)` factory, and the `Topic` navigation; update `GetReviewCardsHandler`, `ResetReviewCardProgressHandler`, and `UpdateReviewCardHandler` to drop remaining `Topic` navigation; verify no residual `TopicId` reads remain (grep).
-- [ ] 4.4 Delete `CurriculumEndpoints.cs`, `GetCurriculumRoadmapHandler` + `RoadmapDtos.cs`, `StarterHandbookService.cs`/`IStarterHandbookService`, `senior-engineering-craft-handbook.json`, and the `Topic` upsert in `CurriculumSeeder.cs` (remove the seeder if nothing else remains); verify DI registration no longer references the removed services and the app starts.
-- [ ] 4.5 Add the destructive EF migration dropping the `Topics` table, `InterviewQuestions.TopicId`, `SpacedRepetitionCards.TopicId`, and the topic index; verify `dotnet build backend` succeeds and the migration applies cleanly on a fresh database.
+- [x] 4.1 Create the pre-destruction restore point: `git tag pre-curriculum-schema-drop`; verify `git tag --list` shows it.
+- [x] 4.2 Delete `Topic.cs`, remove the `Topics` `DbSet` from `ITechDailyDbContext` and `TechDailyDbContext`, and remove the Topic entity configuration plus the `IX_SpacedRepetitionCards_UserId_TopicId` index from `EntityConfigurations.cs`; verify the solution no longer references `Topic` (grep) — build deferred to 4.5.
+- [x] 4.3 Remove `InterviewQuestion.TopicId` (+ config/navigation) and `SpacedRepetitionCard.TopicId`, `CardSourceType.Topic`, the `Create(userId, topicId, …)` factory, and the `Topic` navigation; update `GetReviewCardsHandler`, `ResetReviewCardProgressHandler`, and `UpdateReviewCardHandler` to drop remaining `Topic` navigation; verify no residual `TopicId` reads remain (grep).
+- [x] 4.4 Delete `CurriculumEndpoints.cs`, `GetCurriculumRoadmapHandler` + `RoadmapDtos.cs`, `StarterHandbookService.cs`/`IStarterHandbookService`, `senior-engineering-craft-handbook.json`, and the `Topic` upsert in `CurriculumSeeder.cs` (remove the seeder if nothing else remains); verify DI registration no longer references the removed services and the app starts.
+- [x] 4.5 Add the destructive EF migration dropping the `Topics` table, `InterviewQuestions.TopicId`, `SpacedRepetitionCards.TopicId`, and the topic index; verify `dotnet build backend` succeeds and the migration applies cleanly on a fresh database.
 
 ## 5. Phase 5 — Full integration verification
 
-- [ ] 5.1 Gate 1 (full): run `dotnet test backend` and `npm test`; verify both pass 100% after the destructive phase.
-- [ ] 5.2 End-to-end smoke: register a brand-new account and confirm the library, `/today`, and `/roadmap` show the empty-import state (zero books); then import one document and confirm the read → daily drill → failed-drill review card → `/review` → `/graph` loop works with chunk-sourced data only.
-- [ ] 5.3 Gate 2 (final): re-capture Desktop (1440x900) and Mobile (390x844) screenshots of `/`, `/today`, `/roadmap`, `/graph`, `/review` in `en` and `vi` against the post-cutover build; present them as visual proof that no curriculum/30-day surface remains and layouts are intact in both locales.
+- [x] 5.1 Gate 1 (full): run `dotnet test backend` and `npm test`; verify both pass 100% after the destructive phase.
+- [x] 5.2 End-to-end smoke: register a brand-new account and confirm the library, `/today`, and `/roadmap` show the empty-import state (zero books); then import one document and confirm the read → daily drill → failed-drill review card → `/review` → `/graph` loop works with chunk-sourced data only.
+- [x] 5.3 Gate 2 (final): re-capture Desktop (1440x900) and Mobile (390x844) screenshots of `/`, `/today`, `/roadmap`, `/graph`, `/review` in `en` and `vi` against the post-cutover build; present them as visual proof that no curriculum/30-day surface remains and layouts are intact in both locales.

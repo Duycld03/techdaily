@@ -6,8 +6,7 @@ namespace TechDaily.Domain.Entities;
 public class SpacedRepetitionCard : BaseEntity
 {
     public Guid UserId { get; set; }
-    public Guid? TopicId { get; set; }
-    public CardSourceType SourceType { get; set; } = CardSourceType.Topic;
+    public CardSourceType SourceType { get; set; } = CardSourceType.DocumentChunk;
     public string? FrontMarkdown { get; set; }
     public string? BackMarkdown { get; set; }
     public Guid? SourceHighlightId { get; set; }
@@ -22,7 +21,6 @@ public class SpacedRepetitionCard : BaseEntity
 
     // Navigation properties
     public User User { get; set; } = null!;
-    public Topic? Topic { get; set; }
     public UserHighlight? SourceHighlight { get; set; }
     public QuizQuestion? SourceQuizQuestion { get; set; }
     public DocumentChunk? SourceDocumentChunk { get; set; }
@@ -32,16 +30,6 @@ public class SpacedRepetitionCard : BaseEntity
         NextReviewDate = DateOnly.FromDateTime(DateTime.UtcNow);
     }
 
-    public static SpacedRepetitionCard Create(Guid userId, Guid topicId, DateOnly? initialDate = null)
-    {
-        return new SpacedRepetitionCard
-        {
-            UserId = userId,
-            TopicId = topicId,
-            NextReviewDate = initialDate ?? DateOnly.FromDateTime(DateTime.UtcNow),
-            Status = CardStatus.Learning
-        };
-    }
 
     public static SpacedRepetitionCard CreateFromHighlight(
         Guid userId,
@@ -83,7 +71,7 @@ public class SpacedRepetitionCard : BaseEntity
 
     public static SpacedRepetitionCard CreateFromDrillMistake(
         Guid userId,
-        Guid documentChunkId,
+        Guid? documentChunkId,
         string frontMarkdown,
         string backMarkdown,
         DateOnly? initialDate = null)

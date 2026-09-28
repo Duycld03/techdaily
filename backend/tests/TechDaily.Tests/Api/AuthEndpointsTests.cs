@@ -69,7 +69,6 @@ public class AuthEndpointsTests : IAsyncLifetime
         builder.Services.AddScoped<TechDailyDbContext>(_ => new TechDailyDbContext(_dbOptions));
         builder.Services.AddScoped<ITechDailyDbContext>(sp => sp.GetRequiredService<TechDailyDbContext>());
         builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
-        builder.Services.AddScoped<IStarterHandbookService, NoOpStarterHandbookService>();
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<IEmailSender>(new NoOpEmailSender());
         builder.Services.AddScoped<IOtpService, OtpService>();
@@ -159,10 +158,6 @@ public class AuthEndpointsTests : IAsyncLifetime
         RefreshCookieHeader(response).Should().Contain("max-age=2592000");
     }
 
-    private sealed class NoOpStarterHandbookService : IStarterHandbookService
-    {
-        public Task ProvisionForUserAsync(Guid userId, CancellationToken ct = default) => Task.CompletedTask;
-    }
 
     private sealed class NoOpEmailSender : IEmailSender
     {

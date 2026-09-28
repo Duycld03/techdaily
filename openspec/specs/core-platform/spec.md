@@ -58,13 +58,13 @@ The User Profile interface (`frontend/pages/profile.vue`) SHALL present an execu
    - *Left Column (Account & Security Hub)*: Houses the settings and credentials forms inside a dedicated `.glass-card` (~360px height) with clean tab switching:
      - *Personal Info Tab*: Full Name input, Target Role selector, interactive Daily Goal Pace chips (`5m`, `10m`, `15m`, `30m`).
      - *Security Tab*: Current password verification, new password with dynamic strength bar, confirm password matching, and Google account hint banner.
-   - *Right Column (Domain Mastery Goal Tracker)*: Houses `DomainGoalTracker.vue` (~380px height), presenting curriculum domain coverage across four universal, framework-agnostic core engineering pillars with compact padding and high-contrast gradient tracks:
+   - *Right Column (Domain Mastery Goal Tracker)*: Houses `DomainGoalTracker.vue` (~380px height), presenting the user's library reading and recall coverage across four universal, framework-agnostic core engineering pillars with compact padding and high-contrast gradient tracks:
      - **Pillar 1: Backend Runtime & Concurrency** (`profile.domain_backend_runtime`: "Nền Tảng Backend & Runtime" / "Backend Runtime & Concurrency").
      - **Pillar 2: Data Storage & Persistence** (`profile.domain_data_storage`: "Hệ Lưu Trữ & Cơ Sở Dữ Liệu" / "Data Storage & Persistence").
      - **Pillar 3: Distributed Systems & Architecture** (`profile.domain_system_design`: "Hệ Thống Phân Tán & Thiết Kế" / "Distributed Systems & Architecture").
      - **Pillar 4: Frontend & Browser Engineering** (`profile.domain_frontend`: "Hiệu Năng Frontend & Trình Duyệt" / "Frontend & Browser Engineering").
 
-The Domain Mastery Goal Tracker component SHALL evaluate and aggregate topic mastery dynamically across multi-stack keywords via `matchCategory(keyOrTopic: string)`, ensuring book chapters, drills, and quiz attempts in any modern stack map seamlessly into the appropriate universal pillar.
+The Domain Mastery Goal Tracker component SHALL evaluate and aggregate mastery dynamically from the user's library reading and recall activity — the categories of the `DocumentBook`s the user reads, drills, and reviews — via `matchCategory(category: string)`, ensuring book chapters, drills, and quiz attempts in any modern stack map seamlessly into the appropriate universal pillar.
 
 The Engineer Portfolio Dashboard SHALL adapt responsively across Desktop (≥ 1024px, 3-tier layout with balanced 50/50 lower columns) and Mobile (< 1024px, vertically stacked layout with Identity Passport -> 2x2 Milestones Strip -> Domain Mastery -> Account Settings) without horizontal scrolling or layout overlap.
 
@@ -113,7 +113,7 @@ The Identity passport, milestone statistics, and domain goal tracker SHALL suppo
 - **WHEN** user views the profile page
 - **THEN** UI renders the full-width 4-column milestones telemetry strip displaying:
   - Architecture Drills completed with average score
-  - Interview Quiz accuracy percentage and mastered topics count with non-truncated concise title ("Độ chính xác Quiz" / "Quiz Accuracy")
+  - Interview Quiz accuracy percentage and mastered concepts ratio (`{masteredCount}/{totalAnswered}`), utilizing concise, non-truncated copy across all locales (e.g. "Độ chính xác Quiz" in Vietnamese).
   - Spaced Repetition Memory Vault active card count
   - Architecture Highlights saved count
 - **AND** all 4 cells render in individual `.glass-card` surfaces with hairline borders and distinct semantic accent badges.
@@ -125,7 +125,7 @@ The Identity passport, milestone statistics, and domain goal tracker SHALL suppo
   - Data Storage & Persistence (aggregating PostgreSQL, MongoDB, Redis, MySQL, ACID, indexing topics)
   - Distributed Systems & Architecture (aggregating microservices, Kafka, outbox, system design topics)
   - Frontend & Browser Engineering (aggregating browser performance, Vue, React, TypeScript topics)
-- **AND** topic stats from multi-stack curricula accurately increment completed and total counts in the corresponding universal pillar.
+- **AND** reading and recall stats from the user's library `DocumentBook` categories accurately increment completed and total counts in the corresponding universal pillar.
 
 #### Scenario: Bilingual visual verification for identity widget, milestone stats, and domain goal tracker
 - **WHEN** user toggles between English (`en`) and Vietnamese (`vi`) on the `/profile` page
@@ -143,11 +143,16 @@ The system SHALL serve one curated 3–5 minute reading slice per active documen
 ---
 
 ### Requirement: Senior Scenario Interview Challenge
-The system SHALL present a daily scenario interview challenge aligned with the day's curriculum topic with instant grading, architectural feedback, and score evaluation.
+The system SHALL present a daily scenario interview challenge aligned with the user's active reading slice (`DocumentChunk`) with instant grading, architectural feedback, and score evaluation. The challenge SHALL derive from the active book slice the user is currently pacing through, never from a fixed curriculum topic.
 
 #### Scenario: User completes daily interview scenario
 - **WHEN** user submits answer to `POST /api/v1/daily/drill/submit`
 - **THEN** system records drill submission, evaluates answer, and returns score with architectural explanation.
+
+#### Scenario: Challenge sourced from active reading slice
+- **WHEN** the system presents the daily scenario challenge for a user with an active `DocumentBook`
+- **THEN** the challenge is grounded in the user's active `DocumentChunk` slice
+- **AND** no fixed-curriculum topic supplies the challenge content.
 
 ---
 
@@ -372,31 +377,6 @@ The embedding service SHALL NOT silently fall back to mock or pseudo-random vect
 
 ---
 
-### Requirement: Curriculum Vector Backfill Pipeline
-The system SHALL provide a batched backfill mechanism (`CurriculumSeeder.BackfillEmbeddingsAsync` and `DatabaseMaintenanceRunner.BackfillEmbeddingsAsync`) that iteratively scans and vectorizes all `DocumentChunks` where `Embedding IS NULL` in configurable batches (default 25 chunks per batch) until zero unvectorized chunks remain.
-
-The backfill mechanism SHALL vectorize chunks using Google Gemini model `gemini-embedding-001` specifying `"outputDimensionality": 768`, assert that returned vectors have a length of exactly 768 floats, pace requests with an inter-batch delay to respect API rate limits, and persist changes transactionally.
-
-#### Scenario: Backfill encounters embedding service failure
-- **WHEN** `CurriculumSeeder.BackfillEmbeddingsAsync` executes during startup and `IEmbeddingService.GenerateBatchEmbeddingsAsync` returns a failure result
-- **THEN** the seeder logs an error message detailing the embedding failure
-- **AND** does NOT save changes to `DocumentChunks`
-- **AND** leaves unvectorized chunks with `Embedding = null` in the database.
-
-#### Scenario: Backfill processes all unvectorized chunks across multiple batches
-- **WHEN** the maintenance backfill runner executes against a database with 465 unvectorized document chunks
-- **THEN** the runner processes chunks in sequential batches of 25
-- **AND** generates 768-dimensional vectors for each batch using `gemini-embedding-001`
-- **AND** updates `DocumentChunk.Embedding` in PostgreSQL
-- **AND** continues until 0 chunks remain with `Embedding IS NULL`.
-
-#### Scenario: Backfill handles transient Google API rate limiting
-- **WHEN** the embedding service encounters an HTTP 429 rate limit or transient network timeout during a batch backfill
-- **THEN** the runner applies exponential backoff and retries the batch up to 3 times
-- **AND** logs warning details without terminating the entire maintenance process prematurely.
-
----
-
 ### Requirement: Document Chunk Vectorization on Ingestion
 When new documents are ingested via `PdfIngestionWorker`, the worker SHALL attempt to vectorize initial slices using `IEmbeddingService`. If chunking or embedding fails due to unhandled exceptions or API errors, the worker SHALL mark the book status as `ProcessingStatus.Failed`, record the error detail in `ErrorMessage`, and SHALL NOT mark incomplete books as `ProcessingStatus.Ready`.
 
@@ -537,7 +517,7 @@ The data hygiene capability SHALL enforce the following invariants:
 ---
 
 ### Requirement: Document Chunk Vector Completeness Invariant
-Every document chunk in `DocumentChunks` associated with active curriculum books and imported technical publications SHALL possess a valid, non-null 768-dimensional float vector (`Embedding IS NOT NULL`) before being included in semantic vector similarity search or RAG retrieval pipelines.
+Every document chunk in `DocumentChunks` SHALL possess a valid, non-null 768-dimensional float vector (`Embedding IS NOT NULL`) before being included in semantic vector similarity search or RAG retrieval pipelines. All `DocumentChunks` originate from user-imported library documents; there is no other chunk source.
 
 #### Scenario: Verification of vector completeness post-maintenance
 - **WHEN** post-maintenance integrity verification is executed
@@ -1002,7 +982,7 @@ The backend system SHALL generate OpenAPI 3.1 specification metadata and serve a
    - The OpenAPI document SHALL declare a document-level `security` requirement (`[{ "Bearer": [] }]`), enabling Scalar's interactive authorization client, auth state indicator, and automatic token header injection (`Authorization: Bearer <token>`).
 
 2. **Concise Operation Summaries & Granular Descriptions Standard**:
-   - All Minimal API endpoints across all route groups SHALL strictly define `.WithSummary(...)` using concise, human-readable 2–5 word titles (e.g. `Get Curriculum Roadmap`, `Upload PDF Book`, `Generate AI Insight`).
+   - All Minimal API endpoints across all route groups SHALL strictly define `.WithSummary(...)` using concise, human-readable 2–5 word titles (e.g. `Get Today Focus`, `Upload PDF Book`, `Generate AI Insight`).
    - Deep architectural breakdowns, invariants, fallback behaviors, and rate-limiting policies SHALL be defined in `.WithDescription(...)`, ensuring Scalar's navigation sidebar displays clean endpoint titles without unreadable multi-sentence paragraphs.
 
 3. **100% Minimal API Endpoint Tagging & Metadata Coverage**:
@@ -1032,12 +1012,12 @@ The backend system SHALL generate OpenAPI 3.1 specification metadata and serve a
    - The set of status codes documented for an operation SHALL equal the set of status codes the handler can actually emit; documented codes and runtime codes SHALL NOT diverge.
 
 9. **Technology-Agnostic Operation Copy**:
-   - Operation summaries and descriptions SHALL use current technology-agnostic domain language and SHALL NOT reference the retired fixed "30-day" curriculum program; the curriculum roadmap operation SHALL describe the handbook's core technical pillars without a fixed day-count framing.
+   - Operation summaries and descriptions SHALL use current technology-agnostic domain language and SHALL NOT reference the retired fixed "30-day" curriculum program or a curriculum roadmap operation. The documented surface SHALL NOT include a `GET /api/v1/curriculum/roadmap` operation; roadmap data derives from the user's active `DocumentBook` and its ordered `DocumentChunk` slices.
 
 #### Scenario: Developer accesses interactive API documentation in development
 - **WHEN** a developer navigates to `/scalar/v1` in the development environment
 - **THEN** the system serves the Scalar API explorer rendered with dark theme (`ScalarTheme.Moon`)
-- **AND** the sidebar renders clean, concise endpoint titles for all 47 Minimal API endpoints without multi-sentence text wrapping.
+- **THEN** the sidebar renders clean, concise endpoint titles for all Minimal API endpoints without multi-sentence text wrapping.
 
 #### Scenario: Developer authorizes API requests via JWT Bearer in Scalar
 - **WHEN** a developer provides a valid JWT token in Scalar's security definition dialog
@@ -1054,7 +1034,7 @@ The backend system SHALL generate OpenAPI 3.1 specification metadata and serve a
 - **AND** generates a clean TypeScript type definition file at `frontend/types/api.generated.ts` containing all endpoint paths, request bodies, and response schemas.
 
 #### Scenario: Developer inspects an authenticated read operation in Scalar
-- **WHEN** a developer opens an authenticated read operation (e.g. `GET /api/v1/curriculum/roadmap`) in Scalar
+- **WHEN** a developer opens an authenticated read operation (e.g. `GET /api/v1/daily/today`) in Scalar
 - **THEN** the operation documents a `200 OK` response whose body schema is the concrete response DTO with its fields
 - **AND** the operation also documents a `401 Unauthorized` response using the RFC 7807 problem-details schema
 - **AND** the response panel is no longer an empty "No Body".
@@ -1070,9 +1050,9 @@ The backend system SHALL generate OpenAPI 3.1 specification metadata and serve a
 - **AND** the returned status code is one of the codes documented for that operation.
 
 #### Scenario: Curriculum roadmap operation copy is technology-agnostic
-- **WHEN** a developer reads the description of `GET /api/v1/curriculum/roadmap` in Scalar
-- **THEN** the description does not contain the phrase "30-day" or any fixed day-count program framing
-- **AND** it describes the handbook grouped into its core technical pillars.
+- **WHEN** a developer inspects the Scalar explorer and the `/openapi/v1.json` document
+- **THEN** no `GET /api/v1/curriculum/roadmap` operation is present in the API surface
+- **AND** no operation summary or description references a fixed "30-day" curriculum program.
 ---
 
 ### Requirement: Frontend Composable Utilities & DOM Lifecycle Hygiene
@@ -1447,47 +1427,42 @@ The Settings interface SHALL support deep-linking and state preservation via URL
 - **THEN** the browser lands on `/settings?tab=profile` with the Profile & Identity tab actively selected.
 
 ### Requirement: Executive Cockpit Bento Dashboard Layout Integration
-The primary root route `/` (`HomeBentoDashboard.vue`) SHALL implement the `BentoDashboardLayout` archetype (`BentoDashboardLayout.vue`), decoupling layout shell geometry from individual card content and providing distinct, uncluttered action pathways for continuous reading and daily practice routines.
+The primary root route `/` (`HomeBentoDashboard.vue`) SHALL implement the `BentoDashboardLayout` archetype (`BentoDashboardLayout.vue`), decoupling layout shell geometry from individual card content and providing a single, uncluttered unified focus pathway for the user's active reading slice and its scenario challenge.
 
 1. **Header Slot (`#header`)**:
    - Houses the Welcome & Orientation Banner, displaying the personalized engineer greeting, role target, active reading slice badge, and streak status.
 
 2. **Action Stage Slot (`#action-stage`)**:
-   - **Card A (Active Reading Slice Hero)**:
-     - Displays the user's ongoing book reading progress: book title, active slice title, summary, estimated read time, and progress bar with percentage.
-     - Provides a prominent "Continue Reading →" ("Đọc Tiếp →") primary CTA button that navigates directly to the dedicated Library Reader at that slice (`/read/${bookId}?slice=${currentChunkOrder}`).
-   - **Card B (Today's Practice Session Cockpit)**:
-     - Serves as the primary entry point for the user's scheduled daily curriculum session (`/today`).
-     - **Header & Badges**: Displays the session emblem (`Target` / `CalendarDays`), uppercase category pill "TODAY'S PRACTICE" ("LUYỆN TẬP HÔM NAY"), and curriculum progress badge ("Day {dayOrder} / 30" / "Lộ trình Ngày {dayOrder} / 30").
-     - **Status Indicator**: Displays real-time drill status:
+   - **Unified Focus Card (Active Slice & Scenario Challenge)**:
+     - Displays the user's active `DocumentBook` reading slice: book title, active slice title (`chunk.title`), summary, estimated read time, and progress bar with percentage.
+     - Surfaces today's scenario challenge drill status for the active slice inline within the same card:
        - *Pending*: Subtle pending indicator ("Ready to practice" / "Sẵn sàng luyện tập" or "+10 Points Available").
        - *Submitted / Completed*: Completed badge with score ("Completed: {score}/10" or "Đã hoàn thành").
-     - **Session Focus & Itinerary**: Renders the daily curriculum topic title (`topic?.title`) and a structured itinerary breakdown indicating the dual daily components (1 In-Depth Concept Reading + 1 Architectural Scenario Drill).
-     - **Action CTA**: Displays a high-contrast action button "Start Today's Practice →" ("Vào Luyện Tập →" / "Bắt Đầu Bài Hôm Nay") that navigates directly to the Daily Focus session (`/today`).
+     - Provides a prominent "Continue Reading →" ("Đọc Tiếp →") primary CTA button that navigates directly to the dedicated Library Reader at that slice (`/read/${bookId}?slice=${currentChunkOrder}`), and a "Start Today's Practice →" ("Vào Luyện Tập →") action that navigates to the Daily Focus session (`/today`).
+     - The card SHALL NOT render the dual Card A / Card B split, the `"Day {dayOrder} / 30"` curriculum progress badge, or `topic?.title` bindings.
 
 3. **Telemetry Dock Slot (`#telemetry-dock`)**:
    - Houses Card C (7-day Consistency Heatmap and SM-2 Due Count) and Card D (Domain Knowledge Constellation Card), equalizing total vertical height with the action stage.
 
 #### Scenario: Navigating Home Dashboard on 1080p Desktop
 - **WHEN** an engineer loads the root page `/` on a 1920x1080 desktop browser
-- **THEN** the entire Bento Grid renders with cohesive spacing and equalized column heights, eliminating empty internal margins within Card A and Card B.
+- **THEN** the entire Bento Grid renders with cohesive spacing and equalized column heights, eliminating empty internal margins within the unified focus card.
 
 #### Scenario: User navigates to Today's Practice from Home Dashboard
-- **WHEN** an authenticated user clicks the "Start Today's Practice" ("Vào Luyện Tập") CTA button on Card B of the Home Bento Dashboard
+- **WHEN** an authenticated user clicks the "Start Today's Practice" ("Vào Luyện Tập") CTA button on the unified focus card of the Home Bento Dashboard
 - **THEN** the browser navigates directly to `/today`
-- **AND** the Daily Focus Cockpit opens with today's reading slice and interview challenge ready for practice.
+- **AND** the Daily Focus Cockpit opens with the active reading slice and interview challenge ready for practice.
 
 #### Scenario: User distinguishes between Continue Reading and Today's Practice
-- **WHEN** an authenticated user views the Home Bento Dashboard
-- **THEN** Card A clearly identifies the active document slice with action "Continue Reading" ("Đọc Tiếp") targeting `/read/${bookId}`
-- **AND** Card B clearly identifies the scheduled daily curriculum session with action "Start Today's Practice" ("Vào Luyện Tập") targeting `/today`
-- **AND** neither card presents ambiguous or duplicate routing destinations.
+- **WHEN** an authenticated user with an active `DocumentBook` views the Home Bento Dashboard
+- **THEN** the unified focus card identifies the active document slice with "Continue Reading" ("Đọc Tiếp") targeting `/read/${bookId}` and "Start Today's Practice" ("Vào Luyện Tập") targeting `/today`
+- **AND** no `"Day {dayOrder} / 30"` badge and no `topic?.title` binding is rendered.
 
 #### Scenario: Today's Practice Card reflects daily drill completion state
-- **GIVEN** an authenticated user who has already submitted today's architectural drill (`drill.status === 'Submitted'`)
-- **WHEN** the user views Card B on the Home Bento Dashboard
-- **THEN** Card B displays the completed status badge with earned score
-- **AND** the action button indicates "Review Practice" ("Xem Lại Buổi Học") while still routing to `/today`.
+- **GIVEN** an authenticated user who has already submitted the active slice's architectural drill (`drill.status === 'Submitted'`)
+- **WHEN** the user views the unified focus card on the Home Bento Dashboard
+- **THEN** the card displays the completed status badge with earned score
+- **AND** the practice action button indicates "Review Practice" ("Xem Lại Buổi Học") while still routing to `/today`.
 ---
 
 ### Requirement: Settings Master-Detail Desktop Layout Standard
@@ -1644,29 +1619,3 @@ The application SHALL serve a high-fidelity scalable vector favicon (`/favicon.s
 - **THEN** the browser tab displays the Stitch Developer Emblem favicon (`/favicon.svg`).
 - **AND** the icon is crisp and clearly identifiable on both dark and light browser tab bars.
 
-### Requirement: Technology-Agnostic Starter Handbook Content Invariant
-The platform's canonical starter handbook (*Senior Engineering Craft Handbook*) SHALL define foundational chapters organized into 4 core technical pillars rather than an artificial 30-day program:
-1. **Frontend Systems**: Reactive state propagation, modern web rendering & hydration models, browser rendering pipeline (reflow, repaint, compositing), web performance & Core Web Vitals, state management & cache invalidation, real-time protocols (WebSockets, SSE, long polling), module bundling & build optimization.
-2. **Backend Runtime & Systems**: Generational garbage collection & memory management, contiguous memory buffers & zero-allocation slicing, asynchronous execution & non-blocking event loops, thread synchronization & concurrency primitives, asynchronous channels & producer-consumer pipelines, dependency injection scopes & lifecycle hygiene, high-throughput socket & stream processing pipelines, compile-time metaprogramming & AOT compilation.
-3. **Database & Storage Systems**: Multi-Version Concurrency Control (MVCC) & Write-Ahead Logging (WAL), transaction isolation levels & concurrency anomalies, indexing structures (B-Tree, LSM-Tree, Inverted Indexes, BRIN), query optimization & execution plan analysis, connection pooling architectures, horizontal table partitioning & sharding, vector embeddings & approximate nearest neighbor search.
-4. **Distributed Systems & Architecture**: Distributed caching patterns & cache stampede mitigation, transactional outbox & dual-write reliability, idempotency keys & deduplication windows, distributed rate limiting & token bucket algorithms, resilience patterns & circuit breakers, distributed tracing & OpenTelemetry W3C context propagation, CQRS & event sourcing architectures, zero-trust security & token-based authorization.
-
-The curriculum titles, chapter slugs, summaries, and domain invariants SHALL NOT be branded around specific application frameworks, runtime frameworks, or proprietary database engines (including Vue, Nuxt, .NET/ASP.NET, or PostgreSQL). All conceptual definitions SHALL remain technology-agnostic (Backend Runtimes, Frontend Systems, Database Storage, Distributed Systems). Code snippets in TypeScript, C#, SQL, Go, or Python MAY be included strictly as concrete illustrative examples of the underlying universal concepts.
-
-#### Scenario: User inspects starter handbook chapters
-- **WHEN** a user or client inspects the chapters of the *Senior Engineering Craft Handbook*
-- **THEN** all chapter titles and summaries describe universal engineering concepts rather than framework-specific tutorials
-- **AND** illustrative code examples demonstrate practical applications without binding the curriculum to specific frontend frameworks.
-
-### Requirement: User-Centric Starter Handbook Provisioning on Registration
-When a new user account is created (via email/password registration or OAuth integration), the system SHALL automatically clone and provision a dedicated instance of the *Senior Engineering Craft Handbook* assigned to the new user with `CreatedByUserId = user.Id`.
-
-The provisioned book SHALL include:
-1. An active `UserBookPacer` initializing Chapter 1 / Slice 1 as active (`CurrentChunkOrder = 1`).
-2. Full ownership permissions allowing the user to read, annotate, track pacing, generate flashcards, or delete the handbook from their library.
-
-#### Scenario: New user registers account
-- **WHEN** a new user successfully completes registration
-- **THEN** a `DocumentBook` titled "Senior Engineering Craft Handbook" is created with `CreatedByUserId` set to the new user's ID
-- **AND** a `UserBookPacer` is created with `CurrentChunkOrder = 1` and `IsActive = true`
-- **AND** the user can immediately begin reading and learning without manual document importation.

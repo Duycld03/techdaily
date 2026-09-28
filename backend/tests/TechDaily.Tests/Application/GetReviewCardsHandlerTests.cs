@@ -33,7 +33,7 @@ public class GetReviewCardsHandlerTests : IDisposable
         _connection.Dispose();
     }
 
-    private async Task<(Guid UserId, Topic Topic1, Topic Topic2)> SeedUserAndTopicsAsync()
+    private async Task<Guid> SeedUserAsync()
     {
         var userId = Guid.NewGuid();
         var user = new User
@@ -43,44 +43,21 @@ public class GetReviewCardsHandlerTests : IDisposable
             Name = "Deck Manager Dev"
         };
         await _db.Users.AddAsync(user);
-
-        var topic1 = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Postgres Indexing B-Trees",
-            Slug = "postgres-indexing",
-            Category = Category.DatabaseStorage,
-            Difficulty = Difficulty.Senior,
-            Summary = "Detailed guide on Postgres B-tree index structures."
-        };
-
-        var topic2 = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Vue 3 Reactivity Engine",
-            Slug = "vue-reactivity",
-            Category = Category.FrontendWeb,
-            Difficulty = Difficulty.Senior,
-            Summary = "Deep dive into Proxy-based reactivity in Vue 3."
-        };
-
-        await _db.Topics.AddRangeAsync(topic1, topic2);
         await _db.SaveChangesAsync();
-
-        return (userId, topic1, topic2);
+        return userId;
     }
 
     [Fact]
     public async Task GetReviewCards_ShouldReturnActiveCardsAndAccurateDeckStatistics()
     {
         // Arrange
-        var (userId, topic1, topic2) = await SeedUserAndTopicsAsync();
+        var userId = await SeedUserAsync();
 
         // Card 1: Learning (RepetitionCount = 0)
-        var card1 = SpacedRepetitionCard.Create(userId, topic1.Id);
+        var card1 = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Postgres Indexing B-Trees", "B-tree index structures");
 
         // Card 2: Reviewing (RepetitionCount = 2)
-        var card2 = SpacedRepetitionCard.Create(userId, topic2.Id);
+        var card2 = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Vue 3 Reactivity Engine", "Proxy-based reactivity");
         card2.ApplyReview(4);
         card2.ApplyReview(4);
 
@@ -116,7 +93,7 @@ public class GetReviewCardsHandlerTests : IDisposable
             Name = "Other Dev"
         };
         await _db.Users.AddAsync(otherUser);
-        var cardOtherUser = SpacedRepetitionCard.Create(otherUserId, topic1.Id);
+        var cardOtherUser = SpacedRepetitionCard.CreateFromDrillMistake(otherUserId, null, "Other Front", "Other Back");
 
         await _db.SpacedRepetitionCards.AddRangeAsync(card1, card2, card3, cardDeleted, cardOtherUser);
         await _db.SaveChangesAsync();
@@ -146,10 +123,10 @@ public class GetReviewCardsHandlerTests : IDisposable
     public async Task GetReviewCards_FilterBySearch_ShouldMatchFrontBackOrTopicTitle()
     {
         // Arrange
-        var (userId, topic1, topic2) = await SeedUserAndTopicsAsync();
+        var userId = await SeedUserAsync();
 
-        var card1 = SpacedRepetitionCard.Create(userId, topic1.Id); // Title: Postgres Indexing B-Trees
-        var card2 = SpacedRepetitionCard.Create(userId, topic2.Id); // Title: Vue 3 Reactivity Engine
+        var card1 = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Postgres Indexing B-Trees", "B-tree index structures");
+        var card2 = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Vue 3 Reactivity Engine", "Proxy-based reactivity");
 
         var card3 = new SpacedRepetitionCard
         {
@@ -181,11 +158,11 @@ public class GetReviewCardsHandlerTests : IDisposable
     public async Task GetReviewCards_FilterByStatus_ShouldReturnOnlyCardsWithRequestedStatus()
     {
         // Arrange
-        var (userId, topic1, topic2) = await SeedUserAndTopicsAsync();
+        var userId = await SeedUserAsync();
 
-        var cardLearning = SpacedRepetitionCard.Create(userId, topic1.Id);
+        var cardLearning = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Learning Front", "Learning Back");
 
-        var cardReviewing = SpacedRepetitionCard.Create(userId, topic2.Id);
+        var cardReviewing = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Reviewing Front", "Reviewing Back");
         cardReviewing.ApplyReview(4);
 
         await _db.SpacedRepetitionCards.AddRangeAsync(cardLearning, cardReviewing);
@@ -209,9 +186,9 @@ public class GetReviewCardsHandlerTests : IDisposable
     public async Task GetReviewCards_FilterBySourceType_ShouldReturnOnlyMatchingSourceType()
     {
         // Arrange
-        var (userId, topic1, _) = await SeedUserAndTopicsAsync();
+        var userId = await SeedUserAsync();
 
-        var topicCard = SpacedRepetitionCard.Create(userId, topic1.Id);
+        var chunkCard = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Chunk Front", "Chunk Back");
         var highlightCard = new SpacedRepetitionCard
         {
             UserId = userId,
@@ -220,25 +197,25 @@ public class GetReviewCardsHandlerTests : IDisposable
             BackMarkdown = "Back"
         };
 
-        await _db.SpacedRepetitionCards.AddRangeAsync(topicCard, highlightCard);
+        await _db.SpacedRepetitionCards.AddRangeAsync(chunkCard, highlightCard);
         await _db.SaveChangesAsync();
 
         var handler = new GetReviewCardsHandler(_db);
 
         // Act
         var resHighlight = await handler.ExecuteAsync(new GetReviewCardsRequest(userId, SourceType: CardSourceType.Highlight));
-        var resTopic = await handler.ExecuteAsync(new GetReviewCardsRequest(userId, SourceType: CardSourceType.Topic));
+        var resChunk = await handler.ExecuteAsync(new GetReviewCardsRequest(userId, SourceType: CardSourceType.DocumentChunk));
 
         // Assert
         resHighlight.Value.Cards.Should().ContainSingle().Which.Id.Should().Be(highlightCard.Id);
-        resTopic.Value.Cards.Should().ContainSingle().Which.Id.Should().Be(topicCard.Id);
+        resChunk.Value.Cards.Should().ContainSingle().Which.Id.Should().Be(chunkCard.Id);
     }
 
     [Fact]
     public async Task GetReviewCards_Pagination_ShouldApplyPageAndPageSize()
     {
         // Arrange
-        var (userId, topic1, _) = await SeedUserAndTopicsAsync();
+        var userId = await SeedUserAsync();
 
         var cards = Enumerable.Range(1, 5)
             .Select(i => new SpacedRepetitionCard

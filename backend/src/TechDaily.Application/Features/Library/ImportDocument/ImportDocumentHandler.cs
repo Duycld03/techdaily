@@ -66,9 +66,10 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
             SourceType = request.SourceUrl != null ? SourceType.WebDocUrl : SourceType.MarkdownSeries,
             AuthorOrSourceUrl = request.SourceUrl,
             IsPublished = true,
+            Status = ProcessingStatus.Ready,
+            ProgressPercentage = 100,
             CreatedByUserId = request.CreatedByUserId
         };
-
         // Split markdown content into logical chunks by heading or paragraphs
         var rawChunks = SplitIntoChunks(request.MarkdownContent);
         int order = 1;

@@ -45,19 +45,7 @@ public class ResetReviewCardProgressHandlerTests : IDisposable
         };
         await _db.Users.AddAsync(user);
 
-        var topic = new Topic
-        {
-            Id = Guid.NewGuid(),
-            Title = "Distributed Consensus",
-            Slug = "distributed-consensus",
-            Category = Category.SystemDesign,
-            Difficulty = Difficulty.Senior
-        };
-        await _db.Topics.AddAsync(topic);
-
-        var card = SpacedRepetitionCard.Create(userId, topic.Id);
-        card.FrontMarkdown = "Distributed Consensus (Raft)";
-        card.BackMarkdown = "Leader election, log replication, safety invariants.";
+        var card = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Distributed Consensus (Raft)", "Leader election, log replication, safety invariants.");
 
         // Progress card to Mastered state
         card.ApplyReview(5, new DateOnly(2026, 1, 1));

@@ -89,7 +89,7 @@ The active review session view and the celebratory completion state SHALL be str
 ---
 
 ### Requirement: Flashcard Deck Library Querying & Metrics
-The backend SHALL expose `GET /api/v1/review/cards` to retrieve a paginated list of flashcards belonging to the authenticated user, supporting optional keyword search across front and back markdown, status filtering (`Learning`, `Reviewing`, `Mastered`), and source type filtering (`Topic`, `Highlight`, `QuizMistake`). The response SHALL include deck statistics counting cards in each mastery status (`DeckStatisticsDto`), alongside pagination metadata (`cards`, `totalCount`, `page`, `pageSize`, and calculated `totalPages = (int)Math.Ceiling((double)totalCount / pageSize)`).
+The backend SHALL expose `GET /api/v1/review/cards` to retrieve a paginated list of flashcards belonging to the authenticated user, supporting optional keyword search across front and back markdown, status filtering (`Learning`, `Reviewing`, `Mastered`), and source type filtering (`DocumentChunk` / track-drill, `Highlight`, `QuizMistake`). The response SHALL include deck statistics counting cards in each mastery status (`DeckStatisticsDto`), alongside pagination metadata (`cards`, `totalCount`, `page`, `pageSize`, and calculated `totalPages = (int)Math.Ceiling((double)totalCount / pageSize)`).
 
 The frontend deck management interface SHALL present an E-Learning Bento Overview replacing plain flat stat boxes, comprising:
 1. A Hero Action Card displaying the count of cards due today, an estimated study time (~5 minutes), and a 1-click CTA button to launch the interactive review session.
@@ -128,6 +128,11 @@ All visual elements, buttons, badges, metrics, and filter controls in `/review` 
 - **WHEN** user inputs a search keyword (e.g. "PostgreSQL") and selects status filter "Learning" and source filter "Highlight"
 - **THEN** client calls `GET /api/v1/review/cards?search=PostgreSQL&status=Learning&sourceType=Highlight&page=1&pageSize=20`
 - **AND** table renders only matching flashcards with SM-2 metrics (Repetitions, Interval Days, Ease Factor, Next Review Date).
+
+#### Scenario: User filters deck by document-chunk drill source
+- **WHEN** user selects the `DocumentChunk` / track-drill source type filter
+- **THEN** client calls `GET /api/v1/review/cards?sourceType=DocumentChunk&page=1&pageSize=20`
+- **AND** the grid renders only cards derived from document-chunk drill failures, with no `Topic` source-type option offered.
 
 #### Scenario: User paginates through flashcard deck
 - **WHEN** user clicks to advance to page 2 of the deck
