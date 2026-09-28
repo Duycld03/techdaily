@@ -26,6 +26,11 @@ interface NavigatorWithLocks {
 }
 
 let inFlightRefreshPromise: Promise<string | null> | null = null
+let isRedirectingToLogin = false
+
+export function _resetRedirectingToLogin() {
+  isRedirectingToLogin = false
+}
 
 function parseJwtExp(jwt: string): number | null {
   try {
@@ -273,11 +278,23 @@ export function useApiClient() {
 
         if (typeof window !== 'undefined') {
           const currentPath = window.location.pathname + window.location.search
-          if (!window.location.pathname.startsWith('/login') && typeof navigateTo === 'function') {
-            navigateTo({
+          if (!isRedirectingToLogin && !window.location.pathname.startsWith('/login') && typeof navigateTo === 'function') {
+            isRedirectingToLogin = true
+            const redirectPromise = navigateTo({
               path: '/login',
               query: { redirect: currentPath }
             })
+            if (redirectPromise && typeof redirectPromise.finally === 'function') {
+              redirectPromise.finally(() => {
+                setTimeout(() => {
+                  isRedirectingToLogin = false
+                }, 500)
+              })
+            } else {
+              setTimeout(() => {
+                isRedirectingToLogin = false
+              }, 500)
+            }
           }
         }
       }

@@ -9,7 +9,15 @@ const route = useRoute()
 const authStore = useAuthStore()
 
 const isReaderMode = computed(() => route.path.startsWith('/read'))
-const isAuthPage = computed(() => route.path === '/login')
+const isAuthPage = computed(() => {
+  const normalizedPath = route.path.replace(/\/+$/, '') || '/'
+  return (
+    normalizedPath === '/login' ||
+    normalizedPath === '/register' ||
+    normalizedPath === '/forgot-password' ||
+    normalizedPath === '/reset-password'
+  )
+})
 
 onMounted(() => {
   authStore.init()
@@ -24,7 +32,7 @@ onMounted(() => {
     <div class="flex-1 flex overflow-hidden">
       <AppSidebar v-if="!isReaderMode && !isAuthPage" />
       <main class="flex-1 overflow-y-auto">
-        <NuxtPage />
+        <NuxtPage :page-key="route => route.fullPath" />
       </main>
     </div>
   </div>

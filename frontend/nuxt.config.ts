@@ -106,6 +106,8 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   app: {
+    pageTransition: false,
+    layoutTransition: false,
     head: {
       title: 'TechDaily - Daily Senior Engineering & System Design Focus',
       meta: [

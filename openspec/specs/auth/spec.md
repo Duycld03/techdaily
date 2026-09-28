@@ -195,11 +195,23 @@ The client-side authentication store SHALL decode the JWT payload `exp` claim an
 ### Requirement: Global 401 Session Expiration Interception
 The HTTP client composable (`useApiClient`) SHALL intercept any response with HTTP status `401 Unauthorized`. It SHALL purge local session credentials, show a localized notification indicating that the session has expired, and redirect the user to `/login` preserving the current route as the redirect parameter.
 
+To prevent route cancellation and transition race conditions when multiple parallel asynchronous API requests return HTTP 401 simultaneously:
+1. `useApiClient` SHALL implement single-flight redirect debouncing (`isRedirectingToLogin`).
+2. If a redirect to `/login` is already in flight, subsequent 401 responses SHALL NOT trigger duplicate `navigateTo` invocations.
+3. The redirect guard SHALL automatically reset once the navigation resolves or fails.
+
 #### Scenario: Authenticated request fails with 401
 - **WHEN** an API call returns `HTTP 401 Unauthorized`
 - **THEN** client executes session cleanup via `authStore.logout()` (or internal session reset).
 - **THEN** client emits a warning notification: "Your session has expired. Please sign in again."
 - **THEN** client navigates to `/login?redirect=<currentUrl>`.
+
+#### Scenario: Concurrent 401 responses trigger exactly one redirect without route cancellation
+- **GIVEN** multiple asynchronous requests are initiated concurrently (e.g. daily focus, review stats, and knowledge graph queries)
+- **WHEN** all requests fail with `HTTP 401 Unauthorized` in rapid succession
+- **THEN** `useApiClient` triggers exactly one `navigateTo('/login?redirect=...')` call
+- **AND** discards redundant concurrent redirect calls
+- **AND** the active route transition executes cleanly without being aborted mid-flight.
 
 ---
 
@@ -340,8 +352,9 @@ The authentication surface at `/login` SHALL provide a responsive, viewport-boun
 The platform SHALL provide a dedicated, full-screen **Studio Auth Cockpit** conforming to the Dev-Learning Studio visual language, completely isolated from internal application navigation chrome.
 
 1. **Application Shell Isolation & Full-Screen Frame**:
-   - The global layout shell (`app.vue`) SHALL detect authentication routes (`isAuthPage = computed(() => route.path === '/login')`) and completely suppress both `AppHeader.vue` and `AppSidebar.vue`.
-   - The authentication surface SHALL occupy the entire viewport (`min-h-screen w-screen overflow-hidden`) with the dark obsidian background canvas (`bg-slate-50 dark:bg-canvas`).
+   - The global layout shell (`app.vue`) SHALL detect authentication routes across all guest authentication paths (`/login`, `/register`, `/forgot-password`, `/reset-password`, with optional trailing slashes) and completely suppress both `AppHeader.vue` and `AppSidebar.vue`.
+   - The route outlet `<NuxtPage />` in `app.vue` SHALL enforce explicit full-path route keying (`:page-key="route => route.fullPath"`), and the application SHALL disable Vue page and layout transitions (`pageTransition: false`, `layoutTransition: false` in `nuxt.config.ts`), guaranteeing that outgoing route components are cleanly and atomically destroyed before incoming route components are mounted.
+   - The authentication surface SHALL occupy the entire viewport (`min-h-screen w-screen overflow-hidden`) with the dark obsidian background canvas (`bg-slate-50 dark:bg-canvas`), without vertical scroll bleeding or residual DOM elements from previous routes.
    - The page frame SHALL feature:
      - **Top System Telemetry Bar**: System identity badge (`TECHDAILY::IDE v2.5.0-sys`), live ping latency status indicator (`● PING 18ms`), single-locale language selector (`EN | VI`), and theme toggle button (`ThemeToggle.vue`).
      - **Ambient Status Sub-Header**: Live operational status ticker (`● ALL SERVICES OPERATIONAL  LATENCY 14MS`) and the platform invariant (`⚡ SYSTEM INVARIANT: DAILY DELIBERATE PRACTICE`).
@@ -406,6 +419,13 @@ The platform SHALL provide a dedicated, full-screen **Studio Auth Cockpit** conf
 - **THEN** the top system bar displays `TECHDAILY::IDE` and ping latency
 - **AND** the left stage renders the `CONSENSUS_PROMISE.TS` code block with monospace syntax highlighting and SM-2 spaced decay metrics
 - **AND** the bottom frame displays security compliance notices (`SOC2 TYPE II & RFC-7519 JWT`).
+
+#### Scenario: Unauthenticated redirect to login completely replaces previous page view
+- **GIVEN** the user is viewing the Dashboard at `/` when session expiration occurs
+- **WHEN** the client initiates navigation to `/login?redirect=/`
+- **THEN** the Dashboard component (`index.vue`) is cleanly unmounted from the DOM
+- **AND** the Login component (`login.vue`) mounts as the sole child of the application container
+- **AND** zero Dashboard widgets (streak card, knowledge constellation, reading slice) remain visible or stacked above the login surface.
 
 ---
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useApiClient } from '~/composables/useApiClient'
+import { useApiClient, _resetRedirectingToLogin } from '~/composables/useApiClient'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useToast } from '~/composables/useToast'
 
@@ -14,6 +14,8 @@ describe('useApiClient 401 Interceptor', () => {
     localStorage.clear()
     const toast = useToast()
     toast.clear()
+    vi.clearAllMocks()
+    _resetRedirectingToLogin()
     vi.clearAllMocks()
   })
 
@@ -79,5 +81,34 @@ describe('useApiClient 401 Interceptor', () => {
     const toast = useToast()
     expect(toast.toasts.value.length).toBe(0)
     expect((globalThis as unknown as GlobalWithNavigateTo).navigateTo).not.toHaveBeenCalled()
+  })
+  it('deduplicates concurrent 401 Unauthorized responses to trigger exactly one navigateTo call', async () => {
+    _resetRedirectingToLogin()
+    const auth = useAuthStore()
+    auth.token = 'stale-expired-jwt'
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ detail: 'Token expired', code: 'UNAUTHORIZED' })
+    })
+
+    const api = useApiClient()
+
+    // Dispatch 3 concurrent requests returning 401
+    await Promise.allSettled([
+      api.get('/api/v1/daily/today'),
+      api.get('/api/v1/review/deck'),
+      api.get('/api/v1/graph')
+    ])
+
+    // Exactly one navigateTo call should be triggered
+    const navMock = (globalThis as unknown as GlobalWithNavigateTo).navigateTo
+    expect(navMock).toHaveBeenCalledTimes(1)
+    expect(navMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: '/login'
+      })
+    )
   })
 })
