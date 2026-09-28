@@ -340,11 +340,11 @@ onMounted(() => {
 
           <!-- Itinerary Strip -->
           <div class="grid grid-cols-2 gap-2 mb-2">
-            <div class="px-2.5 py-1.5 rounded-xl bg-slate-100/80 dark:bg-canvas-elevated/60 border border-slate-200/60 dark:border-white/[0.04] flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 min-w-0">
+            <div class="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.06] flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200 min-w-0">
               <BookOpen class="w-3.5 h-3.5 text-brand-500 shrink-0" :stroke-width="1.5" />
               <span class="truncate">{{ $t('dashboard.itinerary_reading') }}</span>
             </div>
-            <div class="px-2.5 py-1.5 rounded-xl bg-slate-100/80 dark:bg-canvas-elevated/60 border border-slate-200/60 dark:border-white/[0.04] flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 min-w-0">
+            <div class="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.06] flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200 min-w-0">
               <Terminal class="w-3.5 h-3.5 text-emerald-500 shrink-0" :stroke-width="1.5" />
               <span class="truncate">{{ scenario?.title || $t('dashboard.itinerary_scenario') }}</span>
             </div>

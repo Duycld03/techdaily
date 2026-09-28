@@ -77,4 +77,74 @@ describe('pages/index.vue', () => {
 
     expect(wrapper.find('.animate-spin').exists()).toBe(true)
   })
+  it('triggers background revalidation on mount when data is already cached without showing spinner', async () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = {
+      documentChunk: { id: 'c-1', chapterTitle: 'System Design Patterns' }
+    } as any
+    const fetchSpy = vi.spyOn(focusStore, 'fetchTodayFocus').mockResolvedValue({} as any)
+
+    const wrapper = mount(IndexPage, {
+      global: {
+        stubs: {
+          HomeBentoDashboard: {
+            template: '<div class="bento-dashboard-stub">Dashboard Cached Content</div>'
+          }
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+
+    expect(fetchSpy).toHaveBeenCalled()
+    expect(wrapper.find('.animate-spin').exists()).toBe(false)
+    expect(wrapper.find('.bento-dashboard-stub').exists()).toBe(true)
+  })
+
+  it('revalidates focus data on popstate history event', async () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = { id: 'existing' } as any
+    const fetchSpy = vi.spyOn(focusStore, 'fetchTodayFocus').mockResolvedValue({} as any)
+
+    mount(IndexPage, {
+      global: {
+        stubs: {
+          HomeBentoDashboard: true
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+
+    fetchSpy.mockClear()
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    await flushPromises()
+
+    expect(fetchSpy).toHaveBeenCalled()
+  })
+
+  it('revalidates focus data on pageshow bfcache restoration', async () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = { id: 'existing' } as any
+    const fetchSpy = vi.spyOn(focusStore, 'fetchTodayFocus').mockResolvedValue({} as any)
+
+    mount(IndexPage, {
+      global: {
+        stubs: {
+          HomeBentoDashboard: true
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+
+    fetchSpy.mockClear()
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }))
+    await flushPromises()
+
+    expect(fetchSpy).toHaveBeenCalled()
+  })
 })

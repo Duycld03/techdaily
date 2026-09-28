@@ -305,4 +305,35 @@ describe('HomeBentoDashboard.vue', () => {
     // Drill status in Card B
     expect(wrapper.text()).toContain('dashboard.status_completed: 10/10')
   })
+  it('renders Card B itinerary strip pills with theme-resilient contrast classes', () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = {
+      scenario: { title: 'Async Replication Failover', situation: 'Leader election split brain' }
+    } as any
+
+    const wrapper = mount(HomeBentoDashboard, {
+      global: {
+        stubs: {
+          ConcentricMetricCard: true,
+          DomainConstellationCard: true,
+          NuxtLink: true
+        }
+      }
+    })
+
+    const pills = wrapper.findAll('.grid.grid-cols-2 > div')
+    expect(pills.length).toBeGreaterThanOrEqual(2)
+
+    for (const pill of pills) {
+      const cls = pill.attributes('class') || ''
+      expect(cls).toContain('dark:bg-white/[0.04]')
+      expect(cls).toContain('dark:border-white/[0.06]')
+      expect(cls).toContain('dark:text-slate-200')
+      expect(cls).toContain('bg-slate-100')
+      // Ensure fragile washed-out classes are eliminated
+      expect(cls).not.toContain('dark:bg-canvas-elevated/60')
+      expect(cls).not.toContain('bg-slate-100/80')
+      expect(cls).not.toContain('dark:text-slate-300')
+    }
+  })
 })

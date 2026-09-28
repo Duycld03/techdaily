@@ -1,15 +1,41 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
 import HomeBentoDashboard from '~/components/dashboard/HomeBentoDashboard.vue'
+
 const focusStore = useDailyFocusStore()
 const { locale } = useI18n()
 
+async function revalidateFocus() {
+  try {
+    await focusStore.fetchTodayFocus({ locale: locale.value })
+  } catch {
+    // Defensive background revalidation swallow
+  }
+}
+
 onMounted(async () => {
   if (!focusStore.data) {
-    await focusStore.fetchTodayFocus({ locale: locale.value })
+    await revalidateFocus()
+  } else {
+    // Optimistic background revalidation when cached data is already present
+    revalidateFocus()
   }
 })
+
+// Listen to browser forward/back buttons (popstate) and Back-Forward Cache (pageshow)
+if (typeof window !== 'undefined') {
+  useEventListener(window, 'popstate', () => {
+    revalidateFocus()
+  })
+
+  useEventListener(window, 'pageshow', (event: PageTransitionEvent) => {
+    if (event.persisted || focusStore.data) {
+      revalidateFocus()
+    }
+  })
+}
 </script>
 
 <template>
