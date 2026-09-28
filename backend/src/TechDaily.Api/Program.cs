@@ -239,7 +239,7 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("PostgreSQL database migrations applied successfully.");
             await TechInsightsSeeder.SeedAsync(context);
             logger.LogInformation("Tech Insights Catalog seeded successfully.");
-
+            await E2EAccountSeeder.SeedAsync(context, app.Configuration, logger);
 
             try
             {

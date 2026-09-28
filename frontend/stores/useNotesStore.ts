@@ -28,6 +28,7 @@ export const useNotesStore = defineStore('notes', () => {
   const currentPage = ref(1)
   const pageSize = ref(15)
   const totalCount = ref(0)
+  const totalAllCount = ref(0)
   const totalPages = ref(0)
   const tagCounts = ref<TagCount[]>([])
 
@@ -76,12 +77,12 @@ export const useNotesStore = defineStore('notes', () => {
       const res = await api.get<{
         highlights: Highlight[]
         totalCount?: number
+        totalAllCount?: number
         page?: number
         pageSize?: number
         totalPages?: number
         tagCounts?: TagCount[]
       }>(`/api/v1/notes/highlights?${queryParams.toString()}`)
-
       const items = res.highlights || []
       if (append) {
         const existingIds = new Set<string>(highlights.value.map((h) => h.id))
@@ -95,8 +96,13 @@ export const useNotesStore = defineStore('notes', () => {
         highlights.value = items
       }
 
-      totalCount.value = res.totalCount ?? highlights.value.length
-      totalPages.value =
+       totalCount.value = res.totalCount ?? highlights.value.length
+      if (res.totalAllCount !== undefined) {
+        totalAllCount.value = res.totalAllCount
+      } else if (!tag && !search) {
+        totalAllCount.value = totalCount.value
+      }
+       totalPages.value =
         res.totalPages ??
         (totalCount.value > 0 ? Math.ceil(totalCount.value / targetSize) : 0)
       currentPage.value = res.page ?? targetPage
@@ -127,6 +133,7 @@ export const useNotesStore = defineStore('notes', () => {
         highlights.value[existingIndex] = highlightItem
       } else {
         highlights.value.unshift(highlightItem)
+        totalAllCount.value++
       }
       return highlightItem
     } catch (err: unknown) {
@@ -153,6 +160,9 @@ export const useNotesStore = defineStore('notes', () => {
       const api = useApiClient()
       await api.delete(`/api/v1/notes/highlights/${id}`)
       highlights.value = highlights.value.filter((h) => h.id !== id)
+      if (totalAllCount.value > 0) {
+        totalAllCount.value--
+      }
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : 'Failed to delete highlight.'
       throw err
@@ -166,9 +176,10 @@ export const useNotesStore = defineStore('notes', () => {
     error,
     currentPage,
     pageSize,
-    totalCount,
-    totalPages,
-    tagCounts,
+     totalCount,
+    totalAllCount,
+     totalPages,
+     tagCounts,
     fetchHighlights,
     createHighlight,
     updateHighlight,

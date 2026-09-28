@@ -372,15 +372,15 @@ async function confirmDeleteHighlight() {
               <button
                 @click="selectTag(null)"
                 :class="[
-                  'px-2.5 py-1 rounded-full text-xs font-bold transition-all whitespace-nowrap shrink-0 border inline-flex items-center gap-1',
+                  'px-2.5 py-1 rounded-full text-xs font-semibold transition-colors duration-150 whitespace-nowrap shrink-0 border inline-flex items-center gap-1 cursor-pointer',
                   selectedTag === null
                     ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                    : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated'
+                    : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
                 ]"
               >
                 <span>{{ $t('notes.tag_all') }}</span>
                 <span :class="selectedTag === null ? 'text-white/80' : 'text-slate-400 dark:text-slate-500'">
-                  ({{ notesStore.totalCount || notesStore.highlights.length }})
+                  ({{ notesStore.totalAllCount || notesStore.totalCount || notesStore.highlights.length }})
                 </span>
               </button>
 
@@ -389,10 +389,10 @@ async function confirmDeleteHighlight() {
                 :key="item.tag"
                 @click="selectTag(item.tag)"
                 :class="[
-                  'px-2.5 py-1 rounded-full text-xs font-semibold transition-all whitespace-nowrap shrink-0 border inline-flex items-center gap-1',
+                  'px-2.5 py-1 rounded-full text-xs font-semibold transition-colors duration-150 whitespace-nowrap shrink-0 border inline-flex items-center gap-1 cursor-pointer',
                   selectedTag === item.tag
                     ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                    : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated'
+                    : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
                 ]"
               >
                 <span>#{{ item.tag }}</span>

@@ -98,6 +98,6 @@ public class GetHighlightsHandler : IUseCase<GetHighlightsRequest, GetHighlights
             HasFlashcard = cardHighlightIds.Contains(h.Id)
         }).ToList();
 
-        return new GetHighlightsResponse(dtos, totalCount, page, pageSize, totalPages, tagCounts);
+        return new GetHighlightsResponse(dtos, totalCount, page, pageSize, totalPages, tagCounts, userHighlightMetadata.Count);
     }
 }

@@ -358,6 +358,11 @@ describe('notes.vue (Dedicated Reading Highlights Hub)', () => {
     const distChip = buttons.find((b) => b.text().includes('#distributed'))
     expect(distChip).toBeDefined()
     expect(distChip?.text()).toContain('(2)')
+
+    // Selecting a tag preserves the total count on the "Tất cả" chip
+    vm.selectTag('hashing')
+    await wrapper.vm.$nextTick()
+    expect(allChip?.text()).toContain('(2)')
   })
 
   it('filters highlights conjunctively by active tag and search query', async () => {

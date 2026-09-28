@@ -1,11 +1,9 @@
-# notes Specification
+# Spec Delta
 
-## Purpose
-Provides a dedicated reading notes and highlights management hub (`/notes`), enabling software engineers to curate chapter highlights, edit personal technical reflections and tags inline, filter by tags and search keywords, and deliberately generate SuperMemo SM-2 flashcards without interface clutter from saved insights.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Dedicated Reading Notes Management View
+
 The `/notes` page SHALL serve as an exclusive reading notes hub, displaying user highlights with book titles, chapter titles, selected excerpt quotes, reflection notes, tags, timestamps, and persistent flashcard association state (`HasFlashcard`), adhering to the **Showcase Design System** note card archetype with uniform row geometry:
 
 1. **Obsidian Studio Canvas & Glass Controls**:
@@ -13,6 +11,7 @@ The `/notes` page SHALL serve as an exclusive reading notes hub, displaying user
    - The dynamic tag chip bar SHALL style the active chip with Iris Violet accents and inactive chips with dark glass styling.
    - The "Tất cả" (All) filter selector SHALL display the user's total unfiltered highlights count (`TotalAllCount`) invariant across active tag or search queries, guaranteeing that selecting a tag does not reduce or mutate the total count shown on the "Tất cả" button.
    - Tag filter chips and the "Tất cả" button SHALL enforce a constant font weight (`font-semibold`) and scoped transitions (`transition-colors duration-150`), eliminating text width expansion and horizontal layout jitter.
+
 2. **Showcase-Archetype Uniform Highlight Cards**:
    - Highlight cards SHALL render as clean elevation containers with uniform vertical geometry (~175px–185px) to eliminate row height disparity and empty bottom gaps in grid rows:
      - **Header**: Primary tag badge pill on the left, document source context on the right, and a responsive hover delete trigger (`Trash2`).
@@ -33,11 +32,7 @@ The `/notes` page SHALL serve as an exclusive reading notes hub, displaying user
 - **WHEN** a user clicks on the body of a highlight card
 - **THEN** system opens the Note Modal with the "Xem chi tiết / Details" tab selected by default
 - **AND** displays the complete, un-truncated excerpt quote and formatted personal reflection note.
-#### Scenario: Tag filtering preserves invariant total count on All button
-- **GIVEN** a user has 8 total highlights across tags `#1 (2)` and `#abc (1)`
-- **WHEN** the user selects tag `#1`
-- **THEN** the `#1` tag button displays active styling
-- **AND** the "Tất cả" button continues to display `Tất cả (8)` with invariant button width, rather than mutating to `Tất cả (2)`.
+
 #### Scenario: User navigates to reading notes hub
 - **WHEN** an authenticated user opens `/notes`
 - **THEN** system loads the first page of highlights via `GET /api/v1/notes/highlights?page=1&pageSize=15`
@@ -136,109 +131,8 @@ The `/notes` page SHALL serve as an exclusive reading notes hub, displaying user
 - **THEN** the tag badges appear on the left side of the footer divider
 - **AND** the "Edit Note" and "Flashcard SM-2" action buttons appear on the right side of the footer divider with comfortable click targets.
 
-### Requirement: Highlight Reflection and Tag Updating
-The system SHALL provide an accessible, dual-mode modal interface for inspecting and editing reading highlight notes and tags using `AppModal.vue`, featuring a mode switcher between "Xem chi tiết / Details" (default) and "Chỉnh sửa / Edit":
-
-1. **Dual-Mode Modal Architecture**:
-   - **Mode Switcher**: The modal header SHALL contain an interactive tab switcher:
-     - `Xem chi tiết` (Details / Preview) — active by default upon opening a card.
-     - `Chỉnh sửa` (Edit) — active when clicking the explicit "Edit Note" button or switching from Details mode.
-   - **Details Mode (Default)**:
-     - Displays the source document title and chapter breadcrumb.
-     - Displays the complete, un-clamped source excerpt quote in a dedicated reference panel.
-     - Displays the personal reflection note rendered as formatted Markdown (supporting bold, italics, bullet lists, and code spans via `markdown-it`).
-     - Displays technical tags and an action to generate an SM-2 flashcard or switch directly to Edit mode.
-   - **Edit Mode**:
-     - Displays the source excerpt reference panel.
-     - Displays a multi-line textarea (`rows="4"`) for drafting reflections.
-     - Displays an interactive comma-separated tag input field.
-     - Displays Cancel and Save buttons with active loading spinner feedback.
-   - Pressing `Escape` or clicking outside the modal backdrop SHALL close the modal.
-
-2. **Persistence and Mode Transition**:
-   - Successfully saving in Edit mode SHALL invoke `PUT /api/v1/notes/highlights/{id}`, update the highlight in `useNotesStore`, display a success toast (`notes.toast_update_success`), and smoothly transition back to Details mode or close the modal.
-
-#### Scenario: User inspects highlight details in default preview mode
-- **WHEN** user clicks on a note card or clicks "Xem chi tiết"
-- **THEN** system opens `AppModal` with the Details tab active
-- **AND** renders the full original excerpt quote and formatted Markdown reflection note without truncation.
-
-#### Scenario: User switches to edit mode, updates note, and saves
-- **WHEN** user is in Details mode and clicks "Chỉnh sửa" (or clicks the Edit button directly from the card)
-- **THEN** modal switches to Edit mode displaying the note textarea and tag input
-- **WHEN** user modifies note text and clicks "Lưu"
-- **THEN** client sends `PUT /api/v1/notes/highlights/{id}`
-- **AND** backend saves changes
-- **AND** modal updates to reflect the new note in Details mode and presents a success toast.
-
-#### Scenario: User clears reflection note
-- **WHEN** user clears the note text and submits the modal editor
-- **THEN** client sends `PUT /api/v1/notes/highlights/{id}` with `note = null` or empty string
-- **AND** backend clears the `Note` property on the highlight and persists changes.
-
-#### Scenario: Unauthorized update attempt
-- **WHEN** user attempts to update a highlight belonging to another user account
-- **THEN** backend rejects the request with HTTP 404 Not Found or HTTP 403 Forbidden without modifying database records.
----
-
-### Requirement: Deliberate Flashcard SM-2 Creation from Notes
-Each highlight card in `/notes` SHALL feature a deliberate "Flashcard SM-2" action button to convert the excerpt and reflection into an active recall spaced repetition card (`POST /api/v1/review/cards/from-highlight`). Flashcard synthesis SHALL be strictly fail-fast: the backend SHALL invoke AI active recall synthesis and, if the external AI service fails (e.g. network timeout, rate limits, unconfigured key, or provider errors), the system SHALL immediately return an error result without persisting any synthetic fallback cards into the database, preserving data integrity and preventing review deck pollution.
-
-Flashcard creation state SHALL be persistently reflected on the highlight card: upon card creation or initial page load where `HasFlashcard = true`, the action button transitions to a disabled badge displaying `<Check />` and localized text `notes.in_sm2` ("Đã Trong SM-2" / "In SM-2"), preserving state across browser refreshes. When card creation fails due to AI downtime or timeouts, the action button SHALL remain active in the unconverted state, allowing the user to retry when the service recovers.
-
-#### Scenario: User creates SM-2 flashcard from highlight
-- **WHEN** user clicks "Flashcard SM-2" on a highlight card in `/notes`
-- **THEN** client invokes `POST /api/v1/review/cards/from-highlight` with `highlightId` and current user `locale`
-- **AND** backend creates or retrieves the `SpacedRepetitionCard` with `SourceType = CardSourceType.Highlight`, `SourceHighlightId = highlightId`, `FrontMarkdown = excerpt`, and `BackMarkdown = note / summary`
-- **AND** frontend displays a success toast (`notes.toast_flashcard_success`) and immediately marks the card as created with the green `In SM-2` check badge.
-
-#### Scenario: User attempts to create SM-2 flashcard when AI service fails or times out (Fail-Fast with No Database Writes)
-- **WHEN** user clicks "Flashcard SM-2" on a highlight card in `/notes` and the AI service times out, exceeds rate limits (429), or returns an error
-- **THEN** backend aborts execution and immediately returns an error failure result (HTTP 400 Bad Request)
-- **AND** does NOT insert, create, or persist any `SpacedRepetitionCard` records in the database, ensuring zero junk data
-- **AND** frontend catches the API failure and presents a localized error toast (`notes.toast_flashcard_error`) to inform the user
-- **AND** the highlight card action button remains in the active `⚡ Flashcard SM-2` state without transitioning to the disabled `In SM-2` state, enabling the user to retry later.
-#### Scenario: User reloads notes hub after creating flashcards
-- **WHEN** user reloads `/notes` (F5) or revisits the page after previously converting highlights into flashcards
-- **THEN** client fetches highlights via `GET /api/v1/notes/highlights`
-- **AND** backend queries `SpacedRepetitionCards` for the current user and returns `HasFlashcard = true` for each linked highlight
-- **AND** client populates `createdCardHighlightIds` with all highlight IDs having `hasFlashcard: true`
-- **AND** all previously converted highlights immediately render the disabled green `<Check />` `In SM-2` button without reverting to the amber `⚡ Flashcard SM-2` state.
-
-#### Scenario: Highlight deleted after flashcard generation
-- **WHEN** user deletes a highlight that previously generated an SM-2 flashcard
-- **THEN** backend soft-deletes the `UserHighlight` record
-- **AND** the foreign key on `SpacedRepetitionCards.SourceHighlightId` is set to null via `onDelete: ReferentialAction.SetNull`
-- **AND** the flashcard remains fully intact and schedulable in the user's review deck with its persisted front and back markdown.
-
-### Requirement: Technical Notes Board Layout Integration
-The technical notes archive interface (`frontend/pages/notes.vue`) SHALL implement the `BoardLayout` archetype (`BoardLayout.vue`) in **flat open-canvas mode** (`:flat="true"`), rendering directly onto the obsidian background canvas (`bg-slate-50 dark:bg-canvas`) without an enclosing outer `.glass-card` container ("card tổng").
-
-1. **Flat Open-Canvas Shell**:
-   - The root layout SHALL NOT enclose the page sections within a parent `.glass-card` container or force an artificial overflow scroll box.
-   - The page header, search and filter bars, notes content grid, and pagination controls SHALL flow naturally within `max-w-7xl mx-auto space-y-4`, preventing double-card nesting and eliminating artificial black margins.
-
-2. **Header Slot (`#header`)**:
-   - Houses the Notes Archive title, subtitle, and primary action triggers directly on the canvas without an enclosing card border.
-
-3. **Filters Slot (`#filters`)**:
-   - Houses the full-text search input with shortcut indicator and horizontal scrollable tag filter chips (#All, #Database, #Vue, #Kafka).
-
-4. **Content Grid Slot (`#content`)**:
-   - Renders saved technical highlights in a responsive auto-flowing grid: 1 column on mobile, 2 columns on tablets/small laptops (`md:grid-cols-2`), and 3 columns on standard desktop viewports (`xl:grid-cols-3 gap-4`).
-   - Each individual note item SHALL render as its own self-contained `.glass-card`.
-
-5. **Pagination Slot (`#pagination`)**:
-   - Houses the paginated navigation controls (`BasePagination.vue`).
-
-#### Scenario: Browsing Technical Highlights on Desktop
-- **WHEN** an engineer views their saved highlights on a 1920x1080 display
-- **THEN** highlights render as compact, structured cards distributed evenly across a 2-to-3 column grid spanning the available container width, with search and tag filters pinned at the top.
-
-#### Scenario: Browsing Technical Highlights on Open Canvas
-- **WHEN** an engineer views their saved highlights on `/notes`
-- **THEN** the page renders directly on the obsidian canvas without an enclosing outer `.glass-card` shell
-- **AND** the individual note cards sit as first-class elevation cards on the canvas
-- **AND** zero double-card nesting occurs.
-
----
+#### Scenario: Tag filtering preserves invariant total count on All button
+- **GIVEN** a user has 8 total highlights across tags `#1 (2)` and `#abc (1)`
+- **WHEN** the user selects tag `#1`
+- **THEN** the `#1` tag button displays active styling
+- **AND** the "Tất cả" button continues to display `Tất cả (8)` with invariant button width, rather than mutating to `Tất cả (2)`.

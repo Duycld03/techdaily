@@ -10,10 +10,11 @@ public record GetHighlightsResponse(
     int Page,
     int PageSize,
     int TotalPages,
-    List<TagCountDto> TagCounts)
+    List<TagCountDto> TagCounts,
+    int TotalAllCount = 0)
 {
-    public GetHighlightsResponse(List<HighlightDto> highlights, int totalCount, int page, int pageSize, List<TagCountDto>? tagCounts = null)
-        : this(highlights, totalCount, page, pageSize, totalCount == 0 ? 0 : (int)Math.Ceiling((double)totalCount / (pageSize > 0 ? pageSize : 15)), tagCounts ?? new())
+    public GetHighlightsResponse(List<HighlightDto> highlights, int totalCount, int page, int pageSize, List<TagCountDto>? tagCounts = null, int? totalAllCount = null)
+        : this(highlights, totalCount, page, pageSize, totalCount == 0 ? 0 : (int)Math.Ceiling((double)totalCount / (pageSize > 0 ? pageSize : 15)), tagCounts ?? new(), totalAllCount ?? totalCount)
     {
     }
 }

@@ -31,12 +31,14 @@ vi.mock('~/composables/useApiClient', () => ({
         const urlObj = new URL('http://localhost' + url)
         const page = parseInt(urlObj.searchParams.get('page') || '1', 10)
         const pageSize = parseInt(urlObj.searchParams.get('pageSize') || '15', 10)
+        const tag = urlObj.searchParams.get('tag')
         return {
           highlights: [...mockHighlights],
-          totalCount: 30,
+          totalCount: tag ? 8 : 30,
+          totalAllCount: 30,
           page,
           pageSize,
-          totalPages: 2,
+          totalPages: tag ? 1 : 2,
           tagCounts: [
             { tag: 'distributed', count: 12 },
             { tag: 'vue', count: 8 }
@@ -108,8 +110,9 @@ describe('useNotesStore', () => {
     await notes.fetchHighlights({ page: 2, pageSize: 15, tag: 'vue' })
     expect(notes.currentPage).toBe(2)
     expect(notes.pageSize).toBe(15)
-    expect(notes.totalCount).toBe(30)
-    expect(notes.totalPages).toBe(2)
+    expect(notes.totalCount).toBe(8)
+    expect(notes.totalAllCount).toBe(30)
+    expect(notes.totalPages).toBe(1)
     expect(notes.tagCounts).toHaveLength(2)
     expect(notes.tagCounts[0]?.tag).toBe('distributed')
   })

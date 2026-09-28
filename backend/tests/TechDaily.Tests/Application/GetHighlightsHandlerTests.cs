@@ -252,6 +252,7 @@ public class GetHighlightsHandlerTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.TotalCount.Should().Be(1);
+        result.Value.TotalAllCount.Should().Be(2);
         result.Value.Highlights.Should().ContainSingle().Which.SelectedText.Should().Be("PostgreSQL indexing text");
         // Global tag counts should still contain "storage", "lsm", and "database"
         result.Value.TagCounts.Should().Contain(t => t.Tag == "storage");
