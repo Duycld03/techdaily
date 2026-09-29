@@ -162,11 +162,11 @@ const hasActiveFilters = computed(() => {
       <!-- Action Button: Fit Screen -->
       <button
         type="button"
-        class="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-slate-100 dark:bg-canvas-subtle hover:bg-slate-200 dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-white/[0.08] transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-sm"
+        class="hidden sm:inline-flex items-center gap-1.5 h-8 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-canvas-subtle hover:bg-slate-200 dark:hover:bg-canvas-elevated text-slate-700 dark:text-slate-200 border border-slate-200/60 dark:border-white/[0.08] transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-sm"
         :title="$t('graph.fitScreen')"
         @click="$emit('fit-screen')"
       >
-        <Maximize2 class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-500 shrink-0" />
+        <Maximize2 class="w-3.5 h-3.5 text-brand-500 shrink-0" />
         <span class="hidden sm:inline whitespace-nowrap shrink-0">{{ $t('graph.fitScreen') }}</span>
       </button>
 
@@ -174,11 +174,11 @@ const hasActiveFilters = computed(() => {
       <button
         v-if="hasActiveFilters"
         type="button"
-        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40 transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-sm"
+        class="inline-flex items-center gap-1.5 h-8 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40 transition-all active:scale-95 whitespace-nowrap shrink-0 shadow-sm"
         :title="$t('graph.resetFilters')"
         @click="onReset"
       >
-        <RotateCcw class="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+        <RotateCcw class="w-3.5 h-3.5 shrink-0" />
         <span class="hidden md:inline whitespace-nowrap shrink-0">{{ $t('graph.resetFilters') }}</span>
       </button>
 

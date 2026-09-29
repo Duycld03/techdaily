@@ -14,7 +14,7 @@ import {
 import ConcentricMetricCard from '~/components/today/ConcentricMetricCard.vue'
 import DomainConstellationCard from '~/components/dashboard/DomainConstellationCard.vue'
 import { useAuthStore } from '~/stores/useAuthStore'
-import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
+import { useDailyFocusStore, type PacerBookSummary } from '~/stores/useDailyFocusStore'
 import { useReviewStore } from '~/stores/useReviewStore'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
 import { useNotesStore } from '~/stores/useNotesStore'
@@ -60,6 +60,26 @@ const drill = computed(() => focusStore.data?.drill)
 const streak = computed(() => focusStore.data?.currentStreak ?? 0)
 const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 2)
 
+const learnedChunksCount = computed(() => {
+  const books = pacer.value?.availableBooks
+  if (books && books.length > 0) {
+    return books.reduce((sum: number, b: PacerBookSummary) => {
+      if (b.progressPercentage >= 100) {
+        return sum + (b.totalChunks || 0)
+      }
+      return sum + Math.max(0, (b.currentChunkOrder ?? 1) - 1)
+    }, 0)
+  }
+
+  if (pacer.value) {
+    if (pacer.value.progressPercentage >= 100) {
+      return pacer.value.totalChunks || 0
+    }
+    return Math.max(0, (pacer.value.currentChunkOrder ?? 1) - 1)
+  }
+
+  return 0
+})
 const activeSliceTitle = computed(() => {
   if (focusStore.data?.hasActiveBook === false) {
     return t('roadmap.no_active_books')
@@ -431,7 +451,7 @@ onMounted(() => {
         :edge-count="graphStore.rawData?.stats?.totalEdges ?? graphStore.rawData?.edges?.length ?? 210"
         :card-count="reviewStats.total"
         :highlight-count="notesStore.totalAllCount || notesStore.totalCount || notesStore.highlights.length"
-        :chunk-count="pacer?.totalChunks || 1"
+        :chunk-count="learnedChunksCount"
       />
     </template>
   </BentoDashboardLayout>
