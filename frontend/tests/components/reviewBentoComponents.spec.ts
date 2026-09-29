@@ -5,6 +5,8 @@ import MasteryGaugeCard from '~/components/review/MasteryGaugeCard.vue'
 import ReviewForecastChart from '~/components/review/ReviewForecastChart.vue'
 import AdvancedFilterModal from '~/components/review/AdvancedFilterModal.vue'
 import FlashcardBentoCard from '~/components/review/FlashcardBentoCard.vue'
+import AtRiskLeechCard from '~/components/review/AtRiskLeechCard.vue'
+import SourceChannelRetentionCard from '~/components/review/SourceChannelRetentionCard.vue'
 import type { ReviewCard } from '~/stores/useReviewStore'
 
 describe('FlashcardHeroCard.vue', () => {
@@ -314,5 +316,79 @@ describe('FlashcardBentoCard.vue', () => {
 
     await deleteBtn!.trigger('click')
     expect(wrapper.emitted('delete')?.[0]?.[0]).toEqual(mockCard)
+  })
+})
+
+describe('AtRiskLeechCard.vue', () => {
+  it('emits review when the at-risk CTA is clicked', async () => {
+    const wrapper = mount(AtRiskLeechCard, {
+      props: { overdueCount: 3, leechCount: 5, atRiskCount: 8 }
+    })
+    const btn = wrapper.find('button')
+    expect(btn.exists()).toBe(true)
+    await btn.trigger('click')
+    expect(wrapper.emitted('review')).toBeTruthy()
+  })
+
+  it('renders overdue, leech, and at-risk counts', () => {
+    const wrapper = mount(AtRiskLeechCard, {
+      props: { overdueCount: 3, leechCount: 5, atRiskCount: 8 }
+    })
+    const text = wrapper.text()
+    expect(text).toContain('3')
+    expect(text).toContain('5')
+    expect(text).toContain('8')
+  })
+
+  it('hides the CTA and shows the empty state when nothing is at risk', () => {
+    const wrapper = mount(AtRiskLeechCard, {
+      props: { overdueCount: 0, leechCount: 0, atRiskCount: 0 }
+    })
+    expect(wrapper.find('button').exists()).toBe(false)
+    expect(wrapper.text()).toContain('review.atrisk_empty')
+  })
+})
+
+describe('SourceChannelRetentionCard.vue', () => {
+  const sources = [
+    { sourceType: 'Highlight', total: 5, learning: 2, reviewing: 1, mastered: 2, averageEaseFactor: 2.31 },
+    { sourceType: 'QuizMistake', total: 3, learning: 1, reviewing: 1, mastered: 1, averageEaseFactor: 1.85 },
+    { sourceType: 'DocumentChunk', total: 2, learning: 1, reviewing: 1, mastered: 0, averageEaseFactor: 1.6 }
+  ]
+
+  it('renders mastered/total ratio and average ease per source channel', () => {
+    const wrapper = mount(SourceChannelRetentionCard, { props: { sources } })
+    const text = wrapper.text()
+    expect(text).toContain('2/5')
+    expect(text).toContain('1/3')
+    expect(text).toContain('0/2')
+    expect(text).toContain('2.31')
+    expect(text).toContain('1.85')
+    expect(text).toContain('1.60')
+  })
+
+  it('maps source type ids to the correct channel labels', () => {
+    const wrapper = mount(SourceChannelRetentionCard, { props: { sources } })
+    const text = wrapper.text()
+    expect(text).toContain('review.source_highlight')
+    expect(text).toContain('review.source_quiz')
+    expect(text).toContain('review.source_drill')
+  })
+
+  it('sizes mastery bars proportional to the mastered share', () => {
+    const wrapper = mount(SourceChannelRetentionCard, { props: { sources } })
+    const styles = wrapper.findAll('div[style]').map((b) => b.attributes('style'))
+    expect(styles).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('width: 40%'),
+        expect.stringContaining('width: 33%')
+      ])
+    )
+  })
+
+  it('shows the empty state when there are no source channels', () => {
+    const wrapper = mount(SourceChannelRetentionCard, { props: { sources: [] } })
+    expect(wrapper.text()).toContain('review.source_empty')
+    expect(wrapper.text()).not.toContain('/')
   })
 })

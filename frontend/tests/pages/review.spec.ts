@@ -59,6 +59,23 @@ vi.mock('~/composables/useApiClient', () => ({
           }
         }
       }
+      if (url.includes('/analytics')) {
+        return {
+          overdueCount: 0,
+          leechCount: 0,
+          atRiskCount: 0,
+          totalCards: 1,
+          learningCount: 0,
+          reviewingCount: 1,
+          masteredCount: 0,
+          strugglingCount: 0,
+          developingCount: 1,
+          comfortableCount: 0,
+          sourceBreakdown: [
+            { sourceType: 'DocumentChunk', total: 1, learning: 0, reviewing: 1, mastered: 0, averageEaseFactor: 2.6 }
+          ]
+        }
+      }
       throw new Error('Not found')
     }),
     post: vi.fn(async (url: string) => {

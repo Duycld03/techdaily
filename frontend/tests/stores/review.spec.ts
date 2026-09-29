@@ -37,6 +37,25 @@ vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     get: vi.fn(async (url: string) => {
       if (url.includes('/deck')) return { dueCards: [...mockCards], totalCardsDue: 2 }
+      if (url.includes('/analytics')) {
+        return {
+          overdueCount: 3,
+          leechCount: 2,
+          atRiskCount: 4,
+          totalCards: 10,
+          learningCount: 4,
+          reviewingCount: 3,
+          masteredCount: 3,
+          strugglingCount: 2,
+          developingCount: 5,
+          comfortableCount: 3,
+          sourceBreakdown: [
+            { sourceType: 'Highlight', total: 5, learning: 2, reviewing: 1, mastered: 2, averageEaseFactor: 2.31 },
+            { sourceType: 'QuizMistake', total: 3, learning: 1, reviewing: 1, mastered: 1, averageEaseFactor: 1.85 },
+            { sourceType: 'DocumentChunk', total: 2, learning: 1, reviewing: 1, mastered: 0, averageEaseFactor: 1.6 }
+          ]
+        }
+      }
       if (url.includes('/cards')) {
         return {
           cards: [...mockCards],
@@ -196,5 +215,18 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
     expect(reset.intervalDays).toBe(1)
     expect(reset.status).toBe(0)
     expect(review.deckCards[0]?.repetitionCount).toBe(0)
+  })
+
+  it('fetches retention analytics into store state', async () => {
+    const review = useReviewStore()
+    expect(review.analytics).toBeNull()
+
+    const res = await review.fetchAnalytics()
+    expect(review.analytics?.atRiskCount).toBe(4)
+    expect(review.analytics?.overdueCount).toBe(3)
+    expect(review.analytics?.leechCount).toBe(2)
+    expect(review.analytics?.sourceBreakdown).toHaveLength(3)
+    expect(res.masteredCount).toBe(3)
+    expect(review.isAnalyticsLoading).toBe(false)
   })
 })

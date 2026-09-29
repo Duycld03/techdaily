@@ -27,6 +27,30 @@ export interface DeckStatistics {
   masteredCount: number
 }
 
+export interface SourceChannelRetention {
+  // Enum name from the API (JsonStringEnumConverter): 'Highlight' | 'QuizMistake' | 'DocumentChunk'
+  sourceType: string
+  total: number
+  learning: number
+  reviewing: number
+  mastered: number
+  averageEaseFactor: number
+}
+
+export interface ReviewAnalytics {
+  overdueCount: number
+  leechCount: number
+  atRiskCount: number
+  totalCards: number
+  learningCount: number
+  reviewingCount: number
+  masteredCount: number
+  strugglingCount: number
+  developingCount: number
+  comfortableCount: number
+  sourceBreakdown: SourceChannelRetention[]
+}
+
 export interface ReviewFilterState {
   status: number | null
   sourceType: number | null
@@ -62,6 +86,8 @@ export const useReviewStore = defineStore('review', () => {
     masteredCount: 0
   })
   const isDeckLoading = ref(false)
+  const analytics = ref<ReviewAnalytics | null>(null)
+  const isAnalyticsLoading = ref(false)
 
   async function fetchReviewDeck(date?: string) {
     isLoading.value = true
@@ -173,6 +199,22 @@ export const useReviewStore = defineStore('review', () => {
     }
   }
 
+  async function fetchAnalytics(date?: string) {
+    isAnalyticsLoading.value = true
+    try {
+      const api = useApiClient()
+      const query = date ? `?date=${encodeURIComponent(date)}` : ''
+      const res = await api.get<ReviewAnalytics>(`/api/v1/review/analytics${query}`)
+      analytics.value = res
+      return res
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Failed to fetch retention analytics.'
+      throw err
+    } finally {
+      isAnalyticsLoading.value = false
+    }
+  }
+
   async function updateCard(cardId: string, payload: { frontMarkdown: string; backMarkdown: string }) {
     const api = useApiClient()
     const res = await api.put<{ card: ReviewCard }>(`/api/v1/review/cards/${cardId}`, payload)
@@ -216,11 +258,14 @@ export const useReviewStore = defineStore('review', () => {
     deckTotalPages,
     deckStatistics,
     isDeckLoading,
+    analytics,
+    isAnalyticsLoading,
     fetchReviewDeck,
     gradeCard,
     createCardFromHighlight,
     createCardFromQuizMistake,
     fetchDeckCards,
+    fetchAnalytics,
     updateCard,
     deleteCard,
     resetCardProgress

@@ -24,6 +24,7 @@ using TechDaily.Application.Features.Review.GetReviewCards;
 using TechDaily.Application.Features.Review.UpdateReviewCard;
 using TechDaily.Application.Features.Review.DeleteReviewCard;
 using TechDaily.Application.Features.Review.ResetReviewCardProgress;
+using TechDaily.Application.Features.Review.GetReviewAnalytics;
 using TechDaily.Application.Features.KnowledgeGraph.DTOs;
 using TechDaily.Application.Features.KnowledgeGraph.GetKnowledgeGraph;
 using TechDaily.Application.Features.Library.SynthesizeAudio;
@@ -52,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<UpdateReviewCardRequest, UpdateReviewCardResponse>, UpdateReviewCardHandler>();
         services.AddScoped<IUseCase<DeleteReviewCardRequest, DeleteReviewCardResponse>, DeleteReviewCardHandler>();
         services.AddScoped<IUseCase<ResetReviewCardProgressRequest, ResetReviewCardProgressResponse>, ResetReviewCardProgressHandler>();
+        services.AddScoped<IUseCase<GetReviewAnalyticsRequest, GetReviewAnalyticsResponse>, GetReviewAnalyticsHandler>();
 
         // Library Handlers
         services.AddScoped<IUseCase<GetBooksRequest, GetBooksResponse>, GetBooksHandler>();

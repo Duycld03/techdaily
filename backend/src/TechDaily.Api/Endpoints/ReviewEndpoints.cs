@@ -10,6 +10,7 @@ using TechDaily.Application.Features.Review.GetReviewCards;
 using TechDaily.Application.Features.Review.UpdateReviewCard;
 using TechDaily.Application.Features.Review.DeleteReviewCard;
 using TechDaily.Application.Features.Review.ResetReviewCardProgress;
+using TechDaily.Application.Features.Review.GetReviewAnalytics;
 using TechDaily.Domain.Enums;
 
 namespace TechDaily.Api.Endpoints;
@@ -48,6 +49,38 @@ public static class ReviewEndpoints
         .WithSummary("Get Review Deck")
         .WithDescription("Retrieves pending SM-2 spaced repetition cards due for current user.")
         .Produces<GetReviewDeckResponse>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        group.MapGet("/analytics", async (
+            [FromQuery] string? date,
+            ClaimsPrincipal userClaims,
+            IUseCase<GetReviewAnalyticsRequest, GetReviewAnalyticsResponse> handler,
+            CancellationToken ct) =>
+        {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            DateOnly? parsedDate = null;
+            if (!string.IsNullOrWhiteSpace(date) && DateOnly.TryParse(date, out var d))
+            {
+                parsedDate = d;
+            }
+
+            var request = new GetReviewAnalyticsRequest(userId.Value, parsedDate);
+            var result = await handler.ExecuteAsync(request, ct);
+
+            return result.IsSuccess
+                ? Results.Ok(result.Value)
+                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
+        })
+        .RequireAuthorization()
+        .WithName("GetReviewAnalytics")
+        .WithSummary("Get Review Analytics")
+        .WithDescription("Returns read-only SM-2 retention analytics: at-risk segment, maturity and difficulty distributions, and source-channel retention breakdown for the current user's deck.")
+        .Produces<GetReviewAnalyticsResponse>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/cards/{id:guid}/grade", async (

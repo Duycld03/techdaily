@@ -33,6 +33,8 @@ import StudioLayout from '~/components/layout/StudioLayout.vue'
 import FlashcardHeroCard from '~/components/review/FlashcardHeroCard.vue'
 import MasteryGaugeCard from '~/components/review/MasteryGaugeCard.vue'
 import ReviewForecastChart from '~/components/review/ReviewForecastChart.vue'
+import AtRiskLeechCard from '~/components/review/AtRiskLeechCard.vue'
+import SourceChannelRetentionCard from '~/components/review/SourceChannelRetentionCard.vue'
 import AdvancedFilterModal from '~/components/review/AdvancedFilterModal.vue'
 import FlashcardBentoCard from '~/components/review/FlashcardBentoCard.vue'
 import FlashcardDeck from '~/components/review/FlashcardDeck.vue'
@@ -233,6 +235,21 @@ function onResetAdvancedFilters() {
   fetchDeck(1)
 }
 
+function onReviewAtRisk() {
+  activeTab.value = 'management'
+  selectedStatus.value = null
+  selectedSource.value = null
+  selectedUrgency.value = null
+  selectedSortBy.value = null
+  fetchDeck(1)
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'management') {
+    reviewStore.fetchAnalytics()
+  }
+})
+
 function isDueToday(dateStr: string): boolean {
   if (!dateStr) return false
   const today = new Date().toISOString().slice(0, 10)
@@ -405,6 +422,7 @@ onMounted(() => {
   const queryPage = route.query.page ? parseInt(route.query.page as string, 10) : 1
   const initialPage = isNaN(queryPage) || queryPage < 1 ? 1 : queryPage
   fetchDeck(initialPage)
+  reviewStore.fetchAnalytics()
 })
 
 
@@ -657,6 +675,17 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
               :cards="reviewStore.deckCards.length > 0 ? reviewStore.deckCards : reviewStore.cards"
             />
           </div>
+
+      <!-- 1b. Retention Analytics (At-Risk & Source-Channel) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+        <AtRiskLeechCard
+          :overdue-count="reviewStore.analytics?.overdueCount ?? 0"
+          :leech-count="reviewStore.analytics?.leechCount ?? 0"
+          :at-risk-count="reviewStore.analytics?.atRiskCount ?? 0"
+          @review="onReviewAtRisk"
+        />
+        <SourceChannelRetentionCard :sources="reviewStore.analytics?.sourceBreakdown ?? []" />
+      </div>
 
       <!-- 2. Filters & Search Bar (Trực tiếp trên nền Canvas) -->
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
