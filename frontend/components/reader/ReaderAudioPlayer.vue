@@ -238,145 +238,177 @@ onMounted(() => {
 <template>
   <div
     v-if="available"
-    class="flex flex-wrap items-center min-h-[50px] gap-2 sm:gap-3 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/80 dark:bg-canvas-subtle/70 px-3 py-2"
+    class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center min-h-[50px] gap-2 sm:gap-3 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/80 dark:bg-canvas-subtle/70 px-3 py-2"
   >
-    <!-- Play / Pause -->
-    <button
-      type="button"
-      class="h-8 inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-semibold px-2.5 sm:px-3 transition-all active:scale-95 disabled:opacity-60"
-      :aria-label="playing ? t('reader.audio_pause') : t('reader.audio_play')"
-      @click="onToggle"
-    >
-      <Loader2 v-if="isLoading" class="w-4 h-4 animate-spin" :stroke-width="2" />
-      <Pause v-else-if="playing" class="w-4 h-4" :stroke-width="2" />
-      <Volume2 v-else class="w-4 h-4" :stroke-width="2" />
-      <span>{{ t('reader.audio_listen') }}</span>
-    </button>
-
-    <!-- Engine Mode Segmented Switch (Cloud vs Device) -->
-    <div
-      class="inline-flex items-center rounded-xl p-0.5 bg-slate-200/60 dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.08] shrink-0 whitespace-nowrap text-xs font-medium"
-      role="group"
-      :aria-label="t('reader.audio_engine_cloud_hint')"
-    >
-      <!-- Cloud Engine Toggle -->
+    <!-- Primary Controls Row -->
+    <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
+      <!-- Play / Pause -->
       <button
         type="button"
-        class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
-        :class="[
-          engineMode === 'cloud'
-            ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
-            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-        ]"
-        :disabled="isNearQuota || isQuotaExhausted"
-        :title="(isNearQuota || isQuotaExhausted) ? t('reader.audio_quota_near_limit_tooltip') : t('reader.audio_engine_cloud_hint')"
-        @click="onToggleEngine('cloud')"
+        class="h-8 inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-semibold px-2.5 sm:px-3 transition-all active:scale-95 disabled:opacity-60"
+        :aria-label="playing ? t('reader.audio_pause') : t('reader.audio_play')"
+        @click="onToggle"
       >
-        <Cloud class="w-3.5 h-3.5" :stroke-width="2" />
-        <span class="hidden sm:inline">{{ t('reader.audio_engine_cloud') }}</span>
+        <Loader2 v-if="isLoading" class="w-4 h-4 animate-spin" :stroke-width="2" />
+        <Pause v-else-if="playing" class="w-4 h-4" :stroke-width="2" />
+        <Volume2 v-else class="w-4 h-4" :stroke-width="2" />
+        <span>{{ t('reader.audio_listen') }}</span>
       </button>
 
-      <!-- Device Engine Toggle -->
-      <button
-        type="button"
-        class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap"
-        :class="[
-          engineMode === 'device'
-            ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
-            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-        ]"
-        :title="t('reader.audio_engine_device_hint')"
-        @click="onToggleEngine('device')"
+      <!-- Engine Mode Segmented Switch (Cloud vs Device) -->
+      <div
+        class="inline-flex items-center rounded-xl p-0.5 bg-slate-200/60 dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.08] shrink-0 whitespace-nowrap text-xs font-medium"
+        role="group"
+        :aria-label="t('reader.audio_engine_cloud_hint')"
       >
-        <Laptop class="w-3.5 h-3.5" :stroke-width="2" />
-        <span class="hidden sm:inline">{{ t('reader.audio_engine_device') }}</span>
-      </button>
-    </div>
+        <!-- Cloud Engine Toggle -->
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+          :class="[
+            engineMode === 'cloud'
+              ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          ]"
+          :disabled="isNearQuota || isQuotaExhausted"
+          :title="(isNearQuota || isQuotaExhausted) ? t('reader.audio_quota_near_limit_tooltip') : t('reader.audio_engine_cloud_hint')"
+          @click="onToggleEngine('cloud')"
+        >
+          <Cloud class="w-3.5 h-3.5" :stroke-width="2" />
+          <span class="hidden sm:inline">{{ t('reader.audio_engine_cloud') }}</span>
+        </button>
 
-    <!-- Free-Tier Voice Picker (Only in Cloud mode) -->
-    <div
-      v-if="engineMode === 'cloud'"
-      class="flex-1 min-w-0 sm:flex-initial sm:w-44"
-    >
-      <AppSelect
-        v-model="currentVoice"
-        :options="availableVoiceOptions"
-        size="sm"
-        :placeholder="t('reader.audio_voice_select_placeholder')"
-        :aria-label="t('reader.audio_voice_select_placeholder')"
-      />
-    </div>
+        <!-- Device Engine Toggle -->
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap"
+          :class="[
+            engineMode === 'device'
+              ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          ]"
+          :title="t('reader.audio_engine_device_hint')"
+          @click="onToggleEngine('device')"
+        >
+          <Laptop class="w-3.5 h-3.5" :stroke-width="2" />
+          <span class="hidden sm:inline">{{ t('reader.audio_engine_device') }}</span>
+        </button>
+      </div>
 
-    <!-- Loading status -->
-    <span
-      v-if="isLoading"
-      class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate"
-    >
-      {{ statusLabel }}
-    </span>
+      <!-- Free-Tier Voice Picker (Only in Cloud mode) -->
+      <div
+        v-if="engineMode === 'cloud'"
+        class="flex-1 min-w-[130px] sm:min-w-0 sm:w-44 sm:flex-none shrink-0"
+      >
+        <AppSelect
+          v-model="currentVoice"
+          :options="availableVoiceOptions"
+          size="sm"
+          :placeholder="t('reader.audio_voice_select_placeholder')"
+          :aria-label="t('reader.audio_voice_select_placeholder')"
+        />
+      </div>
 
-    <!-- Error status & Cloud fallback button -->
-    <template v-else-if="status === 'error'">
+      <!-- Loading status -->
       <span
-        class="text-xs text-rose-500 dark:text-rose-400 truncate max-w-[180px] sm:max-w-xs"
-        :title="formattedErrorMessage"
+        v-if="isLoading"
+        class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate"
       >
-        {{ formattedErrorMessage }}
+        {{ statusLabel }}
       </span>
-      <button
-        v-if="canFallbackToCloud"
-        type="button"
-        class="h-7 inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-semibold px-2.5 transition-all active:scale-95"
-        @click="onFallbackToCloud"
+
+      <!-- Error status & Cloud fallback button -->
+      <template v-else-if="status === 'error'">
+        <span
+          class="text-xs text-rose-500 dark:text-rose-400 truncate max-w-[180px] sm:max-w-xs"
+          :title="formattedErrorMessage"
+        >
+          {{ formattedErrorMessage }}
+        </span>
+        <button
+          v-if="canFallbackToCloud"
+          type="button"
+          class="h-7 inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-semibold px-2.5 transition-all active:scale-95"
+          @click="onFallbackToCloud"
+        >
+          <Cloud class="w-3.5 h-3.5" :stroke-width="2" />
+          <span>{{ t('reader.audio_fallback_to_cloud') }}</span>
+        </button>
+      </template>
+
+      <!-- Desktop Scrubber (Shown inline on tablet/desktop >= sm) -->
+      <template v-else-if="loadedId === chunk?.id && duration > 0">
+        <div class="hidden sm:flex sm:flex-1 sm:items-center sm:gap-2 min-w-0">
+          <input
+            type="range"
+            min="0"
+            :max="duration"
+            step="0.1"
+            :value="currentTime"
+            class="flex-1 min-w-[80px] h-1.5 bg-slate-200 dark:bg-white/[0.12] rounded-lg appearance-none cursor-pointer accent-brand-600"
+            :aria-label="t('reader.audio_play')"
+            @input="onSeek"
+          />
+          <span class="text-xs text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap tabular-nums">
+            {{ formatTime(currentTime) }} / {{ formatTime(duration) }}<span v-if="isStreamingIncomplete && estimatedTotalDuration > duration"> (~{{ formatTime(estimatedTotalDuration) }})</span>
+          </span>
+          <span
+            v-if="isStreamingIncomplete"
+            class="text-xs text-brand-600 dark:text-brand-400 shrink-0 whitespace-nowrap font-medium"
+          >
+            ({{ t('reader.audio_synthesizing', { current: synthIndex, total: synthTotal }) }})
+          </span>
+        </div>
+      </template>
+
+      <!-- Desktop Spacer when idle -->
+      <span v-else class="hidden sm:block sm:flex-1" />
+
+      <!-- Active compute device (GPU/CPU) when in Device mode -->
+      <span
+        v-if="engineMode === 'device' && device"
+        class="shrink-0 whitespace-nowrap hidden sm:inline-flex items-center gap-1 rounded-lg border border-slate-200/80 dark:border-white/[0.08] text-slate-500 dark:text-slate-400 text-xs font-medium px-2 py-1"
+        :title="deviceHint"
       >
-        <Cloud class="w-3.5 h-3.5" :stroke-width="2" />
-        <span>{{ t('reader.audio_fallback_to_cloud') }}</span>
+        <component :is="device === 'webgpu' ? Laptop : Cpu" class="w-3.5 h-3.5" :stroke-width="2" />
+        <span>{{ deviceLabel }}</span>
+      </span>
+
+      <!-- Speed -->
+      <button
+        type="button"
+        class="shrink-0 whitespace-nowrap rounded-lg border border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-200/60 dark:hover:bg-white/[0.06] text-slate-600 dark:text-slate-300 text-xs font-semibold px-1.5 sm:px-2 py-1 transition-colors tabular-nums ml-auto sm:ml-0"
+        :title="t('reader.audio_speed')"
+        @click="cycleSpeed"
+      >
+        {{ speed }}x
       </button>
-    </template>
-    <!-- Scrubber + time (once we have audio) -->
-    <template v-else-if="loadedId === chunk?.id && duration > 0">
+    </div>
+
+    <!-- Dedicated Mobile Scrubber Track (Row 2, only when active and on mobile screens < sm) -->
+    <div
+      v-if="loadedId === chunk?.id && duration > 0"
+      class="flex sm:hidden items-center gap-2 w-full pt-1.5 border-t border-slate-200/60 dark:border-white/[0.06]"
+    >
       <input
         type="range"
         min="0"
         :max="duration"
         step="0.1"
         :value="currentTime"
-        class="flex-1 min-w-[40px] sm:min-w-[80px] h-1.5 bg-slate-200 dark:bg-white/[0.12] rounded-lg appearance-none cursor-pointer accent-brand-600"
+        class="flex-1 min-w-[60px] h-1.5 bg-slate-200 dark:bg-white/[0.12] rounded-lg appearance-none cursor-pointer accent-brand-600"
         :aria-label="t('reader.audio_play')"
         @input="onSeek"
       />
       <span class="text-xs text-slate-500 dark:text-slate-400 shrink-0 whitespace-nowrap tabular-nums">
-        {{ formatTime(currentTime) }} / {{ formatTime(duration) }}<span v-if="isStreamingIncomplete && estimatedTotalDuration > duration" class="hidden sm:inline"> (~{{ formatTime(estimatedTotalDuration) }})</span>
+        {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
       </span>
       <span
         v-if="isStreamingIncomplete"
         class="text-xs text-brand-600 dark:text-brand-400 shrink-0 whitespace-nowrap font-medium"
       >
-        <span class="hidden sm:inline">({{ t('reader.audio_synthesizing', { current: synthIndex, total: synthTotal }) }})</span>
-        <span class="sm:hidden">({{ synthIndex }}/{{ synthTotal }})</span>
+        ({{ synthIndex }}/{{ synthTotal }})
       </span>
-    </template>
-
-    <span v-else class="flex-1" />
-
-    <!-- Active compute device (GPU/CPU) when in Device mode -->
-    <span
-      v-if="engineMode === 'device' && device"
-      class="shrink-0 whitespace-nowrap hidden sm:inline-flex items-center gap-1 rounded-lg border border-slate-200/80 dark:border-white/[0.08] text-slate-500 dark:text-slate-400 text-xs font-medium px-2 py-1"
-      :title="deviceHint"
-    >
-      <component :is="device === 'webgpu' ? Laptop : Cpu" class="w-3.5 h-3.5" :stroke-width="2" />
-      <span>{{ deviceLabel }}</span>
-    </span>
-
-    <!-- Speed -->
-    <button
-      type="button"
-      class="shrink-0 whitespace-nowrap rounded-lg border border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-200/60 dark:hover:bg-white/[0.06] text-slate-600 dark:text-slate-300 text-xs font-semibold px-1.5 sm:px-2 py-1 transition-colors tabular-nums"
-      :title="t('reader.audio_speed')"
-      @click="cycleSpeed"
-    >
-      {{ speed }}x
-    </button>
+    </div>
   </div>
 </template>

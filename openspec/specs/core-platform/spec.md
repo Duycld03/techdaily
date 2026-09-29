@@ -1000,6 +1000,7 @@ The root route `/` SHALL host the primary **Home Command Center Dashboard** (`fr
 - **WHEN** background revalidation is executed
 - **THEN** existing cards and metrics remain rendered in place
 - **AND** update seamlessly once the revalidation response completes.
+
 ### Requirement: Global Error Experience & Authentication Studio Layout
 The global error boundary page (`frontend/error.vue`) and authentication views (`frontend/pages/login.vue`) SHALL adhere to the **Dev-Learning Studio** visual theme:
 
@@ -1205,6 +1206,7 @@ The application shell topbar (`AppHeader.vue`) SHALL provide intuitive, direct n
 - **WHEN** a user clicks the TechDaily brand logo in the top application header (`AppHeader.vue`)
 - **THEN** the application navigates to the root Home Bento Dashboard (`/`) instead of `/today`.
 - **AND** the emblem renders the Stitch Developer Emblem with crisp vector lines.
+
 ### Requirement: Modernized Mobile Navigation Drawer & Cross-Device Parity
 The mobile slide-out navigation drawer (`AppHeader.vue`) SHALL provide 100% visual and functional parity with the desktop sidebar (`AppSidebar.vue`), adhering to the **Dev-Learning Studio** design tokens, zero-shift active link geometry, unified route structure, and complete localization across all supported locales:
 
@@ -1368,6 +1370,7 @@ All modal dialogs across the platform SHALL adhere to a 3-tier layout architectu
 - **AND** only the central form body scrolls when content exceeds `60vh`.
 
 ### Requirement: Interactive Design System Showcase
+
 The platform SHALL maintain an interactive living design system showcase at `/showcase` exclusively in development environments (`NODE_ENV !== 'production'`) displaying:
 1. Base UI Primitives (Buttons, inputs with ⌘K badge, tags, segmented switcher)
 2. Interactive Multiple-Choice Option Cards with active/correct/incorrect states
@@ -1378,13 +1381,13 @@ The platform SHALL maintain an interactive living design system showcase at `/sh
 7. Empty and Error State Cards
 8. Reader Floating Selection Toolbar
 
-The frontend build pipeline (`nuxt.config.ts`) and navigation shell (`useNavigationMenu.ts`) SHALL enforce that `/showcase` and `/playground` routes are strictly isolated to development environments:
+The frontend build pipeline (`nuxt.config.ts`) and navigation shell (`useNavigationMenu.ts`) SHALL enforce that `/showcase` is strictly isolated to development environments:
 1. **Build-Time Route Pruning**:
-   - In production builds (`process.env.NODE_ENV === 'production'`), `/showcase` and `/playground` routes SHALL be stripped during build time via the Nuxt `pages:extend` hook, ensuring zero JavaScript chunks or client-side route manifest entries are emitted into production artifacts.
+   - In production builds (`process.env.NODE_ENV === 'production'`), `/showcase` route definitions SHALL be stripped during build time via the Nuxt `pages:extend` hook, ensuring zero JavaScript chunks or client-side route manifest entries are emitted into production artifacts.
 2. **Environment-Gated Navigation Menu**:
    - The application navigation composable (`useNavigationMenu.ts`) SHALL only include `{ name: 'nav.showcase', path: '/showcase', icon: Palette }` when running in local development mode (`import.meta.dev`), omitting it from the sidebar in production builds.
 3. **Route Defense & Zero Metadata Leakage**:
-   - Direct URL requests to `/showcase` or `/playground` on production deployments SHALL return standard 404 Not Found status without leaking internal design system components, source maps, or prototype state.
+   - Direct URL requests to `/showcase` on production deployments SHALL return standard 404 Not Found status without leaking internal design system components, source maps, or prototype state.
 
 #### Scenario: Developer or Agent inspects design system showcase
 - **WHEN** user navigates to `/showcase` in a local development environment
@@ -1392,11 +1395,9 @@ The frontend build pipeline (`nuxt.config.ts`) and navigation shell (`useNavigat
 - **AND** interactive demo states (selection, modal open, copy feedback) function seamlessly.
 
 #### Scenario: User attempts to access design system showcase in production
-- **WHEN** a user or crawler accesses `/showcase` or `/playground` on a production deployment
+- **WHEN** a user or crawler accesses `/showcase` on a production deployment
 - **THEN** the system returns a standard 404 Not Found error
-- **AND** client-side DevTools, route tables, and source maps contain zero references to showcase or playground components.
-
----
+- **AND** client-side DevTools, route tables, and source maps contain zero references to showcase components.
 
 ### Requirement: Accessible Custom Select Dropdown Invariant
 All dropdown selection controls across the frontend application and component showcases SHALL use custom accessible dropdown components (`AppSelect.vue`) rather than unstyled native HTML `<select><option>` elements.
@@ -1542,6 +1543,7 @@ The Settings interface (`frontend/pages/settings.vue`) SHALL implement the `Mast
 ---
 
 ### Requirement: Developer & Agent UI Design Governance Protocol
+
 The project repository SHALL mandate strict engineering governance rules codified in `AGENTS.md`, organized into five foundational pillars:
 1. **Pillar 1: Production Security & Auth Boundaries**:
    - Zero fake or default fallback users. Endpoints requiring auth must enforce `.RequireAuthorization()` and return `401 Unauthorized` when no valid JWT is present.
@@ -1549,14 +1551,13 @@ The project repository SHALL mandate strict engineering governance rules codifie
 2. **Pillar 2: UI Design System & Component Governance**:
    - Mandatory System Layout Archetypes (`StudioLayout`, `BentoDashboardLayout`, `MasterDetailLayout`, `BoardLayout`). Unconstrained ad-hoc wrapper divs causing empty black voids on 1080p desktop viewports are strictly prohibited.
    - Strict prohibition of raw native HTML `<select>` (MUST use `AppSelect.vue`) and native browser dialogs (`alert`, `confirm`, `prompt`).
-   - Responsive typography standards ($\ge 14\text{px}$ on mobile, $\ge 16\text{px}$ on desktop/tablet) and bilingual layout protection (`whitespace-nowrap shrink-0` across English and Vietnamese).
-   - Mandatory Vue playground protocol (`frontend/pages/playground/<feature>.vue`) for UI previews, completely prohibiting isolated static HTML files.
+   - Responsive typography standards (≥14px on mobile, ≥16px on desktop/tablet) and bilingual layout protection (`whitespace-nowrap shrink-0` across English and Vietnamese).
 3. **Pillar 3: Frontend Testing Boundaries & Visual Inspection**:
    - Automated Vitest unit tests MUST strictly defend data contracts, form serialization payloads, validation barriers, auth state, and route guards.
    - Vitest tests MUST NOT assert CSS/Tailwind classes to evaluate layout geometry.
    - Visual layout, responsiveness, and spacing MUST be verified through direct screenshot inspection.
 4. **Pillar 4: AI Engine & External Ingestion**:
-   - High-speed model selection (`gemini-3.5-flash-lite`, <5s latency, $\ge 120\text{s}$ proxy timeout) with user-triggered generation.
+   - High-speed model selection (`gemini-3.5-flash-lite`, <5s latency, ≥120s proxy timeout) with user-triggered generation.
    - Balanced bracket depth scanning for LLM JSON outputs.
    - Canonical URL resolution and clean markdown extraction for web crawlers.
 5. **Pillar 5: Verification, DevOps & Skills Protocol**:
@@ -1566,35 +1567,12 @@ The project repository SHALL mandate strict engineering governance rules codifie
 
 #### Scenario: Agent Implements a New View
 - **WHEN** an AI agent or developer is instructed to create or refactor a frontend view
-- **THEN** the agent selects an established layout archetype, verifies dropdowns use `AppSelect.vue`, and prototypes in `frontend/pages/playground/` with visual screenshot proof before touching production routes.
+- **THEN** the agent selects an established layout archetype, verifies dropdowns use `AppSelect.vue`, and implements directly on production views with dual-gate verification.
 
 #### Scenario: Agent implements a new feature or refactor
 - **WHEN** an AI agent or developer is instructed to create or refactor frontend or backend code
-- **THEN** the agent adheres to the 5 Core Engineering Pillars in `AGENTS.md`
+- **THEN** the agent adheres to the Core Engineering Pillars in `AGENTS.md`
 - **AND** the agent executes local verification before committing or pushing changes.
----
-
-### Requirement: Frontend Dev Playground UI Previews
-The system SHALL support integrated frontend UI prototyping and previewing through dedicated development playground pages located under `frontend/pages/playground/*.vue`. Playground pages MUST utilize local reactive mock data, share the project's canonical Tailwind CSS and Vite asset pipeline, and require no authentication during local development.
-
-#### Scenario: Reviewing prospective UI in local development
-- **WHEN** a developer or reviewer navigates to `http://localhost:3000/playground/<feature>`
-- **THEN** the playground page MUST render with full design system typography (including `JetBrains Mono` and `Inter`), authentic layout archetypes (`BoardLayout`, `StudioLayout`), and reactive mock data without requiring a user login or backend API connectivity.
-
-#### Scenario: Exclusion from production builds
-- **WHEN** the frontend application is compiled for production deployment (`NODE_ENV === 'production'`)
-- **THEN** all routes matching `/playground` and `/showcase` MUST be automatically stripped by Nuxt page generation hooks and excluded from the production distribution.
-
----
-
-### Requirement: Prohibition of Disconnected Static Preview HTML Files
-Developers and AI agents MUST NOT create disconnected, standalone `.html` files utilizing third-party CDN stylesheets (such as Tailwind CDN or external unbundled fonts) for UI previews. All UI evaluations and user design reviews MUST be performed directly within the Vue playground environment to guarantee 100% visual parity with production components.
-
-#### Scenario: Prototyping a prospective UI phase
-- **WHEN** preparing a visual preview for user design review
-- **THEN** the preview MUST be created as a Vue Single File Component under `frontend/pages/playground/` consuming project component primitives rather than an isolated HTML file.
-
----
 
 ### Requirement: Native Time Input Conforming to Studio Design System
 The custom timepicker component (`AppTimePicker.vue`) SHALL render as an in-place native time input (`<input type="time">`) styled according to TechDaily form control standards, eliminating dropdown popovers and duplicate time displays.
@@ -1680,4 +1658,3 @@ The application SHALL serve a high-fidelity scalable vector favicon (`/favicon.s
 - **WHEN** any page of TechDaily is loaded in a web browser
 - **THEN** the browser tab displays the Stitch Developer Emblem favicon (`/favicon.svg`).
 - **AND** the icon is crisp and clearly identifiable on both dark and light browser tab bars.
-

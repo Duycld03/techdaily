@@ -14,9 +14,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     to.path === '/reset-password'
 
   // Local development / testing exemptions
-  const isDevExempt =
-    to.path.startsWith('/playground') ||
-    to.path.startsWith('/showcase')
+  const isDevExempt = to.path.startsWith('/showcase')
 
   // Default-Deny: all routes require authentication unless explicitly exempted
   const isAuthRequired = !isGuestAuthPath && !isDevExempt

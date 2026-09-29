@@ -76,11 +76,9 @@ describe('auth.global route middleware', () => {
       expect((globalThis as any).navigateTo).not.toHaveBeenCalled()
     })
 
-    it('permits unauthenticated visitor on /playground and /showcase without redirect', async () => {
-      const playgroundTo = { path: '/playground/phase-2', fullPath: '/playground/phase-2' } as any
+    it('permits unauthenticated visitor on /showcase without redirect', async () => {
       const showcaseTo = { path: '/showcase', fullPath: '/showcase' } as any
 
-      await (authMiddleware as any)(playgroundTo)
       await (authMiddleware as any)(showcaseTo)
 
       expect((globalThis as any).navigateTo).not.toHaveBeenCalled()

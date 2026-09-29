@@ -385,6 +385,13 @@ The backend SHALL track cumulative characters synthesized via Google Cloud TTS d
 When the Google Cloud engine is active, the reader audio player SHALL provide a voice selector restricted to Google Cloud Free-Tier voices (Neural2 and WaveNet tiers) for the slice's content language, supporting at least one female and one male voice for Vietnamese (`vi-VN`) and English (`en-US`). Voice selection SHALL NOT be shown when the On-Device engine is active.
 
 The voice selection dropdown trigger SHALL match the exact compact rendered height, vertical alignment, and border radius of the adjacent "Listen" action button (`h-8`, exactly 32px rendered height), and the reader audio player container SHALL maintain a stable, non-shifting minimum height (`min-h-[50px]`), ensuring that switching between On-Device and Google Cloud narration engines produces zero layout shift, vertical expansion, or jitter in the reader audio player bar or the content below it.
+
+On mobile viewports (viewport width < 640px):
+1. **Unambiguous Voice Legibility When Idle**: In the idle or paused state, the voice selector SHALL receive sufficient width (at least 130px) without competing flex spacers, ensuring that voice names (e.g. `"Neural2-A"`, `"Chất lượng cao"`) are clearly readable and SHALL NOT be truncated into unreadable stubs (such as `"N.."`).
+2. **Dedicated Scrubber Row During Playback**: When audio playback is loaded or active (`loadedId === chunk?.id && duration > 0`), the playback scrubber, timestamp display, and synthesis status badge SHALL render in a dedicated full-width second row (`w-full`), providing a finger-accessible touch target spanning the width of the player.
+3. **No Control Collapse or Disappearance**: The voice selector SHALL NOT collapse, shrink below legible width, or disappear (`0px` width) when audio is playing on mobile viewports.
+4. **Stable Single-Row Presentation on Desktop**: On desktop and tablet viewports (viewport width ≥ 640px), all audio controls including play/pause, engine switch, voice picker, scrubber, and speed controls SHALL remain on a single horizontal row with a stable minimum height (`min-h-[50px]`).
+
 The system (both frontend client and backend synthesis handler) SHALL strictly enforce language compatibility between the document slice's content language and the selected voice model:
 1. Slices in English (`en`) SHALL only be synthesized with English voice models (`en-US-*`).
 2. Slices in Vietnamese (`vi`) SHALL only be synthesized with Vietnamese voice models (`vi-VN-*`).
@@ -399,6 +406,7 @@ The reader audio engine selection controls SHALL respect the user's current play
 2. **Continuous Playback When Active**: If audio playback is currently active (`playing === true`), switching between engine modes SHALL pause the previous engine and immediately begin synthesis and playback with the newly selected engine.
 3. **Engine Toggle Audio Preparation**: Switching between Google Cloud and On-Device engine modes while playback is inactive SHALL update the selected engine mode and prepare the newly active engine's audio without starting audible autoplay, leaving the player ready to play when "Listen" is clicked.
 4. **Explicit Fallback Recovery Exception**: Activating the 1-tap `[☁ Switch to Google Cloud]` fallback button from an error state SHALL always switch to Cloud mode and initiate playback immediately.
+
 #### Scenario: Zero layout shift when toggling between Cloud and Device engines
 - **WHEN** the user switches between On-Device and Google Cloud engine modes in the reader audio player
 - **THEN** the total outer container height of the player bar remains constant (50px) without any vertical jump, expansion, or cumulative layout shift.
@@ -418,6 +426,7 @@ The reader audio engine selection controls SHALL respect the user's current play
 #### Scenario: Backend rejects voice ID conflicting with chunk language
 - **WHEN** an API request arrives to synthesize an English document chunk with a `vi-VN-*` voice ID
 - **THEN** the backend responds with HTTP 400 Bad Request and error code `VOICE_LANGUAGE_MISMATCH`.
+
 #### Scenario: Free-tier voice selection for Vietnamese slice
 - **WHEN** a user views a Vietnamese slice with Google Cloud engine active
 - **THEN** the player provides a choice between curated Vietnamese Neural2 female (`vi-VN-Neural2-A`) and male (`vi-VN-Neural2-D`) voices.
@@ -441,6 +450,23 @@ The reader audio engine selection controls SHALL respect the user's current play
 #### Scenario: Switching to Cloud while inactive loads Cloud audio state
 - **WHEN** playback is inactive on an on-device slice and the user clicks the "Cloud" engine button
 - **THEN** the active engine mode switches to Cloud and loads the slice's Cloud audio information without starting audible autoplay, leaving the player ready to play when "Listen" is clicked.
+
+#### Scenario: Voice selector remains readable and un-truncated on mobile when idle
+- **WHEN** a reader views an AI-formatted slice on a mobile viewport (e.g. 390px width) with Google Cloud engine active and playback idle
+- **THEN** the voice selector is displayed with sufficient width to read the selected voice name (e.g. `"Neural2-A"` or `"Standard-A"`) without being truncated to `"N.."`.
+
+#### Scenario: Dedicated full-width scrubber row on mobile during playback
+- **WHEN** audio is playing or loaded on a mobile viewport (< 640px)
+- **THEN** the scrubber slider, elapsed/total time, and synthesis progress badge render in a full-width bottom row within the player container.
+- **AND** the top row retains the Play/Pause button, Engine switch, readable Voice selector, and Speed button.
+
+#### Scenario: Voice selector does not vanish during mobile playback
+- **WHEN** audio playback starts on a mobile device in Google Cloud mode
+- **THEN** the voice selector remains visible on the top row and does not collapse to 0px or an empty icon pill.
+
+#### Scenario: Desktop single-row layout remains unchanged
+- **WHEN** the reader audio player is viewed on desktop (≥ 640px)
+- **THEN** all controls, including the voice picker and inline scrubber slider, are aligned horizontally in a single row at `min-h-[50px]`.
 
 ### Requirement: Mobile Device Resource Safeguards & Single-Threaded WASM
 

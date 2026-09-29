@@ -96,20 +96,6 @@ The web frontend SHALL provide a reusable layout component `BentoDashboardLayout
 
 ---
 
-### Requirement: Isolated Playground Sandbox Prototyping Invariant
-The web frontend SHALL maintain an isolated development playground directory at `frontend/pages/playground/` for rapid component prototyping, layout experiments, and visual review without polluting production application routes.
-1. **Isolation from Production State**:
-   - Sandbox prototype pages under `frontend/pages/playground/` SHALL use mock datasets and self-contained state rather than coupling to global production stores.
-   - Playground prototypes SHALL NOT be linked in production navigation menus (`AppSidebar.vue`, `AppHeader.vue`).
-2. **Visual Verification Prerequisite**:
-   - Any new major layout archetype or high-impact page redesign SHALL be drafted and verified in a playground route with headless 1080p screenshot evidence prior to production cutover.
-
-#### Scenario: Prototyping a New Layout in Playground
-- **WHEN** an engineer or agent prototypes a new UI layout at `frontend/pages/playground/dashboard-v2.vue`
-- **THEN** the route is accessible locally for visual and screenshot inspection without modifying `frontend/pages/index.vue` or affecting production test suites.
-
----
-
 ### Requirement: Unboxed Direct-Canvas Catalog Browsing Standard
 The system SHALL standardize catalog and content browsing surfaces (`library.vue`, `review.vue` Tab 2: Deck Management, and `insights.vue`) on the **Unboxed Direct-Canvas Layout Archetype**, prohibiting monolithic outer wrapper cards (`BoardLayout` or giant enclosing `glass-card`) that produce double-card nesting. Functional tiers (Header/Bento stats, Filter bars, Auto-flowing 3-column grids, and Pagination) MUST sit directly on the page background canvas (`bg-slate-50 dark:bg-canvas`) within a consistent container (`max-w-7xl mx-auto`).
 
@@ -163,16 +149,6 @@ Interactive practice surfaces (`quiz.vue` Arena mode and `review.vue` Tab 1 Flas
 #### Scenario: Mobile viewport responsiveness
 - **WHEN** an engineer uses interactive practice on a mobile screen ($< 1024\text{px}$)
 - **THEN** the primary interaction fills 100% screen width and telemetry docks collapse cleanly below without clipping option choices or action buttons.
-
-### Requirement: Phase 2 Interactive Practice Playground Sandbox Verification
-Prior to modifying production routes (`frontend/pages/quiz.vue`, `frontend/pages/review.vue`), the system SHALL construct an isolated interactive prototype at `frontend/pages/playground/temp.vue` rendering:
-1. **Quiz Arena Studio View**: Question prompt, Shiki-highlighted code block, 4 `OptionCard.vue` states (`default`, `selected`, `correct`, `incorrect`), and companion telemetry dock (live countdown timer, streak multiplier, question progress map).
-2. **Flashcard 3D Practice Studio View**: 3D flip card player with front/back transitions, SM-2 grading button bar (`[1] Blackout`, `[2] Hard`, `[3] Good`, `[4] Easy`), and companion dock (session progress, SM-2 metrics card, hotkeys guide).
-3. **Headless Verification Gate**: The system SHALL capture 1080p screenshots in both Light Mode and Dark Obsidian Mode and require user review and explicit approval before applying changes to production components.
-
-#### Scenario: Prototyping interactive practice in playground
-- **WHEN** the agent develops the Phase 2 prototype
-- **THEN** the prototype is accessible at `http://localhost:3000/playground/temp` with mock datasets without impacting production endpoints or existing Vitest test suites.
 
 ### Requirement: Canvas Layout Archetype
 The web frontend SHALL define the `CanvasLayout` archetype for full-bleed exploratory and interactive spatial surfaces (such as the Knowledge Graph Explorer and Roadmap Mindmap Canvas):

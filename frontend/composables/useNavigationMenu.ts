@@ -10,8 +10,7 @@ import {
   Highlighter,
   Network,
   Settings,
-  Palette,
-  FlaskConical
+  Palette
 } from 'lucide-vue-next'
 
 export interface NavLink {
@@ -31,7 +30,6 @@ export function getNavGroups(isDev: boolean = Boolean(import.meta.dev)): NavGrou
   ]
 
   if (isDev) {
-    accountLinks.push({ name: 'nav.playground', path: '/playground/temp', icon: FlaskConical })
     accountLinks.push({ name: 'nav.showcase', path: '/showcase', icon: Palette })
   }
   return [
@@ -83,9 +81,6 @@ export function isLinkActive(linkPath: string, currentPath: string): boolean {
   }
   if (linkPath === '/settings') {
     return currentPath === '/settings' || currentPath === '/profile'
-  }
-  if (linkPath === '/playground/temp') {
-    return currentPath === '/playground' || currentPath.startsWith('/playground/')
   }
   return currentPath === linkPath
 }

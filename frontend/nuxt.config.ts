@@ -54,12 +54,6 @@ export default defineNuxtConfig({
         'Cross-Origin-Embedder-Policy': 'credentialless'
       }
     },
-    '/playground/**': {
-      headers: {
-        'Cross-Origin-Opener-Policy': 'same-origin',
-        'Cross-Origin-Embedder-Policy': 'credentialless'
-      }
-    },
     // Under COEP the reader's ES module worker must itself opt into COEP and
     // carry CORP, or the browser blocks it (ERR_BLOCKED_BY_RESPONSE). This
     // covers production; the dev server sets the same headers via `vite` below.
@@ -91,7 +85,7 @@ export default defineNuxtConfig({
   hooks: {
     'pages:extend'(pages) {
       if (process.env.NODE_ENV === 'production') {
-        const devPrefixes = ['/showcase', '/playground']
+        const devPrefixes = ['/showcase']
         for (let i = pages.length - 1; i >= 0; i--) {
           const path = pages[i].path || ''
           if (devPrefixes.some(prefix => path === prefix || path.startsWith(`${prefix}/`))) {
