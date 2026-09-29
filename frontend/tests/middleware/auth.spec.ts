@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '~/stores/useAuthStore'
 import authMiddleware from '~/middleware/auth.global'
@@ -156,18 +156,63 @@ describe('auth.global route middleware', () => {
       })
     })
   })
-  describe('SSR hydration deferral', () => {
-    it('defers auth verification to client hydration during SSR instead of aborting to /login', async () => {
-      const originalServer = (process as any).server
-      ;(process as any).server = true
+  describe('SSR route guard and hydration deferral', () => {
+    it('immediately redirects guest without session cookies to /login during SSR', async () => {
+      const proc = process as unknown as { server?: boolean }
+      const originalServer = proc.server
+      proc.server = true
       try {
-        const to = { path: '/library', fullPath: '/library' } as any
-        const result = await (authMiddleware as any)(to)
+        useCookie('techdaily_token').value = null
+        useCookie('refreshToken').value = null
+        const to = { path: '/library', fullPath: '/library' }
+        const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
+        await middleware(to)
 
-        expect((globalThis as any).navigateTo).not.toHaveBeenCalled()
+        const globalNav = globalThis as unknown as { navigateTo: Mock }
+        expect(globalNav.navigateTo).toHaveBeenCalledWith({
+          path: '/login',
+          query: { redirect: '/library' }
+        })
+      } finally {
+        proc.server = originalServer
+      }
+    })
+
+    it('defers auth verification to client hydration during SSR when techdaily_token cookie is present', async () => {
+      const proc = process as unknown as { server?: boolean }
+      const originalServer = proc.server
+      proc.server = true
+      try {
+        useCookie('techdaily_token').value = 'mock-expired-token'
+        useCookie('refreshToken').value = null
+        const to = { path: '/library', fullPath: '/library' }
+        const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
+        const result = await middleware(to)
+
+        const globalNav = globalThis as unknown as { navigateTo: Mock }
+        expect(globalNav.navigateTo).not.toHaveBeenCalled()
         expect(result).toBeUndefined()
       } finally {
-        ;(process as any).server = originalServer
+        proc.server = originalServer
+      }
+    })
+
+    it('defers auth verification to client hydration during SSR when refreshToken cookie is present', async () => {
+      const proc = process as unknown as { server?: boolean }
+      const originalServer = proc.server
+      proc.server = true
+      try {
+        useCookie('techdaily_token').value = null
+        useCookie('refreshToken').value = 'mock-refresh-token'
+        const to = { path: '/library', fullPath: '/library' }
+        const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
+        const result = await middleware(to)
+
+        const globalNav = globalThis as unknown as { navigateTo: Mock }
+        expect(globalNav.navigateTo).not.toHaveBeenCalled()
+        expect(result).toBeUndefined()
+      } finally {
+        proc.server = originalServer
       }
     })
   })

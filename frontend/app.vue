@@ -26,14 +26,23 @@ onMounted(() => {
 
 <template>
   <div class="min-h-dvh flex flex-col bg-slate-50 dark:bg-canvas text-slate-900 dark:text-slate-100 antialiased transition-colors duration-200">
-    <AppHeader v-if="!isReaderMode && !isAuthPage" />
-    <AppCommandPalette />
     <AppToastContainer />
-    <div class="flex-1 flex overflow-hidden">
-      <AppSidebar v-if="!isReaderMode && !isAuthPage" />
-      <main class="flex-1 overflow-y-auto">
-        <NuxtPage :page-key="route => route.fullPath" />
-      </main>
-    </div>
+
+    <!-- Auth Cockpit Shell: Isolated from internal navigation chrome & persistent containers -->
+    <template v-if="isAuthPage">
+      <NuxtPage :page-key="route => route.fullPath" />
+    </template>
+
+    <!-- Standard Application Shell -->
+    <template v-else>
+      <AppHeader v-if="!isReaderMode" />
+      <AppCommandPalette />
+      <div class="flex-1 flex overflow-hidden">
+        <AppSidebar v-if="!isReaderMode" />
+        <main class="flex-1 overflow-y-auto">
+          <NuxtPage :page-key="route => route.fullPath" />
+        </main>
+      </div>
+    </template>
   </div>
 </template>
