@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import HomeBentoDashboard from '~/components/dashboard/HomeBentoDashboard.vue'
 import { useAuthStore } from '~/stores/useAuthStore'
-import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
+import { useDailyFocusStore, type TodayFocusResponse } from '~/stores/useDailyFocusStore'
 import { useReviewStore } from '~/stores/useReviewStore'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
 
@@ -124,6 +124,59 @@ describe('HomeBentoDashboard.vue', () => {
 
     expect(wrapper.find('.constellation-stub').text()).toContain('180 - 250')
   })
+  it('passes calculated learnedChunksCount across availableBooks to DomainConstellationCard', () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = {
+      pacer: {
+        bookId: 'book-1',
+        bookTitle: 'System Design',
+        chapterTitle: 'Microservices',
+        currentChunkOrder: 5,
+        totalChunks: 100,
+        progressPercentage: 4,
+        hasPrevious: true,
+        hasNext: true,
+        availableBooks: [
+          {
+            id: 'book-1',
+            title: 'System Design',
+            currentChunkOrder: 5,
+            totalChunks: 100,
+            progressPercentage: 4,
+            isActive: true
+          },
+          {
+            id: 'book-2',
+            title: 'Complete Guide',
+            currentChunkOrder: 50,
+            totalChunks: 50,
+            progressPercentage: 100,
+            isActive: false
+          }
+        ]
+      }
+    } as unknown as TodayFocusResponse
+
+    const wrapper = mount(HomeBentoDashboard, {
+      global: {
+        stubs: {
+          ConcentricMetricCard: true,
+          DomainConstellationCard: {
+            template: '<div class="constellation-stub">{{ chunkCount }}</div>',
+            props: ['chunkCount']
+          },
+          NuxtLink: true
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+
+    // book-1 completed 4 slices (current 5); book-2 has 100% progress so 50 slices; total = 54
+    expect(wrapper.find('.constellation-stub').text()).toBe('54')
+  })
+
 
   it('binds Spaced Repetition deck statistics correctly to ConcentricMetricCard', () => {
     const reviewStore = useReviewStore()
