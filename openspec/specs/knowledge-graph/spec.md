@@ -188,6 +188,7 @@ The knowledge graph view SHALL include a floating glassmorphic control bar (`Gra
 4. **Mastery Status Filter:** Dropdown or pill selector to filter flashcard nodes by SM-2 status (`All`, `Learning`, `Reviewing`, `Mastered`). When `Mastered` is selected, the active indicator SHALL display primary brand violet styling (`bg-brand-600 text-white`) instead of emerald green.
 5. **Live Search Input:** Text input that dynamically matches node titles, tags, and summary keywords. Matching nodes SHALL remain fully opaque and highlighted, while non-matching nodes SHALL fade to 15% opacity with edges dimmed in both 2D and 3D modes.
 6. **Reset Filters CTA:** A button to immediately reset all filters, search inputs, and node opacities back to the default global view.
+7. **Action Controls Visual Alignment (Fit to Screen & Reset Filters):** Dedicated action buttons ("Fit to Screen", "Reset Filters") providing 1-click viewport centering and filter clearance SHALL share a unified compact rendered height (`h-8`, 32px), typography scale (`text-xs font-bold`), icon dimensions (`w-3.5 h-3.5`), and padding (`px-2.5 py-1.5`) matching the exact visual footprint and vertical baseline of the adjacent 2D/3D view mode switcher container.
 
 All control bar action buttons, mode switches, and filter chips SHALL utilize `.glass-panel`, `dark:bg-canvas-subtle`, `dark:bg-canvas-elevated`, and `dark:border-white/[0.08]`, completely eliminating legacy `dark:bg-slate-800`, `dark:bg-slate-900`, and `dark:border-slate-700`.
 
@@ -229,6 +230,10 @@ All control bar action buttons, mode switches, and filter chips SHALL utilize `.
 - **THEN** all 6 category pills ("Tất Cả", "Backend & Runtime", "Database & Storage", "Distributed Systems", "Frontend & Web", "Engineering Craft") are fully visible without horizontal clipping or truncation
 - **AND** each pill resolves its translated label rather than falling back to raw untranslated English strings
 - **AND** on viewports narrower than the combined pill width, the container wraps naturally into multiple clean rows.
+
+#### Scenario: Action buttons match 2D/3D toggle height and typography
+- **WHEN** a user views the knowledge graph control bar on `/graph`
+- **THEN** the "Fit to Screen" and "Reset Filters" buttons have an identical height (`h-8`, 32px), typography scale (`text-xs font-bold`), and icon size (`w-3.5 h-3.5`) aligning horizontally with the 2D/3D mode switcher.
 
 ---
 
