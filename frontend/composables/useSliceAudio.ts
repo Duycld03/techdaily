@@ -90,7 +90,7 @@ export interface AudioErrorInfo {
   suggestCloudFallback?: boolean
 }
 
-function categorizeAudioError(err: unknown, engine: AudioEngine): AudioErrorInfo {
+export function categorizeAudioError(err: unknown, engine: AudioEngine): AudioErrorInfo {
   const rawMessage = err instanceof Error ? err.message : String(err)
   const lower = rawMessage.toLowerCase()
 
@@ -102,7 +102,17 @@ function categorizeAudioError(err: unknown, engine: AudioEngine): AudioErrorInfo
     return { code: 'DEVICE_OOM', rawMessage, suggestCloudFallback: engine === 'device' }
   }
 
-  if (lower.includes('network') || lower.includes('failed to fetch') || lower.includes('econnrefused')) {
+  if (
+    lower.includes('network')
+    || lower.includes('failed to fetch')
+    || lower === 'load failed'
+    || lower.includes('typeerror: load failed')
+    || lower.includes('failed to load resource')
+    || lower.includes('timeout')
+    || lower.includes('econnrefused')
+    || lower.includes('enotfound')
+    || lower.includes('etimedout')
+  ) {
     return { code: 'NETWORK_ERROR', rawMessage, suggestCloudFallback: engine === 'device' }
   }
 
@@ -136,7 +146,9 @@ function createWorkerEngine(): TtsEngine {
     if (!worker) {
       worker = new Worker(new URL('../workers/ttsSynth.worker.ts', import.meta.url), { type: 'module' })
       worker.onerror = (event: ErrorEvent) => {
-        const err = new Error(event.message || 'Worker initialization failed')
+        const message = event.message || 'Worker initialization failed'
+        console.error('[useSliceAudio] Device TTS Error (worker.onerror):', message, event)
+        const err = new Error(message)
         for (const p of pending.values()) {
           p.reject(err)
         }
@@ -161,6 +173,7 @@ function createWorkerEngine(): TtsEngine {
           p.resolve()
         }
         else if (m.type === 'error') {
+          console.error('[useSliceAudio] Device TTS Error (worker message):', m.message)
           pending.delete(m.reqId)
           p.reject(new Error(m.message ?? 'Synthesis failed'))
         }
@@ -662,6 +675,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
         }
         return
       }
+      console.error('[useSliceAudio] Device TTS Error (synthesizeOnDevice):', error)
       onChunkEndedCallback = null
       status.value = 'error'
       const info = categorizeAudioError(error, 'device')

@@ -23,24 +23,19 @@ interface CancelRequest {
 type WorkerIncomingMessage = SynthRequest | CancelRequest
 type SynthFn = (text: string) => Promise<{ audio: Float32Array, sampling_rate: number }>
 type Backend = 'webgpu' | 'wasm'
-// Precision per backend, chosen for lowest synthesis latency. WebGPU uses fp16
-// (native half-precision). Desktop WASM uses fp32 (~4x faster than int8 VITS kernels
-// on desktop CPUs). Mobile WASM uses quantized q8 (model_quantized.onnx, 36.6 MB vs
-// 109 MB) to fit mobile memory ceilings and avoid out-of-memory browser tab crashes.
-type Dtype = 'fp32' | 'fp16' | 'q8'
-const PREFERRED_DTYPE: Record<Backend, Dtype> = { webgpu: 'fp16', wasm: 'fp32' }
+// Precision per environment, chosen for lowest synthesis latency.
+// Desktop WASM uses fp32 (~4x faster than int8 VITS kernels on desktop CPUs
+// and fully supported by multi-threaded SIMD).
+// Mobile WASM uses quantized q8 (model_quantized.onnx, ~36.6 MB vs 109 MB)
+// to fit mobile memory ceilings and avoid out-of-memory browser tab crashes.
+// Note: fp16 is explicitly prohibited for MMS-TTS due to invalid remote ONNX graph schemas.
+type Dtype = 'fp32' | 'q8'
 
 const isMobile = typeof navigator !== 'undefined' && (
   /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) ||
   (navigator.platform === 'MacIntel' && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1)
 )
 
-function getPreferredDtype(device: Backend): Dtype {
-  if (isMobile && device === 'wasm') {
-    return 'q8'
-  }
-  return PREFERRED_DTYPE[device]
-}
 interface PipelineEntry {
   device: Backend
   synth: SynthFn
@@ -66,40 +61,16 @@ if (onnxWasm) {
 // is recorded so it is decided once per model rather than re-probed per run.
 const pipelines = new Map<string, Promise<PipelineEntry>>()
 
-// Pick the execution backend once. `'gpu' in navigator` only proves the API is
-// exposed (e.g. headless Chromium) — an adapter may still be unavailable, which
-// would make WebGPU inference throw. Requesting the adapter is the real probe.
-async function pickDevice(): Promise<Backend> {
-  if (typeof navigator === 'undefined' || !('gpu' in navigator)) return 'wasm'
-  // WebGPU is absent from the default worker lib types; treat navigator.gpu as
-  // the standard GPU interface. Unexpressible library type → named-const cast.
-  const gpu = (navigator as unknown as { gpu?: { requestAdapter: (options?: { powerPreference?: string }) => Promise<unknown> } }).gpu
-  if (gpu == null) return 'wasm'
-  try {
-    // Prefer a discrete GPU over integrated graphics on hybrid-graphics machines.
-    const adapter = await gpu.requestAdapter({ powerPreference: 'high-performance' })
-    return adapter ? 'webgpu' : 'wasm'
-  }
-  catch {
-    return 'wasm'
-  }
-}
-
-// The adapter probe (and its "No available adapters." console notice on
-// GPU-less browsers) runs at most once per worker, not once per model.
-let devicePromise: Promise<Backend> | null = null
-function resolveDevice(): Promise<Backend> {
-  devicePromise ??= pickDevice()
-  return devicePromise
-}
-
-function buildEntry(model: string, device: Backend, dtype: Dtype, reqId: number): Promise<PipelineEntry> {
-  // Transformers.js fires progress per downloaded file (config, tokenizer,
-  // model weights). The tiny JSON files each race to 100% before the large
-  // `.onnx` weights start, which made the bar flash 100% then restart 0→100%.
-  // Surface only the model-weights file so the percentage climbs once, 0→100.
+// MMS-TTS (Meta VITS) architecture models require 64-bit integer (INT64)
+// indexing on GatherND operators within the stochastic duration predictor,
+// which ONNX Runtime Web's WebGPU WGSL shader kernels do not support (type 7).
+// Furthermore, remote model_fp16.onnx weights contain graph validation errors.
+// Always route MMS-TTS models directly to CPU WASM for 100% stability across
+// all operating systems and browsers (Windows, Linux, macOS, Android, iOS).
+function resolveEntry(model: string, reqId: number): Promise<PipelineEntry> {
+  const dtype: Dtype = isMobile ? 'q8' : 'fp32'
   const built = pipeline('text-to-speech', model, {
-    device,
+    device: 'wasm',
     dtype,
     progress_callback: (info: { status?: string, file?: string, progress?: number } & Record<string, unknown>) => {
       if (info?.status === 'progress' && typeof info.file === 'string' && info.file.endsWith('.onnx')) {
@@ -107,34 +78,7 @@ function buildEntry(model: string, device: Backend, dtype: Dtype, reqId: number)
       }
     },
   }) as unknown as Promise<SynthFn>
-  return built.then(synth => ({ device, synth }))
-}
-
-// Build for one backend, trying its preferred quantized dtype first and falling
-// back to full precision (fp32) when the quantized weights are missing or fail
-// to build — at most two dtype attempts per device.
-async function buildForDevice(model: string, device: Backend, reqId: number): Promise<PipelineEntry> {
-  try {
-    return await buildEntry(model, device, getPreferredDtype(device), reqId)
-  }
-  catch {
-    return await buildEntry(model, device, 'fp32', reqId)
-  }
-}
-
-// Prefer WebGPU when an adapter exists, but a GPU-init failure must not surface
-// as a narration error while WASM can still run: fall back to CPU on build error.
-async function resolveEntry(model: string, reqId: number): Promise<PipelineEntry> {
-  const device = await resolveDevice()
-  if (device === 'webgpu') {
-    try {
-      return await buildForDevice(model, 'webgpu', reqId)
-    }
-    catch {
-      // GPU backend failed to initialize; continue on CPU WASM.
-    }
-  }
-  return buildForDevice(model, 'wasm', reqId)
+  return built.then(synth => ({ device: 'wasm', synth }))
 }
 
 function getPipeline(model: string, reqId: number): Promise<PipelineEntry> {
@@ -209,18 +153,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerIncomingMessage>) => {
           ctx.postMessage({ type: 'done', reqId })
           return
         }
-        // A WebGPU pipeline can initialize yet fail at inference on some
-        // browsers. Rebuild once on CPU WASM and retry this sentence; later
-        // sentences then reuse the fallback without re-probing.
-        if (entry.device !== 'webgpu') throw inferError
-        const fallback = buildForDevice(model, 'wasm', reqId)
-        pipelines.set(model, fallback)
-        entry = await fallback
-        ctx.postMessage({ type: 'device', reqId, device: entry.device })
-        out = await (inferenceQueue = inferenceQueue.catch(() => {}).then(async () => {
-          if (jobId !== currentJobId || cancelledReqIds.has(reqId)) return null
-          return await entry.synth(sentence)
-        })) as { audio: Float32Array, sampling_rate: number } | null
+        throw inferError
       }
 
       if (!out || jobId !== currentJobId || cancelledReqIds.has(reqId)) {

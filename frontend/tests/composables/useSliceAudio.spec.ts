@@ -7,6 +7,7 @@ import {
   AUDIO_SPEED_STORAGE_KEY,
   AUDIO_ENGINE_STORAGE_KEY,
   useSliceAudio,
+  categorizeAudioError,
   type SynthHandlers,
   type TtsEngine,
   type NarrationSource,
@@ -1061,5 +1062,60 @@ describe('useSliceAudio', () => {
     // Audio MUST NOT auto-play chunk 3! Play call count remains 1!
     expect(audio.play).toHaveBeenCalledTimes(1)
     expect(player.playing.value).toBe(false)
+  })
+  describe('categorizeAudioError and device error diagnostics', () => {
+    it('categorizes WebKit/Safari "Load failed" as NETWORK_ERROR with cloud fallback', () => {
+      const error = new Error('TypeError: Load failed')
+      const info = categorizeAudioError(error, 'device')
+      expect(info.code).toBe('NETWORK_ERROR')
+      expect(info.suggestCloudFallback).toBe(true)
+      expect(info.rawMessage).toContain('Load failed')
+    })
+
+    it('categorizes connection timeouts and fetch errors as NETWORK_ERROR', () => {
+      const fetchError = new Error('Failed to fetch model weights')
+      const timeoutError = new Error('Connection timeout while downloading ort-wasm')
+      expect(categorizeAudioError(fetchError, 'device').code).toBe('NETWORK_ERROR')
+      expect(categorizeAudioError(timeoutError, 'device').code).toBe('NETWORK_ERROR')
+    })
+
+    it('categorizes memory exhaustion as DEVICE_OOM', () => {
+      const oomError = new Error('Out of memory: WebAssembly allocation failed')
+      const info = categorizeAudioError(oomError, 'device')
+      expect(info.code).toBe('DEVICE_OOM')
+      expect(info.suggestCloudFallback).toBe(true)
+    })
+
+    it('categorizes unknown worker errors as DEVICE_INIT_FAILED with cloud fallback', () => {
+      const genericError = new Error('Worker initialization failed')
+      const info = categorizeAudioError(genericError, 'device')
+      expect(info.code).toBe('DEVICE_INIT_FAILED')
+      expect(info.suggestCloudFallback).toBe(true)
+    })
+
+    it('sets player error state and preserves raw message when device synthesis fails with network error', async () => {
+      const audio = createFakeAudio()
+      const { cache } = memoryCache()
+      const failingEngine: TtsEngine = {
+        synthesize: vi.fn(async () => {
+          throw new Error('TypeError: Load failed')
+        }),
+        cancel: vi.fn(),
+        dispose: vi.fn()
+      }
+
+      const player = useSliceAudio({
+        defaultEngine: 'device',
+        engine: failingEngine,
+        cache,
+        createAudio: () => audio
+      })
+
+      await player.loadAndPlay(source())
+      expect(player.status.value).toBe('error')
+      expect(player.errorInfo.value?.code).toBe('NETWORK_ERROR')
+      expect(player.errorInfo.value?.suggestCloudFallback).toBe(true)
+      expect(player.errorMessage.value).toBe('TypeError: Load failed')
+    })
   })
 })

@@ -243,7 +243,7 @@ onMounted(() => {
     <!-- Play / Pause -->
     <button
       type="button"
-      class="h-8 inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold px-3 transition-all active:scale-95 disabled:opacity-60"
+      class="h-8 inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-semibold px-2.5 sm:px-3 transition-all active:scale-95 disabled:opacity-60"
       :aria-label="playing ? t('reader.audio_pause') : t('reader.audio_play')"
       @click="onToggle"
     >
@@ -262,7 +262,7 @@ onMounted(() => {
       <!-- Cloud Engine Toggle -->
       <button
         type="button"
-        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+        class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
         :class="[
           engineMode === 'cloud'
             ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
@@ -273,13 +273,13 @@ onMounted(() => {
         @click="onToggleEngine('cloud')"
       >
         <Cloud class="w-3.5 h-3.5" :stroke-width="2" />
-        <span>{{ t('reader.audio_engine_cloud') }}</span>
+        <span class="hidden sm:inline">{{ t('reader.audio_engine_cloud') }}</span>
       </button>
 
       <!-- Device Engine Toggle -->
       <button
         type="button"
-        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap"
+        class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap"
         :class="[
           engineMode === 'device'
             ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
@@ -289,14 +289,14 @@ onMounted(() => {
         @click="onToggleEngine('device')"
       >
         <Laptop class="w-3.5 h-3.5" :stroke-width="2" />
-        <span>{{ t('reader.audio_engine_device') }}</span>
+        <span class="hidden sm:inline">{{ t('reader.audio_engine_device') }}</span>
       </button>
     </div>
 
     <!-- Free-Tier Voice Picker (Only in Cloud mode) -->
     <div
       v-if="engineMode === 'cloud'"
-      class="w-36 sm:w-44 shrink-0"
+      class="flex-1 min-w-0 sm:flex-initial sm:w-44"
     >
       <AppSelect
         v-model="currentVoice"
@@ -372,7 +372,7 @@ onMounted(() => {
     <!-- Speed -->
     <button
       type="button"
-      class="shrink-0 whitespace-nowrap rounded-lg border border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-200/60 dark:hover:bg-white/[0.06] text-slate-600 dark:text-slate-300 text-xs font-semibold px-2 py-1 transition-colors tabular-nums"
+      class="shrink-0 whitespace-nowrap rounded-lg border border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-200/60 dark:hover:bg-white/[0.06] text-slate-600 dark:text-slate-300 text-xs font-semibold px-1.5 sm:px-2 py-1 transition-colors tabular-nums"
       :title="t('reader.audio_speed')"
       @click="cycleSpeed"
     >
