@@ -38,7 +38,10 @@ function handleStartReading() {
   if (pacer.value?.bookId && pacer.value?.currentChunkOrder) {
     navigateTo({
       path: `/read/${pacer.value.bookId}`,
-      query: { slice: pacer.value.currentChunkOrder.toString() }
+      query: {
+        slice: pacer.value.currentChunkOrder.toString(),
+        from: '/'
+      }
     })
   } else {
     navigateTo('/today')

@@ -743,7 +743,7 @@ async function confirmDeleteBook() {
                 </div>
 
                 <NuxtLink
-                  :to="`/read/${book.id}`"
+                  :to="{ path: `/read/${book.id}`, query: { from: '/library' } }"
                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-500/10 text-brand-600 dark:text-brand-300 hover:bg-brand-500/20 border border-brand-500/30 whitespace-nowrap shrink-0 transition-colors"
                 >
                   <GraduationCap class="w-3.5 h-3.5" />

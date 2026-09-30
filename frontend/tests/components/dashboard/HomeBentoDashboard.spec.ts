@@ -212,7 +212,7 @@ describe('HomeBentoDashboard.vue', () => {
 
     expect((globalThis as any).navigateTo).toHaveBeenCalledWith({
       path: '/read/aspnet-doc',
-      query: { slice: '4' }
+      query: { slice: '4', from: '/' }
     })
   })
 

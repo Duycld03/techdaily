@@ -156,4 +156,27 @@ describe('pages/today.vue - Studio Control Bar & 3-Column Layout', () => {
     // Scenario Challenge dock is collapsed (full immersion mode)
     expect(wrapper.find('.challenge-stub').exists()).toBe(false)
   })
+
+  it('renders loading indicator when focusStore.data is null and focusStore.error is null (unresolved state)', async () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = null
+    focusStore.isLoading = false
+    focusStore.error = null
+    vi.spyOn(focusStore, 'fetchTodayFocus').mockReturnValue(Promise.withResolvers<any>().promise)
+
+    const wrapper = mount(TodayPage, {
+      global: {
+        stubs: {
+          DocReaderPane: true,
+          InterviewChallengePane: true,
+          NuxtLink: true
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+
+    expect(wrapper.text()).toContain('pacer.ai_synthesis_desc')
+  })
 })

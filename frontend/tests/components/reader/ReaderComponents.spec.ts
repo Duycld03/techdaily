@@ -146,6 +146,137 @@ describe("ReaderHeaderBar.vue", () => {
     await nextBtn.trigger("click");
     expect(wrapper.emitted("next-slice")).toHaveLength(1);
   });
+
+  it("navigates directly to route.query.from when from query param is provided", async () => {
+    const originalUseRoute = (globalThis as any).useRoute;
+    (globalThis as any).useRoute = () => ({
+      path: "/read/book-1",
+      params: { bookId: "book-1" },
+      query: { from: "/library" },
+    });
+    const navSpy = (globalThis as any).navigateTo;
+    navSpy.mockClear();
+
+    try {
+      const wrapper = mount(ReaderHeaderBar, {
+        props: {
+          book: mockBook,
+          currentChunk: mockBook.chunks[0],
+          activeChunkIndex: 0,
+          totalChunks: 3,
+          isTocOpen: false,
+          progressPercentage: 33,
+        },
+        global: {
+          mocks: globalMocks,
+          stubs: {
+            NuxtLink: { template: "<a><slot /></a>" },
+            ThemeToggle: { template: "<button />" },
+          },
+        },
+      });
+
+      const backBtn = wrapper.find('button[title="reader.back"]');
+      expect(backBtn.exists()).toBe(true);
+      await backBtn.trigger("click");
+
+      expect(navSpy).toHaveBeenCalledWith("/library");
+    } finally {
+      (globalThis as any).useRoute = originalUseRoute;
+    }
+  });
+
+  it("falls back to router.back() when no from query param exists and history length > 1", async () => {
+    const originalUseRoute = (globalThis as any).useRoute;
+    const mockBack = vi.fn();
+    (globalThis as any).useRoute = () => ({
+      path: "/read/book-1",
+      params: { bookId: "book-1" },
+      query: {},
+    });
+    (globalThis as any).useRouter = () => ({
+      push: vi.fn(),
+      replace: vi.fn(),
+      back: mockBack,
+    });
+
+    Object.defineProperty(window, "history", {
+      value: { length: 3 },
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      const wrapper = mount(ReaderHeaderBar, {
+        props: {
+          book: mockBook,
+          currentChunk: mockBook.chunks[0],
+          activeChunkIndex: 0,
+          totalChunks: 3,
+          isTocOpen: false,
+          progressPercentage: 33,
+        },
+        global: {
+          mocks: globalMocks,
+          stubs: {
+            NuxtLink: { template: "<a><slot /></a>" },
+            ThemeToggle: { template: "<button />" },
+          },
+        },
+      });
+
+      const backBtn = wrapper.find('button[title="reader.back"]');
+      await backBtn.trigger("click");
+
+      expect(mockBack).toHaveBeenCalledTimes(1);
+    } finally {
+      (globalThis as any).useRoute = originalUseRoute;
+    }
+  });
+
+  it("falls back to navigateTo('/') when no from query param and history length <= 1", async () => {
+    const originalUseRoute = (globalThis as any).useRoute;
+    (globalThis as any).useRoute = () => ({
+      path: "/read/book-1",
+      params: { bookId: "book-1" },
+      query: {},
+    });
+    const navSpy = (globalThis as any).navigateTo;
+    navSpy.mockClear();
+
+    Object.defineProperty(window, "history", {
+      value: { length: 1 },
+      writable: true,
+      configurable: true,
+    });
+
+    try {
+      const wrapper = mount(ReaderHeaderBar, {
+        props: {
+          book: mockBook,
+          currentChunk: mockBook.chunks[0],
+          activeChunkIndex: 0,
+          totalChunks: 3,
+          isTocOpen: false,
+          progressPercentage: 33,
+        },
+        global: {
+          mocks: globalMocks,
+          stubs: {
+            NuxtLink: { template: "<a><slot /></a>" },
+            ThemeToggle: { template: "<button />" },
+          },
+        },
+      });
+
+      const backBtn = wrapper.find('button[title="reader.back"]');
+      await backBtn.trigger("click");
+
+      expect(navSpy).toHaveBeenCalledWith("/");
+    } finally {
+      (globalThis as any).useRoute = originalUseRoute;
+    }
+  });
 });
 
 describe("ReaderTocSidebar.vue", () => {

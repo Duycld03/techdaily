@@ -28,8 +28,16 @@ When the user is active on `/today` viewing Slice $N$, the system SHALL trigger 
 The `/today` focus loading state SHALL have at least 24px (`p-6`) padding, centered alignment, and a constrained width (`max-w-sm sm:max-w-md`) on mobile viewports.
 
 The `/today` study surface and auxiliary overlays SHALL strictly adhere to the Dev-Learning Studio design language and Responsive Typography Standard:
-1. **Interactive Challenge Option Typography:** Option labels and choice text in `InterviewChallengePane.vue` SHALL render at a minimum of `text-sm` (14px) on mobile viewports and `text-base` (16px) on desktop viewports, strictly eliminating micro-text (`text-xs` / 12px) from body copy and option choices.
-2. **Auxiliary Overlays & Modals:** `AISynthesisCard.vue` and `TermExplainerModal.vue` SHALL utilize `.glass-panel`, `dark:bg-canvas-subtle`, and `dark:bg-canvas-elevated` with translucent hairline borders `dark:border-white/[0.08]`, completely eliminating legacy `dark:bg-slate-900` and `dark:border-slate-800`.
+
+1. **Deterministic Loading State & Elimination of Black Canvas Voids**:
+- Whenever focus data is unresolved (`focusStore.isLoading || (!focusStore.data && !focusStore.error)`), the studio body SHALL render the centralized studio loading state with the spinner and descriptive subtitle (`pacer.ai_synthesis_desc`).
+- The page template SHALL NOT render an unconditioned empty container when `focusStore.isLoading` is false and `focusStore.data` is null during initial SSR or before the `onMounted` query completes, completely eliminating pitch-black screen voids on desktop (1080p) and mobile viewports.
+
+2. **Interactive Challenge Option Typography**:
+- Option labels and choice text in `InterviewChallengePane.vue` SHALL render at a minimum of `text-sm` (14px) on mobile viewports and `text-base` (16px) on desktop viewports, strictly eliminating micro-text (`text-xs` / 12px) from body copy and option choices.
+
+3. **Auxiliary Overlays & Modals**:
+- `AISynthesisCard.vue` and `TermExplainerModal.vue` SHALL utilize `.glass-panel`, `dark:bg-canvas-subtle`, and `dark:bg-canvas-elevated` with translucent hairline borders `dark:border-white/[0.08]`, completely eliminating legacy `dark:bg-slate-900` and `dark:border-slate-800`.
 
 #### Scenario: User visits /today on mobile during synthesis
 - **GIVEN** a user on a mobile viewport (<640px wide) opens `/today`
@@ -47,6 +55,10 @@ The `/today` study surface and auxiliary overlays SHALL strictly adhere to the D
 - **THEN** they render with `dark:bg-canvas-subtle` and `dark:bg-canvas-elevated`
 - **AND** borders display translucent hairline styling `dark:border-white/[0.08]`.
 
+#### Scenario: User navigates to /today before data resolves
+- **WHEN** the `/today` route is rendered on SSR or mounted before the initial `fetchTodayFocus` API call completes
+- **THEN** the main workspace area SHALL display the centered loading indicator and subtitle
+- **AND** the page SHALL NOT render a pitch-black empty void.
 ### Requirement: Strict Authentication on Today Page
 The `/today` focus studio SHALL require an authenticated user session. Unauthenticated requests to `/today` SHALL redirect to `/login?redirect=/today`. The backend endpoint `GET /api/v1/daily/today` SHALL require authorization and return HTTP 401 Unauthorized when requested without a valid JWT token.
 
