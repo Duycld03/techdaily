@@ -198,7 +198,8 @@ const weekDays = computed(() => {
 onMounted(() => {
   // Defensively load review deck statistics & graph data without crashing if methods are uninitialized
   if (!reviewStore.deckStatistics?.totalCards && typeof reviewStore.fetchDeckCards === 'function') {
-    reviewStore.fetchDeckCards({ pageSize: 1 }).catch(() => {})
+    // countOnly probe: refresh aggregate counts without polluting the Deck Management page size.
+    reviewStore.fetchDeckCards({ pageSize: 1, countOnly: true }).catch(() => {})
   }
   if (!graphStore.rawData && typeof graphStore.fetchGraph === 'function') {
     graphStore.fetchGraph().catch(() => {})

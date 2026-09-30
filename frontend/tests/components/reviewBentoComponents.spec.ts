@@ -7,6 +7,7 @@ import AdvancedFilterModal from '~/components/review/AdvancedFilterModal.vue'
 import FlashcardBentoCard from '~/components/review/FlashcardBentoCard.vue'
 import AtRiskLeechCard from '~/components/review/AtRiskLeechCard.vue'
 import SourceChannelRetentionCard from '~/components/review/SourceChannelRetentionCard.vue'
+import EaseFactorDistributionCard from '~/components/review/EaseFactorDistributionCard.vue'
 import type { ReviewCard } from '~/stores/useReviewStore'
 
 describe('FlashcardHeroCard.vue', () => {
@@ -350,6 +351,7 @@ describe('AtRiskLeechCard.vue', () => {
 })
 
 describe('SourceChannelRetentionCard.vue', () => {
+  // The live API serializes CardSourceType as the enum name.
   const sources = [
     { sourceType: 'Highlight', total: 5, learning: 2, reviewing: 1, mastered: 2, averageEaseFactor: 2.31 },
     { sourceType: 'QuizMistake', total: 3, learning: 1, reviewing: 1, mastered: 1, averageEaseFactor: 1.85 },
@@ -367,12 +369,24 @@ describe('SourceChannelRetentionCard.vue', () => {
     expect(text).toContain('1.60')
   })
 
-  it('maps source type ids to the correct channel labels', () => {
+  it('maps distinct source types to distinct channel labels (no shared fallback)', () => {
     const wrapper = mount(SourceChannelRetentionCard, { props: { sources } })
     const text = wrapper.text()
     expect(text).toContain('review.source_highlight')
     expect(text).toContain('review.source_quiz')
     expect(text).toContain('review.source_drill')
+  })
+
+  it('also maps numeric source codes defensively', () => {
+    const numericSources = [
+      { sourceType: 1, total: 5, learning: 2, reviewing: 1, mastered: 2, averageEaseFactor: 2.31 },
+      { sourceType: 3, total: 2, learning: 1, reviewing: 1, mastered: 0, averageEaseFactor: 1.6 }
+    ]
+    const wrapper = mount(SourceChannelRetentionCard, { props: { sources: numericSources } })
+    const text = wrapper.text()
+    expect(text).toContain('review.source_highlight')
+    expect(text).toContain('review.source_drill')
+    expect(text).not.toContain('review.source_quiz')
   })
 
   it('sizes mastery bars proportional to the mastered share', () => {
@@ -390,5 +404,41 @@ describe('SourceChannelRetentionCard.vue', () => {
     const wrapper = mount(SourceChannelRetentionCard, { props: { sources: [] } })
     expect(wrapper.text()).toContain('review.source_empty')
     expect(wrapper.text()).not.toContain('/')
+  })
+})
+
+describe('EaseFactorDistributionCard.vue', () => {
+  it('renders the three ease-factor buckets with their counts', () => {
+    const wrapper = mount(EaseFactorDistributionCard, {
+      props: { struggling: 2, developing: 5, comfortable: 3 }
+    })
+    const text = wrapper.text()
+    expect(text).toContain('review.ease_struggling')
+    expect(text).toContain('review.ease_developing')
+    expect(text).toContain('review.ease_comfortable')
+    expect(text).toContain('2')
+    expect(text).toContain('5')
+    expect(text).toContain('3')
+  })
+
+  it('sizes bucket bars proportional to their share of the total', () => {
+    const wrapper = mount(EaseFactorDistributionCard, {
+      props: { struggling: 2, developing: 5, comfortable: 3 }
+    })
+    const styles = wrapper.findAll('div[style]').map((b) => b.attributes('style'))
+    expect(styles).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('width: 20%'),
+        expect.stringContaining('width: 50%'),
+        expect.stringContaining('width: 30%')
+      ])
+    )
+  })
+
+  it('shows the empty state when the deck has no cards', () => {
+    const wrapper = mount(EaseFactorDistributionCard, {
+      props: { struggling: 0, developing: 0, comfortable: 0 }
+    })
+    expect(wrapper.text()).toContain('review.ease_dist_empty')
   })
 })

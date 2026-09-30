@@ -57,12 +57,15 @@ vi.mock('~/composables/useApiClient', () => ({
         }
       }
       if (url.includes('/cards')) {
+        const urlObj = new URL(url, 'http://localhost')
+        const pageSize = parseInt(urlObj.searchParams.get('pageSize') || '20', 10)
+        const page = parseInt(urlObj.searchParams.get('page') || '1', 10)
         return {
           cards: [...mockCards],
           totalCount: 2,
-          page: 1,
-          pageSize: 20,
-          totalPages: 1,
+          page,
+          pageSize,
+          totalPages: Math.max(1, Math.ceil(2 / pageSize)),
           statistics: {
             totalCards: 2,
             learningCount: 1,
@@ -179,6 +182,27 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
     expect(review.deckStatistics.totalCards).toBe(2)
     expect(review.deckStatistics.learningCount).toBe(1)
     expect(review.deckStatistics.reviewingCount).toBe(1)
+  })
+
+  it('countOnly probe refreshes totals without polluting deck paging state', async () => {
+    const review = useReviewStore()
+    expect(review.deckPageSize).toBe(20)
+
+    // Lightweight count probe (as the dashboard performs) at pageSize 1.
+    await review.fetchDeckCards({ pageSize: 1, countOnly: true })
+
+    // Aggregate counts refresh...
+    expect(review.deckTotalCount).toBe(2)
+    expect(review.deckStatistics.totalCards).toBe(2)
+    // ...but the deck list and its page size are left untouched.
+    expect(review.deckCards).toHaveLength(0)
+    expect(review.deckPageSize).toBe(20)
+    expect(review.deckCurrentPage).toBe(1)
+
+    // A subsequent real deck fetch still paginates at its standard page size.
+    await review.fetchDeckCards({ page: 1, pageSize: 20 })
+    expect(review.deckPageSize).toBe(20)
+    expect(review.deckCards).toHaveLength(2)
   })
 
   it('updates card markdown content', async () => {

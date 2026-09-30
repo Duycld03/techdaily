@@ -28,8 +28,10 @@ export interface DeckStatistics {
 }
 
 export interface SourceChannelRetention {
-  // Enum name from the API (JsonStringEnumConverter): 'Highlight' | 'QuizMistake' | 'DocumentChunk'
-  sourceType: string
+  // CardSourceType from the API. The live endpoint serializes it as the enum
+  // NAME ('Highlight' | 'QuizMistake' | 'DocumentChunk'); numeric codes (1/2/3)
+  // are also tolerated by the card's label mapping for resilience.
+  sourceType: string | number
   total: number
   learning: number
   reviewing: number
@@ -146,8 +148,13 @@ export const useReviewStore = defineStore('review', () => {
     sourceType?: number
     page?: number
     pageSize?: number
+    // When true, only refresh aggregate counts (totalCount + statistics)
+    // without touching the deck list paging state (deckCards/deckPageSize/
+    // deckCurrentPage/deckTotalPages). Lets lightweight count probes on other
+    // pages avoid polluting the Deck Management list's page size.
+    countOnly?: boolean
   }) {
-    isDeckLoading.value = true
+    if (!params?.countOnly) isDeckLoading.value = true
     try {
       const api = useApiClient()
       const queryParts: string[] = []
@@ -175,13 +182,15 @@ export const useReviewStore = defineStore('review', () => {
         }
       }>(`/api/v1/review/cards${query}`)
 
-      deckCards.value = res.cards || []
+      if (!params?.countOnly) {
+        deckCards.value = res.cards || []
+        deckCurrentPage.value = res.page ?? (params?.page || 1)
+        deckPageSize.value = res.pageSize ?? (params?.pageSize || 20)
+        deckTotalPages.value =
+          res.totalPages ??
+          ((res.totalCount ?? 0) > 0 ? Math.ceil((res.totalCount ?? 0) / (res.pageSize ?? params?.pageSize ?? 20)) : 0)
+      }
       deckTotalCount.value = res.totalCount ?? 0
-      deckCurrentPage.value = res.page ?? (params?.page || 1)
-      deckPageSize.value = res.pageSize ?? (params?.pageSize || 20)
-      deckTotalPages.value =
-        res.totalPages ??
-        (deckTotalCount.value > 0 ? Math.ceil(deckTotalCount.value / deckPageSize.value) : 0)
       if (res.statistics) {
         deckStatistics.value = {
           totalCards: res.statistics.totalCards ?? 0,

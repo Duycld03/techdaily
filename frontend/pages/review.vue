@@ -35,6 +35,7 @@ import MasteryGaugeCard from '~/components/review/MasteryGaugeCard.vue'
 import ReviewForecastChart from '~/components/review/ReviewForecastChart.vue'
 import AtRiskLeechCard from '~/components/review/AtRiskLeechCard.vue'
 import SourceChannelRetentionCard from '~/components/review/SourceChannelRetentionCard.vue'
+import EaseFactorDistributionCard from '~/components/review/EaseFactorDistributionCard.vue'
 import AdvancedFilterModal from '~/components/review/AdvancedFilterModal.vue'
 import FlashcardBentoCard from '~/components/review/FlashcardBentoCard.vue'
 import FlashcardDeck from '~/components/review/FlashcardDeck.vue'
@@ -171,11 +172,15 @@ const totalPages = computed(() => {
   return Math.max(1, Math.ceil(reviewStore.deckTotalCount / reviewStore.deckPageSize))
 })
 
+// Deck Management always paginates at its own fixed page size, independent of
+// any lightweight count probe elsewhere that may have touched the store.
+const DECK_PAGE_SIZE = 20
+
 async function fetchDeck(page = 1) {
   try {
     await reviewStore.fetchDeckCards({
       page,
-      pageSize: reviewStore.deckPageSize,
+      pageSize: DECK_PAGE_SIZE,
       search: searchQuery.value.trim() || undefined,
       status: selectedStatus.value !== null ? selectedStatus.value : undefined,
       sourceType: selectedSource.value !== null ? selectedSource.value : undefined
@@ -245,6 +250,16 @@ function onReviewAtRisk() {
 }
 
 watch(activeTab, (tab) => {
+  // Persist the active tab in the URL so a pagination-driven remount (page key
+  // is route.fullPath) restores Deck Management instead of defaulting to session.
+  const query = { ...route.query }
+  if (tab === 'management') {
+    query.tab = 'management'
+  } else {
+    delete query.tab
+  }
+  router.replace({ query })
+
   if (tab === 'management') {
     reviewStore.fetchAnalytics()
   }
@@ -676,8 +691,8 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
             />
           </div>
 
-      <!-- 1b. Retention Analytics (At-Risk & Source-Channel) -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+      <!-- 1b. Retention Analytics (At-Risk, Source-Channel, Ease-Factor Distribution) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
         <AtRiskLeechCard
           :overdue-count="reviewStore.analytics?.overdueCount ?? 0"
           :leech-count="reviewStore.analytics?.leechCount ?? 0"
@@ -685,6 +700,11 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
           @review="onReviewAtRisk"
         />
         <SourceChannelRetentionCard :sources="reviewStore.analytics?.sourceBreakdown ?? []" />
+        <EaseFactorDistributionCard
+          :struggling="reviewStore.analytics?.strugglingCount ?? 0"
+          :developing="reviewStore.analytics?.developingCount ?? 0"
+          :comfortable="reviewStore.analytics?.comfortableCount ?? 0"
+        />
       </div>
 
       <!-- 2. Filters & Search Bar (Trực tiếp trên nền Canvas) -->

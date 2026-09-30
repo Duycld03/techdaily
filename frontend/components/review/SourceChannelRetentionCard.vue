@@ -7,7 +7,13 @@ const props = defineProps<{
   sources: SourceChannelRetention[]
 }>()
 
-const SOURCE_LABEL_KEYS: Record<string, string> = {
+// CardSourceType arrives from the API as the enum NAME ('Highlight' | 'QuizMistake'
+// | 'DocumentChunk'); numeric codes (1/2/3) are also mapped defensively so each
+// source resolves to its own distinct label rather than collapsing to a fallback.
+const SOURCE_LABEL_KEYS: Record<string | number, string> = {
+  1: 'review.source_highlight',
+  2: 'review.source_quiz',
+  3: 'review.source_drill',
   Highlight: 'review.source_highlight',
   QuizMistake: 'review.source_quiz',
   DocumentChunk: 'review.source_drill',
@@ -16,7 +22,7 @@ const SOURCE_LABEL_KEYS: Record<string, string> = {
 const rows = computed(() =>
   props.sources.map((s) => ({
     sourceType: s.sourceType,
-    labelKey: SOURCE_LABEL_KEYS[s.sourceType] ?? 'review.source_highlight',
+    labelKey: SOURCE_LABEL_KEYS[s.sourceType] ?? 'review.source_chunk',
     total: s.total,
     mastered: s.mastered,
     averageEaseFactor: s.averageEaseFactor,
