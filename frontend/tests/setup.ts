@@ -36,7 +36,8 @@ const mockRuntimeConfig = {
 
 ;(globalThis as any).useRouter = () => ({
   push: vi.fn(),
-  replace: vi.fn()
+  replace: vi.fn(),
+  back: vi.fn()
 })
 
 ;(globalThis as any).useI18n = () => ({

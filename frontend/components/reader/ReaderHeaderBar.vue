@@ -46,8 +46,14 @@ const {
 const isTypographyOpen = ref(false);
 const typographyDropdownRef = ref<HTMLElement | null>(null);
 const router = useRouter();
+const route = useRoute();
 
 function handleBackNavigation() {
+  const from = route.query?.from as string | undefined;
+  if (from && typeof from === "string" && from.startsWith("/") && !from.startsWith("/read")) {
+    navigateTo(from);
+    return;
+  }
   if (typeof window !== "undefined" && window.history.length > 1) {
     router.back();
   } else {

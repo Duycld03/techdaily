@@ -345,9 +345,9 @@ watch(locale, (newLocale) => {
       </div>
     </div>
 
-    <!-- Loading State -->
+    <!-- Loading State: Active fetching or initial pre-mount unresolved state -->
     <div
-      v-if="focusStore.isLoading"
+      v-if="focusStore.isLoading || (!focusStore.data && !focusStore.error)"
       class="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 text-center my-auto"
     >
       <div

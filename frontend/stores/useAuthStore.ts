@@ -251,18 +251,21 @@ export const useAuthStore = defineStore('auth', () => {
         setSession(newToken, user.value || parseUserFromJwt(newToken))
         return true
       }
-      clearSession()
+      if (isTokenExpired(token.value)) {
+        clearSession()
+      }
       return false
     } catch (err: any) {
       // If it's a network drop / 502 / server restart, do NOT wipe local credentials!
       if (err?.isNetworkError || (typeof err?.status === 'number' && err.status >= 500)) {
         return false
       }
-      clearSession()
+      if (isTokenExpired(token.value)) {
+        clearSession()
+      }
       return false
     }
   }
-
 
   return {
     token,

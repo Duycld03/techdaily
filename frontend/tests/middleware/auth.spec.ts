@@ -176,12 +176,12 @@ describe('auth.global route middleware', () => {
       }
     })
 
-    it('defers auth verification to client hydration during SSR when techdaily_token cookie is present', async () => {
+    it('permits navigation during SSR when a valid unexpired techdaily_token cookie is present', async () => {
       const proc = process as unknown as { server?: boolean }
       const originalServer = proc.server
       proc.server = true
       try {
-        useCookie('techdaily_token').value = 'mock-expired-token'
+        useCookie('techdaily_token').value = createMockJwt(3600)
         useCookie('refreshToken').value = null
         const to = { path: '/library', fullPath: '/library' }
         const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
@@ -195,12 +195,33 @@ describe('auth.global route middleware', () => {
       }
     })
 
+    it('immediately redirects to /login during SSR when techdaily_token is expired and no refreshToken exists', async () => {
+      const proc = process as unknown as { server?: boolean }
+      const originalServer = proc.server
+      proc.server = true
+      try {
+        useCookie('techdaily_token').value = createMockJwt(-120)
+        useCookie('refreshToken').value = null
+        const to = { path: '/library', fullPath: '/library' }
+        const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
+        await middleware(to)
+
+        const globalNav = globalThis as unknown as { navigateTo: Mock }
+        expect(globalNav.navigateTo).toHaveBeenCalledWith({
+          path: '/login',
+          query: { redirect: '/library' }
+        })
+      } finally {
+        proc.server = originalServer
+      }
+    })
+
     it('defers auth verification to client hydration during SSR when refreshToken cookie is present', async () => {
       const proc = process as unknown as { server?: boolean }
       const originalServer = proc.server
       proc.server = true
       try {
-        useCookie('techdaily_token').value = null
+        useCookie('techdaily_token').value = createMockJwt(-120)
         useCookie('refreshToken').value = 'mock-refresh-token'
         const to = { path: '/library', fullPath: '/library' }
         const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
