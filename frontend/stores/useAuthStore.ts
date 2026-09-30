@@ -11,8 +11,8 @@ export interface AuthUser {
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  const tokenCookie = useCookie<string | null>('techdaily_token', { maxAge: 60 * 60 * 24 * 30, path: '/' })
-  const userCookie = useCookie<AuthUser | null>('techdaily_user', { maxAge: 60 * 60 * 24 * 30, path: '/' })
+  const tokenCookie = useCookie<string | null>('techdaily_token', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
+  const userCookie = useCookie<AuthUser | null>('techdaily_user', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
 
   function parseJwtPayload(jwt: string): any | null {
     try {
@@ -191,7 +191,9 @@ export const useAuthStore = defineStore('auth', () => {
     isPersistentSession.value = remember
     token.value = newToken
 
-    const cookieOpts = remember ? { maxAge: 60 * 60 * 24 * 30, path: '/' } : { path: '/' }
+    const cookieOpts = remember
+      ? { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' as const }
+      : { path: '/', sameSite: 'lax' as const }
     useCookie<string | null>('techdaily_token', cookieOpts).value = newToken
 
     if (typeof window !== 'undefined') {
@@ -231,7 +233,9 @@ export const useAuthStore = defineStore('auth', () => {
   function updateUser(updated: Partial<AuthUser>) {
     if (user.value) {
       user.value = { ...user.value, ...updated }
-      const cookieOpts = isPersistentSession.value ? { maxAge: 60 * 60 * 24 * 30, path: '/' } : { path: '/' }
+      const cookieOpts = isPersistentSession.value
+        ? { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' as const }
+        : { path: '/', sameSite: 'lax' as const }
       useCookie<AuthUser | null>('techdaily_user', cookieOpts).value = user.value
       if (typeof window !== 'undefined') {
         const primary = isPersistentSession.value ? window.localStorage : window.sessionStorage

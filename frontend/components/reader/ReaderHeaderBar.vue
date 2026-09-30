@@ -45,6 +45,15 @@ const {
 
 const isTypographyOpen = ref(false);
 const typographyDropdownRef = ref<HTMLElement | null>(null);
+const router = useRouter();
+
+function handleBackNavigation() {
+  if (typeof window !== "undefined" && window.history.length > 1) {
+    router.back();
+  } else {
+    navigateTo("/");
+  }
+}
 
 onClickOutside(typographyDropdownRef, () => {
   if (isTypographyOpen.value) {
@@ -59,15 +68,15 @@ onClickOutside(typographyDropdownRef, () => {
   >
     <!-- Left: Back to Library & TOC Toggle -->
     <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-      <NuxtLink
-        to="/library"
-        class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors shrink-0"
-        :title="$t('reader.return_library')"
+      <button
+        type="button"
+        @click="handleBackNavigation"
+        class="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-white/[0.08] text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors shrink-0 cursor-pointer"
+        :title="$t('reader.back')"
       >
         <ArrowLeft class="w-4 h-4 shrink-0" />
-        <span class="hidden sm:inline">{{ $t("reader.library") }}</span>
-      </NuxtLink>
-
+        <span class="hidden sm:inline">{{ $t("reader.back") }}</span>
+      </button>
       <!-- Desktop TOC Toggle -->
       <button
         type="button"

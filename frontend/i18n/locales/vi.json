@@ -92,6 +92,8 @@
     "open_cosmos": "Mở Vũ Trụ 3D",
     "connected_nodes": "Khái Niệm Liên Kết",
     "active_relations": "Mối Quan Hệ",
+    "stat_cards_due": "Thẻ Cần Ôn",
+    "stat_mastered_cards": "Đã Thành Thạo",
     "view_bento": "Tổng Quan",
     "view_split": "Chế Độ Đọc & Làm",
     "stat_flashcards": "Thẻ ghi nhớ SM-2",
@@ -99,7 +101,13 @@
     "stat_learned_chunks": "Lát cắt đã học",
     "stat_books": "Tài liệu đang học",
     "knowledge_breakdown_title": "Phân Bố Tri Thức",
-    "scenario_challenge_badge": "Thử Thách Tình Huống"
+    "scenario_challenge_badge": "Thử Thách Tình Huống",
+    "start_focus_cta": "Bắt Đầu Học Ngay",
+    "daily_drill_label": "Trắc Nghiệm Phản Xạ",
+    "senior_dilemma_label": "Tình Huống Senior",
+    "solve_dilemma_cta": "Quyết Định Kiến Trúc",
+    "questions_count": "{count} câu hỏi",
+    "read_minutes": "{min} phút đọc"
   },
   "today": {
     "title": "Luyện Tập Hằng Ngày",
@@ -541,6 +549,7 @@
     "progress_label": "Tiến Độ Đọc",
     "completed_doc": "Đã Hoàn Thành Toàn Bộ Tài Liệu",
     "return_library": "Quay Lại Thư Viện",
+    "back": "Quay Lại",
     "explain_with_gemini": "Giải Thích Bằng Gemini",
     "copy": "Sao Chép",
     "quiz_chapter_btn": "Luyện Quiz Chương Này",

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import HomeBentoDashboard from '~/components/dashboard/HomeBentoDashboard.vue'
-import { useAuthStore } from '~/stores/useAuthStore'
+import { useAuthStore, type AuthUser } from '~/stores/useAuthStore'
 import { useDailyFocusStore, type TodayFocusResponse } from '~/stores/useDailyFocusStore'
 import { useReviewStore } from '~/stores/useReviewStore'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
@@ -17,8 +17,6 @@ describe('HomeBentoDashboard.vue', () => {
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: true,
           NuxtLink: true
         },
         mocks: {
@@ -28,8 +26,8 @@ describe('HomeBentoDashboard.vue', () => {
     })
 
     expect(wrapper.exists()).toBe(true)
-    expect(wrapper.text()).toContain('dashboard.welcome_back')
-    expect(wrapper.text()).toContain('Engineer')
+    expect(wrapper.text()).toContain('dashboard.active_reading_slice')
+    expect(wrapper.text()).toContain('Senior Software Engineer')
   })
 
   it('renders user details when authStore has a user', () => {
@@ -38,14 +36,13 @@ describe('HomeBentoDashboard.vue', () => {
       id: 'u-1',
       name: 'Alex Developer',
       email: 'alex@example.com',
-      preferredLocale: 'en'
-    } as any
+      preferredLocale: 'en',
+      targetRole: 'Staff Infrastructure Architect'
+    } as unknown as AuthUser
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: true,
           NuxtLink: true
         },
         mocks: {
@@ -54,7 +51,7 @@ describe('HomeBentoDashboard.vue', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('Alex')
+    expect(wrapper.text()).toContain('Staff Infrastructure Architect')
   })
 
   it('renders active reading slice and scenario drill when focusStore has data', () => {
@@ -77,13 +74,11 @@ describe('HomeBentoDashboard.vue', () => {
       },
       currentStreak: 7,
       freezeCreditsRemaining: 2
-    } as any
+    } as unknown as TodayFocusResponse
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: true,
           NuxtLink: true
         },
         mocks: {
@@ -98,22 +93,17 @@ describe('HomeBentoDashboard.vue', () => {
     expect(wrapper.text()).toContain('2/2')
   })
 
-  it('passes correct node and edge counts to DomainConstellationCard', () => {
+  it('renders node and edge counts directly in knowledge constellation telemetry', () => {
     const graphStore = useKnowledgeGraphStore()
     graphStore.rawData = {
       nodes: new Array(180).fill({ id: '1' }),
       edges: new Array(250).fill({ id: 'e1' }),
       stats: { totalNodes: 180, totalEdges: 250, nodeTypeCounts: {}, pillarCounts: {}, masteredCardsCount: 0 }
-    } as any
+    } as unknown as NonNullable<typeof graphStore.rawData>
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: {
-            template: '<div class="constellation-stub">{{ nodeCount }} - {{ edgeCount }}</div>',
-            props: ['nodeCount', 'edgeCount']
-          },
           NuxtLink: true
         },
         mocks: {
@@ -122,9 +112,11 @@ describe('HomeBentoDashboard.vue', () => {
       }
     })
 
-    expect(wrapper.find('.constellation-stub').text()).toContain('180 - 250')
+    expect(wrapper.text()).toContain('180')
+    expect(wrapper.text()).toContain('250')
   })
-  it('passes calculated learnedChunksCount across availableBooks to DomainConstellationCard', () => {
+
+  it('renders calculated learnedChunksCount across availableBooks in knowledge telemetry', () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
       pacer: {
@@ -160,11 +152,6 @@ describe('HomeBentoDashboard.vue', () => {
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: {
-            template: '<div class="constellation-stub">{{ chunkCount }}</div>',
-            props: ['chunkCount']
-          },
           NuxtLink: true
         },
         mocks: {
@@ -174,11 +161,10 @@ describe('HomeBentoDashboard.vue', () => {
     })
 
     // book-1 completed 4 slices (current 5); book-2 has 100% progress so 50 slices; total = 54
-    expect(wrapper.find('.constellation-stub').text()).toBe('54')
+    expect(wrapper.text()).toContain('54')
   })
 
-
-  it('binds Spaced Repetition deck statistics correctly to ConcentricMetricCard', () => {
+  it('binds Spaced Repetition deck statistics correctly in telemetry dock', () => {
     const reviewStore = useReviewStore()
     reviewStore.deckStatistics = {
       totalCards: 42,
@@ -191,11 +177,6 @@ describe('HomeBentoDashboard.vue', () => {
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: {
-            template: '<div class="metric-stub">{{ masteredCards }}/{{ totalCards }} due:{{ dueCards }}</div>',
-            props: ['masteredCards', 'totalCards', 'dueCards']
-          },
-          DomainConstellationCard: true,
           NuxtLink: true
         },
         mocks: {
@@ -204,21 +185,19 @@ describe('HomeBentoDashboard.vue', () => {
       }
     })
 
-    expect(wrapper.find('.metric-stub').text()).toContain('20/42 due:5')
+    expect(wrapper.text()).toContain('20/42 SM-2')
+    expect(wrapper.text()).toContain('5')
   })
-
   it('renders dynamic slice progress badge and routes to gitbook reader on start reading', async () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
       documentChunk: { id: 'chunk-1', chapterTitle: 'ASP.NET Core Architecture', summaryMarkdown: 'Architecture summary' },
       pacer: { bookId: 'aspnet-doc', currentChunkOrder: 4, totalChunks: 23 },
       scenario: { title: 'Middleware Pipeline Debugging' }
-    } as any
+    } as unknown as TodayFocusResponse
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: true,
           NuxtLink: true
         }
       }
@@ -242,12 +221,10 @@ describe('HomeBentoDashboard.vue', () => {
     focusStore.data = {
       documentChunk: { id: 'chunk-1', chapterTitle: 'ASP.NET Core Architecture', summaryMarkdown: 'Architecture summary' },
       scenario: { title: 'Middleware Pipeline Debugging' }
-    } as any
+    } as unknown as TodayFocusResponse
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: true,
           NuxtLink: true
         }
       }
@@ -256,22 +233,21 @@ describe('HomeBentoDashboard.vue', () => {
     const practiceBtn = wrapper.findAll('button').find(b => b.text().includes('dashboard.start_today_practice'))
     expect(practiceBtn).toBeDefined()
     await practiceBtn!.trigger('click')
-
-    expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/today')
+    expect((globalThis as any).navigateTo).toHaveBeenCalledWith({
+      path: '/today',
+      query: { tab: 'challenge' }
+    })
   })
 
   it('renders unified focus card with pending drill status badge', () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
       documentChunk: { id: 'chunk-1', chapterTitle: 'ASP.NET Core Architecture', summaryMarkdown: 'Architecture summary' },
-      drill: { status: 'Pending' }
-    } as any
+    } as unknown as TodayFocusResponse
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: true,
           NuxtLink: true
         }
       }
@@ -286,13 +262,11 @@ describe('HomeBentoDashboard.vue', () => {
     focusStore.data = {
       documentChunk: { id: 'chunk-1', chapterTitle: 'Concurrency & Channels', summaryMarkdown: 'Channels summary' },
       drill: { status: 'Submitted', isCorrect: true, score: 10 }
-    } as any
+    } as unknown as TodayFocusResponse
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: true,
           NuxtLink: true
         }
       }
@@ -304,21 +278,43 @@ describe('HomeBentoDashboard.vue', () => {
     const reviewBtn = wrapper.findAll('button').find(b => b.text().includes('dashboard.review_today_practice'))
     expect(reviewBtn).toBeDefined()
     await reviewBtn!.trigger('click')
+    expect((globalThis as any).navigateTo).toHaveBeenCalledWith({
+      path: '/today',
+      query: { tab: 'challenge' }
+    })
+  })
 
-    expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/today')
+  it('routes to /quiz when senior dilemma solve CTA is clicked', async () => {
+    const focusStore = useDailyFocusStore()
+    focusStore.data = {
+      documentChunk: { id: 'chunk-1', chapterTitle: 'Concurrency & Channels', summaryMarkdown: 'Channels summary' },
+      scenario: { title: 'High-Concurrency Bottleneck', situation: 'Thread pool starvation under load' }
+    } as unknown as TodayFocusResponse
+
+    const wrapper = mount(HomeBentoDashboard, {
+      global: {
+        stubs: {
+          NuxtLink: true
+        }
+      }
+    })
+
+    const dilemmaBtn = wrapper.findAll('button').find(b => b.text().includes('dashboard.solve_dilemma_cta'))
+    expect(dilemmaBtn).toBeDefined()
+    await dilemmaBtn!.trigger('click')
+
+    expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/quiz')
   })
   it('renders failed drill with needs review status badge when score is 0', () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
       documentChunk: { id: 'chunk-1', chapterTitle: 'Concurrency & Channels', summaryMarkdown: 'Channels summary' },
       drill: { status: 'Submitted', isCorrect: false, score: 0 }
-    } as any
+    } as unknown as TodayFocusResponse
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: true,
           NuxtLink: true
         }
       }
@@ -335,13 +331,11 @@ describe('HomeBentoDashboard.vue', () => {
       pacer: { bookId: 'b-1', bookTitle: 'Kafka Internals', currentChunkOrder: 2, totalChunks: 10 },
       scenario: { title: 'Consumer Rebalance Storm', situation: 'High consumer lag scenario' },
       drill: { status: 'Submitted', isCorrect: true, score: 10 }
-    } as any
+    } as unknown as TodayFocusResponse
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: true,
           NuxtLink: true
         }
       }
@@ -358,35 +352,55 @@ describe('HomeBentoDashboard.vue', () => {
     // Drill status in Card B
     expect(wrapper.text()).toContain('dashboard.status_completed: 10/10')
   })
-  it('renders Card B itinerary strip pills with theme-resilient contrast classes', () => {
+  it('renders Tier 2 split practice subgrid with daily drill and senior dilemma cards', () => {
     const focusStore = useDailyFocusStore()
     focusStore.data = {
-      scenario: { title: 'Async Replication Failover', situation: 'Leader election split brain' }
-    } as any
-
+      scenario: { title: 'Async Replication Failover', situation: 'Leader election split brain' },
+      drill: { status: 'Pending' }
+    } as unknown as TodayFocusResponse
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
-          ConcentricMetricCard: true,
-          DomainConstellationCard: true,
           NuxtLink: true
         }
       }
     })
 
-    const pills = wrapper.findAll('.grid.grid-cols-2 > div')
-    expect(pills.length).toBeGreaterThanOrEqual(2)
+    expect(wrapper.text()).toContain('dashboard.daily_drill_label')
+    expect(wrapper.text()).toContain('dashboard.senior_dilemma_label')
+    expect(wrapper.text()).toContain('Async Replication Failover')
+    expect(wrapper.text()).toContain('dashboard.solve_dilemma_cta')
+  })
 
-    for (const pill of pills) {
-      const cls = pill.attributes('class') || ''
-      expect(cls).toContain('dark:bg-white/[0.04]')
-      expect(cls).toContain('dark:border-white/[0.06]')
-      expect(cls).toContain('dark:text-slate-200')
-      expect(cls).toContain('bg-slate-100')
-      // Ensure fragile washed-out classes are eliminated
-      expect(cls).not.toContain('dark:bg-canvas-elevated/60')
-      expect(cls).not.toContain('bg-slate-100/80')
-      expect(cls).not.toContain('dark:text-slate-300')
-    }
+  it('renders 2x2 telemetry grid with 4 metrics in Knowledge Radar card', () => {
+    const graphStore = useKnowledgeGraphStore()
+    graphStore.rawData = {
+      nodes: [{ id: 'n1' }, { id: 'n2' }, { id: 'n3' }],
+      edges: [{ id: 'e1' }, { id: 'e2' }]
+    } as any
+
+    const reviewStore = useReviewStore()
+    reviewStore.deckStatistics = {
+      totalCards: 20,
+      masteredCount: 8
+    } as any
+    reviewStore.totalCardsDue = 5
+
+    const wrapper = mount(HomeBentoDashboard, {
+      global: {
+        stubs: {
+          NuxtLink: true
+        }
+      }
+    })
+
+    expect(wrapper.text()).toContain('dashboard.connected_nodes')
+    expect(wrapper.text()).toContain('dashboard.active_relations')
+    expect(wrapper.text()).toContain('dashboard.stat_cards_due')
+    expect(wrapper.text()).toContain('dashboard.stat_mastered_cards')
+    expect(wrapper.text()).toContain('3') // total nodes
+    expect(wrapper.text()).toContain('2') // total edges
+    expect(wrapper.text()).toContain('5') // due cards
+    expect(wrapper.text()).toContain('8') // mastered cards
   })
 })

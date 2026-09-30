@@ -63,31 +63,7 @@ function parseJwtExp(jwt: string): number | null {
 export function useApiClient() {
   const config = useRuntimeConfig()
 
-  function getBaseUrl(): string {
-    const configuredUrl = config.public.apiBaseUrl as string
-    // If a custom API URL is explicitly configured (e.g. in production: https://api.yourdomain.com), use it directly
-    if (configuredUrl && configuredUrl !== 'http://localhost:5000') {
-      return configuredUrl
-    }
-    // In browser environment
-    if (import.meta.client && typeof window !== 'undefined') {
-      // Local development on port 3000 -> Backend is on port 5000
-      if (window.location?.port === '3000') {
-        const protocol = window.location.protocol || 'http:'
-        const hostname = window.location.hostname
-        return `${protocol}//${hostname}:5000`
-      }
-      // In production behind Nginx reverse proxy (port 80 or 443) -> relative path
-      return ''
-    }
-    // Server-side inside Docker / SSR
-    if (process.env.API_INTERNAL_URL) {
-      return process.env.API_INTERNAL_URL
-    }
-    return configuredUrl || 'http://localhost:5000'
-  }
-
-  const baseUrl = getBaseUrl()
+  const baseUrl = process.env.API_INTERNAL_URL || (config?.public?.apiBaseUrl as string | undefined)?.trim() || ''
 
   function getAuthToken(): string | null {
     const tokenCookie = useCookie<string | null>('techdaily_token')
@@ -95,7 +71,10 @@ export function useApiClient() {
       return tokenCookie.value
     }
     if (import.meta.client && typeof window !== 'undefined') {
-      return localStorage.getItem('techdaily_token')
+      const local = localStorage.getItem('techdaily_token')
+      if (local) return local
+      const session = sessionStorage.getItem('techdaily_token')
+      if (session) return session
     }
     return null
   }
@@ -265,13 +244,16 @@ export function useApiClient() {
           throw new ApiError('Authentication service temporarily unavailable', 503, 'SERVICE_UNAVAILABLE')
         }
 
-        try {
-          const authStore = useAuthStore()
-          authStore.clearSession()
-        } catch {
-          // ignore if pinia is not active
+        // Only purge session if refresh was explicitly rejected by the server (401/403)
+        // or if there are truly no stored credentials in cookie, localStorage, or sessionStorage.
+        if (refreshError?.status === 401 || refreshError?.status === 403 || !getAuthToken()) {
+          try {
+            const authStore = useAuthStore()
+            authStore.clearSession()
+          } catch {
+            // ignore if pinia is not active
+          }
         }
-
         try {
           const toast = useToast()
           let message = 'Session expired. Please log in again.'

@@ -19,6 +19,7 @@ config.global.mocks = {
 // Global Nuxt mock composables for Vitest
 ;(globalThis as any).useApiError = useApiError
 ;(globalThis as any).useToast = useToast
+process.env.NUXT_PUBLIC_API_BASE_URL = process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'
 const mockRuntimeConfig = {
   public: {
     apiBaseUrl: 'http://localhost:5000',

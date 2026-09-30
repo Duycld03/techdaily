@@ -31,7 +31,7 @@ definePageMeta({
         const reloaded = sessionStorage.getItem('reader_isolated_reload');
         if (!reloaded) {
           sessionStorage.setItem('reader_isolated_reload', '1');
-          window.location.assign(to.fullPath);
+          window.location.replace(to.fullPath);
           return abortNavigation();
         }
         sessionStorage.removeItem('reader_isolated_reload');

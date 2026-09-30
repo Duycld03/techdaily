@@ -23,7 +23,7 @@ fi
 
 # Ensure frontend receives public runtime config
 export NUXT_PUBLIC_GOOGLE_CLIENT_ID="${NUXT_PUBLIC_GOOGLE_CLIENT_ID:-$GOOGLE_CLIENT_ID}"
-export NUXT_PUBLIC_API_BASE_URL="${NUXT_PUBLIC_API_BASE_URL:-http://localhost:5000}"
+export NUXT_PUBLIC_API_BASE_URL="${NUXT_PUBLIC_API_BASE_URL}"
 
 # Derive the backend Google Client ID from the canonical GOOGLE_CLIENT_ID (ClientSecret is native in .env)
 export Authentication__Google__ClientId="${Authentication__Google__ClientId:-$GOOGLE_CLIENT_ID}"

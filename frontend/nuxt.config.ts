@@ -1,3 +1,8 @@
+import { validateApiBaseUrl } from './config/validateEnv'
+
+const isPrepareOrTypecheck = process.argv.some(arg => arg.includes('prepare') || arg.includes('typecheck'))
+const apiBaseUrl = validateApiBaseUrl(process.env, isPrepareOrTypecheck)
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   future: {
@@ -78,7 +83,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:5000',
+      apiBaseUrl: apiBaseUrl ?? '',
       googleClientId: process.env.NUXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || ''
     }
   },

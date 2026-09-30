@@ -92,6 +92,8 @@
     "open_cosmos": "Open 3D Cosmos",
     "connected_nodes": "Connected Concepts",
     "active_relations": "Associative Relations",
+    "stat_cards_due": "Cards Due Today",
+    "stat_mastered_cards": "Mastered Cards",
     "view_bento": "Dashboard",
     "view_split": "Focus Studio",
     "stat_flashcards": "SM-2 Flashcards",
@@ -99,7 +101,13 @@
     "stat_learned_chunks": "Learned Slices",
     "stat_books": "Studied Documents",
     "knowledge_breakdown_title": "Knowledge Breakdown",
-    "scenario_challenge_badge": "Scenario Challenge"
+    "scenario_challenge_badge": "Scenario Challenge",
+    "start_focus_cta": "Start Daily Focus",
+    "daily_drill_label": "Daily Micro-Drill",
+    "senior_dilemma_label": "Senior Dilemma",
+    "solve_dilemma_cta": "Make Decision",
+    "questions_count": "{count} questions",
+    "read_minutes": "{min} min read"
   },
   "today": {
     "title": "Daily Practice",
@@ -541,6 +549,7 @@
     "progress_label": "Reading Progress",
     "completed_doc": "Completed Entire Document",
     "return_library": "Return to Library",
+    "back": "Back",
     "explain_with_gemini": "Explain with Gemini",
     "copy": "Copy",
     "quiz_chapter_btn": "Quiz This Chapter",

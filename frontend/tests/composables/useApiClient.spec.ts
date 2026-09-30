@@ -142,3 +142,51 @@ describe('useApiClient 401 Interceptor', () => {
     expect((globalThis as unknown as GlobalWithNavigateTo).navigateTo).not.toHaveBeenCalled()
   })
 })
+
+describe('useApiClient Base URL Resolution', () => {
+  it('prepends runtimeConfig.public.apiBaseUrl to requests when configured', async () => {
+    const originalRuntimeConfig = (globalThis as any).useRuntimeConfig
+    ;(globalThis as any).useRuntimeConfig = () => ({
+      public: { apiBaseUrl: 'https://api.techdaily.app' }
+    })
+
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      text: async () => JSON.stringify({ ok: true })
+    })
+    globalThis.fetch = fetchSpy
+
+    try {
+      const api = useApiClient()
+      await api.get('/api/v1/health')
+      expect(fetchSpy).toHaveBeenCalledWith('https://api.techdaily.app/api/v1/health', expect.any(Object))
+    } finally {
+      ;(globalThis as any).useRuntimeConfig = originalRuntimeConfig
+    }
+  })
+
+  it('uses relative path when runtimeConfig.public.apiBaseUrl is empty in production', async () => {
+    const originalRuntimeConfig = (globalThis as any).useRuntimeConfig
+    ;(globalThis as any).useRuntimeConfig = () => ({
+      public: { apiBaseUrl: '' }
+    })
+
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      text: async () => JSON.stringify({ ok: true })
+    })
+    globalThis.fetch = fetchSpy
+
+    try {
+      const api = useApiClient()
+      await api.get('/api/v1/health')
+      expect(fetchSpy).toHaveBeenCalledWith('/api/v1/health', expect.any(Object))
+    } finally {
+      ;(globalThis as any).useRuntimeConfig = originalRuntimeConfig
+    }
+  })
+})

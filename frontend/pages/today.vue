@@ -34,6 +34,17 @@ const bookMenuRef = ref<HTMLElement | null>(null);
 const isOutlineOpen = ref(false);
 const isChallengeDockOpen = ref(true);
 
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (tab === 'challenge') {
+      activeMobileTab.value = 'challenge';
+      isChallengeDockOpen.value = true;
+    }
+  },
+  { immediate: true }
+);
+
 const chunks = computed(() => libraryStore.selectedBook?.chunks || []);
 
 onClickOutside(bookMenuRef, () => {

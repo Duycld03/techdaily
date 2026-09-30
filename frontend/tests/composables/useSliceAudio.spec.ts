@@ -535,6 +535,13 @@ describe('useSliceAudio', () => {
       })
     })
     globalThis.fetch = fetchSpy
+    const originalRuntimeConfig = (globalThis as any).useRuntimeConfig
+    ;(globalThis as any).useRuntimeConfig = () => ({
+      public: {
+        apiBaseUrl: '',
+        googleClientId: 'mock-google-client-id'
+      }
+    })
 
     const originalLocation = window.location
     try {
@@ -558,6 +565,7 @@ describe('useSliceAudio', () => {
       expect(calledUrl).toBe('/api/v1/library/audio/quota')
       expect(calledUrl).not.toContain('localhost:5000')
     } finally {
+      ;(globalThis as any).useRuntimeConfig = originalRuntimeConfig
       globalThis.fetch = originalFetch
       Object.defineProperty(window, 'location', {
         value: originalLocation,
