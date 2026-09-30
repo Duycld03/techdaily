@@ -1129,5 +1129,49 @@
       "showing_range": "Showing {start}–{end} of {total}",
       "ellipsis": "More pages"
     }
+  },
+  "showcase": {
+    "title": "Design System",
+    "subtitle": "UI primitives, assessment micro-components, retention analytics, and canonical system layout archetypes.",
+    "version_badge": "v1.2",
+    "cockpit_density": "Engineering Cockpit · Density 8/10",
+    "anchors": {
+      "primitives": "Primitives",
+      "pagination": "Pagination",
+      "sm2": "SM-2 Assessment",
+      "retention": "Retention Analytics",
+      "archetypes": "Layout Archetypes",
+      "feedback": "Feedback & States",
+      "icons": "Iconography"
+    },
+    "sections": {
+      "primitives_title": "Base UI Primitives",
+      "primitives_sub": "Buttons, inputs, accessible selects, timepickers, and badges.",
+      "pagination_title": "Universal Pagination (BasePagination)",
+      "pagination_sub": "1-based reactive pagination bar with page jumps and summary counters.",
+      "sm2_title": "Spaced Repetition & Recall Assessment",
+      "sm2_sub": "Interactive SM-2 grading controls and standardized flashcard inventory cards.",
+      "retention_title": "Memory Health & Retention Analytics Suite",
+      "retention_sub": "Mastery gauge, 7-day forecast, at-risk/leech alert, source breakdown, and ease factor tiers.",
+      "modal_title": "Production Modal Shell",
+      "modal_sub": "Fixed header + independently scrolling body + sticky footer actions.",
+      "code_title": "Code Snippet Blocks",
+      "code_sub": "Syntax highlighting with copy feedback and horizontal scrolling.",
+      "skeletons_title": "Skeleton Loading States",
+      "skeletons_sub": "Pulse placeholders for card, quiz, and metric surfaces.",
+      "empty_title": "Empty & Error States",
+      "empty_sub": "Compact containers with icon, guidance, and primary recovery trigger.",
+      "reader_title": "Reader Selection Toolbar",
+      "reader_sub": "Contextual floating pill toolbar for text explain and translation.",
+      "archetypes_title": "System Layout Archetypes",
+      "archetypes_sub": "Canonical full-page templates: Studio, MasterDetail, Board, and Bento Dashboard.",
+      "icons_title": "Engineering Iconography Kit",
+      "icons_sub": "Standardized 24-icon suite for technical learning and telemetry."
+    },
+    "interactive": {
+      "selected_page": "Active Page: {page} of {total}",
+      "graded_toast": "Recall graded: Score {score} ({label})",
+      "click_hint": "Click buttons to observe reactive events"
+    }
   }
 }

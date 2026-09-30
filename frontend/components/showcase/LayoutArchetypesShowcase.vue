@@ -1,25 +1,26 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import {
-  Layers, SlidersHorizontal, LayoutGrid,
+  Layers, SlidersHorizontal, LayoutGrid, LayoutDashboard,
   RotateCcw, Clock, TrendingUp, Repeat, Keyboard,
   SettingsIcon, Bell, ShieldCheck,
   Search, Plus, List, Grid2x2, ChevronLeft, ChevronRight,
-  BookOpen, Hash
+  BookOpen, Hash, Flame, Target
 } from 'lucide-vue-next'
 import StudioLayout from '~/components/layout/StudioLayout.vue'
 import MasterDetailLayout from '~/components/layout/MasterDetailLayout.vue'
 import BoardLayout from '~/components/layout/BoardLayout.vue'
+import BentoDashboardLayout from '~/components/layout/BentoDashboardLayout.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
 
-type ArchetypeKey = 'studio' | 'master-detail' | 'board'
+type ArchetypeKey = 'studio' | 'master-detail' | 'board' | 'bento-dashboard'
 
 const archetypes = [
   { key: 'studio', label: 'Flashcards Studio', icon: Layers },
   { key: 'master-detail', label: 'Settings Master-Detail', icon: SlidersHorizontal },
-  { key: 'board', label: 'Notes Board', icon: LayoutGrid }
+  { key: 'board', label: 'Notes Board', icon: LayoutGrid },
+  { key: 'bento-dashboard', label: 'Bento Dashboard', icon: LayoutDashboard }
 ] as const
-
 const active = ref<ArchetypeKey>('studio')
 
 /* ---------- Demo 1: Flashcards Studio ---------- */
@@ -350,7 +351,7 @@ const tagColor: Record<string, string> = {
     </MasterDetailLayout>
 
     <!-- ============ Demo 3: Notes Board ============ -->
-    <BoardLayout v-else>
+    <BoardLayout v-else-if="active === 'board'">
       <template #header>
         <div class="relative w-full max-w-xs">
           <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" :stroke-width="2" />
@@ -448,5 +449,80 @@ const tagColor: Record<string, string> = {
         </div>
       </template>
     </BoardLayout>
+
+    <!-- ============ Demo 4: Bento Dashboard ============ -->
+    <BentoDashboardLayout v-else-if="active === 'bento-dashboard'">
+      <template #header>
+        <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2">
+              <span class="rounded-full bg-brand-500/15 px-2.5 py-0.5 text-xs font-semibold text-brand-600 dark:text-brand-300">
+                Executive Cockpit
+              </span>
+              <span class="text-xs text-slate-400 dark:text-slate-500">2:1 Asymmetric Ratio</span>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">Senior Architecture &amp; System Design Practice</h3>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Orientation banner spanning full working width with synchronized child grids.</p>
+          </div>
+          <button type="button" class="h-9 px-4 rounded-xl bg-brand-500 text-white font-semibold text-xs sm:text-sm shadow-sm hover:bg-brand-600 transition-colors">
+            Start Daily Focus
+          </button>
+        </div>
+      </template>
+
+      <template #action-stage>
+        <div class="glass-card p-5 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">Primary Action Stage (2 Cols)</span>
+            <span class="text-xs text-slate-400">Interactive Focus</span>
+          </div>
+          <h4 class="text-base font-bold text-slate-900 dark:text-white">Distributed Transactions &amp; Two-Phase Commit (2PC)</h4>
+          <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+            Compare 2PC coordinator failure modes with Sagas and Outbox patterns for distributed eventual consistency.
+          </p>
+          <div class="flex items-center gap-2 pt-2">
+            <span class="rounded-md bg-slate-100 dark:bg-canvas-subtle px-2 py-1 text-xs font-medium text-slate-600 dark:text-slate-300">Distributed Systems</span>
+            <span class="rounded-md bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">High Priority</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div class="glass-card p-4 rounded-xl space-y-2">
+            <span class="text-xs font-bold text-slate-500">Micro-Drill 01</span>
+            <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">Raft Consensus Quorum Calculations</p>
+            <span class="text-[11px] text-slate-400">5 questions • 4 min</span>
+          </div>
+          <div class="glass-card p-4 rounded-xl space-y-2">
+            <span class="text-xs font-bold text-slate-500">Micro-Drill 02</span>
+            <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">PostgreSQL MVCC &amp; Isolation Levels</p>
+            <span class="text-[11px] text-slate-400">8 questions • 6 min</span>
+          </div>
+        </div>
+      </template>
+
+      <template #telemetry-dock>
+        <div class="glass-card p-4 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Telemetry Dock (1 Col)</span>
+            <Flame class="w-4 h-4 text-amber-500" />
+          </div>
+          <div class="space-y-1">
+            <span class="text-2xl font-black text-slate-900 dark:text-white tabular-nums">14 Days</span>
+            <p class="text-xs text-slate-500">Consecutive Practice Streak</p>
+          </div>
+          <div class="h-2 w-full rounded-full bg-slate-100 dark:bg-white/[0.08] overflow-hidden">
+            <div class="h-full bg-amber-500 rounded-full w-4/5" />
+          </div>
+        </div>
+
+        <div class="glass-card p-4 rounded-2xl space-y-3">
+          <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Knowledge Constellation</span>
+          <p class="text-xs text-slate-500">28 active technical concept nodes mastered this week.</p>
+          <div class="rounded-lg border border-slate-200/60 dark:border-white/[0.06] bg-slate-50/50 dark:bg-canvas-subtle p-3 text-center text-xs text-brand-600 dark:text-brand-400 font-medium">
+            Graph Telemetry Ready →
+          </div>
+        </div>
+      </template>
+    </BentoDashboardLayout>
   </div>
 </template>

@@ -1129,5 +1129,49 @@
       "showing_range": "Hiển thị {start}–{end} trong tổng số {total}",
       "ellipsis": "Các trang tiếp theo"
     }
+  },
+  "showcase": {
+    "title": "Hệ Thống Thiết Kế",
+    "subtitle": "Thư viện thành phần UI, bộ đánh giá kiến thức, phân tích ghi nhớ và các archetype bố cục chuẩn.",
+    "version_badge": "v1.2",
+    "cockpit_density": "Khoang Điều Khiển Kỹ Sư · Mật Độ 8/10",
+    "anchors": {
+      "primitives": "Nền tảng",
+      "pagination": "Phân trang",
+      "sm2": "Đánh giá SM-2",
+      "retention": "Thống kê Ghi nhớ",
+      "archetypes": "Bố cục Chuẩn",
+      "feedback": "Phản hồi & Trạng thái",
+      "icons": "Biểu tượng"
+    },
+    "sections": {
+      "primitives_title": "Thành Phần Giao Diện Nền Tảng",
+      "primitives_sub": "Nút bấm, ô nhập liệu, dropdown chọn lọc, bộ chọn giờ và huy hiệu trạng thái.",
+      "pagination_title": "Thanh Phân Trang Toàn Sàn (BasePagination)",
+      "pagination_sub": "Thanh điều hướng 1-based phản ứng tức thì với nút nhảy trang và thống kê số lượng.",
+      "sm2_title": "Đánh Giá & Thuật Toán Lặp Lại Ngắt Quãng SM-2",
+      "sm2_sub": "Nút chấm điểm recall tương tác trực tiếp và thẻ ôn tập flashcard chuẩn hệ thống.",
+      "retention_title": "Bộ Chỉ Số Sức Khỏe Trí Nhớ & Độ Bền Kiến Thức",
+      "retention_sub": "Đo độ thành thạo, dự báo 7 ngày, cảnh báo hay quên, hiệu quả theo nguồn và phân bổ độ khó.",
+      "modal_title": "Khung Hộp Thoại Modal Chuẩn Sản Phẩm",
+      "modal_sub": "Tiêu đề cố định + thân cuộn độc lập + thanh thao tác dính đáy màn hình.",
+      "code_title": "Khối Đoạn Mã Nguồn (Code Snippet)",
+      "code_sub": "Làm nổi bật cú pháp với nút sao chép nhanh và thanh cuộn ngang.",
+      "skeletons_title": "Trạng Thái Chờ Tải (Skeleton Shimmer)",
+      "skeletons_sub": "Khung nhấp nháy cho thẻ tài liệu, trắc nghiệm và chỉ số thống kê.",
+      "empty_title": "Trạng Thái Trống & Báo Lỗi",
+      "empty_sub": "Khung nhỏ gọn gồm biểu tượng, thông điệp hướng dẫn và nút hành động khôi phục.",
+      "reader_title": "Thanh Công Cụ Khi Chọn Văn Bản",
+      "reader_sub": "Thanh pill nổi ngữ cảnh hỗ trợ dịch nghĩa và giải thích khái niệm.",
+      "archetypes_title": "Các Bố Cục Chuẩn Mực Hệ Thống (Layout Archetypes)",
+      "archetypes_sub": "Bốn khung giao diện chuẩn: Studio, MasterDetail, Board và Bento Dashboard.",
+      "icons_title": "Bộ Biểu Tượng Kỹ Thuật Chuẩn",
+      "icons_sub": "Bộ 24 biểu tượng nhất quán phục vụ học tập kỹ thuật và đo lường."
+    },
+    "interactive": {
+      "selected_page": "Trang hiện tại: {page} / {total}",
+      "graded_toast": "Đã chấm điểm ôn tập: Điểm {score} ({label})",
+      "click_hint": "Bấm vào các nút để kiểm tra phản hồi sự kiện"
+    }
   }
 }
