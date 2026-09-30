@@ -109,7 +109,7 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
     currentDueCards = [...mockDueCards]
   })
 
-  it('renders top tab switcher with both Review Session and Deck Management tabs', async () => {
+  it('renders top tab switcher with Review Session, Deck Management, and Analytics tabs', async () => {
     const wrapper = mount(ReviewPage, {
       global: {
         stubs: {
@@ -124,9 +124,10 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
 
     expect(wrapper.text()).toContain('review.tab_session')
     expect(wrapper.text()).toContain('review.tab_management')
+    expect(wrapper.text()).toContain('review.tab_stats')
   })
 
-  it('switches between Review Session and Deck Management views', async () => {
+  it('switches between Review Session, Deck Management, and Analytics views', async () => {
     const wrapper = mount(ReviewPage, {
       global: {
         stubs: {
@@ -148,6 +149,8 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
     // Mutual exclusivity invariant: completion hero card must NOT render while cards are due
     expect(wrapper.text()).not.toContain('review.no_cards')
     expect(wrapper.text()).not.toContain('review.no_cards_desc')
+
+    // Switch to Tab 2: Deck Management
     const buttons = wrapper.findAll('button')
     const deckTabBtn = buttons.find((b) => b.text().includes('review.tab_management'))
     expect(deckTabBtn).toBeDefined()
@@ -155,11 +158,26 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
 
     await flushPromises()
 
-    // Tab 2 Bento content rendered
+    // Tab 2: Flashcards render immediately at the top without the 6 bento stat cards
+    expect(wrapper.text()).toContain('Explain Raft leader election invariants.')
+    expect(wrapper.text()).not.toContain('review.cards_due')
+    expect(wrapper.text()).not.toContain('review.mastery_rate')
+    expect(wrapper.text()).not.toContain('review.forecast_title')
+
+    // Switch to Tab 3: Analytics / Stats
+    const statsTabBtn = wrapper.findAll('button').find((b) => b.text().includes('review.tab_stats'))
+    expect(statsTabBtn).toBeDefined()
+    await statsTabBtn!.trigger('click')
+
+    await flushPromises()
+
+    // Tab 3: Analytics cards render
     expect(wrapper.text()).toContain('review.cards_due')
     expect(wrapper.text()).toContain('review.mastery_rate')
     expect(wrapper.text()).toContain('review.forecast_title')
-    expect(wrapper.text()).toContain('Explain Raft leader election invariants.')
+    expect(wrapper.text()).toContain('review.atrisk_title')
+    expect(wrapper.text()).toContain('review.source_title')
+    expect(wrapper.text()).toContain('review.ease_dist_title')
   })
 
   it('filters deck cards by search keyword and status chip', async () => {
@@ -225,9 +243,9 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
     await browseBtn!.trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('review.cards_due')
-    expect(wrapper.text()).toContain('review.mastery_rate')
-    expect(wrapper.text()).toContain('review.forecast_title')
     expect(wrapper.text()).toContain('Explain Raft leader election invariants.')
+    expect(wrapper.text()).not.toContain('review.cards_due')
+    expect(wrapper.text()).not.toContain('review.mastery_rate')
+    expect(wrapper.text()).not.toContain('review.forecast_title')
   })
 })

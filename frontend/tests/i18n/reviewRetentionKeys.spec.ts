@@ -25,7 +25,8 @@ const RETENTION_KEYS = [
   'ease_struggling',
   'ease_developing',
   'ease_comfortable',
-  'ease_dist_empty'
+  'ease_dist_empty',
+  'tab_stats'
 ]
 // Static build-time locale bundles; type the review namespace as an unknown
 // map so it can be indexed by the dynamic keys above and narrowed per value.
@@ -45,5 +46,15 @@ describe('review retention analytics i18n keys', () => {
         expect(value.trim().length, `${locale}.review.${key}`).toBeGreaterThan(0)
       }
     }
+  })
+
+  it('disambiguates retention terminology in Vietnamese locale', () => {
+    expect(vi.review.atrisk_leech).toBe('Hay quên')
+    expect(vi.review.ease_struggling).toBe('Chưa vững')
+    expect(vi.review.tab_stats).toBe('Thống kê')
+  })
+
+  it('defines tab_stats in English locale', () => {
+    expect(en.review.tab_stats).toBe('Analytics')
   })
 })

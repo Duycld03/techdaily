@@ -26,7 +26,8 @@ import {
   Keyboard,
   Flame,
   Activity,
-  Key
+  Key,
+  BarChart3
 } from 'lucide-vue-next'
 import confetti from 'canvas-confetti'
 import StudioLayout from '~/components/layout/StudioLayout.vue'
@@ -58,7 +59,7 @@ function renderMarkdown(raw: string | undefined | null): string {
 }
 
 // Navigation Tab State
-const activeTab = ref<'session' | 'management'>('session')
+const activeTab = ref<'session' | 'management' | 'stats'>('session')
 
 // Tab 1: Review Session Logic
 const initialSessionTotal = ref(0)
@@ -255,12 +256,14 @@ watch(activeTab, (tab) => {
   const query = { ...route.query }
   if (tab === 'management') {
     query.tab = 'management'
+  } else if (tab === 'stats') {
+    query.tab = 'stats'
   } else {
     delete query.tab
   }
   router.replace({ query })
 
-  if (tab === 'management') {
+  if (tab === 'management' || tab === 'stats') {
     reviewStore.fetchAnalytics()
   }
 })
@@ -433,6 +436,8 @@ onMounted(() => {
 
   if (route.query.tab === 'management') {
     activeTab.value = 'management'
+  } else if (route.query.tab === 'stats') {
+    activeTab.value = 'stats'
   }
   const queryPage = route.query.page ? parseInt(route.query.page as string, 10) : 1
   const initialPage = isNaN(queryPage) || queryPage < 1 ? 1 : queryPage
@@ -445,51 +450,84 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
 </script>
 
 <template>
-  <div class="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] p-4 sm:p-6 md:p-8 flex flex-col items-center bg-slate-50 dark:bg-canvas transition-colors duration-200">
-    <!-- Top-Level Tab Switcher -->
-    <div class="w-full max-w-5xl flex items-center justify-between border-b border-slate-200 dark:border-white/[0.08] pb-3 mb-4 sm:mb-6">
-      <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shrink-0 overflow-x-auto">
-        <!-- Tab 1: Review Session -->
-        <button
-          @click="activeTab = 'session'"
-          :class="[
-            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-colors border inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
-            activeTab === 'session'
-              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-          ]"
-        >
-          <Layers class="w-4 h-4" />
-          <span>{{ $t('review.tab_session') }}</span>
-          <span
-            v-if="reviewStore.cards.length > 0"
-            class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/20 ml-0.5"
-          >
-            {{ reviewStore.cards.length }}
-          </span>
-        </button>
+  <div class="py-4 sm:py-6 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-canvas min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] transition-colors duration-200">
+    <div class="max-w-7xl mx-auto space-y-6">
+      <!-- Top-Level Page Header Section (Matching /quiz standard) -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200 dark:border-white/[0.08] pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
+            <Layers class="w-5 h-5 sm:w-6 sm:h-6" :stroke-width="1.5" />
+          </div>
+          <div class="space-y-0.5">
+            <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+              {{ $t('review.title') }}
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+              {{ $t('review.subtitle') }}
+            </p>
+          </div>
+        </div>
 
-        <!-- Tab 2: Deck Management -->
-        <button
-          @click="activeTab = 'management'"
-          :class="[
-            'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-colors border inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
-            activeTab === 'management'
-              ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-          ]"
-        >
-          <Library class="w-4 h-4" />
-          <span>{{ $t('review.tab_management') }}</span>
-          <span
-            v-if="reviewStore.deckStatistics.totalCards > 0"
-            class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/60 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 ml-0.5 border border-slate-300/40 dark:border-white/[0.08]"
+        <!-- Tab Buttons Switcher -->
+        <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-2xl shrink-0 overflow-x-auto">
+          <!-- Tab 1: Review Session -->
+          <button
+            data-testid="session-tab-btn"
+            @click="activeTab = 'session'"
+            :class="[
+              'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-colors border inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
+              activeTab === 'session'
+                ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+            ]"
           >
-            {{ reviewStore.deckStatistics.totalCards }}
-          </span>
-        </button>
+            <Layers class="w-4 h-4" />
+            <span>{{ $t('review.tab_session') }}</span>
+            <span
+              v-if="reviewStore.cards.length > 0"
+              class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/20 ml-0.5"
+            >
+              {{ reviewStore.cards.length }}
+            </span>
+          </button>
+
+          <!-- Tab 2: Deck Management -->
+          <button
+            data-testid="management-tab-btn"
+            @click="activeTab = 'management'"
+            :class="[
+              'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-colors border inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
+              activeTab === 'management'
+                ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+            ]"
+          >
+            <Library class="w-4 h-4" />
+            <span>{{ $t('review.tab_management') }}</span>
+            <span
+              v-if="reviewStore.deckStatistics.totalCards > 0"
+              class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/60 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 ml-0.5 border border-slate-300/40 dark:border-white/[0.08]"
+            >
+              {{ reviewStore.deckStatistics.totalCards }}
+            </span>
+          </button>
+
+          <!-- Tab 3: Stats -->
+          <button
+            data-testid="stats-tab-btn"
+            @click="activeTab = 'stats'"
+            :class="[
+              'px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-colors border inline-flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer',
+              activeTab === 'stats'
+                ? 'bg-white dark:bg-white/[0.08] text-brand-600 dark:text-white font-bold shadow-sm border-transparent dark:border-white/[0.06]'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+            ]"
+          >
+            <BarChart3 class="w-4 h-4" />
+            <span>{{ $t('review.tab_stats') }}</span>
+          </button>
+        </div>
       </div>
-    </div>
 
     <!-- ========================================================================= -->
     <!-- TAB 1: REVIEW SESSION                                                     -->
@@ -675,38 +713,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
     <!-- ========================================================================= -->
     <!-- TAB 2: DECK MANAGEMENT                                                    -->
     <!-- ========================================================================= -->
-    <div v-else-if="activeTab === 'management'" class="w-full max-w-7xl mx-auto space-y-5">
-      <!-- 1. Header: Bento Overview (3 Cards) -->
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
-            <FlashcardHeroCard
-              :due-count="reviewStore.totalCardsDue"
-              @start-review="activeTab = 'session'"
-            />
-            <MasteryGaugeCard
-              :mastered-count="reviewStore.deckStatistics.masteredCount"
-              :total-count="reviewStore.deckStatistics.totalCards"
-            />
-            <ReviewForecastChart
-              :cards="reviewStore.deckCards.length > 0 ? reviewStore.deckCards : reviewStore.cards"
-            />
-          </div>
-
-      <!-- 1b. Retention Analytics (At-Risk, Source-Channel, Ease-Factor Distribution) -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
-        <AtRiskLeechCard
-          :overdue-count="reviewStore.analytics?.overdueCount ?? 0"
-          :leech-count="reviewStore.analytics?.leechCount ?? 0"
-          :at-risk-count="reviewStore.analytics?.atRiskCount ?? 0"
-          @review="onReviewAtRisk"
-        />
-        <SourceChannelRetentionCard :sources="reviewStore.analytics?.sourceBreakdown ?? []" />
-        <EaseFactorDistributionCard
-          :struggling="reviewStore.analytics?.strugglingCount ?? 0"
-          :developing="reviewStore.analytics?.developingCount ?? 0"
-          :comfortable="reviewStore.analytics?.comfortableCount ?? 0"
-        />
-      </div>
-
+    <div v-else-if="activeTab === 'management'" class="w-full space-y-5">
       <!-- 2. Filters & Search Bar (Trực tiếp trên nền Canvas) -->
       <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
         <!-- Quick Filter Chips -->
@@ -831,6 +838,43 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
             />
           </div>
       </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: ANALYTICS & STATS                                                  -->
+    <!-- ========================================================================= -->
+    <div v-else-if="activeTab === 'stats'" class="w-full space-y-6">
+      <!-- 1. Header: Bento Overview (3 Cards) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">
+        <FlashcardHeroCard
+          :due-count="reviewStore.totalCardsDue"
+          @start-review="activeTab = 'session'"
+        />
+        <MasteryGaugeCard
+          :mastered-count="reviewStore.deckStatistics.masteredCount"
+          :total-count="reviewStore.deckStatistics.totalCards"
+        />
+        <ReviewForecastChart
+          :cards="reviewStore.deckCards.length > 0 ? reviewStore.deckCards : reviewStore.cards"
+        />
+      </div>
+
+      <!-- 2. Retention Analytics (At-Risk, Source-Channel, Ease-Factor Distribution) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
+        <AtRiskLeechCard
+          :overdue-count="reviewStore.analytics?.overdueCount ?? 0"
+          :leech-count="reviewStore.analytics?.leechCount ?? 0"
+          :at-risk-count="reviewStore.analytics?.atRiskCount ?? 0"
+          @review="onReviewAtRisk"
+        />
+        <SourceChannelRetentionCard :sources="reviewStore.analytics?.sourceBreakdown ?? []" />
+        <EaseFactorDistributionCard
+          :struggling="reviewStore.analytics?.strugglingCount ?? 0"
+          :developing="reviewStore.analytics?.developingCount ?? 0"
+          :comfortable="reviewStore.analytics?.comfortableCount ?? 0"
+        />
+      </div>
+    </div>
+    </div>
     <!-- ========================================================================= -->
     <!-- MODALS (Teleported to Body)                                               -->
     <!-- ========================================================================= -->

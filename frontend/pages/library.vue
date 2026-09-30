@@ -586,29 +586,29 @@ async function confirmDeleteBook() {
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
             <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
-                <BookOpen class="w-5 h-5" :stroke-width="1.5" />
+              <div class="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
+                <BookOpen class="w-5 h-5 sm:w-6 sm:h-6" :stroke-width="1.5" />
               </div>
               <div>
-                <h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                   <span>{{ $t('library.title') }}</span>
                 </h1>
-                <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
                   {{ $t('library.subtitle') }}
                 </p>
               </div>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <!-- Search Input -->
-              <div class="relative w-full sm:w-72 shrink-0">
+              <div class="relative flex-1 sm:w-72 sm:flex-initial min-w-0">
                 <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
                 <input
                   v-model="searchQuery"
                   @keyup.enter="handleSearch"
                   type="text"
                   :placeholder="$t('library.search_placeholder')"
-                  class="w-full pl-9 pr-8 py-2 bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] rounded-xl text-xs sm:text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
+                  class="h-10 w-full pl-9 pr-8 text-xs sm:text-sm rounded-xl bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
                 />
                 <button
                   v-if="searchQuery"
@@ -622,7 +622,7 @@ async function confirmDeleteBook() {
               <!-- Import Document Button -->
               <button
                 @click="isImportModalOpen = true"
-                class="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm transition-all shadow-md shadow-brand-500/20 active:scale-[0.98] whitespace-nowrap shrink-0 cursor-pointer"
+                class="h-10 flex items-center gap-2 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm transition-all shadow-md shadow-brand-500/20 active:scale-[0.98] whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <Plus class="w-4 h-4" :stroke-width="2" />
                 <span>{{ $t('library.import_btn') }}</span>

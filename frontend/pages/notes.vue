@@ -331,76 +331,75 @@ async function confirmDeleteHighlight() {
       <BoardLayout flat class="w-full">
         <!-- Header -->
         <template #header>
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
-              <Highlighter class="w-4 h-4" :stroke-width="1.5" />
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
+                <Highlighter class="w-5 h-5 sm:w-6 sm:h-6" :stroke-width="1.5" />
+              </div>
+              <div>
+                <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>{{ $t('notes.title') }}</span>
+                </h1>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
+                  {{ $t('notes.subtitle') }}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                {{ $t('notes.title') }}
-              </h1>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                {{ $t('notes.subtitle') }}
-              </p>
+
+            <!-- Search Input -->
+            <div v-if="notesStore.highlights.length > 0" class="relative w-full sm:w-72 shrink-0">
+              <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
+              <input
+                v-model="highlightSearchQuery"
+                type="text"
+                class="h-10 w-full pl-9 pr-8 text-xs sm:text-sm rounded-xl bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
+                :placeholder="$t('notes.search_placeholder')"
+              />
+              <button
+                v-if="highlightSearchQuery"
+                @click="highlightSearchQuery = ''"
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
+              >
+                <X class="w-3.5 h-3.5" :stroke-width="1.5" />
+              </button>
             </div>
           </div>
         </template>
 
         <!-- Filters Bar -->
         <template #filters>
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
-            <!-- Search Input -->
-            <div v-if="notesStore.highlights.length > 0" class="relative max-w-md w-full">
-              <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-              <input
-                v-model="highlightSearchQuery"
-                type="text"
-                class="h-9 w-full pl-9 pr-8 text-xs sm:text-sm rounded-lg bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brand-500 transition-all shadow-sm"
-                :placeholder="$t('notes.search_placeholder')"
-              />
-              <button
-                v-if="highlightSearchQuery"
-                @click="highlightSearchQuery = ''"
-                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full"
-              >
-                <X class="w-3.5 h-3.5" :stroke-width="1.5" />
-              </button>
-            </div>
+          <div v-if="notesStore.highlights.length > 0" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 w-full">
+            <button
+              @click="selectTag(null)"
+              :class="[
+                'px-2.5 py-1 rounded-full text-xs font-semibold transition-colors duration-150 whitespace-nowrap shrink-0 border inline-flex items-center gap-1 cursor-pointer',
+                selectedTag === null
+                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
+              ]"
+            >
+              <span>{{ $t('notes.tag_all') }}</span>
+              <span :class="selectedTag === null ? 'text-white/80' : 'text-slate-400 dark:text-slate-500'">
+                ({{ notesStore.totalAllCount || notesStore.totalCount || notesStore.highlights.length }})
+              </span>
+            </button>
 
-            <!-- Tag Chips -->
-            <div v-if="notesStore.highlights.length > 0" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              <button
-                @click="selectTag(null)"
-                :class="[
-                  'px-2.5 py-1 rounded-full text-xs font-semibold transition-colors duration-150 whitespace-nowrap shrink-0 border inline-flex items-center gap-1 cursor-pointer',
-                  selectedTag === null
-                    ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                    : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
-                ]"
-              >
-                <span>{{ $t('notes.tag_all') }}</span>
-                <span :class="selectedTag === null ? 'text-white/80' : 'text-slate-400 dark:text-slate-500'">
-                  ({{ notesStore.totalAllCount || notesStore.totalCount || notesStore.highlights.length }})
-                </span>
-              </button>
-
-              <button
-                v-for="item in tagCounts"
-                :key="item.tag"
-                @click="selectTag(item.tag)"
-                :class="[
-                  'px-2.5 py-1 rounded-full text-xs font-semibold transition-colors duration-150 whitespace-nowrap shrink-0 border inline-flex items-center gap-1 cursor-pointer',
-                  selectedTag === item.tag
-                    ? 'bg-brand-600 text-white border-transparent shadow-sm'
-                    : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
-                ]"
-              >
-                <span>#{{ item.tag }}</span>
-                <span :class="selectedTag === item.tag ? 'text-white/80' : 'text-slate-400 dark:text-slate-500'">
-                  ({{ item.count }})
-                </span>
-              </button>
-            </div>
+            <button
+              v-for="item in tagCounts"
+              :key="item.tag"
+              @click="selectTag(item.tag)"
+              :class="[
+                'px-2.5 py-1 rounded-full text-xs font-semibold transition-colors duration-150 whitespace-nowrap shrink-0 border inline-flex items-center gap-1 cursor-pointer',
+                selectedTag === item.tag
+                  ? 'bg-brand-600 text-white border-transparent shadow-sm'
+                  : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
+              ]"
+            >
+              <span>#{{ item.tag }}</span>
+              <span :class="selectedTag === item.tag ? 'text-white/80' : 'text-slate-400 dark:text-slate-500'">
+                ({{ item.count }})
+              </span>
+            </button>
           </div>
         </template>
 

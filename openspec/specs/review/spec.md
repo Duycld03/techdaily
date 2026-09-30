@@ -6,24 +6,30 @@ Provides a comprehensive spaced repetition review and flashcard deck management 
 ## Requirements
 
 ### Requirement: Spaced Repetition Dual-Mode Navigation
-The `/review` page SHALL provide a top-level dual-mode tab switcher allowing software engineers to toggle seamlessly between the active review session ("Review Session" / "Ôn tập hôm nay") and the complete flashcard deck library ("Deck Management" / "Kho thẻ của tôi").
+The `/review` page SHALL provide a top-level standardized header banner and a three-tab navigation architecture matching the platform layout archetype:
 
-The active review session view and the celebratory completion state SHALL be strictly mutually exclusive:
-1. **Active Card State**: While due flashcards exist in the queue (`currentCard !== null` and `reviewStore.cards.length > 0`), the `/review` page SHALL exclusively render the active flashcard review interface (`FlashcardDeck.vue`). The celebratory completion hero card SHALL NOT be rendered or peeking into the DOM.
-2. **Completion State**: When the active review session is complete or when zero cards are currently due for review (`activeTab === 'session' && (!currentCard || reviewStore.cards.length === 0)`), the `/review` page SHALL render only the centered, celebratory completion hero card with generous breathing room and balanced visual proportions:
-   - **Celebratory Hero Banner**: Features a triumphant completion icon (`CheckCircle`), celebratory heading (`review.no_cards`), encouraging retention copy (`review.no_cards_desc`), and triggers a celebratory confetti burst upon completing the final due card of the session. The completion icon badge container SHALL strictly render with system primary brand tokens (`bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20`), completely replacing disparate emerald green styling.
-   - **Generous Proportions & Padding**: The completion hero card container SHALL enforce an expanded maximum width bound of `max-w-xl` (36rem / 576px) and generous multi-tier responsive padding of at least `p-10 sm:p-12 md:p-14` (or `p-8 sm:p-12 md:p-14`), ensuring that internal content, heading, descriptive copy, and action buttons maintain ample breathing room without crowding or pressing against card borders.
-   - **Relaxed Vertical Hierarchy & CTA Spacing**: The card elements SHALL maintain relaxed vertical spacing (`space-y-6 sm:space-y-7`) between the completion icon badge, headline, descriptive copy, and action buttons, with an expanded top padding offset on the action CTA row (`pt-4 sm:pt-6` and `gap-3.5 sm:gap-4`).
-   - **Dedicated Action Controls**:
-     - Primary CTA: "Browse Full Deck (N cards)" (`review.browse_deck_btn`), smoothly transitioning the active tab to "Deck Management" (`activeTab = 'management'`) with the total card count prominently displayed.
-     - Secondary CTA: "Cram / Extended Practice" (`review.cram_practice_btn`), routing to `/today` for extended scenario challenge practice.
-   - **Card Deduplication**: The completion state SHALL NOT embed duplicate `MasteryGaugeCard` or `ReviewForecastChart` components, preserving these comprehensive retention analytics exclusively in Tab 2 ("Kho thẻ của tôi" / Deck Management) to maintain a focused, decluttered completion celebration.
+1. **Standardized Page Header Banner**:
+   - **Left**: Icon badge (`w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20`) rendering `<Layers class="w-5 h-5 sm:w-6 sm:h-6" :stroke-width="1.5" />`, primary title (`$t('review.title')` / "Thẻ Ôn Tập"), and subtitle (`$t('review.subtitle')` / "Hệ Thống Lặp Lại Ngắt Quãng & Quản Lý Kho Thẻ").
+   - **Right**: Tab buttons switcher enclosed in a refined rounded glass pill container (`rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100 dark:bg-canvas-subtle p-1`).
+   - **Container Bound**: Enforces `max-w-7xl mx-auto space-y-6 px-4 sm:px-6 py-6`, eliminating the container width mismatch between header and content.
+
+2. **Three-Tab Functional Hierarchy**:
+   - **Tab 1: `session` ("Review Session" / "Ôn tập hôm nay")**:
+     - Dedicated exclusively to active review practice.
+     - While due cards exist, renders the active card player (`FlashcardDeck.vue`) in mutual exclusion with the celebratory completion state.
+     - When zero cards are due, renders the centered celebratory completion hero card (`max-w-xl`, confetti celebration) with primary CTA transitioning to Deck Management (`activeTab = 'management'`) and secondary CTA routing to `/today`.
+   - **Tab 2: `management` ("Deck Management" / "Kho thẻ của tôi")**:
+     - Dedicated exclusively to browsing and managing the flashcard inventory.
+     - SHALL render the search input (`⌘K`), quick filter chips (`All`, `Due Today`, `Mastered`), advanced filter trigger, and responsive flashcard bento grid directly at the top of the content viewport, without embedding the 6 analytics bento cards.
+   - **Tab 3: `stats` ("Analytics" / "Thống kê")**:
+     - Dedicated exclusively to comprehensive retention metrics and forecast analytics.
+     - Hosts the two rows of 6 Bento cards in an uncrowded analytics hub.
 
 #### Scenario: User navigates between review session and deck management
 - **WHEN** user loads `/review`
-- **THEN** page defaults to the "Review Session" tab if due cards exist, or allows switching to "Deck Management"
+- **THEN** page defaults to the "Review Session" tab if due cards exist, or allows switching to "Deck Management" or "Analytics"
 - **WHEN** user clicks the "Deck Management" tab
-- **THEN** client transitions to the deck management view and loads card statistics and the paginated card library without page reload.
+- **THEN** client transitions to the deck management view and loads card statistics and the paginated card library directly without page reload.
 
 #### Scenario: User completes review session
 - **WHEN** user finishes grading all due cards in the "Review Session" tab
@@ -42,7 +48,7 @@ The active review session view and the celebratory completion state SHALL be str
 - **GIVEN** user is viewing the Celebratory Completion Hero Card
 - **WHEN** user clicks `[ 📚 Khám phá kho thẻ (N thẻ) ]`
 - **THEN** client immediately switches `activeTab` to `'management'`
-- **AND** renders the 3-card Bento Overview (including Mastery Gauge Card and Review Forecast Chart) alongside the complete paginated flashcard library.
+- **AND** renders the flashcard inventory and search filters directly at the top of the viewport.
 
 #### Scenario: User completes daily review session and views rich completion hub
 - **GIVEN** an authenticated user who has graded the final due card in `/review` or has zero cards due today (`reviewStore.cards.length === 0`)
@@ -86,6 +92,14 @@ The active review session view and the celebratory completion state SHALL be str
 - **THEN** the active flashcard component unmounts immediately
 - **AND** the celebratory completion hero card renders with confetti celebration and deck exploration CTAs.
 
+#### Scenario: User views standardized page header on review route
+- **WHEN** user loads `/review` on any viewport
+- **THEN** the top section renders the standardized header banner with `<Layers>` icon badge, primary title "Thẻ Ôn Tập", subtitle "Hệ Thống Lặp Lại Ngắt Quãng & Quản Lý Kho Thẻ", and the 3-tab navigation switcher on the right
+- **AND** the header shares the same `max-w-7xl` container bound as the content below.
+
+#### Scenario: User navigates to the dedicated analytics tab
+- **WHEN** user clicks the "Analytics" ("Thống kê") tab
+- **THEN** client transitions to `activeTab = 'stats'` and renders the two 3-card bento rows of retention analytics and forecast metrics.
 ---
 
 ### Requirement: Flashcard Deck Library Querying & Metrics
@@ -436,27 +450,32 @@ The endpoint SHALL scope every aggregate to the authenticated user and SHALL exc
 - **THEN** the system returns `HTTP 200 OK` with all counts equal to zero and an empty source-channel breakdown, without raising an error.
 
 ### Requirement: Deck Management Retention Analytics Panel
+The `/review` route SHALL surface retention analytics from `GET /api/v1/review/analytics` and bento overview cards in the dedicated **Retention Analytics & Stats Tab** (`activeTab === 'stats'`), completely decoupled from the Deck Management inventory list to avoid visual crowding.
 
-The `/review` Deck Management tab SHALL surface the retention analytics from `GET /api/v1/review/analytics` alongside the existing `MasteryGaugeCard` and `ReviewForecastChart`, without duplicating those components elsewhere. The panel SHALL present:
+The analytics panel SHALL present:
+1. **Row 1: Bento Overview (3 Cards)**:
+   - `FlashcardHeroCard`: Cards due today, estimated review time, and 1-click CTA button switching to `activeTab = 'session'`.
+   - `MasteryGaugeCard`: Semi-circular gauge visualizing mastery percentage and tier badge.
+   - `ReviewForecastChart`: 7-day upcoming review volume mini-bar chart.
+2. **Row 2: Retention Analytics (3 Cards)**:
+   - `AtRiskLeechCard`: Displays `overdueCount`, `leechCount` localized as **"Hay quên"** (`$t('review.atrisk_leech')`), and total at-risk count, with a 1-click action opening the Deck Management card list ordered by due urgency.
+   - `SourceChannelRetentionCard`: Compares retention across recall sources (reader highlights, quiz mistakes, daily drills) with distinct per-source labels.
+   - `EaseFactorDistributionCard`: Visualizes ease-factor distribution across three distinct stability tiers: **"Chưa vững"** (`$t('review.ease_struggling')` for $[1.30, 1.70]$), **"Đang củng cố"** (`$t('review.ease_developing')` for $(1.70, 2.10)$), and **"Vững vàng"** (`$t('review.ease_comfortable')` for $[2.10, 2.50]$).
 
-1. **At-Risk & Leech Card**: displays `overdueCount`, `leechCount`, and `atRiskCount`, and provides a 1-click action that opens the Deck Management card list ordered by soonest due date so overdue and low-ease at-risk cards surface first, letting the user act on them immediately.
-2. **Source-Channel Retention Card**: compares retention across the three recall sources (reader highlights, quiz mistakes, daily drills), showing per-source total, maturity split, and average ease factor so the user can see which channel retains best. Each source present in the deck SHALL render with its own distinct localized label derived from its `CardSourceType` (`Highlight`, `QuizMistake`, `DocumentChunk` each mapped to a separate string). No two source rows SHALL display the same label, and a recognized source type MUST NOT fall back to a shared generic label.
-3. **Ease-Factor Distribution Card**: visualizes the difficulty distribution from the analytics response across the bounded SM-2 `[1.30, 2.50]` range — `strugglingCount` (`[1.30, 1.70]`), `developingCount` (`(1.70, 2.10)`), and `comfortableCount` (`[2.10, 2.50]`) — so the user can see how the deck's ease factors are spread, reusing values already returned by `GET /api/v1/review/analytics` without new API surface.
-
-The three analytics cards SHALL lay out in a three-column row on large viewports (`lg` and above), eliminating the wide empty gaps of a two-card row, and SHALL stack into a single column on mobile viewports without horizontal scrolling.
+The three analytics cards in each row SHALL lay out in a three-column row on large viewports (`lg` and above), eliminating wide empty gaps, and SHALL stack into a single column on mobile viewports without horizontal scrolling.
 
 All labels, counts, and action controls SHALL be fully localized in English (`en`) and Vietnamese (`vi`), and action controls SHALL use `whitespace-nowrap shrink-0` to prevent text wrapping collisions across locales.
 
 #### Scenario: User views retention analytics in Deck Management
 - **GIVEN** an authenticated user with graded cards across multiple sources
-- **WHEN** the user opens the Deck Management tab on `/review`
+- **WHEN** the user opens the Analytics tab (`activeTab === 'stats'`) on `/review`
 - **THEN** the At-Risk & Leech card, Source-Channel Retention card, and Ease-Factor Distribution card render with data from `GET /api/v1/review/analytics`
 - **AND** the existing Mastery Gauge and Review Forecast remain the sole instances of those components.
 
 #### Scenario: User jumps from the at-risk card to the deck list
 - **GIVEN** the At-Risk & Leech card reports a non-zero `atRiskCount`
 - **WHEN** the user activates its review action
-- **THEN** the Deck Management card list opens ordered by soonest due date so overdue at-risk cards surface first, without a full page reload.
+- **THEN** client transitions to the Deck Management tab (`activeTab = 'management'`) ordered by soonest due date so overdue at-risk cards surface first, without a full page reload.
 
 #### Scenario: Source-channel rows render distinct labels
 - **GIVEN** a deck with cards from more than one recall source (e.g. reader highlights and daily drills)
@@ -466,28 +485,41 @@ All labels, counts, and action controls SHALL be fully localized in English (`en
 
 #### Scenario: Ease-factor distribution card renders in a three-column analytics row
 - **GIVEN** an authenticated user with graded cards
-- **WHEN** the user opens the Deck Management tab on a large viewport (`\ge 1024\text{px}`)
+- **WHEN** the user opens the Analytics tab on a large viewport (`\ge 1024\text{px}`)
 - **THEN** the analytics row shows the At-Risk & Leech, Source-Channel Retention, and Ease-Factor Distribution cards in a three-column layout with no oversized empty gaps
 - **AND** the Ease-Factor Distribution card reflects the `strugglingCount`, `developingCount`, and `comfortableCount` from the analytics response.
 
 #### Scenario: Retention analytics render in both locales
-- **WHEN** the user toggles the application locale between `en` and `vi` on the Deck Management tab
+- **WHEN** the user toggles the application locale between `en` and `vi` on the Analytics tab
 - **THEN** all retention card titles, metric labels, and action controls update reactively and render without truncation or layout overflow in either locale.
 
+#### Scenario: Vietnamese memory retention labels disambiguate leech from low ease factor
+- **WHEN** user views the retention analytics tab in Vietnamese locale (`vi-VN`)
+- **THEN** the At-Risk card displays "Hay quên" for leech cards with low ease or repeated lapses
+- **AND** the Ease Factor Distribution card displays "Chưa vững" for the $[1.30, 1.70]$ bucket
+- **AND** neither card displays duplicate or colliding "Khó nhớ" labels.
+
+---
+
 ### Requirement: Deck Management Tab Persistence Across Pagination
-The `/review` page SHALL keep the user on the Deck Management tab ("Deck Management" / "Kho thẻ của tôi") when navigating between deck pages. The active tab SHALL be encoded in the URL so that any navigation that recreates the page — including a full remount triggered by a `route.fullPath` change from a pagination query update — restores the Deck Management tab rather than defaulting to the Review Session tab.
+The `/review` page SHALL keep the user on the active tab across navigation and page remounts. The active tab state (`session`, `management`, `stats`) SHALL be encoded bidirectionally in the URL query string (`?tab=session`, `?tab=management`, `?tab=stats`) so that any navigation that recreates the page — including a full remount triggered by a `route.fullPath` change from a pagination query update — restores the active tab accurately.
 
 #### Scenario: Paginating the deck keeps the Deck Management tab active
 - **GIVEN** the user is on the Deck Management tab with more than one page of cards
 - **WHEN** the user clicks "Next", "Previous", or a numbered page button
 - **THEN** the requested page renders within the Deck Management tab
-- **AND** the view does NOT switch to the Review Session tab.
+- **AND** the view does NOT switch to the Review Session or Analytics tab.
 
 #### Scenario: Reloading a deck page URL restores the Deck Management tab
 - **GIVEN** a URL that encodes the Deck Management tab and a page index (e.g. `?tab=management&page=3`)
 - **WHEN** the user loads or reloads that URL
 - **THEN** the page opens on the Deck Management tab showing the requested page.
 
+#### Scenario: Reloading an analytics page URL restores the Analytics tab
+- **GIVEN** a URL that encodes the Analytics tab (e.g. `/review?tab=stats`)
+- **WHEN** the user loads or reloads that URL
+- **THEN** the page opens directly on the Analytics tab with the 6 bento analytics cards rendered.
+---
 ### Requirement: Deck Management Pagination Page-Size Isolation
 The Deck Management card list SHALL always paginate at its own standard configured page size. A lightweight count or preview fetch performed elsewhere in the application (for example, a dashboard requesting a single card only to read the total count) SHALL NOT alter the page size used by the Deck Management list. When the user opens the Deck Management tab, the list SHALL request its standard page size regardless of any prior fetch.
 

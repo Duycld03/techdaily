@@ -240,6 +240,7 @@
     "subtitle": "Spaced Repetition Review & Deck Management",
     "tab_session": "Review Session",
     "tab_management": "Deck Management",
+    "tab_stats": "Analytics",
     "session_progress": "Session Progress",
     "session_progress_desc": "Daily spaced repetition recall queue",
     "interactive_hotkeys": "Interactive Hotkeys",
