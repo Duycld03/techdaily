@@ -455,8 +455,8 @@ const tagColor: Record<string, string> = {
       <template #header>
         <div class="glass-card p-4 sm:p-5 rounded-2xl flex flex-wrap items-center justify-between gap-3">
           <div class="space-y-1">
-            <div class="flex items-center gap-2">
-              <span class="rounded-full bg-brand-500/15 px-2.5 py-0.5 text-xs font-semibold text-brand-600 dark:text-brand-300">
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+              <span class="rounded-full bg-brand-500/15 px-2.5 py-0.5 text-xs font-semibold text-brand-600 dark:text-brand-300 whitespace-nowrap shrink-0">
                 Executive Cockpit
               </span>
               <span class="text-xs text-slate-400 dark:text-slate-500">2:1 Asymmetric Ratio</span>
