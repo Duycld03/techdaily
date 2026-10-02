@@ -325,7 +325,7 @@ describe('SettingsPage Unified Navigation & Account Tabs', () => {
     await secTab?.trigger('click')
     await flushPromises()
 
-    const changePwdSpy = vi.spyOn(profileStore, 'changePassword').mockResolvedValueOnce()
+    const changePwdSpy = vi.spyOn(profileStore, 'changePassword').mockResolvedValueOnce({ message: 'Password changed successfully.' })
 
     const pwdInputs = wrapper.findAll('input[type="password"]')
     expect(pwdInputs.length).toBeGreaterThanOrEqual(2)

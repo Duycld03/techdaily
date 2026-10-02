@@ -271,11 +271,11 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     await wrapper.vm.$nextTick()
 
     // Second option card should now have state selected
-    expect(optionCards[1].props('state')).toBe('selected')
+    expect(optionCards[1]!.props('state')).toBe('selected')
 
     // Test keyboard selection via 'c' (third option)
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c' }))
     await wrapper.vm.$nextTick()
-    expect(optionCards[2].props('state')).toBe('selected')
+    expect(optionCards[2]!.props('state')).toBe('selected')
   })
 })

@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { nextTick, type Ref } from 'vue'
 
 // Control the audio composable so we can drive loading/progress state and assert
 // what the control renders and forwards - without running real synthesis.
@@ -55,7 +55,7 @@ vi.mock('~/composables/useSliceAudio', async () => {
 })
 
 import ReaderAudioPlayer from '~/components/reader/ReaderAudioPlayer.vue'
-import { useSliceAudio } from '~/composables/useSliceAudio'
+import { useSliceAudio, type AudioStatus, type AudioEngine } from '~/composables/useSliceAudio'
 import type { ChunkSummary } from '~/stores/useLibraryStore'
 
 const MESSAGES: Record<string, string> = {
@@ -123,7 +123,34 @@ function chunk(overrides: Partial<ChunkSummary> = {}): ChunkSummary {
 }
 
 // Shared mocked composable state (same singleton the component consumes).
-const audio = useSliceAudio()
+interface MockedSliceAudio {
+  status: Ref<AudioStatus>
+  playing: Ref<boolean>
+  currentTime: Ref<number>
+  duration: Ref<number>
+  downloadProgress: Ref<number>
+  synthIndex: Ref<number>
+  synthTotal: Ref<number>
+  targetBufferCount: Ref<number>
+  errorMessage: Ref<string | null>
+  errorInfo: Ref<unknown>
+  device: Ref<string | null>
+  speed: Ref<number>
+  engineMode: Ref<AudioEngine>
+  selectedVoice: Ref<string>
+  audioQuota: Ref<unknown>
+  isNearQuota: Ref<boolean>
+  isQuotaExhausted: Ref<boolean>
+  setEngineMode: Mock
+  setVoice: Mock
+  fetchQuota: Mock
+  loadAndPlay: Mock
+  play: Mock
+  pause: Mock
+  setSpeed: Mock
+  seek: Mock
+}
+const audio = useSliceAudio() as unknown as MockedSliceAudio
 let originalUseI18n: unknown
 
 function mountPlayer(props: { chunk: ChunkSummary | null }) {

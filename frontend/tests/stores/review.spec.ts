@@ -1,16 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useReviewStore } from '~/stores/useReviewStore'
+import { useReviewStore, type ReviewCard } from '~/stores/useReviewStore'
 
-const mockCards = [
+const mockCards: ReviewCard[] = [
   {
     id: 'c-101',
-    topicId: 't-1',
-    topicTitle: 'Vue 3 Reactivity Engine',
+    title: 'Vue 3 Reactivity Engine',
+    frontMarkdown: 'What is Vue 3 Reactivity?',
+    backMarkdown: 'Proxy vs Object.defineProperty',
     category: 0,
     difficulty: 1,
-    topicSummary: 'Proxy vs Object.defineProperty',
-    topicDeepDiveMarkdown: '### Deep Dive Content',
     repetitionCount: 1,
     easeFactor: 2.5,
     intervalDays: 1,
@@ -19,12 +18,11 @@ const mockCards = [
   },
   {
     id: 'c-102',
-    topicId: 't-2',
-    topicTitle: 'PostgreSQL MVCC & VACUUM',
+    title: 'PostgreSQL MVCC & VACUUM',
+    frontMarkdown: 'What is MVCC?',
+    backMarkdown: 'Multi-version concurrency control mechanics',
     category: 2,
     difficulty: 2,
-    topicSummary: 'Multi-version concurrency control mechanics',
-    topicDeepDiveMarkdown: '### Deep Dive MVCC',
     repetitionCount: 2,
     easeFactor: 2.36,
     intervalDays: 6,
@@ -142,7 +140,7 @@ describe('useReviewStore (SM-2 Spaced Repetition)', () => {
 
     await review.fetchReviewDeck()
     expect(review.cards).toHaveLength(2)
-    expect(review.cards[0]?.topicTitle).toBe('Vue 3 Reactivity Engine')
+    expect(review.cards[0]?.title).toBe('Vue 3 Reactivity Engine')
     expect(review.totalCardsDue).toBe(2)
   })
 

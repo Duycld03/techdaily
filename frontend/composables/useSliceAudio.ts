@@ -593,9 +593,11 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
     const playChunk = (index: number, shouldPlay = playing.value) => {
       if (activeKey !== key || index >= buffers.length) return
+      const chunk = buffers[index]
+      if (!chunk) return
       isPlayingPreRoll = false
       currentPlayingIndex = index
-      const chunkWav = encodeWav(buffers[index], sampleRate)
+      const chunkWav = encodeWav(chunk, sampleRate)
       setSource(chunkWav)
       status.value = 'ready'
       if (shouldPlay && !isUserPaused) {
@@ -705,7 +707,10 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
             offsetSec = el.currentTime
           } else {
             for (let i = 0; i < currentPlayingIndex; i++) {
-              offsetSec += buffers[i].length / sampleRate
+              const buf = buffers[i]
+              if (buf) {
+                offsetSec += buf.length / sampleRate
+              }
             }
             offsetSec += el.currentTime
           }

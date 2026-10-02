@@ -279,7 +279,7 @@ export function useApiClient() {
               path: '/login',
               query: { redirect: currentPath }
             })
-            if (redirectPromise && typeof redirectPromise.finally === 'function') {
+            if (redirectPromise instanceof Promise) {
               redirectPromise.finally(() => {
                 setTimeout(() => {
                   isRedirectingToLogin = false
@@ -385,5 +385,6 @@ export function useApiClient() {
         document.body.removeChild(a)
       }
     },
+    refreshAuthToken
   }
 }

@@ -8,12 +8,18 @@ import { useAuthStore } from '~/stores/useAuthStore'
 
 interface GoogleAccountsIdMock {
   initialize: Mock
-  renderButton: Mock
+  renderButton?: Mock
+  prompt?: Mock
+}
+
+interface GoogleAccountsOauth2Mock {
+  initTokenClient?: Mock
 }
 
 interface WindowWithGoogle extends Window {
   google?: {
     accounts?: {
+      oauth2?: GoogleAccountsOauth2Mock
       id?: GoogleAccountsIdMock
     }
   }
@@ -182,12 +188,12 @@ describe('pages/login.vue', () => {
     // Now in register mode: name and confirm password inputs are visible
     const textInputs = wrapper.findAll('input[type="text"]')
     expect(textInputs.length).toBe(1) // Name input
-    expect(textInputs[0].attributes('placeholder')).toBeTruthy()
+    expect(textInputs[0]!.attributes('placeholder')).toBeTruthy()
 
     const passwordInputs = wrapper.findAll('input[type="password"]')
     expect(passwordInputs.length).toBe(2) // Password and Confirm Password inputs
-    expect(passwordInputs[0].attributes('placeholder')).toBeTruthy()
-    expect(passwordInputs[1].attributes('placeholder')).toBeTruthy()
+    expect(passwordInputs[0]!.attributes('placeholder')).toBeTruthy()
+    expect(passwordInputs[1]!.attributes('placeholder')).toBeTruthy()
 
     // In register mode, forgot password link, remember session checkbox, and Google OAuth must NOT be displayed
     expect(wrapper.text()).not.toContain('auth.forgot_password_link')
@@ -210,8 +216,8 @@ describe('pages/login.vue', () => {
     await registerTab!.trigger('click')
 
     const passwordInputs = wrapper.findAll('input[type="password"]')
-    await passwordInputs[0].setValue('Password123!')
-    await passwordInputs[1].setValue('DifferentPassword!')
+    await passwordInputs[0]!.setValue('Password123!')
+    await passwordInputs[1]!.setValue('DifferentPassword!')
 
     expect(wrapper.text()).toContain('passwords_mismatch')
   })
@@ -319,8 +325,8 @@ describe('pages/login.vue', () => {
     await wrapper.find('input[type="text"]').setValue('Alex Morgan')
     await wrapper.find('input[type="email"]').setValue('alex@example.com')
     const passwordInputs = wrapper.findAll('input[type="password"]')
-    await passwordInputs[0].setValue('SecurePass123!')
-    await passwordInputs[1].setValue('SecurePass123!')
+    await passwordInputs[0]!.setValue('SecurePass123!')
+    await passwordInputs[1]!.setValue('SecurePass123!')
 
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
@@ -354,8 +360,8 @@ describe('pages/login.vue', () => {
     // Provide email and password, but missing name
     await wrapper.find('input[type="email"]').setValue('alex@example.com')
     const passwordInputs = wrapper.findAll('input[type="password"]')
-    await passwordInputs[0].setValue('SecurePass123!')
-    await passwordInputs[1].setValue('SecurePass123!')
+    await passwordInputs[0]!.setValue('SecurePass123!')
+    await passwordInputs[1]!.setValue('SecurePass123!')
 
     await wrapper.find('form').trigger('submit.prevent')
     expect(registerSpy).not.toHaveBeenCalled()
@@ -363,8 +369,8 @@ describe('pages/login.vue', () => {
 
     // Short password (< 8 chars)
     await wrapper.find('input[type="text"]').setValue('Alex Morgan')
-    await passwordInputs[0].setValue('short')
-    await passwordInputs[1].setValue('short')
+    await passwordInputs[0]!.setValue('short')
+    await passwordInputs[1]!.setValue('short')
 
     await wrapper.find('form').trigger('submit.prevent')
     expect(registerSpy).not.toHaveBeenCalled()

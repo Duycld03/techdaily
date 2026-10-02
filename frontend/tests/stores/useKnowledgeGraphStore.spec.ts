@@ -13,7 +13,6 @@ const mockGraphData: KnowledgeGraphResponse = {
       type: 'topic',
       category: 'DatabaseStorage',
       subtitle: 'Day 3',
-      dayOrder: 3,
       summary: 'Multi-version concurrency control mechanics and autovacuum tuning',
       difficulty: 'Advanced',
       tags: ['database', 'postgres', 'concurrency']
@@ -24,7 +23,6 @@ const mockGraphData: KnowledgeGraphResponse = {
       type: 'topic',
       category: 'BackendDotNet',
       subtitle: 'Day 5',
-      dayOrder: 5,
       summary: 'Ephemeral segments and Large Object Heap allocation internals',
       difficulty: 'Expert',
       tags: ['dotnet', 'memory', 'garbage-collection']

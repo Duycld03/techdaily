@@ -1,7 +1,10 @@
 import { validateApiBaseUrl } from './config/validateEnv'
 
 const isPrepareOrTypecheck = process.argv.some(arg => arg.includes('prepare') || arg.includes('typecheck'))
-const apiBaseUrl = validateApiBaseUrl(process.env, isPrepareOrTypecheck)
+const apiBaseUrl = validateApiBaseUrl(
+  { NODE_ENV: process.env.NODE_ENV, NUXT_PUBLIC_API_BASE_URL: process.env.NUXT_PUBLIC_API_BASE_URL },
+  isPrepareOrTypecheck
+)
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -92,7 +95,7 @@ export default defineNuxtConfig({
       if (process.env.NODE_ENV === 'production') {
         const devPrefixes = ['/showcase']
         for (let i = pages.length - 1; i >= 0; i--) {
-          const path = pages[i].path || ''
+          const path = pages[i]?.path || ''
           if (devPrefixes.some(prefix => path === prefix || path.startsWith(`${prefix}/`))) {
             pages.splice(i, 1)
           }

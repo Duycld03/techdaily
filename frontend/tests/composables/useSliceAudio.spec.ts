@@ -28,7 +28,7 @@ interface MockAudio {
   _fire: (type: string) => void
 }
 
-function createFakeAudio(): MockAudio {
+function createFakeAudio(): HTMLAudioElement & MockAudio {
   const listeners: Record<string, Array<() => void>> = {}
   const fire = (type: string) => (listeners[type] || []).forEach(cb => cb())
   const state = {
@@ -53,7 +53,7 @@ function createFakeAudio(): MockAudio {
     }),
     _fire: fire,
   }
-  return state as unknown as MockAudio
+  return state as unknown as HTMLAudioElement & MockAudio
 }
 
 // A streaming engine whose `synthesize` mock is exposed so tests can assert the
@@ -73,7 +73,7 @@ function streamingEngine() {
 function memoryCache() {
   const store = new Map<string, Blob>()
   const partialStore = new Map<string, PartialSliceAudio>()
-  const cache: SliceAudioCache = {
+  const cache = {
     get: vi.fn((key: string) => Promise.resolve(store.get(key))),
     set: vi.fn((key: string, blob: Blob) => {
       store.set(key, blob)
@@ -88,7 +88,7 @@ function memoryCache() {
       partialStore.delete(key)
       return Promise.resolve()
     }),
-  }
+  } satisfies SliceAudioCache
   return { store, partialStore, cache }
 }
 
@@ -522,7 +522,7 @@ describe('useSliceAudio', () => {
 
   it('resolves relative URLs in production environments when no custom fetchClient is provided', async () => {
     const originalFetch = globalThis.fetch
-    const fetchSpy = vi.fn(async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () => {
       return new Response(JSON.stringify({
         monthlyLimit: 950000,
         usedCharacters: 100000,
@@ -678,7 +678,7 @@ describe('useSliceAudio', () => {
       defaultEngine: 'device',
       engine: delayedEngine,
       cache,
-      createAudio: () => audioState as unknown as MockAudio
+      createAudio: () => audioState as unknown as HTMLAudioElement
     })
 
     // 6-sentence slice -> targetBufferCount = ceil(6 / 3) = 2
@@ -1028,7 +1028,7 @@ describe('useSliceAudio', () => {
   })
   it('does not auto-play when a new chunk arrives if the user has paused', async () => {
     const audio = createFakeAudio()
-    let emitChunk3: (() => void) | null = null
+    let emitChunk3: () => void = () => {}
     const asyncEngine: TtsEngine = {
       synthesize: vi.fn(async (_model: string, _sentences: string[], handlers: SynthHandlers) => {
         handlers.onChunk(new Float32Array([0.1, 0.1]), 16000)
@@ -1063,7 +1063,7 @@ describe('useSliceAudio', () => {
     expect(player.playing.value).toBe(false)
 
     // Worker finishes chunk 3 while user is paused
-    emitChunk3?.()
+    emitChunk3()
     await nextTick()
     await loadPromise
 
