@@ -1,22 +1,58 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { Cloud, Cpu, Laptop, Loader2, Pause, Volume2 } from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onClickOutside } from '@vueuse/core'
+import {
+  Check,
+  Cloud,
+  Cpu,
+  FastForward,
+  Laptop,
+  Loader2,
+  Moon,
+  Pause,
+  Volume2,
+} from 'lucide-vue-next'
 import AppSelect from '~/components/common/AppSelect.vue'
 import type { ChunkSummary } from '~/stores/useLibraryStore'
 import {
   type AudioEngine,
   CLOUD_VOICES,
+  filterSystemVoicesForLanguage,
   resolveCloudVoiceForLanguage,
   useSliceAudio,
 } from '~/composables/useSliceAudio'
 import type { NarrationSource } from '~/composables/useSliceAudio'
 
-const props = defineProps<{
-  chunk: ChunkSummary | null
+const props = withDefaults(
+  defineProps<{
+    chunk: ChunkSummary | null
+    bookTitle?: string
+  }>(),
+  {
+    bookTitle: 'TechDaily',
+  },
+)
+
+const emit = defineEmits<{
+  (e: 'auto-advance'): void
+  (e: 'seek-slice', direction: 'next' | 'prev'): void
 }>()
 
 const { t } = useI18n()
 const toast = useToast()
+
+const SLEEP_TIMER_PRESETS = [15, 30, 45, 60, 'end_of_slice'] as const
+export type SleepTimerOption = (typeof SLEEP_TIMER_PRESETS)[number] | null
+const isAdvancing = ref(false)
+const sleepTimer = ref<SleepTimerOption>(null)
+const sleepTimerRemaining = ref<number | null>(null)
+const isSleepTimerOpen = ref(false)
+const sleepTimerMenuRef = ref<HTMLElement | null>(null)
+let sleepTimerInterval: ReturnType<typeof setInterval> | null = null
+
+onClickOutside(sleepTimerMenuRef, () => {
+  isSleepTimerOpen.value = false
+})
 
 const {
   status,
@@ -32,22 +68,120 @@ const {
   errorInfo,
   speed,
   engineMode,
+  activeCascadeTier,
   selectedVoice,
-  audioQuota,
+  selectedSystemVoice,
+  systemVoices,
+  autoAdvance,
   isNearQuota,
   isQuotaExhausted,
   setEngineMode,
   setVoice,
+  setSystemVoice,
+  setVolume,
   fetchQuota,
   loadAndPlay,
   play,
   pause,
   setSpeed,
   seek,
+  playSliceTransitionChime,
+  updateMediaSessionMetadata,
 } = useSliceAudio({
   onQuotaExhausted: () => {
     toast.error(t('reader.audio_quota_exhausted_toast'))
   },
+  onSliceEnded: () => {
+    if (sleepTimer.value === 'end_of_slice') {
+      pause()
+      sleepTimer.value = null
+      setVolume(1)
+      toast.info(t('reader.audio_sleep_timer_ended'))
+      return
+    }
+    if (autoAdvance.value) {
+      isAdvancing.value = true
+      void playSliceTransitionChime().then(() => {
+        emit('auto-advance')
+      })
+    }
+  },
+  onNextTrack: () => {
+    if (playing.value) isAdvancing.value = true
+    emit('seek-slice', 'next')
+  },
+  onPreviousTrack: () => {
+    if (playing.value) isAdvancing.value = true
+    emit('seek-slice', 'prev')
+  },
+})
+
+function setSleepTimer(option: SleepTimerOption): void {
+  sleepTimer.value = option
+  isSleepTimerOpen.value = false
+  if (typeof option === 'number') {
+    sleepTimerRemaining.value = option * 60
+    startSleepTimerCountdown()
+  } else {
+    stopSleepTimerCountdown()
+    sleepTimerRemaining.value = null
+    setVolume(1)
+  }
+}
+
+function startSleepTimerCountdown(): void {
+  stopSleepTimerCountdown()
+  sleepTimerInterval = setInterval(() => {
+    if (!playing.value) return
+    if (sleepTimerRemaining.value === null) return
+    sleepTimerRemaining.value -= 1
+
+    if (sleepTimerRemaining.value <= 15 && sleepTimerRemaining.value > 0) {
+      const ratio = sleepTimerRemaining.value / 15
+      setVolume(Math.pow(ratio, 2))
+    } else if (sleepTimerRemaining.value <= 0) {
+      stopSleepTimerCountdown()
+      pause()
+      sleepTimer.value = null
+      sleepTimerRemaining.value = null
+      setVolume(1)
+      toast.info(t('reader.audio_sleep_timer_ended'))
+    }
+  }, 1000)
+}
+
+function stopSleepTimerCountdown(): void {
+  if (sleepTimerInterval) {
+    clearInterval(sleepTimerInterval)
+    sleepTimerInterval = null
+  }
+}
+
+watch([currentTime, duration, sleepTimer], ([time, dur, timer]) => {
+  if (timer === 'end_of_slice' && dur > 0 && playing.value) {
+    const remaining = dur - time
+    if (remaining <= 15 && remaining > 0) {
+      const ratio = remaining / 15
+      setVolume(Math.pow(ratio, 2))
+    } else if (remaining > 15) {
+      setVolume(1)
+    }
+  }
+})
+
+onUnmounted(() => {
+  stopSleepTimerCountdown()
+})
+
+const sleepTimerLabel = computed(() => {
+  if (sleepTimer.value === null) return null
+  if (sleepTimer.value === 'end_of_slice') return t('reader.audio_sleep_timer_end_of_slice')
+  if (sleepTimerRemaining.value !== null) {
+    const m = Math.floor(sleepTimerRemaining.value / 60)
+    const s = Math.floor(sleepTimerRemaining.value % 60)
+    return `${m}:${s.toString().padStart(2, '0')}`
+  }
+  return `${sleepTimer.value}m`
 })
 
 const SPEED_STEPS = [0.75, 1, 1.25, 1.5, 2] as const
@@ -61,6 +195,16 @@ const source = computed<NarrationSource | null>(() => {
     markdown: props.chunk.originalTextMarkdown,
     language: props.chunk.language,
     isAiFormatted: !!props.chunk.isAiFormatted,
+  }
+})
+
+watch([() => props.chunk, playing], ([chunk, isPlaying]) => {
+  if (isPlaying && chunk) {
+    updateMediaSessionMetadata({
+      title: chunk.title || `Slice #${chunk.chunkIndex ?? 1}`,
+      artist: 'TechDaily Reader',
+      album: props.bookTitle || 'Technical Documentation',
+    })
   }
 })
 
@@ -96,13 +240,69 @@ const currentVoice = computed({
   },
 })
 
+const availableSystemVoiceOptions = computed(() => {
+  const matching = filterSystemVoicesForLanguage(systemVoices.value, props.chunk?.language)
+  if (matching.length === 0) {
+    return [{
+      value: '',
+      label: t('reader.audio_system_voice_default'),
+      description: t('reader.audio_system_voice_auto_desc'),
+    }]
+  }
+  return matching.map(v => ({
+    value: v.id,
+    label: `${v.name} (${v.lang})`,
+    description: v.localService ? t('reader.audio_device_local') : undefined,
+  }))
+})
+
+const currentSystemVoice = computed({
+  get(): string {
+    const matching = filterSystemVoicesForLanguage(systemVoices.value, props.chunk?.language)
+    if (matching.length === 0) return ''
+    const found = matching.find(v => v.id === selectedSystemVoice.value)
+    return found ? found.id : matching[0].id
+  },
+  set(val: string | number) {
+    const voiceId = String(val)
+    setSystemVoice(voiceId)
+    if (loadedId.value) {
+      pause()
+      loadedId.value = null
+      if (source.value) {
+        loadedId.value = source.value.chunkId
+        void loadAndPlay(source.value)
+      }
+    }
+  },
+})
+
 // Track which slice is loaded so switching slices re-synthesizes rather than
 // resuming the previous slice's audio.
 const loadedId = ref<string | null>(null)
 
-watch(() => props.chunk?.id, () => {
+watch(() => props.chunk?.id, (newId) => {
   pause()
   loadedId.value = null
+  if (isAdvancing.value && newId && source.value) {
+    isAdvancing.value = false
+    loadedId.value = newId
+    void loadAndPlay(source.value, true)
+  }
+})
+
+function startPlayback(): void {
+  if (source.value && available.value) {
+    loadedId.value = source.value.chunkId
+    void loadAndPlay(source.value, true)
+  }
+}
+
+defineExpose({
+  startPlayback,
+  onToggle,
+  play,
+  pause,
 })
 
 const formattedErrorMessage = computed(() => {
@@ -238,7 +438,7 @@ onMounted(() => {
 <template>
   <div
     v-if="available"
-    class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center min-h-[50px] gap-2 sm:gap-3 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/80 dark:bg-canvas-subtle/70 px-3 py-2"
+    class="relative flex flex-col sm:flex-row sm:flex-wrap sm:items-center min-h-[50px] gap-2 sm:gap-3 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/80 dark:bg-canvas-subtle/70 px-3 py-2"
   >
     <!-- Primary Controls Row -->
     <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
@@ -255,12 +455,28 @@ onMounted(() => {
         <span>{{ t('reader.audio_listen') }}</span>
       </button>
 
-      <!-- Engine Mode Segmented Switch (Cloud vs Device) -->
+      <!-- Engine Mode Segmented Switch (System vs Cloud vs Device) -->
       <div
         class="inline-flex items-center rounded-xl p-0.5 bg-slate-200/60 dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.08] shrink-0 whitespace-nowrap text-xs font-medium"
         role="group"
         :aria-label="t('reader.audio_engine_cloud_hint')"
       >
+        <!-- System Engine Toggle -->
+        <button
+          type="button"
+          class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap"
+          :class="[
+            engineMode === 'system'
+              ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          ]"
+          :title="t('reader.audio_engine_system_hint')"
+          @click="onToggleEngine('system')"
+        >
+          <Volume2 class="w-3.5 h-3.5" :stroke-width="2" />
+          <span class="hidden sm:inline">{{ t('reader.audio_engine_system') }}</span>
+        </button>
+
         <!-- Cloud Engine Toggle -->
         <button
           type="button"
@@ -295,9 +511,32 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- Free-Tier Voice Picker (Only in Cloud mode) -->
+      <!-- Active Cascade Tier Badge (if different from manual selection or in automatic mode) -->
+      <span
+        v-if="activeCascadeTier && activeCascadeTier !== engineMode"
+        class="shrink-0 whitespace-nowrap hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-medium"
+        :title="t('reader.audio_cascade_active_hint')"
+      >
+        {{ t('reader.audio_cascade_tier', { tier: activeCascadeTier }) }}
+      </span>
+
+      <!-- System Voice Picker -->
       <div
-        v-if="engineMode === 'cloud'"
+        v-if="engineMode === 'system'"
+        class="flex-1 min-w-[130px] sm:min-w-0 sm:w-44 sm:flex-none shrink-0"
+      >
+        <AppSelect
+          v-model="currentSystemVoice"
+          :options="availableSystemVoiceOptions"
+          size="sm"
+          :placeholder="t('reader.audio_voice_select_placeholder')"
+          :aria-label="t('reader.audio_voice_select_placeholder')"
+        />
+      </div>
+
+      <!-- Cloud Voice Picker -->
+      <div
+        v-else-if="engineMode === 'cloud'"
         class="flex-1 min-w-[130px] sm:min-w-0 sm:w-44 sm:flex-none shrink-0"
       >
         <AppSelect
@@ -373,6 +612,105 @@ onMounted(() => {
         <component :is="device === 'webgpu' ? Laptop : Cpu" class="w-3.5 h-3.5" :stroke-width="2" />
         <span>{{ deviceLabel }}</span>
       </span>
+
+      <!-- Auto Next Toggle Button -->
+      <button
+        type="button"
+        class="h-7 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 whitespace-nowrap"
+        :class="[
+          autoAdvance
+            ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/30 font-medium'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-slate-200/80 dark:border-white/[0.08]'
+        ]"
+        :title="t('reader.audio_auto_advance_hint')"
+        @click="autoAdvance = !autoAdvance"
+      >
+        <FastForward class="w-3.5 h-3.5" :stroke-width="2" />
+        <span class="hidden md:inline">{{ t('reader.audio_auto_advance') }}</span>
+      </button>
+
+      <!-- Sleep Timer Menu Container -->
+      <div ref="sleepTimerMenuRef" class="relative shrink-0 whitespace-nowrap">
+        <button
+          type="button"
+          class="h-7 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all shrink-0 whitespace-nowrap"
+          :class="[
+            sleepTimer !== null
+              ? 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/30 font-medium'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-slate-200/80 dark:border-white/[0.08]'
+          ]"
+          :title="t('reader.audio_sleep_timer')"
+          @click="isSleepTimerOpen = !isSleepTimerOpen"
+        >
+          <Moon class="w-3.5 h-3.5" :stroke-width="2" />
+          <span v-if="sleepTimerLabel" class="tabular-nums font-medium text-[11px]">{{ sleepTimerLabel }}</span>
+          <span v-else class="hidden md:inline">{{ t('reader.audio_sleep_timer') }}</span>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div
+          v-if="isSleepTimerOpen"
+          class="absolute bottom-full mb-1.5 right-0 sm:bottom-auto sm:top-full sm:mt-1.5 z-40 w-44 rounded-xl border border-slate-200 dark:border-white/[0.12] bg-white dark:bg-canvas-elevated shadow-lg p-1 text-xs space-y-0.5"
+        >
+          <div class="px-2.5 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+            {{ t('reader.audio_sleep_timer') }}
+          </div>
+          <button
+            type="button"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors"
+            :class="sleepTimer === null ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-semibold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06]'"
+            @click="setSleepTimer(null)"
+          >
+            <span>{{ t('reader.audio_sleep_timer_off') }}</span>
+            <Check v-if="sleepTimer === null" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+          </button>
+          <button
+            type="button"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors"
+            :class="sleepTimer === 15 ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-semibold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06]'"
+            @click="setSleepTimer(15)"
+          >
+            <span>{{ t('reader.audio_sleep_timer_15m') }}</span>
+            <Check v-if="sleepTimer === 15" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+          </button>
+          <button
+            type="button"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors"
+            :class="sleepTimer === 30 ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-semibold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06]'"
+            @click="setSleepTimer(30)"
+          >
+            <span>{{ t('reader.audio_sleep_timer_30m') }}</span>
+            <Check v-if="sleepTimer === 30" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+          </button>
+          <button
+            type="button"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors"
+            :class="sleepTimer === 45 ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-semibold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06]'"
+            @click="setSleepTimer(45)"
+          >
+            <span>{{ t('reader.audio_sleep_timer_45m') }}</span>
+            <Check v-if="sleepTimer === 45" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+          </button>
+          <button
+            type="button"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors"
+            :class="sleepTimer === 60 ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-semibold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06]'"
+            @click="setSleepTimer(60)"
+          >
+            <span>{{ t('reader.audio_sleep_timer_60m') }}</span>
+            <Check v-if="sleepTimer === 60" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+          </button>
+          <button
+            type="button"
+            class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left transition-colors border-t border-slate-200/60 dark:border-white/[0.06] mt-1 pt-1"
+            :class="sleepTimer === 'end_of_slice' ? 'bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 font-semibold' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.06]'"
+            @click="setSleepTimer('end_of_slice')"
+          >
+            <span>{{ t('reader.audio_sleep_timer_end_of_slice') }}</span>
+            <Check v-if="sleepTimer === 'end_of_slice'" class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+          </button>
+        </div>
+      </div>
 
       <!-- Speed -->
       <button

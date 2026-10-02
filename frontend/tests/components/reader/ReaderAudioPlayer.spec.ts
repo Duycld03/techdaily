@@ -5,12 +5,25 @@ import { nextTick, type Ref } from 'vue'
 // Control the audio composable so we can drive loading/progress state and assert
 // what the control renders and forwards - without running real synthesis.
 vi.mock('~/composables/useSliceAudio', async () => {
-  const { ref, computed } = await import('vue')
+  const { ref } = await import('vue')
   const engineMode = ref('cloud')
+  const activeCascadeTier = ref('cloud')
   const selectedVoice = ref('')
+  const selectedSystemVoice = ref('')
+  const systemVoices = ref([
+    { id: 'vi-vn-x-vic-local', name: 'Google Tiếng Việt', lang: 'vi-VN', localService: true, default: true },
+    { id: 'en-us-x-sfg-local', name: 'Google US English', lang: 'en-US', localService: true, default: false },
+  ])
+  const pitch = ref(1)
+  const autoAdvance = ref(true)
+  const volume = ref(1)
   const audioQuota = ref(null)
   const isNearQuota = ref(false)
   const isQuotaExhausted = ref(false)
+  let onSliceEndedCallback: (() => void) | null = null
+  let onNextTrackCallback: (() => void) | null = null
+  let onPrevTrackCallback: (() => void) | null = null
+
   const state = {
     status: ref('idle'),
     playing: ref(false),
@@ -25,21 +38,46 @@ vi.mock('~/composables/useSliceAudio', async () => {
     device: ref<string | null>(null),
     speed: ref(1),
     engineMode,
+    activeCascadeTier,
     selectedVoice,
+    selectedSystemVoice,
+    systemVoices,
+    pitch,
+    autoAdvance,
+    volume,
     audioQuota,
     isNearQuota,
     isQuotaExhausted,
-    setEngineMode: vi.fn((m) => { engineMode.value = m }),
+    setEngineMode: vi.fn((m) => { engineMode.value = m; activeCascadeTier.value = m }),
     setVoice: vi.fn((v) => { selectedVoice.value = v }),
+    setSystemVoice: vi.fn((v) => { selectedSystemVoice.value = v }),
+    setPitch: vi.fn((p) => { pitch.value = p }),
+    setAutoAdvance: vi.fn((a) => { autoAdvance.value = a }),
+    setVolume: vi.fn((v) => { volume.value = v }),
     fetchQuota: vi.fn(async () => null),
     loadAndPlay: vi.fn(),
     play: vi.fn(),
     pause: vi.fn(),
     setSpeed: vi.fn(),
-    seek: vi.fn()
+    seek: vi.fn(),
+    playSliceTransitionChime: vi.fn(async () => {}),
+    updateMediaSessionMetadata: vi.fn(),
+    _triggerSliceEnded: () => onSliceEndedCallback?.(),
+    _triggerNextTrack: () => onNextTrackCallback?.(),
+    _triggerPrevTrack: () => onPrevTrackCallback?.(),
   }
   return {
-    useSliceAudio: () => state,
+    useSliceAudio: (deps?: any) => {
+      if (deps?.onSliceEnded) onSliceEndedCallback = deps.onSliceEnded
+      if (deps?.onNextTrack) onNextTrackCallback = deps.onNextTrack
+      if (deps?.onPreviousTrack) onPrevTrackCallback = deps.onPreviousTrack
+      return state
+    },
+    filterSystemVoicesForLanguage: (voices: any[], lang?: string | null) => {
+      if (!lang) return voices
+      const prefix = lang.toLowerCase().slice(0, 2)
+      return voices.filter(v => v.lang.toLowerCase().startsWith(prefix))
+    },
     CLOUD_VOICES: {
       vi: [
         { id: 'vi-VN-Neural2-A', label: 'vi-VN-Neural2-A', gender: 'female', language: 'vi' },
@@ -73,10 +111,27 @@ const MESSAGES: Record<string, string> = {
   'reader.audio_error_network': 'Network error while loading audio. Please try again.',
   'reader.audio_error_with_reason': 'Could not generate audio: {message}',
   'reader.audio_fallback_to_cloud': 'Switch to Google Cloud',
+  'reader.audio_engine_system': 'System',
   'reader.audio_engine_cloud': 'Cloud',
   'reader.audio_engine_device': 'Device',
+  'reader.audio_engine_system_hint': 'Local device system speech synthesis',
   'reader.audio_engine_cloud_hint': 'Google Cloud high-speed narration',
   'reader.audio_engine_device_hint': 'On-device Web Worker synthesis',
+  'reader.audio_cascade_tier': 'Tier: {tier}',
+  'reader.audio_cascade_active_hint': 'Active synthesis cascade tier',
+  'reader.audio_system_voice_default': 'System Default Voice',
+  'reader.audio_system_voice_auto_desc': 'Automatic voice assignment',
+  'reader.audio_auto_advance': 'Auto Next',
+  'reader.audio_auto_advance_hint': 'Automatically advance to next slice and continue narration',
+  'reader.audio_sleep_timer': 'Sleep Timer',
+  'reader.audio_sleep_timer_off': 'Off',
+  'reader.audio_sleep_timer_15m': '15 min',
+  'reader.audio_sleep_timer_30m': '30 min',
+  'reader.audio_sleep_timer_45m': '45 min',
+  'reader.audio_sleep_timer_60m': '60 min',
+  'reader.audio_sleep_timer_end_of_slice': 'End of slice',
+  'reader.audio_sleep_timer_ended': 'Sleep timer expired. Audio paused.',
+  'reader.audio_pitch': 'Pitch',
   'reader.audio_quota_exhausted_toast': 'Monthly cloud audio quota reached. Switched to on-device narration.',
   'reader.audio_quota_near_limit_tooltip': 'Monthly cloud quota reached, using on-device narration',
   'reader.audio_voice_select_placeholder': 'Select voice',
@@ -85,7 +140,7 @@ const MESSAGES: Record<string, string> = {
   'reader.audio_device_gpu': 'GPU',
   'reader.audio_device_cpu': 'CPU',
   'reader.audio_device_gpu_hint': 'Narration running on GPU',
-  'reader.audio_device_cpu_hint': 'Narration running on CPU'
+  'reader.audio_device_cpu_hint': 'Narration running on CPU',
 }
 
 function interpolate(key: string, params?: Record<string, unknown>): string {
@@ -421,5 +476,115 @@ describe('ReaderAudioPlayer.vue', () => {
     await nextTick()
 
     expect(wrapper.text()).not.toContain('Switch to Google Cloud')
+  })
+
+  describe('Auto Next, Sleep Timer, and Advanced Controls', () => {
+    it('toggles Auto Next when the auto-advance button is clicked', async () => {
+      const wrapper = mountPlayer({ chunk: chunk() })
+      const autoBtn = wrapper.findAll('button').find(b => b.text().includes('Auto Next'))
+      expect(autoBtn).toBeDefined()
+      expect(audio.autoAdvance.value).toBe(true)
+
+      await autoBtn!.trigger('click')
+      expect(audio.autoAdvance.value).toBe(false)
+
+      await autoBtn!.trigger('click')
+      expect(audio.autoAdvance.value).toBe(true)
+    })
+
+    it('opens sleep timer dropdown and selects 15m preset', async () => {
+      vi.useFakeTimers()
+      try {
+        const wrapper = mountPlayer({ chunk: chunk() })
+        const timerBtn = wrapper.findAll('button').find(b => b.text().includes('Sleep Timer'))
+        expect(timerBtn).toBeDefined()
+
+        // Open dropdown
+        await timerBtn!.trigger('click')
+        await nextTick()
+
+        // Find the 15 min option
+        const opt15m = wrapper.findAll('button').find(b => b.text().includes('15 min'))
+        expect(opt15m).toBeDefined()
+
+        // Select 15 min
+        await opt15m!.trigger('click')
+        await nextTick()
+
+        // Badge should display 15:00
+        expect(wrapper.text()).toContain('15:00')
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('applies exponential fade-out during the final 15 seconds of sleep timer countdown and pauses', async () => {
+      vi.useFakeTimers()
+      try {
+        audio.playing.value = true
+        const wrapper = mountPlayer({ chunk: chunk() })
+        const timerBtn = wrapper.findAll('button').find(b => b.text().includes('Sleep Timer'))
+        await timerBtn!.trigger('click')
+        await nextTick()
+
+        const opt15m = wrapper.findAll('button').find(b => b.text().includes('15 min'))
+        await opt15m!.trigger('click')
+        await nextTick()
+
+        // Advance timer 14 minutes and 46 seconds (886 seconds) -> 14 seconds remaining
+        vi.advanceTimersByTime(886 * 1000)
+        await nextTick()
+
+        // Expect volume to be faded: (14 / 15)^2 ≈ 0.871
+        expect(audio.setVolume).toHaveBeenCalled()
+        const lastCallVolume = audio.setVolume.mock.calls.at(-1)?.[0]
+        expect(lastCallVolume).toBeLessThan(1.0)
+        expect(lastCallVolume).toBeGreaterThan(0.8)
+
+        // Advance 14 more seconds to reach zero
+        vi.advanceTimersByTime(14 * 1000)
+        await nextTick()
+
+        expect(audio.pause).toHaveBeenCalled()
+        expect(audio.setVolume).toHaveBeenCalledWith(1)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('emits auto-advance when slice finishes and autoAdvance is active', async () => {
+      const wrapper = mountPlayer({ chunk: chunk() })
+      audio.autoAdvance.value = true
+
+      // Simulate composable onSliceEnded callback
+      audio._triggerSliceEnded()
+      await nextTick()
+      // Allow microtask resolution for playSliceTransitionChime
+      await Promise.resolve()
+      await nextTick()
+
+      expect(wrapper.emitted('auto-advance')).toHaveLength(1)
+    })
+
+    it('emits seek-slice when nexttrack and previoustrack trigger', async () => {
+      const wrapper = mountPlayer({ chunk: chunk() })
+
+      audio._triggerNextTrack()
+      await nextTick()
+      expect(wrapper.emitted('seek-slice')?.[0]).toEqual(['next'])
+
+      audio._triggerPrevTrack()
+      await nextTick()
+      expect(wrapper.emitted('seek-slice')?.[1]).toEqual(['prev'])
+    })
+
+    it('renders system engine toggle and switches to System mode', async () => {
+      const wrapper = mountPlayer({ chunk: chunk() })
+      const sysBtn = wrapper.findAll('button').find(b => b.text().includes('System'))
+      expect(sysBtn).toBeDefined()
+
+      await sysBtn!.trigger('click')
+      expect(audio.setEngineMode).toHaveBeenCalledWith('system')
+    })
   })
 })

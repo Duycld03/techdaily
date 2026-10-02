@@ -12,7 +12,7 @@ import { buildAudioKey, createIdbBackend, createSliceAudioCache } from '~/utils/
 import type { SliceAudioCache } from '~/utils/sliceAudioCache'
 import type { AudioQuotaInfo } from '~/types/audio'
 
-export type AudioEngine = 'cloud' | 'device'
+export type AudioEngine = 'cloud' | 'device' | 'system'
 
 export interface NarrationSource {
   chunkId: string
@@ -52,11 +52,140 @@ export interface SliceAudioDeps {
   fetchClient?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   defaultEngine?: AudioEngine
   onQuotaExhausted?: () => void
+  onSliceEnded?: () => void
+  onNextTrack?: () => void
+  onPreviousTrack?: () => void
+  speechSynthesis?: SpeechSynthesis
 }
 
 export const AUDIO_SPEED_STORAGE_KEY = 'techdaily_reader_audio_speed'
 export const AUDIO_ENGINE_STORAGE_KEY = 'techdaily_reader_audio_engine'
 export const AUDIO_VOICE_STORAGE_KEY = 'techdaily_reader_audio_voice'
+export const AUDIO_PITCH_STORAGE_KEY = 'techdaily_reader_audio_pitch'
+export const AUDIO_SYSTEM_VOICE_STORAGE_KEY = 'techdaily_reader_audio_system_voice'
+export const AUDIO_AUTO_ADVANCE_STORAGE_KEY = 'techdaily_reader_audio_auto_advance'
+export const AUDIO_SLEEP_TIMER_STORAGE_KEY = 'techdaily_reader_audio_sleep_timer'
+
+export interface SystemVoiceOption {
+  id: string
+  name: string
+  lang: string
+  default: boolean
+  localService?: boolean
+}
+
+export interface MediaSessionMetadataPayload {
+  title: string
+  artist?: string
+  album?: string
+  artwork?: { src: string; sizes?: string; type?: string }[]
+}
+
+export function getAvailableSystemVoices(speechSynth?: SpeechSynthesis | null): SystemVoiceOption[] {
+  if (typeof window === 'undefined') return []
+  const synth = speechSynth ?? (typeof window.speechSynthesis !== 'undefined' ? window.speechSynthesis : null)
+  if (!synth) return []
+  return synth.getVoices().map(v => ({
+    id: v.voiceURI || v.name,
+    name: v.name,
+    lang: v.lang,
+    default: v.default,
+    localService: v.localService,
+  }))
+}
+
+export function filterSystemVoicesForLanguage(voices: SystemVoiceOption[], lang?: string | null): SystemVoiceOption[] {
+  if (!lang) return voices
+  const prefix = lang.toLowerCase().split(/[-_]/)[0]
+  if (!prefix) return voices
+  return voices.filter(v => v.lang.toLowerCase().replace('_', '-').startsWith(prefix))
+}
+
+export function resolveCascadedEngine(options: {
+  manualOverride?: AudioEngine | null
+  sliceLanguage?: string | null
+  availableSystemVoices?: SystemVoiceOption[]
+  isOnline?: boolean
+  isQuotaExhausted?: boolean
+  hasDeviceEngineOnly?: boolean
+}): AudioEngine {
+  if (options.manualOverride) {
+    return options.manualOverride
+  }
+  if (options.hasDeviceEngineOnly) {
+    return 'device'
+  }
+  const matchingVoices = filterSystemVoicesForLanguage(options.availableSystemVoices ?? [], options.sliceLanguage)
+  if (matchingVoices.length > 0) {
+    return 'system'
+  }
+  const isOnline = options.isOnline ?? (typeof navigator !== 'undefined' ? navigator.onLine : true)
+  if (isOnline && !options.isQuotaExhausted) {
+    return 'cloud'
+  }
+  return 'device'
+}
+
+export function playSliceTransitionChime(): Promise<void> {
+  if (typeof window === 'undefined') return Promise.resolve()
+  const { promise, resolve } = typeof Promise.withResolvers === 'function'
+    ? Promise.withResolvers<void>()
+    : (() => {
+        let res!: () => void
+        const p = new Promise<void>((r) => { res = r })
+        return { promise: p, resolve: res }
+      })()
+
+  try {
+    let AudioCtx: typeof AudioContext | null = window.AudioContext ?? null
+    if (!AudioCtx && 'webkitAudioContext' in window) {
+      AudioCtx = window.webkitAudioContext as typeof AudioContext
+    }
+    if (!AudioCtx) {
+      resolve()
+      return promise
+    }
+    const ctx = new AudioCtx()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+
+    osc.type = 'sine'
+    const now = ctx.currentTime
+    osc.frequency.setValueAtTime(440, now)
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.25)
+
+    gain.gain.setValueAtTime(0.15, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25)
+
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc.start(now)
+    osc.stop(now + 0.25)
+
+    osc.onended = () => {
+      void ctx.close()
+      resolve()
+    }
+  } catch {
+    resolve()
+  }
+  return promise
+}
+
+export function updateMediaSessionMetadata(payload: MediaSessionMetadataPayload): void {
+  if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: payload.title,
+      artist: payload.artist || 'TechDaily',
+      album: payload.album || 'TechDaily Reader',
+      artwork: payload.artwork || [],
+    })
+  } catch {
+    // Ignored if MediaMetadata fails
+  }
+}
 
 export interface CloudVoiceOption {
   id: string
@@ -241,9 +370,96 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     ?? (deps.engine && !deps.fetchClient ? 'device' : 'cloud')
 
   const engineMode = ref<AudioEngine>(initialEngine)
+  const activeCascadeTier = ref<AudioEngine>(initialEngine)
   const selectedVoice = ref<string>(
     (isClient ? localStorage.getItem(AUDIO_VOICE_STORAGE_KEY) : null) ?? ''
   )
+  const pitch = ref<number>(
+    isClient && localStorage.getItem(AUDIO_PITCH_STORAGE_KEY)
+      ? Number(localStorage.getItem(AUDIO_PITCH_STORAGE_KEY))
+        : 1
+  )
+  const volume = ref<number>(1)
+  const selectedSystemVoice = ref<string>(
+    (isClient ? localStorage.getItem(AUDIO_SYSTEM_VOICE_STORAGE_KEY) : null) ?? ''
+  )
+  const autoAdvance = useStorage(AUDIO_AUTO_ADVANCE_STORAGE_KEY, true)
+  const systemVoices = ref<SystemVoiceOption[]>([])
+
+  let activeUtterance: SpeechSynthesisUtterance | null = null
+  let isSilentCarrierActive = false
+  const SILENT_AUDIO_URI = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
+
+  function getSpeechSynth(): SpeechSynthesis | null {
+    if (deps.speechSynthesis) return deps.speechSynthesis
+    if (isClient && 'speechSynthesis' in window) {
+      return window.speechSynthesis
+    }
+    return null
+  }
+
+  function loadSystemVoices(): void {
+    const synth = getSpeechSynth()
+    if (!synth) return
+    const raw = synth.getVoices()
+    if (raw && raw.length > 0) {
+      systemVoices.value = raw.map(v => ({
+        id: v.voiceURI || v.name,
+        name: v.name,
+        lang: v.lang,
+        default: v.default,
+        localService: v.localService,
+      }))
+    }
+  }
+
+  if (isClient) {
+    loadSystemVoices()
+    const synth = getSpeechSynth()
+    if (synth && 'onvoiceschanged' in synth) {
+      synth.onvoiceschanged = () => loadSystemVoices()
+    }
+    if ('mediaSession' in navigator) {
+      try {
+        navigator.mediaSession.setActionHandler('play', () => { void play() })
+        navigator.mediaSession.setActionHandler('pause', () => { pause() })
+        if (deps.onNextTrack) {
+          navigator.mediaSession.setActionHandler('nexttrack', () => { deps.onNextTrack?.() })
+        }
+        if (deps.onPreviousTrack) {
+          navigator.mediaSession.setActionHandler('previoustrack', () => { deps.onPreviousTrack?.() })
+        }
+      } catch {
+        // Non-fatal
+      }
+    }
+  }
+
+  function startSilentCarrier(): void {
+    if (!isClient) return
+    const el = ensureAudio()
+    if (!el || isSilentCarrierActive) return
+    try {
+      if (el.src !== SILENT_AUDIO_URI) {
+        el.src = SILENT_AUDIO_URI
+        el.loop = true
+      }
+      void el.play()
+      isSilentCarrierActive = true
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  function stopSilentCarrier(): void {
+    if (!isSilentCarrierActive) return
+    const el = audio.value
+    if (el) {
+      el.pause()
+      el.loop = false
+    }
+    isSilentCarrierActive = false
+  }
 
   const audioQuota = ref<AudioQuotaInfo | null>(null)
   const isNearQuota = computed(() => (audioQuota.value?.usedCharacters ?? 0) >= 900_000 || !!audioQuota.value?.isNearLimit)
@@ -325,9 +541,11 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
           onChunkEndedCallback()
         } else {
           playing.value = false
+          deps.onSliceEnded?.()
         }
       })
       el.playbackRate = speed.value
+      el.volume = volume.value
     }
     return audio.value
   }
@@ -358,6 +576,23 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
   async function play(): Promise<void> {
     isUserPaused = false
+    if (engineMode.value === 'system') {
+      const synth = getSpeechSynth()
+      if (synth) {
+        if (synth.paused) {
+          startSilentCarrier()
+          synth.resume()
+          playing.value = true
+          return
+        }
+        if (activeUtterance) {
+          startSilentCarrier()
+          synth.speak(activeUtterance)
+          playing.value = true
+          return
+        }
+      }
+    }
     const el = ensureAudio()
     if (!el) return
     try {
@@ -374,6 +609,13 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   function pause(): void {
     isUserPaused = true
     cancelWaitingForChunk?.()
+    if (engineMode.value === 'system') {
+      const synth = getSpeechSynth()
+      if (synth) {
+        synth.pause()
+      }
+      stopSilentCarrier()
+    }
     audio.value?.pause()
     playing.value = false
     if (status.value === 'loading') {
@@ -395,15 +637,24 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
   function setEngineMode(mode: AudioEngine): void {
     engineMode.value = mode
+    activeCascadeTier.value = mode
     errorMessage.value = null
     errorInfo.value = null
-    if (mode === 'cloud') {
+    if (mode === 'cloud' || mode === 'system') {
       cancelWorkerSynthesis()
+    }
+    if (mode !== 'system') {
+      const synth = getSpeechSynth()
+      if (synth) {
+        synth.cancel()
+        stopSilentCarrier()
+      }
     }
     if (isClient) {
       localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, mode)
     }
   }
+
   function setVoice(voiceId: string): void {
     selectedVoice.value = voiceId
     if (isClient) {
@@ -413,6 +664,26 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     }
   }
 
+  function setSystemVoice(voiceId: string): void {
+    selectedSystemVoice.value = voiceId
+    if (isClient) {
+      localStorage.setItem(AUDIO_SYSTEM_VOICE_STORAGE_KEY, voiceId)
+    }
+  }
+
+  function setPitch(value: number): void {
+    pitch.value = value
+    if (isClient) {
+      localStorage.setItem(AUDIO_PITCH_STORAGE_KEY, String(value))
+    }
+    if (engineMode.value === 'system' && activeUtterance) {
+      activeUtterance.pitch = value
+    }
+  }
+
+  function setAutoAdvance(value: boolean): void {
+    autoAdvance.value = value
+  }
   async function fetchQuota(): Promise<AudioQuotaInfo | null> {
     try {
       const client = getFetchClient()
@@ -433,6 +704,169 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     return null
   }
 
+  async function synthesizeOnSystem(
+    source: NarrationSource,
+    script: string,
+    contentHash: string,
+    cache: SliceAudioCache,
+    autoPlay = true,
+  ): Promise<void> {
+    const synth = getSpeechSynth()
+    if (!synth) {
+      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
+      return
+    }
+
+    synth.cancel()
+    loadSystemVoices()
+    const matching = filterSystemVoicesForLanguage(systemVoices.value, source.language)
+    if (matching.length === 0) {
+      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
+      return
+    }
+
+    const matched = matching.find(v => v.id === selectedSystemVoice.value) || matching[0]
+    selectedSystemVoice.value = matched.id
+    activeCascadeTier.value = 'system'
+
+    const UtteranceCtor = typeof SpeechSynthesisUtterance !== 'undefined'
+      ? SpeechSynthesisUtterance
+      : (typeof globalThis !== 'undefined' && 'SpeechSynthesisUtterance' in globalThis
+          ? (globalThis.SpeechSynthesisUtterance as typeof SpeechSynthesisUtterance)
+          : null)
+    if (!UtteranceCtor) {
+      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
+      return
+    }
+    const utterance = new UtteranceCtor(script)
+    const allRaw = synth.getVoices()
+    const actualVoice = allRaw.find(v => (v.voiceURI || v.name) === matched.id)
+    if (actualVoice) {
+      utterance.voice = actualVoice
+    }
+    utterance.lang = matched.lang
+    utterance.rate = Math.max(0.5, Math.min(2.0, speed.value))
+    utterance.pitch = Math.max(0.5, Math.min(1.5, pitch.value))
+    utterance.volume = Math.max(0, Math.min(1.0, volume.value))
+    activeUtterance = utterance
+    activeKey = `system:${source.chunkId}:${matched.id}:${contentHash}`
+
+    utterance.onstart = () => {
+      playing.value = true
+      status.value = 'ready'
+    }
+    utterance.onpause = () => {
+      playing.value = false
+    }
+    utterance.onresume = () => {
+      playing.value = true
+    }
+    utterance.onend = () => {
+      playing.value = false
+      stopSilentCarrier()
+      deps.onSliceEnded?.()
+    }
+    utterance.onerror = (e) => {
+      if (e.error === 'canceled' || e.error === 'interrupted') return
+      playing.value = false
+      stopSilentCarrier()
+      status.value = 'error'
+      const info = categorizeAudioError(new Error(`System TTS Error: ${e.error}`), 'system')
+      errorMessage.value = info.rawMessage
+      errorInfo.value = info
+    }
+
+    status.value = 'ready'
+    currentTime.value = 0
+    duration.value = 0
+    if (autoPlay) {
+      startSilentCarrier()
+      synth.speak(utterance)
+      playing.value = true
+    }
+  }
+
+  async function synthesizeOnCloud(
+    source: NarrationSource,
+    script: string,
+    contentHash: string,
+    cache: SliceAudioCache,
+    autoPlay = true,
+  ): Promise<void> {
+    activeCascadeTier.value = 'cloud'
+    const langKey = (source.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en'
+    const scopedVoice = isClient ? localStorage.getItem(`${AUDIO_VOICE_STORAGE_KEY}_${langKey}`) : null
+    const requestedVoice = selectedVoice.value || scopedVoice
+    const voiceId = resolveCloudVoiceForLanguage(source.language, requestedVoice)
+    selectedVoice.value = voiceId
+    const key = buildAudioKey(source.chunkId, voiceId, contentHash)
+    activeKey = key
+
+    // Cache hit in browser IndexedDB
+    const cached = await cache.get(key)
+    if (cached) {
+      setSource(cached)
+      status.value = 'ready'
+      if (autoPlay) {
+        await play()
+      }
+      return
+    }
+
+    // Cache miss -> Fetch from backend proxy
+    status.value = 'loading'
+    downloadProgress.value = 0
+
+    try {
+      const client = getFetchClient()
+      const response = await client(`/api/v1/library/chunks/${source.chunkId}/audio`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voiceId,
+          contentHash,
+          narrationScript: script,
+        }),
+      })
+
+      if (response.status === 429) {
+        deps.onQuotaExhausted?.()
+        setEngineMode('device')
+        if (audioQuota.value) {
+          audioQuota.value.isExhausted = true
+        }
+        const info = categorizeAudioError(new Error('QUOTA_EXHAUSTED'), 'cloud')
+        errorMessage.value = 'QUOTA_EXHAUSTED'
+        errorInfo.value = info
+        // Automatic fallback to On-Device Web Worker
+        await synthesizeOnDevice(source, script, contentHash, cache, autoPlay)
+        return
+      }
+
+      if (!response.ok) {
+        status.value = 'error'
+        const info = categorizeAudioError(new Error(`Synthesis failed (${response.status})`), 'cloud')
+        errorMessage.value = info.rawMessage
+        errorInfo.value = info
+        return
+      }
+      const blob = await response.blob()
+      if (activeKey !== key) return
+
+      await cache.set(key, blob)
+      setSource(blob)
+      status.value = 'ready'
+      if (autoPlay) {
+        await play()
+      }
+    } catch (err) {
+      status.value = 'error'
+      const info = categorizeAudioError(err, 'cloud')
+      errorMessage.value = info.rawMessage
+      errorInfo.value = info
+    }
+  }
+
   async function loadAndPlay(source: NarrationSource, autoPlay = true): Promise<void> {
     errorMessage.value = null
     errorInfo.value = null
@@ -445,78 +879,22 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
     const contentHash = await computeContentHash(script)
     cancelWorkerSynthesis()
-    if (engineMode.value === 'cloud') {
-      const langKey = (source.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en'
-      const scopedVoice = isClient ? localStorage.getItem(`${AUDIO_VOICE_STORAGE_KEY}_${langKey}`) : null
-      const requestedVoice = selectedVoice.value || scopedVoice
-      const voiceId = resolveCloudVoiceForLanguage(source.language, requestedVoice)
-      selectedVoice.value = voiceId
-      const key = buildAudioKey(source.chunkId, voiceId, contentHash)
-      activeKey = key
 
-      // Cache hit in browser IndexedDB
-      const cached = await cache.get(key)
-      if (cached) {
-        setSource(cached)
-        status.value = 'ready'
-        if (autoPlay) {
-          await play()
-        }
-        return
-      }
+    const manualStored = isClient ? (localStorage.getItem(AUDIO_ENGINE_STORAGE_KEY) as AudioEngine | null) : null
+    const effectiveEngine = resolveCascadedEngine({
+      manualOverride: deps.defaultEngine || manualStored,
+      sliceLanguage: source.language,
+      availableSystemVoices: systemVoices.value,
+      isQuotaExhausted: isQuotaExhausted.value,
+      hasDeviceEngineOnly: !!(deps.engine && !deps.fetchClient),
+    })
+    activeCascadeTier.value = effectiveEngine
+    engineMode.value = effectiveEngine
 
-      // Cache miss -> Fetch from backend proxy
-      status.value = 'loading'
-      downloadProgress.value = 0
-
-      try {
-        const client = getFetchClient()
-        const response = await client(`/api/v1/library/chunks/${source.chunkId}/audio`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            voiceId,
-            contentHash,
-            narrationScript: script,
-          }),
-        })
-
-        if (response.status === 429) {
-          deps.onQuotaExhausted?.()
-          setEngineMode('device')
-          if (audioQuota.value) {
-            audioQuota.value.isExhausted = true
-          }
-          const info = categorizeAudioError(new Error('QUOTA_EXHAUSTED'), 'cloud')
-          errorMessage.value = 'QUOTA_EXHAUSTED'
-          errorInfo.value = info
-          // Automatic fallback to On-Device Web Worker
-          await synthesizeOnDevice(source, script, contentHash, cache)
-          return
-        }
-
-        if (!response.ok) {
-          status.value = 'error'
-          const info = categorizeAudioError(new Error(`Synthesis failed (${response.status})`), 'cloud')
-          errorMessage.value = info.rawMessage
-          errorInfo.value = info
-          return
-        }
-        const blob = await response.blob()
-        if (activeKey !== key) return
-
-        await cache.set(key, blob)
-        setSource(blob)
-        status.value = 'ready'
-        if (autoPlay) {
-          await play()
-        }
-      } catch (err) {
-        status.value = 'error'
-        const info = categorizeAudioError(err, 'cloud')
-        errorMessage.value = info.rawMessage
-        errorInfo.value = info
-      }
+    if (effectiveEngine === 'system') {
+      await synthesizeOnSystem(source, script, contentHash, cache, autoPlay)
+    } else if (effectiveEngine === 'cloud') {
+      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
     } else {
       await synthesizeOnDevice(source, script, contentHash, cache, autoPlay)
     }
@@ -741,7 +1119,20 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
   function setSpeed(value: number): void {
     speed.value = value
-    if (audio.value) audio.value.playbackRate = value
+    const el = ensureAudio()
+    if (el) el.playbackRate = value
+    if (engineMode.value === 'system' && activeUtterance) {
+      activeUtterance.rate = value
+    }
+  }
+
+  function setVolume(value: number): void {
+    const bounded = Math.max(0, Math.min(1.0, value))
+    volume.value = bounded
+    if (audio.value) audio.value.volume = bounded
+    if (engineMode.value === 'system' && activeUtterance) {
+      activeUtterance.volume = bounded
+    }
   }
 
   function seek(time: number): void {
@@ -749,7 +1140,8 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   }
 
   watch(speed, (value) => {
-    if (audio.value) audio.value.playbackRate = value
+    const el = ensureAudio()
+    if (el) el.playbackRate = value
   })
 
   function dispose(): void {
@@ -759,7 +1151,13 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       objectUrl = null
     }
     audio.value?.pause()
+    stopSilentCarrier()
+    const synth = getSpeechSynth()
+    if (synth) {
+      synth.cancel()
+    }
     activeKey = null
+    activeUtterance = null
     onChunkEndedCallback = null
     status.value = 'idle'
     device.value = null
@@ -782,19 +1180,31 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     device,
     speed,
     engineMode,
+    activeCascadeTier,
     selectedVoice,
+    selectedSystemVoice,
+    systemVoices,
+    pitch,
+    autoAdvance,
     audioQuota,
     isNearQuota,
     isQuotaExhausted,
     setEngineMode,
     setVoice,
+    setSystemVoice,
+    setPitch,
+    setAutoAdvance,
     fetchQuota,
     loadAndPlay,
     play,
     pause,
     toggle,
     setSpeed,
+    volume,
+    setVolume,
     seek,
     dispose,
+    playSliceTransitionChime,
+    updateMediaSessionMetadata,
   }
 }

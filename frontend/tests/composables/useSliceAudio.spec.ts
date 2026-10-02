@@ -6,11 +6,20 @@ import { resolveVoiceForLanguage } from '~/utils/ttsVoices'
 import {
   AUDIO_SPEED_STORAGE_KEY,
   AUDIO_ENGINE_STORAGE_KEY,
+  AUDIO_PITCH_STORAGE_KEY,
+  AUDIO_SYSTEM_VOICE_STORAGE_KEY,
+  AUDIO_AUTO_ADVANCE_STORAGE_KEY,
   useSliceAudio,
   categorizeAudioError,
+  resolveCascadedEngine,
+  filterSystemVoicesForLanguage,
+  getAvailableSystemVoices,
+  playSliceTransitionChime,
+  updateMediaSessionMetadata,
   type SynthHandlers,
   type TtsEngine,
   type NarrationSource,
+  type SystemVoiceOption,
 } from '~/composables/useSliceAudio'
 import type { PartialSliceAudio, SliceAudioCache } from '~/utils/sliceAudioCache'
 import type { AudioQuotaInfo } from '~/types/audio'
@@ -1124,6 +1133,173 @@ describe('useSliceAudio', () => {
       expect(player.errorInfo.value?.code).toBe('NETWORK_ERROR')
       expect(player.errorInfo.value?.suggestCloudFallback).toBe(true)
       expect(player.errorMessage.value).toBe('TypeError: Load failed')
+    })
+  })
+
+  describe('Cascading Engine Resolution, System TTS, and Media Lifecycle', () => {
+    const sampleVoices: SystemVoiceOption[] = [
+      { id: 'vi-vn-x-vic-local', name: 'Google Vietnamese (vic)', lang: 'vi-VN', default: true },
+      { id: 'en-us-x-sfg-local', name: 'Google US English (sfg)', lang: 'en-US', default: false },
+    ]
+
+    it('filters system voices correctly by slice language', () => {
+      const viVoices = filterSystemVoicesForLanguage(sampleVoices, 'vi')
+      expect(viVoices).toHaveLength(1)
+      expect(viVoices[0]!.id).toBe('vi-vn-x-vic-local')
+
+      const enVoices = filterSystemVoicesForLanguage(sampleVoices, 'en')
+      expect(enVoices).toHaveLength(1)
+      expect(enVoices[0]!.id).toBe('en-us-x-sfg-local')
+
+      const frVoices = filterSystemVoicesForLanguage(sampleVoices, 'fr')
+      expect(frVoices).toHaveLength(0)
+    })
+
+    it('resolves cascade Priority 1: System TTS when matching system voice is present', () => {
+      const engine = resolveCascadedEngine({
+        sliceLanguage: 'vi',
+        availableSystemVoices: sampleVoices,
+        isOnline: true,
+        isQuotaExhausted: false,
+      })
+      expect(engine).toBe('system')
+    })
+
+    it('resolves cascade Priority 2: Cloud TTS when system voice is missing but online and quota healthy', () => {
+      const engine = resolveCascadedEngine({
+        sliceLanguage: 'fr',
+        availableSystemVoices: sampleVoices,
+        isOnline: true,
+        isQuotaExhausted: false,
+      })
+      expect(engine).toBe('cloud')
+    })
+
+    it('resolves cascade Priority 3: Device TTS when cloud quota is exhausted or offline', () => {
+      const engineOffline = resolveCascadedEngine({
+        sliceLanguage: 'fr',
+        availableSystemVoices: sampleVoices,
+        isOnline: false,
+        isQuotaExhausted: false,
+      })
+      expect(engineOffline).toBe('device')
+
+      const engineExhausted = resolveCascadedEngine({
+        sliceLanguage: 'fr',
+        availableSystemVoices: sampleVoices,
+        isOnline: true,
+        isQuotaExhausted: true,
+      })
+      expect(engineExhausted).toBe('device')
+    })
+
+    it('honors manual user override over automatic cascade resolution', () => {
+      const engine = resolveCascadedEngine({
+        manualOverride: 'cloud',
+        sliceLanguage: 'vi',
+        availableSystemVoices: sampleVoices,
+        isOnline: true,
+        isQuotaExhausted: false,
+      })
+      expect(engine).toBe('cloud')
+    })
+
+    it('executes System TTS narration, sets pitch and speed, and invokes onSliceEnded on completion', async () => {
+      class FakeUtterance {
+        text: string
+        lang = ''
+        voice: SpeechSynthesisVoice | null = null
+        rate = 1
+        pitch = 1
+        onstart: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onend: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onerror: ((ev: SpeechSynthesisErrorEvent) => void) | null = null
+        onpause: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onresume: ((ev: SpeechSynthesisEvent) => void) | null = null
+        constructor(text: string) {
+          this.text = text
+        }
+      }
+      const prevUtterance = (globalThis as unknown as { SpeechSynthesisUtterance?: unknown }).SpeechSynthesisUtterance
+      ;(globalThis as unknown as { SpeechSynthesisUtterance: unknown }).SpeechSynthesisUtterance = FakeUtterance
+
+      const spokenUtterances: SpeechSynthesisUtterance[] = []
+      const mockSynth = {
+        getVoices: vi.fn(() => [
+          { voiceURI: 'vi-vn-x-vic-local', name: 'Google Vietnamese', lang: 'vi-VN', default: true },
+        ]),
+        speak: vi.fn((utt: SpeechSynthesisUtterance) => {
+          spokenUtterances.push(utt)
+          utt.onstart?.(new Event('start') as SpeechSynthesisEvent)
+        }),
+        pause: vi.fn(),
+        resume: vi.fn(),
+        cancel: vi.fn(),
+        speaking: false,
+        paused: false,
+      } as unknown as SpeechSynthesis
+
+      const audio = createFakeAudio()
+      const { cache } = memoryCache()
+      const onSliceEnded = vi.fn()
+
+      const player = useSliceAudio({
+        defaultEngine: 'system',
+        speechSynthesis: mockSynth,
+        cache,
+        createAudio: () => audio,
+        onSliceEnded,
+      })
+
+      player.setSpeed(2.0)
+      player.setPitch(1.0)
+      player.setSystemVoice('vi-vn-x-vic-local')
+
+      await player.loadAndPlay(source({ language: 'vi' }))
+
+      expect(mockSynth.speak).toHaveBeenCalled()
+      expect(spokenUtterances).toHaveLength(1)
+      expect(spokenUtterances[0].rate).toBe(2.0)
+      expect(spokenUtterances[0].pitch).toBe(1.0)
+      expect(player.playing.value).toBe(true)
+
+      // Trigger speech completion
+      spokenUtterances[0]?.onend?.(new Event('end') as SpeechSynthesisEvent)
+      expect(player.playing.value).toBe(false)
+      expect(onSliceEnded).toHaveBeenCalledTimes(1)
+    })
+
+    it('triggers onSliceEnded when HTMLAudioElement completes playback', async () => {
+      const audio = createFakeAudio()
+      const { cache } = memoryCache()
+      const onSliceEnded = vi.fn()
+      const engine = streamingEngine()
+
+      const player = useSliceAudio({
+        defaultEngine: 'device',
+        engine,
+        cache,
+        createAudio: () => audio,
+        onSliceEnded,
+      })
+
+      await player.loadAndPlay(source())
+      expect(player.status.value).toBe('ready')
+
+      // Fire audio element ended event
+      audio._fire('ended')
+      expect(onSliceEnded).toHaveBeenCalledTimes(1)
+    })
+
+    it('generates soft transition chime via Web Audio API without throwing', async () => {
+      await expect(playSliceTransitionChime()).resolves.toBeUndefined()
+    })
+
+    it('updates MediaSession metadata cleanly', () => {
+      updateMediaSessionMetadata({
+        title: 'Slice 1: Distributed Architecture',
+        artist: 'Designing Data-Intensive Applications',
+      })
     })
   })
 })

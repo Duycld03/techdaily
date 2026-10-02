@@ -46,8 +46,11 @@ const { t, locale } = useI18n();
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
+const focusStore = useDailyFocusStore();
 const libraryStore = useLibraryStore();
 const notesStore = useNotesStore();
+const audioPlayerRef = ref<InstanceType<typeof ReaderAudioPlayer> | null>(null);
 const {
   render: renderMarkdown,
   initHighlighter,
@@ -491,12 +494,37 @@ function selectChunk(index: number) {
   router.replace({ query: { slice: chunkOrder } });
   markCurrentSliceCompleted();
 
+  // Synchronize reading progress and pacer streak with backend UserBookPacer API
+  if (authStore.isAuthenticated) {
+    void focusStore
+      .fetchTodayFocus({
+        bookId: bookId.value,
+        chunkOrder,
+        locale: locale.value,
+      })
+      .catch(() => {});
+  }
+
   // Scroll to top
   nextTick(() => {
     if (articleScrollContainer.value) {
       articleScrollContainer.value.scrollTo({ top: 0, behavior: "smooth" });
     }
   });
+}
+
+function handleAutoAdvance() {
+  if (activeChunkIndex.value < totalChunks.value - 1) {
+    goToNextSlice();
+  }
+}
+
+function handleSeekSlice(direction: 'next' | 'prev') {
+  if (direction === 'next') {
+    goToNextSlice();
+  } else if (direction === 'prev') {
+    goToPrevSlice();
+  }
 }
 
 function goToNextSlice() {
@@ -791,7 +819,13 @@ async function handleHighlightAndNote() {
               {{ currentChunk.chapterTitle }}
             </h1>
 
-            <ReaderAudioPlayer :chunk="currentChunk" />
+            <ReaderAudioPlayer
+              ref="audioPlayerRef"
+              :chunk="currentChunk"
+              :book-title="book?.title"
+              @auto-advance="handleAutoAdvance"
+              @seek-slice="handleSeekSlice"
+            />
           </div>
 
           <!-- Markdown Body -->
