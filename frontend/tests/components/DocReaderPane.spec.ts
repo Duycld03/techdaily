@@ -17,6 +17,13 @@ vi.mock('~/composables/useMarkdownRenderer', () => ({
   })
 }))
 
+vi.mock('~/components/reader/ReaderAudioPlayer.vue', () => ({
+  default: {
+    name: 'ReaderAudioPlayer',
+    props: ['chunk'],
+    template: '<div class="reader-audio-player-stub" :data-chunk-id="chunk?.id">AudioPlayerStub</div>'
+  }
+}))
 const mockDocumentChunk = {
   id: 'chunk-day-5',
   documentBookId: 'book-1',
@@ -26,7 +33,8 @@ const mockDocumentChunk = {
   summaryMarkdown: 'Client State vs Server State Caching',
   keyTakeaways: ['Key Takeaway 1', 'Key Takeaway 2'],
   language: 'en',
-  estimatedReadMinutes: 3
+  estimatedReadMinutes: 3,
+  isAiFormatted: true
 }
 
 describe('DocReaderPane.vue', () => {
@@ -128,5 +136,58 @@ describe('DocReaderPane.vue', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     await wrapper.vm.$nextTick()
     expect(wrapper.text()).not.toContain('reader.font_size')
+  })
+
+  it('renders ReaderAudioPlayer when chunk is AI-formatted', () => {
+    const wrapper = mount(DocReaderPane, {
+      props: {
+        chunk: mockDocumentChunk
+      },
+      global: {
+        stubs: {
+          ReaderAudioPlayer: {
+            name: 'ReaderAudioPlayer',
+            template: '<div class="reader-audio-player-stub" :data-chunk-id="chunk?.id">AudioPlayerStub</div>',
+            props: ['chunk']
+          }
+        },
+        mocks: {
+          $t: (key: string) => key,
+          t: (key: string) => key,
+          locale: 'en'
+        }
+      }
+    })
+
+    const audioStub = wrapper.find('.reader-audio-player-stub')
+    expect(audioStub.exists()).toBe(true)
+    expect(audioStub.attributes('data-chunk-id')).toBe('chunk-day-5')
+  })
+
+  it('does not render ReaderAudioPlayer container when chunk is not AI-formatted', () => {
+    const wrapper = mount(DocReaderPane, {
+      props: {
+        chunk: {
+          ...mockDocumentChunk,
+          isAiFormatted: false
+        }
+      },
+      global: {
+        stubs: {
+          ReaderAudioPlayer: {
+            name: 'ReaderAudioPlayer',
+            template: '<div class="reader-audio-player-stub">AudioPlayerStub</div>',
+            props: ['chunk']
+          }
+        },
+        mocks: {
+          $t: (key: string) => key,
+          t: (key: string) => key,
+          locale: 'en'
+        }
+      }
+    })
+
+    expect(wrapper.find('.reader-audio-player-stub').exists()).toBe(false)
   })
 })

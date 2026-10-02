@@ -24,6 +24,7 @@ export interface DocumentChunk {
   keyTakeaways: string[]
   language: string
   estimatedReadMinutes: number
+  isAiFormatted?: boolean
 }
 
 export type DrillStatus = 'Pending' | 'Submitted' | 'Reviewed' | 'Skipped' | 0 | 1 | 2 | 3
