@@ -1268,6 +1268,49 @@ describe('useSliceAudio', () => {
       expect(player.playing.value).toBe(false)
       expect(onSliceEnded).toHaveBeenCalledTimes(1)
     })
+    it('invokes onFallbackToCloud, updates engineMode and localStorage to cloud when no matching system voices exist', async () => {
+      const mockSynth = {
+        getVoices: vi.fn(() => [
+          { voiceURI: 'vi-vn-x-vic-local', name: 'Google Vietnamese', lang: 'vi-VN', default: true },
+        ]),
+        speak: vi.fn(),
+        pause: vi.fn(),
+        resume: vi.fn(),
+        cancel: vi.fn(),
+        speaking: false,
+        paused: false,
+      } as unknown as SpeechSynthesis
+
+      const audio = createFakeAudio()
+      const { cache } = memoryCache()
+      const onFallbackToCloud = vi.fn()
+      const mockBlob = new Blob(['mock audio data'], { type: 'audio/mpeg' })
+      const fetchClient = vi.fn(async () => {
+        return new Response(mockBlob, {
+          status: 200,
+          headers: { 'Content-Type': 'audio/mpeg' },
+        })
+      })
+
+      const player = useSliceAudio({
+        defaultEngine: 'system',
+        speechSynthesis: mockSynth,
+        cache,
+        createAudio: () => audio,
+        fetchClient,
+        onFallbackToCloud,
+      })
+
+      // Load slice in German ('de') for which there are no system voices (only vi is in mockSynth)
+      await player.loadAndPlay(source({ language: 'de' }))
+
+      expect(onFallbackToCloud).toHaveBeenCalledTimes(1)
+      expect(player.engineMode.value).toBe('cloud')
+      expect(player.activeCascadeTier.value).toBe('cloud')
+      expect(localStorage.getItem(AUDIO_ENGINE_STORAGE_KEY)).toBe('cloud')
+      expect(fetchClient).toHaveBeenCalled()
+    })
+
 
     it('triggers onSliceEnded when HTMLAudioElement completes playback', async () => {
       const audio = createFakeAudio()

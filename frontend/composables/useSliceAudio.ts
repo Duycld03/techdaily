@@ -56,6 +56,7 @@ export interface SliceAudioDeps {
   onNextTrack?: () => void
   onPreviousTrack?: () => void
   speechSynthesis?: SpeechSynthesis
+  onFallbackToCloud?: () => void
 }
 
 export const AUDIO_SPEED_STORAGE_KEY = 'techdaily_reader_audio_speed'
@@ -713,6 +714,10 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   ): Promise<void> {
     const synth = getSpeechSynth()
     if (!synth) {
+      engineMode.value = 'cloud'
+      activeCascadeTier.value = 'cloud'
+      if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
+      deps.onFallbackToCloud?.()
       await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
       return
     }
@@ -721,6 +726,10 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     loadSystemVoices()
     const matching = filterSystemVoicesForLanguage(systemVoices.value, source.language)
     if (matching.length === 0) {
+      engineMode.value = 'cloud'
+      activeCascadeTier.value = 'cloud'
+      if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
+      deps.onFallbackToCloud?.()
       await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
       return
     }
@@ -735,6 +744,10 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
           ? (globalThis.SpeechSynthesisUtterance as typeof SpeechSynthesisUtterance)
           : null)
     if (!UtteranceCtor) {
+      engineMode.value = 'cloud'
+      activeCascadeTier.value = 'cloud'
+      if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
+      deps.onFallbackToCloud?.()
       await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
       return
     }

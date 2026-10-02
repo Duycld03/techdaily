@@ -20,8 +20,8 @@ vi.mock('~/composables/useMarkdownRenderer', () => ({
 vi.mock('~/components/reader/ReaderAudioPlayer.vue', () => ({
   default: {
     name: 'ReaderAudioPlayer',
-    props: ['chunk'],
-    template: '<div class="reader-audio-player-stub" :data-chunk-id="chunk?.id">AudioPlayerStub</div>'
+    props: ['chunk', 'disableAutoAdvance'],
+    template: '<div class="reader-audio-player-stub" :data-chunk-id="chunk?.id" :data-disable-auto-advance="String(disableAutoAdvance)">AudioPlayerStub</div>'
   }
 }))
 const mockDocumentChunk = {
@@ -147,8 +147,8 @@ describe('DocReaderPane.vue', () => {
         stubs: {
           ReaderAudioPlayer: {
             name: 'ReaderAudioPlayer',
-            template: '<div class="reader-audio-player-stub" :data-chunk-id="chunk?.id">AudioPlayerStub</div>',
-            props: ['chunk']
+            template: '<div class="reader-audio-player-stub" :data-chunk-id="chunk?.id" :data-disable-auto-advance="String(disableAutoAdvance)">AudioPlayerStub</div>',
+            props: ['chunk', 'disableAutoAdvance']
           }
         },
         mocks: {
@@ -162,6 +162,10 @@ describe('DocReaderPane.vue', () => {
     const audioStub = wrapper.find('.reader-audio-player-stub')
     expect(audioStub.exists()).toBe(true)
     expect(audioStub.attributes('data-chunk-id')).toBe('chunk-day-5')
+    expect(audioStub.attributes('data-disable-auto-advance')).toBe('true')
+    const playerComp = wrapper.findComponent({ name: 'ReaderAudioPlayer' })
+    expect(playerComp.exists()).toBe(true)
+    expect(playerComp.props('disableAutoAdvance')).toBe(true)
   })
 
   it('does not render ReaderAudioPlayer container when chunk is not AI-formatted', () => {

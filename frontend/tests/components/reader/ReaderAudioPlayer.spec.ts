@@ -23,7 +23,7 @@ vi.mock('~/composables/useSliceAudio', async () => {
   let onSliceEndedCallback: (() => void) | null = null
   let onNextTrackCallback: (() => void) | null = null
   let onPrevTrackCallback: (() => void) | null = null
-
+  let onFallbackToCloudCallback: (() => void) | null = null
   const state = {
     status: ref('idle'),
     playing: ref(false),
@@ -65,12 +65,14 @@ vi.mock('~/composables/useSliceAudio', async () => {
     _triggerSliceEnded: () => onSliceEndedCallback?.(),
     _triggerNextTrack: () => onNextTrackCallback?.(),
     _triggerPrevTrack: () => onPrevTrackCallback?.(),
+    _triggerFallbackToCloud: () => onFallbackToCloudCallback?.(),
   }
   return {
     useSliceAudio: (deps?: any) => {
       if (deps?.onSliceEnded) onSliceEndedCallback = deps.onSliceEnded
       if (deps?.onNextTrack) onNextTrackCallback = deps.onNextTrack
       if (deps?.onPreviousTrack) onPrevTrackCallback = deps.onPreviousTrack
+      if (deps?.onFallbackToCloud) onFallbackToCloudCallback = deps.onFallbackToCloud
       return state
     },
     filterSystemVoicesForLanguage: (voices: any[], lang?: string | null) => {
@@ -141,6 +143,9 @@ const MESSAGES: Record<string, string> = {
   'reader.audio_device_cpu': 'CPU',
   'reader.audio_device_gpu_hint': 'Narration running on GPU',
   'reader.audio_device_cpu_hint': 'Narration running on CPU',
+  'reader.audio_fallback_to_cloud_toast': 'No matching browser voice found; automatically switched to Cloud TTS.',
+  'reader.audio_system_playing_label': 'Reading via browser voice: {voice}',
+  'reader.audio_system_ready_label': 'Ready to read via browser voice',
 }
 
 function interpolate(key: string, params?: Record<string, unknown>): string {
@@ -204,11 +209,15 @@ interface MockedSliceAudio {
   pause: Mock
   setSpeed: Mock
   seek: Mock
+  _triggerSliceEnded: () => void
+  _triggerNextTrack: () => void
+  _triggerPrevTrack: () => void
+  _triggerFallbackToCloud: () => void
 }
 const audio = useSliceAudio() as unknown as MockedSliceAudio
 let originalUseI18n: unknown
 
-function mountPlayer(props: { chunk: ChunkSummary | null }) {
+function mountPlayer(props: { chunk: ChunkSummary | null; disableAutoAdvance?: boolean; bookTitle?: string }) {
   return mount(ReaderAudioPlayer, { props, global: { stubs: iconStubs } })
 }
 
@@ -585,6 +594,49 @@ describe('ReaderAudioPlayer.vue', () => {
 
       await sysBtn!.trigger('click')
       expect(audio.setEngineMode).toHaveBeenCalledWith('system')
+    })
+    it('toggles play/pause button label between Listen and Pause based on playing state', async () => {
+      audio.playing.value = false
+      const wrapper = mountPlayer({ chunk: chunk() })
+      const playBtn = wrapper.findAll('button')[0]
+      expect(playBtn.text()).toContain('Listen')
+
+      audio.playing.value = true
+      await nextTick()
+      expect(playBtn.text()).toContain('Pause')
+    })
+
+    it('hides the auto-advance button when disableAutoAdvance prop is true', () => {
+      const wrapper = mountPlayer({ chunk: chunk(), disableAutoAdvance: true })
+      const autoBtn = wrapper.findAll('button').find(b => b.text().includes('Auto Next'))
+      expect(autoBtn).toBeUndefined()
+    })
+
+    it('never renders active cascade tier badge', async () => {
+      audio.activeCascadeTier.value = 'cloud'
+      audio.engineMode.value = 'device'
+      const wrapper = mountPlayer({ chunk: chunk() })
+      await nextTick()
+      expect(wrapper.text()).not.toContain('Tier:')
+    })
+
+    it('triggers info toast on fallback to cloud callback', async () => {
+      const toast = useToast()
+      mountPlayer({ chunk: chunk() })
+      audio._triggerFallbackToCloud()
+      await nextTick()
+      const lastToast = toast.toasts.value.at(-1)
+      expect(lastToast?.type).toBe('info')
+      expect(lastToast?.message).toBe('No matching browser voice found; automatically switched to Cloud TTS.')
+    })
+
+    it('renders Web Speech active playing banner when duration is 0 and playing is true', async () => {
+      audio.engineMode.value = 'system'
+      audio.duration.value = 0
+      audio.playing.value = true
+      const wrapper = mountPlayer({ chunk: chunk() })
+      await nextTick()
+      expect(wrapper.text()).toContain('Reading via browser voice:')
     })
   })
 })

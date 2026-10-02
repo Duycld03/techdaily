@@ -374,7 +374,7 @@ onUnmounted(() => {
 
       <!-- Audio Narration Player -->
       <div v-if="chunk.isAiFormatted" class="mb-4">
-        <ReaderAudioPlayer :chunk="chunk" />
+        <ReaderAudioPlayer :chunk="chunk" :disable-auto-advance="true" />
       </div>
       <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-canvas-subtle/80 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] font-normal">
         {{ cleanSummary }}
