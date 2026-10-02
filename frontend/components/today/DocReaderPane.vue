@@ -8,6 +8,7 @@ export type DocumentChunkDto = DocumentChunk
 import { useNotesStore } from '~/stores/useNotesStore'
 import { useToast } from '~/composables/useToast'
 import TermExplainerModal from '~/components/today/TermExplainerModal.vue'
+import ReaderAudioPlayer from '~/components/reader/ReaderAudioPlayer.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 import { useApiError } from '~/composables/useApiError'
 import { useReaderTypography } from '~/composables/useReaderTypography'
@@ -371,6 +372,10 @@ onUnmounted(() => {
         {{ chunk.chapterTitle }}
       </h1>
 
+      <!-- Audio Narration Player -->
+      <div v-if="chunk.isAiFormatted" class="mb-4">
+        <ReaderAudioPlayer :chunk="chunk" />
+      </div>
       <p class="text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100/90 dark:bg-canvas-subtle/80 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] font-normal">
         {{ cleanSummary }}
       </p>
