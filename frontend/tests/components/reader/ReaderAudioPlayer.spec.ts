@@ -101,7 +101,8 @@ import type { ChunkSummary } from '~/stores/useLibraryStore'
 const MESSAGES: Record<string, string> = {
   'reader.audio_listen': 'Listen',
   'reader.audio_play': 'Play narration',
-  'reader.audio_pause': 'Pause narration',
+  'reader.audio_pause': 'Pause',
+  'reader.audio_pause_desc': 'Pause narration',
   'reader.audio_downloading': 'Downloading voice… {progress}%',
   'reader.audio_preparing': 'Preparing audio…',
   'reader.audio_synthesizing': 'Generating audio… {current}/{total}',
@@ -110,6 +111,7 @@ const MESSAGES: Record<string, string> = {
   'reader.audio_error': 'Could not generate audio.',
   'reader.audio_error_oom': 'Device memory limit reached. Try Cloud engine.',
   'reader.audio_error_device': 'On-device narration unavailable on this device. Try Cloud engine.',
+  'reader.audio_error_system': 'Browser speech synthesis failed. Try Cloud engine.',
   'reader.audio_error_network': 'Network error while loading audio. Please try again.',
   'reader.audio_error_with_reason': 'Could not generate audio: {message}',
   'reader.audio_fallback_to_cloud': 'Switch to Google Cloud',
@@ -472,6 +474,26 @@ describe('ReaderAudioPlayer.vue', () => {
     expect(audio.setEngineMode).toHaveBeenCalledWith('cloud')
   })
 
+  it('renders diagnostic error and 1-tap Cloud fallback button on system TTS failure', async () => {
+    audio.engineMode.value = 'system'
+    audio.status.value = 'error'
+    audio.errorMessage.value = 'System TTS Error: synthesis-failed'
+    audio.errorInfo.value = {
+      code: 'SYSTEM_TTS_FAILED',
+      rawMessage: 'System TTS Error: synthesis-failed',
+      suggestCloudFallback: true,
+    }
+    const wrapper = mountPlayer({ chunk: chunk() })
+    await nextTick()
+
+    expect(wrapper.text()).toContain('Browser speech synthesis failed. Try Cloud engine.')
+    expect(wrapper.text()).toContain('Switch to Google Cloud')
+
+    const fallbackBtn = wrapper.findAll('button').find(b => b.text().includes('Switch to Google Cloud'))
+    expect(fallbackBtn).toBeDefined()
+    await fallbackBtn!.trigger('click')
+    expect(audio.setEngineMode).toHaveBeenCalledWith('cloud')
+  })
   it('hides the 1-tap Cloud fallback button when cloud quota is exhausted', async () => {
     audio.engineMode.value = 'device'
     audio.status.value = 'error'
@@ -600,10 +622,12 @@ describe('ReaderAudioPlayer.vue', () => {
       const wrapper = mountPlayer({ chunk: chunk() })
       const playBtn = wrapper.findAll('button')[0]
       expect(playBtn.text()).toContain('Listen')
+      expect(playBtn.attributes('aria-label')).toBe('Play narration')
 
       audio.playing.value = true
       await nextTick()
       expect(playBtn.text()).toContain('Pause')
+      expect(playBtn.attributes('aria-label')).toBe('Pause narration')
     })
 
     it('hides the auto-advance button when disableAutoAdvance prop is true', () => {

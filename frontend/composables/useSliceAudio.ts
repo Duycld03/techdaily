@@ -250,6 +250,9 @@ export function categorizeAudioError(err: unknown, engine: AudioEngine): AudioEr
     return { code: 'DEVICE_INIT_FAILED', rawMessage, suggestCloudFallback: true }
   }
 
+  if (engine === 'system') {
+    return { code: 'SYSTEM_TTS_FAILED', rawMessage, suggestCloudFallback: true }
+  }
   return { code: 'UNKNOWN', rawMessage, suggestCloudFallback: false }
 }
 
@@ -389,6 +392,10 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
   let activeUtterance: SpeechSynthesisUtterance | null = null
   let isSilentCarrierActive = false
+  let systemSentences: string[] = []
+  let systemSentenceIndex = 0
+  let isSystemStopped = false
+  let resumeSystemSpeech: (() => void) | null = null
   const SILENT_AUDIO_URI = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
 
   function getSpeechSynth(): SpeechSynthesis | null {
@@ -445,6 +452,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
         el.src = SILENT_AUDIO_URI
         el.loop = true
       }
+      el.volume = 0
       void el.play()
       isSilentCarrierActive = true
     } catch {
@@ -458,9 +466,11 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     if (el) {
       el.pause()
       el.loop = false
+      el.volume = volume.value
     }
     isSilentCarrierActive = false
   }
+
 
   const audioQuota = ref<AudioQuotaInfo | null>(null)
   const isNearQuota = computed(() => (audioQuota.value?.usedCharacters ?? 0) >= 900_000 || !!audioQuota.value?.isNearLimit)
@@ -586,6 +596,11 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
           playing.value = true
           return
         }
+        if (resumeSystemSpeech) {
+          isSystemStopped = false
+          resumeSystemSpeech()
+          return
+        }
         if (activeUtterance) {
           startSilentCarrier()
           synth.speak(activeUtterance)
@@ -615,6 +630,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       if (synth) {
         synth.pause()
       }
+      isSystemStopped = true
       stopSilentCarrier()
     }
     audio.value?.pause()
@@ -751,51 +767,101 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
       return
     }
-    const utterance = new UtteranceCtor(script)
-    const allRaw = synth.getVoices()
-    const actualVoice = allRaw.find(v => (v.voiceURI || v.name) === matched.id)
-    if (actualVoice) {
-      utterance.voice = actualVoice
-    }
-    utterance.lang = matched.lang
-    utterance.rate = Math.max(0.5, Math.min(2.0, speed.value))
-    utterance.pitch = Math.max(0.5, Math.min(1.5, pitch.value))
-    utterance.volume = Math.max(0, Math.min(1.0, volume.value))
-    activeUtterance = utterance
-    activeKey = `system:${source.chunkId}:${matched.id}:${contentHash}`
 
-    utterance.onstart = () => {
-      playing.value = true
+    const split = splitSentences(script)
+    systemSentences = split.length > 0 ? split : [script.trim()].filter(Boolean)
+    if (systemSentences.length === 0) {
       status.value = 'ready'
-    }
-    utterance.onpause = () => {
+      currentTime.value = 0
+      duration.value = 0
       playing.value = false
-    }
-    utterance.onresume = () => {
-      playing.value = true
-    }
-    utterance.onend = () => {
-      playing.value = false
-      stopSilentCarrier()
-      deps.onSliceEnded?.()
-    }
-    utterance.onerror = (e) => {
-      if (e.error === 'canceled' || e.error === 'interrupted') return
-      playing.value = false
-      stopSilentCarrier()
-      status.value = 'error'
-      const info = categorizeAudioError(new Error(`System TTS Error: ${e.error}`), 'system')
-      errorMessage.value = info.rawMessage
-      errorInfo.value = info
+      return
     }
 
+    systemSentenceIndex = 0
+    isSystemStopped = false
+    activeKey = `system:${source.chunkId}:${matched.id}:${contentHash}`
     status.value = 'ready'
     currentTime.value = 0
     duration.value = 0
-    if (autoPlay) {
+
+    function speakSentence(idx: number): void {
+      if (isSystemStopped || idx >= systemSentences.length) {
+        if (idx >= systemSentences.length) {
+          playing.value = false
+          stopSilentCarrier()
+          deps.onSliceEnded?.()
+        }
+        return
+      }
+
+      const text = systemSentences[idx]
+      const utterance = new UtteranceCtor(text)
+      const allRaw = synth.getVoices()
+      const actualVoice = allRaw.find(v => (v.voiceURI || v.name) === matched.id)
+      if (actualVoice) {
+        utterance.voice = actualVoice
+      }
+      utterance.lang = matched.lang
+      utterance.rate = Math.max(0.5, Math.min(2.0, speed.value))
+      utterance.pitch = Math.max(0.5, Math.min(1.5, pitch.value))
+      utterance.volume = Math.max(0, Math.min(1.0, volume.value))
+      activeUtterance = utterance
+
+      utterance.onstart = () => {
+        playing.value = true
+        status.value = 'ready'
+      }
+      utterance.onpause = () => {
+        playing.value = false
+      }
+      utterance.onresume = () => {
+        playing.value = true
+      }
+      utterance.onend = () => {
+        if (isSystemStopped) return
+        systemSentenceIndex = idx + 1
+        if (systemSentenceIndex < systemSentences.length) {
+          speakSentence(systemSentenceIndex)
+        } else {
+          playing.value = false
+          stopSilentCarrier()
+          deps.onSliceEnded?.()
+        }
+      }
+      utterance.onerror = async (e) => {
+        if (e.error === 'canceled' || e.error === 'interrupted') return
+        playing.value = false
+        stopSilentCarrier()
+        isSystemStopped = true
+
+        const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
+        if (isOnline && !isQuotaExhausted.value) {
+          engineMode.value = 'cloud'
+          activeCascadeTier.value = 'cloud'
+          if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
+          deps.onFallbackToCloud?.()
+          await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
+          return
+        }
+
+        status.value = 'error'
+        const info = categorizeAudioError(new Error(`System TTS Error: ${e.error}`), 'system')
+        errorMessage.value = info.rawMessage
+        errorInfo.value = info
+      }
+
       startSilentCarrier()
       synth.speak(utterance)
       playing.value = true
+    }
+
+    resumeSystemSpeech = () => {
+      speakSentence(systemSentenceIndex)
+    }
+
+    if (autoPlay) {
+      speakSentence(0)
     }
   }
 
@@ -1169,9 +1235,12 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     if (synth) {
       synth.cancel()
     }
+    isSystemStopped = true
+    resumeSystemSpeech = null
+    systemSentences = []
+    systemSentenceIndex = 0
     activeKey = null
     activeUtterance = null
-    onChunkEndedCallback = null
     status.value = 'idle'
     device.value = null
     errorMessage.value = null

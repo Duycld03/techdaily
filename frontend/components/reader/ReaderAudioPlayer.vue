@@ -327,6 +327,9 @@ const formattedErrorMessage = computed(() => {
   if (errorInfo?.value?.code === 'DEVICE_INIT_FAILED') {
     return t('reader.audio_error_device')
   }
+  if (errorInfo?.value?.code === 'SYSTEM_TTS_FAILED') {
+    return t('reader.audio_error_system')
+  }
   if (errorInfo?.value?.code === 'NETWORK_ERROR') {
     return t('reader.audio_error_network')
   }
@@ -339,7 +342,7 @@ const formattedErrorMessage = computed(() => {
 const canFallbackToCloud = computed(() => {
   return (
     status.value === 'error' &&
-    engineMode.value === 'device' &&
+    (engineMode.value === 'device' || engineMode.value === 'system') &&
     !isNearQuota.value &&
     !isQuotaExhausted.value &&
     (errorInfo?.value?.suggestCloudFallback ?? true)
@@ -456,14 +459,14 @@ onMounted(() => {
     class="relative flex flex-col gap-2.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/80 dark:bg-canvas-subtle/70 p-2.5 sm:p-3"
   >
     <!-- Row 1: Primary playback controls, engine mode, right utilities -->
-    <div class="flex items-center justify-between gap-2 w-full min-w-0">
+    <div class="flex items-center justify-between gap-1.5 sm:gap-2 w-full min-w-0">
       <!-- Left cluster: Play/Pause button + Engine Mode switch -->
-      <div class="flex items-center gap-2 min-w-0 shrink-0">
+      <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 shrink-0">
         <!-- Play / Pause -->
         <button
           type="button"
           class="h-8 inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs sm:text-sm font-semibold px-2.5 sm:px-3 transition-all active:scale-95 disabled:opacity-60"
-          :aria-label="playing ? t('reader.audio_pause') : t('reader.audio_play')"
+          :aria-label="playing ? t('reader.audio_pause_desc') : t('reader.audio_play')"
           @click="onToggle"
         >
           <Loader2 v-if="isLoading" class="w-4 h-4 animate-spin" :stroke-width="2" />
@@ -481,7 +484,7 @@ onMounted(() => {
           <!-- System Engine Toggle -->
           <button
             type="button"
-            class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap"
+            class="inline-flex items-center gap-1 px-1.5 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap"
             :class="[
               engineMode === 'system'
                 ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
@@ -497,7 +500,7 @@ onMounted(() => {
           <!-- Cloud Engine Toggle -->
           <button
             type="button"
-            class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
+            class="inline-flex items-center gap-1 px-1.5 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed"
             :class="[
               engineMode === 'cloud'
                 ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
@@ -514,7 +517,7 @@ onMounted(() => {
           <!-- Device Engine Toggle -->
           <button
             type="button"
-            class="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap"
+            class="inline-flex items-center gap-1 px-1.5 sm:px-2.5 py-1 rounded-lg transition-all shrink-0 whitespace-nowrap"
             :class="[
               engineMode === 'device'
                 ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm font-semibold'
@@ -540,7 +543,7 @@ onMounted(() => {
       </div>
 
       <!-- Right cluster: Auto-advance, Sleep timer, Speed -->
-      <div class="flex items-center gap-1.5 shrink-0">
+      <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
         <!-- Auto Next Toggle Button (rendered only when !disableAutoAdvance) -->
         <button
           v-if="!disableAutoAdvance"
