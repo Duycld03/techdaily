@@ -391,13 +391,14 @@ function onToggleEngine(mode: AudioEngine, autoPlay = playing.value): void {
   if (mode === 'cloud' && (isNearQuota.value || isQuotaExhausted.value)) {
     return
   }
+  const currentOffset = currentTime.value
   setEngineMode(mode)
   if (loadedId.value) {
     pause()
     loadedId.value = null
     if (source.value) {
       loadedId.value = source.value.chunkId
-      void loadAndPlay(source.value, autoPlay)
+      void loadAndPlay(source.value, autoPlay, currentOffset)
     }
   }
 }

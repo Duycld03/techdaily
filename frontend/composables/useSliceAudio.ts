@@ -393,10 +393,42 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   let activeUtterance: SpeechSynthesisUtterance | null = null
   let isSilentCarrierActive = false
   let systemSentences: string[] = []
+  let systemSentenceDurations: number[] = []
   let systemSentenceIndex = 0
   let isSystemStopped = false
+  let systemTimeTicker: number | null = null
   let resumeSystemSpeech: (() => void) | null = null
   const SILENT_AUDIO_URI = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
+
+  function computeSystemSentenceDurations(sentences: string[], speechSpeed: number): number[] {
+    const CHARS_PER_SECOND = 16
+    const s = Math.max(0.5, Math.min(2.0, speechSpeed))
+    return sentences.map(text => Math.max(1.0, (text.trim().length / CHARS_PER_SECOND) / s))
+  }
+
+  function stopSystemTimeTicker(): void {
+    if (systemTimeTicker) {
+      clearInterval(systemTimeTicker)
+      systemTimeTicker = null
+    }
+  }
+
+  function startSystemTimeTicker(sentenceIdx: number): void {
+    stopSystemTimeTicker()
+    if (!isClient) return
+    const startSentenceTime = performance.now()
+    const baseElapsed = systemSentenceDurations.slice(0, sentenceIdx).reduce((a, b) => a + b, 0)
+    const currentSentenceDuration = systemSentenceDurations[sentenceIdx] || 1
+    systemTimeTicker = window.setInterval(() => {
+      if (!playing.value || isSystemStopped) {
+        stopSystemTimeTicker()
+        return
+      }
+      const elapsedInSentence = (performance.now() - startSentenceTime) / 1000
+      const clampedInSentence = Math.min(currentSentenceDuration, elapsedInSentence)
+      currentTime.value = Math.min(duration.value, baseElapsed + clampedInSentence)
+    }, 200)
+  }
 
   function getSpeechSynth(): SpeechSynthesis | null {
     if (deps.speechSynthesis) return deps.speechSynthesis
@@ -462,13 +494,21 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
   function stopSilentCarrier(): void {
     if (!isSilentCarrierActive) return
+    isSilentCarrierActive = false
     const el = audio.value
     if (el) {
       el.pause()
       el.loop = false
+      if (el.src === SILENT_AUDIO_URI) {
+        try {
+          el.removeAttribute('src')
+          el.load()
+        } catch {
+          // Non-fatal
+        }
+      }
       el.volume = volume.value
     }
-    isSilentCarrierActive = false
   }
 
 
@@ -543,11 +583,22 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       else if (isClient) audio.value = new Audio()
       else return null
       const el = audio.value
-      el.addEventListener('timeupdate', () => { currentTime.value = el.currentTime })
-      el.addEventListener('durationchange', () => { duration.value = Number.isFinite(el.duration) ? el.duration : 0 })
+      el.addEventListener('timeupdate', () => {
+        if (!isSilentCarrierActive && engineMode.value !== 'system') {
+          currentTime.value = el.currentTime
+        }
+      })
+      el.addEventListener('durationchange', () => {
+        if (!isSilentCarrierActive && engineMode.value !== 'system') {
+          duration.value = Number.isFinite(el.duration) ? el.duration : 0
+        }
+      })
       el.addEventListener('play', () => { playing.value = true })
       el.addEventListener('pause', () => { playing.value = false })
       el.addEventListener('ended', () => {
+        if (isSilentCarrierActive || isUserPaused || engineMode.value === 'system') {
+          return
+        }
         if (onChunkEndedCallback) {
           onChunkEndedCallback()
         } else {
@@ -588,17 +639,13 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   async function play(): Promise<void> {
     isUserPaused = false
     if (engineMode.value === 'system') {
+      isSystemStopped = false
       const synth = getSpeechSynth()
       if (synth) {
-        if (synth.paused) {
-          startSilentCarrier()
-          synth.resume()
-          playing.value = true
-          return
-        }
         if (resumeSystemSpeech) {
-          isSystemStopped = false
+          startSilentCarrier()
           resumeSystemSpeech()
+          playing.value = true
           return
         }
         if (activeUtterance) {
@@ -626,11 +673,12 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     isUserPaused = true
     cancelWaitingForChunk?.()
     if (engineMode.value === 'system') {
+      stopSystemTimeTicker()
+      isSystemStopped = true
       const synth = getSpeechSynth()
       if (synth) {
-        synth.pause()
+        synth.cancel()
       }
-      isSystemStopped = true
       stopSilentCarrier()
     }
     audio.value?.pause()
@@ -661,6 +709,8 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       cancelWorkerSynthesis()
     }
     if (mode !== 'system') {
+      stopSystemTimeTicker()
+      isSystemStopped = true
       const synth = getSpeechSynth()
       if (synth) {
         synth.cancel()
@@ -727,6 +777,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     contentHash: string,
     cache: SliceAudioCache,
     autoPlay = true,
+    initialOffset = 0,
   ): Promise<void> {
     const synth = getSpeechSynth()
     if (!synth) {
@@ -734,7 +785,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       activeCascadeTier.value = 'cloud'
       if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
       deps.onFallbackToCloud?.()
-      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
+      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, initialOffset)
       return
     }
 
@@ -746,7 +797,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       activeCascadeTier.value = 'cloud'
       if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
       deps.onFallbackToCloud?.()
-      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
+      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, initialOffset)
       return
     }
 
@@ -764,7 +815,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       activeCascadeTier.value = 'cloud'
       if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
       deps.onFallbackToCloud?.()
-      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
+      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, initialOffset)
       return
     }
 
@@ -778,17 +829,32 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       return
     }
 
-    systemSentenceIndex = 0
+    systemSentenceDurations = computeSystemSentenceDurations(systemSentences, speed.value)
+    duration.value = systemSentenceDurations.reduce((a, b) => a + b, 0)
+
+    let startSentenceIndex = 0
+    if (initialOffset > 0 && duration.value > 0) {
+      let acc = 0
+      for (let i = 0; i < systemSentenceDurations.length; i++) {
+        if (acc + systemSentenceDurations[i] > initialOffset || i === systemSentenceDurations.length - 1) {
+          startSentenceIndex = i
+          break
+        }
+        acc += systemSentenceDurations[i]
+      }
+    }
+
+    systemSentenceIndex = startSentenceIndex
     isSystemStopped = false
     activeKey = `system:${source.chunkId}:${matched.id}:${contentHash}`
     status.value = 'ready'
-    currentTime.value = 0
-    duration.value = 0
+    currentTime.value = initialOffset
 
     function speakSentence(idx: number): void {
       if (isSystemStopped || idx >= systemSentences.length) {
         if (idx >= systemSentences.length) {
           playing.value = false
+          stopSystemTimeTicker()
           stopSilentCarrier()
           deps.onSliceEnded?.()
         }
@@ -811,25 +877,31 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       utterance.onstart = () => {
         playing.value = true
         status.value = 'ready'
+        startSystemTimeTicker(idx)
       }
       utterance.onpause = () => {
         playing.value = false
+        stopSystemTimeTicker()
       }
       utterance.onresume = () => {
         playing.value = true
+        startSystemTimeTicker(idx)
       }
       utterance.onend = () => {
-        if (isSystemStopped) return
+        stopSystemTimeTicker()
+        if (isSystemStopped || isUserPaused) return
         systemSentenceIndex = idx + 1
         if (systemSentenceIndex < systemSentences.length) {
           speakSentence(systemSentenceIndex)
         } else {
           playing.value = false
+          currentTime.value = duration.value
           stopSilentCarrier()
           deps.onSliceEnded?.()
         }
       }
       utterance.onerror = async (e) => {
+        stopSystemTimeTicker()
         if (e.error === 'canceled' || e.error === 'interrupted') return
         playing.value = false
         stopSilentCarrier()
@@ -841,7 +913,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
           activeCascadeTier.value = 'cloud'
           if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
           deps.onFallbackToCloud?.()
-          await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
+          await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, currentTime.value)
           return
         }
 
@@ -861,7 +933,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     }
 
     if (autoPlay) {
-      speakSentence(0)
+      speakSentence(startSentenceIndex)
     }
   }
 
@@ -871,6 +943,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     contentHash: string,
     cache: SliceAudioCache,
     autoPlay = true,
+    initialOffset = 0,
   ): Promise<void> {
     activeCascadeTier.value = 'cloud'
     const langKey = (source.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en'
@@ -884,7 +957,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     // Cache hit in browser IndexedDB
     const cached = await cache.get(key)
     if (cached) {
-      setSource(cached)
+      setSource(cached, initialOffset)
       status.value = 'ready'
       if (autoPlay) {
         await play()
@@ -918,7 +991,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
         errorMessage.value = 'QUOTA_EXHAUSTED'
         errorInfo.value = info
         // Automatic fallback to On-Device Web Worker
-        await synthesizeOnDevice(source, script, contentHash, cache, autoPlay)
+        await synthesizeOnDevice(source, script, contentHash, cache, autoPlay, initialOffset)
         return
       }
 
@@ -933,7 +1006,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       if (activeKey !== key) return
 
       await cache.set(key, blob)
-      setSource(blob)
+      setSource(blob, initialOffset)
       status.value = 'ready'
       if (autoPlay) {
         await play()
@@ -946,7 +1019,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     }
   }
 
-  async function loadAndPlay(source: NarrationSource, autoPlay = true): Promise<void> {
+  async function loadAndPlay(source: NarrationSource, autoPlay = true, initialOffset = 0): Promise<void> {
     errorMessage.value = null
     errorInfo.value = null
     device.value = null
@@ -971,11 +1044,11 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     engineMode.value = effectiveEngine
 
     if (effectiveEngine === 'system') {
-      await synthesizeOnSystem(source, script, contentHash, cache, autoPlay)
+      await synthesizeOnSystem(source, script, contentHash, cache, autoPlay, initialOffset)
     } else if (effectiveEngine === 'cloud') {
-      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay)
+      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, initialOffset)
     } else {
-      await synthesizeOnDevice(source, script, contentHash, cache, autoPlay)
+      await synthesizeOnDevice(source, script, contentHash, cache, autoPlay, initialOffset)
     }
   }
 
@@ -985,6 +1058,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     contentHash: string,
     cache: SliceAudioCache,
     autoPlay = true,
+    initialOffset = 0,
   ): Promise<void> {
     const engine = getEngine()
     if (!engine) return
@@ -996,7 +1070,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     // Cache hit
     const cached = await cache.get(key)
     if (cached) {
-      setSource(cached)
+      setSource(cached, initialOffset)
       status.value = 'ready'
       if (autoPlay) {
         await play()
@@ -1041,7 +1115,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       isPlayingPreRoll = true
       currentPlayingIndex = count - 1
       const preRollWav = encodeWav(concatFloat32(buffers.slice(0, count)), sampleRate)
-      setSource(preRollWav)
+      setSource(preRollWav, initialOffset)
       status.value = 'ready'
       if (autoPlay && !isUserPaused) {
         void play()
@@ -1215,16 +1289,55 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   }
 
   function seek(time: number): void {
+    if (engineMode.value === 'system') {
+      if (systemSentences.length === 0) return
+
+      const targetTime = Math.max(0, Math.min(duration.value, time))
+      currentTime.value = targetTime
+
+      let accumulated = 0
+      let targetIndex = 0
+      for (let i = 0; i < systemSentenceDurations.length; i++) {
+        const dur = systemSentenceDurations[i]
+        if (accumulated + dur > targetTime || i === systemSentenceDurations.length - 1) {
+          targetIndex = i
+          break
+        }
+        accumulated += dur
+      }
+
+      systemSentenceIndex = targetIndex
+      if (playing.value && !isUserPaused) {
+        stopSystemTimeTicker()
+        const synth = getSpeechSynth()
+        if (synth) {
+          isSystemStopped = true
+          synth.cancel()
+          isSystemStopped = false
+        }
+        if (resumeSystemSpeech) {
+          resumeSystemSpeech()
+        }
+      }
+      return
+    }
+
     if (audio.value) audio.value.currentTime = time
   }
 
   watch(speed, (value) => {
     const el = ensureAudio()
     if (el) el.playbackRate = value
+    if (engineMode.value === 'system' && systemSentences.length > 0) {
+      systemSentenceDurations = computeSystemSentenceDurations(systemSentences, value)
+      duration.value = systemSentenceDurations.reduce((a, b) => a + b, 0)
+    }
   })
 
   function dispose(): void {
-    (deps.engine ?? engineInstance)?.dispose()
+    stopSystemTimeTicker()
+    const engineToDispose = deps.engine ?? engineInstance
+    engineToDispose?.dispose()
     if (objectUrl) {
       URL.revokeObjectURL(objectUrl)
       objectUrl = null
@@ -1238,6 +1351,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     isSystemStopped = true
     resumeSystemSpeech = null
     systemSentences = []
+    systemSentenceDurations = []
     systemSentenceIndex = 0
     activeKey = null
     activeUtterance = null

@@ -1419,5 +1419,211 @@ describe('useSliceAudio', () => {
         artist: 'Designing Data-Intensive Applications',
       })
     })
+
+    it('does not trigger onSliceEnded when silent carrier is paused or stopped in System mode', async () => {
+      class FakeUtterance {
+        text: string
+        lang = ''
+        voice: SpeechSynthesisVoice | null = null
+        rate = 1
+        pitch = 1
+        onstart: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onend: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onerror: ((ev: SpeechSynthesisErrorEvent) => void) | null = null
+        onpause: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onresume: ((ev: SpeechSynthesisEvent) => void) | null = null
+        constructor(text: string) {
+          this.text = text
+        }
+      }
+      const prevUtterance = Reflect.get(globalThis, 'SpeechSynthesisUtterance')
+      Reflect.set(globalThis, 'SpeechSynthesisUtterance', FakeUtterance)
+      try {
+        const audio = createFakeAudio()
+        const onSliceEnded = vi.fn()
+        const mockSynth = {
+          getVoices: vi.fn(() => [
+            { voiceURI: 'vi-vn-x-vic-local', name: 'Google Vietnamese', lang: 'vi-VN', default: true },
+          ]),
+          speak: vi.fn((utt: SpeechSynthesisUtterance) => {
+            utt.onstart?.(new Event('start') as SpeechSynthesisEvent)
+          }),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          cancel: vi.fn(),
+          speaking: false,
+          paused: false,
+        } as unknown as SpeechSynthesis
+
+        const player = useSliceAudio({
+          defaultEngine: 'system',
+          speechSynthesis: mockSynth,
+          createAudio: () => audio,
+          onSliceEnded,
+        })
+
+        await player.loadAndPlay(source({ language: 'vi' }))
+        expect(player.playing.value).toBe(true)
+        expect(player.duration.value).toBeGreaterThan(0)
+
+        // User pauses playback
+        player.pause()
+        expect(player.playing.value).toBe(false)
+
+        // Silent carrier ended event must be ignored
+        audio._fire('ended')
+        expect(onSliceEnded).not.toHaveBeenCalled()
+      } finally {
+        Reflect.set(globalThis, 'SpeechSynthesisUtterance', prevUtterance)
+      }
+    })
+
+    it('supports sentence-level seeking and duration tracking in System mode', async () => {
+      let activeUtterance: FakeUtterance | null = null
+      class FakeUtterance {
+        text: string
+        lang = ''
+        voice: SpeechSynthesisVoice | null = null
+        rate = 1
+        pitch = 1
+        onstart: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onend: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onerror: ((ev: SpeechSynthesisErrorEvent) => void) | null = null
+        onpause: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onresume: ((ev: SpeechSynthesisEvent) => void) | null = null
+        constructor(text: string) {
+          this.text = text
+          activeUtterance = this
+        }
+      }
+      const prevUtterance = Reflect.get(globalThis, 'SpeechSynthesisUtterance')
+      Reflect.set(globalThis, 'SpeechSynthesisUtterance', FakeUtterance)
+      try {
+        const audio = createFakeAudio()
+        const onSliceEnded = vi.fn()
+        const mockSynth = {
+          getVoices: vi.fn(() => [
+            { voiceURI: 'vi-vn-x-vic-local', name: 'Google Vietnamese', lang: 'vi-VN', default: true },
+          ]),
+          speak: vi.fn((utt: SpeechSynthesisUtterance) => {
+            utt.onstart?.(new Event('start') as SpeechSynthesisEvent)
+          }),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          cancel: vi.fn(),
+          speaking: false,
+          paused: false,
+        } as unknown as SpeechSynthesis
+
+        const player = useSliceAudio({
+          defaultEngine: 'system',
+          speechSynthesis: mockSynth,
+          createAudio: () => audio,
+          onSliceEnded,
+        })
+
+        await player.loadAndPlay(source({ language: 'vi', markdown: 'Câu thứ nhất rất dài. Câu thứ hai tiếp nối.' }))
+        expect(player.duration.value).toBeGreaterThan(0)
+        expect(player.currentTime.value).toBe(0)
+
+        // Seek towards end (sentence 2)
+        player.seek(player.duration.value * 0.9)
+        expect(player.currentTime.value).toBeGreaterThan(0)
+        expect(mockSynth.cancel).toHaveBeenCalled()
+        expect(activeUtterance?.text).toContain('Câu thứ hai')
+
+        // Complete final sentence
+        activeUtterance?.onend?.(new Event('end') as SpeechSynthesisEvent)
+        expect(onSliceEnded).toHaveBeenCalledTimes(1)
+      } finally {
+        Reflect.set(globalThis, 'SpeechSynthesisUtterance', prevUtterance)
+      }
+    })
+
+    it('resumes seamlessly from paused sentence in System mode without auto-advancing', async () => {
+      let activeUtterance: FakeUtterance | null = null
+      class FakeUtterance {
+        text: string
+        lang = ''
+        voice: SpeechSynthesisVoice | null = null
+        rate = 1
+        pitch = 1
+        onstart: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onend: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onerror: ((ev: SpeechSynthesisErrorEvent) => void) | null = null
+        onpause: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onresume: ((ev: SpeechSynthesisEvent) => void) | null = null
+        constructor(text: string) {
+          this.text = text
+          activeUtterance = this
+        }
+      }
+      const prevUtterance = Reflect.get(globalThis, 'SpeechSynthesisUtterance')
+      Reflect.set(globalThis, 'SpeechSynthesisUtterance', FakeUtterance)
+      try {
+        const audio = createFakeAudio()
+        const onSliceEnded = vi.fn()
+        const mockSynth = {
+          getVoices: vi.fn(() => [
+            { voiceURI: 'vi-vn-x-vic-local', name: 'Google Vietnamese', lang: 'vi-VN', default: true },
+          ]),
+          speak: vi.fn((utt: SpeechSynthesisUtterance) => {
+            utt.onstart?.(new Event('start') as SpeechSynthesisEvent)
+          }),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          cancel: vi.fn(),
+          speaking: false,
+          paused: false,
+        } as unknown as SpeechSynthesis
+
+        const player = useSliceAudio({
+          defaultEngine: 'system',
+          speechSynthesis: mockSynth,
+          createAudio: () => audio,
+          onSliceEnded,
+        })
+
+        await player.loadAndPlay(source({ language: 'vi', markdown: 'Câu đầu. Câu sau.' }))
+        expect(player.playing.value).toBe(true)
+
+        // Pause
+        player.pause()
+        expect(player.playing.value).toBe(false)
+        expect(onSliceEnded).not.toHaveBeenCalled()
+
+        // Resume
+        await player.play()
+        expect(player.playing.value).toBe(true)
+        expect(activeUtterance?.text).toContain('Câu đầu')
+
+        // First sentence completes
+        activeUtterance?.onend?.(new Event('end') as SpeechSynthesisEvent)
+        expect(activeUtterance?.text).toContain('Câu sau')
+        expect(onSliceEnded).not.toHaveBeenCalled()
+
+        // Second sentence completes
+        activeUtterance?.onend?.(new Event('end') as SpeechSynthesisEvent)
+        expect(onSliceEnded).toHaveBeenCalledTimes(1)
+      } finally {
+        Reflect.set(globalThis, 'SpeechSynthesisUtterance', prevUtterance)
+      }
+    })
+
+    it('preserves initialOffset when loading audio across engines', async () => {
+      const audio = createFakeAudio()
+      const { cache } = memoryCache()
+      const engine = streamingEngine()
+
+      const player = useSliceAudio({
+        defaultEngine: 'device',
+        engine,
+        cache,
+        createAudio: () => audio,
+      })
+
+      await player.loadAndPlay(source(), true, 15.5)
+      expect(audio.currentTime).toBe(15.5)
+    })
   })
 })
