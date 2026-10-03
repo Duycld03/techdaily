@@ -43,12 +43,14 @@ jobs:
       - name: Build Backend (Release)
         run: dotnet build backend/TechDaily.sln --configuration Release --no-restore
 
-      - name: Run Backend Tests (35 Tests)
+      - name: Run Backend Tests (TechDaily.Tests)
         run: dotnet test backend/TechDaily.sln --configuration Release --no-build --verbosity normal
 
   frontend-ci:
     name: Frontend CI (Nuxt 4 / Vue 3)
     runs-on: ubuntu-latest
+    env:
+      ONNXRUNTIME_NODE_INSTALL: skip
     defaults:
       run:
         working-directory: frontend
@@ -64,9 +66,9 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Frontend Dependencies
-        run: npm ci || npm install
+        run: npm ci
 
-      - name: Run Frontend Tests (Vitest - 36 Tests)
+      - name: Run Frontend Tests (Vitest)
         run: npm test
 
       - name: Verify Frontend Production Build (Nuxt Nitro)

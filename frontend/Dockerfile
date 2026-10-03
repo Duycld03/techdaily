@@ -1,8 +1,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
+ENV ONNXRUNTIME_NODE_INSTALL=skip
 
 COPY package*.json ./
-RUN npm ci || npm install
+RUN npm ci
 
 COPY . .
 RUN npm run build
