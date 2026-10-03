@@ -1220,8 +1220,8 @@ describe('useSliceAudio', () => {
           this.text = text
         }
       }
-      const prevUtterance = (globalThis as unknown as { SpeechSynthesisUtterance?: unknown }).SpeechSynthesisUtterance
-      ;(globalThis as unknown as { SpeechSynthesisUtterance: unknown }).SpeechSynthesisUtterance = FakeUtterance
+      const prevUtterance = Reflect.get(globalThis, 'SpeechSynthesisUtterance')
+      Reflect.set(globalThis, 'SpeechSynthesisUtterance', FakeUtterance)
 
       const spokenUtterances: SpeechSynthesisUtterance[] = []
       const mockSynth = {
@@ -1263,11 +1263,86 @@ describe('useSliceAudio', () => {
       expect(spokenUtterances[0].pitch).toBe(1.0)
       expect(player.playing.value).toBe(true)
 
-      // Trigger speech completion
+      // Trigger speech completion across sentence chunks
       spokenUtterances[0]?.onend?.(new Event('end') as SpeechSynthesisEvent)
+      expect(spokenUtterances).toHaveLength(2)
+      expect(player.playing.value).toBe(true)
+
+      spokenUtterances[1]?.onend?.(new Event('end') as SpeechSynthesisEvent)
+      expect(spokenUtterances).toHaveLength(3)
+      expect(player.playing.value).toBe(true)
+
+      spokenUtterances[2]?.onend?.(new Event('end') as SpeechSynthesisEvent)
       expect(player.playing.value).toBe(false)
       expect(onSliceEnded).toHaveBeenCalledTimes(1)
     })
+
+    it('automatically cascades to Cloud TTS, updates engineMode and invokes onFallbackToCloud when System TTS emits synthesis-failed error', async () => {
+      let registeredErrorCb: ((ev: SpeechSynthesisErrorEvent) => void) | null = null
+      class FailingUtterance {
+        text: string
+        lang = ''
+        voice: SpeechSynthesisVoice | null = null
+        rate = 1
+        pitch = 1
+        onstart: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onend: ((ev: SpeechSynthesisEvent) => void) | null = null
+        onerror: ((ev: SpeechSynthesisErrorEvent) => void) | null = null
+        constructor(text: string) {
+          this.text = text
+        }
+      }
+      Reflect.set(globalThis, 'SpeechSynthesisUtterance', FailingUtterance)
+
+      const mockSynth = {
+        getVoices: vi.fn(() => [
+          { voiceURI: 'vi-vn-x-vic-local', name: 'Google Vietnamese', lang: 'vi-VN', default: true },
+        ]),
+        speak: vi.fn((utt: { onerror: ((ev: SpeechSynthesisErrorEvent) => void) | null }) => {
+          registeredErrorCb = utt.onerror
+        }),
+        pause: vi.fn(),
+        resume: vi.fn(),
+        cancel: vi.fn(),
+        speaking: false,
+        paused: false,
+      } as unknown as SpeechSynthesis
+
+      const audio = createFakeAudio()
+      const { cache } = memoryCache()
+      const onFallbackToCloud = vi.fn()
+      const mockBlob = new Blob(['cloud audio bytes'], { type: 'audio/mpeg' })
+      const fetchClient = vi.fn(async () => {
+        return new Response(mockBlob, {
+          status: 200,
+          headers: { 'Content-Type': 'audio/mpeg' },
+        })
+      })
+
+      const player = useSliceAudio({
+        defaultEngine: 'system',
+        speechSynthesis: mockSynth,
+        cache,
+        createAudio: () => audio,
+        fetchClient,
+        onFallbackToCloud,
+      })
+
+      await player.loadAndPlay(source({ language: 'vi' }))
+      expect(player.engineMode.value).toBe('system')
+      expect(mockSynth.speak).toHaveBeenCalled()
+
+      // Simulate Android Chrome synthesis-failed error
+      const errorEvent = { error: 'synthesis-failed' } as SpeechSynthesisErrorEvent
+      await registeredErrorCb?.(errorEvent)
+
+      expect(onFallbackToCloud).toHaveBeenCalledTimes(1)
+      expect(player.engineMode.value).toBe('cloud')
+      expect(player.activeCascadeTier.value).toBe('cloud')
+      expect(localStorage.getItem(AUDIO_ENGINE_STORAGE_KEY)).toBe('cloud')
+      expect(fetchClient).toHaveBeenCalled()
+    })
+
     it('invokes onFallbackToCloud, updates engineMode and localStorage to cloud when no matching system voices exist', async () => {
       const mockSynth = {
         getVoices: vi.fn(() => [

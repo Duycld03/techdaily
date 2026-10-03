@@ -141,7 +141,11 @@ The reader SHALL persist the complete slice audio in the browser's on-device sto
 
 The `/read/[bookId]` reader SHALL provide an audio playback control that lets the user listen to the current slice's narration, available only when the current slice is AI-formatted (hidden or disabled otherwise). Playback SHALL use an HTML5 `<audio>` element supporting play, pause, and position seeking over the assembled complete slice audio.
 
+The play/pause toggle button SHALL render concise, balanced action labels symmetrical across playback states and locales: "Listen" in English and "Nghe" in Vietnamese when idle/paused, and "Pause" in English and "Tạm dừng" in Vietnamese when actively playing. Accessible descriptions (`aria-label`) SHALL communicate the full descriptive action (e.g. "Play narration" / "Phát giọng đọc" and "Pause narration" / "Tạm dừng giọng đọc") to assistive technologies without bloating visible button dimensions.
+
 The reader SHALL offer a **playback speed** control spanning 0.5x to 2.0x applied client-side to the `<audio>` element's `playbackRate` **without re-synthesizing audio**; the selected speed SHALL persist across sessions and slices. The reader SHALL NOT present a voice picker, since the voice is chosen automatically by slice language.
+
+The audio player controls layout SHALL ensure that the primary playback controls (play/pause toggle, engine mode switch) and utility controls (auto-advance toggle, sleep timer menu, and speed selector) remain fully visible and contained within the player card boundaries on mobile viewports down to 360px width during both idle and playing states, preventing any control from overflowing or being pushed outside the card.
 
 While the language model is downloading, the reader SHALL display the download progress as an accurate whole-number percentage in the inclusive range **0 to 100**; it SHALL NOT display a value greater than 100% or otherwise mis-scaled. While synthesizing after download, the reader SHALL display a synthesis progress state.
 
@@ -162,6 +166,18 @@ All audio control labels, speed labels, and download/synthesis progress messages
 #### Scenario: Speed preference persists across sessions
 - **WHEN** a user who previously selected 1.25x returns to the reader in a later session
 - **THEN** the reader restores 1.25x playback speed as the active preference.
+
+#### Scenario: Concise play/pause button labels across locales
+- **WHEN** audio is idle or paused in the Vietnamese locale
+- **THEN** the play/pause button renders visible text "Nghe"
+- **WHEN** playback is active in the Vietnamese locale
+- **THEN** the play/pause button renders visible text "Tạm dừng"
+- **WHEN** playback is active in the English locale
+- **THEN** the play/pause button renders visible text "Pause".
+
+#### Scenario: Playback controls contained within player card on mobile viewports
+- **WHEN** viewing the audio narration controls on a mobile viewport (360px–390px width) during active playback in either English or Vietnamese
+- **THEN** all controls in the top bar—including the play/pause toggle, engine switch, auto-advance button, sleep timer button, and playback speed button—remain fully visible inside the player card boundary without horizontal clipping or pushing elements outside the container.
 
 ### Requirement: GPU-Accelerated On-Device Synthesis with CPU Fallback
 
@@ -209,7 +225,6 @@ For Meta VITS / MMS-TTS architecture models (`Xenova/mms-tts-*`), whose duration
 
 On reader routes, the application SHALL be cross-origin isolated so on-device synthesis can use multi-threaded execution. This isolation SHALL be established across deployment tiers without duplicate or conflicting response headers. Response headers `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` SHALL be emitted cleanly without repetition. This isolation SHALL be confined to reader routes and SHALL NOT be applied to the authentication route or other routes, so cross-origin sign-in — which depends on cross-window communication — continues to function. Cross-origin resources the reader legitimately needs (web fonts, document images) SHALL continue to load under the isolation policy.
 
-
 Static assets and worker script endpoints (such as `/_nuxt/**`) SHALL deliver `Cross-Origin-Embedder-Policy: credentialless` and `Cross-Origin-Resource-Policy: cross-origin` across reverse proxy deployment tiers, ensuring that dedicated Web Workers spawned by isolated reader pages are not blocked with `ERR_BLOCKED_BY_RESPONSE` (`coep-frame-resource-needs-coep-header`).
 When entering a reader route from an unisolated browsing context (such as post-login or client-side navigation from library routes), the client application SHALL ensure the browsing context acquires cross-origin isolation (executing a full document navigation if `self.crossOriginIsolated` is not yet active), so that `self.crossOriginIsolated === true` reliably holds on reader views.
 
@@ -218,7 +233,6 @@ When cross-origin isolation is active (`self.crossOriginIsolated === true`), the
 #### Scenario: Clean non-duplicate cross-origin headers delivered
 - **WHEN** a client requests a `/read/**` document
 - **THEN** the HTTP response contains single instances of `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: credentialless` without duplicate header values.
-
 
 #### Scenario: Worker script delivered with COEP on production reverse proxy
 - **WHEN** a cross-origin isolated reader page requests a Web Worker script under `/_nuxt/**` through the production reverse proxy
@@ -492,14 +506,13 @@ On mobile browser environments (including iOS Safari, WebKit webviews, and Andro
 - **THEN** the Web Worker downloads the quantized 8-bit ONNX model (~36.6 MB) rather than the 109 MB FP32 weights, conserving device memory and mobile data.
 
 ### Requirement: Actionable Error Diagnostics & Cloud Fallback Recovery
-
 The reader audio composable and player component SHALL capture, diagnose, and present specific diagnostic feedback whenever audio synthesis or playback encounters an error, rather than masking failures behind opaque generic error messages:
-
 1. **Specific Error Diagnostics**: The audio composable and player SHALL capture and display specific diagnostic context (such as memory exhaustion, worker initialization error, network failure, or HTTP error status) instead of an unexplained generic toast.
 2. **Console Diagnostics**: The composable layer SHALL log full raw error details and stack traces to `console.error('[useSliceAudio] Device TTS Error:', err)` for all worker errors, lifecycle faults, and unhandled rejections.
 3. **Network Error Classification**: Resource loading failures, including WebKit/Safari's `TypeError: Load failed`, CDN connection timeouts, and offline fetch rejections, SHALL be classified as `NETWORK_ERROR` rather than `DEVICE_INIT_FAILED`.
 4. **Mobile Hardware Failure Cloud Recommendation**: When on-device synthesis fails on a mobile client due to hardware constraints, memory limits, or worker initialization errors, the player SHALL present an informative localized message explaining that on-device narration is constrained on this device and provide a direct 1-tap action to switch to the Google Cloud engine.
 5. **Graceful Engine Switch on Error**: Activating the Cloud fallback action from the error state SHALL immediately switch the active engine mode to Google Cloud, clear the error state, and initiate Cloud narration for the slice without requiring a manual page refresh.
+6. **Unified Cloud Fallback Availability**: When audio synthesis encounters a recoverable error under either `device` mode (hardware constraints, memory limits) OR `system` mode (synthesis-failed, voice-unavailable), the player toolbar SHALL render the 1-tap Cloud fallback action button (`Chuyển sang Google Cloud` / `Switch to Cloud`), provided the user's monthly cloud quota is not exhausted.
 
 #### Scenario: On-device synthesis failure surfaces diagnostic reason
 - **WHEN** on-device synthesis fails due to a worker or memory error
@@ -520,6 +533,10 @@ The reader audio composable and player component SHALL capture, diagnose, and pr
 #### Scenario: Hardware error provides 1-tap Cloud fallback
 - **WHEN** on-device synthesis fails due to hardware constraints and the user's monthly cloud quota is not exhausted
 - **THEN** the player displays an error notice recommending Google Cloud narration with an action button that immediately switches to Cloud mode and plays the audio.
+
+#### Scenario: System TTS error offers 1-tap switch to Google Cloud TTS
+- **WHEN** System TTS encounters an error and the player enters error state
+- **THEN** the player toolbar displays an actionable "Chuyển sang Google Cloud" button allowing the user to immediately trigger Cloud playback.
 
 ### Requirement: Model Download Progress Precedence & Compute Device Status Presentation
 
@@ -565,7 +582,7 @@ The on-device text-to-speech Web Worker and client audio player controller SHALL
 ### Requirement: Cascading Audio Engine Resolution Hierarchy
 The reader audio system SHALL implement an automatic **Cascading Engine Resolution Hierarchy** that selects the most efficient, natural, and cost-effective text-to-speech engine available for each slice:
 1. **Priority 1 (Universal System TTS via Web Speech API across Mobile & Laptop/PC)**: On all client environments (Laptop/PC on Windows, macOS, Linux, and Mobile on Android, iOS), the system SHALL first attempt to use `window.speechSynthesis`. If the browser supports the Web Speech API and exposes at least one voice matching the slice's language (e.g. Chrome's built-in Google voices, Edge's Natural voices, macOS Siri/Linh, or Android Google Speech Services), the system SHALL resolve to `'system'`.
-2. **Priority 2 (Cloud TTS via Google Cloud API)**: If no matching system voice is installed on the host operating system, the system SHALL automatically cascade to `'cloud'`, utilizing Google Cloud Text-to-Speech via the backend API.
+2. **Priority 2 (Cloud TTS via Google Cloud API)**: If no matching system voice is installed on the host operating system, OR if System TTS encounters a runtime synthesis failure (`SpeechSynthesisErrorEvent.error` of `synthesis-failed`, `synthesis-unavailable`, `language-unavailable`, `voice-unavailable`, or `audio-busy`), the system SHALL automatically cascade to `'cloud'`, utilizing Google Cloud Text-to-Speech via the backend API.
 3. **Priority 3 (Device TTS as Last Resort)**: If Cloud TTS is unavailable (due to client being offline `navigator.onLine === false`, backend network error, or cloud quota exhaustion `QUOTA_EXHAUSTED` / HTTP 429), the system SHALL degrade gracefully to the on-device Transformers.js Web Worker (`'device'`), ensuring narration is never blocked.
 4. **Manual User Override**: If the user explicitly selects an engine mode via the UI dropdown, the system SHALL honor their selection unless that engine experiences a hard error, in which case it SHALL offer or initiate graceful fallback.
 
@@ -584,6 +601,10 @@ The reader audio system SHALL implement an automatic **Cascading Engine Resoluti
 #### Scenario: User manually selects Cloud engine
 - **WHEN** the user explicitly selects "Google Cloud" from the engine dropdown
 - **THEN** the reader sets `engineMode = 'cloud'` and uses Google Cloud narration, bypassing automatic System TTS selection.
+
+#### Scenario: System TTS runtime synthesis failure cascades automatically to Cloud TTS
+- **WHEN** a user plays a Vietnamese slice with System TTS active and the browser voice emits `synthesis-failed` (such as on Android Chrome when network synthesis fails or voice packs are missing)
+- **THEN** the reader automatically switches the active engine mode to `'cloud'`, displays a localized toast informing the user of the transition, and seamlessly synthesizes and plays the slice via Google Cloud TTS without remaining in an error state.
 
 ### Requirement: System TTS Engine via Web Speech API
 The reader audio narration system SHALL support a **System TTS** engine mode (`engineMode === 'system'`) powered by the browser's native Web Speech API (`window.speechSynthesis`), alongside existing Cloud and Device engines.
@@ -685,7 +706,7 @@ The reader audio narration toolbar SHALL render using a container-resilient, two
 - **THEN** the main play button label dynamically updates to "Tạm dừng" (or "Pause" in English locale), and updates back to "Nghe" (or "Listen") upon pause or completion.
 
 ### Requirement: Graceful Speech Engine Fallback & Notification
-When a user initiates playback using the `System` engine (Web Speech API) and the client environment lacks compatible voices for the slice language (or speech synthesis is entirely unavailable):
+When a user initiates playback using the `System` engine (Web Speech API) and the client environment lacks compatible voices for the slice language OR speech synthesis fails during playback:
 1. The reader SHALL automatically switch the active engine mode to `Cloud`.
 2. The UI Segmented Switch SHALL immediately update its active state to highlight `Cloud`.
 3. The Voice Picker SHALL switch to the corresponding Cloud voice selection for the slice language.
@@ -700,6 +721,10 @@ When a user initiates playback using the `System` engine (Web Speech API) and th
 - **WHEN** audio is played via `system` (Web Speech API) or `device` (On-Device Neural TTS)
 - **THEN** no POST request is issued to `/api/v1/library/chunks/{chunkId}/audio` and zero rows are inserted into `DocumentChunkAudios`.
 
+#### Scenario: Web Speech API synthesis failure transitions to Cloud engine
+- **WHEN** audio playback fails with `synthesis-failed` while running on `engineMode = 'system'`
+- **THEN** the engine mode automatically switches to `'cloud'`, the UI toggle updates to "Cloud", a localized toast notification is displayed, and narration continues via Google Cloud.
+
 ### Requirement: Daily Pacer Workflow Auto-Advance Gating
 In the Daily Learning Pacer workflow (`/today`), completion of slice audio narration SHALL NOT trigger automatic advancement to the next slice, regardless of the `autoAdvance` setting. 
 1. Completing the daily learning milestone strictly requires the user to interact with and complete the Senior Challenge drill for the day's slice.
@@ -712,3 +737,14 @@ In the Daily Learning Pacer workflow (`/today`), completion of slice audio narra
 #### Scenario: Audio narration finishes on standalone Book Reader page
 - **WHEN** audio playback completes for the current slice on `/read/[bookId]` with `autoAdvance` enabled
 - **THEN** the reader automatically navigates to and starts playback for the next slice in the chapter.
+
+### Requirement: Web Speech API Sentence-Level Streaming Chunking
+When synthesizing narration via System TTS (`engineMode === 'system'`), the reader SHALL segment the plain-text narration script into sentence-level chunks using punctuation-aware sentence boundaries (`splitSentences`):
+1. **Input Size Bounds**: The reader SHALL NOT pass multi-thousand-character prose blocks to a single `SpeechSynthesisUtterance`. Each utterance text SHALL be bounded to individual sentence boundaries, strictly adhering to mobile platform input constraints (including Android `TextToSpeech.getMaxSpeechInputLength()` of 4,000 characters).
+2. **Sequential Sentence Progression**: The player SHALL queue and play sentence utterances sequentially via `utterance.onend`.
+3. **Playback Lifecycle Synchronization**: Pausing, stopping, or navigating away SHALL cancel the active utterance and reset the sentence playback pointer.
+4. **Media Focus Isolation**: The silent carrier loop SHALL NOT contend with or interrupt the mobile platform's audio focus during sentence utterance transitions.
+
+#### Scenario: Long book slice is chunked for System TTS
+- **WHEN** a user plays a 6,000-character reading slice using System TTS
+- **THEN** the player splits the script into sentence-level utterances and plays them sequentially, preventing `getMaxSpeechInputLength` overflows and browser synthesis cutoff.
