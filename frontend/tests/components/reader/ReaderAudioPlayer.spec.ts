@@ -236,6 +236,7 @@ describe('ReaderAudioPlayer.vue', () => {
     audio.errorInfo.value = null
     audio.isNearQuota.value = false
     audio.isQuotaExhausted.value = false
+    useToast().clear()
     originalUseI18n = Reflect.get(globalThis, 'useI18n')
     Reflect.set(globalThis, 'useI18n', () => ({ t: interpolate, locale: { value: 'en' } }))
   })
@@ -369,7 +370,8 @@ describe('ReaderAudioPlayer.vue', () => {
     expect(audio.setEngineMode).toHaveBeenCalledWith('device')
     expect(audio.loadAndPlay).toHaveBeenCalledWith(
       expect.objectContaining({ chunkId: 'chunk-1' }),
-      false
+      false,
+      0
     )
   })
 
@@ -662,5 +664,66 @@ describe('ReaderAudioPlayer.vue', () => {
       await nextTick()
       expect(wrapper.text()).toContain('Reading via browser voice:')
     })
+  })
+
+  it('renders seekable scrubber and formatTime when System mode is loaded with duration > 0', async () => {
+    audio.engineMode.value = 'system'
+    audio.playing.value = false
+    audio.duration.value = 65
+    audio.currentTime.value = 15
+    const wrapper = mountPlayer({ chunk: chunk() })
+
+    // Simulate loaded slice
+    await wrapper.find('button').trigger('click')
+    audio.playing.value = true
+    await nextTick()
+
+    const slider = wrapper.find('input[type="range"]')
+    expect(slider.exists()).toBe(true)
+    expect(wrapper.text()).toContain('0:15 / 1:05')
+  })
+
+  it('preserves currentTime as offset when toggling engines', async () => {
+    audio.engineMode.value = 'cloud'
+    audio.playing.value = false
+    const wrapper = mountPlayer({ chunk: chunk() })
+
+    // Simulate loaded slice
+    await wrapper.find('button').trigger('click')
+    audio.loadAndPlay.mockClear()
+
+    audio.currentTime.value = 42
+    audio.playing.value = true
+
+    const deviceBtn = wrapper.findAll('button').find(b => b.text().includes('Device'))
+    await deviceBtn!.trigger('click')
+
+    expect(audio.loadAndPlay).toHaveBeenCalledWith(
+      expect.objectContaining({ chunkId: 'chunk-1' }),
+      true,
+      42
+    )
+  })
+
+  it('does not trigger end_of_slice toast when user clicks pause', async () => {
+    const toast = useToast()
+    toast.clear()
+    const wrapper = mountPlayer({ chunk: chunk() })
+    const timerBtn = wrapper.findAll('button').find(b => b.text().includes('Sleep Timer'))
+    expect(timerBtn).toBeDefined()
+    await timerBtn!.trigger('click')
+    await nextTick()
+
+    const endOfSliceBtn = wrapper.findAll('button').find(b => b.text().includes('End of slice'))
+    expect(endOfSliceBtn).toBeDefined()
+    await endOfSliceBtn!.trigger('click')
+    await nextTick()
+
+    // Click pause button
+    const playPauseBtn = wrapper.find('button')
+    await playPauseBtn.trigger('click')
+
+    const sleepToast = toast.toasts.value.find(t => t.message.includes('Sleep timer expired'))
+    expect(sleepToast).toBeUndefined()
   })
 })

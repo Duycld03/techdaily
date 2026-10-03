@@ -139,11 +139,13 @@ The reader SHALL persist the complete slice audio in the browser's on-device sto
 
 ### Requirement: Reader Audio Playback Controls
 
-The `/read/[bookId]` reader SHALL provide an audio playback control that lets the user listen to the current slice's narration, available only when the current slice is AI-formatted (hidden or disabled otherwise). Playback SHALL use an HTML5 `<audio>` element supporting play, pause, and position seeking over the assembled complete slice audio.
+The `/read/[bookId]` reader SHALL provide an audio playback control that lets the user listen to the current slice's narration, available only when the current slice is AI-formatted (hidden or disabled otherwise). Playback SHALL support play, pause, and position seeking across all engine modes (Cloud, Device, and System).
 
-The play/pause toggle button SHALL render concise, balanced action labels symmetrical across playback states and locales: "Listen" in English and "Nghe" in Vietnamese when idle/paused, and "Pause" in English and "Tạm dừng" in Vietnamese when actively playing. Accessible descriptions (`aria-label`) SHALL communicate the full descriptive action (e.g. "Play narration" / "Phát giọng đọc" and "Pause narration" / "Tạm dừng giọng đọc") to assistive technologies without bloating visible button dimensions.
+1. **Universal Scrubber Slider**: The reader audio player SHALL render an interactive seekable scrubber slider for all active engine modes whenever slice narration is ready or playing.
+2. **System Mode Scrubber & Seeking**: In System TTS mode (`engineMode === 'system'`), the player SHALL compute an estimated total duration and real-time elapsed time from sentence lengths and speech speed, rendering the scrubber slider and elapsed/total time (`mm:ss / mm:ss`). Users SHALL be able to drag or click the slider to seek to any sentence in the slice without restarting from the beginning.
+3. **Action Labels**: The play/pause toggle button SHALL render concise, balanced action labels symmetrical across playback states and locales: "Listen" in English and "Nghe" in Vietnamese when idle/paused, and "Pause" in English and "Tạm dừng" in Vietnamese when actively playing. Accessible descriptions (`aria-label`) SHALL communicate the full descriptive action.
 
-The reader SHALL offer a **playback speed** control spanning 0.5x to 2.0x applied client-side to the `<audio>` element's `playbackRate` **without re-synthesizing audio**; the selected speed SHALL persist across sessions and slices. The reader SHALL NOT present a voice picker, since the voice is chosen automatically by slice language.
+The reader SHALL offer a **playback speed** control spanning 0.5x to 2.0x applied client-side to the `<audio>` element's `playbackRate` **without re-synthesizing audio**; the selected speed SHALL persist across sessions and slices.
 
 The audio player controls layout SHALL ensure that the primary playback controls (play/pause toggle, engine mode switch) and utility controls (auto-advance toggle, sleep timer menu, and speed selector) remain fully visible and contained within the player card boundaries on mobile viewports down to 360px width during both idle and playing states, preventing any control from overflowing or being pushed outside the card.
 
@@ -179,6 +181,18 @@ All audio control labels, speed labels, and download/synthesis progress messages
 - **WHEN** viewing the audio narration controls on a mobile viewport (360px–390px width) during active playback in either English or Vietnamese
 - **THEN** all controls in the top bar—including the play/pause toggle, engine switch, auto-advance button, sleep timer button, and playback speed button—remain fully visible inside the player card boundary without horizontal clipping or pushing elements outside the container.
 
+#### Scenario: User seeks within System TTS narration
+- **WHEN** System TTS narration is active on a slice with 10 sentences
+- **AND** the user drags the scrubber slider to the 50% position (sentence 5)
+- **THEN** the active utterance is canceled without triggering slice completion
+- **AND** playback resumes immediately from sentence 5
+- **AND** the displayed elapsed time reflects the updated sentence offset
+
+#### Scenario: Scrubber visibility in System TTS mode
+- **WHEN** System TTS engine is selected and slice narration is loaded
+- **THEN** the seekable scrubber slider track is visible and interactive
+- **AND** duration is calculated as greater than zero
+- **AND** elapsed time updates as each sentence is narrated
 ### Requirement: GPU-Accelerated On-Device Synthesis with CPU Fallback
 
 The reader SHALL run on-device narration synthesis on the GPU when the browser exposes GPU compute to the synthesis worker and the target neural network architecture is compatible with available WebGPU shader kernels, and SHALL fall back to CPU execution when GPU compute is unavailable or fails to initialize, so synthesis completes on any supported browser. The choice of execution backend SHALL NOT change the produced audio or any user-facing control. A backend-initialization failure SHALL NOT surface as a narration error while a working fallback exists, and the backend selection SHALL NOT be re-probed or re-failed per sentence within a synthesis run.
@@ -624,9 +638,13 @@ The reader audio narration system SHALL support a **System TTS** engine mode (`e
 
 ### Requirement: Continuous Cross-Slice Auto-Advance
 The reader audio player SHALL provide an automatic slice progression mechanism that continues narration to subsequent document slices without manual user intervention.
+
 1. **Auto-Advance Toggle**: The player SHALL render an "Auto Next" (`autoAdvance`) toggle control, defaulted to enabled (`true`) and persisted in `localStorage` (`techdaily_reader_audio_auto_advance`).
-2. **End-of-Slice Trigger**: When narration of the current slice completes (via `<audio>` `ended` event for Cloud/Device or `utterance.onend` for System), if `autoAdvance` is enabled and a subsequent slice exists (`activeChunkIndex < chunks.length - 1`), the system SHALL trigger progression to the next slice (`activeChunkIndex + 1`).
-3. **Continuous Playback Hand-off**: Upon advancing to the next slice, the audio player SHALL automatically begin playback of the new slice's narration.
+2. **Strict Natural Completion Trigger**: Progression to the next slice SHALL trigger strictly and solely upon genuine natural completion of the slice's narration:
+   - For Cloud and Device modes: When the assembled audio track reaches its natural conclusion (`ended` event) while `isUserPaused === false`.
+   - For System mode: When the final sentence chunk completes (`systemSentenceIndex >= systemSentences.length`) while `isSystemStopped === false`.
+3. **Pause and Interruption Isolation**: Pausing playback, switching synthesis engines, stopping background carrier audio, seeking, or re-synthesizing SHALL NEVER trigger `onSliceEnded` or advance the reader to the next slice.
+4. **Silent Carrier Isolation**: The HTML5 audio element running the zero-duration silent carrier SHALL NOT propagate `ended` events to `onSliceEnded`. Stopping or unlooping the silent carrier MUST NOT trigger slice progression.
 
 #### Scenario: Current slice audio finishes with auto-advance enabled
 - **WHEN** audio narration for slice $N$ reaches completion and `autoAdvance` is true and slice $N+1$ exists
@@ -636,6 +654,19 @@ The reader audio player SHALL provide an automatic slice progression mechanism t
 - **WHEN** audio narration for slice $N$ finishes and `autoAdvance` is false
 - **THEN** playback transitions to paused (`playing === false`), remaining on slice $N$.
 
+#### Scenario: User pauses during System TTS playback
+- **WHEN** System TTS is actively narrating a slice and `autoAdvance` is enabled
+- **AND** the user clicks the "Pause" button (or triggers remote pause)
+- **THEN** speech synthesis halts immediately
+- **AND** the reader remains on the current slice without advancing to the next slice
+- **AND** `auto-advance` is not emitted
+
+#### Scenario: User switches engine while narration is playing
+- **WHEN** narration is playing in System mode
+- **AND** the user clicks the "Cloud" or "Device" engine toggle
+- **THEN** System TTS and silent carrier halt cleanly
+- **AND** the reader remains on the current slice without skipping to the next slice
+- **AND** narration transitions to the newly selected engine
 ### Requirement: Soft Chime Transition on Slice Boundary
 The reader audio system SHALL emit a subtle, non-intrusive auditory chime whenever auto-advancing across slice boundaries.
 1. **Web Audio Synthesis**: The chime SHALL be synthesized dynamically via the Web Audio API (`AudioContext`), requiring zero external network asset downloads.
@@ -675,6 +706,7 @@ The reader audio player SHALL provide a Sleep Timer control with fixed duration 
 3. **15-Second Audio Fade-Out**: When a timed sleep timer reaches its final 15 seconds, the system SHALL smoothly attenuate audio volume exponentially from 1.0 down to 0.0 over the 15-second window prior to pausing.
 4. **End-of-Slice Stop**: When set to "End of Current Slice", the player SHALL disable auto-advance for the current slice, pausing playback upon slice completion with volume intact.
 5. **State Preservation**: When the timer expires, playback SHALL pause and volume SHALL be restored to 1.0 for the next manual playback session, leaving the reader bookmark at the exact position reached.
+6. **End-of-Slice Sleep Guard**: When `end_of_slice` is active, the sleep timer completion action (pausing playback, clearing timer, and notifying the user) SHALL trigger strictly upon natural slice completion. Manual user pauses, engine changes, or silent carrier teardown SHALL NOT trigger the sleep timer completion notification or dismiss the timer prematurely.
 
 #### Scenario: Sleep timer reaches final 15 seconds
 - **WHEN** an active 30-minute sleep timer counts down to 0:15 remaining
@@ -684,6 +716,12 @@ The reader audio player SHALL provide a Sleep Timer control with fixed duration 
 - **WHEN** the user selects "End of Current Slice" as the sleep timer mode
 - **THEN** the reader plays the remainder of the active slice, and upon reaching slice completion, halts playback without advancing to the next slice.
 
+#### Scenario: User manually pauses with End of Slice sleep timer active
+- **WHEN** the sleep timer is set to "End of Current Slice" (`end_of_slice`)
+- **AND** the user clicks the "Pause" button mid-slice
+- **THEN** playback pauses normally
+- **AND** the sleep timer remains active (not dismissed)
+- **AND** no "Sleep timer ended" toast is triggered
 ### Requirement: Multi-Engine Audio Narration Toolbar Layout
 The reader audio narration toolbar SHALL render using a container-resilient, two-row responsive layout that guarantees zero visual element collisions, zero text overlapping, and zero button clipping across mobile (390px), constrained split-pane containers (~550px), and unconstrained desktop viewports (1440px+).
 1. **Row 1 (Primary Controls & Utilities)**:
@@ -742,9 +780,34 @@ In the Daily Learning Pacer workflow (`/today`), completion of slice audio narra
 When synthesizing narration via System TTS (`engineMode === 'system'`), the reader SHALL segment the plain-text narration script into sentence-level chunks using punctuation-aware sentence boundaries (`splitSentences`):
 1. **Input Size Bounds**: The reader SHALL NOT pass multi-thousand-character prose blocks to a single `SpeechSynthesisUtterance`. Each utterance text SHALL be bounded to individual sentence boundaries, strictly adhering to mobile platform input constraints (including Android `TextToSpeech.getMaxSpeechInputLength()` of 4,000 characters).
 2. **Sequential Sentence Progression**: The player SHALL queue and play sentence utterances sequentially via `utterance.onend`.
-3. **Playback Lifecycle Synchronization**: Pausing, stopping, or navigating away SHALL cancel the active utterance and reset the sentence playback pointer.
-4. **Media Focus Isolation**: The silent carrier loop SHALL NOT contend with or interrupt the mobile platform's audio focus during sentence utterance transitions.
+3. **Playback Lifecycle & Resume Synchronization**:
+   - When paused, the active sentence index (`systemSentenceIndex`) SHALL be preserved.
+   - Resuming from pause SHALL reset `isSystemStopped = false` and speak from `systemSentenceIndex`, continuing subsequent sentences smoothly until the slice ends.
+   - Canceling an utterance during pause or engine switch SHALL NOT invoke `onSliceEnded`.
+4. **Sentence Seeking**: When `seek(time)` is invoked in System mode, the system SHALL calculate the target sentence index from the requested time, halt active speech, update `systemSentenceIndex`, and begin speaking from that sentence.
 
 #### Scenario: Long book slice is chunked for System TTS
 - **WHEN** a user plays a 6,000-character reading slice using System TTS
 - **THEN** the player splits the script into sentence-level utterances and plays them sequentially, preventing `getMaxSpeechInputLength` overflows and browser synthesis cutoff.
+
+#### Scenario: User pauses and resumes in System mode
+- **WHEN** System TTS is playing sentence 3 of 8
+- **AND** the user pauses playback
+- **AND** later clicks "Play"
+- **THEN** narration resumes from sentence 3
+- **AND** when sentence 3 completes, narration automatically continues through sentences 4 to 8
+
+### Requirement: Cross-Engine Playback Progress Retention
+
+When switching between synthesis engines (System, Cloud, Device) within the same slice:
+
+1. **Time-Based Engine Switching (Cloud <-> Device)**: The reader SHALL capture `currentTime` from the active audio element and pass it as `initialOffset` to `loadAndPlay()`, resuming playback at the exact elapsed second.
+2. **Hybrid Engine Switching (System <-> Cloud/Device)**:
+   - When switching from System to Cloud/Device, the reader SHALL map the current sentence progress ratio (`systemSentenceIndex / totalSentences`) to the target audio duration and start playback at that elapsed position.
+   - When switching from Cloud/Device to System, the reader SHALL map the elapsed time ratio (`currentTime / duration`) to the corresponding sentence index and resume narration from that sentence.
+
+#### Scenario: Switching from Cloud to Device during playback
+- **WHEN** Cloud narration is playing at 0:45 of a 2:00 slice
+- **AND** the user switches the engine to "Device"
+- **THEN** Device synthesis or cached audio loads and resumes playback at 0:45
+- **AND** playback does not reset to 0:00
