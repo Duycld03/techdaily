@@ -3,6 +3,7 @@ services:
     image: pgvector/pgvector:pg17
     container_name: techdaily_postgres
     restart: unless-stopped
+    mem_limit: 1g
     environment:
       POSTGRES_DB: techdaily_db
       POSTGRES_USER: techdaily_user
@@ -21,8 +22,9 @@ services:
     image: dpage/pgadmin4:latest
     container_name: techdaily_pgadmin
     restart: unless-stopped
+    mem_limit: 512m
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@techdaily.local
+      PGADMIN_DEFAULT_EMAIL: admin@techdaily.com
       PGADMIN_DEFAULT_PASSWORD: admin_password_secret
     ports:
       - "5051:80"
