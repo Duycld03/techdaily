@@ -6,7 +6,7 @@ Provides short-lived access tokens with concurrency-safe refresh token rotation,
 ## Requirements
 
 ### Requirement: Refresh token issuance alongside access token
-The authentication endpoints (`/api/v1/auth/login`, `/register`, `/google`, `/refresh`) SHALL issue a refresh token alongside the JWT access token. The refresh token SHALL be a cryptographically random 256-bit value, stored as a SHA-256 hash in the database, and delivered to the client as an HttpOnly SameSite=Lax cookie scoped to the auth endpoint path (`Path=/api/v1/auth`).
+The authentication endpoints (`/api/v1/auth/login`, `/register`, `/google`, `/refresh`) SHALL issue a refresh token alongside the JWT access token. The refresh token SHALL be a cryptographically random 256-bit value, stored as a SHA-256 hash in the database, and delivered to the client as an HttpOnly SameSite=Lax cookie scoped to the root application path (`Path=/`).
 
 In HTTPS environments (detected via direct TLS or `X-Forwarded-Proto: https`), the cookie SHALL include the `Secure` attribute. In local or development environments running over plain HTTP, the `Secure` attribute SHALL be omitted so that browsers running in non-secure HTTP contexts correctly store and transmit the cookie. Each refresh token SHALL have a 30-day absolute server-side expiry (`ExpiresAt`).
 
@@ -18,15 +18,15 @@ The browser persistence of the `refreshToken` cookie SHALL reflect the authentic
 
 #### Scenario: Successful login returns access token and sets refresh cookie
 - **WHEN** user authenticates via `POST /api/v1/auth/login` with valid credentials and `rememberMe: true` (or the field omitted)
-- **THEN** the response body contains `accessToken` (JWT, configurable expiry) and the response includes a `Set-Cookie` header for the refresh token with `HttpOnly; SameSite=Lax; Path=/api/v1/auth; Max-Age=2592000`
+- **THEN** the response body contains `accessToken` (JWT, configurable expiry) and the response includes a `Set-Cookie` header for the refresh token with `HttpOnly; SameSite=Lax; Path=/; Max-Age=2592000`
 
 #### Scenario: Login with Remember session disabled sets a session refresh cookie
 - **WHEN** user authenticates via `POST /api/v1/auth/login` with valid credentials and `rememberMe: false`
-- **THEN** the `Set-Cookie` header for `refreshToken` includes `HttpOnly; SameSite=Lax; Path=/api/v1/auth` and carries no `Expires` or `Max-Age` attribute (a browser session cookie)
+- **THEN** the `Set-Cookie` header for `refreshToken` includes `HttpOnly; SameSite=Lax; Path=/` and carries no `Expires` or `Max-Age` attribute (a browser session cookie)
 
 #### Scenario: Google OAuth returns access token and sets refresh cookie
 - **WHEN** user authenticates via `POST /api/v1/auth/google` with a valid Google ID token
-- **THEN** the response body contains `accessToken` and the response includes a persistent refresh token cookie (`HttpOnly; SameSite=Lax; Path=/api/v1/auth; Max-Age=2592000`)
+- **THEN** the response body contains `accessToken` and the response includes a persistent refresh token cookie (`HttpOnly; SameSite=Lax; Path=/; Max-Age=2592000`)
 
 #### Scenario: Login over plain HTTP in local/LAN development
 - **WHEN** client authenticates via `POST /api/v1/auth/login` over plain HTTP (e.g., `http://localhost:5000` or `http://192.168.x.x:5000`)
@@ -34,7 +34,7 @@ The browser persistence of the `refreshToken` cookie SHALL reflect the authentic
 
 #### Scenario: Login over HTTPS in production
 - **WHEN** client authenticates via `POST /api/v1/auth/login` over HTTPS or through a reverse proxy supplying `X-Forwarded-Proto: https`
-- **THEN** the `Set-Cookie` header for `refreshToken` includes `Secure; HttpOnly; SameSite=Lax; Path=/api/v1/auth`
+- **THEN** the `Set-Cookie` header for `refreshToken` includes `Secure; HttpOnly; SameSite=Lax; Path=/`
 
 ### Requirement: Concurrency-safe refresh token rotation endpoint
 The system SHALL expose `POST /api/v1/auth/refresh` that reads the refresh token from the HttpOnly cookie. Rotation SHALL be performed as an atomic database operation ensuring that a given refresh token can be successfully rotated into a new successor token.
@@ -93,6 +93,7 @@ The HTTP client composable and frontend route middleware SHALL detect access tok
 1. **Proactive Refresh Lead Time**: The HTTP client SHALL proactively initiate background token refresh when the access token has less than **5 minutes (300 seconds)** remaining before expiration (`exp * 1000 - Date.now() <= 300_000 ms`), ensuring seamless rotation before requests encounter hard expiration.
 2. **SSR Route Guard Resilience**: The Nuxt route middleware (`auth.global.ts`) SHALL NOT execute an immediate server-side hard redirect to `/login` if client-side session credentials or refresh token cookies may be present. SSR SHALL yield to client hydration to allow `tryRefreshToken()` to verify or restore the session before rejecting navigation.
 3. **Transient Network Error Resilience**: Transient network failures, server restarts, or `502`/`503` gateway responses encountered by the HTTP client SHALL NOT clear the user's session credentials (`clearSession`) or trigger an unprompted logout; only an authentic terminal `401 Unauthorized` with failed refresh rotation SHALL invalidate the session.
+4. **Login View Automatic Session Restoration**: When a user navigates to `/login` with an expired access token or a valid refresh cookie, the view (`login.vue`) SHALL attempt background token refresh (`authStore.tryRefreshToken()`) and redirect to the target destination upon success instead of prompting for credentials.
 
 When a protected page is accessed and the in-memory access token is expired or missing, the route middleware SHALL NOT synchronously purge user credentials. Instead, it SHALL asynchronously invoke token refresh via the auth store. Only if the refresh attempt yields a terminal failure (such as `401 Unauthorized`, expired refresh token, or invalid token) SHALL the client purge local session state, show an expiration notification, and redirect to `/login`.
 
@@ -124,6 +125,13 @@ The Web Locks API (`navigator.locks`) SHALL guard token refresh attempts so that
 #### Scenario: Transient backend restart during development does not log out user
 - **WHEN** the backend API restarts (e.g. during code watch or compilation) and returns a connection error or 502/503
 - **THEN** the frontend client preserves existing session tokens and does NOT purge credentials or redirect to `/login`.
+
+#### Scenario: User visits /login with valid refresh cookie
+- **GIVEN** the user opens `/login?redirect=/library`
+- **AND** a valid `refreshToken` cookie exists
+- **WHEN** the login component mounts
+- **THEN** it executes `tryRefreshToken()`
+- **AND** upon successful rotation, navigates automatically to `/library`.
 ### Requirement: Credential logging prohibition
 Application logs SHALL NOT contain raw values of access tokens, refresh tokens, JWT strings, Authorization header values, OAuth client secrets, database connection strings containing passwords, or VAPID private keys. Logs MAY contain user IDs, token family IDs, request IDs, failure reason codes (without embedded credentials), and token expiry timestamps.
 

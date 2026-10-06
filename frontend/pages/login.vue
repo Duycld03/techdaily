@@ -114,11 +114,20 @@ function cancelOtpStep() {
   pauseResendTimer()
 }
 
-onMounted(() => {
+onMounted(async () => {
   authStore.init()
   if (authStore.isLoggedIn) {
     navigateTo(getRedirectTarget())
     return
+  }
+
+  const refreshCookie = useCookie<string | null>('refreshToken')
+  if (authStore.token || refreshCookie.value) {
+    const refreshed = await authStore.tryRefreshToken()
+    if (refreshed && authStore.isLoggedIn) {
+      navigateTo(getRedirectTarget())
+      return
+    }
   }
 
   startGooglePoll()

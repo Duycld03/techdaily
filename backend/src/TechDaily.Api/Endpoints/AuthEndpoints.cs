@@ -540,7 +540,7 @@ public static class AuthEndpoints
             HttpOnly = true,
             Secure = isHttps,
             SameSite = SameSiteMode.Lax,
-            Path = "/api/v1/auth"
+            Path = "/"
         };
         if (persistent)
         {
@@ -557,7 +557,7 @@ public static class AuthEndpoints
             HttpOnly = true,
             Secure = isHttps,
             SameSite = SameSiteMode.Lax,
-            Path = "/api/v1/auth"
+            Path = "/"
         });
     }
 
