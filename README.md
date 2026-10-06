@@ -22,7 +22,7 @@ TechDaily (Clean Architecture)
 ├── Application    → Pure DI Use-Case Handlers, FluentValidation, Result Pattern, DTOs
 ├── Domain         → Rich Domain Entities, SM-2 Spaced Repetition Invariants, PBKDF2 Password Security
 ├── Infrastructure → PostgreSQL 17 (pgvector, EF Core 10), Gemini 3.5 Flash Lite Client, PdfPig, ReverseMarkdown, SMTP Email Sender
-└── Frontend       → Nuxt 3, Vue 3.5, Pinia, Tailwind CSS, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode, Shiki
+└── Frontend       → Nuxt 4, Vue 3.5, Pinia, Tailwind CSS, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode, Shiki, Three.js, Web Worker Neural TTS
 ```
 
 | Layer | Technology | Key Responsibilities |
@@ -31,16 +31,19 @@ TechDaily (Clean Architecture)
 | **Data Persistence** | **EF Core 10 + Npgsql** | PostgreSQL 17 (`pgvector`), JSONB (`ToJson()`) for takeaways/quizzes/options, User Bookmarks with Unique Indexes, UserBookPacer |
 | **AI Synthesis Engine** | **Gemini 3.5 Flash Lite API** | Structured Output (JSON Schema), High-Speed Quiz & Challenge Synthesis (<5s), Semantic Term Cache, JIT Look-Ahead Buffer Pre-generation |
 | **Document Ingestion** | **PdfPig + ReverseMarkdown** | Asynchronous Channel-based queue with zero-LOH disk spooling for PDFs up to 300MB (8,000+ pages), native PDF Bookmarks/Outline segmentation, HTML-to-Markdown Web Crawler |
-| **Frontend Web** | **Nuxt 3 + Vue 3.5** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
+| **Frontend Web** | **Nuxt 4 + Vue 3.5** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
+| **Audio Narration Engine** | **Web Worker Neural TTS + Web Speech** | Client-side neural TTS via ONNX Runtime Web / Transformers.js with Web Worker offloading (zero server cost), 3-tier cascading fallback (Device ONNX → System Web Speech → Cloud TTS), seekable sentence scrubber, and IndexedDB caching |
+| **Knowledge Visualization** | **Three.js + 3D-Force-Graph + Cytoscape** | Interactive personal associative knowledge graph in 2D Canvas & 3D WebGL, visualizing relational connections between books, reading slices, highlights, and flashcards anchored to architectural pillars |
 | **Notifications** | **Web Push (VAPID)** | Real-time browser push notifications (VAPID, Service Worker) for Morning Curriculum and Streak Preservation with auto-detected IANA timezones |
 | **Identity & Security** | **JWT + Rotating Refresh Tokens + Email OTP** | PBKDF2 password hashing (16-byte salt, 100,000 SHA-256 iterations), OTP-verified email registration & password reset (SMTP transactional email), refresh-token family rotation with reuse detection, opt-in 30-day "Remember Me" persistence, Google OAuth 2.0 |
-
 ---
 
 ## 🌟 Comprehensive Feature Set
 
 > 📖 **Feature Specifications & Capabilities:** See [openspec/specs/](openspec/specs/)
 ### 💡 Key Retention & Architecture Highlights
+- **On-Device Neural Audio Narration (TTS):** Zero-latency client-side neural speech synthesis run in Web Workers via ONNX Runtime Web / Transformers.js with 100% offline playback, IndexedDB chunk audio caching, and cascading fallbacks (Device ONNX → System Web Speech → Cloud TTS).
+- **Interactive 2D & 3D Knowledge Graph:** Personal associative knowledge cosmos rendered with 2D Canvas & 3D WebGL (Three.js), projecting real-time relational connections between user books, slices, highlights, and flashcards anchored to architectural pillars in a single PostgreSQL query pass.
 - **Web Push Notifications (VAPID):** Real-time browser push notifications for Morning Curriculum (08:00) and Streak Preservation (20:00) with automatic IANA timezone detection and Brave browser guidance.
 - **1-Click Flashcard (SM-2) from Reading Highlights:** Transform any highlighted technical passage in `/notes` or `/read/[bookId]` into a spaced repetition card with backend idempotency and deduplication.
 - **Markdown Knowledge Export:** Export book notes and highlights with YAML frontmatter formatted for Obsidian and Logseq second-brain workflows.
@@ -49,12 +52,12 @@ TechDaily (Clean Architecture)
 
 
 ### 1. 🏠 Daily Focus Hub (`/today`)
-- **Daily Doc Slice & Pacer Bar:** Curated 3–5 minute excerpt from official docs preserving original source language with structured takeaways, reading progress metrics, and 1-click active book switching dropdown.
+- **Daily Doc Slice & Pacer Bar:** Curated 3–5 minute excerpt from official docs preserving original source language with structured takeaways, reading progress metrics, calendar day change auto-advance, and 1-click active book switching dropdown.
+- **Integrated Audio Narration Player:** Direct client-side speech playback of daily slices with seekable scrubber, sleep timer, auto-advance, and multi-engine fallback.
 - **Bilingual Resilient AI Explainer:** Highlight any complex technical term or sentence to get instant popover explanation localized to your language, powered by DOM context window extraction (±300 characters), responsive non-wrapping layout, and HTTP 500 translation resilience with instant retry button (backed by `TermExplanationCaches`).
 - **Senior Scenario Challenge:** Real-world architectural decision drill with instant option grading, trade-off analysis, and deep-dive explanations.
 - **JIT Look-Ahead Buffer:** Background pre-generation service keeping 3 scenario challenges ahead using Gemini 3.5 Flash Lite with resilient 6-second timeout fallback.
-- **Streak & Freeze Retention:** Automatic streak incrementing, longest streak tracking, and monthly streak freeze credits.
-
+- **Streak & Freeze Retention:** Automatic streak incrementing, longest streak tracking, effective streak decay calculation, and monthly streak freeze credits.
 ### 2. 🗺️ 30-Day Senior Fullstack Roadmap (`/roadmap`)
 - **Core Pillars & Custom Track:** Frontend & Browser Internals, .NET 10 & C# 13 Runtime Internals, PostgreSQL 17 Storage Engine, Distributed Systems Architecture, or your active custom technical book.
 - **Skill Tree & Milestone Progression:** Chapter-level milestone progression with live slice indicators, completed slice counters, and sprint progress tracking.
@@ -75,6 +78,7 @@ TechDaily (Clean Architecture)
 
 ### 5. 📖 Immersive Book Reader (`/read/[bookId]`)
 - **Table of Contents Sidebar:** Real-time chapter navigation, active slice indicator, and reading completion status.
+- **On-Device & Multi-Engine Audio Narration:** Full two-row responsive audio player bar with seekable sentence scrubber slider, cascading engine fallback (Device ONNX Web Worker → System Web Speech API → Cloud TTS), sleep timer (5–60 min), auto-advance to next slice, and IndexedDB audio chunk caching.
 - **IDE-Grade Shiki Highlighting:** Multi-language syntax highlighting for C#, TypeScript, JavaScript, SQL, Python, Go, JSON, Bash, YAML, Dockerfile with 1-click clipboard copying.
 - **Reading Progress Bar:** Live percentage counter and automatic local bookmark persistence (`localStorage`).
 - **Floating Selection Toolbar:** 1-click AI Explanation with Gemini, text highlighting, 1-click SM-2 flashcard creation, and clipboard copying.
@@ -95,13 +99,18 @@ TechDaily (Clean Architecture)
 - **1-Click Flashcard Creation:** Generate spaced repetition cards directly from saved highlights with Gemini active recall prompt synthesis.
 - **Markdown Knowledge Export:** Export complete book notes, chapter reflections, and tagged highlights formatted for second-brain tools.
 
-### 8. 🎯 Senior Technical Interview Quiz & Mastery Arena (`/quiz`)
+### 8. 🕸️ Interactive Associative Knowledge Graph (`/graph`)
+- **2D Canvas & 3D WebGL Visualization:** High-performance personal knowledge cosmos rendered with Three.js (`3d-force-graph`) and 2D Cytoscape visualizers with particle-pulse edge streams and smooth orbit controls.
+- **Relational Knowledge Extraction:** Single-pass PostgreSQL 17 query projection (`GET /api/v1/graph`) linking user flashcards, highlights, and document slices to the 5 Core Architectural Pillars without auxiliary graph databases.
+- **Interactive Telemetry & Navigation:** Category filtering, node search with auto-centering camera fly-to animation, and 1-click navigation bridges directly into Reader slices and Flashcards.
+
+### 9. 🎯 Senior Technical Interview Quiz & Mastery Arena (`/quiz`)
 - **High-Speed AI Quiz Synthesis:** Generate 5 or 10 real-world interview scenario questions tailored to seniority level (Fresher to Senior/Staff) in under 5 seconds with Gemini 3.5 Flash Lite.
 - **Interactive Arena & Mistake Review:** Timed scenario questions with instant option grading, detailed markdown architectural explanations, and 1-click mistake retry sessions.
 - **Spaced Repetition Mastery:** Automatically tracks user progress in PostgreSQL. Questions are marked as `Mastered` after 2 consecutive correct submissions.
 - **Weak Topics Analysis:** Aggregated analytics dashboard tracking accuracy rate, mastered cards, and ranking weakest vs strongest engineering topics.
 
-### 9. 🛡️ User Profile, Centralized Settings & Hybrid Auth (`/login`, `/profile`, `/settings`)
+### 10. 🛡️ User Profile, Centralized Settings & Hybrid Auth (`/login`, `/profile`, `/settings`)
 - **Decluttered Profile & Centralized Settings:** Clean separation between personal identity/career track (`/profile`) and system preferences/notifications (`/settings`).
 - **OTP-Verified Email Registration:** No account is created until a 6-digit email verification code is confirmed (10-minute expiry, hashed & single-use, 5-attempt limit, 60-second resend cooldown).
 - **Standard Email/Password:** Secure PBKDF2 hashing with 16-byte random salt and 100,000 SHA-256 iterations.
@@ -113,10 +122,9 @@ TechDaily (Clean Architecture)
 - **Global Toast Notification System:** Non-blocking, glassmorphic top-right toast alerts for all user actions.
 - **Bilingual & Dual Theme:** 100% Vietnamese (`vi-VN`) & English (`en-US`) parity with Dark/Light mode support.
 
-### 10. 🔔 Web Push Notifications & Retention Hub (`/settings`)
+### 11. 🔔 Web Push Notifications & Retention Hub (`/settings`)
 - **Web Push Notifications (VAPID):** Real-time browser push notifications for Morning Curriculum (08:00) and Streak Preservation (20:00) with automatic IANA timezone detection and Brave browser guidance.
 - **Multi-Device Sync:** Persistent endpoint subscriptions stored in `UserPushSubscriptions` with automatic device cleanup and test dispatch validation.
-
 ---
 
 ## ⚡ Quick Start (Local Development)
@@ -153,11 +161,13 @@ Run the fullstack development environment with all services wired:
 Run the entire automated test suite:
 
 ```bash
-# Run Backend Unit & Integration Tests (313 Tests)
+# Run Backend Unit & Integration Tests (351 Tests)
 dotnet test backend/TechDaily.sln
 
-# Run Frontend Component & Store Tests (498 Tests)
+# Run Frontend Component & Store Tests (664 Tests)
 npm --prefix frontend test
+
+# Total: 1,015 Automated Tests (100% Passing)
 ```
 
 ---
