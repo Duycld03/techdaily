@@ -76,7 +76,7 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         return new GetTodayFocusResponse
         {
             HasActiveBook = false,
-            CurrentStreak = streak?.CurrentStreak ?? 0,
+            CurrentStreak = streak?.CalculateEffectiveStreak(today) ?? 0,
             LongestStreak = streak?.LongestStreak ?? 0,
             FreezeCreditsRemaining = streak?.FreezeCreditsRemaining ?? 0,
             Question = new InterviewQuestionDto(),
@@ -123,7 +123,6 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                 else
                 {
                     activePacer.IsActive = true;
-                    activePacer.LastReadDate = today;
                 }
             }
             else
@@ -153,7 +152,6 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                     else
                     {
                         activePacer.IsActive = true;
-                        activePacer.LastReadDate = today;
                     }
                 }
             }
@@ -166,9 +164,51 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                 : readyBooks.FirstOrDefault(b => b.IsFeatured) ?? readyBooks[0];
         }
 
-        int targetChunkOrder = request.ChunkOrder
-            ?? (activePacer?.CurrentChunkOrder)
-            ?? 1;
+        int targetChunkOrder;
+        bool isManualNavigation = request.ChunkOrder.HasValue;
+
+        if (isManualNavigation)
+        {
+            targetChunkOrder = request.ChunkOrder!.Value;
+        }
+        else
+        {
+            targetChunkOrder = activePacer?.CurrentChunkOrder ?? 1;
+
+            if (isAuthenticated && activePacer != null)
+            {
+                // Calendar day transition check: subsequent day after prior activity
+                if (activePacer.LastReadDate.HasValue && today > activePacer.LastReadDate.Value)
+                {
+                    // Check if the current slice's drill is reviewed
+                    var currentChunk = await _dbContext.DocumentChunks
+                        .FirstOrDefaultAsync(c => c.DocumentBookId == targetBook.Id && c.ChunkOrder == activePacer.CurrentChunkOrder, cancellationToken);
+
+                    if (currentChunk != null)
+                    {
+                        var isCurrentSliceDrillReviewed = await _dbContext.DailyDrills
+                            .AnyAsync(d => d.UserId == userId 
+                                        && d.DocumentChunkId == currentChunk.Id 
+                                        && d.Status == DrillStatus.Reviewed, cancellationToken);
+
+                        if (isCurrentSliceDrillReviewed)
+                        {
+                            if (activePacer.CurrentChunkOrder < targetBook.TotalChunks)
+                            {
+                                activePacer.CurrentChunkOrder++;
+                                targetChunkOrder = activePacer.CurrentChunkOrder;
+                            }
+                            else
+                            {
+                                activePacer.CompletedAt ??= DateTimeOffset.UtcNow;
+                            }
+                        }
+                    }
+                }
+
+                activePacer.LastReadDate = today;
+            }
+        }
 
         if (targetBook.TotalChunks > 0)
         {
@@ -177,8 +217,10 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
 
         if (isAuthenticated && activePacer != null)
         {
-            activePacer.CurrentChunkOrder = targetChunkOrder;
-            activePacer.LastReadDate = today;
+            if (!isManualNavigation)
+            {
+                activePacer.CurrentChunkOrder = targetChunkOrder;
+            }
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
@@ -300,11 +342,36 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
 
-            var existingDrill = await _dbContext.DailyDrills
-                .Include(d => d.Question)
-                .Include(d => d.DocumentChunk)
-                .FirstOrDefaultAsync(d => d.UserId == userId && d.QuestionId == question.Id, cancellationToken);
+            DailyDrill? existingDrill;
+            if (isManualNavigation)
+            {
+                existingDrill = await _dbContext.DailyDrills
+                    .Include(d => d.Question)
+                    .Include(d => d.DocumentChunk)
+                    .OrderByDescending(d => d.SubmittedAt ?? d.CreatedAt)
+                    .FirstOrDefaultAsync(d => d.UserId == userId && d.QuestionId == question.Id, cancellationToken);
+            }
+            else
+            {
+                existingDrill = await _dbContext.DailyDrills
+                    .Include(d => d.Question)
+                    .Include(d => d.DocumentChunk)
+                    .FirstOrDefaultAsync(d => d.UserId == userId && d.QuestionId == question.Id && d.ScheduledDate == today, cancellationToken);
 
+                if (existingDrill == null)
+                {
+                    var pastReviewedDrill = await _dbContext.DailyDrills
+                        .Include(d => d.Question)
+                        .Include(d => d.DocumentChunk)
+                        .OrderByDescending(d => d.SubmittedAt)
+                        .FirstOrDefaultAsync(d => d.UserId == userId && d.QuestionId == question.Id && d.Status == DrillStatus.Reviewed, cancellationToken);
+
+                    if (pastReviewedDrill != null)
+                    {
+                        existingDrill = pastReviewedDrill;
+                    }
+                }
+            }
             if (existingDrill != null)
             {
                 drill = existingDrill;
@@ -380,7 +447,7 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
             AvailableBooks = availableBooks
         };
 
-        var response = MapResponse(drill, streak, question, documentChunk);
+        var response = MapResponse(drill, streak, question, documentChunk, today);
         response.Pacer = pacer;
         response.IsGeneratingQuestion = isGenerating;
         return response;
@@ -390,7 +457,8 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
         DailyDrill drill,
         StreakRecord streak,
         InterviewQuestion question,
-        DocumentChunk? chunk)
+        DocumentChunk? chunk,
+        DateOnly today)
     {
         var isReviewed = drill.Status == DrillStatus.Reviewed;
 
@@ -430,7 +498,7 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                 AttemptCount = drill.AttemptCount,
                 SubmittedAt = drill.SubmittedAt
             },
-            CurrentStreak = streak.CurrentStreak,
+            CurrentStreak = streak.CalculateEffectiveStreak(today),
             LongestStreak = streak.LongestStreak,
             FreezeCreditsRemaining = streak.FreezeCreditsRemaining
         };

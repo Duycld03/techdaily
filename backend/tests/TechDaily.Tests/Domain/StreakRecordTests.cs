@@ -122,4 +122,58 @@ public class StreakRecordTests
         record.CurrentStreak.Should().Be(1);
         record.FreezeCreditsRemaining.Should().Be(2); // Credits not consumed for multiday gaps
     }
+
+    [Fact]
+    public void CalculateEffectiveStreak_WhenNoActivity_ShouldReturnZero()
+    {
+        var record = StreakRecord.Create(Guid.NewGuid());
+        var today = new DateOnly(2026, 10, 6);
+
+        record.CalculateEffectiveStreak(today).Should().Be(0);
+    }
+
+    [Fact]
+    public void CalculateEffectiveStreak_SameDayActivity_ShouldReturnCurrentStreak()
+    {
+        var record = StreakRecord.Create(Guid.NewGuid());
+        var today = new DateOnly(2026, 10, 6);
+        record.RecordCompletion(today, 10);
+
+        record.CalculateEffectiveStreak(today).Should().Be(1);
+    }
+
+    [Fact]
+    public void CalculateEffectiveStreak_NextDayBeforeCompletion_ShouldReturnCurrentStreak()
+    {
+        var record = StreakRecord.Create(Guid.NewGuid());
+        var yesterday = new DateOnly(2026, 10, 5);
+        record.RecordCompletion(yesterday, 10);
+
+        var today = new DateOnly(2026, 10, 6);
+        record.CalculateEffectiveStreak(today).Should().Be(1);
+    }
+
+    [Fact]
+    public void CalculateEffectiveStreak_MissedOneDayWithFreezeCredits_ShouldReturnCurrentStreak()
+    {
+        var record = StreakRecord.Create(Guid.NewGuid());
+        var twoDaysAgo = new DateOnly(2026, 10, 4);
+        record.RecordCompletion(twoDaysAgo, 10);
+
+        var today = new DateOnly(2026, 10, 6);
+        // Missed Oct 5, evaluated on Oct 6 (dayDifference = 2, freeze credits = 2)
+        record.CalculateEffectiveStreak(today).Should().Be(1);
+    }
+
+    [Fact]
+    public void CalculateEffectiveStreak_MissedMultipleDays_ShouldReturnZero()
+    {
+        var record = StreakRecord.Create(Guid.NewGuid());
+        var pastDate = new DateOnly(2026, 9, 30);
+        record.RecordCompletion(pastDate, 10);
+
+        var today = new DateOnly(2026, 10, 6); // 6 days later
+        record.CalculateEffectiveStreak(today).Should().Be(0);
+        record.CurrentStreak.Should().Be(1, "underlying entity should not be mutated");
+    }
 }

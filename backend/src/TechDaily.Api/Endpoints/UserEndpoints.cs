@@ -64,7 +64,7 @@ public static class UserEndpoints
                     HasPassword: !string.IsNullOrEmpty(user.PasswordHash),
                     IsGoogleLinked: !string.IsNullOrEmpty(user.GoogleSubjectId)),
                 Stats: new ProfileStatsDto(
-                    CurrentStreak: user.StreakRecord?.CurrentStreak ?? 0,
+                    CurrentStreak: user.StreakRecord?.CalculateEffectiveStreak(DateOnly.FromDateTime(DateTime.UtcNow)) ?? 0,
                     LongestStreak: user.StreakRecord?.LongestStreak ?? 0,
                     FreezeCreditsRemaining: user.StreakRecord?.FreezeCreditsRemaining ?? 2,
                     TotalDrillsCompleted: totalDrills,

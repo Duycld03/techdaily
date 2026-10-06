@@ -29,6 +29,34 @@ public class StreakRecord : BaseEntity
     }
 
     /// <summary>
+    /// Evaluates the user's effective active streak at read time based on elapsed calendar days since LastActiveDate.
+    /// Does not mutate entity state.
+    /// </summary>
+    public int CalculateEffectiveStreak(DateOnly today)
+    {
+        if (LastActiveDate == null || CurrentStreak == 0)
+        {
+            return 0;
+        }
+
+        var dayDifference = today.DayNumber - LastActiveDate.Value.DayNumber;
+
+        if (dayDifference <= 1)
+        {
+            return CurrentStreak;
+        }
+
+        // Missed exactly 1 day, covered by freeze credit
+        var effectiveFreezeCredits = today.Month != LastFreezeMonth ? 2 : FreezeCreditsRemaining;
+        if (dayDifference == 2 && effectiveFreezeCredits > 0)
+        {
+            return CurrentStreak;
+        }
+
+        return 0;
+    }
+
+    /// <summary>
     /// Records daily completion, handles consecutive streak increments and automatic freeze credit protections.
     /// </summary>
     public void RecordCompletion(DateOnly today, int? drillScore = null)

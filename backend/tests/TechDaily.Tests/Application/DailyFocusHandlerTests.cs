@@ -434,4 +434,378 @@ public class DailyFocusHandlerTests : IDisposable
         result.Value.Question.CorrectOptionIndex.Should().BeNull();
         result.Value.Question.ExplanationMarkdown.Should().BeNull();
     }
+
+    [Fact]
+    public async Task GetTodayFocus_ShouldAutoAdvancePacer_OnNewCalendarDay_WhenPriorDrillReviewed()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        await _db.Users.AddAsync(user);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Concurrency Patterns",
+            Slug = "concurrency-patterns",
+            Category = Category.BackendRuntime,
+            Status = ProcessingStatus.Ready,
+            CreatedByUserId = userId,
+            TotalChunks = 3
+        };
+        var chunk1 = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = 1,
+            ChapterTitle = "Channels"
+        };
+        var chunk2 = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = 2,
+            ChapterTitle = "Actor Model"
+        };
+        var q1 = new InterviewQuestion
+        {
+            Id = Guid.NewGuid(),
+            DocumentChunkId = chunk1.Id,
+            QuestionText = "Channel bounded vs unbounded?",
+            Options = new() { "A", "B", "C", "D" },
+            CorrectOptionIndex = 0,
+            ExplanationMarkdown = "Bounded prevents OOM"
+        };
+        var q2 = new InterviewQuestion
+        {
+            Id = Guid.NewGuid(),
+            DocumentChunkId = chunk2.Id,
+            QuestionText = "Actor mailboxes?",
+            Options = new() { "A", "B", "C", "D" },
+            CorrectOptionIndex = 1,
+            ExplanationMarkdown = "Isolated state"
+        };
+
+        var yesterday = new DateOnly(2026, 10, 5);
+        var today = new DateOnly(2026, 10, 6);
+
+        var pacer = new UserBookPacer
+        {
+            UserId = userId,
+            DocumentBookId = book.Id,
+            CurrentChunkOrder = 1,
+            IsActive = true,
+            LastReadDate = yesterday
+        };
+
+        // Prior drill completed yesterday
+        var completedDrill = new DailyDrill
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            QuestionId = q1.Id,
+            DocumentChunkId = chunk1.Id,
+            ScheduledDate = yesterday,
+            Status = DrillStatus.Reviewed,
+            SelectedOptionIndex = 0,
+            IsCorrect = true,
+            Score = 10,
+            SubmittedAt = DateTimeOffset.UtcNow.AddDays(-1)
+        };
+
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.DocumentChunks.AddRangeAsync(chunk1, chunk2);
+        await _db.InterviewQuestions.AddRangeAsync(q1, q2);
+        await _db.UserBookPacers.AddAsync(pacer);
+        await _db.DailyDrills.AddAsync(completedDrill);
+        await _db.SaveChangesAsync();
+
+        var handler = new GetTodayFocusHandler(_db);
+
+        // Act - request today without chunkOrder
+        var result = await handler.ExecuteAsync(new GetTodayFocusRequest(userId, null, null, today));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Pacer.Should().NotBeNull();
+        result.Value.Pacer!.CurrentChunkOrder.Should().Be(2, "pacer should advance from slice 1 to slice 2 on subsequent day");
+        result.Value.DocumentChunk!.ChapterTitle.Should().Be("Actor Model");
+        result.Value.Drill.Status.Should().Be(DrillStatus.Pending, "newly advanced slice should receive a fresh pending drill");
+        result.Value.Drill.ScheduledDate.Should().Be(today);
+
+        var updatedPacer = await _db.UserBookPacers.FirstOrDefaultAsync(p => p.UserId == userId && p.DocumentBookId == book.Id);
+        updatedPacer!.CurrentChunkOrder.Should().Be(2);
+        updatedPacer.LastReadDate.Should().Be(today);
+    }
+
+    [Fact]
+    public async Task GetTodayFocus_ShouldPreserveSlice_OnSameCalendarDay()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        await _db.Users.AddAsync(user);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Networking Patterns",
+            Slug = "networking-patterns",
+            Category = Category.SystemDesign,
+            Status = ProcessingStatus.Ready,
+            CreatedByUserId = userId,
+            TotalChunks = 2
+        };
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = 1,
+            ChapterTitle = "HTTP/3 & QUIC"
+        };
+        var question = new InterviewQuestion
+        {
+            Id = Guid.NewGuid(),
+            DocumentChunkId = chunk.Id,
+            QuestionText = "QUIC HOL blocking?",
+            Options = new() { "A", "B", "C", "D" },
+            CorrectOptionIndex = 0,
+            ExplanationMarkdown = "Independent byte streams"
+        };
+
+        var today = new DateOnly(2026, 10, 6);
+        var pacer = new UserBookPacer
+        {
+            UserId = userId,
+            DocumentBookId = book.Id,
+            CurrentChunkOrder = 1,
+            IsActive = true,
+            LastReadDate = today
+        };
+        var reviewedDrill = new DailyDrill
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            QuestionId = question.Id,
+            DocumentChunkId = chunk.Id,
+            ScheduledDate = today,
+            Status = DrillStatus.Reviewed,
+            SelectedOptionIndex = 0,
+            IsCorrect = true,
+            Score = 10,
+            SubmittedAt = DateTimeOffset.UtcNow
+        };
+
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.DocumentChunks.AddAsync(chunk);
+        await _db.InterviewQuestions.AddAsync(question);
+        await _db.UserBookPacers.AddAsync(pacer);
+        await _db.DailyDrills.AddAsync(reviewedDrill);
+        await _db.SaveChangesAsync();
+
+        var handler = new GetTodayFocusHandler(_db);
+
+        // Act
+        var result = await handler.ExecuteAsync(new GetTodayFocusRequest(userId, null, null, today));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Pacer!.CurrentChunkOrder.Should().Be(1, "should remain on same slice throughout the same calendar day");
+        result.Value.Drill.Status.Should().Be(DrillStatus.Reviewed);
+        result.Value.Question.CorrectOptionIndex.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetTodayFocus_ShouldRetainSlice_OnNewDay_WhenPriorDrillIsIncomplete()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        await _db.Users.AddAsync(user);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Security Hardening",
+            Slug = "security-hardening",
+            Category = Category.EngineeringCraft,
+            Status = ProcessingStatus.Ready,
+            CreatedByUserId = userId,
+            TotalChunks = 2
+        };
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = 1,
+            ChapterTitle = "mTLS Implementation"
+        };
+        var question = new InterviewQuestion
+        {
+            Id = Guid.NewGuid(),
+            DocumentChunkId = chunk.Id,
+            QuestionText = "Cert rotation strategy?",
+            Options = new() { "A", "B", "C", "D" },
+            CorrectOptionIndex = 0,
+            ExplanationMarkdown = "Dual trust anchors"
+        };
+
+        var yesterday = new DateOnly(2026, 10, 5);
+        var today = new DateOnly(2026, 10, 6);
+
+        var pacer = new UserBookPacer
+        {
+            UserId = userId,
+            DocumentBookId = book.Id,
+            CurrentChunkOrder = 1,
+            IsActive = true,
+            LastReadDate = yesterday
+        };
+        var pendingDrill = new DailyDrill
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            QuestionId = question.Id,
+            DocumentChunkId = chunk.Id,
+            ScheduledDate = yesterday,
+            Status = DrillStatus.Pending
+        };
+
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.DocumentChunks.AddAsync(chunk);
+        await _db.InterviewQuestions.AddAsync(question);
+        await _db.UserBookPacers.AddAsync(pacer);
+        await _db.DailyDrills.AddAsync(pendingDrill);
+        await _db.SaveChangesAsync();
+
+        var handler = new GetTodayFocusHandler(_db);
+
+        // Act
+        var result = await handler.ExecuteAsync(new GetTodayFocusRequest(userId, null, null, today));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Pacer!.CurrentChunkOrder.Should().Be(1, "should not skip ahead if previous drill is uncompleted");
+    }
+
+    [Fact]
+    public async Task GetTodayFocus_ShouldDecayEffectiveStreak_WhenMultiDayAbsenceExceedsFreezeCredits()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        await _db.Users.AddAsync(user);
+
+        var streak = StreakRecord.Create(userId);
+        var sixDaysAgo = new DateOnly(2026, 9, 30);
+        var today = new DateOnly(2026, 10, 6);
+        streak.RecordCompletion(sixDaysAgo, 10);
+
+        await _db.StreakRecords.AddAsync(streak);
+        await _db.SaveChangesAsync();
+
+        var handler = new GetTodayFocusHandler(_db);
+
+        // Act
+        var result = await handler.ExecuteAsync(new GetTodayFocusRequest(userId, null, null, today));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.CurrentStreak.Should().Be(0, "effective streak should evaluate to 0 after 6 days of absence");
+    }
+
+    [Fact]
+    public async Task GetTodayFocus_ShouldReturnHistoricalDrill_WhenManuallyNavigatingToCompletedSlice()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        await _db.Users.AddAsync(user);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Atomic Habits",
+            Slug = "atomic-habits",
+            Category = Category.EngineeringCraft,
+            Status = ProcessingStatus.Ready,
+            CreatedByUserId = userId,
+            TotalChunks = 75
+        };
+        var chunk1 = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = 1,
+            ChapterTitle = "Introduction Section 1"
+        };
+        var chunk2 = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = 2,
+            ChapterTitle = "Introduction Section 2"
+        };
+        var q1 = new InterviewQuestion
+        {
+            Id = Guid.NewGuid(),
+            DocumentChunkId = chunk1.Id,
+            QuestionText = "Micro-tasks scenario question?",
+            Options = new() { "A", "B", "C", "D" },
+            CorrectOptionIndex = 1,
+            ExplanationMarkdown = "Atomic habits explanation"
+        };
+
+        var pastDate = new DateOnly(2026, 9, 28);
+        var today = new DateOnly(2026, 10, 6);
+
+        // Pacer is currently at Slice 2 for today
+        var pacer = new UserBookPacer
+        {
+            UserId = userId,
+            DocumentBookId = book.Id,
+            CurrentChunkOrder = 2,
+            IsActive = true,
+            LastReadDate = today
+        };
+
+        // Historical drill completed on Slice 1
+        var pastReviewedDrill = new DailyDrill
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            QuestionId = q1.Id,
+            DocumentChunkId = chunk1.Id,
+            ScheduledDate = pastDate,
+            Status = DrillStatus.Reviewed,
+            SelectedOptionIndex = 1,
+            IsCorrect = true,
+            Score = 10,
+            SubmittedAt = DateTimeOffset.UtcNow.AddDays(-8)
+        };
+
+        await _db.DocumentBooks.AddAsync(book);
+        await _db.DocumentChunks.AddRangeAsync(chunk1, chunk2);
+        await _db.InterviewQuestions.AddAsync(q1);
+        await _db.UserBookPacers.AddAsync(pacer);
+        await _db.DailyDrills.AddAsync(pastReviewedDrill);
+        await _db.SaveChangesAsync();
+
+        var handler = new GetTodayFocusHandler(_db);
+
+        // Act - user manually reviews Slice 1 via chunkOrder = 1
+        var result = await handler.ExecuteAsync(new GetTodayFocusRequest(userId, book.Id, 1, today));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.DocumentChunk!.ChunkOrder.Should().Be(1);
+        result.Value.Drill.Status.Should().Be(DrillStatus.Reviewed, "historical drill should be returned on manual review");
+        result.Value.Drill.SelectedOptionIndex.Should().Be(1);
+        result.Value.Question.CorrectOptionIndex.Should().Be(1);
+        result.Value.Question.ExplanationMarkdown.Should().Be("Atomic habits explanation");
+
+        // Verify pacer's daily position was not overwritten
+        var currentPacer = await _db.UserBookPacers.FirstOrDefaultAsync(p => p.UserId == userId && p.DocumentBookId == book.Id);
+        currentPacer!.CurrentChunkOrder.Should().Be(2, "manual navigation to slice 1 must not alter active daily position");
+    }
 }
