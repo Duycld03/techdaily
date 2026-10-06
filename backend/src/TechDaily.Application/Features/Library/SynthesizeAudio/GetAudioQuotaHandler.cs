@@ -22,8 +22,8 @@ public class GetAudioQuotaHandler : IUseCase<GetAudioQuotaRequest, AudioQuotaRes
             .Where(a => a.CreatedAt >= startOfMonth)
             .SumAsync(a => (long)a.CharacterCount, cancellationToken);
 
-        const long limit = 950_000;
-        const long nearLimit = 900_000;
+        const long limit = GetOrSynthesizeChunkAudioHandler.MonthlyCharacterLimit;
+        const long nearLimit = GetOrSynthesizeChunkAudioHandler.NearLimitThreshold;
 
         return new AudioQuotaResponse
         {

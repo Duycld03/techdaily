@@ -50,7 +50,6 @@ const authStore = useAuthStore();
 const focusStore = useDailyFocusStore();
 const libraryStore = useLibraryStore();
 const notesStore = useNotesStore();
-const audioPlayerRef = ref<InstanceType<typeof ReaderAudioPlayer> | null>(null);
 const {
   render: renderMarkdown,
   initHighlighter,
@@ -820,7 +819,6 @@ async function handleHighlightAndNote() {
             </h1>
 
             <ReaderAudioPlayer
-              ref="audioPlayerRef"
               :chunk="currentChunk"
               :book-title="book?.title"
               @auto-advance="handleAutoAdvance"

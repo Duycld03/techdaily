@@ -14,7 +14,6 @@ vi.mock('~/composables/useSliceAudio', async () => {
     { id: 'vi-vn-x-vic-local', name: 'Google Tiếng Việt', lang: 'vi-VN', localService: true, default: true },
     { id: 'en-us-x-sfg-local', name: 'Google US English', lang: 'en-US', localService: true, default: false },
   ])
-  const pitch = ref(1)
   const autoAdvance = ref(true)
   const volume = ref(1)
   const audioQuota = ref(null)
@@ -42,7 +41,6 @@ vi.mock('~/composables/useSliceAudio', async () => {
     selectedVoice,
     selectedSystemVoice,
     systemVoices,
-    pitch,
     autoAdvance,
     volume,
     audioQuota,
@@ -51,8 +49,6 @@ vi.mock('~/composables/useSliceAudio', async () => {
     setEngineMode: vi.fn((m) => { engineMode.value = m; activeCascadeTier.value = m }),
     setVoice: vi.fn((v) => { selectedVoice.value = v }),
     setSystemVoice: vi.fn((v) => { selectedSystemVoice.value = v }),
-    setPitch: vi.fn((p) => { pitch.value = p }),
-    setAutoAdvance: vi.fn((a) => { autoAdvance.value = a }),
     setVolume: vi.fn((v) => { volume.value = v }),
     fetchQuota: vi.fn(async () => null),
     loadAndPlay: vi.fn(),
@@ -90,6 +86,7 @@ vi.mock('~/composables/useSliceAudio', async () => {
         { id: 'en-US-Neural2-D', label: 'en-US-Neural2-D', gender: 'male', language: 'en' },
       ],
     },
+    AUDIO_VOICE_STORAGE_KEY: 'techdaily_reader_audio_voice',
     resolveCloudVoiceForLanguage: (lang?: string | null) => (lang === 'vi' ? 'vi-VN-Neural2-A' : 'en-US-Neural2-F'),
   }
 })
@@ -135,7 +132,6 @@ const MESSAGES: Record<string, string> = {
   'reader.audio_sleep_timer_60m': '60 min',
   'reader.audio_sleep_timer_end_of_slice': 'End of slice',
   'reader.audio_sleep_timer_ended': 'Sleep timer expired. Audio paused.',
-  'reader.audio_pitch': 'Pitch',
   'reader.audio_quota_exhausted_toast': 'Monthly cloud audio quota reached. Switched to on-device narration.',
   'reader.audio_quota_near_limit_tooltip': 'Monthly cloud quota reached, using on-device narration',
   'reader.audio_voice_select_placeholder': 'Select voice',

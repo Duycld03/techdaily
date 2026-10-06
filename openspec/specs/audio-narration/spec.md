@@ -149,9 +149,11 @@ The reader SHALL offer a **playback speed** control spanning 0.5x to 2.0x applie
 
 The audio player controls layout SHALL ensure that the primary playback controls (play/pause toggle, engine mode switch) and utility controls (auto-advance toggle, sleep timer menu, and speed selector) remain fully visible and contained within the player card boundaries on mobile viewports down to 360px width during both idle and playing states, preventing any control from overflowing or being pushed outside the card.
 
+The playback control API surface SHALL encapsulate playback state (status, current time, duration, speed, volume, and quota) directly within the reader audio orchestrator composable. Generic library or document stores SHALL NOT maintain dead audio quota fields or unused audio fetch actions. The playback control SHALL NOT expose unused pitch adjustments, unreferenced storage keys, or redundant toggle abstractions.
+
 While the language model is downloading, the reader SHALL display the download progress as an accurate whole-number percentage in the inclusive range **0 to 100**; it SHALL NOT display a value greater than 100% or otherwise mis-scaled. While synthesizing after download, the reader SHALL display a synthesis progress state.
 
-All audio control labels, speed labels, and download/synthesis progress messages SHALL render localized text (en/vi) from the i18n catalog, and the controls SHALL follow the reader's responsive typography and `whitespace-nowrap shrink-0` layout invariants across both locales. The reader SHALL NOT use native browser dialogs for audio state; status is conveyed via in-page controls and `useToast()`.
+All audio control labels, speed labels, and download/synthesis progress messages SHALL render localized text (en/vi) from the i18n catalog, and the catalog SHALL contain strictly active user-facing audio keys without orphaned keys for unrendered pitch settings or unused drill progression hints. The controls SHALL follow the reader's responsive typography and `whitespace-nowrap shrink-0` layout invariants across both locales. The reader SHALL NOT use native browser dialogs for audio state; status is conveyed via in-page controls and `useToast()`.
 
 #### Scenario: User plays the current slice narration
 - **WHEN** a user viewing an AI-formatted slice activates the play control
@@ -193,6 +195,20 @@ All audio control labels, speed labels, and download/synthesis progress messages
 - **THEN** the seekable scrubber slider track is visible and interactive
 - **AND** duration is calculated as greater than zero
 - **AND** elapsed time updates as each sentence is narrated
+
+#### Scenario: Audio playback controls contain only active user interactions
+- **WHEN** a user opens the reader audio player on an AI-formatted slice
+- **THEN** the player card renders controls for play/pause, engine switching (System/Cloud/Device), voice selection, playback speed, auto-advance, and sleep timer
+- **AND** no pitch adjustment controls or orphaned UI hooks are rendered.
+
+#### Scenario: Audio quota state is encapsulated in the playback orchestrator
+- **WHEN** the reader queries or evaluates cloud audio narration quota
+- **THEN** the request and state management occur directly within the reader audio composable
+- **AND** the general library store (`useLibraryStore`) does not maintain redundant quota state or fetch actions.
+
+#### Scenario: Clean i18n audio catalog without dead keys
+- **WHEN** inspecting the reader localization messages in English and Vietnamese
+- **THEN** all defined audio message keys map directly to active player controls, toasts, or progress indicators.
 ### Requirement: GPU-Accelerated On-Device Synthesis with CPU Fallback
 
 The reader SHALL run on-device narration synthesis on the GPU when the browser exposes GPU compute to the synthesis worker and the target neural network architecture is compatible with available WebGPU shader kernels, and SHALL fall back to CPU execution when GPU compute is unavailable or fails to initialize, so synthesis completes on any supported browser. The choice of execution backend SHALL NOT change the produced audio or any user-facing control. A backend-initialization failure SHALL NOT surface as a narration error while a working fallback exists, and the backend selection SHALL NOT be re-probed or re-failed per sentence within a synthesis run.

@@ -62,10 +62,8 @@ export interface SliceAudioDeps {
 export const AUDIO_SPEED_STORAGE_KEY = 'techdaily_reader_audio_speed'
 export const AUDIO_ENGINE_STORAGE_KEY = 'techdaily_reader_audio_engine'
 export const AUDIO_VOICE_STORAGE_KEY = 'techdaily_reader_audio_voice'
-export const AUDIO_PITCH_STORAGE_KEY = 'techdaily_reader_audio_pitch'
 export const AUDIO_SYSTEM_VOICE_STORAGE_KEY = 'techdaily_reader_audio_system_voice'
 export const AUDIO_AUTO_ADVANCE_STORAGE_KEY = 'techdaily_reader_audio_auto_advance'
-export const AUDIO_SLEEP_TIMER_STORAGE_KEY = 'techdaily_reader_audio_sleep_timer'
 
 export interface SystemVoiceOption {
   id: string
@@ -377,11 +375,6 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   const activeCascadeTier = ref<AudioEngine>(initialEngine)
   const selectedVoice = ref<string>(
     (isClient ? localStorage.getItem(AUDIO_VOICE_STORAGE_KEY) : null) ?? ''
-  )
-  const pitch = ref<number>(
-    isClient && localStorage.getItem(AUDIO_PITCH_STORAGE_KEY)
-      ? Number(localStorage.getItem(AUDIO_PITCH_STORAGE_KEY))
-        : 1
   )
   const volume = ref<number>(1)
   const selectedSystemVoice = ref<string>(
@@ -738,19 +731,6 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     }
   }
 
-  function setPitch(value: number): void {
-    pitch.value = value
-    if (isClient) {
-      localStorage.setItem(AUDIO_PITCH_STORAGE_KEY, String(value))
-    }
-    if (engineMode.value === 'system' && activeUtterance) {
-      activeUtterance.pitch = value
-    }
-  }
-
-  function setAutoAdvance(value: boolean): void {
-    autoAdvance.value = value
-  }
   async function fetchQuota(): Promise<AudioQuotaInfo | null> {
     try {
       const client = getFetchClient()
@@ -870,7 +850,6 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       }
       utterance.lang = matched.lang
       utterance.rate = Math.max(0.5, Math.min(2.0, speed.value))
-      utterance.pitch = Math.max(0.5, Math.min(1.5, pitch.value))
       utterance.volume = Math.max(0, Math.min(1.0, volume.value))
       activeUtterance = utterance
 
@@ -1258,17 +1237,6 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       }
     }
   }
-  function toggle(source: NarrationSource): void {
-    if (playing.value) {
-      pause()
-      return
-    }
-    if (audio.value?.src) {
-      void play()
-      return
-    }
-    void loadAndPlay(source)
-  }
 
   function setSpeed(value: number): void {
     speed.value = value
@@ -1380,7 +1348,6 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     selectedVoice,
     selectedSystemVoice,
     systemVoices,
-    pitch,
     autoAdvance,
     audioQuota,
     isNearQuota,
@@ -1388,13 +1355,10 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     setEngineMode,
     setVoice,
     setSystemVoice,
-    setPitch,
-    setAutoAdvance,
     fetchQuota,
     loadAndPlay,
     play,
     pause,
-    toggle,
     setSpeed,
     volume,
     setVolume,

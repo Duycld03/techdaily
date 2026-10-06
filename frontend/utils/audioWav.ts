@@ -52,8 +52,3 @@ export function encodeWav(samples: Float32Array, sampleRate: number): Blob {
   return new Blob([buffer], { type: 'audio/wav' })
 }
 
-/** Playback duration (seconds) of a 16-bit mono PCM WAV blob at `sampleRate`. */
-export function wavDurationSeconds(blob: Blob, sampleRate: number): number {
-  const sampleBytes = Math.max(0, blob.size - 44)
-  return sampleBytes / 2 / sampleRate
-}

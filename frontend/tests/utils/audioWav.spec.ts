@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { concatFloat32, encodeWav, wavDurationSeconds } from '~/utils/audioWav'
+import { concatFloat32, encodeWav } from '~/utils/audioWav'
 
 function readAscii(view: DataView, offset: number, length: number): string {
   let s = ''
@@ -45,14 +45,4 @@ describe('audioWav', () => {
     })
   })
 
-  describe('wavDurationSeconds', () => {
-    it('derives seconds from the PCM byte count and sample rate', () => {
-      const blob = encodeWav(new Float32Array(16000), 16000)
-      expect(wavDurationSeconds(blob, 16000)).toBeCloseTo(1, 5)
-    })
-
-    it('never returns negative for a blob smaller than the header', () => {
-      expect(wavDurationSeconds(new Blob([new Uint8Array(10)]), 16000)).toBe(0)
-    })
-  })
 })

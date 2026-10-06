@@ -6,7 +6,6 @@ import { resolveVoiceForLanguage } from '~/utils/ttsVoices'
 import {
   AUDIO_SPEED_STORAGE_KEY,
   AUDIO_ENGINE_STORAGE_KEY,
-  AUDIO_PITCH_STORAGE_KEY,
   AUDIO_SYSTEM_VOICE_STORAGE_KEY,
   AUDIO_AUTO_ADVANCE_STORAGE_KEY,
   useSliceAudio,
@@ -1204,7 +1203,7 @@ describe('useSliceAudio', () => {
       expect(engine).toBe('cloud')
     })
 
-    it('executes System TTS narration, sets pitch and speed, and invokes onSliceEnded on completion', async () => {
+    it('executes System TTS narration, sets speed, and invokes onSliceEnded on completion', async () => {
       class FakeUtterance {
         text: string
         lang = ''
@@ -1252,7 +1251,6 @@ describe('useSliceAudio', () => {
       })
 
       player.setSpeed(2.0)
-      player.setPitch(1.0)
       player.setSystemVoice('vi-vn-x-vic-local')
 
       await player.loadAndPlay(source({ language: 'vi' }))
@@ -1260,7 +1258,6 @@ describe('useSliceAudio', () => {
       expect(mockSynth.speak).toHaveBeenCalled()
       expect(spokenUtterances).toHaveLength(1)
       expect(spokenUtterances[0].rate).toBe(2.0)
-      expect(spokenUtterances[0].pitch).toBe(1.0)
       expect(player.playing.value).toBe(true)
 
       // Trigger speech completion across sentence chunks

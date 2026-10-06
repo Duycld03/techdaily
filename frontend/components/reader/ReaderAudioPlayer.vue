@@ -16,6 +16,7 @@ import AppSelect from '~/components/common/AppSelect.vue'
 import type { ChunkSummary } from '~/stores/useLibraryStore'
 import {
   type AudioEngine,
+  AUDIO_VOICE_STORAGE_KEY,
   CLOUD_VOICES,
   filterSystemVoicesForLanguage,
   resolveCloudVoiceForLanguage,
@@ -227,7 +228,7 @@ const availableVoiceOptions = computed(() => {
 const currentVoice = computed({
   get(): string {
     const langKey = isVi.value ? 'vi' : 'en'
-    const scoped = typeof localStorage !== 'undefined' ? localStorage.getItem(`techdaily_reader_audio_voice_${langKey}`) : null
+    const scoped = typeof localStorage !== 'undefined' ? localStorage.getItem(`${AUDIO_VOICE_STORAGE_KEY}_${langKey}`) : null
     return resolveCloudVoiceForLanguage(props.chunk?.language, selectedVoice.value || scoped)
   },
   set(val: string | number) {
