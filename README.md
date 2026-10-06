@@ -1,5 +1,13 @@
 # 🚀 TechDaily — Senior Engineering & Interview Drill Platform
 
+[![Live Production](https://img.shields.io/badge/Live-techdaily.duckdns.org-10b981?style=flat-square&logo=nginx&logoColor=white)](https://techdaily.duckdns.org)
+[![Backend](https://img.shields.io/badge/.NET%2010-ASP.NET%20Core-512bd4?style=flat-square&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
+[![Frontend](https://img.shields.io/badge/Nuxt%204-Vue%203.5-00DC82?style=flat-square&logo=nuxtdotjs&logoColor=white)](https://nuxt.com/)
+[![Database](https://img.shields.io/badge/PostgreSQL%2017-pgvector-4169e1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-38bdf8?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![CI/CD](https://img.shields.io/github/actions/workflow/status/Duycld03/techdaily/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI%2FCD)](https://github.com/Duycld03/techdaily/actions)
+[![Spec-Driven Development](https://img.shields.io/badge/Workflow-OpenSpec-7c3aed?style=flat-square)](https://github.com/Fission-AI/OpenSpec)
+
 > **Live Production (HTTPS):** [https://techdaily.duckdns.org](https://techdaily.duckdns.org)
 
 An AI-powered, daily bite-sized learning and technical interview preparation platform designed for Senior Fullstack & Backend (.NET) Engineers.

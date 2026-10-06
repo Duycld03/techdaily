@@ -41,6 +41,7 @@
     "@types/cytoscape": "^3.21.9",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.13.5",
+    "@vitejs/plugin-vue": "^6.0.9",
     "@vue/test-utils": "^2.5.0",
     "autoprefixer": "^10.4.20",
     "happy-dom": "^20.12.0",
