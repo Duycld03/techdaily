@@ -1,0 +1,366 @@
+using FluentAssertions;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using DeepPace.Application.Features.Insights.BookmarkInsight;
+using DeepPace.Application.Features.Insights.DTOs;
+using DeepPace.Application.Features.Insights.GetInsightsFeed;
+using DeepPace.Domain.Entities;
+using DeepPace.Domain.Enums;
+using DeepPace.Infrastructure.Persistence;
+using Xunit;
+
+namespace DeepPace.Tests.Application;
+
+public class TechInsightsTests : IDisposable
+{
+    private readonly SqliteConnection _connection;
+    private readonly DeepPaceDbContext _db;
+
+    public TechInsightsTests()
+    {
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+
+        var options = new DbContextOptionsBuilder<DeepPaceDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        _db = new DeepPaceDbContext(options);
+        _db.Database.EnsureCreated();
+    }
+
+    public void Dispose()
+    {
+        _db.Dispose();
+        _connection.Dispose();
+    }
+
+    [Fact]
+    public async Task GetInsightsFeed_ShouldReturnInsightsFilteredByCategoryAndTags()
+    {
+        // Arrange
+        await _db.TechInsights.AddRangeAsync(
+            new TechInsight
+            {
+                Id = Guid.NewGuid(),
+                Slug = "dotnet-span-split",
+                Title = "Span Split Optimization",
+                Category = Category.BackendRuntime,
+                Tags = new() { "csharp", "dotnet", "memory" },
+                SummaryMarkdown = "Summary 1",
+                ProblemSnippet = "Problem 1",
+                SolutionSnippet = "Solution 1",
+                UnderTheHoodMarkdown = "UnderTheHood 1",
+                BenchmarkStats = "⚡ 10x",
+                IsPublished = true
+            },
+            new TechInsight
+            {
+                Id = Guid.NewGuid(),
+                Slug = "postgres-hot-updates",
+                Title = "Postgres HOT Updates",
+                Category = Category.DatabaseStorage,
+                Tags = new() { "postgres", "mvcc", "fillfactor" },
+                SummaryMarkdown = "Summary 2",
+                ProblemSnippet = "Problem 2",
+                SolutionSnippet = "Solution 2",
+                UnderTheHoodMarkdown = "UnderTheHood 2",
+                BenchmarkStats = "⚡ 5x",
+                IsPublished = true
+            }
+        );
+        await _db.SaveChangesAsync();
+
+        var handler = new GetInsightsFeedHandler(_db);
+
+        // Act 1: Get all
+        var allResult = await handler.ExecuteAsync(new GetInsightsFeedRequest());
+        allResult.IsSuccess.Should().BeTrue();
+        allResult.Value.TotalCount.Should().Be(2);
+
+        // Act 2: Filter by Category
+        var dotnetResult = await handler.ExecuteAsync(new GetInsightsFeedRequest(Category: Category.BackendRuntime));
+        dotnetResult.IsSuccess.Should().BeTrue();
+        dotnetResult.Value.Insights.Should().HaveCount(1);
+        dotnetResult.Value.Insights[0].Slug.Should().Be("dotnet-span-split");
+
+        // Act 3: Filter by Tag
+        var tagResult = await handler.ExecuteAsync(new GetInsightsFeedRequest(Tag: "fillfactor"));
+        tagResult.IsSuccess.Should().BeTrue();
+        tagResult.Value.Insights.Should().HaveCount(1);
+        tagResult.Value.Insights[0].Slug.Should().Be("postgres-hot-updates");
+    }
+
+    [Fact]
+    public async Task BookmarkInsight_ShouldToggleBookmarkOnAndOff()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "test@techdaily.io",
+            Name = "Test Engineer",
+            CreatedAt = DateTime.UtcNow
+        };
+        var insight = new TechInsight
+        {
+            Id = Guid.NewGuid(),
+            Slug = "dotnet-channels",
+            Title = "Dotnet Channels",
+            Category = Category.BackendRuntime,
+            Tags = new() { "channels", "concurrency" },
+            SummaryMarkdown = "Summary",
+            ProblemSnippet = "Problem",
+            SolutionSnippet = "Solution",
+            UnderTheHoodMarkdown = "UnderTheHood",
+            BenchmarkStats = "⚡ 4M ops",
+            BookmarksCount = 0,
+            IsPublished = true
+        };
+        await _db.Users.AddAsync(user);
+        await _db.TechInsights.AddAsync(insight);
+        await _db.SaveChangesAsync();
+
+        var handler = new BookmarkInsightHandler(_db);
+
+        // Act 1: Toggle ON (Bookmark)
+        var result1 = await handler.ExecuteAsync(new BookmarkInsightRequest(insight.Id, user.Id));
+
+        // Assert 1
+        result1.IsSuccess.Should().BeTrue();
+        result1.Value.IsBookmarked.Should().BeTrue();
+        result1.Value.TotalBookmarks.Should().Be(1);
+
+        var countInDb = await _db.UserInsightBookmarks.CountAsync(b => b.UserId == user.Id && b.InsightId == insight.Id);
+        countInDb.Should().Be(1);
+
+        // Act 2: Toggle OFF (Unbookmark)
+        var result2 = await handler.ExecuteAsync(new BookmarkInsightRequest(insight.Id, user.Id));
+
+        // Assert 2
+        result2.IsSuccess.Should().BeTrue();
+        result2.Value.IsBookmarked.Should().BeFalse();
+        result2.Value.TotalBookmarks.Should().Be(0);
+
+        var countAfterUnbookmark = await _db.UserInsightBookmarks.CountAsync(b => b.UserId == user.Id && b.InsightId == insight.Id);
+        countAfterUnbookmark.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetInsightsFeed_ShouldResolveIsBookmarkedByUserAndFilterByOnlyBookmarked()
+    {
+        // Arrange
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "dev@techdaily.io",
+            Name = "Dev",
+            CreatedAt = DateTime.UtcNow
+        };
+        var ins1 = new TechInsight
+        {
+            Id = Guid.NewGuid(),
+            Slug = "card-1",
+            Title = "Card 1",
+            Category = Category.BackendRuntime,
+            Tags = new() { "csharp" },
+            SummaryMarkdown = "Summary",
+            ProblemSnippet = "Problem",
+            SolutionSnippet = "Solution",
+            UnderTheHoodMarkdown = "Internals",
+            IsPublished = true
+        };
+        var ins2 = new TechInsight
+        {
+            Id = Guid.NewGuid(),
+            Slug = "card-2",
+            Title = "Card 2",
+            Category = Category.DatabaseStorage,
+            Tags = new() { "sql" },
+            SummaryMarkdown = "Summary",
+            ProblemSnippet = "Problem",
+            SolutionSnippet = "Solution",
+            UnderTheHoodMarkdown = "Internals",
+            IsPublished = true
+        };
+        await _db.Users.AddAsync(user);
+        await _db.TechInsights.AddRangeAsync(ins1, ins2);
+        await _db.UserInsightBookmarks.AddAsync(new UserInsightBookmark
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            InsightId = ins1.Id,
+            CreatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
+
+        var feedHandler = new GetInsightsFeedHandler(_db);
+
+        // Act 1: Get feed for user
+        var feedResponse = await feedHandler.ExecuteAsync(new GetInsightsFeedRequest(UserId: user.Id));
+        feedResponse.IsSuccess.Should().BeTrue();
+        feedResponse.Value.Insights.Should().HaveCount(2);
+
+        var dto1 = feedResponse.Value.Insights.First(i => i.Id == ins1.Id);
+        var dto2 = feedResponse.Value.Insights.First(i => i.Id == ins2.Id);
+        dto1.IsBookmarkedByUser.Should().BeTrue();
+        dto2.IsBookmarkedByUser.Should().BeFalse();
+
+        // Act 2: Filter only bookmarked
+        var onlyBookmarkedResponse = await feedHandler.ExecuteAsync(new GetInsightsFeedRequest(UserId: user.Id, OnlyBookmarked: true));
+        onlyBookmarkedResponse.IsSuccess.Should().BeTrue();
+        onlyBookmarkedResponse.Value.Insights.Should().HaveCount(1);
+        onlyBookmarkedResponse.Value.Insights[0].Id.Should().Be(ins1.Id);
+    }
+
+    [Fact]
+    public async Task GenerateInsightHandler_ShouldQueryExistingTitlesAndPassToGenerator()
+    {
+        // Arrange
+        var existing1 = new TechInsight
+        {
+            Id = Guid.NewGuid(),
+            Slug = "existing-1",
+            Title = "Existing Insight One",
+            Category = Category.BackendRuntime,
+            IsPublished = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        var existing2 = new TechInsight
+        {
+            Id = Guid.NewGuid(),
+            Slug = "existing-2",
+            Title = "Existing Insight Two",
+            Category = Category.BackendRuntime,
+            IsPublished = true,
+            CreatedAt = DateTime.UtcNow.AddMinutes(-5)
+        };
+        await _db.TechInsights.AddRangeAsync(existing1, existing2);
+        await _db.SaveChangesAsync();
+
+        List<string>? capturedAvoidTitles = null;
+        var fakeGenerator = new FakeInsightGenerator((cat, topic, avoid, loc) =>
+        {
+            capturedAvoidTitles = avoid;
+            return new TechInsight
+            {
+                Id = Guid.NewGuid(),
+                Slug = "new-generated-slug",
+                Title = "Fresh Unique Insight",
+                Category = Category.BackendRuntime,
+                SummaryMarkdown = "Summary",
+                ProblemSnippet = "Problem",
+                SolutionSnippet = "Solution",
+                UnderTheHoodMarkdown = "UnderTheHood",
+                BenchmarkStats = "⚡ 10x",
+                IsPublished = true,
+                CreatedAt = DateTime.UtcNow
+            };
+        });
+
+        var handler = new DeepPace.Application.Features.Insights.GenerateInsight.GenerateInsightHandler(_db, fakeGenerator);
+
+        // Act
+        var request = new GenerateInsightRequest(PreferredCategory: Category.BackendRuntime, PreferredTopic: "về asp.net");
+        var result = await handler.ExecuteAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        capturedAvoidTitles.Should().NotBeNull();
+        capturedAvoidTitles.Should().Contain("Existing Insight One");
+        capturedAvoidTitles.Should().Contain("Existing Insight Two");
+    }
+
+    [Fact]
+    public async Task GeminiAiService_WhenApiKeyMissing_ShouldReturnFailure()
+    {
+        // Arrange
+        var config = new FakeConfiguration(new Dictionary<string, string?>
+        {
+            ["Gemini:ApiKey"] = "",
+            ["Gemini:Model"] = "gemini-3.5-flash-lite"
+        });
+
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DeepPace.Infrastructure.Services.GeminiAiService>.Instance;
+        var service = new DeepPace.Infrastructure.Services.GeminiAiService(new System.Net.Http.HttpClient(), config, logger);
+
+        // Act - Call with "asp.net"
+        var result1 = await service.GenerateInsightAsync(Category.BackendRuntime, "về asp.net", locale: "vi");
+
+        // Assert
+        result1.IsSuccess.Should().BeFalse();
+        result1.Error.Code.Should().Be("AiService.Unavailable");
+    }
+
+    [Fact]
+    public async Task GeminiAiService_WithRealApiKeyIfAvailable_ShouldGenerateDiverseInsights()
+    {
+        var localConfigPath = Path.Combine(Directory.GetCurrentDirectory(), "../../../../src/DeepPace.Api/appsettings.Local.json");
+        if (!File.Exists(localConfigPath)) return;
+
+        var json = await File.ReadAllTextAsync(localConfigPath);
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        if (!doc.RootElement.TryGetProperty("Gemini", out var geminiProp) ||
+            !geminiProp.TryGetProperty("ApiKey", out var keyProp) ||
+            string.IsNullOrWhiteSpace(keyProp.GetString()))
+        {
+            return;
+        }
+
+        var apiKey = keyProp.GetString()!;
+        var config = new FakeConfiguration(new Dictionary<string, string?>
+        {
+            ["Gemini:ApiKey"] = apiKey,
+            ["Gemini:Model"] = "gemini-3.1-flash-lite"
+        });
+
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DeepPace.Infrastructure.Services.GeminiAiService>.Instance;
+        var service = new DeepPace.Infrastructure.Services.GeminiAiService(new HttpClient(), config, logger);
+
+        // Generate #1
+        var result1 = await service.GenerateInsightAsync(Category.BackendRuntime, "về asp.net", locale: "vi");
+        result1.IsSuccess.Should().BeTrue();
+        result1.Value.Title.Should().NotBeNullOrWhiteSpace();
+
+        // Generate #2 avoiding #1
+        var result2 = await service.GenerateInsightAsync(
+            Category.BackendRuntime,
+            "về asp.net",
+            existingTitlesToAvoid: new List<string> { result1.Value.Title },
+            locale: "vi");
+
+        result2.IsSuccess.Should().BeTrue();
+        result2.Value.Title.Should().NotBeNullOrWhiteSpace();
+        result2.Value.Title.Should().NotBe(result1.Value.Title);
+    }
+}
+
+internal class FakeConfiguration : Microsoft.Extensions.Configuration.IConfiguration
+{
+    private readonly Dictionary<string, string?> _data;
+    public FakeConfiguration(Dictionary<string, string?> data) => _data = data;
+    public string? this[string key] { get => _data.TryGetValue(key, out var v) ? v : null; set => _data[key] = value; }
+    public IEnumerable<Microsoft.Extensions.Configuration.IConfigurationSection> GetChildren() => Enumerable.Empty<Microsoft.Extensions.Configuration.IConfigurationSection>();
+    public Microsoft.Extensions.Primitives.IChangeToken GetReloadToken() => throw new NotImplementedException();
+    public Microsoft.Extensions.Configuration.IConfigurationSection GetSection(string key) => throw new NotImplementedException();
+}
+
+internal class FakeInsightGenerator : DeepPace.Application.Interfaces.ITechInsightGenerator
+{
+    private readonly Func<Category?, string?, List<string>?, string, TechInsight> _func;
+
+    public FakeInsightGenerator(Func<Category?, string?, List<string>?, string, TechInsight> func)
+    {
+        _func = func;
+    }
+
+    public Task<DeepPace.Application.Common.Result<TechInsight>> GenerateInsightAsync(
+        Category? preferredCategory,
+        string? preferredTopic,
+        List<string>? existingTitlesToAvoid = null,
+        string locale = "en",
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult<DeepPace.Application.Common.Result<TechInsight>>(_func(preferredCategory, preferredTopic, existingTitlesToAvoid, locale));
+    }
+}

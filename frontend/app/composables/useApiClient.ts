@@ -66,14 +66,18 @@ export function useApiClient() {
   const baseUrl = process.env.API_INTERNAL_URL || (config?.public?.apiBaseUrl as string | undefined)?.trim() || ''
 
   function getAuthToken(): string | null {
-    const tokenCookie = useCookie<string | null>('techdaily_token')
+    const tokenCookie = useCookie<string | null>('deeppace_token')
     if (tokenCookie.value) {
       return tokenCookie.value
     }
+    const legacyCookie = useCookie<string | null>('techdaily_token')
+    if (legacyCookie.value) {
+      return legacyCookie.value
+    }
     if (import.meta.client && typeof window !== 'undefined') {
-      const local = localStorage.getItem('techdaily_token')
+      const local = localStorage.getItem('deeppace_token') || localStorage.getItem('techdaily_token')
       if (local) return local
-      const session = sessionStorage.getItem('techdaily_token')
+      const session = sessionStorage.getItem('deeppace_token') || sessionStorage.getItem('techdaily_token')
       if (session) return session
     }
     return null
@@ -122,10 +126,10 @@ export function useApiClient() {
       const authStore = useAuthStore()
       authStore.setSession(newToken, returnedUser || authStore.user)
     } catch {
-      const tokenCookie = useCookie<string | null>('techdaily_token')
+      const tokenCookie = useCookie<string | null>('deeppace_token')
       tokenCookie.value = newToken
       if (typeof window !== 'undefined') {
-        localStorage.setItem('techdaily_token', newToken)
+        localStorage.setItem('deeppace_token', newToken)
       }
     }
 
@@ -135,7 +139,7 @@ export function useApiClient() {
   async function refreshAuthToken(): Promise<string | null> {
     if (typeof navigator !== 'undefined' && (navigator as any).locks && typeof (navigator as any).locks.request === 'function') {
       const nav = navigator as unknown as NavigatorWithLocks
-      return await nav.locks.request('techdaily_auth_refresh', async () => {
+      return await nav.locks.request('deeppace_auth_refresh', async () => {
         const token = getAuthToken()
         if (token) {
           const exp = parseJwtExp(token)

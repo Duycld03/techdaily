@@ -44,6 +44,8 @@ describe('useAuthStore', () => {
     localStorage.clear()
     sessionStorage.clear()
     mockPost.mockClear()
+    useCookie('deeppace_token').value = null
+    useCookie('deeppace_user').value = null
     useCookie('techdaily_token').value = null
     useCookie('techdaily_user').value = null
   })
@@ -62,7 +64,7 @@ describe('useAuthStore', () => {
     expect(res.token).toBe('mock-jwt-token-123')
     expect(auth.isLoggedIn).toBe(true)
     expect(auth.user?.email).toBe('engineer@techdaily.local')
-    expect(localStorage.getItem('techdaily_token')).toBe('mock-jwt-token-123')
+    expect(localStorage.getItem('deeppace_token')).toBe('mock-jwt-token-123')
   })
 
   it('registerRequest sends the documented payload and yields no session', async () => {
@@ -133,7 +135,7 @@ describe('useAuthStore', () => {
     expect(auth.isLoggedIn).toBe(false)
     expect(auth.token).toBeNull()
     expect(auth.user).toBeNull()
-    expect(localStorage.getItem('techdaily_token')).toBeNull()
+    expect(localStorage.getItem('deeppace_token')).toBeNull()
   })
 
   it('submits rememberMe in the login request body', async () => {
@@ -158,29 +160,28 @@ describe('useAuthStore', () => {
     const auth = useAuthStore()
     await auth.login('engineer@techdaily.local', 'password123', false)
 
-    expect(sessionStorage.getItem('techdaily_token')).toBe('mock-jwt-token-123')
-    expect(localStorage.getItem('techdaily_token')).toBeNull()
+    expect(sessionStorage.getItem('deeppace_token')).toBe('mock-jwt-token-123')
+    expect(localStorage.getItem('deeppace_token')).toBeNull()
   })
 
   it('stores a remembered login in localStorage and not sessionStorage', async () => {
     const auth = useAuthStore()
     await auth.login('engineer@techdaily.local', 'password123', true)
 
-    expect(localStorage.getItem('techdaily_token')).toBe('mock-jwt-token-123')
-    expect(sessionStorage.getItem('techdaily_token')).toBeNull()
+    expect(localStorage.getItem('deeppace_token')).toBe('mock-jwt-token-123')
+    expect(sessionStorage.getItem('deeppace_token')).toBeNull()
   })
 
   it('clearSession clears both localStorage and sessionStorage', async () => {
     const auth = useAuthStore()
     await auth.login('engineer@techdaily.local', 'password123', false)
-    expect(sessionStorage.getItem('techdaily_token')).toBe('mock-jwt-token-123')
+    expect(sessionStorage.getItem('deeppace_token')).toBe('mock-jwt-token-123')
 
     auth.clearSession()
-    expect(localStorage.getItem('techdaily_token')).toBeNull()
-    expect(sessionStorage.getItem('techdaily_token')).toBeNull()
-    expect(sessionStorage.getItem('techdaily_user')).toBeNull()
+    expect(localStorage.getItem('deeppace_token')).toBeNull()
+    expect(sessionStorage.getItem('deeppace_token')).toBeNull()
+    expect(sessionStorage.getItem('deeppace_user')).toBeNull()
   })
-
   describe('JWT Expiration and Proactive Cleanup', () => {
     function createMockJwt(expOffsetSeconds: number): string {
       const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -225,15 +226,15 @@ describe('useAuthStore', () => {
       const auth = useAuthStore()
       const expiredToken = createMockJwt(-120)
 
-      localStorage.setItem('techdaily_token', expiredToken)
-      localStorage.setItem('techdaily_user', JSON.stringify({ id: 'u-100', email: 'test@techdaily.io', name: 'Test' }))
+      localStorage.setItem('deeppace_token', expiredToken)
+      localStorage.setItem('deeppace_user', JSON.stringify({ id: 'u-100', email: 'test@techdaily.io', name: 'Test' }))
 
       auth.init()
 
       expect(auth.isLoggedIn).toBe(false)
       expect(auth.token).toBe(expiredToken)
       expect(auth.user?.email).toBe('test@techdaily.io')
-      expect(localStorage.getItem('techdaily_token')).toBe(expiredToken)
+      expect(localStorage.getItem('deeppace_token')).toBe(expiredToken)
     })
 
     it('successfully refreshes token via tryRefreshToken() and marks isLoggedIn true', async () => {
@@ -272,14 +273,29 @@ describe('useAuthStore', () => {
       const auth = useAuthStore()
       const activeToken = createMockJwt(7200)
 
-      localStorage.setItem('techdaily_token', activeToken)
-      localStorage.setItem('techdaily_user', JSON.stringify({ id: 'u-100', email: 'test@techdaily.io', name: 'Test' }))
+      localStorage.setItem('deeppace_token', activeToken)
+      localStorage.setItem('deeppace_user', JSON.stringify({ id: 'u-100', email: 'test@techdaily.io', name: 'Test' }))
 
       auth.init()
 
       expect(auth.isLoggedIn).toBe(true)
       expect(auth.token).toBe(activeToken)
       expect(auth.user?.email).toBe('test@techdaily.io')
+    })
+
+    it('migrates legacy techdaily_token and techdaily_user to deeppace_token on init()', () => {
+      const auth = useAuthStore()
+      const activeToken = createMockJwt(7200)
+
+      localStorage.setItem('techdaily_token', activeToken)
+      localStorage.setItem('techdaily_user', JSON.stringify({ id: 'u-100', email: 'legacy@techdaily.io', name: 'Legacy' }))
+
+      auth.init()
+
+      expect(auth.isLoggedIn).toBe(true)
+      expect(auth.token).toBe(activeToken)
+      expect(localStorage.getItem('deeppace_token')).toBe(activeToken)
+      expect(localStorage.getItem('techdaily_token')).toBeNull()
     })
   })
 })

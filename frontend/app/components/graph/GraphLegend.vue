@@ -11,12 +11,13 @@ import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
 import { NODE_TYPE_COLOR, SM2_STATUS_COLOR } from '~/utils/graphVisualTokens'
 
 const store = useKnowledgeGraphStore()
-const STORAGE_KEY = 'techdaily_graph_legend_collapsed'
+const STORAGE_KEY = 'deeppace_graph_legend_collapsed'
+const LEGACY_STORAGE_KEY = 'techdaily_graph_legend_collapsed'
 
 function getInitialCollapsedState(): boolean {
   if (typeof window === 'undefined') return false
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(LEGACY_STORAGE_KEY)
     if (saved !== null) {
       return saved === 'true'
     }

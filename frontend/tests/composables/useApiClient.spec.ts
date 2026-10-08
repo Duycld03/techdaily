@@ -36,7 +36,7 @@ describe('useApiClient 401 Interceptor', () => {
     const auth = useAuthStore()
     auth.token = 'stale-expired-jwt'
     auth.user = { id: 'u-1', email: 'test@example.com', name: 'Test', preferredLocale: 'en' }
-    localStorage.setItem('techdaily_token', 'stale-expired-jwt')
+    localStorage.setItem('deeppace_token', 'stale-expired-jwt')
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -51,7 +51,7 @@ describe('useApiClient 401 Interceptor', () => {
     // 1. Session must be cleared
     expect(auth.token).toBeNull()
     expect(auth.user).toBeNull()
-    expect(localStorage.getItem('techdaily_token')).toBeNull()
+    expect(localStorage.getItem('deeppace_token')).toBeNull()
 
     // 2. Toast warning must be emitted with i18n key
     const toast = useToast()
@@ -116,7 +116,7 @@ describe('useApiClient 401 Interceptor', () => {
     const auth = useAuthStore()
     auth.token = 'active-jwt-token'
     auth.user = { id: 'u-1', email: 'test@example.com', name: 'Test', preferredLocale: 'en' }
-    localStorage.setItem('techdaily_token', 'active-jwt-token')
+    localStorage.setItem('deeppace_token', 'active-jwt-token')
 
     // Initial request returns 401, but the subsequent refresh call throws a network error (server restarting)
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
@@ -136,7 +136,7 @@ describe('useApiClient 401 Interceptor', () => {
     // Session credentials must NOT be purged on network error
     expect(auth.token).toBe('active-jwt-token')
     expect(auth.user?.email).toBe('test@example.com')
-    expect(localStorage.getItem('techdaily_token')).toBe('active-jwt-token')
+    expect(localStorage.getItem('deeppace_token')).toBe('active-jwt-token')
 
     // Must NOT navigate to /login
     expect((globalThis as unknown as GlobalWithNavigateTo).navigateTo).not.toHaveBeenCalled()

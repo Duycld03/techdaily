@@ -59,11 +59,11 @@ export interface SliceAudioDeps {
   onFallbackToCloud?: () => void
 }
 
-export const AUDIO_SPEED_STORAGE_KEY = 'techdaily_reader_audio_speed'
-export const AUDIO_ENGINE_STORAGE_KEY = 'techdaily_reader_audio_engine'
-export const AUDIO_VOICE_STORAGE_KEY = 'techdaily_reader_audio_voice'
-export const AUDIO_SYSTEM_VOICE_STORAGE_KEY = 'techdaily_reader_audio_system_voice'
-export const AUDIO_AUTO_ADVANCE_STORAGE_KEY = 'techdaily_reader_audio_auto_advance'
+export const AUDIO_SPEED_STORAGE_KEY = 'deeppace_reader_audio_speed'
+export const AUDIO_ENGINE_STORAGE_KEY = 'deeppace_reader_audio_engine'
+export const AUDIO_VOICE_STORAGE_KEY = 'deeppace_reader_audio_voice'
+export const AUDIO_SYSTEM_VOICE_STORAGE_KEY = 'deeppace_reader_audio_system_voice'
+export const AUDIO_AUTO_ADVANCE_STORAGE_KEY = 'deeppace_reader_audio_auto_advance'
 
 export interface SystemVoiceOption {
   id: string

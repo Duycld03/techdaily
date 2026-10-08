@@ -55,10 +55,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // causes severe DOM hydration mismatches when client hydration rejects the expired token.
   const isServer = Boolean(import.meta.server || (typeof process !== 'undefined' && 'server' in process && process.server))
   if (isServer && isAuthRequired) {
-    const tokenCookie = useCookie<string | null>('techdaily_token')
+    const tokenCookie = useCookie<string | null>('deeppace_token')
+    const legacyTokenCookie = useCookie<string | null>('techdaily_token')
     const refreshCookie = useCookie<string | null>('refreshToken')
 
-    const hasValidToken = Boolean(tokenCookie.value && !isJwtExpired(tokenCookie.value))
+    const activeToken = tokenCookie.value || legacyTokenCookie.value
+    const hasValidToken = Boolean(activeToken && !isJwtExpired(activeToken))
     const hasRefreshCookie = Boolean(refreshCookie.value)
 
     if (!hasValidToken && !hasRefreshCookie) {

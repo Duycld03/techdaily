@@ -2,14 +2,15 @@ import { ref, onMounted } from 'vue'
 
 export type RoadmapViewMode = 'timeline' | 'mindmap'
 
-export const ROADMAP_VIEW_MODE_STORAGE_KEY = 'techdaily_roadmap_view_mode'
+export const ROADMAP_VIEW_MODE_STORAGE_KEY = 'deeppace_roadmap_view_mode'
+export const LEGACY_ROADMAP_VIEW_MODE_STORAGE_KEY = 'techdaily_roadmap_view_mode'
 
 export function useRoadmapViewMode() {
   const viewMode = ref<RoadmapViewMode>('timeline')
 
   function init() {
     if (typeof window !== 'undefined' && window.localStorage) {
-      const stored = window.localStorage.getItem(ROADMAP_VIEW_MODE_STORAGE_KEY)
+      const stored = window.localStorage.getItem(ROADMAP_VIEW_MODE_STORAGE_KEY) || window.localStorage.getItem(LEGACY_ROADMAP_VIEW_MODE_STORAGE_KEY)
       if (stored === 'timeline' || stored === 'mindmap') {
         viewMode.value = stored
       }

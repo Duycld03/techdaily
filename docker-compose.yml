@@ -1,30 +1,30 @@
 services:
   db:
     image: pgvector/pgvector:pg17
-    container_name: techdaily_postgres
+    container_name: deeppace_postgres
     restart: unless-stopped
     mem_limit: 1g
     environment:
-      POSTGRES_DB: techdaily_db
-      POSTGRES_USER: techdaily_user
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-techdaily_password_secret}"
+      POSTGRES_DB: deeppace_db
+      POSTGRES_USER: deeppace_user
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-deeppace_password_secret}"
     ports:
       - "5432:5432"
     volumes:
-      - techdaily_pgdata:/var/lib/postgresql/data
+      - deeppace_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U techdaily_user -d techdaily_db"]
+      test: ["CMD-SHELL", "pg_isready -U deeppace_user -d deeppace_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  techdaily-pgadmin:
+  deeppace-pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: techdaily_pgadmin
+    container_name: deeppace_pgadmin
     restart: unless-stopped
     mem_limit: 512m
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@techdaily.com
+      PGADMIN_DEFAULT_EMAIL: admin@deeppace.com
       PGADMIN_DEFAULT_PASSWORD: admin_password_secret
     ports:
       - "5051:80"
@@ -33,4 +33,4 @@ services:
         condition: service_healthy
 
 volumes:
-  techdaily_pgdata:
+  deeppace_pgdata:

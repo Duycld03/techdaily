@@ -1,0 +1,181 @@
+using FluentAssertions;
+using DeepPace.Domain.Entities;
+using DeepPace.Domain.Enums;
+using Xunit;
+
+namespace DeepPace.Tests.Domain;
+
+public class SpacedRepetitionCardTests
+{
+    private static SpacedRepetitionCard CreateTestCard(DateOnly? initialDate = null) =>
+        SpacedRepetitionCard.CreateFromDrillMistake(Guid.NewGuid(), Guid.NewGuid(), "front", "back", initialDate);
+
+    [Fact]
+    public void CreateFromHighlight_ShouldInitializeWithDefaultSM2Values()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var highlightId = Guid.NewGuid();
+        var today = new DateOnly(2026, 1, 1);
+
+        // Act
+        var card = SpacedRepetitionCard.CreateFromHighlight(userId, highlightId, "front", "back", today);
+
+        // Assert
+        card.UserId.Should().Be(userId);
+        card.SourceHighlightId.Should().Be(highlightId);
+        card.SourceType.Should().Be(CardSourceType.Highlight);
+        card.RepetitionCount.Should().Be(0);
+        card.EaseFactor.Should().Be(2.50m);
+        card.IntervalDays.Should().Be(1);
+        card.Status.Should().Be(CardStatus.Learning);
+        card.NextReviewDate.Should().Be(today);
+    }
+    [Fact]
+    public void ApplyReview_Grade5_ShouldFollowSM2Progression()
+    {
+        // Arrange
+        var card = CreateTestCard(new DateOnly(2026, 1, 1));
+
+        // First successful review (Repetition 0 -> 1)
+        card.ApplyReview(5, new DateOnly(2026, 1, 1));
+        card.RepetitionCount.Should().Be(1);
+        card.IntervalDays.Should().Be(1);
+        card.NextReviewDate.Should().Be(new DateOnly(2026, 1, 2));
+        card.Status.Should().Be(CardStatus.Reviewing);
+
+        // Second successful review (Repetition 1 -> 2)
+        card.ApplyReview(5, new DateOnly(2026, 1, 2));
+        card.RepetitionCount.Should().Be(2);
+        card.IntervalDays.Should().Be(6);
+        card.NextReviewDate.Should().Be(new DateOnly(2026, 1, 8));
+
+        // Third successful review (Repetition 2 -> 3)
+        card.ApplyReview(5, new DateOnly(2026, 1, 8));
+        card.RepetitionCount.Should().Be(3);
+        card.IntervalDays.Should().Be(15); // 6 * 2.50 = 15
+
+        // Fourth successful review (Repetition 3 -> 4) -> Mastered
+        card.ApplyReview(5, new DateOnly(2026, 1, 23));
+        card.RepetitionCount.Should().Be(4);
+        card.IntervalDays.Should().Be(38); // 15 * 2.50 = 37.5 -> 38
+        card.Status.Should().Be(CardStatus.Mastered);
+    }
+
+    [Fact]
+    public void ApplyReview_GradeBelow3_ShouldResetStreakToLearning()
+    {
+        // Arrange
+        var card = CreateTestCard(new DateOnly(2026, 1, 1));
+        card.ApplyReview(5, new DateOnly(2026, 1, 1));
+        card.ApplyReview(5, new DateOnly(2026, 1, 2));
+        card.RepetitionCount.Should().Be(2);
+
+        // Act - Failed review (Grade 2)
+        card.ApplyReview(2, new DateOnly(2026, 1, 8));
+
+        // Assert
+        card.RepetitionCount.Should().Be(0);
+        card.IntervalDays.Should().Be(1);
+        card.Status.Should().Be(CardStatus.Learning);
+        card.NextReviewDate.Should().Be(new DateOnly(2026, 1, 9));
+        card.EaseFactor.Should().BeLessThan(2.50m);
+    }
+
+    [Fact]
+    public void ApplyReview_EaseFactor_ShouldNeverDropBelowMinimum1Point30()
+    {
+        // Arrange
+        var card = CreateTestCard(new DateOnly(2026, 1, 1));
+
+        // Act - Repeatedly fail
+        for (int i = 0; i < 15; i++)
+        {
+            card.ApplyReview(0, new DateOnly(2026, 1, 1).AddDays(i));
+        }
+
+        // Assert
+        card.EaseFactor.Should().Be(1.30m);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(6)]
+    public void ApplyReview_InvalidGrade_ShouldThrowException(int invalidGrade)
+    {
+        var card = CreateTestCard();
+        var act = () => card.ApplyReview(invalidGrade);
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void UpdateContent_ShouldUpdateMarkdownAndSetUpdatedAt()
+    {
+        // Arrange
+        var card = CreateTestCard();
+        var before = DateTimeOffset.UtcNow.AddSeconds(-1);
+
+        // Act
+        card.UpdateContent("# Updated Front", "# Updated Back");
+
+        // Assert
+        card.FrontMarkdown.Should().Be("# Updated Front");
+        card.BackMarkdown.Should().Be("# Updated Back");
+        card.UpdatedAt.Should().NotBeNull();
+        card.UpdatedAt.Should().BeAfter(before);
+    }
+
+    [Fact]
+    public void ResetProgression_ShouldResetSM2MetricsBackToInitialLearningState()
+    {
+        // Arrange
+        var card = CreateTestCard(new DateOnly(2026, 1, 1));
+        card.ApplyReview(5, new DateOnly(2026, 1, 1));
+        card.ApplyReview(5, new DateOnly(2026, 1, 2));
+        card.ApplyReview(5, new DateOnly(2026, 1, 8));
+        card.ApplyReview(5, new DateOnly(2026, 1, 24)); // Reaches Mastered
+
+        card.Status.Should().Be(CardStatus.Mastered);
+        card.RepetitionCount.Should().Be(4);
+        card.IntervalDays.Should().BeGreaterThan(1);
+
+        var resetDate = new DateOnly(2026, 5, 1);
+
+        // Act
+        card.ResetProgression(resetDate);
+
+        // Assert
+        card.RepetitionCount.Should().Be(0);
+        card.IntervalDays.Should().Be(1);
+        card.EaseFactor.Should().Be(2.50m);
+        card.Status.Should().Be(CardStatus.Learning);
+        card.NextReviewDate.Should().Be(resetDate);
+        card.UpdatedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CreateFromDrillMistake_ShouldInitializeCorrectly()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var chunkId = Guid.NewGuid();
+        var front = "Question markdown";
+        var back = "Explanation markdown";
+        var today = new DateOnly(2026, 3, 1);
+
+        // Act
+        var card = SpacedRepetitionCard.CreateFromDrillMistake(userId, chunkId, front, back, today);
+
+        // Assert
+        card.UserId.Should().Be(userId);
+        card.SourceType.Should().Be(CardSourceType.DocumentChunk);
+        card.SourceDocumentChunkId.Should().Be(chunkId);
+        card.FrontMarkdown.Should().Be(front);
+        card.BackMarkdown.Should().Be(back);
+        card.RepetitionCount.Should().Be(0);
+        card.EaseFactor.Should().Be(2.50m);
+        card.IntervalDays.Should().Be(1);
+        card.Status.Should().Be(CardStatus.Learning);
+        card.NextReviewDate.Should().Be(today);
+    }
+}

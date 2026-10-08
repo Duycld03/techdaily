@@ -1,4 +1,4 @@
-name: TechDaily CI
+name: DeepPace CI
 
 on:
   push:
@@ -38,13 +38,13 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore Dependencies
-        run: dotnet restore backend/TechDaily.sln
+        run: dotnet restore backend/DeepPace.sln
 
       - name: Build Backend (Release)
-        run: dotnet build backend/TechDaily.sln --configuration Release --no-restore
+        run: dotnet build backend/DeepPace.sln --configuration Release --no-restore
 
-      - name: Run Backend Tests (TechDaily.Tests)
-        run: dotnet test backend/TechDaily.sln --configuration Release --no-build --verbosity normal
+      - name: Run Backend Tests (DeepPace.Tests)
+        run: dotnet test backend/DeepPace.sln --configuration Release --no-build --verbosity normal
 
   frontend-ci:
     name: Frontend CI (Nuxt 4 / Vue 3)
@@ -89,9 +89,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Lowercase Repository Name
+      - name: Lowercase Repository Owner
         id: repo
-        run: echo "NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+        run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -110,8 +110,8 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.repo.outputs.NAME }}-backend:latest
-            ghcr.io/${{ steps.repo.outputs.NAME }}-backend:${{ github.sha }}
+            ghcr.io/${{ steps.repo.outputs.OWNER }}/deeppace-backend:latest
+            ghcr.io/${{ steps.repo.outputs.OWNER }}/deeppace-backend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -122,8 +122,8 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.repo.outputs.NAME }}-frontend:latest
-            ghcr.io/${{ steps.repo.outputs.NAME }}-frontend:${{ github.sha }}
+            ghcr.io/${{ steps.repo.outputs.OWNER }}/deeppace-frontend:latest
+            ghcr.io/${{ steps.repo.outputs.OWNER }}/deeppace-frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

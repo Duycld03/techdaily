@@ -11,8 +11,10 @@ export interface AuthUser {
 }
 
 export const useAuthStore = defineStore('auth', () => {
-  const tokenCookie = useCookie<string | null>('techdaily_token', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
-  const userCookie = useCookie<AuthUser | null>('techdaily_user', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
+  const tokenCookie = useCookie<string | null>('deeppace_token', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
+  const legacyTokenCookie = useCookie<string | null>('techdaily_token', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
+  const userCookie = useCookie<AuthUser | null>('deeppace_user', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
+  const legacyUserCookie = useCookie<AuthUser | null>('techdaily_user', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
 
   function parseJwtPayload(jwt: string): any | null {
     try {
@@ -56,8 +58,15 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     user.value = null
     tokenCookie.value = null
+    legacyTokenCookie.value = null
     userCookie.value = null
+    legacyUserCookie.value = null
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('deeppace_token')
+      localStorage.removeItem('deeppace_user')
+      localStorage.removeItem('deeppace_refresh_token')
+      sessionStorage.removeItem('deeppace_token')
+      sessionStorage.removeItem('deeppace_user')
       localStorage.removeItem('techdaily_token')
       localStorage.removeItem('techdaily_user')
       localStorage.removeItem('techdaily_refresh_token')
@@ -66,8 +75,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const token = ref<string | null>(tokenCookie.value || null)
-  const user = ref<AuthUser | null>(userCookie.value || (token.value ? parseUserFromJwt(token.value) : null))
+  const initialToken = tokenCookie.value || legacyTokenCookie.value || null
+  const initialUser = userCookie.value || legacyUserCookie.value || (initialToken ? parseUserFromJwt(initialToken) : null)
+  const token = ref<string | null>(initialToken)
+  const user = ref<AuthUser | null>(initialUser)
   const isInitialized = ref(false)
   // Whether the current session is persistent (Remember me) or session-scoped
   const isPersistentSession = ref(true)
@@ -76,19 +87,33 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!token.value && !isTokenExpired(token.value))
 
   function init() {
-    if (!token.value && tokenCookie.value) {
-      token.value = tokenCookie.value
+    if (!token.value) {
+      if (tokenCookie.value) {
+        token.value = tokenCookie.value
+      } else if (legacyTokenCookie.value) {
+        token.value = legacyTokenCookie.value
+      }
     }
-    if (!user.value && userCookie.value) {
-      user.value = userCookie.value
+    if (!user.value) {
+      if (userCookie.value) {
+        user.value = userCookie.value
+      } else if (legacyUserCookie.value) {
+        user.value = legacyUserCookie.value
+      }
     }
 
     if (typeof window !== 'undefined') {
       if (!token.value) {
-        token.value = localStorage.getItem('techdaily_token') || sessionStorage.getItem('techdaily_token')
+        token.value = localStorage.getItem('deeppace_token')
+          || sessionStorage.getItem('deeppace_token')
+          || localStorage.getItem('techdaily_token')
+          || sessionStorage.getItem('techdaily_token')
       }
       if (!user.value) {
-        const storedUser = localStorage.getItem('techdaily_user') || sessionStorage.getItem('techdaily_user')
+        const storedUser = localStorage.getItem('deeppace_user')
+          || sessionStorage.getItem('deeppace_user')
+          || localStorage.getItem('techdaily_user')
+          || sessionStorage.getItem('techdaily_user')
         if (storedUser) {
           try {
             user.value = JSON.parse(storedUser)
@@ -97,10 +122,34 @@ export const useAuthStore = defineStore('auth', () => {
           }
         }
       }
+      // Migrate legacy keys if present in storage
+      if (localStorage.getItem('techdaily_token')) {
+        if (!localStorage.getItem('deeppace_token')) {
+          localStorage.setItem('deeppace_token', localStorage.getItem('techdaily_token')!)
+        }
+        localStorage.removeItem('techdaily_token')
+      }
+      if (localStorage.getItem('techdaily_user')) {
+        if (!localStorage.getItem('deeppace_user')) {
+          localStorage.setItem('deeppace_user', localStorage.getItem('techdaily_user')!)
+        }
+        localStorage.removeItem('techdaily_user')
+      }
+      if (sessionStorage.getItem('techdaily_token')) {
+        if (!sessionStorage.getItem('deeppace_token')) {
+          sessionStorage.setItem('deeppace_token', sessionStorage.getItem('techdaily_token')!)
+        }
+        sessionStorage.removeItem('techdaily_token')
+      }
+      if (sessionStorage.getItem('techdaily_user')) {
+        if (!sessionStorage.getItem('deeppace_user')) {
+          sessionStorage.setItem('deeppace_user', sessionStorage.getItem('techdaily_user')!)
+        }
+        sessionStorage.removeItem('techdaily_user')
+      }
       // Session-scoped only when the token lives in sessionStorage and not localStorage
-      isPersistentSession.value = !(sessionStorage.getItem('techdaily_token') !== null && localStorage.getItem('techdaily_token') === null)
+      isPersistentSession.value = !(sessionStorage.getItem('deeppace_token') !== null && localStorage.getItem('deeppace_token') === null)
     }
-
 
     if (token.value && !user.value) {
       const parsed = parseUserFromJwt(token.value)
@@ -194,24 +243,31 @@ export const useAuthStore = defineStore('auth', () => {
     const cookieOpts = remember
       ? { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' as const }
       : { path: '/', sameSite: 'lax' as const }
-    useCookie<string | null>('techdaily_token', cookieOpts).value = newToken
+    useCookie<string | null>('deeppace_token', cookieOpts).value = newToken
+    useCookie<string | null>('techdaily_token').value = null
 
     if (typeof window !== 'undefined') {
       const primary = remember ? window.localStorage : window.sessionStorage
       const secondary = remember ? window.sessionStorage : window.localStorage
-      primary.setItem('techdaily_token', newToken)
-      secondary.removeItem('techdaily_token')
+      primary.setItem('deeppace_token', newToken)
+      secondary.removeItem('deeppace_token')
+      localStorage.removeItem('deeppace_refresh_token')
+      localStorage.removeItem('techdaily_token')
+      sessionStorage.removeItem('techdaily_token')
       localStorage.removeItem('techdaily_refresh_token')
     }
 
     if (newUser) {
       user.value = newUser
-      useCookie<AuthUser | null>('techdaily_user', cookieOpts).value = newUser
+      useCookie<AuthUser | null>('deeppace_user', cookieOpts).value = newUser
+      useCookie<AuthUser | null>('techdaily_user').value = null
       if (typeof window !== 'undefined') {
         const primary = remember ? window.localStorage : window.sessionStorage
         const secondary = remember ? window.sessionStorage : window.localStorage
-        primary.setItem('techdaily_user', JSON.stringify(newUser))
-        secondary.removeItem('techdaily_user')
+        primary.setItem('deeppace_user', JSON.stringify(newUser))
+        secondary.removeItem('deeppace_user')
+        localStorage.removeItem('techdaily_user')
+        sessionStorage.removeItem('techdaily_user')
       }
     }
   }
@@ -236,10 +292,13 @@ export const useAuthStore = defineStore('auth', () => {
       const cookieOpts = isPersistentSession.value
         ? { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' as const }
         : { path: '/', sameSite: 'lax' as const }
-      useCookie<AuthUser | null>('techdaily_user', cookieOpts).value = user.value
+      useCookie<AuthUser | null>('deeppace_user', cookieOpts).value = user.value
+      useCookie<AuthUser | null>('techdaily_user').value = null
       if (typeof window !== 'undefined') {
         const primary = isPersistentSession.value ? window.localStorage : window.sessionStorage
-        primary.setItem('techdaily_user', JSON.stringify(user.value))
+        primary.setItem('deeppace_user', JSON.stringify(user.value))
+        window.localStorage.removeItem('techdaily_user')
+        window.sessionStorage.removeItem('techdaily_user')
       }
     }
   }

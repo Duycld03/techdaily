@@ -390,8 +390,8 @@ describe('useSliceAudio', () => {
   })
 
   it('enforces that English slices never use Vietnamese voices even if previously saved in localStorage', async () => {
-    localStorage.setItem('techdaily_reader_audio_voice', 'vi-VN-Neural2-A')
-    localStorage.setItem('techdaily_reader_audio_voice_vi', 'vi-VN-Neural2-A')
+    localStorage.setItem('deeppace_reader_audio_voice', 'vi-VN-Neural2-A')
+    localStorage.setItem('deeppace_reader_audio_voice_vi', 'vi-VN-Neural2-A')
 
     const { cache } = memoryCache()
     const audio = createFakeAudio()

@@ -86,7 +86,7 @@ vi.mock('~/composables/useSliceAudio', async () => {
         { id: 'en-US-Neural2-D', label: 'en-US-Neural2-D', gender: 'male', language: 'en' },
       ],
     },
-    AUDIO_VOICE_STORAGE_KEY: 'techdaily_reader_audio_voice',
+    AUDIO_VOICE_STORAGE_KEY: 'deeppace_reader_audio_voice',
     resolveCloudVoiceForLanguage: (lang?: string | null) => (lang === 'vi' ? 'vi-VN-Neural2-A' : 'en-US-Neural2-F'),
   }
 })

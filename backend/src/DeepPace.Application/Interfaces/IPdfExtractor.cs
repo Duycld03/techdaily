@@ -1,0 +1,28 @@
+namespace DeepPace.Application.Interfaces;
+
+public record ExtractedPdfSlice(
+    int Order,
+    string ChapterTitle,
+    string ContentMarkdown,
+    int EstimatedReadMinutes,
+    List<string> KeyTakeaways);
+
+public record PdfExtractionProgress(
+    int ProcessedPages,
+    int TotalPages,
+    string CurrentStep);
+
+public record PdfExtractionResult(
+    string DocumentTitle,
+    int TotalPages,
+    List<ExtractedPdfSlice> Slices);
+
+public interface IPdfExtractor
+{
+    Task<PdfExtractionResult> ExtractSlicesAsync(
+        Stream pdfStream,
+        string? customTitle = null,
+        int maxPages = int.MaxValue,
+        IProgress<PdfExtractionProgress>? progress = null,
+        CancellationToken cancellationToken = default);
+}

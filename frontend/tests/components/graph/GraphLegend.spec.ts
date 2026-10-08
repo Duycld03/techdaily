@@ -43,12 +43,12 @@ describe('GraphLegend.vue', () => {
     expect(wrapper.find('[data-testid="legend-card"]').exists()).toBe(false)
     const expandBtn = wrapper.find('[data-testid="legend-expand-btn"]')
     expect(expandBtn.exists()).toBe(true)
-    expect(localStorage.getItem('techdaily_graph_legend_collapsed')).toBe('true')
+    expect(localStorage.getItem('deeppace_graph_legend_collapsed')).toBe('true')
 
     // Click expand button
     await expandBtn.trigger('click')
     expect(wrapper.find('[data-testid="legend-card"]').exists()).toBe(true)
-    expect(localStorage.getItem('techdaily_graph_legend_collapsed')).toBe('false')
+    expect(localStorage.getItem('deeppace_graph_legend_collapsed')).toBe('false')
   })
 
   it('triggers store.setHoveredLegendType on mouseenter and mouseleave', async () => {
@@ -71,7 +71,7 @@ describe('GraphLegend.vue', () => {
   })
 
   it('restores collapsed state from localStorage on mount', () => {
-    localStorage.setItem('techdaily_graph_legend_collapsed', 'true')
+    localStorage.setItem('deeppace_graph_legend_collapsed', 'true')
     const wrapper = mount(GraphLegend)
 
     expect(wrapper.find('[data-testid="legend-card"]').exists()).toBe(false)

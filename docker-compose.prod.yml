@@ -1,13 +1,13 @@
 services:
   db:
     image: pgvector/pgvector:pg17
-    container_name: techdaily_postgres_prod
+    container_name: deeppace_postgres_prod
     restart: always
     ports:
       - "127.0.0.1:5432:5432"
     environment:
-      POSTGRES_DB: techdaily_db
-      POSTGRES_USER: techdaily_user
+      POSTGRES_DB: deeppace_db
+      POSTGRES_USER: deeppace_user
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     command:
       - "postgres"
@@ -24,22 +24,22 @@ services:
       - "-c"
       - "wal_buffers=16MB"
     volumes:
-      - techdaily_pgdata_prod:/var/lib/postgresql/data
+      - deeppace_pgdata_prod:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U techdaily_user -d techdaily_db"]
+      test: ["CMD-SHELL", "pg_isready -U deeppace_user -d deeppace_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   backend:
-    image: ghcr.io/duycld03/techdaily-backend:latest
-    container_name: techdaily_backend_prod
+    image: ghcr.io/duycld03/deeppace-backend:latest
+    container_name: deeppace_backend_prod
     restart: always
     env_file:
       - .env
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=techdaily_db;Username=techdaily_user;Password=${POSTGRES_PASSWORD}"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=deeppace_db;Username=deeppace_user;Password=${POSTGRES_PASSWORD}"
       Authentication__Google__ClientId: "${GOOGLE_CLIENT_ID}"
       Cors__AllowedOrigins__0: "${CORS_ALLOWED_ORIGINS:-https://techdaily.duckdns.org}"
     depends_on:
@@ -47,8 +47,8 @@ services:
         condition: service_healthy
 
   frontend:
-    image: ghcr.io/duycld03/techdaily-frontend:latest
-    container_name: techdaily_frontend_prod
+    image: ghcr.io/duycld03/deeppace-frontend:latest
+    container_name: deeppace_frontend_prod
     restart: always
     environment:
       NODE_ENV: production
@@ -60,7 +60,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: techdaily_nginx_prod
+    container_name: deeppace_nginx_prod
     restart: always
     ports:
       - "80:80"
@@ -74,4 +74,4 @@ services:
       - frontend
 
 volumes:
-  techdaily_pgdata_prod:
+  deeppace_pgdata_prod:

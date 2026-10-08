@@ -67,9 +67,9 @@ describe('Immersive Document Reader (Hướng 1)', () => {
   it('persists and loads bookmark from localStorage correctly', () => {
     const bookId = 'book-123'
     // Save bookmark for slice 2
-    localStorage.setItem(`techdaily_bookmark_${bookId}`, '2')
+    localStorage.setItem(`deeppace_bookmark_${bookId}`, '2')
 
-    const saved = localStorage.getItem(`techdaily_bookmark_${bookId}`)
+    const saved = localStorage.getItem(`deeppace_bookmark_${bookId}`)
     expect(saved).toBe('2')
 
     const parsedSlice = parseInt(saved!, 10)
@@ -83,9 +83,9 @@ describe('Immersive Document Reader (Hướng 1)', () => {
     completed.add(1)
     completed.add(2)
 
-    localStorage.setItem(`techdaily_completed_${bookId}`, JSON.stringify(Array.from(completed)))
+    localStorage.setItem(`deeppace_completed_${bookId}`, JSON.stringify(Array.from(completed)))
 
-    const loaded = new Set(JSON.parse(localStorage.getItem(`techdaily_completed_${bookId}`)!))
+    const loaded = new Set(JSON.parse(localStorage.getItem(`deeppace_completed_${bookId}`)!))
     expect(loaded.has(1)).toBe(true)
     expect(loaded.has(2)).toBe(true)
     expect(loaded.has(3)).toBe(false)
@@ -114,9 +114,9 @@ describe('Immersive Document Reader (Hướng 1)', () => {
       readingWidth: 'wide'
     }
 
-    localStorage.setItem('techdaily_reader_typography', JSON.stringify(customTypography))
+    localStorage.setItem('deeppace_reader_typography', JSON.stringify(customTypography))
 
-    const loaded = JSON.parse(localStorage.getItem('techdaily_reader_typography')!)
+    const loaded = JSON.parse(localStorage.getItem('deeppace_reader_typography')!)
     expect(loaded.fontSize).toBe('xl')
     expect(loaded.fontFamily).toBe('serif')
     expect(loaded.lineSpacing).toBe('loose')

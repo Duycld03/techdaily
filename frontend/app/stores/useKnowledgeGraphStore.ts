@@ -50,9 +50,10 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
   const isLoading = ref<boolean>(false)
   const error = ref<string | null>(null)
   const selectedNodeId = ref<string | null>(null)
-  const VIEW_MODE_KEY = 'techdaily_graph_view_mode'
+  const VIEW_MODE_KEY = 'deeppace_graph_view_mode'
+  const LEGACY_VIEW_MODE_KEY = 'techdaily_graph_view_mode'
   const initialViewMode = typeof window !== 'undefined'
-    ? ((localStorage.getItem(VIEW_MODE_KEY) as '2d' | '3d') || '2d')
+    ? (((localStorage.getItem(VIEW_MODE_KEY) || localStorage.getItem(LEGACY_VIEW_MODE_KEY)) as '2d' | '3d') || '2d')
     : '2d'
   const viewMode = ref<'2d' | '3d'>(initialViewMode === '3d' ? '3d' : '2d')
   const searchQuery = ref<string>('')

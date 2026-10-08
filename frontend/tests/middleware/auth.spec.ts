@@ -20,8 +20,12 @@ describe('auth.global route middleware', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
+    sessionStorage.clear()
+    useCookie('deeppace_token').value = null
+    useCookie('deeppace_user').value = null
     useCookie('techdaily_token').value = null
     useCookie('techdaily_user').value = null
+    useCookie('refreshToken').value = null
     authStore = useAuthStore()
     vi.clearAllMocks()
   })
@@ -181,6 +185,7 @@ describe('auth.global route middleware', () => {
       const originalServer = proc.server
       proc.server = true
       try {
+        useCookie('deeppace_token').value = null
         useCookie('techdaily_token').value = createMockJwt(3600)
         useCookie('refreshToken').value = null
         const to = { path: '/library', fullPath: '/library' }
@@ -200,6 +205,7 @@ describe('auth.global route middleware', () => {
       const originalServer = proc.server
       proc.server = true
       try {
+        useCookie('deeppace_token').value = null
         useCookie('techdaily_token').value = createMockJwt(-120)
         useCookie('refreshToken').value = null
         const to = { path: '/library', fullPath: '/library' }
@@ -221,8 +227,28 @@ describe('auth.global route middleware', () => {
       const originalServer = proc.server
       proc.server = true
       try {
+        useCookie('deeppace_token').value = null
         useCookie('techdaily_token').value = createMockJwt(-120)
         useCookie('refreshToken').value = 'mock-refresh-token'
+        const to = { path: '/library', fullPath: '/library' }
+        const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
+        const result = await middleware(to)
+
+        const globalNav = globalThis as unknown as { navigateTo: Mock }
+        expect(globalNav.navigateTo).not.toHaveBeenCalled()
+        expect(result).toBeUndefined()
+      } finally {
+        proc.server = originalServer
+      }
+    })
+
+    it('permits navigation during SSR when a valid unexpired deeppace_token cookie is present', async () => {
+      const proc = process as unknown as { server?: boolean }
+      const originalServer = proc.server
+      proc.server = true
+      try {
+        useCookie('deeppace_token').value = createMockJwt(3600)
+        useCookie('refreshToken').value = null
         const to = { path: '/library', fullPath: '/library' }
         const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
         const result = await middleware(to)

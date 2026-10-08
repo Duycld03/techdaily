@@ -1,4 +1,4 @@
-# 🚀 TechDaily — Senior Engineering & Interview Drill Platform
+# 🚀 DeepPace — Senior Engineering & Deliberate Practice Platform
 
 [![Live Production](https://img.shields.io/badge/Live-techdaily.duckdns.org-10b981?style=flat-square&logo=nginx&logoColor=white)](https://techdaily.duckdns.org)
 [![Backend](https://img.shields.io/badge/.NET%2010-ASP.NET%20Core-512bd4?style=flat-square&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
@@ -16,16 +16,15 @@ An AI-powered, daily bite-sized learning and technical interview preparation pla
 
 ## 🎯 Project Overview
 
-TechDaily solves the two most critical challenges for senior engineers preparing for architectural roles:
+DeepPace solves the two most critical challenges for senior engineers preparing for architectural roles:
 1. **Daily Micro-Learning from Real Documentation:** Curated 3–5 minute reading slices extracted directly from authoritative sources (*Microsoft Learn, PostgreSQL 17 Internals, Vue 3 / Nuxt 4 Docs, Designing Data-Intensive Applications, CLR via C#*) with key takeaways, inline AI explanations, and IDE-grade Shiki syntax highlighting.
 2. **Active Recall & Scenario Drills:** Daily Senior-level engineering architecture scenario challenges with multiple-choice trade-off decisions, instant verification, and Principal-level deep-dive explanations.
-
 ---
 
 ## 🏗️ Architecture & Technology Stack
 
 ```
-TechDaily (Clean Architecture)
+DeepPace (Clean Architecture)
 ├── Api            → ASP.NET Core Minimal APIs (.NET 10, C# 13), JWT Bearer Auth, RFC 7807 Problem Details
 ├── Application    → Pure DI Use-Case Handlers, FluentValidation, Result Pattern, DTOs
 ├── Domain         → Rich Domain Entities, SM-2 Spaced Repetition Invariants, PBKDF2 Password Security
@@ -169,8 +168,8 @@ Run the fullstack development environment with all services wired:
 Run the entire automated test suite:
 
 ```bash
-# Run Backend Unit & Integration Tests (351 Tests)
-dotnet test backend/TechDaily.sln
+# Run Backend Unit & Integration Tests
+dotnet test backend/DeepPace.sln
 
 # Run Frontend Component & Store Tests (664 Tests)
 npm --prefix frontend test
@@ -186,8 +185,8 @@ npm --prefix frontend test
 |---|---|
 | [**`openspec/specs/`**](openspec/specs/) | Single source of truth for modular capability specifications, requirements, and acceptance criteria. |
 | [**`openspec/changes/`**](openspec/changes/) | Active lifecycle change proposals, delta specs, technical designs, and task checklists. |
-| [**`TechDaily.Api/Endpoints/`**](backend/src/TechDaily.Api/Endpoints/) | Executable Minimal API endpoint contracts with interactive Scalar API Reference at `/scalar/v1`. |
-| [**`TechDaily.Domain/Entities/`**](backend/src/TechDaily.Domain/Entities/) | Executable domain models, EF Core migrations, and pgvector schema definitions. |
+| [**`DeepPace.Api/Endpoints/`**](backend/src/DeepPace.Api/Endpoints/) | Executable Minimal API endpoint contracts with interactive Scalar API Reference at `/scalar/v1`. |
+| [**`DeepPace.Domain/Entities/`**](backend/src/DeepPace.Domain/Entities/) | Executable domain models, EF Core migrations, and pgvector schema definitions. |
 
 ---
 

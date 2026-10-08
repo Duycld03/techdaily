@@ -263,6 +263,8 @@ onMounted(async () => {
   // Load saved completed slices from localStorage
   try {
     const savedCompleted = localStorage.getItem(
+      `deeppace_completed_${bookId.value}`,
+    ) || localStorage.getItem(
       `techdaily_completed_${bookId.value}`,
     );
     if (savedCompleted) {
@@ -289,6 +291,8 @@ onMounted(async () => {
       activeChunkIndex.value = querySlice - 1;
     } else {
       const savedBookmark = localStorage.getItem(
+        `deeppace_bookmark_${bookId.value}`,
+      ) || localStorage.getItem(
         `techdaily_bookmark_${bookId.value}`,
       );
       if (savedBookmark) {
@@ -459,7 +463,7 @@ function markCurrentSliceCompleted() {
   completedSlices.value.add(currentChunk.value.chunkOrder);
   try {
     localStorage.setItem(
-      `techdaily_completed_${bookId.value}`,
+      `deeppace_completed_${bookId.value}`,
       JSON.stringify(Array.from(completedSlices.value)),
     );
   } catch (e) {
@@ -483,7 +487,7 @@ function selectChunk(index: number) {
   // Save bookmark
   try {
     localStorage.setItem(
-      `techdaily_bookmark_${bookId.value}`,
+      `deeppace_bookmark_${bookId.value}`,
       chunkOrder.toString(),
     );
   } catch (e) {
