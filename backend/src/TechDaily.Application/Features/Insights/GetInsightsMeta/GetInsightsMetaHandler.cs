@@ -39,6 +39,27 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
             "Cache Stampede & XFetch",
             "Token Bucket Rate Limiting",
             "Circuit Breaker with Jitter"
+        },
+        [4] = new()
+        {
+            "Clean Code Refactoring",
+            "Design Patterns in Practice",
+            "Testing Invariants",
+            "Defensive Programming"
+        },
+        [5] = new()
+        {
+            "First Principles Thinking",
+            "Inversion (Pre-Mortem)",
+            "Second-Order Thinking",
+            "Probabilistic Thinking"
+        },
+        [6] = new()
+        {
+            "Atomic Habits & Cue Design",
+            "Deep Work 90m Blocks",
+            "Parkinson's Law",
+            "Context Switching Elimination"
         }
     };
 
@@ -89,6 +110,27 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
                 "Distributed Systems & Architecture",
                 "Thiết Kế Hệ Thống",
                 countMap.GetValueOrDefault(Category.SystemDesign, 0)
+            ),
+            new(
+                (int)Category.EngineeringCraft,
+                "craft",
+                "Software Craftsmanship",
+                "Kỹ Nghệ Phần Mềm",
+                countMap.GetValueOrDefault(Category.EngineeringCraft, 0)
+            ),
+            new(
+                (int)Category.MentalModels,
+                "mental_models",
+                "Mental Models & Decisions",
+                "Mô Hình Tư Duy & Ra Quyết Định",
+                countMap.GetValueOrDefault(Category.MentalModels, 0)
+            ),
+            new(
+                (int)Category.HabitsProductivity,
+                "habits",
+                "Habits & Deep Work",
+                "Thói Quen & Tập Trung Sâu",
+                countMap.GetValueOrDefault(Category.HabitsProductivity, 0)
             )
         };
 
@@ -106,7 +148,7 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
 
         var suggestedTopics = new Dictionary<int, List<string>>();
 
-        foreach (var categoryId in new[] { 0, 1, 2, 3 })
+        foreach (var categoryId in new[] { 0, 1, 2, 3, 4, 5, 6 })
         {
             var topicsForCat = dbTopicGroups.TryGetValue(categoryId, out var dbTopics)
                 ? dbTopics

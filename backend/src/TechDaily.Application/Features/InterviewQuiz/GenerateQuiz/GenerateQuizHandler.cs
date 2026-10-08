@@ -200,6 +200,10 @@ public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizRes
     private static Category InferCategoryFromTopic(string topic)
     {
         var lower = topic.ToLowerInvariant();
+        if (lower.Contains("habit") || lower.Contains("thói quen") || lower.Contains("deep work") || lower.Contains("focus") || lower.Contains("tập trung") || lower.Contains("productivity") || lower.Contains("procrastination"))
+            return Category.HabitsProductivity;
+        if (lower.Contains("mental model") || lower.Contains("tư duy") || lower.Contains("decision") || lower.Contains("ra quyết định") || lower.Contains("stoic") || lower.Contains("khắc kỷ") || lower.Contains("psychology"))
+            return Category.MentalModels;
         if (lower.Contains("postgres") || lower.Contains("sql") || lower.Contains("database") || lower.Contains("redis") || lower.Contains("mongo"))
             return Category.DatabaseStorage;
         if (lower.Contains("vue") || lower.Contains("react") || lower.Contains("frontend") || lower.Contains("css") || lower.Contains("browser") || lower.Contains("javascript") || lower.Contains("typescript"))

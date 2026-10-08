@@ -31,7 +31,7 @@ const props = withDefaults(
     disableAutoAdvance?: boolean
   }>(),
   {
-    bookTitle: 'TechDaily',
+    bookTitle: 'DeepPace',
     disableAutoAdvance: false,
   },
 )
@@ -207,7 +207,7 @@ watch([() => props.chunk, playing], ([chunk, isPlaying]) => {
   if (isPlaying && chunk) {
     updateMediaSessionMetadata({
       title: chunk.title || `Slice #${chunk.chunkIndex ?? 1}`,
-      artist: 'TechDaily Reader',
+      artist: 'DeepPace Reader',
       album: props.bookTitle || 'Technical Documentation',
     })
   }

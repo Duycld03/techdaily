@@ -3,6 +3,10 @@ using TechDaily.Domain.Enums;
 
 namespace TechDaily.Domain.Entities;
 
+/// <summary>
+/// Represents a deliberate practice Decision Drill synthesized from a document chunk,
+/// supporting both technical architecture trade-offs and behavioral mindset scenarios.
+/// </summary>
 public class InterviewQuestion : BaseEntity
 {
     public Guid? DocumentChunkId { get; set; }

@@ -19,7 +19,7 @@ The system SHALL require authenticated user identity for all quiz generation, su
 ---
 
 ### Requirement: Structured AI Question Generation with Gemini
-The system SHALL generate batches of 5 to 10 multiple-choice questions tailored by topic and seniority level (Fresher, Junior, Middle, Senior) via Gemini 3.6 Flash.
+The system SHALL generate batches of 5 to 10 multiple-choice questions tailored by topic and mastery depth level (Foundation, Applied, Advanced, Mastery) via Gemini.
 
 #### Scenario: User requests a new quiz batch
 - **WHEN** an authenticated user submits `POST /api/v1/quiz/generate` with a valid topic (2-100 characters), category, level, and count (5 or 10)
@@ -220,7 +220,7 @@ The spaced repetition bridge SHALL guarantee idempotency for card creation acros
 - **THEN** the backend resets the existing card's review schedule to today and returns `HTTP 200 OK` without duplicating records.
 
 ### Requirement: Interview Quiz Studio Visual Layout & Interactive Tokens
-The `/quiz` route SHALL implement the **Dev-Learning Studio** visual language and 100% bilingual localization across all internal tabs (`generate`, `arena`, `summary`, `review`, `stats`):
+The `/quiz` route SHALL implement the **DeepPace Studio** visual language and 100% bilingual localization across all internal tabs (`generate`, `arena`, `summary`, `review`, `stats`):
 
 1. **Canvas & Container Consistency:**
    - The root `/quiz` container SHALL render over `dark:bg-canvas` (`#09090b` obsidian base) instead of legacy slate, utilizing a standard studio container width (`max-w-6xl mx-auto px-4 sm:px-6 py-6`) to prevent wide empty margins on desktop displays and align with `/library` and `/profile`.
@@ -244,7 +244,7 @@ The `/quiz` route SHALL implement the **Dev-Learning Studio** visual language an
    - When triggering quiz generation with an empty topic input, the generator SHALL safely fall back to the first available computed quick topic suggestion or a reliable default engineering topic, without throwing runtime reference errors.
    - Topic chips SHALL enforce `whitespace-nowrap shrink-0` with horizontal wrapping to maintain neat presentation.
 5. **Minimalist Typographic Seniority Level Matrix ($2 \times 2$ Grid)**:
-   - The 4 seniority tiers (`Fresher / Entry`, `Junior`, `Mid-Level`, `Senior / Staff`) SHALL render in an ergonomic $2 \times 2$ matrix (`grid grid-cols-1 sm:grid-cols-2 gap-3`) to equalize vertical height between the two studio columns.
+   - The 4 mastery depth tiers (`Foundation`, `Applied`, `Advanced`, `Mastery`) SHALL render in an ergonomic $2 \times 2$ matrix (`grid grid-cols-1 sm:grid-cols-2 gap-3`) to equalize vertical height between the two studio columns.
    - The level cards SHALL strictly prohibit decorative emojis, icon badges, and graphical embellishments to maintain a calm, professional engineering aesthetic.
    - Selected level cards SHALL indicate active state via subtle brand borders (`border-brand-500`), translucent background fill (`bg-brand-500/10`), a soft focus ring (`ring-1 ring-brand-500/30`), and a discrete circular accent dot (`w-2 h-2 rounded-full bg-brand-500`).
    - Unselected cards SHALL render neutral translucent surfaces (`border-slate-200/80 dark:border-white/[0.06] bg-white/60 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/[0.15]`).

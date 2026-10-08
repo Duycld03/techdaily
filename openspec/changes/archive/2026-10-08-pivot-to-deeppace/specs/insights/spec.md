@@ -1,9 +1,6 @@
-# Insights Specification
+# Spec Delta
 
-## Purpose
-Provides an infinite feed of bite-sized architectural tech insights (anti-patterns vs idiomatic solutions), on-demand AI insight generation via Gemini, and one-click bookmarking to personal notes.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Tech Insights Feed Data Model & Query API
 The system SHALL maintain a standalone `TechInsight` catalog and expose paginated/random browsing APIs alongside a dynamic metadata query endpoint `GET /api/v1/insights/meta`, adhering to the **DeepPace Studio** visual theme. Technical insights SHALL retain concrete code blocks (problematic vs idiomatic solution) with syntax highlighting, under-the-hood mechanics, and benchmark telemetry chips, while supporting both technical craft and mental model domains.
@@ -77,15 +74,6 @@ The system SHALL support generating fresh, high-impact craft insights on-demand 
 #### Scenario: User triggers AI insight generation
 - **WHEN** user sends `POST /api/v1/insights/generate` with a specified technical topic or category
 - **THEN** the system invokes Gemini to synthesize a concrete breakdown with syntax-highlighted code snippets and benchmark stats, saves the result to `TechInsights` table, and returns the newly created insight card.
-
 #### Scenario: User triggers mental model AI insight generation
 - **WHEN** user sends `POST /api/v1/insights/generate` with a mindset or cognitive focus topic
 - **THEN** the system invokes Gemini to synthesize a behavioral comparison analyzing naive friction versus optimal focus design, saves to `TechInsights`, and returns the card.
----
-
-### Requirement: Insight 1-Click Bookmark & Note Saving
-The system SHALL allow users to save insights directly to their personal notes or spaced repetition review deck.
-
-#### Scenario: User bookmarks an insight card
-- **WHEN** user clicks "Save to Notes" on an insight card
-- **THEN** the system persists the bookmark and increments the card's bookmark count.

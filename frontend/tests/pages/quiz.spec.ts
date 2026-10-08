@@ -140,10 +140,10 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
 
     // 3. Seniority Matrix Card (resolves legacy bug: all 4 distinct levels render!)
     expect(wrapper.text()).toContain('quiz.bento_seniority_title')
-    expect(wrapper.text()).toContain('Fresher / Entry')
-    expect(wrapper.text()).toContain('Junior')
-    expect(wrapper.text()).toContain('Mid-Level')
-    expect(wrapper.text()).toContain('Senior / Staff')
+    expect(wrapper.text()).toContain('Foundation')
+    expect(wrapper.text()).toContain('Applied')
+    expect(wrapper.text()).toContain('Advanced')
+    expect(wrapper.text()).toContain('Mastery')
 
     // 4. Topic Strengths & Weaknesses Card
     expect(wrapper.text()).toContain('quiz.bento_topic_title')

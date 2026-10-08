@@ -328,7 +328,7 @@ onUnmounted(() => {
 
           <div class="flex items-center gap-1.5 font-semibold text-brand-500">
             <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
-            TechDaily Studio
+            DeepPace Studio
           </div>
         </div>
       </div>

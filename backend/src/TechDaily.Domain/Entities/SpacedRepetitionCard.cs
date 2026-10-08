@@ -3,6 +3,10 @@ using TechDaily.Domain.Enums;
 
 namespace TechDaily.Domain.Entities;
 
+/// <summary>
+/// Represents an active recall flashcard scheduled via SuperMemo SM-2,
+/// retaining core mental models, behavioral habits, and deep technical patterns.
+/// </summary>
 public class SpacedRepetitionCard : BaseEntity
 {
     public Guid UserId { get; set; }

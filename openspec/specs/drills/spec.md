@@ -6,7 +6,7 @@ Provides multiple-choice Senior scenario challenges with instant grading, archit
 ## Requirements
 
 ### Requirement: Scenario Multiple-Choice Interview Question Domain Model
-The `InterviewQuestion` entity SHALL be sourced exclusively from a `DocumentChunk` via a mandatory `DocumentChunkId` foreign key, and SHALL NOT reference any `Topic` or `TopicId`. The entity SHALL include: 4 distinct answer choices (A, B, C, D) representing technical solutions, architectural decisions, or debugging actions; zero-based correct option index; detailed markdown explanation analyzing trade-offs; and difficulty tier. When the drill is not yet completed, the correct option index and explanation SHALL be masked from client-side responses.
+The `InterviewQuestion` entity SHALL be sourced exclusively from a `DocumentChunk` via a mandatory `DocumentChunkId` foreign key, and SHALL NOT reference any `Topic` or `TopicId`. The entity represents a practical decision drill, containing: 4 distinct answer choices (A, B, C, D) modeling technical solutions, architectural decisions, or behavioral strategies; zero-based correct option index; detailed markdown trade-off analysis; and difficulty tier. Uncompleted drills mask the correct answer.
 
 #### Scenario: User queries unattempted drill question
 - **WHEN** user calls `GET /api/v1/daily/today` for an uncompleted drill
@@ -82,12 +82,12 @@ If AI scenario synthesis fails or exceeds a 6-second threshold, the system SHALL
 - **THEN** challenge pane presents an elegant fallback card with a "Retry Scenario Generation" action button and standard architectural discussion prompts for that chapter.
 
 ### Requirement: Architectural Trade-off Challenge Representation
-The Senior Scenario challenge on `/today` (`InterviewChallengePane.vue`) SHALL present architectural problem statements with explicit production constraints (e.g. throughput requirements, latency SLA, consistency level, disaster recovery tolerances). Answer choices SHALL represent distinct architectural designs or engineering strategies rather than trivia facts.
+The decision challenge on `/today` (`InterviewChallengePane.vue`) SHALL present contextual problem statements with explicit real-world constraints across both software craftsmanship (latency, throughput, consistency) and human craft (cognitive focus, habit formation, leadership trade-offs). Answer choices SHALL represent distinct strategies or operational designs rather than trivia facts.
 
 #### Scenario: User views an unattempted Trade-off Challenge
 - **WHEN** user views `/today` challenge pane
-- **THEN** system displays the scenario title, production context badge (e.g., "High-Throughput Ingestion", "FinTech Consistency"), constraints summary, and interactive architecture proposal cards.
-- **THEN** each proposal card clearly presents the architectural approach without revealing the optimal choice indicator prior to submission.
+- **THEN** system displays the scenario title, context badge (e.g., "High-Throughput Ingestion", "Deep Focus Environment"), constraints summary, and interactive proposal cards.
+- **THEN** each proposal card clearly presents the approach without revealing the optimal choice indicator prior to submission.
 
 #### Scenario: User submits their architectural choice
 - **WHEN** user selects an architecture proposal and clicks "Submit Decision"
@@ -96,9 +96,9 @@ The Senior Scenario challenge on `/today` (`InterviewChallengePane.vue`) SHALL p
 #### Scenario: Principal Architect Review display
 - **WHEN** challenge state transitions to reviewed
 - **THEN** system reveals:
-  1. The optimal architectural choice badge (`Optimal Choice`) and the user's choice badge (`Your Choice`).
-  2. The deep-dive architectural explanation detailing why the chosen pattern satisfies the SLA/constraints.
-  3. The structural breakdown of failure modes for the alternative options (e.g., why Optimistic Locking causes high retry storms at 30k RPS, or why Distributed Locking introduces single-point-of-failure bottlenecks).
+  1. The optimal choice badge (`Optimal Choice`) and the user's choice badge (`Your Choice`).
+  2. The deep-dive explanation detailing why the chosen pattern satisfies constraints.
+  3. The structural breakdown of failure modes for the alternative options.
 
 ### Requirement: Daily Drill Status Resiliency & State Deserialization
 The daily interview challenge components (`InterviewChallengePane.vue` and `today.vue`) SHALL handle both string (`"Reviewed"`, `"reviewed"`, `"Submitted"`) and integer (`2`, `1`) representations of `DrillStatus`. Upon page refresh, when a previously completed drill is retrieved from `GET /api/v1/daily/today`, the interface SHALL preserve the reviewed state, restore the user's selected option, and display the score, architectural explanation, and header completed badge without reverting to an unsubmitted state.

@@ -8,7 +8,7 @@ describe('AppLogo.vue', () => {
     const svg = wrapper.find('svg')
     expect(svg.exists()).toBe(true)
     expect(svg.attributes('role')).toBe('img')
-    expect(svg.attributes('aria-label')).toBe('TechDaily')
+    expect(svg.attributes('aria-label')).toBe('DeepPace')
     expect(svg.attributes('width')).toBe('32px')
     expect(svg.attributes('height')).toBe('32px')
   })

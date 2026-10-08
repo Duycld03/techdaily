@@ -32,8 +32,8 @@ describe('components/layout/AppChrome', () => {
 
       const header = wrapper.find('header')
       expect(header.exists()).toBe(true)
-      expect(wrapper.text()).toContain('TechDaily')
-      expect(wrapper.find('svg[aria-label="TechDaily"]').exists()).toBe(true)
+      expect(wrapper.text()).toContain('DeepPace')
+      expect(wrapper.find('svg[aria-label="DeepPace"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="streak-badge-stub"]').exists()).toBe(true)
     })
 

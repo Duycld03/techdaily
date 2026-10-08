@@ -42,9 +42,9 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAi
         string locale = "en",
         CancellationToken cancellationToken = default)
     {
-        var categoryName = preferredCategory?.ToString() ?? "Senior Fullstack / .NET / Postgres / Distributed Systems";
+        var categoryName = preferredCategory?.ToString() ?? "Software Craftsmanship / Performance / Mental Models";
         var topicPrompt = string.IsNullOrWhiteSpace(preferredTopic)
-            ? "a deep, surprising senior-level performance or architectural trick (under the hood)"
+            ? "a deep, surprising senior-level performance trick or high-leverage mental model"
             : preferredTopic;
 
         var isVi = locale.Equals("vi", StringComparison.OrdinalIgnoreCase);
@@ -58,12 +58,16 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAi
         try
         {
             var cleanTopic = topicPrompt.Trim();
-            var broadKeywords = new[] { "asp.net", "c#", ".net", "dotnet", "postgres", "postgresql", "sql", "database", "react", "vue", "frontend", "system design", "architecture", "docker", "kafka", "redis", "go", "golang", "rust", "python" };
+            var isMindsetCategory = preferredCategory is Category.MentalModels or Category.HabitsProductivity;
+            var mindsetKeywords = new[] { "habit", "habits", "thói quen", "tập trung", "deep work", "mindset", "tư duy", "mental model", "stoic", "khắc kỷ", "decision", "ra quyết định", "productivity", "hiệu suất", "willpower", "ý chí", "dopamine", "procrastination", "trì hoãn" };
+            var isMindsetTopic = isMindsetCategory || mindsetKeywords.Any(k => cleanTopic.Contains(k, StringComparison.OrdinalIgnoreCase));
+
+            var broadKeywords = new[] { "asp.net", "c#", ".net", "dotnet", "postgres", "postgresql", "sql", "database", "react", "vue", "frontend", "system design", "architecture", "docker", "kafka", "redis", "go", "golang", "rust", "python", "habit", "mindset", "focus" };
             var isBroad = string.IsNullOrWhiteSpace(preferredTopic) ||
                           cleanTopic.Length <= 25 ||
                           broadKeywords.Any(k => cleanTopic.Equals(k, StringComparison.OrdinalIgnoreCase) || cleanTopic.Equals($"về {k}", StringComparison.OrdinalIgnoreCase));
 
-            var exploratoryLenses = new[]
+            var techLenses = new[]
             {
                 "Memory Allocations, GC Generations & Zero-Copy Buffers (ArrayPool, Span/Memory, Sockets)",
                 "High-Throughput Concurrency, Lock-Free Internals & ThreadPool Scheduling",
@@ -74,6 +78,20 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAi
                 "Distributed Caching, Tag Eviction & Cache Stampede Mitigations",
                 "Resilience, Circuit Breakers, Partitioned Rate Limiting & Resource Throttling"
             };
+
+            var mindsetLenses = new[]
+            {
+                "Prefrontal Cortex & Willpower Depletion (Overcoming Decision Fatigue)",
+                "Dopamine Prediction Error & Habit Cue Inversion (Cue-Craving-Response-Reward)",
+                "Attention Residue, Context Switching & Deep Work 90-Minute Timeboxes",
+                "Inversion Mental Model & Anti-Goal Setting (Stoicism, Charlie Munger Pre-Mortem)",
+                "Parkinson's Law, Eisenhower Matrix & Asymmetric Leverage Systems",
+                "Confirmation Bias, Sunk Cost Fallacy & Probabilistic Decision Making",
+                "Energy Management, Ultradian Rhythms & Recovery Protocols",
+                "High-Friction Environment Design & Habit Stacking"
+            };
+
+            var exploratoryLenses = isMindsetTopic ? mindsetLenses : techLenses;
             var randomLens = exploratoryLenses[Random.Shared.Next(exploratoryLenses.Length)];
 
             var antiDuplicationClause = existingTitlesToAvoid != null && existingTitlesToAvoid.Any()
@@ -88,9 +106,37 @@ If the user's topic relates to an existing insight, you MUST explore a fresh sub
                 ? $"The user provided a broad topic ('{topicPrompt}'). You MUST explore it through the lens of '{randomLens}' or pick an unexpected deep under-the-hood sub-system."
                 : $"The user provided a specific topic ('{topicPrompt}'). Focus directly, deeply, and strictly on this requested topic and its under-the-hood implementation mechanics.";
 
-            var systemInstruction = $@"
+            string systemInstruction;
+            if (isMindsetTopic)
+            {
+                systemInstruction = $@"
+You are an Executive Strategist and Cognitive Performance Scientist specializing in Mental Models, Behavioral Systems, and Deliberate Practice.
+Generate an authoritative, bite-sized DeepPace Insight on the requested personal mastery or mental model topic.
+{topicInstruction}
+Focus on neurobiological mechanisms, cognitive friction reduction, habit loops, or probabilistic decision making.
+Provide realistic contrast models (naive behavioral trap vs optimal deliberate practice pattern) and impact statistics.
+{antiDuplicationClause}
+Language of explanations: {(isVi ? "Vietnamese (Technical terminology in English with Vietnamese explanations)" : "English")}.
+Respond strictly in valid JSON adhering to this schema:
+{{
+  ""title"": ""Catchy, precise insight title"",
+  ""category"": {(preferredCategory.HasValue ? (int)preferredCategory.Value : 5)},
+  ""tags"": [""tag1"", ""tag2""],
+  ""summaryMarkdown"": ""Markdown summary explaining why the naive instinct causes friction and why the deliberate practice pattern succeeds."",
+  ""problemSnippet"": ""// ❌ TRAP: Naive behavioral pattern, reliance on raw willpower, multitasking"",
+  ""solutionSnippet"": ""// ✅ DELIBERATE MODEL: Asymmetric leverage, environment design, systematic routine"",
+  ""underTheHoodMarkdown"": ""### Under The Hood Mechanics\\n- Deep dive into neurobiology, cognitive load theory, or behavioral economics."",
+  ""benchmarkStats"": ""⚡ Impact metric (e.g. +3h deep work/day | 0 cognitive fatigue | 80% friction removed)"",
+  ""sourceUrl"": ""https://...""
+}}
+Category mapping: 0=FrontendWeb, 1=BackendRuntime, 2=DatabaseStorage, 3=SystemDesign, 4=EngineeringCraft, 5=MentalModels, 6=HabitsProductivity.
+No markdown backticks around JSON.";
+            }
+            else
+            {
+                systemInstruction = $@"
 You are a Principal Software Architect and Staff Engineer.
-Generate an authoritative, bite-sized Senior Technical Insight on the requested topic or language.
+Generate an authoritative, bite-sized DeepPace Insight on the requested technical topic or language.
 IMPORTANT: If the user's prompt mentions or implies a specific language or technology (such as Rust, Go, Python, C#, TypeScript, Vue, React, PostgreSQL, Docker, Kafka, etc.), you MUST write the code snippets (`problemSnippet`, `solutionSnippet`) strictly in that requested language! Never default to C# unless C# or .NET was requested.
 {topicInstruction}
 Focus on under-the-hood runtime mechanisms, memory allocation savings, zero-cost abstractions, or latency optimizations.
@@ -99,8 +145,8 @@ Provide realistic, concrete code snippets (bad/naive pattern vs senior optimal p
 Language of explanations: {(isVi ? "Vietnamese (Technical terminology in English with Vietnamese explanations)" : "English")}.
 Respond strictly in valid JSON adhering to this schema:
 {{
-  ""title"": ""Catchy, precise senior title"",
-  ""category"": 3,
+  ""title"": ""Catchy, precise craft title"",
+  ""category"": {(preferredCategory.HasValue ? (int)preferredCategory.Value : 3)},
   ""tags"": [""tag1"", ""tag2""],
   ""summaryMarkdown"": ""Markdown summary explaining why the naive pattern is suboptimal and why the senior pattern is superior."",
   ""problemSnippet"": ""// ❌ BAD: snippet showing naive or anti-pattern"",
@@ -109,9 +155,9 @@ Respond strictly in valid JSON adhering to this schema:
   ""benchmarkStats"": ""⚡ Benchmark metric (e.g. 10x faster | 0 B allocated)"",
   ""sourceUrl"": ""https://docs...""
 }}
-Category mapping: 0=FrontendWeb, 1=BackendRuntime, 2=DatabaseStorage, 3=SystemDesign, 4=EngineeringCraft.
+Category mapping: 0=FrontendWeb, 1=BackendRuntime, 2=DatabaseStorage, 3=SystemDesign, 4=EngineeringCraft, 5=MentalModels, 6=HabitsProductivity.
 No markdown backticks around JSON.";
-
+            }
             var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
             var promptText = isBroad
                 ? $"User requested topic: '{topicPrompt}'. Preferred category: {categoryName}. Exploratory focus angle: '{randomLens}'. Generate a unique, authoritative, non-repetitive Senior Technical Insight."
@@ -655,12 +701,20 @@ No markdown backticks around JSON.";
         var isVi = locale.Equals("vi", StringComparison.OrdinalIgnoreCase);
         var levelName = level switch
         {
-            QuizLevel.Fresher => "Fresher / Entry-Level (Fundamentals, Syntax, Core Concepts)",
-            QuizLevel.Junior => "Junior Engineer (Practical Usage, Standard Library, Basic Debugging)",
-            QuizLevel.Middle => "Mid-Level Engineer (Design Patterns, Concurrency, SQL Optimization, Clean Code)",
-            QuizLevel.Senior => "Senior / Staff Engineer (Under-the-hood Mechanics, Runtime/Engine Internals, Memory Overhead, High-Throughput Trade-offs)",
-            _ => "Senior Engineer"
+            QuizLevel.Foundation => "Foundation (Core Principles, Definitions, Primary Mechanisms)",
+            QuizLevel.Applied => "Applied (Practical Real-World Application, Common Traps & Antipatterns)",
+            QuizLevel.Advanced => "Advanced (Complex Systems, Cross-Discipline Integration, Nuanced Trade-offs)",
+            QuizLevel.Mastery => "Mastery (High-Leverage Architecture, Under-the-Hood Dynamics, Systemic Optimization)",
+            _ => "Mastery"
         };
+
+        var isMindsetCategory = category is Category.MentalModels or Category.HabitsProductivity;
+        var roleTitle = isMindsetCategory
+            ? "Master Decision Strategist and Cognitive Performance Mentor"
+            : "Principal Software Architect and Staff Engineer";
+        var questionFocus = isMindsetCategory
+            ? "practical decision scenarios, behavioral trade-offs, habit loops, mental models, or cognitive focus strategies"
+            : "practical engineering knowledge, conceptual depth, runtime mechanics, or architectural trade-offs";
 
         if (string.IsNullOrWhiteSpace(_apiKey))
         {
@@ -671,10 +725,10 @@ No markdown backticks around JSON.";
         try
         {
             var systemInstruction = $@"
-You are a Principal Software Architect and Lead Technical Interviewer.
-Your task is to generate exactly {count} realistic, challenging, high-quality multiple-choice technical interview questions for the level '{levelName}'.
+You are a {roleTitle}.
+Your task is to generate exactly {count} realistic, challenging, high-quality multiple-choice Decision Drill questions for the mastery level '{levelName}'.
 Rules:
-1. Each question MUST test practical engineering knowledge, conceptual depth, or architectural trade-offs.
+1. Each question MUST test {questionFocus}.
 2. Each question MUST have EXACTLY 4 distinct option strings in the `options` array (no fewer, no more).
 3. `correctOptionIndex` MUST be an integer from 0 to 3 pointing to the single optimal/correct answer.
 4. `explanationMarkdown` MUST be detailed markdown (using bold, code backticks, bullet points) explaining:
@@ -702,8 +756,7 @@ Respond strictly in valid JSON adhering to this schema:
 No markdown backticks around JSON.";
 
             var requestUri = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent";
-            var promptText = $"Generate {count} multiple-choice interview questions on topic '{topic}' in category {category} for level {level}.";
-
+            var promptText = $"Generate {count} multiple-choice Decision Drill questions on topic '{topic}' in category {category} for mastery level '{levelName}'.";
             var requestPayload = new
             {
                 contents = new[]
@@ -1062,14 +1115,14 @@ No markdown backticks around JSON.";
 
             var isVi = !string.IsNullOrWhiteSpace(language) && language.Trim().ToLowerInvariant().StartsWith("vi");
             string systemInstruction;
-            if (category == Category.EngineeringCraft)
+            var isMindsetOrBehavioral = category is Category.EngineeringCraft or Category.MentalModels or Category.HabitsProductivity;
+            if (isMindsetOrBehavioral)
             {
                 if (isVi)
                 {
                     systemInstruction = $@"
-You are a Principal Software Engineer and Leadership Coach specializing in Engineering Craft, Cognitive Habits, and Productivity Systems.
-Your task is to convert raw extracted text from an engineering leadership, productivity, or mindset book into a structured TechInsight-style reading slice.
-
+You are an Executive Coach and Master Strategist specializing in Deliberate Practice, Cognitive Habits, and High-Performance Systems.
+Your task is to convert raw extracted text from a personal growth, productivity, or mindset book into a structured DeepPace reading slice.
 CRITICAL LANGUAGE INVARIANT:
 The document is written in VIETNAMESE. All generated additions—including executive notes (> [!NOTE]), alerts (> [!TIP], > [!WARNING], > [!IMPORTANT]), summary overview, key takeaways, and scenario challenges—MUST be written in natural, fluent VIETNAMESE. NEVER output English callouts, English bullet points, or English scenarios for this Vietnamese document.
 
@@ -1126,9 +1179,8 @@ Respond strictly in valid JSON without markdown wrapping:
                 else
                 {
                     systemInstruction = $@"
-You are a Principal Software Engineer and Leadership Coach specializing in Engineering Craft, Cognitive Habits, and Productivity Systems.
-Your task is to convert raw extracted text from an engineering leadership, productivity, or mindset book into a structured TechInsight-style reading slice.
-
+You are an Executive Coach and Master Strategist specializing in Deliberate Practice, Cognitive Habits, and High-Performance Systems.
+Your task is to convert raw extracted text from a personal growth, productivity, or mindset book into a structured DeepPace reading slice.
 MANDATORY RULES:
 1. Document Heading: Start immediately with '# {chapterTitle}' as the top-level H1 header.
 2. Context Note: Follow directly with an executive context callout:
@@ -1186,8 +1238,7 @@ Respond strictly in valid JSON without markdown wrapping:
                 {
                     systemInstruction = $@"
 You are a Principal Software Architect and Technical Editor.
-Your task is to convert raw extracted text from a technical book or documentation chapter into a standardized TechInsight-style Markdown reading article.
-
+Your task is to convert raw extracted text from a technical book or documentation chapter into a standardized DeepPace Markdown reading article.
 CRITICAL LANGUAGE INVARIANT:
 The document is written in VIETNAMESE. All generated additions—including executive notes (> [!NOTE]), architectural alerts (> [!TIP], > [!WARNING], > [!IMPORTANT]), summary overview, key takeaways, and scenario challenges—MUST be written in natural, fluent VIETNAMESE. NEVER output English callouts, English bullet points, or English scenarios for this Vietnamese document.
 
@@ -1242,8 +1293,7 @@ Respond strictly in valid JSON without markdown wrapping:
                 {
                     systemInstruction = $@"
 You are a Principal Software Architect and Technical Editor.
-Your task is to convert raw extracted text from a technical book or documentation chapter into a standardized TechInsight-style Markdown reading article.
-
+Your task is to convert raw extracted text from a technical book or documentation chapter into a standardized DeepPace Markdown reading article.
 MANDATORY RULES:
 1. Document Heading: Start immediately with '# {chapterTitle}' as the top-level H1 header.
 2. Context Note: Follow directly with a brief executive context callout:

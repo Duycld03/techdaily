@@ -157,9 +157,9 @@ builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, context, cancellationToken) =>
     {
-        document.Info.Title = "TechDaily API Reference";
+        document.Info.Title = "DeepPace API Reference";
         document.Info.Version = "v1";
-        document.Info.Description = "Daily Senior Engineering & Interview Drill Platform API. Interactive developer reference for all Minimal API endpoints, domain contracts, and RFC 7807 problem details.";
+        document.Info.Description = "DeepPace deliberate daily practice platform API. Interactive reference for all Minimal API endpoints, domain contracts, and RFC 7807 problem details.";
 
         var scheme = new OpenApiSecurityScheme
         {
@@ -212,7 +212,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference(options =>
     {
-        options.WithTitle("TechDaily API Reference")
+        options.WithTitle("DeepPace API Reference")
                .WithTheme(ScalarTheme.Moon)
                .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
     });

@@ -45,7 +45,7 @@ public class GetQuizStatsHandler : IUseCase<GetQuizStatsRequest, GetQuizStatsRes
         var totalCorrect = progresses.Sum(p => p.CorrectCount);
         var accuracyRate = totalAttempts > 0 ? Math.Round((decimal)totalCorrect / totalAttempts * 100, 1) : 0m;
 
-        var levelBreakdown = Enum.GetValues<QuizLevel>().Select(lvl =>
+        var levelBreakdown = Enum.GetValues<QuizLevel>().Distinct().Select(lvl =>
         {
             var lvlProgs = progresses.Where(p => p.Question.Level == lvl).ToList();
             var lvlAttempts = lvlProgs.Sum(p => p.CorrectCount + p.IncorrectCount);

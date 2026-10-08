@@ -1,9 +1,9 @@
 <script lang="ts">
 export const seniorityLevels = [
-  { id: 0, key: 'level_fresher', label: 'Fresher / Entry', desc: 'Core syntax, OOP, basic algorithms' },
-  { id: 1, key: 'level_junior', label: 'Junior', desc: 'Framework APIs, standard libraries, debugging' },
-  { id: 2, key: 'level_middle', label: 'Mid-Level', desc: 'Design patterns, concurrency, SQL tuning' },
-  { id: 3, key: 'level_senior', label: 'Senior / Staff', desc: 'Under-the-hood runtime, memory trade-offs' }
+  { id: 0, key: 'level_fresher', label: 'Foundation', desc: 'Core principles, primary mechanisms & syntax' },
+  { id: 1, key: 'level_junior', label: 'Applied', desc: 'Practical execution, common edge cases & patterns' },
+  { id: 2, key: 'level_middle', label: 'Advanced', desc: 'Complex trade-offs, architecture & integration' },
+  { id: 3, key: 'level_senior', label: 'Mastery', desc: 'Under-the-hood dynamics & high-leverage systems' }
 ]
 
 export function formatSeniorityLevel(level: string | number) {
@@ -11,10 +11,10 @@ export function formatSeniorityLevel(level: string | number) {
     return seniorityLevels[level] || seniorityLevels[3]
   }
   const levelStr = String(level).trim().toLowerCase()
-  if (levelStr === 'fresher' || levelStr === '0') return seniorityLevels[0]
-  if (levelStr === 'junior' || levelStr === '1') return seniorityLevels[1]
-  if (levelStr === 'middle' || levelStr === 'mid' || levelStr === '2') return seniorityLevels[2]
-  if (levelStr === 'senior' || levelStr === '3') return seniorityLevels[3]
+  if (levelStr === 'foundation' || levelStr === 'fresher' || levelStr === '0') return seniorityLevels[0]
+  if (levelStr === 'applied' || levelStr === 'junior' || levelStr === '1') return seniorityLevels[1]
+  if (levelStr === 'advanced' || levelStr === 'middle' || levelStr === 'mid' || levelStr === '2') return seniorityLevels[2]
+  if (levelStr === 'mastery' || levelStr === 'senior' || levelStr === '3') return seniorityLevels[3]
   return seniorityLevels[3]
 }
 </script>

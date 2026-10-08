@@ -111,11 +111,11 @@ export default defineNuxtConfig({
     pageTransition: false,
     layoutTransition: false,
     head: {
-      title: 'TechDaily - Daily Senior Engineering & System Design Focus',
+      title: 'DeepPace - Deep Learning & Daily Deliberate Practice',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Transform 30 mins into senior engineering mastery with daily architecture drills, SM-2 flashcards, and multimodal AI evaluation.' }
+        { name: 'description', content: 'Transform 15-30 minutes daily into enduring mastery with deliberate practice drills, SM-2 retention, and codecraft insights.' }
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },

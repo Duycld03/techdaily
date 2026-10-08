@@ -255,8 +255,8 @@ describe('pages/login.vue', () => {
     })
 
     // Brand stage
-    expect(wrapper.text()).toContain('TechDaily')
-    expect(wrapper.text()).toContain('TECHDAILY')
+    expect(wrapper.text()).toContain('DeepPace')
+    expect(wrapper.text()).toContain('DEEPPACE')
     // Right interactive auth card
     expect(wrapper.find('.glass-panel').exists()).toBe(true)
   })
@@ -411,7 +411,7 @@ describe('pages/login.vue', () => {
 
     const header = wrapper.find('header')
     expect(header.exists()).toBe(true)
-    expect(header.text()).toContain('TechDaily')
+    expect(header.text()).toContain('DeepPace')
     expect(wrapper.find('[data-testid="locale-selector"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="theme-toggle"]').exists()).toBe(true)
   })
@@ -535,7 +535,7 @@ describe('pages/login.vue', () => {
         }
       })
 
-      expect(wrapper.text()).toContain('TechDaily')
+      expect(wrapper.text()).toContain('DeepPace')
       expect(wrapper.text()).not.toContain('IDE')
       expect(wrapper.text()).not.toContain('v2.5.0-sys')
       expect(wrapper.text()).not.toContain('PING 18ms')
@@ -555,7 +555,7 @@ describe('pages/login.vue', () => {
       })
 
       // Left showcase elements
-      expect(wrapper.text()).toContain('TECHDAILY')
+      expect(wrapper.text()).toContain('DEEPPACE')
       expect(wrapper.text()).toContain('SM-2 ACTIVE RECALL')
       expect(wrapper.text()).toContain('auth.cockpit_title')
       expect(wrapper.text()).toContain('auth.session_interval_target')
@@ -565,7 +565,7 @@ describe('pages/login.vue', () => {
 
       // Live code card
       expect(wrapper.text()).toContain('auth.file_consensus')
-      expect(wrapper.text()).toContain('techDaily.getDailySlice')
+      expect(wrapper.text()).toContain('deepPace.getDailySlice')
     })
 
     it('renders interactive auth cockpit card with shortcut badges and session persistence', () => {
@@ -628,7 +628,7 @@ describe('pages/login.vue', () => {
         }
       })
 
-      const headerLogo = wrapper.find('header svg[aria-label="TechDaily"]')
+      const headerLogo = wrapper.find('header svg[aria-label="DeepPace"]')
       expect(headerLogo.exists()).toBe(true)
     })
   })

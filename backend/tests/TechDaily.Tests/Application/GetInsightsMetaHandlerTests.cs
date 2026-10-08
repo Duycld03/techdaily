@@ -47,7 +47,7 @@ public class GetInsightsMetaHandlerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         var response = result.Value;
 
-        response.Categories.Should().HaveCount(4);
+        response.Categories.Should().HaveCount(7);
 
         var cat0 = response.Categories.First(c => c.Id == 0);
         cat0.Key.Should().Be("frontend");
@@ -73,16 +73,37 @@ public class GetInsightsMetaHandlerTests : IDisposable
         cat3.LabelVi.Should().Be("Thiết Kế Hệ Thống");
         cat3.Count.Should().Be(0);
 
-        // Suggested topics should contain all 4 categories with defaults
+        var cat4 = response.Categories.First(c => c.Id == 4);
+        cat4.Key.Should().Be("craft");
+        cat4.LabelEn.Should().Be("Software Craftsmanship");
+        cat4.Count.Should().Be(0);
+
+        var cat5 = response.Categories.First(c => c.Id == 5);
+        cat5.Key.Should().Be("mental_models");
+        cat5.LabelEn.Should().Be("Mental Models & Decisions");
+        cat5.Count.Should().Be(0);
+
+        var cat6 = response.Categories.First(c => c.Id == 6);
+        cat6.Key.Should().Be("habits");
+        cat6.LabelEn.Should().Be("Habits & Deep Work");
+        cat6.Count.Should().Be(0);
+
+        // Suggested topics should contain all 7 categories with defaults
         response.SuggestedTopics.Should().ContainKey(0);
         response.SuggestedTopics.Should().ContainKey(1);
         response.SuggestedTopics.Should().ContainKey(2);
         response.SuggestedTopics.Should().ContainKey(3);
+        response.SuggestedTopics.Should().ContainKey(4);
+        response.SuggestedTopics.Should().ContainKey(5);
+        response.SuggestedTopics.Should().ContainKey(6);
 
         response.SuggestedTopics[0].Should().Contain("Vue 3 shallowRef vs reactive");
         response.SuggestedTopics[1].Should().Contain("Kestrel Socket Pipeline");
         response.SuggestedTopics[2].Should().Contain("PostgreSQL Index-Only Scan & INCLUDE");
         response.SuggestedTopics[3].Should().Contain("Transactional Outbox & CDC");
+        response.SuggestedTopics[4].Should().Contain("Clean Code Refactoring");
+        response.SuggestedTopics[5].Should().Contain("First Principles Thinking");
+        response.SuggestedTopics[6].Should().Contain("Atomic Habits & Cue Design");
     }
 
     [Fact]

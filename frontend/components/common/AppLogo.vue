@@ -9,8 +9,8 @@ const props = withDefaults(
   }>(),
   {
     size: 'md',
-    ariaLabel: 'TechDaily',
-    idPrefix: 'td-logo'
+    ariaLabel: 'DeepPace',
+    idPrefix: 'dp-logo'
   }
 )
 

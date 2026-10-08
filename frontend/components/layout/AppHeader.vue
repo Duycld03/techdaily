@@ -70,7 +70,7 @@ onUnmounted(() => {
 
       <NuxtLink to="/" class="flex items-center gap-2 font-bold tracking-tight hover:opacity-90 transition-opacity">
         <AppLogo size="md" id-prefix="header-logo" class="w-7 h-7 sm:w-8 sm:h-8" />
-        <span class="hidden sm:inline text-base sm:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-brand-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">TechDaily</span>
+        <span class="hidden sm:inline text-base sm:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-brand-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">DeepPace</span>
       </NuxtLink>
 
       <!-- Mobile Quick Search Trigger -->
@@ -171,7 +171,7 @@ onUnmounted(() => {
               <span
                 data-testid="mobile-nav-title"
                 class="text-base sm:text-lg font-black tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-brand-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent"
-              >TechDaily</span>
+              >DeepPace</span>
             </NuxtLink>
             <button
               @click="isMobileNavOpen = false"

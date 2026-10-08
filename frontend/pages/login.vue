@@ -435,7 +435,7 @@ async function handleResend() {
           <!-- Logo Icon -->
           <AppLogo size="md" id-prefix="login-logo" class="group-hover:scale-105 transition-transform duration-200" />
           <!-- Brand Title -->
-          <span class="text-base font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors">TechDaily</span>
+          <span class="text-base font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-brand-500 transition-colors">DeepPace</span>
         </NuxtLink>
 
         <!-- Language Switcher & Theme Control -->
@@ -459,7 +459,7 @@ async function handleResend() {
           <div class="flex items-center gap-2.5">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-brand-500/10 border border-brand-500/25 text-brand-600 dark:text-brand-300 font-mono text-xs tracking-wide uppercase">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-500 dark:bg-brand-400"></span>
-              <span>TECHDAILY</span>
+              <span>DEEPPACE</span>
               <span class="text-slate-300 dark:text-zinc-600">|</span>
               <span class="text-brand-600 dark:text-brand-400">SM-2 ACTIVE RECALL</span>
             </div>
@@ -524,7 +524,7 @@ async function handleResend() {
             </div>
             <!-- Code View -->
             <div class="p-4 font-mono text-[13px] leading-relaxed text-slate-800 dark:text-zinc-300 overflow-x-auto bg-slate-50 dark:bg-[#0d0d11]">
-              <p><span class="text-purple-600 dark:text-purple-400 font-semibold">const</span> <span class="text-blue-600 dark:text-blue-300">drill</span> = <span class="text-purple-600 dark:text-purple-400 font-semibold">await</span> techDaily.<span class="text-amber-600 dark:text-amber-300">getDailySlice</span>({</p>
+              <p><span class="text-purple-600 dark:text-purple-400 font-semibold">const</span> <span class="text-blue-600 dark:text-blue-300">drill</span> = <span class="text-purple-600 dark:text-purple-400 font-semibold">await</span> deepPace.<span class="text-amber-600 dark:text-amber-300">getDailySlice</span>({</p>
               <p class="pl-4"><span class="text-slate-500 dark:text-zinc-400">track</span>: <span class="text-emerald-600 dark:text-emerald-400">"Architecture &amp; Systems"</span>,</p>
               <p class="pl-4"><span class="text-slate-500 dark:text-zinc-400">spacedRepetition</span>: <span class="text-emerald-600 dark:text-emerald-400">"SM-2 Active Recall"</span>,</p>
               <p class="pl-4"><span class="text-slate-500 dark:text-zinc-400">targetTime</span>: <span class="text-emerald-600 dark:text-emerald-400">"5 Mins / Day"</span></p>
