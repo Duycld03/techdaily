@@ -61,12 +61,19 @@ function setTab(tab: SettingsTab | 'profile') {
 
 // 1. General & Learning Preferences State
 const name = ref('')
-const targetRole = ref('Senior Engineer')
+const targetRole = ref('Deep Work & Focus Practitioner')
 const dailyGoalMinutes = ref(10)
 const autoAdvanceCards = useStorage('techdaily-auto-advance-cards', true)
 const isSaving = ref(false)
 
-const difficultyOptions = computed(() => [
+const masteryTrackOptions = computed(() => [
+  // DeepPace Universal Mastery Tracks
+  { value: 'Deep Work & Focus Practitioner', label: t('settings.track_deep_work') },
+  { value: 'System Architect & Decision Maker', label: t('settings.track_system_architect') },
+  { value: 'Lifelong Polymath & Cognitive Explorer', label: t('settings.track_polymath') },
+  { value: 'Clean Code & Software Craftsperson', label: t('settings.track_clean_code') },
+  { value: 'Technical Leader & Engineering Mentor', label: t('settings.track_tech_lead') },
+  // Backward compatibility for existing users
   { value: 'Senior Engineer', label: t('settings.role_senior') },
   { value: 'Staff Engineer', label: t('settings.role_staff') },
   { value: 'Principal Architect', label: t('settings.role_principal') },
@@ -476,11 +483,11 @@ async function handleTimezoneChange(newTz: string | number) {
                 <!-- Row 1: Difficulty track & Daily goal -->
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5">
-                    {{ $t('settings.difficulty_track') }}
+                    {{ $t('settings.mastery_track') }}
                   </label>
                   <AppSelect
                     v-model="targetRole"
-                    :options="difficultyOptions"
+                    :options="masteryTrackOptions"
                     :icon="Briefcase"
                     :placeholder="$t('settings.select_track')"
                   />

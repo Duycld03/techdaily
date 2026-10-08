@@ -177,8 +177,8 @@ export function updateMediaSessionMetadata(payload: MediaSessionMetadataPayload)
   try {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: payload.title,
-      artist: payload.artist || 'TechDaily',
-      album: payload.album || 'TechDaily Reader',
+      artist: payload.artist || 'DeepPace',
+      album: payload.album || 'DeepPace Reader',
       artwork: payload.artwork || [],
     })
   } catch {

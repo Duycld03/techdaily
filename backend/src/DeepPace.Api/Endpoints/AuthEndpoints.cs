@@ -214,7 +214,7 @@ public static class AuthEndpoints
                     AvatarUrl = avatarUrl,
                     GoogleSubjectId = subject,
                     PreferredLocale = "vi",
-                    TargetRole = "Senior Engineer",
+                    TargetRole = "Deep Work & Focus Practitioner",
                     DailyGoalMinutes = 10
                 };
                 await db.Users.AddAsync(user);
@@ -245,7 +245,7 @@ public static class AuthEndpoints
                 }
                 if (string.IsNullOrWhiteSpace(user.TargetRole))
                 {
-                    user.TargetRole = "Senior Engineer";
+                    user.TargetRole = "Deep Work & Focus Practitioner";
                     updated = true;
                 }
                 if (user.DailyGoalMinutes <= 0)
@@ -378,7 +378,7 @@ public static class AuthEndpoints
                 Name = string.IsNullOrWhiteSpace(otp.PendingName) ? normalizedEmail.Split('@')[0] : otp.PendingName!,
                 PasswordHash = otp.PendingPasswordHash!,
                 PreferredLocale = otp.PendingLocale ?? "en",
-                TargetRole = "Senior Engineer",
+                TargetRole = "Deep Work & Focus Practitioner",
                 DailyGoalMinutes = 10
             };
 

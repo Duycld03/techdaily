@@ -105,7 +105,7 @@ describe('pages/login.vue', () => {
 
     await vi.waitFor(() => {
       expect(consoleWarnSpy).toHaveBeenCalledWith(
-        '[TechDaily Auth] Google Client ID is not configured. Google Sign-In is disabled.'
+        '[DeepPace Auth] Google Client ID is not configured. Google Sign-In is disabled.'
       )
     }, { timeout: 1000 })
 

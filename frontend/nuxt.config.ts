@@ -118,16 +118,50 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Transform 15-30 minutes daily into enduring mastery with deliberate practice drills, SM-2 retention, and codecraft insights.' }
+        { name: 'theme-color', content: '#09090b' },
+        { name: 'description', content: 'Transform 15-30 minutes daily into enduring mastery with deliberate practice drills, SM-2 retention, and codecraft insights.' },
+        // Open Graph Protocol
+        { property: 'og:site_name', content: 'DeepPace' },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:title', content: 'DeepPace - Deep Learning & Daily Deliberate Practice' },
+        { property: 'og:description', content: 'Transform 15-30 minutes daily into enduring mastery with deliberate practice drills, SM-2 retention, and codecraft insights.' },
+        { property: 'og:url', content: 'https://deeppace.duckdns.org' },
+        { property: 'og:image', content: 'https://deeppace.duckdns.org/favicon.svg' },
+        { property: 'og:locale', content: 'en_US' },
+        { property: 'og:locale:alternate', content: 'vi_VN' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'DeepPace - Deep Learning & Daily Deliberate Practice' },
+        { name: 'twitter:description', content: 'Transform 15-30 minutes daily into enduring mastery with deliberate practice drills, SM-2 retention, and codecraft insights.' },
+        { name: 'twitter:image', content: 'https://deeppace.duckdns.org/favicon.svg' }
       ],
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'canonical', href: 'https://deeppace.duckdns.org' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap' }
       ],
       script: [
-        { src: 'https://accounts.google.com/gsi/client', async: true, defer: true }
+        { src: 'https://accounts.google.com/gsi/client', async: true, defer: true },
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': ['WebApplication', 'EducationalApplication'],
+            name: 'DeepPace',
+            alternateName: 'TechDaily',
+            url: 'https://deeppace.duckdns.org',
+            description: 'Daily deliberate practice and senior engineering active recall platform with SM-2 spaced repetition and codecraft insights.',
+            applicationCategory: 'EducationalApplication',
+            operatingSystem: 'All',
+            offers: {
+              '@type': 'Offer',
+              price: '0',
+              priceCurrency: 'USD'
+            }
+          })
+        }
       ]
     }
   }

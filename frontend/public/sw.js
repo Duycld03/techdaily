@@ -10,13 +10,13 @@ self.addEventListener('push', function (event) {
       data: {
         url: payload.url || '/today'
       },
-      tag: payload.tag || 'techdaily-daily',
+      tag: payload.tag || 'deeppace-daily',
       renotify: true,
       requireInteraction: false
     };
 
     event.waitUntil(
-      self.registration.showNotification(payload.title || 'TechDaily', options)
+      self.registration.showNotification(payload.title || 'DeepPace', options)
     );
   } catch (err) {
     console.error('Error handling push event in Service Worker:', err);

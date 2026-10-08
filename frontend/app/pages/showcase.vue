@@ -18,7 +18,7 @@ import { useToast } from '~/composables/useToast'
 
 if (typeof useHead === 'function') {
   useHead({
-    title: 'Design System — TechDaily',
+    title: 'Design System — DeepPace',
     link: [
       {
         rel: 'stylesheet',

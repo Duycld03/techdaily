@@ -10,7 +10,7 @@ public class User : BaseEntity
     public string? GoogleSubjectId { get; set; }
     public string? PasswordHash { get; set; }
     public string PreferredLocale { get; set; } = "en"; // "en" or "vi"
-    public string TargetRole { get; set; } = "Senior Engineer";
+    public string TargetRole { get; set; } = "Deep Work & Focus Practitioner";
     public int DailyGoalMinutes { get; set; } = 10;
     public TimeOnly? PreferredStudyTime { get; set; } = new TimeOnly(8, 0);
     public TimeOnly? StreakAlertTime { get; set; } = new TimeOnly(20, 0);

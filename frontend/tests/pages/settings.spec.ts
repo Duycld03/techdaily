@@ -303,6 +303,56 @@ describe('SettingsPage Unified Navigation & Account Tabs', () => {
     expect(lastToast?.type).toBe('success')
   })
 
+  it('provides mastery track options including Deep Work and legacy tracks, and submits targetRole', async () => {
+    const wrapper = mount(SettingsPage, {
+      global: {
+        stubs: {
+          ThemeToggle: true,
+          LocaleSelector: true,
+          AppTimePicker: true,
+        }
+      }
+    })
+    await flushPromises()
+
+    const selectComponents = wrapper.findAllComponents(AppSelect)
+    const trackSelect = selectComponents.find(c => {
+      const opts = c.props('options') as Array<{ value: string; label: string }> | undefined
+      return opts?.some(o => o.value === 'Deep Work & Focus Practitioner')
+    })
+    expect(trackSelect).toBeDefined()
+    const options = trackSelect?.props('options') as Array<{ value: string; label: string }>
+    expect(options.some(o => o.value === 'Deep Work & Focus Practitioner')).toBe(true)
+    expect(options.some(o => o.value === 'System Architect & Decision Maker')).toBe(true)
+    expect(options.some(o => o.value === 'Senior Engineer')).toBe(true)
+
+    const profileStore = useProfileStore()
+    const updateSpy = vi.spyOn(profileStore, 'updateProfile').mockResolvedValueOnce({
+      id: 'usr-1',
+      email: 'test@deeppace.dev',
+      name: 'Deep Practitioner',
+      targetRole: 'Deep Work & Focus Practitioner',
+      dailyGoalMinutes: 15,
+      preferredLocale: 'en'
+    })
+
+    const nameInput = wrapper.find('input[type="text"]')
+    await nameInput.setValue('Deep Practitioner')
+
+    await trackSelect?.vm.$emit('update:modelValue', 'Deep Work & Focus Practitioner')
+
+    const form = wrapper.find('form')
+    await form.trigger('submit.prevent')
+    await flushPromises()
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Deep Practitioner',
+        targetRole: 'Deep Work & Focus Practitioner'
+      })
+    )
+  })
+
   it('submits password change on security tab', async () => {
     const wrapper = mount(SettingsPage, {
       global: {

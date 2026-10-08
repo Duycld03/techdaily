@@ -144,7 +144,7 @@ let tokenClient: any = null
 function initGoogleAuth() {
   if (typeof window === 'undefined') return
   if (!config.public.googleClientId) {
-    console.warn('[TechDaily Auth] Google Client ID is not configured. Google Sign-In is disabled.')
+    console.warn('[DeepPace Auth] Google Client ID is not configured. Google Sign-In is disabled.')
     return
   }
   const google = (window as any).google
@@ -162,7 +162,7 @@ function initGoogleAuth() {
               await navigateTo(getRedirectTarget())
             } catch (err: any) {
               const rawError = (err as any)?.data?.detail || (err as any)?.response?._data?.detail
-              console.error('[TechDaily Auth] Google login failed:', err, rawError)
+              console.error('[DeepPace Auth] Google login failed:', err, rawError)
               const formatted = formatError(err, 'auth.toast_google_failed')
               errorMessage.value = rawError ? `${formatted} (${rawError})` : formatted
               toast.error(errorMessage.value)
@@ -170,12 +170,12 @@ function initGoogleAuth() {
               isLoading.value = false
             }
           } else if (tokenResponse?.error) {
-            console.warn('[TechDaily Auth] Google OAuth error:', tokenResponse.error)
+            console.warn('[DeepPace Auth] Google OAuth error:', tokenResponse.error)
           }
         }
       })
     } catch (e) {
-      console.warn('[TechDaily Auth] OAuth2 initTokenClient failed:', e)
+      console.warn('[DeepPace Auth] OAuth2 initTokenClient failed:', e)
     }
   }
 
@@ -237,7 +237,7 @@ async function handleGoogleCredentialResponse(response: any) {
     await navigateTo(getRedirectTarget())
   } catch (err: any) {
     const rawError = (err as any)?.data?.detail || (err as any)?.response?._data?.detail
-    console.error('[TechDaily Auth] Google login failed:', err, rawError)
+    console.error('[DeepPace Auth] Google login failed:', err, rawError)
     const formatted = formatError(err, 'auth.toast_google_failed')
     errorMessage.value = rawError ? `${formatted} (${rawError})` : formatted
     toast.error(errorMessage.value)

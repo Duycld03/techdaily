@@ -1,2 +1,61 @@
+# ==============================================================================
+# DeepPace (formerly TechDaily) — Robots & Crawler Directives
+# ==============================================================================
+
+# Block aggressive AI scrapers and automated training harvesters
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Anthropic-ai
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+# Directives for legitimate search engines (Googlebot, Bingbot, etc.)
 User-agent: *
+# Allowed public entry points & client rendering assets
 Allow: /
+Allow: /login
+Allow: /register
+Allow: /_nuxt/
+Allow: /favicon.*
+Allow: /icons/
+
+# Disallow private authenticated user workflows
+Disallow: /today
+Disallow: /read/
+Disallow: /library
+Disallow: /quiz
+Disallow: /review
+Disallow: /notes
+Disallow: /graph
+Disallow: /roadmap
+Disallow: /settings
+Disallow: /profile
+Disallow: /showcase
+
+# Disallow backend service routes & API documentation
+Disallow: /api/
+Disallow: /scalar/
+Disallow: /health
+Disallow: /uploads/
+
+# Canonical Sitemaps
+Sitemap: https://techdaily.duckdns.org/sitemap.xml
+Sitemap: https://deeppace.duckdns.org/sitemap.xml

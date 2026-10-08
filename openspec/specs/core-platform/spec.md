@@ -43,14 +43,25 @@ The system SHALL support signing in with Google via Google Identity Services (GI
 ---
 
 ### Requirement: User Profile Management, Route Guards & Security
-The user profile endpoints (`GET /api/v1/user/profile`, `PUT /api/v1/user/profile`, `PUT /api/v1/user/change-password`) SHALL support managing user study schedules, streak preservation alert preferences, IANA timezones, and browser push status alongside existing profile properties, protected with strict JWT Bearer authentication, reject unauthenticated requests with `HTTP 401 Unauthorized`, and enforce route middleware guards on protected frontend pages.
+The user profile management subsystem (`GET /api/v1/user/profile`, `PUT /api/v1/user/profile`, `PUT /api/v1/user/change-password`, `pages/settings.vue`) SHALL support managing user identity, multi-disciplinary mastery tracks (`TargetRole`), daily study pace (`DailyGoalMinutes`), study schedules, and notification alert preferences, protected with strict JWT Bearer authentication, reject unauthenticated requests with `HTTP 401 Unauthorized`, and enforce route middleware guards on protected frontend pages.
+
+1. **Mastery Tracks in Settings**:
+   - The user profile settings in `/settings` SHALL present the field as **Mastery Track** (`settings.mastery_track`, "Lộ trình rèn luyện chuyên sâu"), replacing legacy single-track interview difficulty labels.
+   - The available options SHALL offer diverse, technology-agnostic deliberate practice tracks:
+     - `Deep Work & Focus Practitioner` ("Thực Hành Tập Trung Sâu & Nhịp Sống Bền Vững")
+     - `System Architect & Decision Maker` ("Kiến Trúc Sư Hệ Thống & Ra Quyết Định")
+     - `Lifelong Polymath & Cognitive Explorer` ("Học Giả Đa Ngành & Khám Phá Nhận Thức")
+     - `Clean Code & Software Craftsperson` ("Chuyên Gia Kỹ Thuật & Mã Sạch")
+     - `Technical Leader & Engineering Mentor` ("Lãnh Đạo Kỹ Thuật & Cố Vấn")
+   - For backwards compatibility, legacy roles (`Senior Engineer`, `Staff Engineer`, `Principal Architect`, `Tech Lead`, `Mid-Level Engineer`, `Junior Engineer`) SHALL be preserved in option matching so existing accounts display localized labels without empty fallback values.
+2. **Default New Account Track**:
+   - Newly provisioned user accounts (`AuthEndpoints.cs`, `User.cs`) SHALL default `TargetRole` to `"Deep Work & Focus Practitioner"`.
 
 The User Profile interface (`frontend/pages/profile.vue`) and update action SHALL be strictly dedicated to personal identity (`name`), career role targets (`targetRole`), daily study pace (`dailyGoalMinutes`), and account credentials/password security.
 
 The User Profile interface SHALL NOT display notification scheduling controls (`preferredStudyTime`, `streakAlertTime`) or timezone displays. The User Profile interface SHALL NOT include redirection links or navigational bridges to the system settings page, keeping the user experience clean and decluttered.
 
 When submitting profile updates from the profile page, the client application SHALL dispatch only personal identity and pace fields (`name`, `targetRole`, `dailyGoalMinutes`) to `PUT /api/v1/user/profile`. The backend API SHALL support partial updates, preserving existing notification schedule and timezone database records when those fields are omitted.
-
 The User Profile interface (`frontend/pages/profile.vue`) SHALL present an executive **3-Tier Bento Dashboard** adhering to the **Dev-Learning Studio** visual standard:
 1. **Root Container**: Renders on deep dark canvas (`dark:bg-canvas`, `dark:bg-canvas-subtle`) with `scrollbar-gutter: stable` and responsive spacing, utilizing a dedicated, non-duplicated page subtitle (`profile.subtitle`).
 2. **Tier 1 (Top Full-Width Engineer Identity Passport)**: A prominent `.glass-card` banner spanning full width across the top featuring:
@@ -100,6 +111,44 @@ The Identity passport, milestone statistics, and domain goal tracker SHALL suppo
 - **AND** the payload does NOT contain `preferredStudyTime`, `streakAlertTime`, or `timeZone`
 - **AND** the backend updates the user's name, target role, and daily goal minutes in PostgreSQL while preserving existing notification schedule and timezone values
 - **AND** the user receives a localized success toast notification.
+
+#### Scenario: User selects Deep Work & Focus Practitioner mastery track
+- **WHEN** an authenticated user opens `/settings` in the Profile tab
+- **THEN** the track selector displays "Mastery Track" / "Lộ trình rèn luyện"
+- **WHEN** user selects "Deep Work & Focus Practitioner" and saves their profile
+- **THEN** the client sends `PUT /api/v1/user/profile` with `targetRole: "Deep Work & Focus Practitioner"`
+- **AND** the server persists the updated track and returns `200 OK`.
+
+#### Scenario: Existing user with legacy Senior Engineer role views settings
+- **WHEN** an existing user whose database `TargetRole` is `"Senior Engineer"` opens `/settings`
+- **THEN** the track dropdown cleanly displays the localized label ("Lộ trình Senior" / "Senior Track") without blank selection or console errors.
+
+---
+
+### Requirement: Universal DeepPace Production Micro-Branding & Media Session Identity
+All user-facing media sessions, service worker notification handlers, and API diagnostic test payloads SHALL standardize on the **DeepPace** brand name, eliminating legacy application names.
+
+1. **Audio Player MediaSession Metadata**:
+   - The audio player composable (`useSliceAudio.ts`) SHALL populate Navigator MediaSession metadata with default `artist: 'DeepPace'` and `album: 'DeepPace Reader'` (eliminating legacy 'TechDaily' fallbacks).
+2. **Service Worker Push Notifications**:
+   - The background service worker (`sw.js`) SHALL use `'DeepPace'` as the default notification fallback title when the push payload omits a custom title.
+3. **Push Notification Test Diagnostic Endpoint**:
+   - The push notification verification endpoint (`POST /api/v1/notifications/push/test`) SHALL send notification title `"DeepPace Test Push 🚀"` and tag `"deeppace-test"`.
+4. **Application Page Titles & Diagnostics**:
+   - Document head meta titles (such as `/showcase`) SHALL display `DeepPace`.
+   - Client authentication warning diagnostics in `/login` SHALL log with prefix `[DeepPace Auth]`.
+
+#### Scenario: Background audio player registers MediaSession
+- **WHEN** user plays an audio narration slice for an imported book or article
+- **THEN** the operating system lockscreen and media notification bar displays artist as "DeepPace" and album as "DeepPace Reader" unless overridden by book author metadata.
+
+#### Scenario: Service worker receives push event with empty title
+- **WHEN** a web push notification arrives with no title in the payload
+- **THEN** `sw.js` displays a notification with title `"DeepPace"`.
+
+#### Scenario: Developer triggers test push notification
+- **WHEN** an authenticated user clicks "Send Test Push" in `/settings`
+- **THEN** the test notification payload arrives with title `"DeepPace Test Push 🚀"` and tag `"deeppace-test"`.
 
 #### Scenario: User inspects `/profile` interface for decluttering
 - **WHEN** a user navigates to the `/profile` page
@@ -1783,3 +1832,75 @@ The platform backend solution, C# projects, and executable assemblies SHALL oper
 - **WHEN** the backend container launches from `ghcr.io/duycld03/deeppace-backend:latest`
 - **THEN** the Kestrel server starts using `DeepPace.Api.dll`
 - **AND** probes to `/health` respond with `HTTP 200 OK` and `status: "healthy"`.
+
+---
+
+### Requirement: Canonical DeepPace Environment Variable Standard
+The platform SHALL maintain a canonical environment variable dictionary in `.env.example` adhering to the DeepPace architecture and .NET configuration binding conventions:
+
+1. **Naming & Section Hierarchy**:
+   - Environment variables overriding hierarchical configuration SHALL use .NET-native double-underscore notation (`Section__Key`), binding directly to `IConfiguration` without custom parsers.
+   - Database credentials SHALL default to `deeppace_db` and `deeppace_user`.
+   - JWT tokens SHALL default to Issuer `"DeepPace"` and Audience `"DeepPaceUsers"`.
+   - Allowed CORS origins SHALL default to `https://deeppace.duckdns.org`.
+2. **Environment Parity**:
+   - The same variable names in `.env` SHALL be used across both local development (sourced by `run-dev.sh`) and VPS production (injected by `docker-compose.prod.yml` via `env_file`).
+   - Secrets SHALL NOT be hardcoded in committed application source files or configuration templates.
+
+#### Scenario: Local development script boots with standard .env
+- **WHEN** a developer executes `./run-dev.sh` with a valid `.env`
+- **THEN** the script loads all variables
+- **AND** the backend connects to `deeppace_db` with `deeppace_user` on `localhost:5432`
+- **AND** the frontend boots with `NUXT_PUBLIC_API_BASE_URL=http://localhost:5000`.
+
+#### Scenario: Production compose deploys with DeepPace environment variables
+- **WHEN** the production stack is booted via `docker compose -f docker-compose.prod.yml up`
+- **THEN** `deeppace_backend_prod` reads secrets from `.env`
+- **AND** ASP.NET Core accepts JWT tokens with Issuer `"DeepPace"` and enforces CORS for `https://deeppace.duckdns.org`.
+
+---
+
+### Requirement: Production Database Migration & Restoration Tooling
+The platform SHALL provide an idempotent, automated data restoration script (`scripts/restore-prod-database.sh`) to migrate legacy PostgreSQL database data from `techdaily_pgdata_prod` into `deeppace_pgdata_prod`:
+
+1. **Volume & Container Detection**:
+   - The script SHALL automatically detect if the legacy volume `techdaily_pgdata_prod` exists on the host.
+   - If legacy data is detected, the script SHALL execute a zero-data-loss transfer into `deeppace_db` under user `deeppace_user`.
+2. **Data Integrity & Relational Verification**:
+   - The restoration process SHALL preserve all relational entities, vector embeddings, users, document books, chunks, highlights, and spaced repetition cards without corruption.
+
+#### Scenario: Production restoration script migrates legacy volume data
+- **WHEN** an administrator runs `./scripts/restore-prod-database.sh` on the VPS
+- **THEN** the script extracts database contents from legacy `techdaily_pgdata_prod`
+- **AND** loads them into `deeppace_postgres_prod` (`deeppace_db`)
+- **AND** verifies that existing user accounts and learning artifacts are fully queryable.
+
+---
+
+### Requirement: Production Domain & SSL Reverse Proxy Termination
+The production reverse proxy service (`nginx/nginx.conf`) SHALL terminate TLS 1.2 and TLS 1.3 traffic for the primary production domain `deeppace.duckdns.org`, utilizing a valid Let's Encrypt certificate and private key mounted from `/etc/letsencrypt/live/deeppace.duckdns.org/`:
+
+1. **Virtual Host Routing**:
+   - HTTP requests on port 80 SHALL redirect to HTTPS (`301 Moved Permanently`) with preservation of `$host` and `$request_uri`.
+   - The ACME challenge directory `/.well-known/acme-challenge/` SHALL be served directly from `/var/www/certbot` over HTTP port 80 to enable automated Let's Encrypt issuance and renewals without downtime.
+   - The HTTPS server block SHALL accept requests for `deeppace.duckdns.org` as the primary virtual host and maintain backward-compatible redirection or dual-host routing for `techdaily.duckdns.org`.
+2. **Cryptographic Suite & Protocols**:
+   - The SSL configuration SHALL restrict protocols to TLSv1.2 and TLSv1.3 with high-cipher strength (`HIGH:!aNULL:!MD5`) and server-side cipher prioritization.
+   - HTTP/2 (`http2 on`) SHALL be enabled on port 443 for low-latency asset streaming.
+3. **CORS and Upstream Host Header Propagation**:
+   - The reverse proxy SHALL propagate client host headers (`proxy_set_header Host $host`, `proxy_set_header X-Forwarded-Proto https`) to upstream containers (`frontend:3000` and `backend:5000`).
+   - The production container environment (`docker-compose.prod.yml`) SHALL configure `Cors__AllowedOrigins__0` with fallback `https://deeppace.duckdns.org`, rejecting unauthenticated cross-origin requests from unauthorized origins.
+
+#### Scenario: User navigates to production domain via HTTPS
+- **WHEN** a client performs an HTTPS handshake to `https://deeppace.duckdns.org`
+- **THEN** Nginx presents a valid Let's Encrypt certificate issued for Common Name / SAN `deeppace.duckdns.org`
+- **AND** the browser connects securely with zero certificate warnings (`NET::ERR_CERT_COMMON_NAME_INVALID`).
+
+#### Scenario: Certbot executes automated HTTP-01 challenge renewal
+- **WHEN** Certbot initiates an ACME HTTP-01 challenge probe to `http://deeppace.duckdns.org/.well-known/acme-challenge/{token}`
+- **THEN** Nginx responds with `HTTP 200 OK` from `/var/www/certbot` without redirecting to HTTPS
+- **AND** the ACME validation completes successfully.
+
+#### Scenario: Backend accepts cross-origin API requests from DeepPace domain
+- **WHEN** the frontend on `https://deeppace.duckdns.org` sends a CORS preflight `OPTIONS /api/v1/daily/today` with `Origin: https://deeppace.duckdns.org`
+- **THEN** the backend responds with `Access-Control-Allow-Origin: https://deeppace.duckdns.org` and `Access-Control-Allow-Credentials: true`.

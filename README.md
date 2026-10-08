@@ -190,5 +190,68 @@ npm --prefix frontend test
 
 ---
 
+## 🚢 VPS Production Deployment & Database Migration
+
+### 1. Production `.env` Configuration
+On the production host, configure `.env` based on `.env.example`:
+```bash
+# Database Credentials
+POSTGRES_USER=deeppace_user
+POSTGRES_DB=deeppace_db
+POSTGRES_PASSWORD=<strong-random-password>
+
+# JWT Security
+Jwt__Secret=<64-char-csprng-secret>
+Jwt__Issuer=DeepPace
+Jwt__Audience=DeepPaceUsers
+Jwt__ExpiryMinutes=60
+
+# Production CORS & Allowed Origins
+CORS_ALLOWED_ORIGINS=https://deeppace.duckdns.org,https://techdaily.duckdns.org
+
+# OAuth & Public Configuration
+GOOGLE_CLIENT_ID=<google-oauth-client-id>
+NUXT_PUBLIC_GOOGLE_CLIENT_ID=<google-oauth-client-id>
+Authentication__Google__ClientSecret=<google-oauth-client-secret>
+
+# Third-Party Engines (AI, TTS, VAPID, SMTP)
+Gemini__ApiKey=<gemini-api-key>
+Google__TtsApiKey=<google-tts-key>
+WebPush__PublicKey=<vapid-public>
+WebPush__PrivateKey=<vapid-private>
+WebPush__Subject=mailto:support@deeppace.app
+```
+
+### 2. Zero-Downtime Database Migration / In-Place Rename
+If upgrading an existing production deployment with legacy `techdaily_db` data:
+```bash
+# Option A: Automated restoration pipeline (recommended)
+./scripts/restore-prod-database.sh
+
+# Option B: In-place database & user rename inside PostgreSQL
+docker exec -it deeppace_postgres_prod psql -U postgres -c "ALTER DATABASE techdaily_db RENAME TO deeppace_db;"
+docker exec -it deeppace_postgres_prod psql -U postgres -c "ALTER USER techdaily_user RENAME TO deeppace_user;"
+```
+
+### 3. Deploy Production Containers
+```bash
+# Validate compose configuration substitutions
+docker compose -f docker-compose.prod.yml config
+
+# Boot production services
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### 4. Google Cloud Console OAuth 2.0 Credentials
+When activating `https://deeppace.duckdns.org`, register the domain origins in Google Cloud Console:
+1. Navigate to **Google Cloud Console** > **APIs & Services** > **Credentials**.
+2. Edit your OAuth 2.0 Web Client ID.
+3. Under **Authorized JavaScript origins**, add:
+   - `https://deeppace.duckdns.org`
+   - `https://techdaily.duckdns.org` (retained for backward-compatible login)
+4. Under **Authorized redirect URIs**, add:
+   - `https://deeppace.duckdns.org`
+   - `https://deeppace.duckdns.org/login`
+---
 ## 📜 License
 MIT License. Built for passionate software engineers mastering distributed systems and architecture.

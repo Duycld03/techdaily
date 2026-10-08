@@ -29,7 +29,7 @@ export NUXT_PUBLIC_API_BASE_URL="${NUXT_PUBLIC_API_BASE_URL}"
 export Authentication__Google__ClientId="${Authentication__Google__ClientId:-$GOOGLE_CLIENT_ID}"
 
 # Compose the local connection string from the single POSTGRES_PASSWORD source
-export ConnectionStrings__DefaultConnection="${ConnectionStrings__DefaultConnection:-Host=localhost;Port=5432;Database=deeppace_db;Username=deeppace_user;Password=${POSTGRES_PASSWORD}}"
+export ConnectionStrings__DefaultConnection="${ConnectionStrings__DefaultConnection:-Host=localhost;Port=5432;Database=${POSTGRES_DB:-deeppace_db};Username=${POSTGRES_USER:-deeppace_user};Password=${POSTGRES_PASSWORD}}"
 
 # 1. Check if database container is running
 if ! docker ps --format '{{.Names}}' | grep -q 'deeppace_postgres'; then
