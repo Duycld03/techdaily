@@ -147,7 +147,8 @@ jobs:
             set -e
             echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
             cd ~/techdaily || cd /home/${{ secrets.VPS_USERNAME }}/techdaily
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             for i in 1 2 3 4 5; do
               echo "Pulling container images from GHCR (attempt $i/5)..."
               if docker compose -f docker-compose.prod.yml pull; then
