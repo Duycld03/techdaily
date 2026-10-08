@@ -62,7 +62,8 @@ public class GetBooksHandler : IUseCase<GetBooksRequest, GetBooksResponse>
                 ProgressPercentage = b.ProgressPercentage,
                 StatusMessage = b.StatusMessage,
                 ErrorMessage = b.ErrorMessage,
-                CreatedAt = b.CreatedAt
+                CreatedAt = b.CreatedAt,
+                Language = b.Chunks.Select(c => c.Language).FirstOrDefault() ?? "en"
             })
             .ToListAsync(cancellationToken);
 

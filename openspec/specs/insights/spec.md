@@ -6,7 +6,7 @@ Provides an infinite feed of bite-sized architectural tech insights (anti-patter
 ## Requirements
 
 ### Requirement: Tech Insights Feed Data Model & Query API
-The system SHALL maintain a standalone `TechInsight` catalog and expose paginated/random browsing APIs alongside a dynamic metadata query endpoint `GET /api/v1/insights/meta`, adhering to the **DeepPace Studio** visual theme. Technical insights SHALL retain concrete code blocks (problematic vs idiomatic solution) with syntax highlighting, under-the-hood mechanics, and benchmark telemetry chips, while supporting both technical craft and mental model domains.
+The system SHALL maintain a standalone `TechInsight` catalog and expose paginated/random browsing APIs alongside a dynamic metadata query endpoint `GET /api/v1/insights/meta`, adhering to the **DeepPace Studio** visual theme. Technical insights SHALL retain concrete code blocks (problematic vs idiomatic solution) with syntax highlighting, under-the-hood mechanics, and benchmark telemetry chips, while supporting technical craft, software design, mental models, and deep work habit domains.
 
 #### Scenario: User requests next technical insight card
 - **WHEN** user sends `GET /api/v1/insights/feed` with optional `category` or `tag` query parameters
@@ -32,6 +32,8 @@ The system SHALL maintain a standalone `TechInsight` catalog and expose paginate
 - **WHEN** client sends `GET /api/v1/insights/meta`
 - **THEN** system queries `TechInsights` to compile category metadata including category IDs, keys, localized English and Vietnamese labels, and published card counts
 - **AND** queries the authenticated user's library `DocumentBooks` in PostgreSQL to extract suggested inspiration seeds from book categories and `DocumentChunk` chapter titles, grouped by category
+- **AND** limits suggested topics to a maximum of 8 distinct items per category, filtering out raw chapter index prefixes (e.g. `CHƯƠNG X:`, `Tóm tắt chương`, `(Section Y)`)
+- **AND** when fewer than 2 library topics remain for a category, supplements with domain-specific curated fallback topics
 - **AND** returns HTTP 200 with `{ categories, suggestedTopics }`
 - **AND** client dynamically populates filter chips and the AI generation modal suggestion pool from the user's ingested library documents without relying on hardcoded arrays or the removed `Topics` table.
 
@@ -53,7 +55,7 @@ The system SHALL maintain a standalone `TechInsight` catalog and expose paginate
 #### Scenario: User views tailored empty state in Saved mode with zero bookmarks
 - **GIVEN** an authenticated user who has not saved any insights (`bookmarkedInsights.length === 0`)
 - **WHEN** user switches to `[ 🔖 Đã Lưu (0) ]` mode
-- **THEN** page renders the tailored Saved empty state with the `BookmarkCheck` icon
+- **THEN** page renders the tailored Saved empty state with the `BookmarkCheck` icon mounted visibly inside the centered icon wrapper
 - **AND** displays title "Bạn chưa lưu mẫu kiến thức nào"
 - **AND** displays description "Hãy bấm biểu tượng Bookmark trên các thẻ kiến thức khi khám phá để lưu lại xem sau."
 - **AND** displays the CTA button `[ 🌐 Khám Phá Kiến Thức Ngay ]`.
@@ -71,8 +73,59 @@ The system SHALL maintain a standalone `TechInsight` catalog and expose paginate
 - **AND** card bookmark status toggles to active
 - **AND** the View Mode Switcher counter reactively increments to `[ 🔖 Đã Lưu (4) ]`.
 
+#### Scenario: Responsive AI generation modal height containment
+- **WHEN** user clicks "+ Tạo Với AI" on `/insights` with any active category
+- **THEN** the modal dialog container is constrained to a maximum height of `85dvh` with `overflow-y-auto`
+- **AND** the suggested topic chips container maintains a maximum vertical scroll bounds (`max-h-36 overflow-y-auto`)
+- **AND** the modal never expands beyond the top or bottom viewport edges regardless of how many topic chips are returned.
+
+#### Scenario: Dynamic category-aware modal placeholders and guidance
+- **WHEN** user opens the AI generation modal with `EngineeringCraft` (Mã Sạch & Thiết Kế) active
+- **THEN** the placeholder displays software craft examples (e.g., `Refactoring God Class, Specification Pattern, TDD Invariants`)
+- **WHEN** user opens the modal with `MentalModels` (Mô Hình Tư Duy) active
+- **THEN** the placeholder displays cognitive models (e.g., `First Principles, Inversion (Pre-Mortem), Second-Order Thinking`)
+- **WHEN** user opens the modal with `HabitsProductivity` (Thói Quen & Tập Trung Sâu) active
+- **THEN** the placeholder displays habit systems (e.g., `Deep Work 90m Blocks, Ultradian Rhythms, Dopamine Reset`).
+
+#### Scenario: Empty state visual integrity with contextual icons
+- **WHEN** user views an empty category in Explore mode with zero matching insights
+- **THEN** the centered icon container renders a visible Lucide `<Lightbulb>` component
+- **AND** the container does not render an unstyled empty box.
+
+#### Scenario: Localized category badge and sanitized tag display
+- **WHEN** user views an active insight card in Vietnamese (`vi`)
+- **THEN** the category pill badge renders the localized category label matching the active locale (e.g., `Hệ Thống Backend & Runtime`, `Mã Sạch & Thiết Kế`, `Mô Hình Tư Duy`) instead of hardcoded English
+- **AND** all hashtag badges render with trimmed text without leading or internal spaces (e.g. `#.NET` rather than `# .NET`).
+
+#### Scenario: Seed data availability across all practice domains
+- **WHEN** the application starts up and runs database seeding via `TechInsightsSeeder`
+- **THEN** initial high-quality seed insights are provisioned for all 7 categories (including `EngineeringCraft`, `MentalModels`, and `HabitsProductivity`)
+- **AND** exploring any category immediately displays at least one ready insight card without requiring upfront on-demand AI synthesis.
+
+---
+
 ### Requirement: On-Demand AI Insight Synthesizer
 The system SHALL support generating fresh, high-impact craft insights on-demand via Google Gemini. For technical topics, the synthesizer SHALL generate bad vs good code snippets and runtime performance benchmarks; for mindset and personal craft topics, the synthesizer SHALL analyze behavioral antipatterns vs optimal models and cognitive mechanisms.
+
+The AI topic synthesis dialog on `/insights` SHALL provide an ergonomic, visually cohesive modal input form:
+1. **Flush Focus Ring Geometry & Stability**:
+   - When the custom topic text input is focused (including automatic autofocus upon modal presentation), the input SHALL apply flush, border-radius-conforming focus styling (`focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20`).
+   - The input SHALL NOT render a detached, floating outer outline with an offset gap or double-border glitch.
+2. **Bilingual Action Localization**:
+   - The modal dismiss action button SHALL render localized text using `$t('insights.cancel')` ("Hủy Bỏ" in Vietnamese, "Cancel" in English) rather than hardcoded English text.
+
+#### Scenario: User opens AI topic synthesis modal and inspects input focus
+- **GIVEN** an authenticated user clicks "Tạo Với AI" on `/insights`
+- **WHEN** the generator modal renders and the text input receives autofocus
+- **THEN** the input displays flush rounded focus styling adhering strictly to the input's `rounded-2xl` geometry
+- **AND** zero detached or offset purple outline rectangles appear around the input box.
+
+#### Scenario: User inspects modal dismiss button localization
+- **GIVEN** user views the AI generator modal in Vietnamese (`vi-VN`)
+- **WHEN** inspecting the dialog action footer
+- **THEN** the dismiss button displays "Hủy Bỏ"
+- **WHEN** user switches interface locale to English (`en-US`)
+- **THEN** the dismiss button displays "Cancel".
 
 #### Scenario: User triggers AI insight generation
 - **WHEN** user sends `POST /api/v1/insights/generate` with a specified technical topic or category
@@ -81,6 +134,7 @@ The system SHALL support generating fresh, high-impact craft insights on-demand 
 #### Scenario: User triggers mental model AI insight generation
 - **WHEN** user sends `POST /api/v1/insights/generate` with a mindset or cognitive focus topic
 - **THEN** the system invokes Gemini to synthesize a behavioral comparison analyzing naive friction versus optimal focus design, saves to `TechInsights`, and returns the card.
+
 ---
 
 ### Requirement: Insight 1-Click Bookmark & Note Saving

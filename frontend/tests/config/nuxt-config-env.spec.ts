@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateApiBaseUrl } from '~/config/validateEnv'
+import { validateApiBaseUrl } from '~~/config/validateEnv'
 
 describe('validateApiBaseUrl', () => {
   it('throws an explicit configuration error when NUXT_PUBLIC_API_BASE_URL is undefined in development', () => {

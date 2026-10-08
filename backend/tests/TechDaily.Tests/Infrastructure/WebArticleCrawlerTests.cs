@@ -332,10 +332,30 @@ public class WebArticleCrawlerTests
 
     [Theory]
     [InlineData("Pragmatic Programmer Mindset", "https://example.com/mindset")]
-    [InlineData("Deep Work and Engineering Productivity", "https://example.com/productivity")]
+    [InlineData("Clean Code and Refactoring Patterns", "https://example.com/clean-code")]
     public void InferCategoryFromContext_ShouldInferEngineeringCraft_ForCraftKeywords(string title, string url)
     {
         var category = WebArticleCrawler.InferCategoryFromContext(title, url);
         category.Should().Be(Category.EngineeringCraft);
+    }
+
+    [Theory]
+    [InlineData("Deep Work and Daily Focus", "https://example.com/deep-work")]
+    [InlineData("Atomic Habits for Knowledge Workers", "https://jamesclear.com/atomic-habits")]
+    [InlineData("Xây dựng thói quen và duy trì năng suất", "https://example.com/thoi-quen")]
+    public void InferCategoryFromContext_ShouldInferHabitsProductivity_ForHabitsKeywords(string title, string url)
+    {
+        var category = WebArticleCrawler.InferCategoryFromContext(title, url);
+        category.Should().Be(Category.HabitsProductivity);
+    }
+
+    [Theory]
+    [InlineData("Mental Models: The Best Way to Make Intelligent Decisions", "https://fs.blog/mental-models")]
+    [InlineData("First Principles Thinking and Cognitive Biases", "https://example.com/first-principles")]
+    [InlineData("Mô hình tư duy và nghệ thuật ra quyết định", "https://example.com/tu-duy")]
+    public void InferCategoryFromContext_ShouldInferMentalModels_ForMentalModelsKeywords(string title, string url)
+    {
+        var category = WebArticleCrawler.InferCategoryFromContext(title, url);
+        category.Should().Be(Category.MentalModels);
     }
 }

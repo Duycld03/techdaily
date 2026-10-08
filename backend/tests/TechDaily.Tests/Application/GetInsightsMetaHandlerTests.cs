@@ -75,9 +75,9 @@ public class GetInsightsMetaHandlerTests : IDisposable
 
         var cat4 = response.Categories.First(c => c.Id == 4);
         cat4.Key.Should().Be("craft");
-        cat4.LabelEn.Should().Be("Software Craftsmanship");
+        cat4.LabelEn.Should().Be("Clean Code & Software Design");
+        cat4.LabelVi.Should().Be("Mã Sạch & Thiết Kế Mã");
         cat4.Count.Should().Be(0);
-
         var cat5 = response.Categories.First(c => c.Id == 5);
         cat5.Key.Should().Be("mental_models");
         cat5.LabelEn.Should().Be("Mental Models & Decisions");
@@ -202,5 +202,48 @@ public class GetInsightsMetaHandlerTests : IDisposable
         response.SuggestedTopics[(int)Category.BackendRuntime].Should().NotContain("Deleted Chapter");
         // DatabaseStorage had 0 topics, so should have default topics
         response.SuggestedTopics[(int)Category.DatabaseStorage].Should().Contain("PostgreSQL Index-Only Scan & INCLUDE");
+    }
+    [Theory]
+    [InlineData("CHƯƠNG 4: QUY LUẬT SỐ 1 - KHIẾN VIỆC ĐÓ TRỞ NÊN HIỂN NHIÊN (Section 1)", "QUY LUẬT SỐ 1 - KHIẾN VIỆC ĐÓ TRỞ NÊN HIỂN NHIÊN")]
+    [InlineData("Chapter 19: Query Optimization & Cost-Based Execution Planning", "Query Optimization & Cost-Based Execution Planning")]
+    [InlineData("Tóm tắt chương (Section 3)", "")]
+    [InlineData("Raft Consensus Protocol", "Raft Consensus Protocol")]
+    [InlineData("QUI LUẬT SỐ 12: NỖ LỰC TỐI THIỂU (Section 1)", "NỖ LỰC TỐI THIỂU")]
+    public void CleanTopicTitle_StripsNoiseAndChapterPrefixes(string raw, string expected)
+    {
+        var cleaned = GetInsightsMetaHandler.CleanTopicTitle(raw);
+        cleaned.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task GetInsightsMeta_CapsSuggestedTopicsAtEightItems()
+    {
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Large Architecture Volume",
+            Slug = "large-arch-vol",
+            Category = Category.SystemDesign,
+            Status = ProcessingStatus.Ready
+        };
+        await _db.DocumentBooks.AddAsync(book);
+
+        var chunks = Enumerable.Range(1, 15).Select(i => new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = i,
+            ChapterTitle = $"Chapter {i}: Architectural Subsystem Design Number {i}"
+        }).ToList();
+        await _db.DocumentChunks.AddRangeAsync(chunks);
+        await _db.SaveChangesAsync();
+
+        var result = await _handler.ExecuteAsync(new GetInsightsMetaRequest());
+        result.IsSuccess.Should().BeTrue();
+
+        var systemTopics = result.Value.SuggestedTopics[(int)Category.SystemDesign];
+        systemTopics.Should().HaveCount(8);
+        systemTopics[0].Should().Be("Architectural Subsystem Design Number 1");
+        systemTopics[7].Should().Be("Architectural Subsystem Design Number 8");
     }
 }

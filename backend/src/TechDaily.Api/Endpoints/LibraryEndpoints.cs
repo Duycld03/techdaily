@@ -13,6 +13,7 @@ using TechDaily.Application.Features.Library.ImportDocument;
 using TechDaily.Application.Features.Library.UploadPdf;
 using TechDaily.Application.Features.Library.ExportBookMarkdown;
 using TechDaily.Application.Features.Library.ImportRemotePdf;
+using TechDaily.Application.Features.Library.UpdateBook;
 using TechDaily.Application.Features.Library.SynthesizeAudio;
 using TechDaily.Domain.Enums;
 
@@ -192,6 +193,41 @@ public static class LibraryEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status403Forbidden)
         .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized);
+
+        // Protected Book Metadata Update (Requires Authentication and Ownership)
+        group.MapPatch("/books/{id:guid}", async (
+            Guid id,
+            [FromBody] UpdateBookApiRequest body,
+            ClaimsPrincipal userClaims,
+            [FromServices] IUseCase<UpdateBookRequest, UpdateBookResponse> handler,
+            CancellationToken ct) =>
+        {
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var request = new UpdateBookRequest(id, userId.Value, body.Title, body.AuthorOrSourceUrl, body.Category, body.Language);
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.Match(
+                success => Results.Ok(success.Book),
+                error => error == Error.NotFound
+                    ? error.ToProblem(StatusCodes.Status404NotFound)
+                    : error.Code == "LIBRARY_FORBIDDEN"
+                        ? error.ToProblem(StatusCodes.Status403Forbidden)
+                        : error.ToProblem(StatusCodes.Status400BadRequest)
+            );
+        })
+        .RequireAuthorization()
+        .WithName("UpdateBook")
+        .WithSummary("Update Book Metadata")
+        .WithDescription("Updates title, author/source URL, domain category, and language for an imported book owned by the authenticated user.")
+        .Produces<BookDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Protected PDF Upload (Requires Authentication, supports up to 300MB, Zero-LOH streaming)
@@ -384,4 +420,5 @@ public static class LibraryEndpoints
 }
 
 public record SynthesizeChunkAudioApiRequest(string? VoiceId, string? ContentHash = null, string? NarrationScript = null);
+public record UpdateBookApiRequest(string Title, string? AuthorOrSourceUrl, Category Category, string? Language = null);
 

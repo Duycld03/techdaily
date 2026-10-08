@@ -7,10 +7,7 @@ export default {
     hoverOnlyWhenSupported: true
   },
   content: [
-    './components/**/*.{js,vue,ts}',
-    './layouts/**/*.vue',
-    './pages/**/*.vue',
-    './plugins/**/*.{js,ts}',
+    './app/**/*.{js,vue,ts}',
     './app.vue',
     './error.vue'
   ],

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import nuxtConfig from '~/nuxt.config'
+import nuxtConfig from '~~/nuxt.config'
 
 describe('nuxt.config pages:extend route pruning', () => {
   it('prunes showcase routes when NODE_ENV is production', () => {

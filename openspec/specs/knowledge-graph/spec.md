@@ -8,6 +8,8 @@ Provides an interactive associative knowledge graph extracting relational learni
 ### Requirement: Knowledge Graph Relational Extraction API
 The system SHALL expose a protected HTTP GET endpoint `GET /api/v1/graph` that extracts and returns an associative **personal** knowledge graph for the authenticated user, derived strictly from that user's own learning artifacts in relational PostgreSQL 17 without introducing auxiliary graph databases or continuous server-side vector calculations. The graph SHALL represent only knowledge the user has actually engaged with — books the user imported, the chunks within those books, the user's personal highlights, and the user's spaced-repetition cards — and SHALL NOT project content owned by other users.
 
+The graph projection SHALL support all seven canonical DeepPace domain categories (`FrontendWeb`, `BackendRuntime`, `DatabaseStorage`, `SystemDesign`, `EngineeringCraft`, `MentalModels`, `HabitsProductivity`).
+
 The endpoint SHALL require valid JWT Bearer authentication (`.RequireAuthorization()`) and SHALL return `HTTP 401 Unauthorized` with RFC 7807 problem details when invoked without a valid token.
 
 All node source queries SHALL honor the global soft-delete query filter (`IsDeleted == false`), so that any book, highlight, or flashcard the user has deleted is absent from the graph without special handling.
@@ -18,7 +20,7 @@ The returned response payload (`KnowledgeGraphResponse`) SHALL consist of:
    - **Highlight Nodes:** Personal reading highlights from `UserHighlights` owned by the authenticated user (`UserId == currentUser.Id`), containing `id`, `label` (truncated quote), `documentChunkId`, `bookId`, `note`, `tags`, and `createdAt`.
    - **Book Nodes:** Only books the authenticated user imported — from `DocumentBooks` where `CreatedByUserId == currentUser.Id` and the book is published and not deleted — containing `id`, `label`, `category`, `totalChunks`, and `authorOrSourceUrl`. Books created by other accounts SHALL NOT appear (parity with the Library page `GET /api/v1/library/books`).
    - **Chunk Nodes:** Reading slices from `DocumentChunks` belonging to the user's imported books, containing `id`, `label` (chunk/chapter title), `bookId`, `chunkOrder`, and `summary`. A chunk SHALL be emitted if and only if it belongs to a surviving user book and is referenced by at least one of the user's own cards or highlights, avoiding a blind projection of every slice.
-   - **Pillar Hub Nodes:** Canonical architectural pillar anchors (id pattern `pillar-{Category}` for the five pillars Frontend & Web, Backend & Runtime, Database & Storage, Distributed Systems, Engineering Craft), containing `id`, `label`, `category`, and `type: "pillar"`. A pillar hub SHALL be emitted only when it anchors at least one surviving user node — a user book or a user card of that category. Pillars with no user activity SHALL be omitted; the graph therefore contains between zero and five pillar hubs depending on the breadth of the user's learning.
+   - **Pillar Hub Nodes:** Canonical architectural and mental model pillar anchors (id pattern `pillar-{Category}` for the seven pillars Frontend & Web, Backend & Runtime, Database & Storage, Distributed Systems, Engineering Craft, Mental Models & Decisions, Habits & Deep Work), containing `id`, `label`, `category`, and `type: "pillar"`. A pillar hub SHALL be emitted only when it anchors at least one surviving user node — a user book or a user card of that category. Pillars with no user activity SHALL be omitted; the graph therefore contains between zero and seven pillar hubs depending on the breadth of the user's learning.
 
 2. `edges`: An array of `GraphEdgeDto` items connecting only nodes present in `nodes`:
    - `BookToPillar`: Connecting each user book to the pillar hub for the book's own category (`Book.Id -> pillar-{Category}`).
@@ -73,7 +75,7 @@ The query execution SHALL execute in a single consolidated read pass using EF Co
 #### Scenario: Authenticated user receives pillar hub nodes and guaranteed connected topics
 - **WHEN** an authenticated user whose artifacts span only some technical domains sends `GET /api/v1/graph` with a valid JWT Bearer token
 - **THEN** the system returns `HTTP 200 OK` with `KnowledgeGraphResponse`
-- **AND** the `nodes` array contains a `type: "pillar"` hub only for each category that has at least one user book or card (between 0 and 5 hubs), and omits pillars with no user activity
+- **AND** the `nodes` array contains a `type: "pillar"` hub only for each category that has at least one user book or card (between 0 and 7 hubs), and omits pillars with no user activity
 - **AND** the `edges` array contains a `BookToPillar` edge for every emitted book, connecting it to its respective pillar hub
 - **AND** no emitted book or chunk node has an edge degree of 0.
 
@@ -101,6 +103,20 @@ The query execution SHALL execute in a single consolidated read pass using EF Co
 - **WHEN** an authenticated user soft-deletes a highlight or flashcard and then requests `GET /api/v1/graph`
 - **THEN** the deleted node and all of its edges are absent from the response
 - **AND** any chunk or pillar hub that no longer anchors a surviving user node is also omitted.
+
+#### Scenario: Authenticated user receives DeepPace pillar hub nodes and guaranteed connected topics
+- **WHEN** an authenticated user whose artifacts include books or cards in `Category.MentalModels` or `Category.HabitsProductivity` sends `GET /api/v1/graph` with a valid JWT Bearer token
+- **THEN** the system returns `HTTP 200 OK` with `KnowledgeGraphResponse`
+- **AND** the `nodes` array contains a `type: "pillar"` hub for each active category (between 0 and 7 hubs)
+- **AND** `pillar-MentalModels` is emitted with label "Mô Hình Tư Duy & Quyết Định" ("Mental Models & Decisions") when user has mental models artifacts
+- **AND** `pillar-HabitsProductivity` is emitted with label "Thói Quen & Tập Trung Sâu" ("Habits & Deep Work") when user has habits or productivity artifacts
+- **AND** all `BookToPillar` and `CardToPillar` edges for categories 5 and 6 connect to their respective pillar hub nodes without any dangling edges.
+
+#### Scenario: No dangling edges for non-technical learning artifacts
+- **WHEN** an authenticated user has imported books or created review cards in `Category.MentalModels` or `Category.HabitsProductivity`
+- **THEN** every edge in the `edges` array has both its `source` and `target` IDs present in the `nodes` array
+- **AND** zero edges reference un-emitted pillar identifiers.
+
 ---
 
 ### Requirement: Client-Side Canvas 2D Force Layout Visualization
@@ -114,13 +130,15 @@ The visualization SHALL execute an asynchronous force-directed layout (such as C
 - A physics cooling parameter (`coolingFactor: 0.95`, `numIter: 300`) that settles and halts all movement within 1.5 seconds. Once settled, the canvas SHALL transition to static interactive mode, consuming 0% ongoing CPU or GPU cycles when idle.
 
 The canvas SHALL visually differentiate node types and retention status:
-- **Pillar Hub Nodes:** Prominent circular nodes ($54\times 54\text{px}$) with a $3.5\text{px}$ neon halo ring (blur $18\text{px}$), bold typography ($13\text{px}$ font weight 700), the highest stacking rank (z 50), and color-coded backgrounds matching their respective domain palette.
-- **Chunk Nodes:** Small circular nodes ($30\times 30\text{px}$) color-coded by their parent book's engineering pillar, representing individual reading slices/chapters:
-  - Backend Runtime: Cyan/Sky (`#0284c7` / `#38bdf8`)
-  - Data Storage: Cyan/Teal (`#0891b2` / `#22d3ee`)
-  - Distributed Systems: Violet/Purple (`#7c3aed` / `#a78bfa`)
-  - Frontend Engineering: Amber/Orange (`#f59e0b` / `#fbbf24`)
-  - Engineering Craft: Pink/Rose (`#ec4899` / `#fb7185`)
+- **Pillar Hub Nodes:** Prominent circular nodes ($54\times 54\text{px}$) with a $3.5\text{px}$ neon halo ring (blur $18\text{px}$), bold typography ($13\text{px}$ font weight 700), the highest stacking rank (z 50), and color-coded backgrounds matching their respective domain palette:
+  - Backend Runtime: Sky (`#0284c7`, border `#38bdf8`)
+  - Database Storage: Cyan (`#0891b2`, border `#22d3ee`)
+  - Distributed Systems: Violet (`#7c3aed`, border `#a78bfa`)
+  - Frontend Web: Amber (`#f59e0b`, border `#fbbf24`)
+  - Engineering Craft: Pink (`#ec4899`, border `#fb7185`)
+  - Mental Models: Deep Iris / Indigo (`#6366f1`, border `#818cf8`)
+  - Habits & Deep Work: Vibrant Emerald / Teal (`#10b981`, border `#34d399`)
+- **Chunk Nodes:** Small circular nodes ($30\times 30\text{px}$) color-coded by their parent book's pillar category.
 - **Book Nodes:** Rounded-rectangle nodes ($34\times 26\text{px}$, corner radius $6\text{px}$) in an indigo tone (`#6366f1`) with an internal bookmark stroke, displaying book source emblems.
 - **Card Nodes:** Diamond-shaped nodes ($26\times 26\text{px}$) color-coded by SM-2 retention status:
   - Learning: Amber (`#f59e0b`)
@@ -173,17 +191,25 @@ The canvas SHALL support smooth mouse and touch pan, zoom (bounded between 0.2x 
 - **WHEN** a user navigates to `/graph` with a book that has chunks but zero user highlights
 - **THEN** the chunks belonging to that book remain anchored to it via `ChunkToBook` edges and to their pillar via the book's `BookToPillar` edge
 - **AND** the CoSE simulation settles without stacking unconnected nodes into a horizontal line at the viewport perimeter.
+
 #### Scenario: Obsidian 2D canvas background and hairline border styling
 - **WHEN** the 2D canvas renders in dark mode
 - **THEN** the canvas container background renders with neutral obsidian `#09090b` (`dark:bg-canvas`)
 - **AND** node borders and edges in dark mode utilize `#27272a` hairline styling rather than legacy opaque slate colors.
+
+#### Scenario: DeepPace pillar and chunk node rendering on 2D canvas
+- **WHEN** the 2D canvas renders nodes for `MentalModels` and `HabitsProductivity`
+- **THEN** `pillar-MentalModels` hub node renders at $54\times 54\text{px}$ with Indigo fill (`#6366f1`) and accent halo
+- **AND** `pillar-HabitsProductivity` hub node renders at $54\times 54\text{px}$ with Emerald fill (`#10b981`) and accent halo
+- **AND** chunk nodes for mental models and habits render with their respective category border tones
+- **AND** neither category is rendered with the legacy .NET sky-blue fallback.
 
 ---
 
 ### Requirement: Multi-Dimensional Graph Filtering & Live Search
 The knowledge graph view SHALL include a floating glassmorphic control bar (`GraphControlBar.vue`) positioned above the canvas, providing real-time client-side filtering across multiple dimensions and engine modes without triggering backend network requests:
 1. **Engine Mode Switcher (2D / 3D):** A prominent dual-button toggle allowing the user to seamlessly switch between the **2D Planar Canvas** (Cytoscape.js) and the **3D WebGL Cosmos** (`3d-force-graph` / Three.js). The active mode SHALL persist in `localStorage` under key `techdaily_graph_view_mode`.
-2. **Pillar Category Filter:** Filter chips allowing the user to view all nodes or isolate a specific pillar (`All`, `Backend Runtime`, `Data Storage`, `Distributed Systems`, `Frontend Engineering`, `Engineering Craft`). The filter container SHALL employ a responsive wrapping layout (`flex-wrap gap-1.5`) without hidden scrollbars or box-model clipping across both English and Vietnamese locales, ensuring that all 6 pill options remain 100% visible and discoverable. All category pills SHALL resolve explicit localization keys without falling back to raw untranslated strings.
+2. **Pillar Category Filter:** Filter chips allowing the user to view all nodes or isolate a specific pillar (`All`, `Mental Models & Decisions`, `Habits & Deep Work`, `Backend Runtime`, `Database & Storage`, `Distributed Systems`, `Frontend & Web`, `Engineering Craft`). The filter container SHALL employ a responsive wrapping layout (`flex-wrap gap-1.5`) without hidden scrollbars or box-model clipping across both English and Vietnamese locales, ensuring that all 8 pill options remain 100% visible and discoverable. All category pills SHALL resolve explicit localization keys without falling back to raw untranslated strings.
 3. **Node Type Toggles:** Toggle buttons to show or hide specific node types (`Books`, `Chunks`, `Flashcards`, `Highlights`).
 4. **Mastery Status Filter:** Dropdown or pill selector to filter flashcard nodes by SM-2 status (`All`, `Learning`, `Reviewing`, `Mastered`). When `Mastered` is selected, the active indicator SHALL display primary brand violet styling (`bg-brand-600 text-white`) instead of emerald green.
 5. **Live Search Input:** Text input that dynamically matches node titles, tags, and summary keywords. Matching nodes SHALL remain fully opaque and highlighted, while non-matching nodes SHALL fade to 15% opacity with edges dimmed in both 2D and 3D modes.
@@ -227,7 +253,7 @@ All control bar action buttons, mode switches, and filter chips SHALL utilize `.
 #### Scenario: Bilingual responsive category pills wrapping and complete localization
 - **GIVEN** a user views `/graph` in Vietnamese locale (`vi-VN`)
 - **WHEN** inspecting the Category Pillars filter row in `GraphControlBar.vue`
-- **THEN** all 6 category pills ("Tất Cả", "Backend & Runtime", "Database & Storage", "Distributed Systems", "Frontend & Web", "Engineering Craft") are fully visible without horizontal clipping or truncation
+- **THEN** all 8 category pills ("Tất Cả", "Mô Hình Tư Duy & Quyết Định", "Thói Quen & Tập Trung Sâu", "Backend & Runtime", "Database & Storage", "Distributed Systems", "Frontend & Web", "Engineering Craft") are fully visible without horizontal clipping or truncation
 - **AND** each pill resolves its translated label rather than falling back to raw untranslated English strings
 - **AND** on viewports narrower than the combined pill width, the container wraps naturally into multiple clean rows.
 
@@ -235,6 +261,11 @@ All control bar action buttons, mode switches, and filter chips SHALL utilize `.
 - **WHEN** a user views the knowledge graph control bar on `/graph`
 - **THEN** the "Fit to Screen" and "Reset Filters" buttons have an identical height (`h-8`, 32px), typography scale (`text-xs font-bold`), and icon size (`w-3.5 h-3.5`) aligning horizontally with the 2D/3D mode switcher.
 
+#### Scenario: DeepPace category filtering in control bar
+- **WHEN** the user selects the "Mô Hình Tư Duy" or "Thói Quen & Tập Trung" category chip in `GraphControlBar.vue`
+- **THEN** all nodes belonging to other categories are filtered out from the canvas
+- **AND** the viewport smoothly animates to focus on the selected DeepPace constellation
+- **AND** all 8 filter chips wrap responsively without visual clipping or overflow.
 ---
 
 ### Requirement: Node Detail Slide-Over Drawer & 1-Click Action Bridges

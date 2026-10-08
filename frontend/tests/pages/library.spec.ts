@@ -90,12 +90,23 @@ const mockPostRaw = vi.fn(async (_url: string, _body: FormData) => {
     }
   }
 })
+const mockPatch = vi.fn(async (_url: string, body: Record<string, unknown>) => {
+  return {
+    id: 'book-1',
+    title: body.title,
+    category: body.category,
+    authorOrSourceUrl: body.authorOrSourceUrl,
+    language: (body.language as string) ?? 'en'
+  }
+})
+
 
 vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     get: mockGet,
     post: mockPost,
     postRaw: mockPostRaw,
+    patch: mockPatch,
     delete: vi.fn(),
     download: vi.fn()
   })
@@ -107,7 +118,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     vi.clearAllMocks()
   })
 
-  it('renders category filter chips including Category 4 (Engineering Craft & Mindset)', async () => {
+  it('renders category filter chips including Category 4 (Engineering Craft & Mindset), Category 5 (Mental Models), and Category 6 (Habits)', async () => {
     const wrapper = mount(LibraryPage, {
       global: {
         stubs: {
@@ -124,6 +135,8 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(wrapper.text()).toContain('library.categories.database')
     expect(wrapper.text()).toContain('library.categories.backend')
     expect(wrapper.text()).toContain('library.categories.frontend')
+    expect(wrapper.text()).toContain('library.categories.mental_models')
+    expect(wrapper.text()).toContain('library.categories.habits')
   })
 
   it('detects embedded PDF during URL crawl and renders preview card with direct import action', async () => {
@@ -225,9 +238,12 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       { id: 'b-num2', title: 'Num 2', category: 2, totalChunks: 1, status: 'Ready' },
       { id: 'b-num3', title: 'Num 3', category: 3, totalChunks: 1, status: 'Ready' },
       { id: 'b-num4', title: 'Num 4', category: 4, totalChunks: 1, status: 'Ready' },
+      { id: 'b-num5', title: 'Num 5', category: 5, totalChunks: 1, status: 'Ready' },
+      { id: 'b-num6', title: 'Num 6', category: 6, totalChunks: 1, status: 'Ready' },
+      { id: 'b-mental', title: 'Mental Models Book', category: 'MentalModels', totalChunks: 3, status: 'Ready' },
+      { id: 'b-habits', title: 'Atomic Habits Book', category: 'HabitsProductivity', totalChunks: 3, status: 'Ready' },
       { id: 'b-alias', title: 'Alias Craft', category: 'craft', totalChunks: 2, status: 'Ready' }
     ]
-
     mockGet.mockImplementationOnce(async (url: string) => {
       if (url.includes('/api/v1/library/books')) {
         return { books: customBooks }
@@ -253,6 +269,8 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(wrapper.text()).toContain('library.categories.database')
     expect(wrapper.text()).toContain('library.categories.system_design')
     expect(wrapper.text()).toContain('library.categories.craft')
+    expect(wrapper.text()).toContain('library.categories.mental_models')
+    expect(wrapper.text()).toContain('library.categories.habits')
   })
 
   it('renders dynamic localized status messages with parameter interpolation for in-progress books', async () => {
@@ -584,5 +602,61 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     // Must render BookOpen icon, not CheckCircle2
     expect(badge.findComponent(BookOpen).exists()).toBe(true)
     expect(badge.findComponent(CheckCircle2).exists()).toBe(false)
+  })
+
+  describe('Edit Book Modal & Metadata Update', () => {
+    it('opens edit modal with pre-populated values when edit button is clicked', async () => {
+      const wrapper = mount(LibraryPage, {
+        global: {
+          stubs: {
+            NuxtLink: true,
+            Teleport: true
+          }
+        }
+      })
+      await flushPromises()
+
+      const editButtons = wrapper.findAll('button[title="library.edit_book"]')
+      expect(editButtons.length).toBeGreaterThan(0)
+
+      await editButtons[0].trigger('click')
+      await flushPromises()
+
+      const titleInput = wrapper.find('#edit-book-title')
+      expect(titleInput.exists()).toBe(true)
+      expect((titleInput.element as HTMLInputElement).value).toBe('Designing Data-Intensive Applications')
+    })
+
+    it('submits updated book metadata via PATCH API and updates library store', async () => {
+      const wrapper = mount(LibraryPage, {
+        global: {
+          stubs: {
+            NuxtLink: true,
+            Teleport: true
+          }
+        }
+      })
+      await flushPromises()
+
+      const editButtons = wrapper.findAll('button[title="library.edit_book"]')
+      await editButtons[0].trigger('click')
+      await flushPromises()
+
+      const titleInput = wrapper.find('#edit-book-title')
+      await titleInput.setValue('Designing Data-Intensive Systems (Updated)')
+
+      const form = wrapper.find('#edit-book-form')
+      await form.trigger('submit.prevent')
+      await flushPromises()
+
+      expect(mockPatch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/library/books/book-1'),
+        expect.objectContaining({
+          title: 'Designing Data-Intensive Systems (Updated)',
+          category: 2,
+          language: 'en'
+        })
+      )
+    })
   })
 })

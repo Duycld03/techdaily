@@ -12,6 +12,7 @@ using TechDaily.Application.Features.Library.ImportDocument;
 using TechDaily.Application.Features.Library.UploadPdf;
 using TechDaily.Application.Features.Library.ExportBookMarkdown;
 using TechDaily.Application.Features.Library.ImportRemotePdf;
+using TechDaily.Application.Features.Library.UpdateBook;
 using TechDaily.Application.Features.Notes.CreateHighlight;
 using TechDaily.Application.Features.Notes.DeleteHighlight;
 using TechDaily.Application.Features.Notes.GetHighlights;
@@ -61,6 +62,7 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<Features.Library.GetBookStatus.GetBookStatusRequest, Features.Library.DTOs.BookIngestionStatusDto>, Features.Library.GetBookStatus.GetBookStatusHandler>();
         services.AddScoped<IUseCase<ImportDocumentRequest, ImportDocumentResponse>, ImportDocumentHandler>();
         services.AddScoped<IUseCase<DeleteBookRequest, DeleteBookResponse>, DeleteBookHandler>();
+        services.AddScoped<IUseCase<UpdateBookRequest, UpdateBookResponse>, UpdateBookHandler>();
         services.AddScoped<IUseCase<UploadPdfRequest, UploadPdfResponse>, UploadPdfHandler>();
         services.AddScoped<IUseCase<CrawlUrlRequest, CrawlUrlResponse>, CrawlUrlHandler>();
         services.AddScoped<IUseCase<Features.Library.CurateSlice.CurateSliceRequest, Features.Library.CurateSlice.CurateSliceResponse>, Features.Library.CurateSlice.CurateSliceHandler>();

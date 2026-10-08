@@ -405,6 +405,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         pillars.Should().NotContain(p => p.Id == "pillar-DatabaseStorage");
         pillars.Should().NotContain(p => p.Id == "pillar-SystemDesign");
         pillars.Should().NotContain(p => p.Id == "pillar-EngineeringCraft");
+        pillars.Should().NotContain(p => p.Id == "pillar-MentalModels");
+        pillars.Should().NotContain(p => p.Id == "pillar-HabitsProductivity");
     }
 
     [Fact]
@@ -907,6 +909,115 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         foreach (var cardId in new[] { chunkCard.Id.ToString(), highlightCard.Id.ToString(), orphanCard.Id.ToString() })
         {
             response.Edges.Any(e => e.Source == cardId || e.Target == cardId).Should().BeTrue();
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_DeepPaceMentalModelsAndHabitsBooks_ShouldEmitPillarHubsWithoutDanglingEdges()
+    {
+        // Arrange
+        var user = new User { Id = Guid.NewGuid(), Email = "deeppace@techdaily.local", Name = "DeepPace User" };
+        await _db.Users.AddAsync(user);
+
+        var mentalBook = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "The Great Mental Models",
+            Slug = "great-mental-models",
+            Category = Category.MentalModels,
+            IsPublished = true,
+            CreatedByUserId = user.Id
+        };
+        var habitsBook = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Atomic Habits",
+            Slug = "atomic-habits",
+            Category = Category.HabitsProductivity,
+            IsPublished = true,
+            CreatedByUserId = user.Id
+        };
+        await _db.DocumentBooks.AddRangeAsync(mentalBook, habitsBook);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var response = result.Value;
+        var pillars = response.Nodes.Where(n => n.Type == GraphNodeType.Pillar).ToList();
+
+        pillars.Should().HaveCount(2);
+        pillars.Should().Contain(p => p.Id == "pillar-MentalModels");
+        pillars.Should().Contain(p => p.Id == "pillar-HabitsProductivity");
+
+        // Verify zero dangling edges
+        var nodeIds = response.Nodes.Select(n => n.Id).ToHashSet();
+        foreach (var edge in response.Edges)
+        {
+            nodeIds.Should().Contain(edge.Source, $"edge {edge.Id} source must be present");
+            nodeIds.Should().Contain(edge.Target, $"edge {edge.Id} target must be present");
+        }
+
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
+            && e.Source == mentalBook.Id.ToString()
+            && e.Target == "pillar-MentalModels");
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
+            && e.Source == habitsBook.Id.ToString()
+            && e.Target == "pillar-HabitsProductivity");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CardLinkedToHabitsChunk_ShouldAnchorToHabitsPillarHub()
+    {
+        // Arrange
+        var user = new User { Id = Guid.NewGuid(), Email = "habitscard@techdaily.local", Name = "Habits Card User" };
+        await _db.Users.AddAsync(user);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Atomic Habits",
+            Slug = "atomic-habits",
+            Category = Category.HabitsProductivity,
+            IsPublished = true,
+            CreatedByUserId = user.Id
+        };
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(),
+            DocumentBookId = book.Id,
+            ChunkOrder = 1,
+            ChapterTitle = "The 1% Rule",
+            SummaryMarkdown = "Small improvements compound",
+            OriginalTextMarkdown = "Every day get 1% better"
+        };
+        book.Chunks.Add(chunk);
+        await _db.DocumentBooks.AddAsync(book);
+
+        var card = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, chunk.Id, "What is the 1% rule?", "Compounding habits.");
+        await _db.SpacedRepetitionCards.AddAsync(card);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _handler.ExecuteAsync(new GetKnowledgeGraphQuery(user.Id));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var response = result.Value;
+
+        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar && n.Id == "pillar-HabitsProductivity");
+        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Card && n.Id == card.Id.ToString() && n.Category == "HabitsProductivity");
+        response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToChunk
+            && e.Source == card.Id.ToString()
+            && e.Target == chunk.Id.ToString());
+
+        var nodeIds = response.Nodes.Select(n => n.Id).ToHashSet();
+        foreach (var edge in response.Edges)
+        {
+            nodeIds.Should().Contain(edge.Source);
+            nodeIds.Should().Contain(edge.Target);
         }
     }
 }

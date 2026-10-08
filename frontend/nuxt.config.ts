@@ -8,13 +8,15 @@ const apiBaseUrl = validateApiBaseUrl(
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  future: {
-    compatibilityVersion: 4
-  },
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
   typescript: {
     shim: true
+  },
+  postcss: {
+    plugins: {
+      'tailwindcss/nesting': false
+    }
   },
 
   devServer: {
@@ -37,6 +39,7 @@ export default defineNuxtConfig({
   },
 
   i18n: {
+    restructureDir: 'app/i18n',
     locales: [
       { code: 'en', iso: 'en-US', name: 'English', file: 'en.json' },
       { code: 'vi', iso: 'vi-VN', name: 'Tiếng Việt', file: 'vi.json' }

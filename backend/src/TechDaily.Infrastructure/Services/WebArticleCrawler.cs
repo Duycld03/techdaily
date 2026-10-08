@@ -447,11 +447,24 @@ public class WebArticleCrawler : IWebArticleCrawler
         }
 
         if (combined.Contains("atomic habits") || combined.Contains("deep work") ||
-            combined.Contains("pragmatic") || combined.Contains("mindset") ||
-            combined.Contains("productivity") || combined.Contains("leadership") ||
-            combined.Contains("soft skills"))
+            combined.Contains("productivity") || combined.Contains("focus") ||
+            combined.Contains("flow state") || combined.Contains("habit") ||
+            combined.Contains("procrastination") || combined.Contains("cal newport") ||
+            combined.Contains("james clear") || combined.Contains("thói quen") ||
+            combined.Contains("tập trung") || combined.Contains("năng suất") ||
+            combined.Contains("trì hoãn"))
         {
-            return Category.EngineeringCraft;
+            return Category.HabitsProductivity;
+        }
+
+        if (combined.Contains("mental model") || combined.Contains("first principles") ||
+            combined.Contains("cognitive bias") || combined.Contains("decision making") ||
+            combined.Contains("psychology") || combined.Contains("stoic") ||
+            combined.Contains("charlie munger") || combined.Contains("farnam street") ||
+            combined.Contains("mô hình tư duy") || combined.Contains("tư duy") ||
+            combined.Contains("tâm lý học") || combined.Contains("ra quyết định"))
+        {
+            return Category.MentalModels;
         }
 
         if (combined.Contains("vue") || combined.Contains("react") ||
@@ -461,6 +474,16 @@ public class WebArticleCrawler : IWebArticleCrawler
             combined.Contains("javascript") || combined.Contains("typescript"))
         {
             return Category.FrontendWeb;
+        }
+
+        if (combined.Contains("clean code") || combined.Contains("refactor") ||
+            combined.Contains("design pattern") || combined.Contains("craftsmanship") ||
+            combined.Contains("solid") || combined.Contains("unit test") ||
+            combined.Contains("pragmatic") || combined.Contains("mindset") ||
+            combined.Contains("leadership") || combined.Contains("soft skills") ||
+            combined.Contains("architecture"))
+        {
+            return Category.EngineeringCraft;
         }
 
         return Category.EngineeringCraft;

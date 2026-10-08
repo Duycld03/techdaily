@@ -69,6 +69,19 @@ const mockPost = vi.fn(async (url: string, body: Record<string, unknown>) => {
 const mockDownload = vi.fn(async (url: string, defaultName: string) => {
   return;
 });
+const mockPatch = vi.fn(async (url: string, body: Record<string, unknown>) => {
+  return {
+    id: "b-1",
+    title: body.title,
+    category: body.category,
+    authorOrSourceUrl: body.authorOrSourceUrl,
+    totalChunks: 12,
+    isPublished: true,
+    createdAt: "2026-08-31T00:00:00Z",
+    language: (body.language as string) ?? "en"
+  };
+});
+
 
 const mockGet = vi.fn(async (url: string) => {
   if (url.includes("/slices/")) {
@@ -122,6 +135,7 @@ vi.mock("~/composables/useApiClient", () => ({
   useApiClient: () => ({
     get: mockGet,
     post: mockPost,
+    patch: mockPatch,
     download: mockDownload,
   }),
 }));
@@ -252,5 +266,32 @@ describe("useLibraryStore", () => {
     mockGet.mockRejectedValueOnce(new Error("Slice fetch failed"));
 
     await expect(library.fetchSlice("b-1", 1)).rejects.toThrow("Slice fetch failed");
+  });
+
+  it("updates book metadata via patch and reflects change in store", async () => {
+    const library = useLibraryStore();
+    await library.fetchBooks();
+
+    const updated = await library.updateBook("b-1", {
+      title: "Updated Title",
+      authorOrSourceUrl: "New Author",
+      category: 6,
+      language: "vi"
+    });
+
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/api/v1/library/books/b-1",
+      {
+        title: "Updated Title",
+        authorOrSourceUrl: "New Author",
+        category: 6,
+        language: "vi"
+      }
+    );
+    expect(updated.title).toBe("Updated Title");
+    expect(updated.language).toBe("vi");
+    expect(library.books.find(b => b.id === "b-1")?.title).toBe("Updated Title");
+    expect(library.books.find(b => b.id === "b-1")?.category).toBe(6);
+    expect(library.books.find(b => b.id === "b-1")?.language).toBe("vi");
   });
 });

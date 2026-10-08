@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using TechDaily.Application.Common;
 using TechDaily.Application.Features.Insights.DTOs;
@@ -63,6 +64,18 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
         }
     };
 
+    private static readonly Regex NoisePrefixRegex = new(
+        @"^(chương\s+\d+[:\-\s]*|chapter\s+\d+[:\-\s]*|tóm\s+tắt\s+chương[:\-\s]*|\(section\s+\d+\)[:\-\s]*|qui\s+luật\s+số\s+\d+[:\-\s]*)",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    public static string CleanTopicTitle(string title)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return string.Empty;
+        var cleaned = NoisePrefixRegex.Replace(title.Trim(), string.Empty).Trim();
+        cleaned = Regex.Replace(cleaned, @"\s*\(section\s+\d+\)\s*$", string.Empty, RegexOptions.IgnoreCase).Trim();
+        return cleaned.Length >= 3 ? cleaned : string.Empty;
+    }
+
     public GetInsightsMetaHandler(ITechDailyDbContext dbContext)
     {
         _dbContext = dbContext;
@@ -114,8 +127,8 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
             new(
                 (int)Category.EngineeringCraft,
                 "craft",
-                "Software Craftsmanship",
-                "Kỹ Nghệ Phần Mềm",
+                "Clean Code & Software Design",
+                "Mã Sạch & Thiết Kế Mã",
                 countMap.GetValueOrDefault(Category.EngineeringCraft, 0)
             ),
             new(
@@ -137,13 +150,19 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
         var activeTopics = await _dbContext.DocumentChunks
             .AsNoTracking()
             .Where(c => !c.IsDeleted && !c.DocumentBook.IsDeleted && c.DocumentBook.Status == ProcessingStatus.Ready)
+            .OrderBy(c => c.ChunkOrder)
             .Select(c => new { c.DocumentBook.Category, Title = c.ChapterTitle })
             .ToListAsync(cancellationToken);
+
         var dbTopicGroups = activeTopics
             .GroupBy(t => (int)t.Category)
             .ToDictionary(
                 g => g.Key,
-                g => g.Select(x => x.Title.Trim()).Where(t => !string.IsNullOrEmpty(t)).Distinct().ToList()
+                g => g.Select(x => CleanTopicTitle(x.Title))
+                      .Where(t => !string.IsNullOrEmpty(t))
+                      .Distinct(StringComparer.OrdinalIgnoreCase)
+                      .Take(8)
+                      .ToList()
             );
 
         var suggestedTopics = new Dictionary<int, List<string>>();
@@ -157,7 +176,11 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
             if (topicsForCat.Count < 2)
             {
                 var defaults = DefaultTopics.GetValueOrDefault(categoryId, new List<string>());
-                topicsForCat = topicsForCat.Union(defaults).ToList();
+                topicsForCat = topicsForCat.Union(defaults, StringComparer.OrdinalIgnoreCase).Take(8).ToList();
+            }
+            else
+            {
+                topicsForCat = topicsForCat.Take(8).ToList();
             }
 
             suggestedTopics[categoryId] = topicsForCat;

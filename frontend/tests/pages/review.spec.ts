@@ -141,8 +141,9 @@ describe('review.vue (Dual-Mode Spaced Repetition & Deck Management)', () => {
     await flushPromises()
 
     // Initially on Tab 1 (Review Session with StudioLayout)
-    expect(wrapper.findComponent({ name: 'FlashcardDeck' }).exists()).toBe(true)
-    expect(wrapper.text()).toContain('Distributed Consensus with Raft')
+    const deckComponent = wrapper.findComponent({ name: 'FlashcardDeck' })
+    expect(deckComponent.exists()).toBe(true)
+    expect(deckComponent.props('card')).toMatchObject({ id: 'due-1' })
     expect(wrapper.text()).toContain('review.session_progress')
     expect(wrapper.text()).toContain('review.sm2_telemetry')
     expect(wrapper.text()).toContain('review.shortcuts_title')

@@ -221,7 +221,7 @@ describe('Immersive Document Reader (Hướng 1)', () => {
   })
 
   it('validates floating toolbar Dev-Learning Studio Iris Violet buttons and absence of amber colors', () => {
-    const readerSource = fs.readFileSync(path.resolve(__dirname, '../../pages/read/[bookId].vue'), 'utf-8')
+    const readerSource = fs.readFileSync(path.resolve(__dirname, '../../app/pages/read/[bookId].vue'), 'utf-8')
     const toolbarBlock = readerSource.slice(readerSource.indexOf('<Teleport to="body">'))
 
     // Ensure Highlight/Note does not use legacy amber tokens
@@ -239,7 +239,7 @@ describe('Immersive Document Reader (Hướng 1)', () => {
   })
 
   it('validates reflection popover placeholder bindings, soft focus rings, and glassmorphic tokens', () => {
-    const readerSource = fs.readFileSync(path.resolve(__dirname, '../../pages/read/[bookId].vue'), 'utf-8')
+    const readerSource = fs.readFileSync(path.resolve(__dirname, '../../app/pages/read/[bookId].vue'), 'utf-8')
 
     // Ensure explicit placeholder bindings exist
     expect(readerSource).toContain(':placeholder="$t(\'reader.note_placeholder\')"')

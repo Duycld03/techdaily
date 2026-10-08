@@ -22,7 +22,9 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
         ("pillar-BackendRuntime", "Backend & Runtime", Category.BackendRuntime, "Runtimes, Concurrency, Memory & Async I/O", "High-performance runtime internals, concurrency primitives, asynchronous execution, and service architectures."),
         ("pillar-DatabaseStorage", "Database & Storage", Category.DatabaseStorage, "Storage Engines, Indexing & Persistence", "Relational persistence, storage engine mechanics, index strategies, transaction isolation, and caching."),
         ("pillar-SystemDesign", "Distributed Systems", Category.SystemDesign, "Event-Driven, Consistency & Fault Tolerance", "Scalable distributed patterns, transactional outbox, idempotency, event sourcing, and resilience engineering."),
-        ("pillar-EngineeringCraft", "Engineering Craft", Category.EngineeringCraft, "Architecture, Clean Code, Testing", "Foundational engineering practices, clean architecture, automated testing, and software design principles.")
+        ("pillar-EngineeringCraft", "Engineering Craft", Category.EngineeringCraft, "Architecture, Clean Code, Testing", "Foundational engineering practices, clean architecture, automated testing, and software design principles."),
+        ("pillar-MentalModels", "Mental Models & Decisions", Category.MentalModels, "First Principles, Cognitive Biases, Inversion", "Foundational cognitive frameworks, multi-disciplinary mental models, and structured decision-making mechanisms."),
+        ("pillar-HabitsProductivity", "Habits & Deep Work", Category.HabitsProductivity, "Habit Loops, Focus Rituals, Attention Management", "Deliberate practice systems, environmental cue design, ultradian focus blocks, and sustainable daily pace.")
     ];
 
     public async Task<Result<KnowledgeGraphResponse>> ExecuteAsync(
@@ -365,7 +367,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             }
         }
 
-        // Pillar Hub Nodes: emit only pillars that at least one edge targets (0..5 hubs)
+        // Pillar Hub Nodes: emit only pillars that at least one edge targets (0..7 hubs)
         var pillarNodes = new List<GraphNodeDto>();
         foreach (var (id, label, cat, subtitle, summary) in CanonicalPillars)
         {

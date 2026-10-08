@@ -18,6 +18,7 @@ public class BookDto
     public string? StatusMessage { get; set; }
     public string? ErrorMessage { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    public string Language { get; set; } = "en";
 }
 
 public class BookIngestionStatusDto

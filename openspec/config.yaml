@@ -9,7 +9,7 @@ context: |
   - Dark Mode first for night-time developer usage.
   Tech stack:
   - Backend: ASP.NET Core (.NET 10), C# 13, Clean Architecture with Plain Use-Case Handlers (Pure DI), Rich Domain Model, EF Core 9 (Npgsql), PostgreSQL 17 (pgvector)
-  - Frontend: Nuxt 3 (Vue 3.5, SSR/PWA), Tailwind CSS, Pinia, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode (Dark/Light), Markdown-it + Shiki Syntax Highlighter, Cytoscape.js Knowledge Graph, Lucide Icons
+  - Frontend: Nuxt 4 (Vue 3.5, SSR/PWA), Tailwind CSS, Pinia, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode (Dark/Light), Markdown-it + Shiki Syntax Highlighter, Cytoscape.js Knowledge Graph, Lucide Icons
   - AI Engine: Gemini 3.5 Flash Lite (<5s low latency for scenarios & quizzes), gemini-embedding-001 (768-D vectors), Structured JSON Output, Semantic Term Cache
   - Background Jobs: BackgroundService with PeriodicTimer for notifications & async PDF ingestion
   - Notifications: Web Push (VAPID) with auto-detected IANA timezones

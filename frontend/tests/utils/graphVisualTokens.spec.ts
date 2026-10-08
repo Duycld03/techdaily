@@ -65,6 +65,10 @@ describe('graphVisualTokens', () => {
       expect(CATEGORY_PALETTE.DatabaseStorage.fill).toBe('#0891b2')
       expect(CATEGORY_PALETTE.SystemDesign.fill).toBe('#7c3aed')
       expect(CATEGORY_PALETTE.EngineeringCraft.fill).toBe('#ec4899')
+      expect(CATEGORY_PALETTE.MentalModels.fill).toBe('#6366f1')
+      expect(CATEGORY_PALETTE.MentalModels.border).toBe('#818cf8')
+      expect(CATEGORY_PALETTE.HabitsProductivity.fill).toBe('#10b981')
+      expect(CATEGORY_PALETTE.HabitsProductivity.border).toBe('#34d399')
     })
 
     it('normalizes API category aliases onto canonical keys', () => {
@@ -74,6 +78,11 @@ describe('graphVisualTokens', () => {
       expect(normalizeCategory('Postgres')).toBe('DatabaseStorage')
       expect(normalizeCategory('DistributedSystems')).toBe('SystemDesign')
       expect(normalizeCategory('Craft')).toBe('EngineeringCraft')
+      expect(normalizeCategory('MentalModels')).toBe('MentalModels')
+      expect(normalizeCategory('mental')).toBe('MentalModels')
+      expect(normalizeCategory('HabitsProductivity')).toBe('HabitsProductivity')
+      expect(normalizeCategory('habit')).toBe('HabitsProductivity')
+      expect(normalizeCategory('productivity')).toBe('HabitsProductivity')
       expect(normalizeCategory(null)).toBe('BackendDotNet')
     })
   })

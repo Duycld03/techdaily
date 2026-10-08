@@ -249,4 +249,43 @@ public class GetReviewCardsHandlerTests : IDisposable
         resPage3.Value.Page.Should().Be(3);
         resPage3.Value.Cards.Should().HaveCount(1);
     }
+    [Fact]
+    public async Task GetReviewCards_WhenCardFromQuizMistake_ShouldProjectQuizTopicCategoryAndDifficulty()
+    {
+        // Arrange
+        var userId = await SeedUserAsync();
+        var quizQuestion = new QuizQuestion
+        {
+            Id = Guid.NewGuid(),
+            Topic = "MemoryPool Zero-Allocation",
+            Category = Category.BackendRuntime,
+            Level = QuizLevel.Mastery,
+            QuestionText = "How do we rent buffers zero-alloc?",
+            ExplanationMarkdown = "Via ArrayPool<T>.Shared or MemoryPool<T>.",
+            CorrectOptionIndex = 0,
+            Options = new List<string> { "MemoryPool", "new byte[]" }
+        };
+        await _db.QuizQuestions.AddAsync(quizQuestion);
+
+        var card = SpacedRepetitionCard.CreateFromQuizMistake(
+            userId,
+            quizQuestion.Id,
+            quizQuestion.QuestionText,
+            quizQuestion.ExplanationMarkdown);
+        await _db.SpacedRepetitionCards.AddAsync(card);
+        await _db.SaveChangesAsync();
+
+        var handler = new GetReviewCardsHandler(_db);
+
+        // Act
+        var result = await handler.ExecuteAsync(new GetReviewCardsRequest(userId));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Cards.Should().HaveCount(1);
+        var dto = result.Value.Cards.First();
+        dto.TopicTitle.Should().Be("MemoryPool Zero-Allocation");
+        dto.Category.Should().Be(Category.BackendRuntime);
+        dto.Difficulty.Should().Be(Difficulty.Lead);
+    }
 }

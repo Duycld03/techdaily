@@ -352,15 +352,25 @@ The `/review` route and interactive flashcard deck player (`FlashcardDeck.vue`) 
 - **THEN** the card content scales gracefully without expanding beyond the screen fold or clipping action controls.
 
 ### Requirement: Flashcards Practice Studio Layout Integration
-The `/review` page active review session (`activeTab === 'session'` with `currentCard !== null`) SHALL implement the `StudioLayout` archetype (`StudioLayout.vue`), replacing the solitary centered card layout with an integrated practice studio.
-1. **Action Stage (Left Column)**:
-   - The interactive flashcard player (`FlashcardDeck.vue`) SHALL render within the `#main` slot, centered within a maximum container width of `max-w-3xl` while filling the left 68% column.
+The `/review` page active review session (`activeTab === 'session'` with `currentCard !== null`) SHALL implement a focused, unboxed direct-canvas practice layout without redundant sub-headers:
+1. **Direct-Canvas Action Stage (Left Column)**:
+   - The interactive flashcard player (`FlashcardDeck.vue`) SHALL sit directly on the canvas as the single focal hero element in the left 68% column, without an enclosing outer sub-header row.
+   - The application SHALL NOT render outer truncated title snippets (e.g. slicing the prompt markdown) or repeated icon badges above the flashcard container.
 2. **Telemetry Dock (Right Column)**:
-   - The `#dock` slot SHALL render a companion telemetry dock containing:
-     - **Daily Session Progress**: A compact card displaying completed cards versus total due cards with a percentage progress bar.
-     - **SM-2 Scheduling Metrics**: Dynamic readouts of the current card's Ease Factor ($EF$), interval in days, repetition count, and mastery status tag.
-     - **Keyboard Shortcuts Cheatsheet**: A compact guide showing `[Space]` to flip, `[1-4]` to grade (`Blackout`, `Hard`, `Good`, `Easy`), and `[E]` to edit.
-     - **Source Architecture Context**: A reference block citing the original book title, chapter, and slice with a direct navigation link.
+   - The right column companion dock SHALL house the session progress tracker, SM-2 algorithm telemetry, and keyboard shortcut legends.
+   - Session remaining cards count SHALL be surfaced exclusively in the page navigation tab (`$t('review.tab_session')`) and the companion progress dock (`sessionProgress`), eliminating duplicate floating badges.
+3. **Accurate Domain Category & Difficulty Metadata**:
+   - The review deck endpoint (`GET /api/v1/review/deck`) and deck query endpoint (`GET /api/v1/review/cards`) SHALL accurately project `Category`, `Difficulty`, and `TopicTitle` from the card's underlying origin (such as `SourceQuizQuestion` or `SourceDocumentChunk`), prohibiting hardcoded fallback values (`FrontendWeb`, `Senior`).
+
+#### Scenario: Active review session renders single hero card without outer sub-header
+- **WHEN** the user navigates to `/review` with due review cards present in `activeTab === 'session'`
+- **THEN** the active card is displayed directly under the page tab navigation without a secondary title/icon sub-header
+- **AND** the question text appears solely within the flashcard hero container without prior truncation
+
+#### Scenario: Review deck accurately reflects question domain category and seniority
+- **WHEN** a user reviews a card created from an ASP.NET Core or Database quiz mistake
+- **THEN** the card's category badge displays the authentic category (e.g., `BackendRuntime`, `DatabaseStorage`)
+- **AND** the seniority level reflects the original question level rather than a static default
 
 #### Scenario: Active Flashcard Practice on Desktop
 - **WHEN** an engineer begins reviewing due flashcards on a desktop browser
@@ -387,10 +397,14 @@ The modal SHALL prohibit rigid multi-column grid layouts in the sorting section 
 - **AND** clicking "Áp dụng bộ lọc" MUST dispatch the active sort criteria to update deck cards.
 
 ### Requirement: Flashcard Active Practice Player 3D Flip & Void Elimination
-The active review card player in `review.vue` Tab 1 and `FlashcardDeck.vue` SHALL eliminate excessive vertical stretching and dark voids on desktop displays ($W \ge 1280\text{px}$):
+The interactive flashcard player (`FlashcardDeck.vue`) SHALL eliminate excessive vertical stretching and dark voids on desktop displays ($W \ge 1280\text{px}$) and render clear provenance indicators directly on the front card face:
 1. **Vertical Constraint & Centering**: The card container SHALL bound its height to `min-h-[320px] max-h-[520px]` centered horizontally (`max-w-2xl mx-auto`) with smooth 3D CSS perspective flip transformations (`perspective: 1000px`, `transform-style: preserve-3d`).
-2. **Card Faces Organization**:
-   - **Front Face**: Question/concept prompt, document category tag, seniority level badge, and clear flip affordance button (`[Space] Flip Card` / `[Phím cách] Lật thẻ`).
+2. **Card Faces Organization & Provenance Badge**:
+   - **Front Face Header**: Question/concept prompt, document category tag, seniority level badge, and a compact provenance badge identifying the card's origin:
+     - `From Quiz Challenge` / `Từ Bài Trắc Nghiệm` when `sourceType === CardSourceType.QuizMistake`
+     - `Reading Highlight` / `Từ Trích Đoạn` when `sourceType === CardSourceType.Highlight`
+     - `Monograph Monograph` / `Tài Liệu Chuyên Khảo` when `sourceType === CardSourceType.DocumentChunk`
+     - The repetition counter and SM-2 Ease Factor readout SHALL sit aligned on the opposite side of the card header.
    - **Back Face**: Comprehensive explanation with Markdown rendering, Shiki-highlighted code excerpts, source book title badge, and SM-2 grading CTA bar.
 3. **Zero Layout Shifts**: Card flipping and answer reveal MUST transition smoothly without expanding the outer container or clipping against the viewport fold.
 
@@ -398,6 +412,9 @@ The active review card player in `review.vue` Tab 1 and `FlashcardDeck.vue` SHAL
 - **WHEN** an engineer begins a review session on desktop ($1920\times1080$)
 - **THEN** the active flashcard renders in a compact, centered card with zero empty dark voids and prominent front/back readability.
 
+#### Scenario: Card originating from quiz mistake displays quiz challenge provenance badge
+- **WHEN** a flashcard originating from a quiz mistake is displayed on the front face
+- **THEN** a provenance badge indicating its quiz challenge source is visible alongside the category badge
 ### Requirement: Flashcard Telemetry Dock Completeness & SM-2 Controls
 The Tab 1 companion dock and grading controls SHALL provide complete localized session feedback:
 1. **Session Progress Telemetry**: Localized header `$t('review.session_progress')` ("Session Progress" / "Tiến Độ Phiên Ôn Tập"), dynamic completion percentage, remaining review count, and visual progress bar.
