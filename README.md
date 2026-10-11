@@ -1,6 +1,6 @@
-# 🚀 DeepPace — Senior Engineering & Deliberate Practice Platform
+# 🚀 DeepPace — Active Recall & Deliberate Practice Platform
 
-[![Live Production](https://img.shields.io/badge/Live-techdaily.duckdns.org-10b981?style=flat-square&logo=nginx&logoColor=white)](https://techdaily.duckdns.org)
+[![Live Production](https://img.shields.io/badge/Live-deeppace.duckdns.org-10b981?style=flat-square&logo=nginx&logoColor=white)](https://deeppace.duckdns.org)
 [![Backend](https://img.shields.io/badge/.NET%2010-ASP.NET%20Core-512bd4?style=flat-square&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Frontend](https://img.shields.io/badge/Nuxt%204-Vue%203.5-00DC82?style=flat-square&logo=nuxtdotjs&logoColor=white)](https://nuxt.com/)
 [![Database](https://img.shields.io/badge/PostgreSQL%2017-pgvector-4169e1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -8,17 +8,17 @@
 [![CI/CD](https://img.shields.io/github/actions/workflow/status/Duycld03/techdaily/ci.yml?branch=main&style=flat-square&logo=githubactions&logoColor=white&label=CI%2FCD)](https://github.com/Duycld03/techdaily/actions)
 [![Spec-Driven Development](https://img.shields.io/badge/Workflow-OpenSpec-7c3aed?style=flat-square)](https://github.com/Fission-AI/OpenSpec)
 
-> **Live Production (HTTPS):** [https://techdaily.duckdns.org](https://techdaily.duckdns.org)
+> **Live Production (HTTPS):** [https://deeppace.duckdns.org](https://deeppace.duckdns.org)
 
-An AI-powered, daily bite-sized learning and technical interview preparation platform designed for Senior Fullstack & Backend (.NET) Engineers.
+An AI-powered active recall and deliberate practice platform for technical documentation and engineering literature.
 
 ---
 
 ## 🎯 Project Overview
 
-DeepPace solves the two most critical challenges for senior engineers preparing for architectural roles:
-1. **Daily Micro-Learning from Real Documentation:** Curated 3–5 minute reading slices extracted directly from authoritative sources (*Microsoft Learn, PostgreSQL 17 Internals, Vue 3 / Nuxt 4 Docs, Designing Data-Intensive Applications, CLR via C#*) with key takeaways, inline AI explanations, and IDE-grade Shiki syntax highlighting.
-2. **Active Recall & Scenario Drills:** Daily Senior-level engineering architecture scenario challenges with multiple-choice trade-off decisions, instant verification, and Principal-level deep-dive explanations.
+DeepPace solves the two most critical challenges in technical learning and retention:
+1. **Daily Practice from Real Documentation:** Curated 3–5 minute reading slices extracted directly from authoritative sources (*Microsoft Learn, PostgreSQL 17 Internals, Vue 3 / Nuxt 4 Docs, Designing Data-Intensive Applications, CLR via C#*) with key takeaways, inline AI explanations, and IDE-grade Shiki syntax highlighting.
+2. **Active Recall & Decision Drills:** Daily decision drills with multiple-choice trade-off evaluations, instant verification, and in-depth architectural explanations.
 ---
 
 ## 🏗️ Architecture & Technology Stack
@@ -28,7 +28,7 @@ DeepPace (Clean Architecture)
 ├── Api            → ASP.NET Core Minimal APIs (.NET 10, C# 13), JWT Bearer Auth, RFC 7807 Problem Details
 ├── Application    → Pure DI Use-Case Handlers, FluentValidation, Result Pattern, DTOs
 ├── Domain         → Rich Domain Entities, SM-2 Spaced Repetition Invariants, PBKDF2 Password Security
-├── Infrastructure → PostgreSQL 17 (pgvector, EF Core 10), Gemini 3.5 Flash Lite Client, PdfPig, ReverseMarkdown, SMTP Email Sender
+├── Infrastructure → PostgreSQL 17 (pgvector, EF Core 10), Gemini 3.6 Flash Client, PdfPig, ReverseMarkdown, SMTP Email Sender
 └── Frontend       → Nuxt 4, Vue 3.5, Pinia, Tailwind CSS, @nuxtjs/i18n (en/vi), @nuxtjs/color-mode, Shiki, Three.js, Web Worker Neural TTS
 ```
 
@@ -36,7 +36,7 @@ DeepPace (Clean Architecture)
 |---|---|---|
 | **Backend API** | **ASP.NET Core (.NET 10)** | Clean Architecture, C# 13, Plain Use-Case Handlers (Pure DI), Rich Domain Model, RFC 7807 problem details, 100% English codebase |
 | **Data Persistence** | **EF Core 10 + Npgsql** | PostgreSQL 17 (`pgvector`), JSONB (`ToJson()`) for takeaways/quizzes/options, User Bookmarks with Unique Indexes, UserBookPacer |
-| **AI Synthesis Engine** | **Gemini 3.5 Flash Lite API** | Structured Output (JSON Schema), High-Speed Quiz & Challenge Synthesis (<5s), Semantic Term Cache, JIT Look-Ahead Buffer Pre-generation |
+| **AI Synthesis Engine** | **Gemini 3.6 Flash API** | Structured Output (JSON Schema), High-Speed Quiz & Challenge Synthesis (<5s), Semantic Term Cache, JIT Look-Ahead Buffer Pre-generation |
 | **Document Ingestion** | **PdfPig + ReverseMarkdown** | Asynchronous Channel-based queue with zero-LOH disk spooling for PDFs up to 300MB (8,000+ pages), native PDF Bookmarks/Outline segmentation, HTML-to-Markdown Web Crawler |
 | **Frontend Web** | **Nuxt 4 + Vue 3.5** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
 | **Audio Narration Engine** | **Web Worker Neural TTS + Web Speech** | Client-side neural TTS via ONNX Runtime Web / Transformers.js with Web Worker offloading (zero server cost), 3-tier cascading fallback (Device ONNX → System Web Speech → Cloud TTS), seekable sentence scrubber, and IndexedDB caching |
@@ -62,10 +62,10 @@ DeepPace (Clean Architecture)
 - **Daily Doc Slice & Pacer Bar:** Curated 3–5 minute excerpt from official docs preserving original source language with structured takeaways, reading progress metrics, calendar day change auto-advance, and 1-click active book switching dropdown.
 - **Integrated Audio Narration Player:** Direct client-side speech playback of daily slices with seekable scrubber, sleep timer, auto-advance, and multi-engine fallback.
 - **Bilingual Resilient AI Explainer:** Highlight any complex technical term or sentence to get instant popover explanation localized to your language, powered by DOM context window extraction (±300 characters), responsive non-wrapping layout, and HTTP 500 translation resilience with instant retry button (backed by `TermExplanationCaches`).
-- **Senior Scenario Challenge:** Real-world architectural decision drill with instant option grading, trade-off analysis, and deep-dive explanations.
-- **JIT Look-Ahead Buffer:** Background pre-generation service keeping 3 scenario challenges ahead using Gemini 3.5 Flash Lite with resilient 6-second timeout fallback.
+- **Decision Drills:** Real-world trade-off decision drills with instant option grading, trade-off analysis, and deep-dive explanations.
+- **JIT Look-Ahead Buffer:** Background pre-generation service keeping 3 decision drills ahead using Gemini 3.6 Flash with resilient 6-second timeout fallback.
 - **Streak & Freeze Retention:** Automatic streak incrementing, longest streak tracking, effective streak decay calculation, and monthly streak freeze credits.
-### 2. 🗺️ 30-Day Senior Fullstack Roadmap (`/roadmap`)
+### 2. 🗺️ 30-Day Technical Mastery Roadmap (`/roadmap`)
 - **Core Pillars & Custom Track:** Frontend & Browser Internals, .NET 10 & C# 13 Runtime Internals, PostgreSQL 17 Storage Engine, Distributed Systems Architecture, or your active custom technical book.
 - **Skill Tree & Milestone Progression:** Chapter-level milestone progression with live slice indicators, completed slice counters, and sprint progress tracking.
 - **Direct Navigation:** Jump directly into any unlocked slice or milestone focus topic and challenge.
@@ -91,16 +91,16 @@ DeepPace (Clean Architecture)
 - **Floating Selection Toolbar:** 1-click AI Explanation with Gemini, text highlighting, 1-click SM-2 flashcard creation, and clipboard copying.
 - **Markdown Knowledge Export:** 1-click export of book chapters, executive summaries, takeaways, and user highlights with Obsidian/Logseq YAML frontmatter.
 
-### 6. ✨ Infinite Senior Tech Insights Feed (`/insights`)
-- **Bite-Sized Architectural Lessons:** Curated feed of Senior Anti-Patterns vs Idiomatic Solutions across C#, Rust, Go, Python, TypeScript, Vue 3, and PostgreSQL.
+### 6. ✨ Infinite Tech Insights Feed (`/insights`)
+- **Bite-Sized Architectural Lessons:** Curated feed of Anti-Patterns vs Idiomatic Solutions across C#, Rust, Go, Python, TypeScript, Vue 3, and PostgreSQL.
 - **Under-The-Hood Mechanics:** Memory layouts, lock contention, compiler lowerings, and OS syscalls with benchmark statistics.
 - **Database-Persisted Bookmarks:** Save important lessons with real-time bookmark toggle and "🔖 Đã Lưu" filter view.
-- **Multimodal AI Synthesis:** Generate on-demand, deep-dive insights on any custom technology or topic using Gemini 3.5 Flash Lite.
+- **Multimodal AI Synthesis:** Generate on-demand, deep-dive insights on any custom technology or topic using Gemini 3.6 Flash.
 - **Keyboard Navigation:** Fast card flipping using `[Space]`, `[→]`, and `[←]` keys.
 
 ### 7. 🖍️ Architectural Highlights & Saved Insights Hub (`/notes`)
 - **2-Tab Knowledge Base:**
-  - **🔖 Saved Insights:** Manage all bookmarked senior technical insights with summaries, fast jump links, and unbookmarking.
+  - **🔖 Saved Insights:** Manage all bookmarked technical insights with summaries, fast jump links, and unbookmarking.
   - **🖍️ Reading Highlights:** Centralized archive of all highlighted quotes categorized by book and chapter with custom reflections and tagging.
 - **Production Confirmation Modals:** Sleek, accessible delete and unbookmark confirmation dialogs (Zero native browser popups).
 - **1-Click Flashcard Creation:** Generate spaced repetition cards directly from saved highlights with Gemini active recall prompt synthesis.
@@ -111,8 +111,8 @@ DeepPace (Clean Architecture)
 - **Relational Knowledge Extraction:** Single-pass PostgreSQL 17 query projection (`GET /api/v1/graph`) linking user flashcards, highlights, and document slices to the 5 Core Architectural Pillars without auxiliary graph databases.
 - **Interactive Telemetry & Navigation:** Category filtering, node search with auto-centering camera fly-to animation, and 1-click navigation bridges directly into Reader slices and Flashcards.
 
-### 9. 🎯 Senior Technical Interview Quiz & Mastery Arena (`/quiz`)
-- **High-Speed AI Quiz Synthesis:** Generate 5 or 10 real-world interview scenario questions tailored to seniority level (Fresher to Senior/Staff) in under 5 seconds with Gemini 3.5 Flash Lite.
+### 9. 🎯 Reflex Practice & Mastery Arena (`/quiz`)
+- **High-Speed AI Quiz Synthesis:** Generate 5 or 10 real-world reflex practice questions across mastery depth stages (Foundation to Mastery) in under 5 seconds with Gemini 3.6 Flash.
 - **Interactive Arena & Mistake Review:** Timed scenario questions with instant option grading, detailed markdown architectural explanations, and 1-click mistake retry sessions.
 - **Spaced Repetition Mastery:** Automatically tracks user progress in PostgreSQL. Questions are marked as `Mastered` after 2 consecutive correct submissions.
 - **Weak Topics Analysis:** Aggregated analytics dashboard tracking accuracy rate, mastered cards, and ranking weakest vs strongest engineering topics.
