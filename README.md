@@ -10,13 +10,13 @@
 
 > **Live Production (HTTPS):** [https://deeppace.duckdns.org](https://deeppace.duckdns.org)
 
-An AI-powered active recall and deliberate practice platform for technical documentation and engineering literature.
+An open, tech-agnostic active recall and deliberate practice platform for documentation, literature, and mental craft.
 
 ---
 
 ## 🎯 Project Overview
 
-DeepPace solves the two most critical challenges in technical learning and retention:
+DeepPace solves the two most critical challenges in deep learning and knowledge retention:
 1. **Daily Practice from Real Documentation:** Curated 3–5 minute reading slices extracted directly from authoritative sources (*Microsoft Learn, PostgreSQL 17 Internals, Vue 3 / Nuxt 4 Docs, Designing Data-Intensive Applications, CLR via C#*) with key takeaways, inline AI explanations, and IDE-grade Shiki syntax highlighting.
 2. **Active Recall & Decision Drills:** Daily decision drills with multiple-choice trade-off evaluations, instant verification, and in-depth architectural explanations.
 ---
@@ -65,7 +65,7 @@ DeepPace (Clean Architecture)
 - **Decision Drills:** Real-world trade-off decision drills with instant option grading, trade-off analysis, and deep-dive explanations.
 - **JIT Look-Ahead Buffer:** Background pre-generation service keeping 3 decision drills ahead using Gemini 3.6 Flash with resilient 6-second timeout fallback.
 - **Streak & Freeze Retention:** Automatic streak incrementing, longest streak tracking, effective streak decay calculation, and monthly streak freeze credits.
-### 2. 🗺️ 30-Day Technical Mastery Roadmap (`/roadmap`)
+### 2. 🗺️ Chapter Milestone & Technical Roadmap (`/roadmap`)
 - **Core Pillars & Custom Track:** Frontend & Browser Internals, .NET 10 & C# 13 Runtime Internals, PostgreSQL 17 Storage Engine, Distributed Systems Architecture, or your active custom technical book.
 - **Skill Tree & Milestone Progression:** Chapter-level milestone progression with live slice indicators, completed slice counters, and sprint progress tracking.
 - **Direct Navigation:** Jump directly into any unlocked slice or milestone focus topic and challenge.
@@ -115,7 +115,7 @@ DeepPace (Clean Architecture)
 - **High-Speed AI Quiz Synthesis:** Generate 5 or 10 real-world reflex practice questions across mastery depth stages (Foundation to Mastery) in under 5 seconds with Gemini 3.6 Flash.
 - **Interactive Arena & Mistake Review:** Timed scenario questions with instant option grading, detailed markdown architectural explanations, and 1-click mistake retry sessions.
 - **Spaced Repetition Mastery:** Automatically tracks user progress in PostgreSQL. Questions are marked as `Mastered` after 2 consecutive correct submissions.
-- **Weak Topics Analysis:** Aggregated analytics dashboard tracking accuracy rate, mastered cards, and ranking weakest vs strongest engineering topics.
+- **Weak Topics Analysis:** Aggregated analytics dashboard tracking accuracy rate, mastered cards, and ranking weakest vs strongest study topics.
 
 ### 10. 🛡️ User Profile, Centralized Settings & Hybrid Auth (`/login`, `/profile`, `/settings`)
 - **Decluttered Profile & Centralized Settings:** Clean separation between personal identity/career track (`/profile`) and system preferences/notifications (`/settings`).
@@ -254,4 +254,4 @@ When activating `https://deeppace.duckdns.org`, register the domain origins in G
    - `https://deeppace.duckdns.org/login`
 ---
 ## 📜 License
-MIT License. Built for passionate software engineers mastering distributed systems and architecture.
+MIT License. Built for lifelong learners, knowledge workers, and builders pursuing deliberate practice and lasting mastery.
