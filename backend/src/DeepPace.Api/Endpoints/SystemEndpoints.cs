@@ -16,12 +16,16 @@ public static class SystemEndpoints
             IEmbeddingService embeddingService,
             CancellationToken ct) =>
         {
-            var textModel = configuration["Gemini:Model"] ?? "gemini-3.5-flash-lite";
+            var textModel = configuration["Gemini:Model"];
             var embeddingModel = configuration["Gemini:EmbeddingModel"] ?? "gemini-embedding-001";
-            var apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
+            var apiKey = configuration["Gemini:ApiKey"];
 
-            if (string.IsNullOrWhiteSpace(apiKey))
+            if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(textModel))
             {
+                var errorMsg = string.IsNullOrWhiteSpace(apiKey)
+                    ? "Gemini API key is not configured."
+                    : "Gemini model is not configured.";
+
                 return Results.Json(new AiHealthResponse(
                     Status: "unhealthy",
                     TextModel: "unhealthy",
@@ -31,7 +35,7 @@ public static class SystemEndpoints
                     Dimension: 0,
                     Details: null,
                     Timestamp: DateTime.UtcNow,
-                    Error: "Gemini API key is not configured."), statusCode: StatusCodes.Status503ServiceUnavailable);
+                    Error: errorMsg), statusCode: StatusCodes.Status503ServiceUnavailable);
             }
 
             long textLatencyMs = 0;
@@ -116,7 +120,7 @@ public static class SystemEndpoints
                 var combinedError = string.Join("; ", new[] { textError, embError }.Where(e => !string.IsNullOrEmpty(e)));
                 return Results.Json(new AiHealthResponse(
                     Status: "unhealthy",
-                    TextModel: textError == null ? textModel : "unhealthy",
+                    TextModel: textError == null ? textModel! : "unhealthy",
                     TextLatencyMs: textLatencyMs,
                     EmbeddingModel: embError == null ? embeddingModel : "unhealthy",
                     EmbeddingLatencyMs: embLatencyMs,
@@ -145,9 +149,9 @@ public static class SystemEndpoints
 
             return Results.Ok(new AiHealthResponse(
                 Status: "healthy",
-                TextModel: "gemini-3.5-flash-lite",
+                TextModel: textModel!,
                 TextLatencyMs: textLatencyMs,
-                EmbeddingModel: "gemini-embedding-001",
+                EmbeddingModel: embeddingModel,
                 EmbeddingLatencyMs: embLatencyMs,
                 Dimension: 768,
                 Details: new

@@ -49,7 +49,7 @@ public class TermExplanationServiceTests : IDisposable
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gemini:ApiKey"] = "fake-key",
-                ["Gemini:Model"] = "gemini-3.1-flash-lite"
+                ["Gemini:Model"] = "gemini-3.6-flash"
             })
             .Build();
 
@@ -118,7 +118,7 @@ public class TermExplanationServiceTests : IDisposable
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gemini:ApiKey"] = "fake-valid-key",
-                ["Gemini:Model"] = "gemini-3.1-flash-lite"
+                ["Gemini:Model"] = "gemini-3.6-flash"
             })
             .Build();
 
@@ -178,7 +178,7 @@ public class TermExplanationServiceTests : IDisposable
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gemini:ApiKey"] = "fake-valid-key",
-                ["Gemini:Model"] = "gemini-3.1-flash-lite"
+                ["Gemini:Model"] = "gemini-3.6-flash"
             })
             .Build();
 
@@ -252,7 +252,7 @@ public class TermExplanationServiceTests : IDisposable
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gemini:ApiKey"] = "fake-valid-key",
-                ["Gemini:Model"] = "gemini-3.1-flash-lite"
+                ["Gemini:Model"] = "gemini-3.6-flash"
             })
             .Build();
 

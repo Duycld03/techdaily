@@ -16,8 +16,8 @@ public class LookAheadBufferService : ILookAheadBufferService
     private readonly HttpClient _httpClient;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<LookAheadBufferService> _logger;
-    private readonly string _apiKey;
-    private readonly string _model;
+    private readonly string? _apiKey;
+    private readonly string? _model;
 
     public LookAheadBufferService(
         HttpClient httpClient,
@@ -28,8 +28,8 @@ public class LookAheadBufferService : ILookAheadBufferService
         _httpClient = httpClient;
         _scopeFactory = scopeFactory;
         _logger = logger;
-        _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
-        _model = configuration["Gemini:Model"] ?? "gemini-3.5-flash-lite";
+        _apiKey = configuration["Gemini:ApiKey"];
+        _model = configuration["Gemini:Model"];
     }
 
     public async Task PreGenerateInitialBufferAsync(Guid bookId, CancellationToken cancellationToken = default)
@@ -149,9 +149,9 @@ public class LookAheadBufferService : ILookAheadBufferService
 
     private async Task<InterviewQuestion> CallGeminiForScenarioAsync(DocumentChunk chunk, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(_apiKey))
+        if (string.IsNullOrWhiteSpace(_apiKey) || string.IsNullOrWhiteSpace(_model))
         {
-            _logger.LogWarning("Gemini API key is not configured. Falling back to local template challenge.");
+            _logger.LogWarning("Gemini API key or model is not configured. Falling back to local template challenge.");
             return CreateFallbackQuestion(chunk);
         }
 

@@ -114,7 +114,7 @@ public class SystemEndpointsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gemini:ApiKey"] = "valid-api-key",
-                ["Gemini:Model"] = "gemini-3.5-flash-lite",
+                ["Gemini:Model"] = "gemini-3.6-flash",
                 ["Gemini:EmbeddingModel"] = "gemini-embedding-001"
             })
             .Build();
@@ -136,7 +136,7 @@ public class SystemEndpointsTests
             var root = doc.RootElement;
 
             root.GetProperty("status").GetString().Should().Be("healthy");
-            root.GetProperty("textModel").GetString().Should().Be("gemini-3.5-flash-lite");
+            root.GetProperty("textModel").GetString().Should().Be("gemini-3.6-flash");
             root.GetProperty("embeddingModel").GetString().Should().Be("gemini-embedding-001");
             root.GetProperty("dimension").GetInt32().Should().Be(768);
         }
@@ -155,7 +155,7 @@ public class SystemEndpointsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gemini:ApiKey"] = "valid-api-key",
-                ["Gemini:Model"] = "gemini-3.5-flash-lite",
+                ["Gemini:Model"] = "gemini-3.6-flash",
                 ["Gemini:EmbeddingModel"] = "gemini-embedding-001"
             })
             .Build();
@@ -194,7 +194,7 @@ public class SystemEndpointsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gemini:ApiKey"] = "valid-api-key",
-                ["Gemini:Model"] = "gemini-3.5-flash-lite",
+                ["Gemini:Model"] = "gemini-3.6-flash",
                 ["Gemini:EmbeddingModel"] = "gemini-embedding-001"
             })
             .Build();
@@ -233,7 +233,7 @@ public class SystemEndpointsTests
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Gemini:ApiKey"] = "",
-                ["Gemini:Model"] = "gemini-3.5-flash-lite",
+                ["Gemini:Model"] = "gemini-3.6-flash",
                 ["Gemini:EmbeddingModel"] = "gemini-embedding-001"
             })
             .Build();
@@ -256,6 +256,45 @@ public class SystemEndpointsTests
 
             root.GetProperty("status").GetString().Should().Be("unhealthy");
             root.GetProperty("error").GetString().Should().Contain("Gemini API key is not configured.");
+        }
+        finally
+        {
+            await app.StopAsync();
+            await app.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task GetAiHealth_WhenModelMissing_ShouldReturn503ServiceUnavailable()
+    {
+        // Arrange
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gemini:ApiKey"] = "valid-api-key",
+                ["Gemini:Model"] = "",
+                ["Gemini:EmbeddingModel"] = "gemini-embedding-001"
+            })
+            .Build();
+
+        var handler = new MockHttpMessageHandler(HttpStatusCode.OK, "{}");
+        var httpFactory = new StubHttpClientFactory(handler);
+        var embeddingService = new FakeEmbeddingService(shouldSucceed: true, dimensions: 768);
+
+        var (app, client) = await CreateTestAppAsync(config, httpFactory, embeddingService);
+        try
+        {
+            // Act
+            var response = await client.GetAsync("/api/v1/system/ai-health");
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+            var content = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(content);
+            var root = doc.RootElement;
+
+            root.GetProperty("status").GetString().Should().Be("unhealthy");
+            root.GetProperty("error").GetString().Should().Contain("Gemini model is not configured.");
         }
         finally
         {

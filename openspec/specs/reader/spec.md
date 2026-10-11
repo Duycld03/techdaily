@@ -421,7 +421,7 @@ The reader SHALL provide an interactive slide-over chat drawer allowing readers 
 
 #### Scenario: User asks a question about the active book
 - **WHEN** user submits a technical query in the reader's Ask Book drawer
-- **THEN** backend vectorizes the question, retrieves the top 3 most relevant `DocumentChunk` records from the current book (`DocumentBookId == id`) ordered by cosine distance, and synthesizes a grounded answer using `gemini-3.5-flash-lite`.
+- **THEN** backend vectorizes the question, retrieves the top 3 most relevant `DocumentChunk` records from the current book (`DocumentBookId == id`) ordered by cosine distance, and synthesizes a grounded answer using `gemini-3.6-flash`.
 
 #### Scenario: Grounded citations and source jumping
 - **WHEN** the AI response is delivered to the reader

@@ -38,7 +38,7 @@ public class GeminiAiServiceTests
         var inMemoryConfig = new Dictionary<string, string?>
         {
             ["Gemini:ApiKey"] = "mock-api-key",
-            ["Gemini:Model"] = "gemini-3.5-flash-lite"
+            ["Gemini:Model"] = "gemini-3.6-flash"
         };
         var config = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
         var service = new GeminiAiService(client, config, NullLogger<GeminiAiService>.Instance);
@@ -141,7 +141,7 @@ public class GeminiAiServiceTests
         var inMemoryConfig = new Dictionary<string, string?>
         {
             ["Gemini:ApiKey"] = "test-gemini-key",
-            ["Gemini:Model"] = "gemini-3.5-flash-lite"
+            ["Gemini:Model"] = "gemini-3.6-flash"
         };
         var config = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
         var service = new GeminiAiService(client, config, NullLogger<GeminiAiService>.Instance);
@@ -190,5 +190,28 @@ public class GeminiAiServiceTests
         systemInstructionText.Should().Contain("You are a Principal Software Architect");
         systemInstructionText.Should().Contain("### Key Takeaways");
         systemInstructionText.Should().NotContain("CRITICAL LANGUAGE INVARIANT");
+    }
+
+    [Fact]
+    public async Task GeminiAiService_WhenModelMissing_ShouldReturnFailure()
+    {
+        // Arrange
+        var handler = new MockHttpMessageHandler();
+        var client = new HttpClient(handler);
+        var inMemoryConfig = new Dictionary<string, string?>
+        {
+            ["Gemini:ApiKey"] = "valid-api-key",
+            ["Gemini:Model"] = ""
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(inMemoryConfig).Build();
+        var service = new GeminiAiService(client, config, NullLogger<GeminiAiService>.Instance);
+
+        // Act
+        var result = await service.GenerateInsightAsync(Category.BackendRuntime, "asp.net", locale: "en");
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("AiService.Unavailable");
+        result.Error.Message.Should().Contain("API key or model is not configured");
     }
 }

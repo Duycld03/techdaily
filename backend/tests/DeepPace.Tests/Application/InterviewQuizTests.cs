@@ -483,7 +483,7 @@ public class InterviewQuizTests : IDisposable
         var fakeConfig = new FakeConfiguration(new Dictionary<string, string?>
         {
             ["Gemini:ApiKey"] = "fake-api-key",
-            ["Gemini:Model"] = "gemini-3.1-flash-lite"
+            ["Gemini:Model"] = "gemini-3.6-flash"
         });
 
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DeepPace.Infrastructure.Services.GeminiAiService>.Instance;

@@ -14,8 +14,8 @@ namespace DeepPace.Infrastructure.Services;
 public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAiMarkdownFormatter, IGeminiAiService
 {
     private readonly HttpClient _httpClient;
-    private readonly string _apiKey;
-    private readonly string _model;
+    private readonly string? _apiKey;
+    private readonly string? _model;
     private readonly ILogger<GeminiAiService> _logger;
 
     public GeminiAiService(
@@ -27,12 +27,10 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAi
         _logger = logger;
         _apiKey = configuration["Gemini:ApiKey"]
                ?? configuration["GEMINI_API_KEY"]
-               ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY")
-               ?? string.Empty;
+               ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY");
         _model = configuration["Gemini:Model"]
               ?? configuration["GEMINI_MODEL"]
-              ?? Environment.GetEnvironmentVariable("GEMINI_MODEL")
-              ?? "gemini-3.5-flash-lite";
+              ?? Environment.GetEnvironmentVariable("GEMINI_MODEL");
     }
 
     public async Task<Result<TechInsight>> GenerateInsightAsync(
@@ -49,10 +47,10 @@ public class GeminiAiService : ITechInsightGenerator, IQuizGeneratorService, IAi
 
         var isVi = locale.Equals("vi", StringComparison.OrdinalIgnoreCase);
 
-        if (string.IsNullOrWhiteSpace(_apiKey))
+        if (string.IsNullOrWhiteSpace(_apiKey) || string.IsNullOrWhiteSpace(_model))
         {
-            _logger.LogError("Gemini API key is not configured.");
-            return Result<TechInsight>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI insight generation failed."));
+            _logger.LogError("Gemini API key or model is not configured.");
+            return Result<TechInsight>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI insight generation failed: API key or model is not configured."));
         }
 
         try
@@ -716,10 +714,10 @@ No markdown backticks around JSON.";
             ? "practical decision scenarios, behavioral trade-offs, habit loops, mental models, or cognitive focus strategies"
             : "practical engineering knowledge, conceptual depth, runtime mechanics, or architectural trade-offs";
 
-        if (string.IsNullOrWhiteSpace(_apiKey))
+        if (string.IsNullOrWhiteSpace(_apiKey) || string.IsNullOrWhiteSpace(_model))
         {
-            _logger.LogError("Gemini API key is not configured.");
-            return Result<List<QuizQuestion>>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI quiz generation failed."));
+            _logger.LogError("Gemini API key or model is not configured.");
+            return Result<List<QuizQuestion>>.Failure(Error.Custom("AiService.Unavailable", "Gemini AI quiz generation failed: API key or model is not configured."));
         }
 
         try
@@ -1102,10 +1100,10 @@ No markdown backticks around JSON.";
         }
 
         // Check if Gemini is configured
-        if (string.IsNullOrWhiteSpace(_apiKey))
+        if (string.IsNullOrWhiteSpace(_apiKey) || string.IsNullOrWhiteSpace(_model))
         {
-            _logger.LogWarning("Gemini API key is not configured for '{Title}'.", chapterTitle);
-            return new Error("Gemini.MissingApiKey", "Gemini API key is not configured.");
+            _logger.LogWarning("Gemini API key or model is not configured for '{Title}'.", chapterTitle);
+            return new Error("Gemini.MissingConfiguration", "Gemini API key or model is not configured.");
         }
 
         try
@@ -1524,10 +1522,10 @@ Respond strictly in valid JSON without markdown wrapping:
         var isVi = locale.Equals("vi", StringComparison.OrdinalIgnoreCase);
         var noteContext = string.IsNullOrWhiteSpace(note) ? "None provided" : note.Trim();
 
-        if (string.IsNullOrWhiteSpace(_apiKey))
+        if (string.IsNullOrWhiteSpace(_apiKey) || string.IsNullOrWhiteSpace(_model))
         {
-            _logger.LogError("Gemini API key is not configured for recall card synthesis.");
-            return Result<(string Front, string Back)>.Failure(Error.Custom("AiService.RecallFailed", "Gemini API key is not configured."));
+            _logger.LogError("Gemini API key or model is not configured for recall card synthesis.");
+            return Result<(string Front, string Back)>.Failure(Error.Custom("AiService.RecallFailed", "Gemini API key or model is not configured."));
         }
 
         try

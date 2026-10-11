@@ -278,7 +278,7 @@ public class TechInsightsTests : IDisposable
         var config = new FakeConfiguration(new Dictionary<string, string?>
         {
             ["Gemini:ApiKey"] = "",
-            ["Gemini:Model"] = "gemini-3.5-flash-lite"
+            ["Gemini:Model"] = "gemini-3.6-flash"
         });
 
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DeepPace.Infrastructure.Services.GeminiAiService>.Instance;
@@ -311,7 +311,7 @@ public class TechInsightsTests : IDisposable
         var config = new FakeConfiguration(new Dictionary<string, string?>
         {
             ["Gemini:ApiKey"] = apiKey,
-            ["Gemini:Model"] = "gemini-3.1-flash-lite"
+            ["Gemini:Model"] = "gemini-3.6-flash"
         });
 
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<DeepPace.Infrastructure.Services.GeminiAiService>.Instance;

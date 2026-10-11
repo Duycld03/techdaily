@@ -445,10 +445,15 @@ When new documents are ingested via `PdfIngestionWorker`, the worker SHALL attem
 ---
 
 ### Requirement: AI Content Generation Handlers & Persistence
-AI content generation services SHALL standardize text generation on Google Gemini model `gemini-3.5-flash-lite` and return `Result.Failure` on API errors without returning canned fallback entities wrapped in successful results. 
+AI content generation services SHALL require explicit `Gemini:Model` and `Gemini:ApiKey` configuration and SHALL NOT provide silent in-code string fallbacks when either setting is missing or empty. When configuration is unconfigured or empty, the service SHALL return `Result.Failure` without dispatching HTTP calls or returning canned fallback entities.
 
 Application database tables (`TermExplanationCaches`, `TechInsights`, `QuizQuestions`, `SpacedRepetitionCards`) SHALL NOT contain synthetic mock records, canned boilerplate explanations, or un-synthesized flashcard templates. Any such records identified by database hygiene maintenance runners SHALL be purged.
 
+#### Scenario: Gemini model is unconfigured in environment
+- **WHEN** an AI text generation service is invoked and `Gemini:Model` is missing or empty in configuration
+- **THEN** the service returns `Result.Failure` with code `AiService.Unavailable`
+- **AND** logs an error indicating that Gemini model is not configured
+- **AND** does NOT dispatch any HTTP request with a malformed URL.
 #### Scenario: AI insight generation fails
 - **WHEN** `GenerateInsightHandler` invokes `ITechInsightGenerator.GenerateInsightAsync` and Gemini API fails
 - **THEN** the generator returns `Result<TechInsight>.Failure`
@@ -479,7 +484,7 @@ Application database tables (`TermExplanationCaches`, `TechInsights`, `QuizQuest
 ---
 
 ### Requirement: AI Term Explanation & Cache Protocol
-`ITermExplanationService.ExplainTermAsync` SHALL check exact database cache and semantic HNSW vector cache before invoking Gemini text generation (`gemini-3.5-flash-lite`). If the term is not cached and the Gemini API call fails, the service SHALL return `Result<TermExplanationResult>.Failure` with code `AiService.Unavailable`. The service SHALL NOT return generic boilerplate sentences wrapped in `HTTP 200 OK`.
+`ITermExplanationService.ExplainTermAsync` SHALL check exact database cache and semantic HNSW vector cache before invoking Gemini text generation (`gemini-3.6-flash`). If the term is not cached and the Gemini API call fails, the service SHALL return `Result<TermExplanationResult>.Failure` with code `AiService.Unavailable`. The service SHALL NOT return generic boilerplate sentences wrapped in `HTTP 200 OK`.
 
 The endpoint `POST /api/v1/daily/explain-term` SHALL return an error HTTP status (such as `400 Bad Request` or `503 Service Unavailable`) when term explanation fails, enabling the frontend reader modal to display a clear error state and retry prompt.
 
@@ -516,25 +521,29 @@ The client error resolution composable `frontend/composables/useApiError.ts` SHA
 ---
 
 ### Requirement: System AI Health Check Endpoint
-The platform SHALL provide an operational diagnostics endpoint `GET /api/v1/system/ai-health` that concurrently probes Google Gemini text generation (`gemini-3.5-flash-lite`) and Google Gemini embedding generation (`gemini-embedding-001`) via `Task.WhenAll`.
+The platform SHALL provide an operational diagnostics endpoint `GET /api/v1/system/ai-health` that concurrently probes Google Gemini text generation and Google Gemini embedding generation (`gemini-embedding-001`) via `Task.WhenAll`.
 
-The health check SHALL verify:
-1. Text model (`gemini-3.5-flash-lite`) connectivity and latency.
+The health check SHALL dynamically resolve the configured text model name and verify:
+1. Text model connectivity and latency.
 2. Embedding model (`gemini-embedding-001`) connectivity, latency, and vector dimensionality (asserting length == 768).
 
-The endpoint SHALL respond with `HTTP 200 OK` containing `{ textModel: "healthy", embeddingModel: "healthy", dimension: 768 }` when both probes succeed, or `HTTP 503 Service Unavailable` with diagnostic error details when either probe fails.
+The endpoint SHALL respond with `HTTP 200 OK` containing `{ textModel: "<configured-model>", embeddingModel: "gemini-embedding-001", dimension: 768 }` when both probes succeed, or `HTTP 503 Service Unavailable` with diagnostic error details when either probe fails or when either model/key configuration is unconfigured.
 
 #### Scenario: AI health check probe succeeds
 - **WHEN** a client or monitoring agent invokes `GET /api/v1/system/ai-health`
-- **AND** Gemini text generation (`gemini-3.5-flash-lite`) and Gemini embedding generation (`gemini-embedding-001`) both respond successfully with a 768-dimensional vector
+- **AND** Gemini text generation and Gemini embedding generation (`gemini-embedding-001`) both respond successfully with a 768-dimensional vector
 - **THEN** the server returns `HTTP 200 OK`
-- **AND** the JSON response contains `status = "healthy"`, `textModel = "healthy"`, `embeddingModel = "healthy"`, and `dimension = 768`.
+- **AND** the JSON response contains `status = "healthy"`, `textModel = "gemini-3.6-flash"`, `embeddingModel = "gemini-embedding-001"`, and `dimension = 768`.
+
+#### Scenario: AI health check detects unconfigured text model
+- **WHEN** a client invokes `GET /api/v1/system/ai-health` and `Gemini:Model` is missing or whitespace in configuration
+- **THEN** the server returns `HTTP 503 Service Unavailable`
+- **AND** the JSON response contains `status = "unhealthy"` with `error` containing `"Gemini model is not configured."`.
 
 #### Scenario: AI health check probe detects dimension mismatch or model failure
-- **WHEN** a client invokes `GET /api/v1/system/ai-health` and either `gemini-3.5-flash-lite` fails or `gemini-embedding-001` returns a vector with dimension != 768 or returns an HTTP error
+- **WHEN** a client invokes `GET /api/v1/system/ai-health` and either Gemini text generation fails or `gemini-embedding-001` returns a vector with dimension != 768 or returns an HTTP error
 - **THEN** the server returns `HTTP 503 Service Unavailable`
 - **AND** the JSON response contains `status = "unhealthy"` with diagnostic details identifying the failing model and error reason.
-
 ### Requirement: Controlled Offline Mock Vector Configuration
 The platform SHALL support an explicit configuration flag `Gemini:UseOfflineMock` in `appsettings*.json`. The system SHALL strictly disallow mock vector generation in production and default environments, permitting mock generation only when `Gemini:UseOfflineMock` is explicitly configured as `true`.
 
@@ -1606,7 +1615,7 @@ The project repository SHALL mandate strict engineering governance rules codifie
    - Vitest tests MUST NOT assert CSS/Tailwind classes to evaluate layout geometry.
    - Visual layout, responsiveness, and spacing MUST be verified through direct screenshot inspection.
 4. **Pillar 4: AI Engine & External Ingestion**:
-   - High-speed model selection (`gemini-3.5-flash-lite`, <5s latency, ≥120s proxy timeout) with user-triggered generation.
+   - High-speed model selection (`gemini-3.6-flash`, <5s latency, ≥120s proxy timeout) with user-triggered generation.
    - Balanced bracket depth scanning for LLM JSON outputs.
    - Canonical URL resolution and clean markdown extraction for web crawlers.
 5. **Pillar 5: Verification, DevOps & Skills Protocol**:

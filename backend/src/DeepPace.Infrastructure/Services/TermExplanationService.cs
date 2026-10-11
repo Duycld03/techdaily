@@ -15,8 +15,8 @@ public class TermExplanationService : ITermExplanationService
     private readonly IDeepPaceDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
     private readonly HttpClient _httpClient;
-    private readonly string _apiKey;
-    private readonly string _model;
+    private readonly string? _apiKey;
+    private readonly string? _model;
     private readonly ILogger<TermExplanationService> _logger;
 
     public TermExplanationService(
@@ -30,8 +30,8 @@ public class TermExplanationService : ITermExplanationService
         _embeddingService = embeddingService;
         _httpClient = httpClient;
         _logger = logger;
-        _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
-        _model = configuration["Gemini:Model"] ?? "gemini-3.5-flash-lite";
+        _apiKey = configuration["Gemini:ApiKey"];
+        _model = configuration["Gemini:Model"];
     }
 
     public async Task<Result<TermExplanationResult>> ExplainTermAsync(
@@ -96,7 +96,7 @@ public class TermExplanationService : ITermExplanationService
         string explanation = string.Empty;
         bool isLlmGenerated = false;
 
-        if (!string.IsNullOrWhiteSpace(_apiKey))
+        if (!string.IsNullOrWhiteSpace(_apiKey) && !string.IsNullOrWhiteSpace(_model))
         {
             try
             {
