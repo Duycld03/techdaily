@@ -161,6 +161,8 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+builder.Services.AddAdminDashboardRateLimiting();
+
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer((document, context, cancellationToken) =>
@@ -229,6 +231,7 @@ if (app.Environment.IsDevelopment())
     app.MapGet("/swagger/index.html", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
 }
 
+app.UseAdminDashboardNoStore();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -294,6 +297,7 @@ app.MapGroup("/api/v1/review")
 
 app.MapLibraryEndpoints();
 app.MapCatalogEndpoints();
+app.MapAdminDashboardEndpoints();
 
 app.MapNotesEndpoints();
 

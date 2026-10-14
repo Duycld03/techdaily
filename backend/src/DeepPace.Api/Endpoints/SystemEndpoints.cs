@@ -1,7 +1,5 @@
-using System.Diagnostics;
-using System.Text;
-using System.Text.Json;
 using DeepPace.Api.Contracts;
+using DeepPace.Application.Features.AdminDashboard.DTOs;
 using DeepPace.Application.Interfaces;
 
 namespace DeepPace.Api.Endpoints;
@@ -10,167 +8,29 @@ public static class SystemEndpoints
 {
     public static RouteGroupBuilder MapSystemEndpoints(this RouteGroupBuilder group)
     {
-        group.MapGet("/ai-health", async (
-            IHttpClientFactory httpClientFactory,
-            IConfiguration configuration,
-            IEmbeddingService embeddingService,
-            CancellationToken ct) =>
+        group.MapGet("/ai-health", async (IAiHealthProbe probe, CancellationToken ct) =>
         {
-            var textModel = configuration["Gemini:Model"];
-            var embeddingModel = configuration["Gemini:EmbeddingModel"] ?? "gemini-embedding-001";
-            var apiKey = configuration["Gemini:ApiKey"];
-
-            if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(textModel))
-            {
-                var errorMsg = string.IsNullOrWhiteSpace(apiKey)
-                    ? "Gemini API key is not configured."
-                    : "Gemini model is not configured.";
-
-                return Results.Json(new AiHealthResponse(
-                    Status: "unhealthy",
-                    TextModel: "unhealthy",
-                    TextLatencyMs: 0,
-                    EmbeddingModel: "unhealthy",
-                    EmbeddingLatencyMs: 0,
-                    Dimension: 0,
-                    Details: null,
-                    Timestamp: DateTime.UtcNow,
-                    Error: errorMsg), statusCode: StatusCodes.Status503ServiceUnavailable);
-            }
-
-            long textLatencyMs = 0;
-            string? textError = null;
-
-            var textStopwatch = Stopwatch.StartNew();
-            var textTask = Task.Run(async () =>
-            {
-                try
+            var observation = await probe.ProbeAsync(ct);
+            var text = observation.TextGeneration;
+            var embedding = observation.Embeddings;
+            var configurationMissing = text.ErrorCode is "AI_API_KEY_MISSING" or "AI_MODEL_MISSING";
+            var textError = DescribeFailure(text, true);
+            var embeddingError = DescribeFailure(embedding, false);
+            var error = configurationMissing ? textError
+                : string.Join("; ", new[] { textError, embeddingError }.Where(message => message != null));
+            var response = new AiHealthResponse(
+                observation.IsHealthy ? "healthy" : "unhealthy",
+                text.Status == "healthy" ? text.Model! : "unhealthy", text.LatencyMs ?? 0,
+                embedding.Status == "healthy" ? embedding.Model! : "unhealthy", embedding.LatencyMs ?? 0,
+                embedding.Dimension ?? 0,
+                configurationMissing ? null : new
                 {
-                    var httpClient = httpClientFactory.CreateClient();
-                    var url = $"https://generativelanguage.googleapis.com/v1beta/models/{textModel}:generateContent";
-                    var payload = new
-                    {
-                        contents = new[]
-                        {
-                            new { parts = new[] { new { text = "ping" } } }
-                        }
-                    };
-                    var json = JsonSerializer.Serialize(payload);
-                    using var request = new HttpRequestMessage(HttpMethod.Post, url)
-                    {
-                        Content = new StringContent(json, Encoding.UTF8, "application/json")
-                    };
-                    request.Headers.Add("x-goog-api-key", apiKey);
-                    var response = await httpClient.SendAsync(request, ct);
-                    textStopwatch.Stop();
-                    textLatencyMs = textStopwatch.ElapsedMilliseconds;
-
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        var err = await response.Content.ReadAsStringAsync(ct);
-                        textError = $"Text model {textModel} returned HTTP {(int)response.StatusCode}: {err}";
-                    }
-                }
-                catch (Exception ex)
-                {
-                    textStopwatch.Stop();
-                    textLatencyMs = textStopwatch.ElapsedMilliseconds;
-                    textError = $"Text probe failed: {ex.Message}";
-                }
-            }, ct);
-
-            long embLatencyMs = 0;
-            int? returnedDimension = null;
-            string? embError = null;
-
-            var embStopwatch = Stopwatch.StartNew();
-            var embTask = Task.Run(async () =>
-            {
-                try
-                {
-                    var embResult = await embeddingService.GenerateEmbeddingAsync("health check", ct);
-                    embStopwatch.Stop();
-                    embLatencyMs = embStopwatch.ElapsedMilliseconds;
-
-                    if (!embResult.IsSuccess)
-                    {
-                        embError = $"Embedding probe failed: {embResult.Error.Message}";
-                        return;
-                    }
-
-                    var dims = embResult.Value.ToArray().Length;
-                    returnedDimension = dims;
-                    if (dims != 768)
-                    {
-                        embError = $"Embedding probe failed: Expected 768 dimensions but received {dims}";
-                    }
-                }
-                catch (Exception ex)
-                {
-                    embStopwatch.Stop();
-                    embLatencyMs = embStopwatch.ElapsedMilliseconds;
-                    embError = $"Embedding probe failed: {ex.Message}";
-                }
-            }, ct);
-
-            await Task.WhenAll(textTask, embTask);
-
-            if (textError != null || embError != null)
-            {
-                var combinedError = string.Join("; ", new[] { textError, embError }.Where(e => !string.IsNullOrEmpty(e)));
-                return Results.Json(new AiHealthResponse(
-                    Status: "unhealthy",
-                    TextModel: textError == null ? textModel! : "unhealthy",
-                    TextLatencyMs: textLatencyMs,
-                    EmbeddingModel: embError == null ? embeddingModel : "unhealthy",
-                    EmbeddingLatencyMs: embLatencyMs,
-                    Dimension: returnedDimension ?? 0,
-                    Details: new
-                    {
-                        text = new
-                        {
-                            model = textModel,
-                            status = textError == null ? "healthy" : "unhealthy",
-                            latencyMs = textLatencyMs,
-                            error = textError
-                        },
-                        embedding = new
-                        {
-                            model = embeddingModel,
-                            status = embError == null ? "healthy" : "unhealthy",
-                            dimension = returnedDimension,
-                            latencyMs = embLatencyMs,
-                            error = embError
-                        }
-                    },
-                    Timestamp: DateTime.UtcNow,
-                    Error: combinedError), statusCode: StatusCodes.Status503ServiceUnavailable);
-            }
-
-            return Results.Ok(new AiHealthResponse(
-                Status: "healthy",
-                TextModel: textModel!,
-                TextLatencyMs: textLatencyMs,
-                EmbeddingModel: embeddingModel,
-                EmbeddingLatencyMs: embLatencyMs,
-                Dimension: 768,
-                Details: new
-                {
-                    text = new
-                    {
-                        model = textModel,
-                        status = "healthy",
-                        latencyMs = textLatencyMs
-                    },
-                    embedding = new
-                    {
-                        model = embeddingModel,
-                        status = "healthy",
-                        dimension = 768,
-                        latencyMs = embLatencyMs
-                    }
+                    text = new { model = text.Model, status = text.Status == "healthy" ? "healthy" : "unhealthy", latencyMs = text.LatencyMs ?? 0, error = textError },
+                    embedding = new { model = embedding.Model, status = embedding.Status == "healthy" ? "healthy" : "unhealthy", dimension = embedding.Dimension, latencyMs = embedding.LatencyMs ?? 0, error = embeddingError }
                 },
-                Timestamp: DateTime.UtcNow));
+                observation.CheckedAt.UtcDateTime,
+                observation.IsHealthy ? null : error);
+            return Results.Json(response, statusCode: observation.IsHealthy ? 200 : 503);
         })
         .WithName("GetAiHealth")
         .WithSummary("Probe AI Health")
@@ -178,7 +38,16 @@ public static class SystemEndpoints
         .AllowAnonymous()
         .Produces<AiHealthResponse>(StatusCodes.Status200OK)
         .Produces<AiHealthResponse>(StatusCodes.Status503ServiceUnavailable);
-
         return group;
     }
+
+    private static string? DescribeFailure(AiServiceObservationDto observation, bool isText) => observation.ErrorCode switch
+    {
+        null => null,
+        "AI_API_KEY_MISSING" => "Gemini API key is not configured.",
+        "AI_MODEL_MISSING" => "Gemini model is not configured.",
+        "EMBEDDING_DIMENSION_MISMATCH" => $"Embedding probe failed: Expected 768 dimensions but received {observation.Dimension}",
+        "AI_TIMEOUT" => isText ? "Text model probe timed out." : "Embedding probe timed out.",
+        _ => isText ? "Text model probe failed." : "Embedding probe failed."
+    };
 }

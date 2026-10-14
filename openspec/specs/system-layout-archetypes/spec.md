@@ -201,7 +201,7 @@ The web frontend SHALL formalize the `MasterDetailLayout` archetype (`MasterDeta
 - **AND** the settings form fields span 100% of the screen width with comfortable touch padding.
 
 ### Requirement: Global Navigation Chrome & Header Elevation Standards
-The global application shell components (`AppHeader.vue`, `AppSidebar.vue`) SHALL adhere to unified studio density and elevation specifications:
+On learner routes, the global application shell components (`AppHeader.vue`, `AppSidebar.vue`) SHALL adhere to unified studio density and elevation specifications:
 
 1. **Header Chrome (`AppHeader.vue`)**:
    - SHALL maintain a fixed compact height (`h-14 sm:h-15`) with glassmorphic backdrop blur (`bg-white/95 dark:bg-canvas/80 backdrop-blur-md`).
@@ -212,9 +212,14 @@ The global application shell components (`AppHeader.vue`, `AppSidebar.vue`) SHAL
    - Navigation links SHALL enforce `whitespace-nowrap shrink-0` across English and Vietnamese locales.
 
 #### Scenario: Global header rendering across viewports
-- **WHEN** a user navigates across pages on desktop or mobile
+- **WHEN** a user navigates across learner pages on desktop or mobile
 - **THEN** `AppHeader.vue` remains pinned at the top with hairline border and glassmorphic backdrop
 - **AND** interactive controls (Search, Theme, Language, Profile) remain accessible without layout jitter.
+
+#### Scenario: Administrator navigation is isolated
+- **WHEN** an authorized administrator visits `/admin` or `/admin/catalog`
+- **THEN** the dedicated administrator shell replaces learner navigation and telemetry
+- **AND** shared design tokens and standardized page archetypes remain in use.
 
 ---
 
@@ -301,3 +306,12 @@ The `LayoutArchetypesShowcase` component and production dashboards SHALL demonst
 - **WHEN** a user views the Bento Dashboard on a mobile display ($< 1024\text{px}$)
 - **THEN** the Action Stage and Telemetry Dock stack sequentially in a single column
 - **AND** all cards preserve their full informational density with zero horizontal overflow.
+
+
+### Requirement: Administrator shell design continuity
+The administrator shell SHALL reuse DeepPace semantic colors, canvas and glass surfaces, typography, iconography and accessible shared components. It SHALL host the existing StudioLayout for login, BentoDashboardLayout for overview and MasterDetailLayout for catalog. Native selects, browser dialogs and an independent admin theme SHALL NOT be introduced.
+
+#### Scenario: Administrator changes locale and theme
+- **WHEN** an administrator changes English/Vietnamese locale or light/dark theme
+- **THEN** login, dashboard, navigation and catalog follow the existing DeepPace theme and translated labels
+- **AND** shared learner components retain their existing behavior.

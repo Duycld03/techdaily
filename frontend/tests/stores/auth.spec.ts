@@ -254,13 +254,13 @@ describe('useAuthStore', () => {
       expect(auth.isLoggedIn).toBe(true)
     })
 
-    it('clears session on tryRefreshToken() failure', async () => {
+    it('clears session when token renewal is explicitly rejected', async () => {
       const auth = useAuthStore()
       const expiredToken = createMockJwt(-120)
       auth.token = expiredToken
       auth.user = { id: 'u-100', email: 'test@techdaily.io', name: 'Test' } as any
 
-      mockRefreshAuthToken.mockRejectedValueOnce(new Error('Refresh token expired'))
+      mockRefreshAuthToken.mockRejectedValueOnce(Object.assign(new Error('Refresh token expired'), { status: 401 }))
 
       const success = await auth.tryRefreshToken()
 

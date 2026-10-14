@@ -7,9 +7,11 @@ const props = withDefaults(
     open: boolean
     title: string
     maxWidth?: string
+    closeLabel?: string
   }>(),
   {
-    maxWidth: 'max-w-2xl'
+    maxWidth: 'max-w-2xl',
+    closeLabel: 'Close dialog'
   }
 )
 
@@ -86,8 +88,8 @@ onBeforeUnmount(() => {
             </div>
             <button
               type="button"
-              aria-label="Close dialog"
-              class="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors shrink-0 cursor-pointer"
+              :aria-label="closeLabel"
+              class="min-h-11 min-w-11 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors shrink-0 cursor-pointer"
               @click="emit('close')"
             >
               <X class="h-5 w-5" :stroke-width="1.5" />

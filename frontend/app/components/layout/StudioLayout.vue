@@ -7,6 +7,8 @@
 defineProps<{
   /** Cap the internal height so the stage/dock scroll independently instead of the page. */
   maxHeight?: string
+  mainLabel?: string
+  dockLabel?: string
 }>()
 </script>
 
@@ -29,7 +31,7 @@ defineProps<{
       <!-- Main action stage -->
       <section
         class="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto lg:w-[68%]"
-        aria-label="Practice stage"
+        :aria-label="mainLabel || 'Practice stage'"
       >
         <div class="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center p-4 sm:p-5">
           <slot name="main" />
@@ -40,7 +42,7 @@ defineProps<{
       <aside
         v-if="$slots.dock"
         class="flex min-h-0 shrink-0 flex-col gap-3.5 overflow-y-auto border-t lg:border-t-0 lg:border-l border-slate-200 bg-slate-50/60 p-4 dark:border-white/[0.08] dark:bg-white/[0.02] w-full lg:w-[32%]"
-        aria-label="Session telemetry"
+        :aria-label="dockLabel || 'Session telemetry'"
       >
         <slot name="dock" />
       </aside>

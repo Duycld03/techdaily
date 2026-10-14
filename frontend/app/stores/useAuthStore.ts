@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, shallowRef } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
 
 export interface AuthUser {
@@ -55,6 +55,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function clearSession() {
+    sessionGeneration.value++
+    adminGeneration.value++
     token.value = null
     user.value = null
     tokenCookie.value = null
@@ -86,6 +88,13 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(initialToken)
   const user = ref<AuthUser | null>(initialUser)
   const isInitialized = ref(false)
+  const sessionGeneration = shallowRef(0)
+  const adminGeneration = shallowRef(0)
+  const lastRefreshError = shallowRef<number | null>(null)
+
+  function invalidateAdminAccess() {
+    adminGeneration.value++
+  }
   // Whether the current session is persistent (Remember me) or session-scoped
   const isPersistentSession = ref(true)
 
@@ -243,6 +252,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function setSession(newToken: string, newUser?: AuthUser | null, remember: boolean = isPersistentSession.value) {
+    const nextUserId = newUser?.id || parseUserFromJwt(newToken)?.id || user.value?.id
+    if (nextUserId !== user.value?.id) {
+      sessionGeneration.value++
+      adminGeneration.value++
+    }
     isPersistentSession.value = remember
     token.value = newToken
 
@@ -309,6 +323,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
   async function tryRefreshToken(): Promise<boolean> {
+    lastRefreshError.value = null
     try {
       const api = useApiClient()
       const newToken = await api.refreshAuthToken()
@@ -323,16 +338,25 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (err: any) {
       // If it's a network drop / 502 / server restart, do NOT wipe local credentials!
       if (err?.isNetworkError || (typeof err?.status === 'number' && err.status >= 500)) {
+        lastRefreshError.value = 503
         return false
       }
-      if (isTokenExpired(token.value)) {
+      if (err?.status === 401 || err?.status === 403) {
         clearSession()
+        lastRefreshError.value = err.status
+      } else {
+        lastRefreshError.value = 503
       }
       return false
     }
   }
 
   return {
+    sessionGeneration,
+    adminGeneration,
+    lastRefreshError,
+    isPersistentSession,
+    invalidateAdminAccess,
     token,
     user,
     isLoggedIn,

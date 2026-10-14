@@ -11,6 +11,7 @@ using Pgvector;
 using DeepPace.Api.Endpoints;
 using DeepPace.Application.Common;
 using DeepPace.Application.Interfaces;
+using DeepPace.Infrastructure.Services;
 using Xunit;
 
 namespace DeepPace.Tests.Api;
@@ -98,6 +99,8 @@ public class SystemEndpointsTests
         builder.Services.AddSingleton(configuration);
         builder.Services.AddSingleton(httpClientFactory);
         builder.Services.AddSingleton(embeddingService);
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddScoped<IAiHealthProbe, AiHealthProbe>();
 
         var app = builder.Build();
         app.MapGroup("/api/v1/system").MapSystemEndpoints();

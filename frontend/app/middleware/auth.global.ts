@@ -1,4 +1,6 @@
 import { useAuthStore } from '~/stores/useAuthStore'
+import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
+import { isAdminRoute, isAdminLogin, normalizeRoutePath, loginRedirectFor, safeAdminReturnPath } from '~/utils/adminRoutes'
 
 export function isJwtExpired(jwt: string | null): boolean {
   if (!jwt) return true
@@ -36,12 +38,48 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // Always initialize store state from cookies and local storage
   authStore.init()
+  const normalizedPath = normalizeRoutePath(to.path)
+  const isServer = Boolean(import.meta.server || (typeof process !== 'undefined' && 'server' in process && process.server))
+
+  if (isAdminRoute(normalizedPath)) {
+    const access = useAdminAccessStore()
+    if (isAdminLogin(normalizedPath)) {
+      if (authStore.isLoggedIn && await access.verify()) return navigateTo(safeAdminReturnPath(to.query?.redirect))
+      return
+    }
+    // Match server-confirmed markup during hydration. The neutral boundary renews
+    // refresh-only sessions after mounting; subsequent navigation verifies again.
+    if (!isServer) {
+      let serverRenderedHydration = false
+      try {
+        const app = useNuxtApp()
+        serverRenderedHydration = app.isHydrating && Boolean(app.payload.serverRendered)
+      } catch { /* Route guards can run outside Nuxt in isolated tests. */ }
+      if (serverRenderedHydration) return
+    }
+    if (isServer) {
+      const token = useCookie<string | null>('deeppace_token').value || useCookie<string | null>('techdaily_token').value
+      if (!token || isJwtExpired(token)) {
+        if (useCookie<string | null>('refreshToken').value) { access.reset(); return }
+        return navigateTo(loginRedirectFor(to.fullPath))
+      }
+    } else if (!authStore.isLoggedIn) {
+      const renewed = await authStore.tryRefreshToken()
+      if (!renewed) {
+        if (authStore.lastRefreshError === 503) { access.setUnavailable(); return }
+        return navigateTo(loginRedirectFor(to.fullPath))
+      }
+    }
+    const allowed = await access.verify()
+    if (!allowed && access.state === 'denied') return navigateTo(loginRedirectFor(to.fullPath))
+    return
+  }
   // Guest authentication paths
   const isGuestAuthPath =
-    to.path === '/login' ||
-    to.path === '/register' ||
-    to.path === '/forgot-password' ||
-    to.path === '/reset-password'
+    normalizedPath === '/login' ||
+    normalizedPath === '/register' ||
+    normalizedPath === '/forgot-password' ||
+    normalizedPath === '/reset-password'
 
   // Local development / testing exemptions
   const isDevExempt = to.path.startsWith('/showcase')
@@ -53,7 +91,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // with expired access tokens (and no refresh cookie) to /login.
   // This prevents SSR from rendering the protected shell (<AppHeader>, <AppSidebar>) which then
   // causes severe DOM hydration mismatches when client hydration rejects the expired token.
-  const isServer = Boolean(import.meta.server || (typeof process !== 'undefined' && 'server' in process && process.server))
   if (isServer && isAuthRequired) {
     const tokenCookie = useCookie<string | null>('deeppace_token')
     const legacyTokenCookie = useCookie<string | null>('techdaily_token')

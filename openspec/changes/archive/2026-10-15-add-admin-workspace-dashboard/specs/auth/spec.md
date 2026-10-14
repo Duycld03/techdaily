@@ -100,3 +100,19 @@ The numbered rules and existing scenarios below govern learner routes. Admin rou
 - **WHEN** an SSR or client permission check encounters a transient failure
 - **THEN** protected UI remains hidden, a neutral retry state is shown and valid session credentials are retained.
 
+### Requirement: Administrator capability discovery and route protection
+The server SHALL expose the current user's catalog management capability to support navigation. Every protected administrator route SHALL verify this capability before rendering protected UI or requesting administrative data. Anonymous visitors and authenticated non-administrators SHALL be redirected to `/admin/login` with a validated local administrator return path. Transient permission-check failures SHALL retain valid session credentials and show a neutral retry state without protected content.
+
+#### Scenario: Administrator opens management page
+- **WHEN** a designated administrator opens `/admin/catalog`
+- **THEN** the server confirms permission and the catalog workspace loads inside the administrator shell.
+
+#### Scenario: Client capability becomes stale
+- **WHEN** an administrator's access is revoked while their page is open
+- **THEN** a denied request clears privileged data, aborts pending privileged requests, stops polling and redirects once to `/admin/login`
+- **AND** the browser does not treat its cached capability as authorization.
+
+#### Scenario: Non-administrator opens management page
+- **WHEN** an authenticated non-administrator visits a protected administrator route
+- **THEN** the browser redirects to `/admin/login` without rendering protected SSR markup or fetching draft data
+- **AND** the existing learner session remains available for switching to learning.

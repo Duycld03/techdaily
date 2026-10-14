@@ -62,6 +62,9 @@ public static class DependencyInjection
 
         services.AddScoped<ICatalogAdoptionService, Services.CatalogAdoptionService>();
         services.AddScoped<ICatalogAdminService, Services.CatalogAdminService>();
+        services.AddScoped<IAdminDashboardReader, AdminDashboardReader>();
+        services.AddScoped<IAdminSystemStatusService, AdminSystemStatusService>();
+        services.AddScoped<IAiHealthProbe, AiHealthProbe>();
         // Ingestion Destinations
         services.AddScoped<Workers.IngestionDestinations.PersonalBookDestination>();
         services.AddScoped<Workers.IngestionDestinations.CatalogDocumentDestination>();

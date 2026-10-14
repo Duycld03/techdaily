@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import { useApiClient } from "~/composables/useApiClient";
+import { useAuthStore } from "~/stores/useAuthStore";
 
 export interface LearnerCatalogDocument {
   id: string;
@@ -110,6 +111,8 @@ function isForbiddenError(err: unknown): boolean {
 
 export const useCatalogStore = defineStore("catalog", () => {
   const apiClient = useApiClient();
+  const auth = useAuthStore();
+  let adminDataGeneration = 0;
 
   // Capability
   const canManageCatalog = ref(false);
@@ -156,18 +159,20 @@ export const useCatalogStore = defineStore("catalog", () => {
   let pollingTimer: ReturnType<typeof setInterval> | null = null;
 
   async function fetchCapabilities(): Promise<boolean> {
+    const generation = adminDataGeneration;
     isCheckingCapability.value = true;
     try {
       const response = await apiClient.get<{ canManageCatalog: boolean }>(
         "/api/v1/catalog/capabilities"
       );
+      if (generation !== adminDataGeneration) return false;
       canManageCatalog.value = response?.canManageCatalog ?? false;
       return canManageCatalog.value;
     } catch {
-      canManageCatalog.value = false;
+      if (generation === adminDataGeneration) canManageCatalog.value = false;
       return false;
     } finally {
-      isCheckingCapability.value = false;
+      if (generation === adminDataGeneration) isCheckingCapability.value = false;
     }
   }
 
@@ -325,7 +330,7 @@ export const useCatalogStore = defineStore("catalog", () => {
     } catch (err: unknown) {
       if (requestSeq === activeAdminRequestSeq) {
         if (isForbiddenError(err)) {
-          cleanupAdmin();
+          handleForbidden();
         } else {
           adminError.value = extractErrorMessage(err, "Failed to load admin documents");
         }
@@ -338,42 +343,48 @@ export const useCatalogStore = defineStore("catalog", () => {
   }
 
   async function fetchAdminDocumentById(id: string): Promise<AdminCatalogDocument | null> {
+    const generation = adminDataGeneration;
     isAdminLoading.value = true;
     adminError.value = null;
     try {
       const doc = await apiClient.get<AdminCatalogDocument>(`/api/v1/admin/catalog/documents/${id}`);
+      if (generation !== adminDataGeneration) return null;
       selectedAdminDoc.value = doc;
       return doc;
     } catch (err: unknown) {
+      if (generation !== adminDataGeneration) return null;
       if (isForbiddenError(err)) {
-        cleanupAdmin();
+        handleForbidden();
       } else {
         adminError.value = extractErrorMessage(err, "Failed to load document details");
       }
       return null;
     } finally {
-      isAdminLoading.value = false;
+      if (generation === adminDataGeneration) isAdminLoading.value = false;
     }
   }
 
   async function fetchAdminSlice(docId: string, order: number): Promise<AdminCatalogSlice | null> {
+    const generation = adminDataGeneration;
     isAdminLoading.value = true;
     adminError.value = null;
     try {
       const slice = await apiClient.get<AdminCatalogSlice>(
         `/api/v1/admin/catalog/documents/${docId}/slices/${order}`
       );
+      if (generation !== adminDataGeneration) return null;
       selectedAdminSlice.value = slice;
       return slice;
     } catch (err: unknown) {
+      if (generation !== adminDataGeneration) return null;
       if (isForbiddenError(err)) {
-        cleanupAdmin();
+        handleForbidden();
       } else {
         adminError.value = extractErrorMessage(err, "Failed to load slice");
       }
       return null;
     } finally {
-      isAdminLoading.value = false;
+      if (generation === adminDataGeneration) isAdminLoading.value = false;
     }
   }
 
@@ -439,7 +450,7 @@ export const useCatalogStore = defineStore("catalog", () => {
       }
       return updated;
     } catch (err: unknown) {
-      if (isForbiddenError(err)) cleanupAdmin();
+      if (isForbiddenError(err)) handleForbidden();
       throw err;
     }
   }
@@ -456,7 +467,7 @@ export const useCatalogStore = defineStore("catalog", () => {
       selectedAdminDoc.value = doc;
       return doc;
     } catch (err: unknown) {
-      if (isForbiddenError(err)) cleanupAdmin();
+      if (isForbiddenError(err)) handleForbidden();
       throw err;
     }
   }
@@ -470,7 +481,7 @@ export const useCatalogStore = defineStore("catalog", () => {
       selectedAdminDoc.value = doc;
       return doc;
     } catch (err: unknown) {
-      if (isForbiddenError(err)) cleanupAdmin();
+      if (isForbiddenError(err)) handleForbidden();
       throw err;
     }
   }
@@ -492,7 +503,7 @@ export const useCatalogStore = defineStore("catalog", () => {
       }
       return doc;
     } catch (err: unknown) {
-      if (isForbiddenError(err)) cleanupAdmin();
+      if (isForbiddenError(err)) handleForbidden();
       throw err;
     }
   }
@@ -511,7 +522,7 @@ export const useCatalogStore = defineStore("catalog", () => {
       }
       return doc;
     } catch (err: unknown) {
-      if (isForbiddenError(err)) cleanupAdmin();
+      if (isForbiddenError(err)) handleForbidden();
       throw err;
     }
   }
@@ -537,7 +548,17 @@ export const useCatalogStore = defineStore("catalog", () => {
     }
   }
 
+  function handleForbidden() {
+    cleanupAdmin();
+    auth.invalidateAdminAccess();
+  }
+
   function cleanupAdmin() {
+    adminDataGeneration++;
+    activeAdminRequestSeq++;
+    isAdminLoading.value = false;
+    isCheckingCapability.value = false;
+    adminError.value = null;
     canManageCatalog.value = false;
     adminDocuments.value = [];
     selectedAdminDoc.value = null;
@@ -547,6 +568,7 @@ export const useCatalogStore = defineStore("catalog", () => {
   }
 
   function cleanup() {
+    activeDiscoveryRequestSeq++;
     cleanupAdmin();
     documents.value = [];
     selectedDocument.value = null;
@@ -556,6 +578,9 @@ export const useCatalogStore = defineStore("catalog", () => {
     error.value = null;
     adminError.value = null;
   }
+
+  watch([() => auth.user?.id, () => auth.sessionGeneration], cleanup, { flush: 'sync' });
+  watch(() => auth.adminGeneration, cleanupAdmin, { flush: 'sync' });
 
   return {
     // Capability

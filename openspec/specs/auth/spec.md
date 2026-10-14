@@ -193,11 +193,11 @@ The client-side authentication store SHALL decode the JWT payload `exp` claim an
 ---
 
 ### Requirement: Global 401 Session Expiration Interception
-The HTTP client composable (`useApiClient`) SHALL intercept any response with HTTP status `401 Unauthorized`. It SHALL purge local session credentials, show a localized notification indicating that the session has expired, and redirect the user to `/login` preserving the current route as the redirect parameter.
+The HTTP client composable (`useApiClient`) SHALL intercept any response with HTTP status `401 Unauthorized`. It SHALL purge local session credentials, show a localized notification indicating that the session has expired, and redirect the user to the login for the current area, preserving a validated local route as the redirect parameter. Protected admin routes use `/admin/login`; learner routes use `/login`. Existing silent refresh is attempted before terminal session cleanup; transient network/server refresh errors do not clear valid credentials. The learner examples below retain their existing behavior.
 
 To prevent route cancellation and transition race conditions when multiple parallel asynchronous API requests return HTTP 401 simultaneously:
 1. `useApiClient` SHALL implement single-flight redirect debouncing (`isRedirectingToLogin`).
-2. If a redirect to `/login` is already in flight, subsequent 401 responses SHALL NOT trigger duplicate `navigateTo` invocations.
+2. If a redirect to either area's login is already in flight, subsequent 401 responses SHALL NOT trigger duplicate `navigateTo` invocations.
 3. The redirect guard SHALL automatically reset once the navigation resolves or fails.
 
 #### Scenario: Authenticated request fails with 401
@@ -213,6 +213,11 @@ To prevent route cancellation and transition race conditions when multiple paral
 - **AND** discards redundant concurrent redirect calls
 - **AND** the active route transition executes cleanly without being aborted mid-flight.
 
+#### Scenario: Terminal unauthorized response in administration
+- **WHEN** an authenticated admin request returns 401 and session refresh is definitively rejected
+- **THEN** the client clears session and privileged state and redirects once to `/admin/login?redirect=<safeAdminPath>`
+- **AND** no learner shell is rendered during the transition.
+
 ---
 
 ### Requirement: Extended Access Token Lifespan Matching Curriculum
@@ -223,7 +228,9 @@ The authentication endpoints (`/api/v1/auth/login`, `/register`, `/google`) SHAL
 - **THEN** the returned JWT access token has an expiration set to 60 minutes from creation time
 
 ### Requirement: Route Middleware Token Expiry Validation
-The client-side route guard (`frontend/middleware/auth.global.ts`) SHALL enforce a strict **Default-Deny** security posture: all platform routes require active authentication by default, with only explicit guest authentication routes (`/login`, `/register`, `/forgot-password`, `/reset-password`) and local development playgrounds (`/playground/*`, `/showcase`) exempted.
+The client-side route guard (`frontend/middleware/auth.global.ts`) SHALL enforce a strict **Default-Deny** security posture: all platform routes require active authentication by default, with only explicit guest authentication routes (`/login`, `/register`, `/forgot-password`, `/reset-password`, `/admin/login`) and local development playgrounds (`/playground/*`, `/showcase`) exempted.
+
+The numbered rules and existing scenarios below govern learner routes. Admin routes SHALL follow the administrator-specific rules at the end of this requirement. `/admin/login` SHALL remain accessible to authenticated non-admin accounts and SHALL NOT use the learner guest-page redirect.
 
 1. **Server-Side Rendering (SSR) Route Guard & Expiration Verification**:
    - On Server-Side Rendering (`import.meta.server`), when an incoming HTTP request targets any protected route (such as `/library`, `/today`, `/notes`), the middleware SHALL inspect request cookies for session credentials (`techdaily_token` and `refreshToken`).
@@ -278,6 +285,19 @@ The client-side route guard (`frontend/middleware/auth.global.ts`) SHALL enforce
 - **WHEN** client-side route navigation occurs with an expired access token in a local environment where refresh cookies cannot be sent across ports
 - **AND** the refresh attempt fails with an unauthorized status
 - **THEN** the client SHALL redirect cleanly to `/login?redirect={targetUrl}` without corrupting DOM tree structures.
+
+#### Scenario: Administrator route admission on server and client
+- **WHEN** a caller visits `/admin` or any `/admin/*` route except `/admin/login`
+- **THEN** server-confirmed administrator permission is required before rendering or fetching privileged content
+- **AND** anonymous or denied callers are redirected to `/admin/login` with a validated local admin return path.
+
+#### Scenario: Administrator login remains reachable
+- **WHEN** a regular signed-in account is redirected to `/admin/login`
+- **THEN** the page remains visible with a localized permission message and allows signing in with another account without a redirect loop.
+
+#### Scenario: Permission verification cannot complete
+- **WHEN** an SSR or client permission check encounters a transient failure
+- **THEN** protected UI remains hidden, a neutral retry state is shown and valid session credentials are retained.
 ### Requirement: Mandatory secret configuration at startup
 The application SHALL fail fast during startup if the `Jwt:Secret` configuration value is missing, empty, or has fewer than 256 bits of cryptographically random entropy. The `Jwt:Secret` value MUST be generated using a CSPRNG; human-readable, example, or default secrets SHALL NOT be used. The application SHALL NOT fall back to any hardcoded default JWT signing key. The same fail-fast behavior SHALL apply to VAPID key configuration (`WebPush:PrivateKey`, `WebPush:PublicKey`).
 
@@ -700,13 +720,18 @@ Catalog administrator access SHALL be assigned only by trusted deployment config
 ---
 
 ### Requirement: Administrator capability discovery and route protection
-The server SHALL expose the current user's catalog management capability to support navigation. The admin page SHALL redirect anonymous visitors to login with the requested destination and show an access-denied state for authenticated non-administrators without loading draft data.
+The server SHALL expose the current user's catalog management capability to support navigation. Every protected administrator route SHALL verify this capability before rendering protected UI or requesting administrative data. Anonymous visitors and authenticated non-administrators SHALL be redirected to `/admin/login` with a validated local administrator return path. Transient permission-check failures SHALL retain valid session credentials and show a neutral retry state without protected content.
 
 #### Scenario: Administrator opens management page
 - **WHEN** a designated administrator opens `/admin/catalog`
-- **THEN** the server confirms permission and the catalog workspace loads.
+- **THEN** the server confirms permission and the catalog workspace loads inside the administrator shell.
 
 #### Scenario: Client capability becomes stale
 - **WHEN** an administrator's access is revoked while their page is open
-- **THEN** a denied request presents an access-denied state, clears privileged data and stops polling
+- **THEN** a denied request clears privileged data, aborts pending privileged requests, stops polling and redirects once to `/admin/login`
 - **AND** the browser does not treat its cached capability as authorization.
+
+#### Scenario: Non-administrator opens management page
+- **WHEN** an authenticated non-administrator visits a protected administrator route
+- **THEN** the browser redirects to `/admin/login` without rendering protected SSR markup or fetching draft data
+- **AND** the existing learner session remains available for switching to learning.

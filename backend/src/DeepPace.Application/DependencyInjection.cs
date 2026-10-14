@@ -93,6 +93,9 @@ public static class DependencyInjection
         // Knowledge Graph Handlers
         services.AddScoped<IUseCase<GetKnowledgeGraphQuery, KnowledgeGraphResponse>, GetKnowledgeGraphQueryHandler>();
 
+        // Administrator Dashboard Handlers
+        services.AddScoped<IUseCase<Features.AdminDashboard.GetOverview.GetAdminDashboardOverviewRequest, Features.AdminDashboard.DTOs.AdminDashboardOverviewDto>, Features.AdminDashboard.GetOverview.GetAdminDashboardOverviewHandler>();
+
         // Catalog Handlers (Learner)
         services.AddScoped<IUseCase<Features.Catalog.Learner.GetDocuments.GetPublishedCatalogDocumentsRequest, Features.Catalog.Learner.GetDocuments.GetPublishedCatalogDocumentsResponse>, Features.Catalog.Learner.GetDocuments.GetPublishedCatalogDocumentsHandler>();
         services.AddScoped<IUseCase<Features.Catalog.Learner.GetDocumentById.GetPublishedCatalogDocumentByIdRequest, Features.Catalog.DTOs.LearnerCatalogDetailDto>, Features.Catalog.Learner.GetDocumentById.GetPublishedCatalogDocumentByIdHandler>();

@@ -1,5 +1,7 @@
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useToast } from '~/composables/useToast'
+import { watch } from 'vue'
+import { isAdminLogin, isAdminRoute, loginRedirectFor } from '~/utils/adminRoutes'
 
 export class ApiError extends Error {
   code?: string
@@ -27,6 +29,8 @@ interface NavigatorWithLocks {
 
 let inFlightRefreshPromise: Promise<string | null> | null = null
 let isRedirectingToLogin = false
+let refreshOwner: ReturnType<typeof useAuthStore> | null = null
+let refreshGeneration = -1
 
 export function _resetRedirectingToLogin() {
   isRedirectingToLogin = false
@@ -62,8 +66,13 @@ function parseJwtExp(jwt: string): number | null {
 
 export function useApiClient() {
   const config = useRuntimeConfig()
-
-  const baseUrl = process.env.API_INTERNAL_URL || (config?.public?.apiBaseUrl as string | undefined)?.trim() || ''
+  const auth = useAuthStore()
+  const isServer = Boolean(import.meta.server || (typeof process !== 'undefined' && 'server' in process && process.server))
+  const baseUrl = (isServer ? process.env.API_INTERNAL_URL : '') || (config?.public?.apiBaseUrl as string | undefined)?.trim() || ''
+  let translate: ((key: string) => string) | null = null
+  try { translate = useNuxtApp().$i18n.t } catch {
+    try { translate = useI18n().t } catch { /* Translation is optional outside Nuxt. */ }
+  }
 
   function getAuthToken(): string | null {
     const tokenCookie = useCookie<string | null>('deeppace_token')
@@ -84,6 +93,8 @@ export function useApiClient() {
   }
 
   async function executeRefresh(): Promise<string | null> {
+    if (isServer) throw new ApiError('Session renewal requires client verification.', 503, 'SSR_REFRESH_PENDING')
+    const generation = auth.sessionGeneration
     const refreshUrl = `${baseUrl}/api/v1/auth/refresh`
     let res: Response
     try {
@@ -122,9 +133,9 @@ export function useApiClient() {
       throw new Error('No access token returned from refresh')
     }
 
+    if (generation !== auth.sessionGeneration) throw new ApiError('The account changed during renewal.', 409, 'SESSION_CHANGED')
     try {
-      const authStore = useAuthStore()
-      authStore.setSession(newToken, returnedUser || authStore.user)
+      auth.setSession(newToken, returnedUser || auth.user)
     } catch {
       const tokenCookie = useCookie<string | null>('deeppace_token')
       tokenCookie.value = newToken
@@ -151,187 +162,112 @@ export function useApiClient() {
       })
     }
 
-    if (!inFlightRefreshPromise) {
-      inFlightRefreshPromise = executeRefresh().finally(() => {
-        inFlightRefreshPromise = null
+    if (!inFlightRefreshPromise || refreshOwner !== auth || refreshGeneration !== auth.sessionGeneration) {
+      refreshOwner = auth
+      refreshGeneration = auth.sessionGeneration
+      const flight = executeRefresh().finally(() => {
+        if (inFlightRefreshPromise === flight) inFlightRefreshPromise = null
       })
+      inFlightRefreshPromise = flight
     }
     return await inFlightRefreshPromise
   }
 
-  async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const isAuthEndpoint =
-      endpoint.includes('/api/v1/auth/login') ||
-      endpoint.includes('/api/v1/auth/register') ||
-      endpoint.includes('/api/v1/auth/refresh') ||
-      endpoint.includes('/api/v1/auth/revoke') ||
-      endpoint.includes('/api/v1/auth/google')
+  function redirectToLogin() {
+    if (isServer || typeof window === 'undefined' || isRedirectingToLogin || typeof navigateTo !== 'function') return
+    const currentPath = window.location.pathname + window.location.search
+    if (isAdminLogin(window.location.pathname) || window.location.pathname === '/login') return
+    isRedirectingToLogin = true
+    Promise.resolve(navigateTo(loginRedirectFor(currentPath))).finally(() => {
+      setTimeout(() => { isRedirectingToLogin = false }, 500)
+    })
+  }
 
-    if (!isAuthEndpoint) {
-      const currentToken = getAuthToken()
-      if (currentToken) {
-        const exp = parseJwtExp(currentToken)
-        if (exp && exp * 1000 - Date.now() <= 5 * 60 * 1000) {
-          try {
-            await refreshAuthToken()
-          } catch {
-            // Proactive refresh failed, proceed and let 401 handler manage it
-          }
-        }
+  async function parseError(response: Response): Promise<ApiError> {
+    let message = `HTTP Error ${response.status}`
+    let code: string | undefined
+    let details: unknown
+    let data: unknown
+    try {
+      const body = await response.json()
+      data = body
+      message = body.detail || body.message || body.title || message
+      code = body.code
+      details = body.errors
+    } catch { /* Empty and non-JSON error bodies use the HTTP status. */ }
+    code ||= response.status === 401 ? 'UNAUTHORIZED' : response.status === 403 ? 'FORBIDDEN'
+      : response.status === 404 ? 'RESOURCE_NOT_FOUND' : response.status >= 500 ? 'SERVER_ERROR' : undefined
+    return new ApiError(message, response.status, code, details, data)
+  }
+
+  async function performRequest<T>(endpoint: string, options: RequestInit, generation: number): Promise<T> {
+    const isAuthEndpoint = endpoint.startsWith('/api/v1/auth/')
+    if (!isAuthEndpoint && !isServer) {
+      const token = getAuthToken()
+      const exp = token ? parseJwtExp(token) : null
+      if (exp && exp * 1000 - Date.now() <= 300_000) {
+        try { await refreshAuthToken() } catch { /* A response will determine whether the session is rejected. */ }
       }
     }
-
+    options.signal?.throwIfAborted()
+    const headers: Record<string, string> = { ...(options.headers as Record<string, string> || {}) }
     const token = getAuthToken()
-    const headers: Record<string, string> = {
-      ...(options.headers as Record<string, string> || {})
-    }
+    if (token) headers.Authorization = `Bearer ${token}`
+    if (!(options.body instanceof FormData) && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
+    let response = await fetch(`${baseUrl}${endpoint}`, { ...options, credentials: options.credentials || 'include', headers })
+    if (generation !== auth.sessionGeneration) throw new ApiError('The account changed during the request.', 409, 'SESSION_CHANGED')
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
-    if (!(options.body instanceof FormData) && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json'
-    }
-
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      ...options,
-      credentials: options.credentials || 'include',
-      headers
-    })
-    if (!response.ok) {
-      if (
-        response.status === 401 &&
-        !endpoint.includes('/api/v1/auth/login') &&
-        !endpoint.includes('/api/v1/auth/register') &&
-        !endpoint.includes('/api/v1/auth/refresh') &&
-        !endpoint.includes('/api/v1/auth/revoke') &&
-        !endpoint.includes('/api/v1/auth/google')
-      ) {
-        let refreshedToken: string | null = null
-        let refreshError: any = null
-        try {
-          refreshedToken = await refreshAuthToken()
-        } catch (err: any) {
-          refreshError = err
-        }
-        if (refreshedToken) {
-          const retryHeaders: Record<string, string> = {
-            ...(options.headers as Record<string, string> || {}),
-            Authorization: `Bearer ${refreshedToken}`
-          }
-
-          if (!(options.body instanceof FormData) && !retryHeaders['Content-Type']) {
-            retryHeaders['Content-Type'] = 'application/json'
-          }
-
-          const retryResponse = await fetch(`${baseUrl}${endpoint}`, {
-            ...options,
-            credentials: options.credentials || 'include',
-            headers: retryHeaders
-          })
-
-          if (retryResponse.ok) {
-            if (retryResponse.status === 204 || retryResponse.headers.get('content-length') === '0') {
-              return {} as T
-            }
-            const text = await retryResponse.text()
-            if (!text || text.trim() === '') {
-              return {} as T
-            }
-            return JSON.parse(text)
-          }
-        }
-        // If the refresh failure was due to transient network failure or server 502/503 (e.g. backend restarting),
-        // do NOT purge session credentials or redirect to login.
-        if (refreshError?.isNetworkError || (typeof refreshError?.status === 'number' && refreshError.status >= 500)) {
+    if (response.status === 401 && !isAuthEndpoint && !isServer) {
+      try {
+        const renewed = await refreshAuthToken()
+        options.signal?.throwIfAborted()
+        if (renewed) response = await fetch(`${baseUrl}${endpoint}`, {
+          ...options, credentials: options.credentials || 'include',
+          headers: { ...headers, Authorization: `Bearer ${renewed}` }
+        })
+      } catch (error: unknown) {
+        const failure = error as { status?: number; isNetworkError?: boolean; code?: string }
+        if (failure.code === 'SESSION_CHANGED' || generation !== auth.sessionGeneration) throw error
+        if (options.signal?.aborted) throw error
+        if (failure.isNetworkError || (failure.status !== 401 && failure.status !== 403)) {
           throw new ApiError('Authentication service temporarily unavailable', 503, 'SERVICE_UNAVAILABLE')
         }
-
-        // Only purge session if refresh was explicitly rejected by the server (401/403)
-        // or if there are truly no stored credentials in cookie, localStorage, or sessionStorage.
-        if (refreshError?.status === 401 || refreshError?.status === 403 || !getAuthToken()) {
-          try {
-            const authStore = useAuthStore()
-            authStore.clearSession()
-          } catch {
-            // ignore if pinia is not active
-          }
-        }
-        try {
-          const toast = useToast()
-          let message = 'Session expired. Please log in again.'
-          try {
-            const { t } = useI18n()
-            const localized = t('auth.session_expired')
-            if (localized) {
-              message = localized
-            }
-          } catch {
-            // fallback if i18n composable is not available
-          }
-          toast.warning(message)
-        } catch {
-          // ignore
-        }
-
-        if (typeof window !== 'undefined') {
-          const currentPath = window.location.pathname + window.location.search
-          if (!isRedirectingToLogin && !window.location.pathname.startsWith('/login') && typeof navigateTo === 'function') {
-            isRedirectingToLogin = true
-            const redirectPromise = navigateTo({
-              path: '/login',
-              query: { redirect: currentPath }
-            })
-            if (redirectPromise instanceof Promise) {
-              redirectPromise.finally(() => {
-                setTimeout(() => {
-                  isRedirectingToLogin = false
-                }, 500)
-              })
-            } else {
-              setTimeout(() => {
-                isRedirectingToLogin = false
-              }, 500)
-            }
-          }
-        }
       }
-
-      let errorMessage = `HTTP Error ${response.status}`
-      let errorCode: string | undefined = undefined
-      let errorDetails: unknown = undefined
-      let errorData: unknown = undefined
-
-      try {
-        const errorJson = await response.json()
-        errorData = errorJson
-        errorMessage = errorJson.detail || errorJson.message || errorJson.title || errorMessage
-        errorCode = errorJson.code
-        errorDetails = errorJson.errors
-      } catch {
-        // fallback
+      if (generation !== auth.sessionGeneration) throw new ApiError('The account changed during the request.', 409, 'SESSION_CHANGED')
+      if (response.status === 401) {
+        auth.clearSession()
+        try { useToast().warning(translate?.('auth.session_expired') || 'Session expired. Please log in again.') } catch { /* No toast outside UI context. */ }
+        redirectToLogin()
       }
-
-      if (!errorCode) {
-        if (response.status === 401) errorCode = 'UNAUTHORIZED'
-        else if (response.status === 403) errorCode = 'FORBIDDEN'
-        else if (response.status === 404) errorCode = 'RESOURCE_NOT_FOUND'
-        else if (response.status >= 500) errorCode = 'SERVER_ERROR'
-      }
-
-      throw new ApiError(errorMessage, response.status, errorCode, errorDetails, errorData)
     }
-    if (response.status === 204 || response.headers.get('content-length') === '0') {
-      return {} as T
+    if (response.status === 403 && endpoint.startsWith('/api/v1/admin/') && !isServer) {
+      auth.invalidateAdminAccess()
+      if (typeof window !== 'undefined' && isAdminRoute(window.location.pathname)) redirectToLogin()
     }
-
+    if (!response.ok) throw await parseError(response)
+    if (response.status === 204 || response.headers.get('content-length') === '0') return {} as T
     const text = await response.text()
-    if (!text || text.trim() === '') {
-      return {} as T
-    }
+    return text.trim() ? JSON.parse(text) : {} as T
+  }
 
-    return JSON.parse(text)
+  async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const generation = auth.sessionGeneration
+    const privileged = endpoint.startsWith('/api/v1/admin/') || endpoint === '/api/v1/catalog/capabilities'
+    if (!privileged) return performRequest<T>(endpoint, options, generation)
+    const controller = new AbortController()
+    const stop = watch([() => auth.user?.id, () => auth.sessionGeneration, () => auth.adminGeneration],
+      () => controller.abort(), { flush: 'sync' })
+    const onAbort = () => controller.abort()
+    if (options.signal?.aborted) controller.abort()
+    options.signal?.addEventListener('abort', onAbort, { once: true })
+    try {
+      const result = await performRequest<T>(endpoint, { ...options, signal: controller.signal }, generation)
+      controller.signal.throwIfAborted()
+      return result
+    } finally {
+      stop()
+      options.signal?.removeEventListener('abort', onAbort)
+    }
   }
 
   return {

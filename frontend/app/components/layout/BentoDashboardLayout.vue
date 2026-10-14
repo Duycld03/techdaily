@@ -6,6 +6,8 @@
  */
 defineProps<{
   maxHeight?: string
+  actionLabel?: string
+  dockLabel?: string
 }>()
 </script>
 
@@ -25,7 +27,7 @@ defineProps<{
       <!-- Left 2 Columns: Action Stage -->
       <section
         class="lg:col-span-2 flex flex-col justify-start gap-3.5 sm:gap-4 min-h-0"
-        aria-label="Core action stage"
+        :aria-label="actionLabel || 'Core action stage'"
       >
         <slot name="action-stage" />
       </section>
@@ -34,7 +36,7 @@ defineProps<{
       <aside
         v-if="$slots['telemetry-dock']"
         class="lg:col-span-1 flex flex-col justify-start gap-3.5 sm:gap-4 min-h-0"
-        aria-label="Telemetry and constellation dock"
+        :aria-label="dockLabel || 'Telemetry and constellation dock'"
       >
         <slot name="telemetry-dock" />
       </aside>

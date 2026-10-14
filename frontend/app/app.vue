@@ -5,17 +5,28 @@ import AppHeader from '~/components/layout/AppHeader.vue'
 import AppSidebar from '~/components/layout/AppSidebar.vue'
 import AppToastContainer from '~/components/common/AppToastContainer.vue'
 import AppCommandPalette from '~/components/app/AppCommandPalette.vue'
-const route = useRoute()
+import AdminShell from '~/components/admin/AdminShell.vue'
+import AdminAuthorizationBoundary from '~/components/admin/AdminAuthorizationBoundary.vue'
+import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
+import { isAdminRoute, isAdminLogin } from '~/utils/adminRoutes'
+const deferredRoute = useRoute()
+const router = useRouter()
+// Shell transitions must follow the committed router location even when the
+// authorization boundary temporarily replaces NuxtPage and delays page finish.
+const route = computed(() => router.currentRoute?.value || deferredRoute)
 const authStore = useAuthStore()
+const adminAccess = useAdminAccessStore()
+const isAdminPage = computed(() => isAdminRoute(route.value.path) && !isAdminLogin(route.value.path))
 
-const isReaderMode = computed(() => route.path.startsWith('/read'))
+const isReaderMode = computed(() => route.value.path.startsWith('/read'))
 const isAuthPage = computed(() => {
-  const normalizedPath = route.path.replace(/\/+$/, '') || '/'
+  const normalizedPath = route.value.path.replace(/\/+$/, '') || '/'
   return (
     normalizedPath === '/login' ||
     normalizedPath === '/register' ||
     normalizedPath === '/forgot-password' ||
-    normalizedPath === '/reset-password'
+    normalizedPath === '/reset-password' ||
+    isAdminLogin(normalizedPath)
   )
 })
 
@@ -31,6 +42,11 @@ onMounted(() => {
     <!-- Auth Cockpit Shell: Isolated from internal navigation chrome & persistent containers -->
     <template v-if="isAuthPage">
       <NuxtPage :page-key="route => route.fullPath" />
+    </template>
+
+    <template v-else-if="isAdminPage">
+      <AdminShell v-if="adminAccess.isAuthorized"><NuxtPage :page-key="route => route.fullPath" /></AdminShell>
+      <AdminAuthorizationBoundary v-else />
     </template>
 
     <!-- Standard Application Shell -->

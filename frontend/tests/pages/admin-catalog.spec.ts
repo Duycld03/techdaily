@@ -4,6 +4,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import AdminCatalogPage from '~/pages/admin/catalog.vue'
 import { useCatalogStore, type AdminCatalogDocumentDetailDto } from '~/stores/useCatalogStore'
+import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 
 const mockAdminDocs = [
   {
@@ -149,15 +150,11 @@ describe('admin/catalog.vue (MasterDetail Catalog Management)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    useAdminAccessStore().state = 'authorized'
   })
 
-  it('renders access denied state for authenticated non-administrators without fetching documents', async () => {
-    mockGet.mockImplementationOnce(async (url: string) => {
-      if (url.includes('/api/v1/catalog/capabilities')) {
-        return { canManageCatalog: false }
-      }
-      return {}
-    })
+  it('withholds catalog data until the shared administrator gate admits the account', async () => {
+    useAdminAccessStore().state = 'denied'
 
     const wrapper = mount(AdminCatalogPage, {
       global: {
@@ -175,8 +172,7 @@ describe('admin/catalog.vue (MasterDetail Catalog Management)', () => {
 
     await flushPromises()
 
-    expect(wrapper.text()).toContain('admin_catalog.access_denied_title')
-    expect(wrapper.text()).toContain('admin_catalog.access_denied_desc')
+    expect(wrapper.text()).not.toContain('admin_catalog.title')
     // Must NOT have called admin documents endpoint
     expect(mockGet).not.toHaveBeenCalledWith(expect.stringMatching(/\/api\/v1\/admin\/catalog\/documents/))
   })
@@ -282,7 +278,7 @@ describe('admin/catalog.vue (MasterDetail Catalog Management)', () => {
     )
   })
 
-  it('cleans up admin state and shows access denied when an admin operation returns 403', async () => {
+  it('cleans up administrative state and withholds the page after revoked permission', async () => {
     const wrapper = mount(AdminCatalogPage, {
       global: {
         stubs: {
@@ -311,6 +307,7 @@ describe('admin/catalog.vue (MasterDetail Catalog Management)', () => {
     const catalogStore = useCatalogStore()
     expect(catalogStore.canManageCatalog).toBe(false)
     expect(catalogStore.adminDocuments.length).toBe(0)
-    expect(wrapper.text()).toContain('admin_catalog.access_denied_title')
+    expect(useAdminAccessStore().isAuthorized).toBe(false)
+    expect(wrapper.text()).not.toContain('admin_catalog.title')
   })
 })
