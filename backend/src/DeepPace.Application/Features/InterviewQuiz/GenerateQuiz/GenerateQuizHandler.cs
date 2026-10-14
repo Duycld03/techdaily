@@ -43,13 +43,15 @@ public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizRes
             var book = await _dbContext.DocumentBooks
                 .AsNoTracking()
                 .FirstOrDefaultAsync(b => b.Id == request.BookId.Value, cancellationToken);
-            if (book != null)
+            if (book == null || (book.CreatedByUserId != null && book.CreatedByUserId != request.UserId))
             {
-                category = request.Category ?? book.Category;
-                if (request.IsGrounded && !normalizedTopic.Contains(book.Title, StringComparison.OrdinalIgnoreCase))
-                {
-                    normalizedTopic = $"{book.Title}: {normalizedTopic}";
-                }
+                return Error.Custom("Quiz.Forbidden", "Access to this book is not permitted.");
+            }
+
+            category = request.Category ?? book.Category;
+            if (request.IsGrounded && !normalizedTopic.Contains(book.Title, StringComparison.OrdinalIgnoreCase))
+            {
+                normalizedTopic = $"{book.Title}: {normalizedTopic}";
             }
         }
 

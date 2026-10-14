@@ -8,7 +8,7 @@ using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Features.Library.CurateSlice;
 
-public record CurateSliceRequest(Guid BookId, int ChunkOrder);
+public record CurateSliceRequest(Guid BookId, int ChunkOrder, Guid? UserId = null);
 
 public class CurateSliceResponse
 {
@@ -44,6 +44,11 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
         {
             return Error.NotFound;
         }
+        if (request.UserId.HasValue && chunk.DocumentBook.CreatedByUserId != null && chunk.DocumentBook.CreatedByUserId != request.UserId.Value)
+        {
+            return Error.NotFound;
+        }
+
 
         if (!chunk.IsAiFormatted)
         {

@@ -13,7 +13,8 @@ import {
   Loader2,
   List,
   Clock,
-  X
+  X,
+  Compass
 } from "lucide-vue-next";
 import DocReaderPane from "~/components/today/DocReaderPane.vue";
 import InterviewChallengePane from "~/components/today/InterviewChallengePane.vue";
@@ -387,13 +388,20 @@ watch(locale, (newLocale) => {
         <BookOpen class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" :stroke-width="1.5" />
         <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">{{ $t('roadmap.no_active_books') }}</h3>
         <p class="text-sm text-slate-500 mt-2 leading-relaxed">{{ $t('roadmap.no_active_books_desc') }}</p>
-        <div class="mt-6 flex justify-center">
+        <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
           <NuxtLink
             to="/library"
-            class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl bg-brand-500 hover:bg-brand-600 text-white shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0"
+            class="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-800 dark:text-slate-200 transition-colors whitespace-nowrap shrink-0"
           >
             <span>{{ $t('roadmap.browse_library') }}</span>
             <ArrowUpRight class="w-4 h-4" />
+          </NuxtLink>
+          <NuxtLink
+            to="/library?tab=discover"
+            class="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-brand-500 hover:bg-brand-600 text-white shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0"
+          >
+            <Compass class="w-4 h-4" />
+            <span>{{ $t('library.discover.browse_discover') }}</span>
           </NuxtLink>
         </div>
       </div>

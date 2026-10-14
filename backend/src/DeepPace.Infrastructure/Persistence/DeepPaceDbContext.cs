@@ -31,6 +31,8 @@ public class DeepPaceDbContext : DbContext, IDeepPaceDbContext
     public DbSet<UserPushSubscription> UserPushSubscriptions => Set<UserPushSubscription>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<EmailOtp> EmailOtps => Set<EmailOtp>();
+    public DbSet<CatalogDocument> CatalogDocuments => Set<CatalogDocument>();
+    public DbSet<CatalogSlice> CatalogSlices => Set<CatalogSlice>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -58,6 +60,11 @@ public class DeepPaceDbContext : DbContext, IDeepPaceDbContext
                 .HasIndex(t => t.Embedding)
                 .HasMethod("hnsw")
                 .HasOperators("vector_cosine_ops");
+            modelBuilder.Entity<CatalogSlice>().Property(c => c.Embedding).HasColumnType("vector(768)");
+            modelBuilder.Entity<CatalogSlice>()
+                .HasIndex(c => c.Embedding)
+                .HasMethod("hnsw")
+                .HasOperators("vector_cosine_ops");
         }
         else
         {
@@ -70,6 +77,11 @@ public class DeepPaceDbContext : DbContext, IDeepPaceDbContext
 
             modelBuilder.Entity<TermExplanationCache>()
                 .Property(t => t.Embedding)
+                .HasConversion(
+                    v => v == null ? null : string.Join(";", v.ToArray()),
+                    s => s == null ? null : new Pgvector.Vector(s.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(float.Parse).ToArray()));
+            modelBuilder.Entity<CatalogSlice>()
+                .Property(c => c.Embedding)
                 .HasConversion(
                     v => v == null ? null : string.Join(";", v.ToArray()),
                     s => s == null ? null : new Pgvector.Vector(s.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(float.Parse).ToArray()));

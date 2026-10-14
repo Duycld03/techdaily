@@ -20,7 +20,7 @@ export function formatSeniorityLevel(level: string | number) {
 </script>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import {
   HelpCircle,
@@ -43,7 +43,8 @@ import {
   Check,
   AlertCircle,
   Swords,
-  Key
+  Key,
+  Clock
 } from 'lucide-vue-next'
 import { useReviewStore } from '~/stores/useReviewStore'
 import { useInterviewQuizStore, type QuizQuestion } from '~/stores/useInterviewQuizStore'
@@ -54,6 +55,7 @@ import BasePagination from '~/components/common/BasePagination.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
 import OptionCard from '~/components/ui/OptionCard.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
+import StudioLayout from '~/components/layout/StudioLayout.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -223,6 +225,40 @@ const renderedExplanationHtml = computed(() => {
 const currentQ = computed(() => quizStore.currentQuestion)
 const currentSub = computed(() => quizStore.currentSubmission)
 
+const sessionSeconds = ref(0)
+let sessionTimer: ReturnType<typeof setInterval> | null = null
+
+function formatSessionTime(seconds: number) {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+watch(
+  () => quizStore.activeTab,
+  (tab) => {
+    if (tab === 'arena') {
+      if (!sessionTimer) {
+        sessionTimer = setInterval(() => {
+          sessionSeconds.value++
+        }, 1000)
+      }
+    } else {
+      if (sessionTimer) {
+        clearInterval(sessionTimer)
+        sessionTimer = null
+      }
+    }
+  },
+  { immediate: true }
+)
+
+onUnmounted(() => {
+  if (sessionTimer) {
+    clearInterval(sessionTimer)
+    sessionTimer = null
+  }
+})
 function handleSelectOption(index: number) {
   if (quizStore.isCurrentAnswered || quizStore.isSubmitting) return
   selectedOptionIndex.value = index
@@ -729,37 +765,38 @@ defineExpose({
       </div>
     </div>
 
-    <!-- TAB 2: QUIZ ARENA (UNBOXED DIRECT-CANVAS STUDIO ARCHETYPE) -->
-    <div v-if="quizStore.activeTab === 'arena' && currentQ" class="space-y-4">
-      <!-- Direct-Canvas Breadcrumb Bar (No Enclosing Card) -->
-      <div class="flex flex-wrap items-center justify-between gap-2 px-1">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <span class="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 shrink-0">
-            {{ $t('quiz.question_counter', { current: quizStore.currentIndex + 1, total: quizStore.questions.length }) }}
-          </span>
-          <h2 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">
-            {{ currentQ.topic }}
-          </h2>
-        </div>
+    <!-- TAB 2: QUIZ ARENA (STUDIO LAYOUT ARCHETYPE) -->
+    <StudioLayout v-if="quizStore.activeTab === 'arena' && currentQ">
+      <!-- Header: Breadcrumb & Level Metadata -->
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-2 w-full">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 shrink-0">
+              {{ $t('quiz.question_counter', { current: quizStore.currentIndex + 1, total: quizStore.questions.length }) }}
+            </span>
+            <h2 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">
+              {{ currentQ.topic }}
+            </h2>
+          </div>
 
-        <div class="flex items-center gap-2 shrink-0">
-          <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.06]">
-            {{ formatSeniorityLevel(currentQ.level).label }}
-          </span>
-          <span
-            v-if="currentQ.isMastered"
-            class="px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/30 flex items-center gap-1"
-          >
-            <CheckCircle2 class="w-3.5 h-3.5" :stroke-width="1.5" />
-            Mastered
-          </span>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.06]">
+              {{ formatSeniorityLevel(currentQ.level).label }}
+            </span>
+            <span
+              v-if="currentQ.isMastered"
+              class="px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-500/15 text-brand-600 dark:text-brand-400 border border-brand-500/30 flex items-center gap-1"
+            >
+              <CheckCircle2 class="w-3.5 h-3.5" :stroke-width="1.5" />
+              Mastered
+            </span>
+          </div>
         </div>
-      </div>
+      </template>
 
-      <!-- 2-Column Unboxed Cockpit (Stage 68% + Dock 32%) -->
-      <div class="flex flex-col lg:flex-row gap-4 items-start">
-        <!-- LEFT: Primary Action Card (The ONLY Card!) -->
-        <div class="w-full lg:w-[68%] rounded-2xl border border-slate-200/90 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle p-5 sm:p-7 space-y-5 shadow-sm">
+      <!-- Main Action Stage -->
+      <template #main>
+        <div class="space-y-5">
           <!-- Question Heading -->
           <div class="space-y-2">
             <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -851,9 +888,11 @@ defineExpose({
             </div>
           </div>
         </div>
+      </template>
 
-        <!-- RIGHT: Companion Telemetry Dock (32% Desktop, Stacks Below on Mobile) -->
-        <aside class="w-full lg:w-[32%] space-y-3 sm:space-y-4">
+      <!-- Telemetry Dock -->
+      <template #dock>
+        <div class="space-y-3 sm:space-y-4">
           <!-- 1. Session Score & Progress Card -->
           <div class="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-canvas-subtle p-4 shadow-sm space-y-2.5">
             <div class="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
@@ -877,6 +916,20 @@ defineExpose({
             <div class="flex items-center justify-between text-[11px] text-slate-400">
               <span>{{ quizStore.currentIndex + 1 }} of {{ quizStore.questions.length }} answered</span>
               <span class="font-mono">{{ quizStore.progressPercentage }}% complete</span>
+            </div>
+
+            <!-- Live Session Metrics: Timer & Streak -->
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
+              <div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                <Clock class="w-3.5 h-3.5 text-brand-500 shrink-0" />
+                <span class="text-[11px] text-slate-400">Time:</span>
+                <span class="font-mono font-bold text-slate-700 dark:text-slate-300">{{ formatSessionTime(sessionSeconds) }}</span>
+              </div>
+              <div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                <Flame class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <span class="text-[11px] text-slate-400">Streak:</span>
+                <span class="font-mono font-bold text-slate-700 dark:text-slate-300">{{ profileStore.stats?.currentStreak ?? 0 }}d</span>
+              </div>
             </div>
           </div>
 
@@ -935,9 +988,9 @@ defineExpose({
               </div>
             </div>
           </div>
-        </aside>
-      </div>
-    </div>
+        </div>
+      </template>
+    </StudioLayout>
 
     <!-- TAB 3: SESSION SUMMARY -->
     <div v-if="quizStore.activeTab === 'summary'" class="space-y-6">

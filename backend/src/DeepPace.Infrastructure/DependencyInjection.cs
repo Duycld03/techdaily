@@ -60,6 +60,11 @@ public static class DependencyInjection
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<IOtpService, OtpService>();
 
+        services.AddScoped<ICatalogAdoptionService, Services.CatalogAdoptionService>();
+        services.AddScoped<ICatalogAdminService, Services.CatalogAdminService>();
+        // Ingestion Destinations
+        services.AddScoped<Workers.IngestionDestinations.PersonalBookDestination>();
+        services.AddScoped<Workers.IngestionDestinations.CatalogDocumentDestination>();
         // Background Workers
         services.AddHostedService<Workers.PdfIngestionWorker>();
         services.AddHostedService<Workers.DailyPushNotificationWorker>();

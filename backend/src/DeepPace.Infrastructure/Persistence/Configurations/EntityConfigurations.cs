@@ -141,6 +141,11 @@ public class DocumentBookConfiguration : IEntityTypeConfiguration<DocumentBook>
             .WithMany()
             .HasForeignKey(b => b.CreatedByUserId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Property(b => b.SourceAttribution).HasMaxLength(2000);
+        builder.HasIndex(b => new { b.CreatedByUserId, b.SourceCatalogDocumentId })
+            .IsUnique()
+            .HasFilter("\"CreatedByUserId\" IS NOT NULL AND \"SourceCatalogDocumentId\" IS NOT NULL AND \"IsDeleted\" = false");
     }
 }
 
@@ -528,5 +533,67 @@ public class DocumentChunkAudioConfiguration : IEntityTypeConfiguration<Document
             .WithMany(c => c.Audios)
             .HasForeignKey(a => a.DocumentChunkId)
             .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class CatalogDocumentConfiguration : IEntityTypeConfiguration<CatalogDocument>
+{
+    public void Configure(EntityTypeBuilder<CatalogDocument> builder)
+    {
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Title).HasMaxLength(255).IsRequired();
+        builder.Property(c => c.Description).IsRequired();
+        builder.Property(c => c.Category).HasConversion(ConfigurationHelpers.CategoryStringConverter).HasMaxLength(50).IsRequired();
+        builder.Property(c => c.Language).HasMaxLength(10).HasDefaultValue("en").IsRequired();
+        builder.Property(c => c.SourceType).HasConversion<string>().HasMaxLength(50).IsRequired();
+        builder.Property(c => c.AuthorOrSourceUrl).HasMaxLength(1000);
+        builder.Property(c => c.AttributionText).HasMaxLength(2000).IsRequired();
+        builder.Property(c => c.PermissionBasis).HasMaxLength(500).IsRequired();
+        builder.Property(c => c.PermissionEvidence).HasMaxLength(2000).IsRequired();
+        builder.Property(c => c.ConfirmedDistributionRights).HasDefaultValue(false);
+        builder.Property(c => c.ConfirmedAiProcessingRights).HasDefaultValue(false);
+
+        builder.Property(c => c.Visibility).HasConversion<string>().HasMaxLength(50).IsRequired();
+        builder.HasIndex(c => c.Visibility);
+
+        builder.Property(c => c.ProcessingStatus).HasConversion<string>().HasMaxLength(50).IsRequired();
+        builder.HasIndex(c => c.ProcessingStatus);
+
+        builder.Property(c => c.TotalSlices).HasDefaultValue(0);
+        builder.Property(c => c.EstimatedReadMinutes).HasDefaultValue(0);
+        builder.Property(c => c.Revision).HasDefaultValue(1);
+        builder.Property(c => c.ConcurrencyVersion).HasDefaultValue(1).IsConcurrencyToken();
+        builder.Property(c => c.ProcessingGeneration).HasDefaultValue(0);
+        builder.Property(c => c.ProcessingStatusMessage).HasMaxLength(500);
+
+        builder.HasMany(c => c.Slices)
+            .WithOne(s => s.CatalogDocument)
+            .HasForeignKey(s => s.CatalogDocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(c => new { c.Visibility, c.PublishedAt });
+    }
+}
+
+public class CatalogSliceConfiguration : IEntityTypeConfiguration<CatalogSlice>
+{
+    public void Configure(EntityTypeBuilder<CatalogSlice> builder)
+    {
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.ChapterTitle).HasMaxLength(255).IsRequired();
+        builder.Property(s => s.OriginalTextMarkdown).IsRequired();
+        builder.Property(s => s.SummaryMarkdown).IsRequired();
+        builder.Property(s => s.Language).HasMaxLength(10).HasDefaultValue("en");
+        builder.Property(s => s.SliceOrder).IsRequired();
+
+        builder.Property(s => s.KeyTakeaways)
+            .HasConversion(
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
+
+        builder.HasIndex(s => new { s.CatalogDocumentId, s.SliceOrder })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
     }
 }

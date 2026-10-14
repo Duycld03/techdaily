@@ -10,8 +10,11 @@ import {
   Highlighter,
   Network,
   Settings,
-  Palette
+  Palette,
+  ShieldCheck
 } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { useCatalogStore } from '~/stores/useCatalogStore'
 
 export interface NavLink {
   name: string
@@ -24,7 +27,7 @@ export interface NavGroup {
   links: NavLink[]
 }
 
-export function getNavGroups(isDev: boolean = Boolean(import.meta.dev)): NavGroup[] {
+export function getNavGroups(isDev: boolean = Boolean(import.meta.dev), canManageCatalog: boolean = false): NavGroup[] {
   const accountLinks: NavLink[] = [
     { name: 'nav.settings_profile', path: '/settings', icon: Settings }
   ]
@@ -32,6 +35,18 @@ export function getNavGroups(isDev: boolean = Boolean(import.meta.dev)): NavGrou
   if (isDev) {
     accountLinks.push({ name: 'nav.showcase', path: '/showcase', icon: Palette })
   }
+
+  const knowledgeLinks: NavLink[] = [
+    { name: 'nav.insights', path: '/insights', icon: Compass },
+    { name: 'nav.library', path: '/library', icon: BookOpen },
+    { name: 'nav.notes', path: '/notes', icon: Highlighter },
+    { name: 'nav.graph', path: '/graph', icon: Network }
+  ]
+
+  if (canManageCatalog) {
+    knowledgeLinks.push({ name: 'nav.admin_catalog', path: '/admin/catalog', icon: ShieldCheck })
+  }
+
   return [
     {
       titleKey: 'nav.group_practice',
@@ -45,12 +60,7 @@ export function getNavGroups(isDev: boolean = Boolean(import.meta.dev)): NavGrou
     },
     {
       titleKey: 'nav.group_knowledge',
-      links: [
-        { name: 'nav.insights', path: '/insights', icon: Compass },
-        { name: 'nav.library', path: '/library', icon: BookOpen },
-        { name: 'nav.notes', path: '/notes', icon: Highlighter },
-        { name: 'nav.graph', path: '/graph', icon: Network }
-      ]
+      links: knowledgeLinks
     },
     {
       titleKey: 'nav.group_account',
@@ -82,14 +92,28 @@ export function isLinkActive(linkPath: string, currentPath: string): boolean {
   if (linkPath === '/settings') {
     return currentPath === '/settings' || currentPath === '/profile'
   }
+  if (linkPath === '/admin/catalog') {
+    return currentPath === '/admin/catalog' || currentPath.startsWith('/admin/catalog')
+  }
   return currentPath === linkPath
 }
 
 export function useNavigationMenu() {
   const route = useRoute()
 
+  const navGroups = computed(() => {
+    let canManage = false
+    try {
+      const catalogStore = useCatalogStore()
+      canManage = catalogStore.canManageCatalog
+    } catch {
+      // Pinia might not be initialized
+    }
+    return getNavGroups(Boolean(import.meta.dev), canManage)
+  })
+
   return {
-    navGroups: getNavGroups(),
+    navGroups,
     isLinkActive: (linkPath: string): boolean => isLinkActive(linkPath, route.path)
   }
 }

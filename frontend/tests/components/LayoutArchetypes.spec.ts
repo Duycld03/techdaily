@@ -165,23 +165,26 @@ describe('BoardLayout.vue', () => {
   it('renders natural height when maxHeight is not provided', () => {
     const wrapper = mount(BoardLayout)
     expect((wrapper.element as HTMLElement).style.height).toBe('')
-    expect(wrapper.classes()).toContain('glass-card')
   })
 
-  it('renders flat open-canvas mode without glass-card when flat is true', () => {
+  it('renders flat open-canvas mode with structural slots when flat is true', () => {
     const wrapper = mount(BoardLayout, {
       props: {
         flat: true
       },
       slots: {
-        header: '<div>Header</div>',
-        filters: '<div>Filters</div>',
-        content: '<div>Content</div>',
-        pagination: '<div>Pagination</div>'
+        header: '<div data-testid="board-header">Header</div>',
+        filters: '<div data-testid="board-filters">Filters</div>',
+        content: '<div data-testid="board-content">Content</div>',
+        pagination: '<div data-testid="board-pagination">Pagination</div>'
       }
     })
 
-    expect(wrapper.classes()).not.toContain('glass-card')
-    expect(wrapper.classes()).toContain('space-y-4')
+    expect(wrapper.find('header').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="board-header"]').text()).toBe('Header')
+    expect(wrapper.find('[data-testid="board-filters"]').text()).toBe('Filters')
+    expect(wrapper.find('[data-testid="board-content"]').text()).toBe('Content')
+    expect(wrapper.find('footer').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="board-pagination"]').text()).toBe('Pagination')
   })
 })

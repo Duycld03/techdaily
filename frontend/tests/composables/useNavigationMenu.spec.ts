@@ -57,6 +57,16 @@ describe('useNavigationMenu', () => {
     expect(account?.links.some((l) => l.path === '/showcase')).toBe(false)
   })
 
+  it('includes admin_catalog route when canManageCatalog is true and excludes when false', () => {
+    const adminGroups = getNavGroups(false, true)
+    const knowledgeAdmin = adminGroups[1]
+    expect(knowledgeAdmin?.links.map((l) => l.path)).toContain('/admin/catalog')
+
+    const regularGroups = getNavGroups(false, false)
+    const knowledgeRegular = regularGroups[1]
+    expect(knowledgeRegular?.links.map((l) => l.path)).not.toContain('/admin/catalog')
+  })
+
   it('correctly matches active links without false positives on root path', () => {
     // When on root dashboard
     expect(isLinkActive('/', '/')).toBe(true)

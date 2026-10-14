@@ -73,6 +73,12 @@ export const useAuthStore = defineStore('auth', () => {
       sessionStorage.removeItem('techdaily_token')
       sessionStorage.removeItem('techdaily_user')
     }
+    try {
+      const catalogStore = useCatalogStore()
+      catalogStore.cleanup()
+    } catch {
+      // Pinia may not be available in isolated tests
+    }
   }
 
   const initialToken = tokenCookie.value || legacyTokenCookie.value || null

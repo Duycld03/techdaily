@@ -12,7 +12,8 @@ import {
   BookOpen,
   ChevronDown,
   ChevronRight,
-  Search
+  Search,
+  Compass
 } from 'lucide-vue-next'
 import BoardLayout from '~/components/layout/BoardLayout.vue'
 import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
@@ -635,13 +636,22 @@ function navigateToActiveSlice() {
                 {{ $t('roadmap.no_active_books_desc') }}
               </p>
             </div>
-            <NuxtLink
-              to="/library"
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95"
-            >
-              <span>{{ $t('roadmap.browse_library') }}</span>
-              <ArrowRight class="w-4 h-4" />
-            </NuxtLink>
+            <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <NuxtLink
+                to="/library"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-800 dark:text-slate-200 font-semibold text-xs sm:text-sm transition-colors whitespace-nowrap shrink-0"
+              >
+                <span>{{ $t('roadmap.browse_library') }}</span>
+                <ArrowRight class="w-4 h-4" />
+              </NuxtLink>
+              <NuxtLink
+                to="/library?tab=discover"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs sm:text-sm shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0"
+              >
+                <Compass class="w-4 h-4" />
+                <span>{{ $t('library.discover.browse_discover') }}</span>
+              </NuxtLink>
+            </div>
           </div>
           <RoadmapMindmapCanvas
             v-else
@@ -671,13 +681,22 @@ function navigateToActiveSlice() {
                 {{ $t('roadmap.no_active_books_desc') }}
               </p>
             </div>
-            <NuxtLink
-              to="/library"
-              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95"
-            >
-              <span>{{ $t('roadmap.browse_library') }}</span>
-              <ArrowRight class="w-4 h-4" />
-            </NuxtLink>
+            <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <NuxtLink
+                to="/library"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-800 dark:text-slate-200 font-semibold text-xs sm:text-sm transition-colors whitespace-nowrap shrink-0"
+              >
+                <span>{{ $t('roadmap.browse_library') }}</span>
+                <ArrowRight class="w-4 h-4" />
+              </NuxtLink>
+              <NuxtLink
+                to="/library?tab=discover"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs sm:text-sm shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0"
+              >
+                <Compass class="w-4 h-4" />
+                <span>{{ $t('library.discover.browse_discover') }}</span>
+              </NuxtLink>
+            </div>
           </div>
 
           <!-- Loading State -->

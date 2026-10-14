@@ -81,7 +81,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.CatalogAdminAuthorizationHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("CatalogAdmin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new DeepPace.Api.Authorization.CatalogAdminRequirement());
+    });
+});
 
 builder.Services.AddCors(options =>
 {
@@ -285,6 +293,7 @@ app.MapGroup("/api/v1/review")
     .MapReviewEndpoints();
 
 app.MapLibraryEndpoints();
+app.MapCatalogEndpoints();
 
 app.MapNotesEndpoints();
 

@@ -1,18 +1,147 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
-import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb, GraduationCap, ChevronRight, Pencil } from 'lucide-vue-next'
+import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb, GraduationCap, ChevronRight, Pencil, Compass, Eye, SlidersHorizontal } from 'lucide-vue-next'
 import AppModal from '~/components/ui/AppModal.vue'
 import BasePagination from '~/components/common/BasePagination.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
-import { useApiError } from '~/composables/useApiError'
+import BoardLayout from '~/components/layout/BoardLayout.vue'
+import CatalogCard from '~/components/catalog/CatalogCard.vue'
+import CatalogPreviewModal from '~/components/catalog/CatalogPreviewModal.vue'
+import CatalogFilterModal, { type CatalogFilterState } from '~/components/catalog/CatalogFilterModal.vue'
+import { useCatalogStore, type LearnerCatalogDocumentDto } from '~/stores/useCatalogStore'
 import { useLibraryStore } from '~/stores/useLibraryStore'
 const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { formatError } = useApiError()
 const libraryStore = useLibraryStore()
+const catalogStore = useCatalogStore()
 const toast = useToast()
+
+const currentTab = computed<'mine' | 'discover'>({
+  get: () => (route.query.tab === 'discover' ? 'discover' : 'mine'),
+  set: (val) => {
+    router.push({
+      query: {
+        ...route.query,
+        tab: val === 'discover' ? 'discover' : undefined,
+        page: undefined
+      }
+    })
+  }
+})
+
+// Discover state
+const discoverSearch = ref('')
+const discoverCategory = ref<number | undefined>(undefined)
+const discoverSourceType = ref<number | undefined>(undefined)
+const discoverLanguage = ref<string | undefined>(undefined)
+const isPreviewModalOpen = ref(false)
+const isCatalogFilterModalOpen = ref(false)
+const adoptingDocId = ref<string | null>(null)
+
+const activeDiscoverFilterCount = computed(() => {
+  let count = 0
+  if (discoverCategory.value !== undefined) count++
+  if (discoverSourceType.value !== undefined) count++
+  if (discoverLanguage.value !== undefined && discoverLanguage.value !== '') count++
+  return count
+})
+
+const quickDiscoverCategories = computed(() => [
+  { id: undefined, label: t('library.categories.all') },
+  { id: 0, label: t('library.categories.frontend') },
+  { id: 1, label: t('library.categories.backend') },
+  { id: 2, label: t('library.categories.database') },
+  { id: 3, label: t('library.categories.system_design') }
+])
+
+function handleDiscoverCategorySelect(catId?: number) {
+  discoverCategory.value = catId
+  loadDiscover(1)
+}
+
+function handleApplyCatalogFilters(filters: CatalogFilterState) {
+  discoverCategory.value = filters.category
+  discoverSourceType.value = filters.sourceType
+  discoverLanguage.value = filters.language
+  loadDiscover(1)
+}
+
+function handleResetCatalogFilters() {
+  discoverCategory.value = undefined
+  discoverSourceType.value = undefined
+  discoverLanguage.value = undefined
+  loadDiscover(1)
+}
+
+const discoverSourceTypeOptions = computed(() => [
+  { value: '', label: t('library.discover.source_all') },
+  { value: 1, label: t('library.discover.source_web') },
+  { value: 2, label: t('library.discover.source_pdf') },
+  { value: 3, label: t('library.discover.source_markdown') }
+])
+
+const discoverLanguageOptions = computed(() => [
+  { value: '', label: t('library.discover.language_all') },
+  { value: 'en', label: t('library.language_english') },
+  { value: 'vi', label: t('library.language_vietnamese') }
+])
+
+const discoverCategoryOptions = computed(() => [
+  { value: '', label: t('library.categories.all') },
+  { value: 0, label: t('library.categories.frontend') },
+  { value: 1, label: t('library.categories.backend') },
+  { value: 2, label: t('library.categories.database') },
+  { value: 3, label: t('library.categories.system_design') },
+  { value: 4, label: t('library.categories.craft') },
+  { value: 5, label: t('library.categories.cloud') }
+])
+
+async function loadDiscover(page = 1) {
+  await catalogStore.fetchPublishedDocuments({
+    search: discoverSearch.value || undefined,
+    category: discoverCategory.value,
+    sourceType: discoverSourceType.value,
+    language: discoverLanguage.value || undefined,
+    page,
+    pageSize: 12
+  })
+}
+
+function handleDiscoverSearch() {
+  loadDiscover(1)
+}
+
+function onDiscoverPageChange(newPage: number) {
+  loadDiscover(newPage)
+}
+
+async function handleOpenPreview(doc: LearnerCatalogDocumentDto) {
+  try {
+    await catalogStore.fetchPublishedDocumentById(doc.id)
+    isPreviewModalOpen.value = true
+  } catch (err: unknown) {
+    toast.error(formatError(err))
+  }
+}
+
+async function handleAdoptDocument(doc: { id: string }) {
+  adoptingDocId.value = doc.id
+  try {
+    const res = await catalogStore.adoptDocument(doc.id)
+    if (res.alreadyAdded) {
+      toast.info(t('library.discover.already_added'))
+    } else {
+      toast.success(t('library.discover.adoption_success'))
+    }
+  } catch (err: unknown) {
+    toast.error(formatError(err))
+  } finally {
+    adoptingDocId.value = null
+  }
+}
 const searchQuery = ref('')
 const selectedCategory = ref<number | undefined>(undefined)
 const bookmarks = ref<Record<string, number>>({})
@@ -388,10 +517,27 @@ onMounted(async () => {
     searchQuery.value = route.query.search
   }
 
-  await loadBooksWithPagination(initialPage)
-  checkBackgroundPolling()
-  loadBookmarks()
+  if (currentTab.value === 'discover') {
+    catalogStore.fetchCapabilities().catch(() => {})
+    await loadDiscover(initialPage)
+  } else {
+    await loadBooksWithPagination(initialPage)
+    checkBackgroundPolling()
+    loadBookmarks()
+  }
 })
+
+watch(
+  () => route.query.tab,
+  async (newTab) => {
+    if (newTab === 'discover') {
+      await loadDiscover(1)
+    } else {
+      await loadBooksWithPagination(1)
+      checkBackgroundPolling()
+    }
+  }
+)
 
 
 function loadBookmarks() {
@@ -712,45 +858,57 @@ async function handleSaveEditBook() {
 
 <template>
   <div class="py-4 sm:py-6 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-canvas min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-3.75rem)] transition-colors duration-200">
-    <div class="max-w-7xl mx-auto space-y-4">
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+    <div class="max-w-7xl mx-auto">
+      <BoardLayout flat class="w-full">
+        <!-- Header -->
+        <template #header>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0">
                 <BookOpen class="w-5 h-5 sm:w-6 sm:h-6" :stroke-width="1.5" />
               </div>
               <div>
                 <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>{{ $t('library.title') }}</span>
+                  <span>{{ currentTab === 'discover' ? $t('library.discover.title') : $t('library.title') }}</span>
                 </h1>
                 <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
-                  {{ $t('library.subtitle') }}
+                  {{ currentTab === 'discover' ? $t('library.discover.subtitle') : $t('library.subtitle') }}
                 </p>
               </div>
             </div>
 
-            <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-              <!-- Search Input -->
-              <div class="relative flex-1 sm:w-72 sm:flex-initial min-w-0">
-                <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-                <input
-                  v-model="searchQuery"
-                  @keyup.enter="handleSearch"
-                  type="text"
-                  :placeholder="$t('library.search_placeholder')"
-                  class="h-10 w-full pl-9 pr-8 text-xs sm:text-sm rounded-xl bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
-                />
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Tab Switcher -->
+              <div class="flex items-center p-1 bg-slate-100 dark:bg-canvas-subtle rounded-xl border border-slate-200/80 dark:border-white/[0.08]">
                 <button
-                  v-if="searchQuery"
-                  @click="searchQuery = ''; handleSearch()"
-                  class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
+                  type="button"
+                  @click="currentTab = 'mine'"
+                  :class="[
+                    'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer',
+                    currentTab === 'mine'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
                 >
-                  <X class="w-3.5 h-3.5" :stroke-width="1.5" />
+                  {{ $t('library.tabs.mine') }}
+                </button>
+                <button
+                  type="button"
+                  @click="currentTab = 'discover'"
+                  :class="[
+                    'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer',
+                    currentTab === 'discover'
+                      ? 'bg-white dark:bg-canvas-elevated text-brand-600 dark:text-brand-400 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  {{ $t('library.tabs.discover') }}
                 </button>
               </div>
 
-              <!-- Import Document Button -->
+              <!-- Import Document Button (My Library tab) -->
               <button
+                v-if="currentTab === 'mine'"
                 @click="isImportModalOpen = true"
                 class="h-10 flex items-center gap-2 px-4 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs sm:text-sm transition-all shadow-md shadow-brand-500/20 active:scale-[0.98] whitespace-nowrap shrink-0 cursor-pointer"
               >
@@ -759,23 +917,109 @@ async function handleSaveEditBook() {
               </button>
             </div>
           </div>
+        </template>
 
-      <!-- Filters Bar -->
-      <div class="flex flex-wrap items-center gap-2 w-full py-0.5">
-            <button
-              v-for="cat in categories"
-              :key="cat.label"
-              @click="handleCategorySelect(cat.id)"
-              :class="[
-                'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-colors duration-150 outline-none focus:outline-none whitespace-nowrap shrink-0 cursor-pointer',
-                selectedCategory === cat.id
-                  ? 'bg-slate-100 dark:bg-canvas-elevated border-slate-300 dark:border-white/[0.12] text-brand-600 dark:text-brand-400 shadow-sm'
-                  : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-white/[0.16]'
-              ]"
-            >
-              {{ cat.label }}
-            </button>
-      </div>
+        <!-- Filters Bar -->
+        <template #filters>
+          <!-- My Library Filters -->
+          <div v-if="currentTab === 'mine'" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full py-0.5">
+            <div class="relative flex-1 sm:w-72 sm:flex-initial min-w-0">
+              <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
+              <input
+                v-model="searchQuery"
+                @keyup.enter="handleSearch"
+                type="text"
+                :placeholder="$t('library.search_placeholder')"
+                class="h-10 w-full pl-9 pr-8 text-xs sm:text-sm rounded-xl bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
+              />
+              <button
+                v-if="searchQuery"
+                @click="searchQuery = ''; handleSearch()"
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
+              >
+                <X class="w-3.5 h-3.5" :stroke-width="1.5" />
+              </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <button
+                v-for="cat in categories"
+                :key="cat.label"
+                @click="handleCategorySelect(cat.id)"
+                :class="[
+                  'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-colors duration-150 outline-none focus:outline-none whitespace-nowrap shrink-0 cursor-pointer',
+                  selectedCategory === cat.id
+                    ? 'bg-slate-100 dark:bg-canvas-elevated border-slate-300 dark:border-white/[0.12] text-brand-600 dark:text-brand-400 shadow-sm'
+                    : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-white/[0.16]'
+                ]"
+              >
+                {{ cat.label }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Discover Catalog Filters -->
+          <div v-else class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full py-0.5">
+            <div class="relative flex-1 sm:w-72 sm:flex-initial min-w-0">
+              <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
+              <input
+                v-model="discoverSearch"
+                @keyup.enter="handleDiscoverSearch"
+                type="text"
+                :placeholder="$t('library.discover.search_placeholder')"
+                class="h-10 w-full pl-9 pr-8 text-xs sm:text-sm rounded-xl bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
+              />
+              <button
+                v-if="discoverSearch"
+                @click="discoverSearch = ''; handleDiscoverSearch()"
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
+              >
+                <X class="w-3.5 h-3.5" :stroke-width="1.5" />
+              </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <!-- Category Quick Pills -->
+              <button
+                v-for="cat in quickDiscoverCategories"
+                :key="String(cat.id)"
+                type="button"
+                @click="handleDiscoverCategorySelect(cat.id)"
+                :class="[
+                  'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-colors duration-150 outline-none focus:outline-none whitespace-nowrap shrink-0 cursor-pointer',
+                  discoverCategory === cat.id
+                    ? 'bg-slate-100 dark:bg-canvas-elevated border-slate-300 dark:border-white/[0.12] text-brand-600 dark:text-brand-400 shadow-sm'
+                    : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-white/[0.16]'
+                ]"
+              >
+                {{ cat.label }}
+              </button>
+
+              <!-- Advanced Filter Trigger Button -->
+              <button
+                type="button"
+                data-testid="catalog-advanced-filter-btn"
+                @click="isCatalogFilterModalOpen = true"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-canvas-subtle text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08] hover:border-brand-500/40 transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-sm"
+              >
+                <SlidersHorizontal class="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                <span>{{ $t('library.discover.advanced_filter_btn') }}</span>
+                <span
+                  v-if="activeDiscoverFilterCount > 0"
+                  class="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-brand-600 text-white leading-tight"
+                >
+                  {{ activeDiscoverFilterCount }}
+                </span>
+              </button>
+            </div>
+          </div>
+        </template>
+
+        <!-- Content Slot -->
+        <template #content>
+          <!-- My Library Content -->
+          <div v-if="currentTab === 'mine'">
+
       <!-- Content Grid -->
       <!-- Books Grid Loading -->
           <div v-if="libraryStore.isLoading" class="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 text-sm">
@@ -893,23 +1137,122 @@ async function handleSaveEditBook() {
           </div>
 
           <!-- Empty state -->
-          <div v-else class="text-center py-16 glass-card rounded-2xl border border-slate-200/80 dark:border-white/[0.08] p-8 shadow-sm">
-            <FileText class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" :stroke-width="1.5" />
-            <h3 class="text-base font-bold text-slate-800 dark:text-slate-200">{{ $t('library.no_books') }}</h3>
-            <p class="text-sm text-slate-500 mt-1">{{ $t('library.empty_desc') }}</p>
+          <div v-else class="text-center py-16 glass-card rounded-2xl border border-slate-200/80 dark:border-white/[0.08] p-8 shadow-sm max-w-lg mx-auto space-y-4">
+            <FileText class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto" :stroke-width="1.5" />
+            <div class="space-y-1">
+              <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">{{ $t('library.no_books') }}</h3>
+              <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{{ $t('library.empty_desc') }}</p>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                @click="isImportModalOpen = true"
+                class="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-800 dark:text-slate-200 transition-colors whitespace-nowrap shrink-0"
+              >
+                <Plus class="w-4 h-4" />
+                <span>{{ $t('library.import_btn') }}</span>
+              </button>
+              <button
+                type="button"
+                @click="currentTab = 'discover'"
+                class="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-brand-500 hover:bg-brand-600 text-white shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <Compass class="w-4 h-4" />
+                <span>{{ $t('library.discover.browse_discover') }}</span>
+              </button>
+            </div>
           </div>
+        </div>
+
+        <!-- Discover Content -->
+        <div v-else>
+          <div v-if="catalogStore.isLoading" class="flex flex-col items-center justify-center py-20 text-slate-500 dark:text-slate-400 text-sm">
+            <div class="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mb-3"></div>
+            <span>{{ $t('library.loading') }}</span>
+          </div>
+
+          <div v-else-if="catalogStore.documents.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <CatalogCard
+              v-for="doc in catalogStore.documents"
+              :key="doc.id"
+              :document="doc"
+              :is-adopting="adoptingDocId === doc.id"
+              @preview="handleOpenPreview"
+              @adopt="handleAdoptDocument"
+            />
+          </div>
+
+          <!-- Empty Discover State -->
+          <div v-else class="text-center py-16 glass-card rounded-2xl border border-slate-200/80 dark:border-white/[0.08] p-8 shadow-sm max-w-lg mx-auto space-y-4">
+            <BookOpen class="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto" :stroke-width="1.5" />
+            <div class="space-y-1">
+              <h3 class="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200">{{ $t('library.discover.no_published') }}</h3>
+              <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{{ $t('library.discover.no_published_desc') }}</p>
+            </div>
+            <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                @click="isImportModalOpen = true; currentTab = 'mine'"
+                class="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-brand-500 hover:bg-brand-600 text-white shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <Plus class="w-4 h-4" />
+                <span>{{ $t('library.import_btn') }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+
       <!-- Pagination -->
-      <div v-if="libraryStore.books.length > 0" class="w-full pt-1">
-        <BasePagination
-          :current-page="libraryStore.currentPage"
-          :total-pages="libraryStore.totalPages"
-          :total-count="libraryStore.totalCount"
-          :page-size="libraryStore.pageSize"
-          show-summary
-          @change="onPageChange"
-        />
-      </div>
-    </div>
+      <template #pagination>
+        <div v-if="currentTab === 'mine' && libraryStore.books.length > 0" class="w-full">
+          <BasePagination
+            :current-page="libraryStore.currentPage"
+            :total-pages="libraryStore.totalPages"
+            :total-count="libraryStore.totalCount"
+            :page-size="libraryStore.pageSize"
+            show-summary
+            @change="onPageChange"
+          />
+        </div>
+        <div v-else-if="currentTab === 'discover' && catalogStore.documents.length > 0" class="w-full">
+          <BasePagination
+            :current-page="catalogStore.currentPage"
+            :total-pages="catalogStore.totalPages"
+            :total-count="catalogStore.totalCount"
+            :page-size="catalogStore.pageSize"
+            show-summary
+            @change="onDiscoverPageChange"
+          />
+        </div>
+      </template>
+    </BoardLayout>
+
+    <!-- Catalog Preview Modal -->
+    <CatalogPreviewModal
+      :open="isPreviewModalOpen"
+      :document="catalogStore.selectedDocument"
+      :is-adopting="adoptingDocId === catalogStore.selectedDocument?.id"
+      @close="isPreviewModalOpen = false"
+      @adopt="(id) => handleAdoptDocument({ id })"
+    />
+
+    <!-- Catalog Advanced Filter Modal -->
+    <CatalogFilterModal
+      :is-open="isCatalogFilterModalOpen"
+      :current-filters="{
+        category: discoverCategory,
+        sourceType: discoverSourceType,
+        language: discoverLanguage
+      }"
+      @close="isCatalogFilterModalOpen = false"
+      @apply="handleApplyCatalogFilters"
+      @reset="handleResetCatalogFilters"
+    />
+  </div>
+
+  <!-- Existing Modals -->
+  <div class="max-w-7xl mx-auto">
     <!-- Import Document Modal -->
     <AppModal
       :open="isImportModalOpen"
@@ -1387,5 +1730,6 @@ async function handleSaveEditBook() {
         </div>
       </div>
     </Teleport>
+    </div>
   </div>
 </template>

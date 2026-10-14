@@ -4,7 +4,8 @@ public record SynthesizeChunkAudioRequest(
     Guid ChunkId,
     string VoiceId,
     string? ContentHash = null,
-    string? NarrationScript = null);
+    string? NarrationScript = null,
+    Guid? UserId = null);
 
 public class SynthesizeChunkAudioResponse
 {

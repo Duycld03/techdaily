@@ -23,6 +23,8 @@ public interface IDeepPaceDbContext
     DbSet<UserPushSubscription> UserPushSubscriptions { get; }
     DbSet<RefreshToken> RefreshTokens { get; }
     DbSet<EmailOtp> EmailOtps { get; }
+    DbSet<CatalogDocument> CatalogDocuments { get; }
+    DbSet<CatalogSlice> CatalogSlices { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -2,12 +2,23 @@ using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Interfaces;
 
+public enum IngestionDestinationType
+{
+    PersonalBook = 0,
+    CatalogDocument = 1
+}
+
 public record PdfIngestJob(
-    Guid BookId,
+    Guid TargetId,
     string TempFilePath,
     string DocumentTitle,
     Category Category,
-    string Language = "en");
+    string Language = "en",
+    IngestionDestinationType DestinationType = IngestionDestinationType.PersonalBook,
+    long Generation = 0)
+{
+    public Guid BookId => TargetId;
+}
 
 public interface IPdfIngestionQueue
 {

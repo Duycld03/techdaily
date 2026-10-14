@@ -53,11 +53,13 @@ public static class LibraryEndpoints
 
         // Public Book Details
         group.MapGet("/books/{id:guid}", async (
+            ClaimsPrincipal userClaims,
             Guid id,
             [FromServices] IUseCase<GetBookByIdRequest, GetBookByIdResponse> handler,
             CancellationToken ct) =>
         {
-            var result = await handler.ExecuteAsync(new GetBookByIdRequest(id), ct);
+            var userId = GetUserIdFromClaims(userClaims);
+            var result = await handler.ExecuteAsync(new GetBookByIdRequest(id, userId), ct);
             return result.Match(
                 success => Results.Ok(success),
                 error => error == Error.NotFound
@@ -74,11 +76,13 @@ public static class LibraryEndpoints
 
         // Public Book Ingestion Status Polling
         group.MapGet("/books/{id:guid}/status", async (
+            ClaimsPrincipal userClaims,
             Guid id,
             [FromServices] IUseCase<GetBookStatusRequest, BookIngestionStatusDto> handler,
             CancellationToken ct) =>
         {
-            var result = await handler.ExecuteAsync(new GetBookStatusRequest(id), ct);
+            var userId = GetUserIdFromClaims(userClaims);
+            var result = await handler.ExecuteAsync(new GetBookStatusRequest(id, userId), ct);
             return result.Match(
                 success => Results.Ok(success),
                 error => error == Error.NotFound
@@ -96,12 +100,14 @@ public static class LibraryEndpoints
 
         // Public On-Demand Single Slice Retrieval
         group.MapGet("/books/{id:guid}/slices/{order:int}", async (
+            ClaimsPrincipal userClaims,
             Guid id,
             int order,
             [FromServices] IUseCase<DeepPace.Application.Features.Library.GetBookSlice.GetBookSliceRequest, DeepPace.Application.Features.Library.GetBookSlice.GetBookSliceResponse> handler,
             CancellationToken ct) =>
         {
-            var result = await handler.ExecuteAsync(new DeepPace.Application.Features.Library.GetBookSlice.GetBookSliceRequest(id, order), ct);
+            var userId = GetUserIdFromClaims(userClaims);
+            var result = await handler.ExecuteAsync(new DeepPace.Application.Features.Library.GetBookSlice.GetBookSliceRequest(id, order, userId), ct);
             return result.Match(
                 success => Results.Ok(success),
                 error => error == Error.NotFound
@@ -118,12 +124,14 @@ public static class LibraryEndpoints
 
         // Public On-Demand JIT Slice Curation
         group.MapPost("/books/{id:guid}/slices/{order:int}/curate", async (
+            ClaimsPrincipal userClaims,
             Guid id,
             int order,
             [FromServices] IUseCase<DeepPace.Application.Features.Library.CurateSlice.CurateSliceRequest, DeepPace.Application.Features.Library.CurateSlice.CurateSliceResponse> handler,
             CancellationToken ct) =>
         {
-            var result = await handler.ExecuteAsync(new DeepPace.Application.Features.Library.CurateSlice.CurateSliceRequest(id, order), ct);
+            var userId = GetUserIdFromClaims(userClaims);
+            var result = await handler.ExecuteAsync(new DeepPace.Application.Features.Library.CurateSlice.CurateSliceRequest(id, order, userId), ct);
             return result.Match(
                 success => Results.Ok(success),
                 error => error == Error.NotFound
@@ -355,17 +363,20 @@ public static class LibraryEndpoints
 
         // Synthesize Chunk Audio (Requires Authentication)
         group.MapPost("/chunks/{chunkId:guid}/audio", async (
+            ClaimsPrincipal userClaims,
             Guid chunkId,
             [FromBody] SynthesizeChunkAudioApiRequest? body,
             [FromServices] IUseCase<SynthesizeChunkAudioRequest, SynthesizeChunkAudioResponse> handler,
             CancellationToken ct) =>
         {
+            var userId = GetUserIdFromClaims(userClaims);
             var voiceId = string.IsNullOrWhiteSpace(body?.VoiceId) ? "en-US-Neural2-F" : body.VoiceId;
             var request = new SynthesizeChunkAudioRequest(
                 chunkId,
                 voiceId,
                 body?.ContentHash,
-                body?.NarrationScript);
+                body?.NarrationScript,
+                userId);
 
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(

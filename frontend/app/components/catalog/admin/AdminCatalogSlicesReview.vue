@@ -1,0 +1,96 @@
+<script setup lang="ts">
+import { Layers, Clock, CheckCircle2, Eye, Loader2 } from 'lucide-vue-next'
+import type { AdminCatalogDocumentDto } from '~/stores/useCatalogStore'
+
+defineProps<{
+  document: AdminCatalogDocumentDto
+  isPreparingSlices: boolean
+  isReviewing: boolean
+}>()
+
+defineEmits<{
+  (e: 'prepare-slices'): void
+  (e: 'confirm-review'): void
+  (e: 'inspect-slice', order: number): void
+}>()
+</script>
+
+<template>
+  <div class="p-6 rounded-3xl bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] shadow-sm space-y-4">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-white/[0.06] pb-3">
+      <div>
+        <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <Layers class="w-4 h-4 text-brand-500 shrink-0" />
+          <span>{{ $t('admin_catalog.slices_review') }}</span>
+        </h3>
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+          {{ $t('admin_catalog.document.slices_extracted_summary', { total: document.totalSlices }) }}
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+        <!-- Prepare Initial Slices Action -->
+        <button
+          type="button"
+          :disabled="isPreparingSlices || document.processingStatus === 'Processing'"
+          @click="$emit('prepare-slices')"
+          class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-brand-500/10 hover:bg-brand-500/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0 disabled:opacity-50 cursor-pointer"
+        >
+          <Loader2 v-if="isPreparingSlices" class="w-4 h-4 animate-spin shrink-0" />
+          <Clock v-else class="w-4 h-4 shrink-0" />
+          <span class="whitespace-nowrap">{{ isPreparingSlices ? $t('admin_catalog.preparing') : $t('admin_catalog.prepare_action') }}</span>
+        </button>
+
+        <!-- Confirm Administrator Review Action -->
+        <button
+          type="button"
+          :disabled="isReviewing || !document.confirmedDistributionRights"
+          @click="$emit('confirm-review')"
+          class="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-all active:scale-95 whitespace-nowrap shrink-0 disabled:opacity-50 cursor-pointer"
+        >
+          <Loader2 v-if="isReviewing" class="w-4 h-4 animate-spin shrink-0" />
+          <CheckCircle2 v-else class="w-4 h-4 shrink-0" />
+          <span class="whitespace-nowrap">{{ $t('admin_catalog.review_confirm') }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Slices Table / List -->
+    <div class="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+      <div
+        v-for="slice in document.slices"
+        :key="slice.id"
+        class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/60 dark:border-white/[0.04] text-xs sm:text-sm"
+      >
+        <div class="flex items-center gap-2.5 min-w-0 pr-3">
+          <span class="w-6 h-6 rounded-full bg-slate-200 dark:bg-white/[0.08] text-slate-700 dark:text-slate-300 flex items-center justify-center font-mono font-bold text-xs shrink-0">
+            {{ slice.sliceOrder }}
+          </span>
+          <span class="font-semibold text-slate-800 dark:text-slate-200 truncate">
+            {{ slice.chapterTitle || $t('admin_catalog.document.slice_default_title', { order: slice.sliceOrder }) }}
+          </span>
+        </div>
+
+        <div class="flex items-center gap-3 shrink-0">
+          <span :class="[
+            'px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0',
+            slice.isAiFormatted
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+              : 'bg-slate-200 dark:bg-white/[0.06] text-slate-500'
+          ]">
+            {{ slice.isAiFormatted ? $t('admin_catalog.document.slice_prepared') : $t('admin_catalog.document.slice_raw') }}
+          </span>
+
+          <button
+            type="button"
+            @click="$emit('inspect-slice', slice.sliceOrder)"
+            class="p-1 text-slate-500 hover:text-brand-500 transition-colors cursor-pointer shrink-0"
+            :title="$t('admin_catalog.document.inspect_slice_tooltip')"
+          >
+            <Eye class="w-4 h-4 shrink-0" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

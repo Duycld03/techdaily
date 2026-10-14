@@ -50,6 +50,11 @@ public class SwitchBookHandler : IUseCase<SwitchBookRequest, PacerDto>
         {
             return Error.NotFound;
         }
+        if (targetBook.CreatedByUserId != null && targetBook.CreatedByUserId != request.UserId)
+        {
+            return Error.NotFound;
+        }
+
 
         // Deactivate existing pacers for this user
         var existingPacers = await _dbContext.UserBookPacers

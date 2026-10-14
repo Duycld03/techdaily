@@ -6,7 +6,7 @@ using DeepPace.Application.Interfaces;
 
 namespace DeepPace.Application.Features.Library.GetBookStatus;
 
-public record GetBookStatusRequest(Guid BookId);
+public record GetBookStatusRequest(Guid BookId, Guid? UserId = null);
 
 public class GetBookStatusValidator : AbstractValidator<GetBookStatusRequest>
 {
@@ -42,23 +42,26 @@ public class GetBookStatusHandler : IUseCase<GetBookStatusRequest, BookIngestion
 
         var book = await _dbContext.DocumentBooks
             .AsNoTracking()
-            .Where(b => b.Id == request.BookId)
-            .Select(b => new BookIngestionStatusDto
-            {
-                Id = b.Id,
-                Status = b.Status,
-                ProgressPercentage = b.ProgressPercentage,
-                StatusMessage = b.StatusMessage,
-                ErrorMessage = b.ErrorMessage,
-                TotalChunks = b.TotalChunks
-            })
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(b => b.Id == request.BookId, cancellationToken);
 
         if (book == null)
         {
             return Error.NotFound;
         }
 
-        return book;
+        if (request.UserId.HasValue && book.CreatedByUserId != null && book.CreatedByUserId != request.UserId.Value)
+        {
+            return Error.NotFound;
+        }
+
+        return new BookIngestionStatusDto
+        {
+            Id = book.Id,
+            Status = book.Status,
+            ProgressPercentage = book.ProgressPercentage,
+            StatusMessage = book.StatusMessage,
+            ErrorMessage = book.ErrorMessage,
+            TotalChunks = book.TotalChunks
+        };
     }
 }

@@ -1,11 +1,10 @@
-using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using DeepPace.Application.Interfaces;
-using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
+using DeepPace.Infrastructure.Workers.IngestionDestinations;
 
 namespace DeepPace.Infrastructure.Workers;
 
@@ -29,43 +28,42 @@ public class PdfIngestionWorker : BackgroundService
     {
         _logger.LogInformation("PdfIngestionWorker started listening for PDF ingestion jobs.");
 
+        // Interrupted-work recovery on worker startup
+        await RecoverInterruptedJobsAsync(stoppingToken);
+
         await foreach (var job in _queue.ReadAllAsync(stoppingToken))
         {
             if (stoppingToken.IsCancellationRequested) break;
 
-            _logger.LogInformation("Processing PDF ingestion for book {BookId} ({Title})", job.BookId, job.DocumentTitle);
+            _logger.LogInformation("Processing PDF ingestion for target {TargetId} ({Title}) [Destination: {Destination}]",
+                job.TargetId, job.DocumentTitle, job.DestinationType);
 
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<IDeepPaceDbContext>();
+            var pdfExtractor = scope.ServiceProvider.GetRequiredService<IPdfExtractor>();
+            var aiFormatter = scope.ServiceProvider.GetService<IAiMarkdownFormatter>();
+            var embeddingService = scope.ServiceProvider.GetService<IEmbeddingService>();
             try
             {
-                using var scope = _scopeFactory.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<IDeepPaceDbContext>();
-                var pdfExtractor = scope.ServiceProvider.GetRequiredService<IPdfExtractor>();
-                var lookAheadService = scope.ServiceProvider.GetService<ILookAheadBufferService>();
-                var aiFormatter = scope.ServiceProvider.GetService<IAiMarkdownFormatter>();
-
-                var book = await dbContext.DocumentBooks.FirstOrDefaultAsync(b => b.Id == job.BookId, stoppingToken);
-                if (book == null)
+                var destination = ResolveDestination(scope.ServiceProvider, job.DestinationType);
+                if (!await destination.CanProcessJobAsync(job, dbContext, stoppingToken))
                 {
-                    _logger.LogWarning("Book {BookId} not found in database. Skipping job.", job.BookId);
                     continue;
                 }
 
                 if (!File.Exists(job.TempFilePath))
                 {
-                    book.Status = ProcessingStatus.Failed;
-                    book.ErrorMessage = "Temporary file not found.";
-                    await dbContext.SaveChangesAsync(stoppingToken);
+                    _logger.LogWarning("Temporary file {TempPath} not found for job {TargetId}", job.TempFilePath, job.TargetId);
+                    await destination.OnMissingFileAsync(job, dbContext, stoppingToken);
                     continue;
                 }
 
-                book.Status = ProcessingStatus.Processing;
-                book.ProgressPercentage = 5;
-                book.StatusMessage = "Analyzing document structure and bookmarks...";
-                await dbContext.SaveChangesAsync(stoppingToken);
+                await destination.OnProcessingStartedAsync(job, dbContext, stoppingToken);
 
                 var progress = new Progress<PdfExtractionProgress>(p =>
                 {
-                    _ = UpdateProgressAsync(job.BookId, p);
+                    var pct = p.TotalPages > 0 ? (int)Math.Round((double)p.ProcessedPages / p.TotalPages * 100) : 5;
+                    _ = destination.OnProgressUpdatedAsync(job, pct, p.CurrentStep, dbContext, CancellationToken.None);
                 });
 
                 PdfExtractionResult result;
@@ -81,148 +79,32 @@ public class PdfIngestionWorker : BackgroundService
 
                 if (result.Slices.Count == 0)
                 {
-                    book.Status = ProcessingStatus.Failed;
-                    book.ErrorMessage = "No readable text or chapters could be extracted from this PDF.";
-                    await dbContext.SaveChangesAsync(stoppingToken);
+                    _logger.LogWarning("No slices extracted from PDF for job {TargetId}", job.TargetId);
+                    await destination.OnNoSlicesExtractedAsync(job, dbContext, stoppingToken);
                     continue;
                 }
 
-                book.StatusMessage = "Persisting chapters and slices...";
-                book.ProgressPercentage = 8;
-                await dbContext.SaveChangesAsync(stoppingToken);
-
-                var chunks = new List<DocumentChunk>();
-                foreach (var slice in result.Slices)
-                {
-                    var summaryText = SanitizeSummary(slice.ContentMarkdown, slice.ChapterTitle);
-
-                    var chunk = new DocumentChunk
-                    {
-                        DocumentBookId = book.Id,
-                        ChunkOrder = slice.Order,
-                        ChapterTitle = slice.ChapterTitle,
-                        OriginalTextMarkdown = slice.ContentMarkdown,
-                        SummaryMarkdown = summaryText,
-                        KeyTakeaways = slice.KeyTakeaways,
-                        Language = job.Language,
-                        EstimatedReadMinutes = slice.EstimatedReadMinutes,
-                        IsAiFormatted = false
-                    };
-                    chunks.Add(chunk);
-                }
-
-                await dbContext.DocumentChunks.AddRangeAsync(chunks, stoppingToken);
-                book.TotalChunks = chunks.Count;
-                await dbContext.SaveChangesAsync(stoppingToken);
-
-                // Phase 1: Rapid Availability - AI format initial slices 1..3
-                int initialCount = Math.Min(3, chunks.Count);
-                if (aiFormatter != null)
-                {
-                    for (int i = 0; i < initialCount; i++)
-                    {
-                        var chunk = chunks[i];
-                        try
-                        {
-                            book.StatusMessage = $"AI is curating initial slice {i + 1}/{chunks.Count}...";
-                            await dbContext.SaveChangesAsync(stoppingToken);
-
-                            var aiResult = await aiFormatter.FormatSliceAsync(
-                                chunk.OriginalTextMarkdown,
-                                chunk.ChapterTitle,
-                                chunk.Language,
-                                book.Category,
-                                stoppingToken);
-
-                            if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
-                            {
-                                // Verbatim Guardrail: NEVER overwrite OriginalTextMarkdown for EngineeringCraft!
-                                // Keep chunk.OriginalTextMarkdown exactly as extracted by PdfPigExtractor.
-                                if (book.Category != Category.EngineeringCraft)
-                                {
-                                    chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
-                                }
-
-                                chunk.SummaryMarkdown = !string.IsNullOrWhiteSpace(aiResult.Value.SummaryMarkdown)
-                                    ? aiResult.Value.SummaryMarkdown
-                                    : aiResult.Value.FormattedMarkdown;
-                                chunk.KeyTakeaways = aiResult.Value.KeyTakeaways;
-                                chunk.EstimatedReadMinutes = aiResult.Value.EstimatedReadMinutes;
-                                chunk.IsAiFormatted = true;
-
-                                if (aiResult.Value.ScenarioDrill != null)
-                                {
-                                    var drill = aiResult.Value.ScenarioDrill;
-
-                                    var question = new Domain.Entities.InterviewQuestion
-                                    {
-                                        DocumentChunkId = chunk.Id,
-                                        QuestionText = drill.QuestionText,
-                                        Options = drill.Options,
-                                        CorrectOptionIndex = drill.CorrectOptionIndex,
-                                        ExplanationMarkdown = drill.ExplanationMarkdown,
-                                        ExpectedKeyPoints = drill.ExpectedKeyPoints,
-                                        ModelAnswerMarkdown = drill.ExplanationMarkdown,
-                                        Difficulty = Domain.Enums.Difficulty.Senior
-                                    };
-                                    await dbContext.InterviewQuestions.AddAsync(question, stoppingToken);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex, "Failed to format initial slice {Order} with AI for book {BookId}", chunk.ChunkOrder, book.Id);
-                        }
-                    }
-                }
-
-                var embeddingService = scope.ServiceProvider.GetService<IEmbeddingService>();
-                if (embeddingService != null && chunks.Count > 0)
-                {
-                    try
-                    {
-                        var initialToEmbed = chunks.Take(initialCount).ToList();
-                        var texts = initialToEmbed.Select(c => $"{c.ChapterTitle}: {c.SummaryMarkdown}").ToList();
-                        var embResult = await embeddingService.GenerateBatchEmbeddingsAsync(texts, stoppingToken);
-                        if (embResult.IsSuccess && embResult.Value.Count == initialToEmbed.Count)
-                        {
-                            for (int i = 0; i < initialToEmbed.Count; i++)
-                            {
-                                initialToEmbed[i].Embedding = embResult.Value[i];
-                            }
-                        }
-                    }
-                    catch (Exception embEx)
-                    {
-                        _logger.LogWarning(embEx, "Failed to generate embeddings for initial slices of book {BookId}", book.Id);
-                    }
-                }
-
-                book.ProgressPercentage = 100;
-                book.Status = ProcessingStatus.Ready;
-                book.StatusMessage = "Ready for reading";
-                await dbContext.SaveChangesAsync(stoppingToken);
-
-                _logger.LogInformation("Successfully ingested book {BookId}: {TotalChunks} slices extracted, initial {InitialCount} slices AI-curated. Book is Ready.", book.Id, chunks.Count, initialCount);
+                await destination.PersistAndFormatSlicesAsync(
+                    job,
+                    result,
+                    dbContext,
+                    aiFormatter,
+                    embeddingService,
+                    stoppingToken);
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogError(ex, "Error processing PDF ingestion for book {BookId}", job.BookId);
+                _logger.LogError(ex, "Error processing PDF ingestion for job {TargetId}", job.TargetId);
                 try
                 {
-                    using var scope = _scopeFactory.CreateScope();
-                    var dbContext = scope.ServiceProvider.GetRequiredService<IDeepPaceDbContext>();
-                    var book = await dbContext.DocumentBooks.FirstOrDefaultAsync(b => b.Id == job.BookId, CancellationToken.None);
-                    if (book != null)
-                    {
-                        book.Status = ProcessingStatus.Failed;
-                        book.ErrorMessage = ex.Message;
-                        await dbContext.SaveChangesAsync(CancellationToken.None);
-                    }
+                    using var errScope = _scopeFactory.CreateScope();
+                    var errDb = errScope.ServiceProvider.GetRequiredService<IDeepPaceDbContext>();
+                    var errDestination = ResolveDestination(errScope.ServiceProvider, job.DestinationType);
+                    await errDestination.OnFailedAsync(job, ex.Message, errDb, CancellationToken.None);
                 }
                 catch (Exception dbEx)
                 {
-                    _logger.LogError(dbEx, "Failed to update book status to Failed for book {BookId}", job.BookId);
+                    _logger.LogError(dbEx, "Failed to persist failure status for job {TargetId}", job.TargetId);
                 }
             }
             finally
@@ -243,48 +125,63 @@ public class PdfIngestionWorker : BackgroundService
         }
     }
 
-    private async Task UpdateProgressAsync(Guid bookId, PdfExtractionProgress p)
+    private static IIngestionDestination ResolveDestination(IServiceProvider sp, IngestionDestinationType type)
+    {
+        return type switch
+        {
+            IngestionDestinationType.CatalogDocument =>
+                sp.GetService<CatalogDocumentDestination>()
+                ?? new CatalogDocumentDestination(
+                    sp.GetService<ILogger<CatalogDocumentDestination>>() ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<CatalogDocumentDestination>.Instance),
+            _ =>
+                sp.GetService<PersonalBookDestination>()
+                ?? new PersonalBookDestination(
+                    sp.GetService<ILogger<PersonalBookDestination>>() ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<PersonalBookDestination>.Instance)
+        };
+    }
+
+    private async Task RecoverInterruptedJobsAsync(CancellationToken cancellationToken)
     {
         try
         {
             using var scope = _scopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<IDeepPaceDbContext>();
-            var book = await dbContext.DocumentBooks.FirstOrDefaultAsync(b => b.Id == bookId);
-            if (book != null && book.Status == ProcessingStatus.Processing)
+
+            // 1. Recover Catalog Documents
+            var interruptedCatalogDocs = await dbContext.CatalogDocuments
+                .Where(d => d.ProcessingStatus == ProcessingStatus.Processing)
+                .ToListAsync(cancellationToken);
+
+            foreach (var doc in interruptedCatalogDocs)
             {
-                var pct = p.TotalPages > 0 ? (int)Math.Round((double)p.ProcessedPages / p.TotalPages * 100) : 5;
-                book.ProgressPercentage = Math.Clamp(pct, 5, 89);
-                book.StatusMessage = p.CurrentStep;
-                await dbContext.SaveChangesAsync();
+                doc.ProcessingStatus = ProcessingStatus.Failed;
+                doc.ProcessingStatusMessage = "Interrupted - retry available";
+                doc.ProcessingErrorMessage = "Preparation was interrupted by system shutdown or worker restart. Please retry preparation.";
+                doc.ProcessingLeaseExpiresAt = null;
+            }
+
+            // 2. Recover Personal Books
+            var interruptedBooks = await dbContext.DocumentBooks
+                .Where(b => b.Status == ProcessingStatus.Processing)
+                .ToListAsync(cancellationToken);
+
+            foreach (var book in interruptedBooks)
+            {
+                book.Status = ProcessingStatus.Failed;
+                book.StatusMessage = "Interrupted by system restart";
+                book.ErrorMessage = "Document processing was interrupted by a server restart. Please import or retry.";
+            }
+
+            if (interruptedCatalogDocs.Count > 0 || interruptedBooks.Count > 0)
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Startup recovery completed: {CatalogCount} catalog docs and {BookCount} personal books marked recoverable.",
+                    interruptedCatalogDocs.Count, interruptedBooks.Count);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Minor error updating progress for book {BookId}", bookId);
+            _logger.LogError(ex, "Failed during interrupted job recovery on startup.");
         }
-    }
-
-    private static string SanitizeSummary(string contentMarkdown, string chapterTitle)
-    {
-        if (string.IsNullOrWhiteSpace(contentMarkdown)) return chapterTitle;
-
-        // 1. Strip leading and inline markdown headings (# Heading, ## Subheading, ### 07/30/2025)
-        var cleaned = Regex.Replace(contentMarkdown, @"(?m)^\s*#+\s+[^\n\r]*$", "").Trim();
-
-        // 2. Strip code blocks from summary
-        cleaned = Regex.Replace(cleaned, @"(?s)```.*?```", "").Trim();
-
-        // 3. Strip pre-release disclaimer boilerplate
-        cleaned = Regex.Replace(cleaned, @"(?i)(?:Important\s+)?This information relates to a pre-release product[^.\n]*\.[^.\n]*\.(?:\s*For the current release[^.\n]*\.)?", "").Trim();
-
-        // 4. Collapse multiple whitespace and newlines
-        cleaned = Regex.Replace(cleaned, @"\s+", " ").Trim();
-
-        if (string.IsNullOrWhiteSpace(cleaned) || cleaned.Length < 15)
-        {
-            return chapterTitle;
-        }
-
-        return cleaned.Length > 280 ? cleaned.Substring(0, 277) + "..." : cleaned;
     }
 }

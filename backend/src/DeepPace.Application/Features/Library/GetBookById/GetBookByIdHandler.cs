@@ -5,7 +5,7 @@ using DeepPace.Application.Interfaces;
 
 namespace DeepPace.Application.Features.Library.GetBookById;
 
-public record GetBookByIdRequest(Guid BookId);
+public record GetBookByIdRequest(Guid BookId, Guid? UserId = null);
 
 public class GetBookByIdResponse
 {
@@ -33,6 +33,11 @@ public class GetBookByIdHandler : IUseCase<GetBookByIdRequest, GetBookByIdRespon
         {
             return Error.NotFound;
         }
+        if (request.UserId.HasValue && book.CreatedByUserId != null && book.CreatedByUserId != request.UserId.Value)
+        {
+            return Error.NotFound;
+        }
+
 
         var chunks = await _dbContext.DocumentChunks
             .Where(c => c.DocumentBookId == request.BookId)

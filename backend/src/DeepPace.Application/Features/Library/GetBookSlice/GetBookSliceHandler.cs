@@ -5,7 +5,7 @@ using DeepPace.Application.Interfaces;
 
 namespace DeepPace.Application.Features.Library.GetBookSlice;
 
-public record GetBookSliceRequest(Guid BookId, int ChunkOrder);
+public record GetBookSliceRequest(Guid BookId, int ChunkOrder, Guid? UserId = null);
 
 public class GetBookSliceResponse
 {
@@ -26,6 +26,7 @@ public class GetBookSliceHandler : IUseCase<GetBookSliceRequest, GetBookSliceRes
         CancellationToken cancellationToken = default)
     {
         var chunk = await _dbContext.DocumentChunks
+            .Include(c => c.DocumentBook)
             .AsNoTracking()
             .FirstOrDefaultAsync(
                 c => c.DocumentBookId == request.BookId && c.ChunkOrder == request.ChunkOrder,
@@ -35,6 +36,11 @@ public class GetBookSliceHandler : IUseCase<GetBookSliceRequest, GetBookSliceRes
         {
             return Error.NotFound;
         }
+        if (request.UserId.HasValue && chunk.DocumentBook.CreatedByUserId != null && chunk.DocumentBook.CreatedByUserId != request.UserId.Value)
+        {
+            return Error.NotFound;
+        }
+
 
         var sliceDto = new ChunkSummaryDto
         {

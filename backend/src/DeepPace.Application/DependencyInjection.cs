@@ -93,6 +93,24 @@ public static class DependencyInjection
         // Knowledge Graph Handlers
         services.AddScoped<IUseCase<GetKnowledgeGraphQuery, KnowledgeGraphResponse>, GetKnowledgeGraphQueryHandler>();
 
+        // Catalog Handlers (Learner)
+        services.AddScoped<IUseCase<Features.Catalog.Learner.GetDocuments.GetPublishedCatalogDocumentsRequest, Features.Catalog.Learner.GetDocuments.GetPublishedCatalogDocumentsResponse>, Features.Catalog.Learner.GetDocuments.GetPublishedCatalogDocumentsHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Learner.GetDocumentById.GetPublishedCatalogDocumentByIdRequest, Features.Catalog.DTOs.LearnerCatalogDetailDto>, Features.Catalog.Learner.GetDocumentById.GetPublishedCatalogDocumentByIdHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.AdoptDocument.AdoptCatalogDocumentRequest, Interfaces.CatalogAdoptionResult>, Features.Catalog.AdoptDocument.AdoptCatalogDocumentHandler>();
+
+        // Catalog Handlers (Admin)
+        services.AddScoped<IUseCase<Features.Catalog.Admin.UploadPdf.AdminUploadCatalogPdfRequest, Features.Catalog.DTOs.AdminCatalogDocumentDto>, Features.Catalog.Admin.UploadPdf.AdminUploadCatalogPdfHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Admin.PreviewUrl.AdminPreviewCatalogUrlRequest, Features.Catalog.Admin.PreviewUrl.AdminPreviewCatalogUrlResponse>, Features.Catalog.Admin.PreviewUrl.AdminPreviewCatalogUrlHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Admin.ImportUrl.AdminImportCatalogUrlRequest, Features.Catalog.DTOs.AdminCatalogDocumentDto>, Features.Catalog.Admin.ImportUrl.AdminImportCatalogUrlHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Admin.UpdateMetadata.AdminUpdateCatalogMetadataRequest, Features.Catalog.DTOs.AdminCatalogDocumentDto>, Features.Catalog.Admin.UpdateMetadata.AdminUpdateCatalogMetadataHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Admin.Prepare.AdminPrepareCatalogRequest, Features.Catalog.DTOs.AdminCatalogDocumentDto>, Features.Catalog.Admin.Prepare.AdminPrepareCatalogHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Admin.GetDocuments.AdminGetCatalogDocumentsRequest, Features.Catalog.Admin.GetDocuments.AdminGetCatalogDocumentsResponse>, Features.Catalog.Admin.GetDocuments.AdminGetCatalogDocumentsHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Admin.GetDocumentById.AdminGetCatalogDocumentByIdRequest, Features.Catalog.DTOs.AdminCatalogDocumentDto>, Features.Catalog.Admin.GetDocumentById.AdminGetCatalogDocumentByIdHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Admin.GetSlice.AdminGetCatalogSliceRequest, Features.Catalog.DTOs.AdminCatalogSliceDto>, Features.Catalog.Admin.GetSlice.AdminGetCatalogSliceHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Admin.Review.AdminReviewCatalogRequest, Features.Catalog.DTOs.AdminCatalogDocumentDto>, Features.Catalog.Admin.Review.AdminReviewCatalogHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Admin.Publish.AdminPublishCatalogDocumentRequest, Features.Catalog.DTOs.AdminCatalogDocumentDto>, Features.Catalog.Admin.Publish.AdminPublishCatalogDocumentHandler>();
+        services.AddScoped<IUseCase<Features.Catalog.Admin.Hide.AdminHideCatalogDocumentRequest, Features.Catalog.DTOs.AdminCatalogDocumentDto>, Features.Catalog.Admin.Hide.AdminHideCatalogDocumentHandler>();
+
         return services;
     }
 }

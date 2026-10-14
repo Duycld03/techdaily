@@ -35,6 +35,11 @@ public class ExportBookMarkdownHandler : IUseCase<ExportBookMarkdownRequest, Exp
         {
             return Error.NotFound;
         }
+        if (book.CreatedByUserId != null && book.CreatedByUserId != request.UserId)
+        {
+            return Error.NotFound;
+        }
+
 
         var highlights = await _dbContext.UserHighlights
             .AsNoTracking()

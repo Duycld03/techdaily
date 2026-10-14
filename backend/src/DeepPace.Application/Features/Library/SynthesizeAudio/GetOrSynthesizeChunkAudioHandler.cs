@@ -43,13 +43,18 @@ public class GetOrSynthesizeChunkAudioHandler : IUseCase<SynthesizeChunkAudioReq
         }
 
         var chunk = await _dbContext.DocumentChunks
+            .Include(c => c.DocumentBook)
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == request.ChunkId, cancellationToken);
-
         if (chunk == null)
         {
             return Error.NotFound;
         }
+        if (request.UserId.HasValue && chunk.DocumentBook.CreatedByUserId != null && chunk.DocumentBook.CreatedByUserId != request.UserId.Value)
+        {
+            return Error.NotFound;
+        }
+
         var isViChunk = (chunk.Language ?? "").StartsWith("vi", StringComparison.OrdinalIgnoreCase);
         var isViVoice = request.VoiceId.Trim().StartsWith("vi-", StringComparison.OrdinalIgnoreCase);
         if (isViChunk != isViVoice)

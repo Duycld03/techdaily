@@ -61,3 +61,10 @@ public enum ProcessingStatus
     Ready,
     Failed
 }
+
+public enum CatalogVisibility
+{
+    Draft = 0,
+    Published = 1,
+    Hidden = 2
+}
