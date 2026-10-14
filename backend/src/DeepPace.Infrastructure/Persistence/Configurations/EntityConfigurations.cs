@@ -55,7 +55,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
     {
         builder.HasKey(u => u.Id);
         builder.Property(u => u.Email).HasMaxLength(255).IsRequired();
-        builder.HasIndex(u => u.Email).IsUnique();
+        builder.HasIndex(u => u.Email)
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
         builder.Property(u => u.Name).HasMaxLength(255).IsRequired();
         builder.Property(u => u.AvatarUrl).HasMaxLength(500);
         builder.Property(u => u.GoogleSubjectId).HasMaxLength(255);
@@ -114,7 +116,9 @@ public class DocumentBookConfiguration : IEntityTypeConfiguration<DocumentBook>
         builder.HasKey(b => b.Id);
         builder.Property(b => b.Title).HasMaxLength(255).IsRequired();
         builder.Property(b => b.Slug).HasMaxLength(255).IsRequired();
-        builder.HasIndex(b => b.Slug).IsUnique();
+        builder.HasIndex(b => b.Slug)
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
         builder.Property(b => b.SourceType).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(b => b.Category).HasConversion(ConfigurationHelpers.CategoryStringConverter).HasMaxLength(50).IsRequired();
 
@@ -151,7 +155,9 @@ public class UserBookPacerConfiguration : IEntityTypeConfiguration<UserBookPacer
         builder.Property(p => p.LastReadDate);
         builder.Property(p => p.CompletedAt);
 
-        builder.HasIndex(p => new { p.UserId, p.DocumentBookId }).IsUnique();
+        builder.HasIndex(p => new { p.UserId, p.DocumentBookId })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(p => new { p.UserId, p.IsActive });
 
         builder.HasOne(p => p.User)
@@ -182,7 +188,9 @@ public class DocumentChunkConfiguration : IEntityTypeConfiguration<DocumentChunk
                 v => ConfigurationHelpers.SerializeStringList(v),
                 v => ConfigurationHelpers.DeserializeStringList(v))
             .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
-
+        builder.HasIndex(c => new { c.DocumentBookId, c.ChunkOrder })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
     }
 }
 
@@ -197,7 +205,9 @@ public class DailyDrillConfiguration : IEntityTypeConfiguration<DailyDrill>
         builder.Property(d => d.IsCorrect);
         builder.Property(d => d.Score);
 
-        builder.HasIndex(d => new { d.UserId, d.ScheduledDate, d.QuestionId }).IsUnique();
+        builder.HasIndex(d => new { d.UserId, d.ScheduledDate, d.QuestionId })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
 
         builder.HasOne(d => d.User)
             .WithMany(u => u.DailyDrills)
@@ -320,7 +330,9 @@ public class TechInsightConfiguration : IEntityTypeConfiguration<TechInsight>
     {
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Slug).HasMaxLength(255).IsRequired();
-        builder.HasIndex(t => t.Slug).IsUnique();
+        builder.HasIndex(t => t.Slug)
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
         builder.Property(t => t.Title).HasMaxLength(255).IsRequired();
         builder.Property(t => t.Category).IsRequired();
         builder.Property(t => t.SummaryMarkdown).IsRequired();
@@ -348,7 +360,9 @@ public class UserInsightBookmarkConfiguration : IEntityTypeConfiguration<UserIns
     {
         builder.ToTable("UserInsightBookmarks");
         builder.HasKey(b => b.Id);
-        builder.HasIndex(b => new { b.UserId, b.InsightId }).IsUnique();
+        builder.HasIndex(b => new { b.UserId, b.InsightId })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
 
         builder.HasOne(b => b.User)
             .WithMany()
@@ -412,7 +426,9 @@ public class UserQuizProgressConfiguration : IEntityTypeConfiguration<UserQuizPr
         builder.Property(p => p.CorrectCount).HasDefaultValue(0);
         builder.Property(p => p.IncorrectCount).HasDefaultValue(0);
 
-        builder.HasIndex(p => new { p.UserId, p.QuestionId }).IsUnique();
+        builder.HasIndex(p => new { p.UserId, p.QuestionId })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
         builder.HasIndex(p => new { p.UserId, p.IsMastered });
 
         builder.HasOne(p => p.User)
@@ -438,7 +454,9 @@ public class UserPushSubscriptionConfiguration : IEntityTypeConfiguration<UserPu
         builder.Property(s => s.Auth).IsRequired();
         builder.Property(s => s.UserAgent).HasMaxLength(500);
 
-        builder.HasIndex(s => new { s.UserId, s.Endpoint }).IsUnique();
+        builder.HasIndex(s => new { s.UserId, s.Endpoint })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
 
         builder.HasOne(s => s.User)
             .WithMany(u => u.PushSubscriptions)

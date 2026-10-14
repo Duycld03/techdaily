@@ -411,7 +411,10 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
 
         // Build PacerDto
         var userPacersList = isAuthenticated
-            ? await _dbContext.UserBookPacers.Where(p => p.UserId == userId).ToListAsync(cancellationToken)
+            ? await _dbContext.UserBookPacers
+                .AsNoTracking()
+                .Where(p => p.UserId == userId)
+                .ToListAsync(cancellationToken)
             : new List<UserBookPacer>();
         var pacerMap = userPacersList.ToDictionary(p => p.DocumentBookId);
 

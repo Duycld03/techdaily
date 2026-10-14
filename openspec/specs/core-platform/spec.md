@@ -544,6 +544,7 @@ The endpoint SHALL respond with `HTTP 200 OK` containing `{ textModel: "<configu
 - **WHEN** a client invokes `GET /api/v1/system/ai-health` and either Gemini text generation fails or `gemini-embedding-001` returns a vector with dimension != 768 or returns an HTTP error
 - **THEN** the server returns `HTTP 503 Service Unavailable`
 - **AND** the JSON response contains `status = "unhealthy"` with diagnostic details identifying the failing model and error reason.
+
 ### Requirement: Controlled Offline Mock Vector Configuration
 The platform SHALL support an explicit configuration flag `Gemini:UseOfflineMock` in `appsettings*.json`. The system SHALL strictly disallow mock vector generation in production and default environments, permitting mock generation only when `Gemini:UseOfflineMock` is explicitly configured as `true`.
 
@@ -1913,3 +1914,14 @@ The production reverse proxy service (`nginx/nginx.conf`) SHALL terminate TLS 1.
 #### Scenario: Backend accepts cross-origin API requests from DeepPace domain
 - **WHEN** the frontend on `https://deeppace.duckdns.org` sends a CORS preflight `OPTIONS /api/v1/daily/today` with `Origin: https://deeppace.duckdns.org`
 - **THEN** the backend responds with `Access-Control-Allow-Origin: https://deeppace.duckdns.org` and `Access-Control-Allow-Credentials: true`.
+
+### Requirement: Relational Soft Delete Partial Unique Index Invariant
+The relational persistence layer SHALL configure partial unique indexes filtered by `WHERE "IsDeleted" = false` on all soft-deletable entities declaring unique business constraints. Soft-deleted records SHALL NOT prevent active records from utilizing the same business key.
+
+#### Scenario: Re-registration with a previously soft-deleted email
+- **WHEN** a user account with email `engineer@example.com` is marked `IsDeleted = true` and a new registration request is submitted with `engineer@example.com`
+- **THEN** the registration succeeds and persists a new active user without database unique constraint violation
+
+#### Scenario: Re-importing a document with an identical slug after soft deletion
+- **WHEN** a document book with slug `design-patterns` is soft-deleted and a user imports a new document generating the slug `design-patterns`
+- **THEN** the persistence layer allows the import without slug uniqueness conflict
