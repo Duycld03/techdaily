@@ -162,11 +162,7 @@ public static class CatalogEndpoints
             [FromForm] Category category,
             [FromForm] string? authorOrSourceUrl,
             [FromForm] string? language,
-            [FromForm] string attributionText,
-            [FromForm] string permissionBasis,
-            [FromForm] string permissionEvidence,
-            [FromForm] bool confirmedDistributionRights,
-            [FromForm] bool confirmedAiProcessingRights,
+            [FromForm] string? attributionText,
             ClaimsPrincipal userClaims,
             [FromServices] IUseCase<AdminUploadCatalogPdfRequest, AdminCatalogDocumentDto> handler,
             CancellationToken ct) =>
@@ -186,10 +182,6 @@ public static class CatalogEndpoints
                 language ?? "en",
                 authorOrSourceUrl,
                 attributionText,
-                permissionBasis,
-                permissionEvidence,
-                confirmedDistributionRights,
-                confirmedAiProcessingRights,
                 tempFilePath,
                 adminUserId);
 
@@ -244,10 +236,6 @@ public static class CatalogEndpoints
                 body.Language ?? "en",
                 body.AuthorOrSourceUrl,
                 body.AttributionText,
-                body.PermissionBasis,
-                body.PermissionEvidence,
-                body.ConfirmedDistributionRights,
-                body.ConfirmedAiProcessingRights,
                 adminUserId);
 
             var result = await handler.ExecuteAsync(request, ct);
@@ -322,10 +310,6 @@ public static class CatalogEndpoints
                 body.Language,
                 body.AuthorOrSourceUrl,
                 body.AttributionText,
-                body.PermissionBasis,
-                body.PermissionEvidence,
-                body.ConfirmedDistributionRights,
-                body.ConfirmedAiProcessingRights,
                 body.ExpectedVersion);
 
             var result = await handler.ExecuteAsync(request, ct);
@@ -477,11 +461,7 @@ public record AdminImportCatalogUrlApiRequest(
     Category Category,
     string? AuthorOrSourceUrl,
     string Language,
-    string AttributionText,
-    string PermissionBasis,
-    string PermissionEvidence,
-    bool ConfirmedDistributionRights,
-    bool ConfirmedAiProcessingRights);
+    string? AttributionText);
 
 public record AdminUpdateCatalogMetadataApiRequest(
     string Title,
@@ -489,11 +469,7 @@ public record AdminUpdateCatalogMetadataApiRequest(
     Category Category,
     string Language,
     string? AuthorOrSourceUrl,
-    string AttributionText,
-    string PermissionBasis,
-    string PermissionEvidence,
-    bool ConfirmedDistributionRights,
-    bool ConfirmedAiProcessingRights,
+    string? AttributionText,
     int ExpectedVersion);
 
 public record AdminPrepareCatalogApiRequest(string? ReplacementTempFilePath = null);

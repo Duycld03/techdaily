@@ -548,10 +548,7 @@ public class CatalogDocumentConfiguration : IEntityTypeConfiguration<CatalogDocu
         builder.Property(c => c.SourceType).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(c => c.AuthorOrSourceUrl).HasMaxLength(1000);
         builder.Property(c => c.AttributionText).HasMaxLength(2000).IsRequired();
-        builder.Property(c => c.PermissionBasis).HasMaxLength(500).IsRequired();
-        builder.Property(c => c.PermissionEvidence).HasMaxLength(2000).IsRequired();
-        builder.Property(c => c.ConfirmedDistributionRights).HasDefaultValue(false);
-        builder.Property(c => c.ConfirmedAiProcessingRights).HasDefaultValue(false);
+
 
         builder.Property(c => c.Visibility).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.HasIndex(c => c.Visibility);

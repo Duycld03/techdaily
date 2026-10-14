@@ -40,10 +40,10 @@ onMounted(() => { if (auth.isLoggedIn && access.state === 'pending') void verify
     </header>
     <StudioLayout class="flex-1" :main-label="$t('admin.login.title')" :dock-label="$t('admin.login.workspace_title')">
       <template #main>
-        <div class="mx-auto w-full max-w-md space-y-6 py-5 sm:py-8">
+        <div class="mx-auto flex w-full max-w-md flex-col justify-start space-y-6 py-4 sm:py-6 lg:py-8">
           <div class="space-y-3">
             <div class="flex h-12 w-12 items-center justify-center rounded-2xl border border-brand-500/20 bg-brand-500/10 text-brand-600 dark:text-brand-300"><ShieldCheck class="h-6 w-6" :stroke-width="1.5" aria-hidden="true" /></div>
-            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight">{{ $t('admin.login.title') }}</h1>
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{{ $t('admin.login.title') }}</h1>
             <p class="text-sm sm:text-base leading-relaxed text-slate-600 dark:text-slate-400">{{ $t('admin.login.description') }}</p>
           </div>
           <p v-if="access.state === 'denied'" role="alert" class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm sm:text-base text-amber-800 dark:text-amber-200">{{ $t('admin.login.denied') }}</p>
@@ -55,11 +55,36 @@ onMounted(() => { if (auth.isLoggedIn && access.state === 'pending') void verify
         </div>
       </template>
       <template #dock>
-        <div class="flex flex-1 flex-col justify-center gap-6 py-3 sm:py-6">
-          <div><p class="mb-2 text-sm sm:text-base font-semibold text-brand-600 dark:text-brand-300">{{ $t('admin.nav.workspace') }}</p><h2 class="text-xl sm:text-2xl font-bold">{{ $t('admin.login.workspace_title') }}</h2></div>
-          <div v-for="item in [{ icon: LayoutDashboard, key: 'overview' }, { icon: LibraryBig, key: 'catalog' }, { icon: ShieldCheck, key: 'permission' }]" :key="item.key" class="flex items-start gap-3">
-            <component :is="item.icon" class="mt-1 h-5 w-5 shrink-0 text-brand-500" :stroke-width="1.5" aria-hidden="true" />
-            <p class="text-sm sm:text-base leading-relaxed text-slate-600 dark:text-slate-300">{{ $t(`admin.login.context_${item.key}`) }}</p>
+        <div class="flex flex-1 flex-col justify-center gap-5 py-4 sm:py-6 lg:py-8">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-brand-500/20 bg-brand-500/10 text-brand-600 dark:text-brand-400 shrink-0">
+              <LayoutDashboard class="h-5 w-5" :stroke-width="1.75" aria-hidden="true" />
+            </div>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">{{ $t('admin.nav.workspace') }}</p>
+              <h2 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{{ $t('admin.login.workspace_title') }}</h2>
+            </div>
+          </div>
+          <div class="space-y-3">
+            <div
+              v-for="item in [
+                { icon: LayoutDashboard, key: 'overview' },
+                { icon: LibraryBig, key: 'catalog' },
+                { icon: ShieldCheck, key: 'permission' }
+              ]"
+              :key="item.key"
+              class="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white/70 dark:bg-canvas-subtle p-3.5 shadow-sm transition-colors"
+            >
+              <div class="flex items-start gap-3">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-brand-500/20 bg-brand-500/10 text-brand-600 dark:text-brand-400">
+                  <component :is="item.icon" class="h-4.5 w-4.5" :stroke-width="1.75" aria-hidden="true" />
+                </div>
+                <div class="min-w-0 flex-1 space-y-1">
+                  <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">{{ $t(`admin.login.context_${item.key}_title`) }}</h3>
+                  <p class="text-xs sm:text-sm leading-relaxed text-slate-600 dark:text-slate-400">{{ $t(`admin.login.context_${item.key}`) }}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </template>

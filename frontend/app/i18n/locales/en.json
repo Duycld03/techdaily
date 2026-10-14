@@ -422,6 +422,7 @@
       "mine": "My Library",
       "discover": "Discover Catalog"
     },
+    "reset_filters": "Reset Filters",
     "discover": {
       "title": "Curated Technical Catalog",
       "subtitle": "Administrator-prepared technical literature, RFCs, and runtime architecture guides ready for deliberate practice",
@@ -1434,8 +1435,11 @@
       "password_required": "Enter your password.",
       "denied": "This account does not have administrator access. Sign in with another account or switch to learning.",
       "workspace_title": "Your system overview",
+      "context_overview_title": "Operations & Inventory",
       "context_overview": "View accounts, document inventory and measured service status.",
+      "context_catalog_title": "Curated Catalog",
       "context_catalog": "Prepare, review and publish curated documents.",
+      "context_permission_title": "Server Verification",
       "context_permission": "Administrator access is verified by the server.",
       "shared_session": "Administration and learning share the same sign-in session."
     },

@@ -52,10 +52,7 @@ export interface AdminCatalogDocument {
   sourceType: number;
   authorOrSourceUrl?: string;
   attributionText: string;
-  permissionBasis: string;
-  permissionEvidence: string;
-  confirmedDistributionRights: boolean;
-  confirmedAiProcessingRights: boolean;
+
   visibility: "Draft" | "Published" | "Hidden" | number;
   processingStatus: "Pending" | "Processing" | "Ready" | "Failed" | number;
   totalSlices: number;
@@ -399,11 +396,7 @@ export const useCatalogStore = defineStore("catalog", () => {
     category: number;
     language: string;
     authorOrSourceUrl?: string;
-    attributionText: string;
-    permissionBasis: string;
-    permissionEvidence: string;
-    confirmedDistributionRights: boolean;
-    confirmedAiProcessingRights: boolean;
+    attributionText?: string;
   }): Promise<AdminCatalogDocument> {
     const doc = await apiClient.post<AdminCatalogDocument>(
       "/api/v1/admin/catalog/documents/import-url",
@@ -413,10 +406,35 @@ export const useCatalogStore = defineStore("catalog", () => {
     return doc;
   }
 
-  async function uploadPdf(formData: FormData): Promise<AdminCatalogDocument> {
+  async function uploadPdf(
+    input:
+      | FormData
+      | {
+          file: File;
+          title: string;
+          description?: string;
+          category: number;
+          language: string;
+          authorOrSourceUrl?: string;
+          attributionText?: string;
+        }
+  ): Promise<AdminCatalogDocument> {
+    let body: FormData;
+    if (input instanceof FormData) {
+      body = input;
+    } else {
+      body = new FormData();
+      body.append("file", input.file);
+      body.append("title", input.title);
+      body.append("description", input.description || input.title);
+      body.append("category", input.category.toString());
+      body.append("language", input.language);
+      if (input.authorOrSourceUrl) body.append("authorOrSourceUrl", input.authorOrSourceUrl);
+      if (input.attributionText) body.append("attributionText", input.attributionText);
+    }
     const doc = await apiClient.post<AdminCatalogDocument>(
       "/api/v1/admin/catalog/documents/upload-pdf",
-      formData
+      body
     );
     await fetchAdminDocuments();
     return doc;
@@ -430,11 +448,7 @@ export const useCatalogStore = defineStore("catalog", () => {
       category: number;
       language: string;
       authorOrSourceUrl?: string;
-      attributionText: string;
-      permissionBasis: string;
-      permissionEvidence: string;
-      confirmedDistributionRights: boolean;
-      confirmedAiProcessingRights: boolean;
+      attributionText?: string;
       expectedVersion: number;
     }
   ): Promise<AdminCatalogDocument> {

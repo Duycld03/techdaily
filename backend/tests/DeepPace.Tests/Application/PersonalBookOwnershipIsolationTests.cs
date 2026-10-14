@@ -221,10 +221,6 @@ public class PersonalBookOwnershipIsolationTests : IDisposable
             Description = "Catalog desc",
             Category = Category.BackendRuntime,
             AttributionText = "Attr",
-            PermissionBasis = "Basis",
-            PermissionEvidence = "Evidence",
-            ConfirmedDistributionRights = true,
-            ConfirmedAiProcessingRights = true,
             Visibility = CatalogVisibility.Published,
             ProcessingStatus = ProcessingStatus.Ready,
             TotalSlices = 1

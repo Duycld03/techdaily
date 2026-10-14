@@ -3,6 +3,7 @@ import { ShieldCheck, RefreshCw, Plus } from 'lucide-vue-next'
 
 defineProps<{
   isLoading?: boolean
+  isCreatingDraft?: boolean
 }>()
 
 defineEmits<{
@@ -41,6 +42,7 @@ defineEmits<{
       </button>
 
       <button
+        v-if="!isCreatingDraft"
         type="button"
         data-testid="admin-catalog-new-draft-btn"
         @click="$emit('new-draft')"

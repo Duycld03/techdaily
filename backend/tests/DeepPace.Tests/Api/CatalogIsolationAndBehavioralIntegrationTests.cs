@@ -168,10 +168,6 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
             SourceType = SourceType.WebDocUrl,
             AuthorOrSourceUrl = "https://principles.systems/raft",
             AttributionText = "Distributed Systems Research Group",
-            PermissionBasis = "Written Consent & Open License",
-            PermissionEvidence = "Signed license verification 2026",
-            ConfirmedDistributionRights = true,
-            ConfirmedAiProcessingRights = true,
             Visibility = CatalogVisibility.Draft,
             ProcessingStatus = ProcessingStatus.Ready,
             TotalSlices = 2,
@@ -213,11 +209,7 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
             Category: Category.BackendRuntime,
             AuthorOrSourceUrl: "https://principles.systems/raft",
             Language: "en",
-            AttributionText: "Stanford & USENIX ATC 2014",
-            PermissionBasis: "Academic Open Access (CC-BY-4.0)",
-            PermissionEvidence: "https://principles.systems/license-evidence.pdf",
-            ConfirmedDistributionRights: true,
-            ConfirmedAiProcessingRights: true);
+            AttributionText: "Stanford & USENIX ATC 2014");
 
         var importMessage = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/admin/catalog/documents/import-url", _adminUserId);
         importMessage.Content = JsonContent.Create(importUrlRequest);

@@ -16,11 +16,7 @@ public record AdminImportCatalogUrlRequest(
     Category Category,
     string Language,
     string? AuthorOrSourceUrl,
-    string AttributionText,
-    string PermissionBasis,
-    string PermissionEvidence,
-    bool ConfirmedDistributionRights,
-    bool ConfirmedAiProcessingRights,
+    string? AttributionText,
     Guid? AdminUserId);
 
 public class AdminImportCatalogUrlValidator : AbstractValidator<AdminImportCatalogUrlRequest>
@@ -33,13 +29,7 @@ public class AdminImportCatalogUrlValidator : AbstractValidator<AdminImportCatal
         RuleFor(x => x.Title).NotEmpty().MaximumLength(255);
         RuleFor(x => x.Description).NotEmpty();
         RuleFor(x => x.Language).NotEmpty().MaximumLength(10);
-        RuleFor(x => x.AttributionText).NotEmpty().MaximumLength(2000);
-        RuleFor(x => x.PermissionBasis).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.PermissionEvidence).NotEmpty().MaximumLength(2000);
-        RuleFor(x => x.ConfirmedDistributionRights).Equal(true)
-            .WithMessage("Distribution rights must be confirmed by the administrator.");
-        RuleFor(x => x.ConfirmedAiProcessingRights).Equal(true)
-            .WithMessage("AI processing rights must be confirmed by the administrator.");
+        RuleFor(x => x.AttributionText).MaximumLength(2000);
     }
 }
 
@@ -100,11 +90,7 @@ public class AdminImportCatalogUrlHandler : IUseCase<AdminImportCatalogUrlReques
             Language = request.Language,
             SourceType = crawlResult.IsPdfDetected ? SourceType.PdfBook : SourceType.WebDocUrl,
             AuthorOrSourceUrl = request.AuthorOrSourceUrl ?? request.Url,
-            AttributionText = request.AttributionText,
-            PermissionBasis = request.PermissionBasis,
-            PermissionEvidence = request.PermissionEvidence,
-            ConfirmedDistributionRights = request.ConfirmedDistributionRights,
-            ConfirmedAiProcessingRights = request.ConfirmedAiProcessingRights,
+            AttributionText = string.IsNullOrWhiteSpace(request.AttributionText) ? (request.AuthorOrSourceUrl ?? request.Url) : request.AttributionText,
             Visibility = CatalogVisibility.Draft,
             ProcessingStatus = ProcessingStatus.Processing,
             ProcessingGeneration = 1,

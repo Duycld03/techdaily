@@ -422,6 +422,7 @@
       "mine": "Thư Viện Của Tôi",
       "discover": "Khám Phá Danh Mục"
     },
+    "reset_filters": "Đặt lại bộ lọc",
     "discover": {
       "title": "Danh Mục Tài Liệu Tuyển Chọn",
       "subtitle": "Tài liệu kỹ thuật, RFC kiến trúc và phân tích chuyên sâu được chuẩn bị sẵn để luyện tập chủ động",
@@ -1434,8 +1435,11 @@
       "password_required": "Vui lòng nhập mật khẩu.",
       "denied": "Tài khoản này chưa có quyền quản trị. Bạn có thể đăng nhập bằng tài khoản khác hoặc chuyển sang học tập.",
       "workspace_title": "Tổng quan hệ thống",
+      "context_overview_title": "Vận hành & Tài nguyên",
       "context_overview": "Xem số tài khoản, tài liệu và trạng thái dịch vụ đã kiểm tra.",
+      "context_catalog_title": "Tài liệu tuyển chọn",
       "context_catalog": "Chuẩn bị, duyệt và xuất bản tài liệu tuyển chọn.",
+      "context_permission_title": "Xác thực máy chủ",
       "context_permission": "Quyền quản trị được xác minh từ máy chủ.",
       "shared_session": "Quản trị và học tập dùng chung phiên đăng nhập."
     },

@@ -13,11 +13,7 @@ public record AdminUploadCatalogPdfRequest(
     Category Category,
     string Language,
     string? AuthorOrSourceUrl,
-    string AttributionText,
-    string PermissionBasis,
-    string PermissionEvidence,
-    bool ConfirmedDistributionRights,
-    bool ConfirmedAiProcessingRights,
+    string? AttributionText,
     string TempFilePath,
     Guid? AdminUserId);
 
@@ -28,13 +24,7 @@ public class AdminUploadCatalogPdfValidator : AbstractValidator<AdminUploadCatal
         RuleFor(x => x.Title).NotEmpty().MaximumLength(255);
         RuleFor(x => x.Description).NotEmpty();
         RuleFor(x => x.Language).NotEmpty().MaximumLength(10);
-        RuleFor(x => x.AttributionText).NotEmpty().MaximumLength(2000);
-        RuleFor(x => x.PermissionBasis).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.PermissionEvidence).NotEmpty().MaximumLength(2000);
-        RuleFor(x => x.ConfirmedDistributionRights).Equal(true)
-            .WithMessage("Distribution rights must be confirmed by the administrator.");
-        RuleFor(x => x.ConfirmedAiProcessingRights).Equal(true)
-            .WithMessage("AI processing rights must be confirmed by the administrator.");
+        RuleFor(x => x.AttributionText).MaximumLength(2000);
         RuleFor(x => x.TempFilePath).NotEmpty()
             .Must(File.Exists).WithMessage("Uploaded PDF temporary file does not exist on disk.");
     }
@@ -75,11 +65,7 @@ public class AdminUploadCatalogPdfHandler : IUseCase<AdminUploadCatalogPdfReques
             Language = request.Language,
             SourceType = SourceType.PdfBook,
             AuthorOrSourceUrl = request.AuthorOrSourceUrl,
-            AttributionText = request.AttributionText,
-            PermissionBasis = request.PermissionBasis,
-            PermissionEvidence = request.PermissionEvidence,
-            ConfirmedDistributionRights = request.ConfirmedDistributionRights,
-            ConfirmedAiProcessingRights = request.ConfirmedAiProcessingRights,
+            AttributionText = string.IsNullOrWhiteSpace(request.AttributionText) ? (request.AuthorOrSourceUrl ?? request.Title) : request.AttributionText,
             Visibility = CatalogVisibility.Draft,
             ProcessingStatus = ProcessingStatus.Pending,
             ProcessingGeneration = 1,

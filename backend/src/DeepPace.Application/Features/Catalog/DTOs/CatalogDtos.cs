@@ -11,10 +11,7 @@ public record AdminCatalogDocumentDto(
     SourceType SourceType,
     string? AuthorOrSourceUrl,
     string AttributionText,
-    string PermissionBasis,
-    string PermissionEvidence,
-    bool ConfirmedDistributionRights,
-    bool ConfirmedAiProcessingRights,
+
     CatalogVisibility Visibility,
     ProcessingStatus ProcessingStatus,
     int TotalSlices,

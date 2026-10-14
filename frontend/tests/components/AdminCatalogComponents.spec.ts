@@ -172,8 +172,7 @@ describe('AdminCatalogSlicesReview.vue', () => {
     const wrapper = mount(AdminCatalogSlicesReview, {
       props: {
         document: mockDoc,
-        isPreparingSlices: false,
-        isReviewing: false
+        isPreparingSlices: false
       },
       global: defaultGlobal
     })
@@ -188,10 +187,6 @@ describe('AdminCatalogSlicesReview.vue', () => {
     await prepareBtn!.trigger('click')
     expect(wrapper.emitted('prepare-slices')).toBeTruthy()
 
-    const reviewBtn = buttons.find(b => b.text().includes('admin_catalog.review_confirm'))
-    expect(reviewBtn).toBeDefined()
-    await reviewBtn!.trigger('click')
-    expect(wrapper.emitted('confirm-review')).toBeTruthy()
 
     // Inspect slice button
     const inspectBtn = wrapper.find('button[title]')
@@ -208,7 +203,6 @@ describe('AdminCatalogDocumentDetail.vue', () => {
         document: mockDoc,
         isSavingMetadata: false,
         isPreparingSlices: false,
-        isReviewing: false,
         isPublishing: false,
         isHiding: false,
         isRetrying: false

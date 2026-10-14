@@ -55,7 +55,9 @@ until curl -s http://localhost:5000/health > /dev/null 2>&1 || [ ! -e /proc/$BAC
 done
 
 # 3. Start Frontend Nuxt 4 with HMR (binding to 0.0.0.0)
-echo "✨ Starting Nuxt 4 Frontend on http://0.0.0.0:3000..."
+# Allocate 4096 MB V8 heap to prevent Vite/Nitro worker threads from reaching memory limit
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
+echo "✨ Starting Nuxt 4 Frontend on http://0.0.0.0:3000 (NODE_OPTIONS: ${NODE_OPTIONS})..."
 echo "📱 Mobile Access URL: http://${LOCAL_IP}:3000"
 npm --prefix frontend run dev -- --host 0.0.0.0
 

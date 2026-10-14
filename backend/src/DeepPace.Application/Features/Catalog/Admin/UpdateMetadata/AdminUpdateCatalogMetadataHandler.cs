@@ -14,11 +14,7 @@ public record AdminUpdateCatalogMetadataRequest(
     Category Category,
     string Language,
     string? AuthorOrSourceUrl,
-    string AttributionText,
-    string PermissionBasis,
-    string PermissionEvidence,
-    bool ConfirmedDistributionRights,
-    bool ConfirmedAiProcessingRights,
+    string? AttributionText,
     int ExpectedConcurrencyVersion);
 
 public class AdminUpdateCatalogMetadataValidator : AbstractValidator<AdminUpdateCatalogMetadataRequest>
@@ -29,13 +25,7 @@ public class AdminUpdateCatalogMetadataValidator : AbstractValidator<AdminUpdate
         RuleFor(x => x.Title).NotEmpty().MaximumLength(255);
         RuleFor(x => x.Description).NotEmpty();
         RuleFor(x => x.Language).NotEmpty().MaximumLength(10);
-        RuleFor(x => x.AttributionText).NotEmpty().MaximumLength(2000);
-        RuleFor(x => x.PermissionBasis).NotEmpty().MaximumLength(500);
-        RuleFor(x => x.PermissionEvidence).NotEmpty().MaximumLength(2000);
-        RuleFor(x => x.ConfirmedDistributionRights).Equal(true)
-            .WithMessage("Distribution rights must be confirmed.");
-        RuleFor(x => x.ConfirmedAiProcessingRights).Equal(true)
-            .WithMessage("AI processing rights must be confirmed.");
+        RuleFor(x => x.AttributionText).MaximumLength(2000);
     }
 }
 
@@ -91,11 +81,7 @@ public class AdminUpdateCatalogMetadataHandler : IUseCase<AdminUpdateCatalogMeta
                 category: request.Category,
                 language: request.Language,
                 authorOrSourceUrl: request.AuthorOrSourceUrl,
-                attributionText: request.AttributionText,
-                permissionBasis: request.PermissionBasis,
-                permissionEvidence: request.PermissionEvidence,
-                confirmedDistributionRights: request.ConfirmedDistributionRights,
-                confirmedAiProcessingRights: request.ConfirmedAiProcessingRights);
+                attributionText: string.IsNullOrWhiteSpace(request.AttributionText) ? (request.AuthorOrSourceUrl ?? request.Title) : request.AttributionText);
 
             await _dbContext.SaveChangesAsync(cancellationToken);
             return doc.ToAdminDto();

@@ -15,7 +15,7 @@ function toggleTheme() {
 <template>
   <button
     @click="toggleTheme"
-    class="p-2 rounded-xl bg-slate-100 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-amber-400 hover:border-slate-300 dark:hover:border-white/[0.16] transition-all shadow-sm active:scale-95"
+    class="inline-flex items-center justify-center p-2 rounded-xl bg-slate-100 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:text-brand-600 dark:hover:text-amber-400 hover:border-slate-300 dark:hover:border-white/[0.16] transition-all shadow-sm active:scale-95"
     :title="colorMode.value === 'dark' ? lightLabel : darkLabel"
     :aria-label="toggleLabel"
   >

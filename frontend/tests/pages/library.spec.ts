@@ -659,4 +659,92 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       )
     })
   })
+
+  describe('Two-Tier Header Filter Bar', () => {
+    it('renders search input and category chips in two tiers with reset button hidden initially', async () => {
+      const wrapper = mount(LibraryPage, {
+        global: {
+          stubs: {
+            NuxtLink: true,
+            Teleport: true
+          }
+        }
+      })
+      await flushPromises()
+
+      const searchInput = wrapper.find('[data-testid="library-search-input"]')
+      expect(searchInput.exists()).toBe(true)
+
+      const categoryContainer = wrapper.find('[data-testid="library-category-chips"]')
+      expect(categoryContainer.exists()).toBe(true)
+
+      const resetBtn = wrapper.find('[data-testid="library-reset-filters-btn"]')
+      expect(resetBtn.exists()).toBe(false)
+    })
+
+    it('shows reset button when category is selected and resets filters when clicked', async () => {
+      const mockReplace = vi.fn()
+      vi.stubGlobal('useRouter', () => ({
+        push: vi.fn(),
+        replace: mockReplace,
+        back: vi.fn()
+      }))
+
+      const wrapper = mount(LibraryPage, {
+        global: {
+          stubs: {
+            NuxtLink: true,
+            Teleport: true
+          }
+        }
+      })
+      await flushPromises()
+
+      const categoryChips = wrapper.findAll('[data-testid="library-category-chips"] button')
+      expect(categoryChips.length).toBeGreaterThan(1)
+
+      await categoryChips[1].trigger('click')
+      await flushPromises()
+
+      const resetBtn = wrapper.find('[data-testid="library-reset-filters-btn"]')
+      expect(resetBtn.exists()).toBe(true)
+
+      await resetBtn.trigger('click')
+      await flushPromises()
+
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: expect.objectContaining({
+            category: undefined,
+            search: undefined
+          })
+        })
+      )
+      expect(wrapper.find('[data-testid="library-reset-filters-btn"]').exists()).toBe(false)
+    })
+
+    it('shows reset button and clear button when search input has value', async () => {
+      const wrapper = mount(LibraryPage, {
+        global: {
+          stubs: {
+            NuxtLink: true,
+            Teleport: true
+          }
+        }
+      })
+      await flushPromises()
+
+      const searchInput = wrapper.find('[data-testid="library-search-input"]')
+      await searchInput.setValue('distributed systems')
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="library-reset-filters-btn"]').exists()).toBe(true)
+      expect(wrapper.find('button[aria-label="Clear search"]').exists()).toBe(true)
+
+      await wrapper.find('button[aria-label="Clear search"]').trigger('click')
+      await flushPromises()
+
+      expect((searchInput.element as HTMLInputElement).value).toBe('')
+    })
+  })
 })

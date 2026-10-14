@@ -22,10 +22,7 @@ const category = ref<number>(0)
 const language = ref<string>(locale.value || 'en')
 const sourceUrl = ref('')
 const attribution = ref('')
-const permissionBasis = ref('')
-const permissionEvidence = ref('')
-const confirmedDistribution = ref(false)
-const confirmedAi = ref(false)
+
 const pdfFile = ref<File | null>(null)
 const isDraggingFile = ref(false)
 const pdfInputRef = ref<HTMLInputElement | null>(null)
@@ -50,7 +47,8 @@ const categoryOptions = computed<SelectOption[]>(() => [
   { value: 2, label: t('library.categories.database') },
   { value: 3, label: t('library.categories.system_design') },
   { value: 4, label: t('library.categories.craft') },
-  { value: 5, label: t('library.categories.cloud') }
+  { value: 5, label: t('library.categories.mental_models') },
+  { value: 6, label: t('library.categories.habits') }
 ])
 
 const languageOptions = computed<SelectOption[]>(() => [
@@ -110,10 +108,7 @@ async function handleSubmit() {
     return
   }
 
-  if (!confirmedDistribution.value || !confirmedAi.value) {
-    toast.error(t('admin_catalog.toasts.confirm_rights_required'))
-    return
-  }
+
 
   isSubmitting.value = true
   try {
@@ -130,11 +125,7 @@ async function handleSubmit() {
         category: category.value,
         language: language.value,
         authorOrSourceUrl: sourceUrl.value.trim() || undefined,
-        attributionText: attribution.value.trim() || undefined,
-        permissionBasis: permissionBasis.value.trim() || undefined,
-        permissionEvidence: permissionEvidence.value.trim() || undefined,
-        confirmedDistributionRights: confirmedDistribution.value,
-        confirmedAiProcessingRights: confirmedAi.value
+        attributionText: attribution.value.trim() || undefined
       })
 
       toast.success(t('admin_catalog.toasts.pdf_draft_created'))
@@ -149,13 +140,10 @@ async function handleSubmit() {
       const res = await catalogStore.importUrl({
         sourceUrl: sourceUrl.value.trim(),
         title: title.value.trim(),
+        description: title.value.trim(),
         category: category.value,
         language: language.value,
-        attributionText: attribution.value.trim() || undefined,
-        permissionBasis: permissionBasis.value.trim() || undefined,
-        permissionEvidence: permissionEvidence.value.trim() || undefined,
-        confirmedDistributionRights: confirmedDistribution.value,
-        confirmedAiProcessingRights: confirmedAi.value
+        attributionText: attribution.value.trim() || undefined
       })
 
       toast.success(t('admin_catalog.toasts.web_draft_created'))
@@ -356,54 +344,6 @@ async function handleSubmit() {
           />
         </div>
 
-        <div class="space-y-1.5">
-          <label class="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-            {{ $t('admin_catalog.permission_basis') }}
-          </label>
-          <input
-            v-model="permissionBasis"
-            type="text"
-            :placeholder="$t('admin_catalog.form.permission_basis_placeholder')"
-            class="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 focus:outline-none focus:border-brand-500 transition-colors"
-          />
-        </div>
-
-        <div class="space-y-1.5">
-          <label class="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-            {{ $t('admin_catalog.permission_evidence') }}
-          </label>
-          <input
-            v-model="permissionEvidence"
-            type="text"
-            :placeholder="$t('admin_catalog.form.permission_evidence_placeholder')"
-            class="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 focus:outline-none focus:border-brand-500 transition-colors"
-          />
-        </div>
-      </div>
-
-      <!-- Mandatory Rights Checkboxes -->
-      <div class="space-y-2.5 pt-3 border-t border-slate-100 dark:border-white/[0.06]">
-        <label class="flex items-start gap-2.5 cursor-pointer">
-          <input
-            v-model="confirmedDistribution"
-            type="checkbox"
-            class="mt-1 rounded text-brand-600 focus:ring-brand-500"
-          />
-          <span class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-            {{ $t('admin_catalog.distribution_rights') }}
-          </span>
-        </label>
-
-        <label class="flex items-start gap-2.5 cursor-pointer">
-          <input
-            v-model="confirmedAi"
-            type="checkbox"
-            class="mt-1 rounded text-brand-600 focus:ring-brand-500"
-          />
-          <span class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-            {{ $t('admin_catalog.ai_rights') }}
-          </span>
-        </label>
       </div>
     </div>
 

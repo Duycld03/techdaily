@@ -81,8 +81,6 @@ public class CuratedCatalogPersistenceTests : IDisposable
             Description = "Desc",
             Category = Category.BackendRuntime,
             AttributionText = "Attr",
-            PermissionBasis = "Basis",
-            PermissionEvidence = "Evidence",
             IsDeleted = false
         };
         await _db.CatalogDocuments.AddAsync(doc);
@@ -129,8 +127,6 @@ public class CuratedCatalogPersistenceTests : IDisposable
             Description = "Desc",
             Category = Category.BackendRuntime,
             AttributionText = "Attr",
-            PermissionBasis = "Basis",
-            PermissionEvidence = "Evidence",
             IsDeleted = false
         };
         await _db.CatalogDocuments.AddAsync(doc);
@@ -280,8 +276,6 @@ public class CuratedCatalogPersistenceTests : IDisposable
             Description = "Desc",
             Category = Category.BackendRuntime,
             AttributionText = "Attr",
-            PermissionBasis = "Basis",
-            PermissionEvidence = "Evidence",
             IsDeleted = false
         };
         await _db.CatalogDocuments.AddAsync(doc);

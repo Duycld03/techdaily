@@ -156,14 +156,14 @@ function getStatusLabel(status: string) {
         </h4>
 
         <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
-          <span class="flex items-center gap-1 min-w-0">
+          <span v-if="doc.processingStatus !== 'Ready'" class="flex items-center gap-1 min-w-0">
             <span :class="[
               'w-1.5 h-1.5 rounded-full shrink-0',
-              doc.processingStatus === 'Ready' ? 'bg-emerald-500' :
               doc.processingStatus === 'Failed' ? 'bg-rose-500' : 'bg-brand-500 animate-pulse'
             ]"></span>
             <span class="truncate">{{ getStatusLabel(doc.processingStatus) }}</span>
           </span>
+          <span v-else></span>
 
           <span v-if="doc.totalSlices > 0" class="shrink-0 font-medium">
             {{ $t('admin_catalog.filters.slices_count', { count: doc.totalSlices }) }}

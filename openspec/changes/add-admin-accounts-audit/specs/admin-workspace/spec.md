@@ -1,0 +1,68 @@
+# Admin Workspace Spec Delta
+
+## MODIFIED Requirements
+
+### Requirement: Administrator route admission
+Every route at `/admin` or beneath `/admin/`, except `/admin/login`, SHALL require server-confirmed permission for its destination. `/admin/users` SHALL require account-management permission and `/admin/audit` audit-read permission. Missing authentication or denied permission SHALL redirect to `/admin/login` without exposing protected SSR markup or client content. Backend administration APIs SHALL independently enforce authorization.
+
+#### Scenario: Guest or learner opens an admin deep link
+- **WHEN** a guest or non-admin requests `/admin/catalog` directly or through client navigation
+- **THEN** the browser reaches `/admin/login` with a safe return destination
+- **AND** no protected data appears before or during hydration.
+
+#### Scenario: Permission revoked while open
+- **WHEN** an admin request returns a definitive permission denial after access is removed
+- **THEN** privileged state and pending privileged requests are cleared and the user is redirected once to `/admin/login`.
+
+#### Scenario: Permission check temporarily unavailable
+- **WHEN** permission verification fails due to network or server failure
+- **THEN** protected content stays hidden behind a neutral retry state
+- **AND** the failure is not treated as permission approval or grounds to destroy a valid session.
+
+#### Scenario: Account or audit deep link
+- **WHEN** a guest or learner requests `/admin/users` or `/admin/audit`, including through SSR
+- **THEN** the browser reaches admin login with a validated local return destination
+- **AND** account identities and audit events are never rendered or fetched before admission.
+
+#### Scenario: New privileged request resolves after account replacement
+- **WHEN** an account or audit request resolves after logout, permission denial or a change of signed-in account
+- **THEN** its result is discarded and cannot appear in the next session's workspace.
+
+### Requirement: Distinct administrator navigation
+Authorized admin routes SHALL show dedicated navigation with Dashboard, Documents, Accounts and Administration log destinations according to verified capabilities, active-route indication, locale/theme controls, logout and Switch to learning. Learner sidebar, learning telemetry and learner command palette SHALL NOT appear in the admin shell. Admin login SHALL show neither protected shell.
+
+#### Scenario: Navigate from dashboard to catalog
+- **WHEN** an admin opens Documents
+- **THEN** `/admin/catalog` uses the admin shell and existing catalog functionality without duplicate learner navigation.
+
+#### Scenario: Switch to learning
+- **WHEN** the admin selects Switch to learning
+- **THEN** `/today` opens using the learner shell with the same session
+- **AND** no login, token issuance or privilege change is required.
+
+#### Scenario: Navigate to new destinations
+- **WHEN** an administrator selects Accounts or Administration log
+- **THEN** `/admin/users` or `/admin/audit` opens within the same admin shell with the correct active destination
+- **AND** the mobile menu dismisses without leaving duplicate navigation or trapped focus.
+
+#### Scenario: Navigation reflects permission
+- **WHEN** the server does not confirm a destination's required capability
+- **THEN** its protected navigation entry is unavailable
+- **AND** removing or adding a browser menu entry cannot grant backend access.
+
+### Requirement: DeepPace design system parity
+Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons and accessible controls. Login SHALL use StudioLayout, dashboard BentoDashboardLayout, catalog and accounts MasterDetailLayout, and audit BoardLayout. The separate shell SHALL NOT introduce a competing theme, CSS framework or unconstrained page wrappers.
+
+#### Scenario: Bilingual responsive admin surfaces
+- **WHEN** admin login, dashboard, catalog, accounts and audit are viewed in English and Vietnamese at 1440x900 and 390x844 in light and dark themes
+- **THEN** controls and text remain legible without clipping, wrapping collisions or double navigation
+- **AND** body text is at least 14px on mobile and 16px on larger screens, with no-wrap action labels and responsive gaps.
+
+#### Scenario: Accessible mobile menu
+- **WHEN** an administrator opens the mobile navigation using keyboard or touch
+- **THEN** focus is managed, Escape closes it, and navigation dismisses it without trapping focus or obscuring the destination.
+
+#### Scenario: Accessible account and audit controls
+- **WHEN** an administrator uses keyboard or touch to filter accounts/history or confirm an account action
+- **THEN** custom select controls and confirmation dialogs provide labels, focus management and clear localized feedback
+- **AND** Escape closes a cancelable dialog without submitting the action.

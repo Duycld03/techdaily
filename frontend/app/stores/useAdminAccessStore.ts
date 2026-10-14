@@ -24,7 +24,9 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
   function verify(): Promise<boolean> {
     if (flight) return flight
     const requestGeneration = generation
-    state.value = 'checking'
+    if (state.value !== 'authorized') {
+      state.value = 'checking'
+    }
     const request = (async () => {
       try {
         const capability = await api.get<{ canManageCatalog: boolean }>('/api/v1/catalog/capabilities', { cache: 'no-store' })

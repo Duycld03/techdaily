@@ -62,10 +62,6 @@ public class CatalogAdminHandlersTests : IDisposable
             Language = "en",
             SourceType = SourceType.PdfBook,
             AttributionText = "Attribution text",
-            PermissionBasis = "Permission basis",
-            PermissionEvidence = "Evidence doc",
-            ConfirmedDistributionRights = true,
-            ConfirmedAiProcessingRights = true,
             Visibility = visibility,
             ProcessingStatus = status,
             Revision = 1,
@@ -93,12 +89,8 @@ public class CatalogAdminHandlersTests : IDisposable
     }
 
     [Fact]
-    public async Task UploadPdf_WithMissingRights_ShouldFailValidation()
+    public async Task UploadPdf_WithNonExistentTempFile_ShouldFailValidation()
     {
-        var tempFile = Path.Combine(Path.GetTempPath(), $"upload-{Guid.NewGuid():N}.pdf");
-        await File.WriteAllBytesAsync(tempFile, new byte[] { 1, 2, 3 });
-        _tempFilesToCleanup.Add(tempFile);
-
         var queue = new TestQueue();
         var handler = new AdminUploadCatalogPdfHandler(_db, queue, new AdminUploadCatalogPdfValidator());
 
@@ -109,11 +101,7 @@ public class CatalogAdminHandlersTests : IDisposable
             Language: "en",
             AuthorOrSourceUrl: null,
             AttributionText: "Attr",
-            PermissionBasis: "Basis",
-            PermissionEvidence: "Evidence",
-            ConfirmedDistributionRights: false, // Invalid!
-            ConfirmedAiProcessingRights: true,
-            TempFilePath: tempFile,
+            TempFilePath: "/tmp/non-existent-pdf-file.pdf",
             AdminUserId: Guid.NewGuid());
 
         var result = await handler.ExecuteAsync(request);
@@ -140,10 +128,6 @@ public class CatalogAdminHandlersTests : IDisposable
             Language: "en",
             AuthorOrSourceUrl: "https://example.com/source",
             AttributionText: "Attr",
-            PermissionBasis: "Basis",
-            PermissionEvidence: "Evidence",
-            ConfirmedDistributionRights: true,
-            ConfirmedAiProcessingRights: true,
             TempFilePath: tempFile,
             AdminUserId: Guid.NewGuid());
 
@@ -176,10 +160,6 @@ public class CatalogAdminHandlersTests : IDisposable
             Language: doc.Language,
             AuthorOrSourceUrl: doc.AuthorOrSourceUrl,
             AttributionText: doc.AttributionText,
-            PermissionBasis: doc.PermissionBasis,
-            PermissionEvidence: doc.PermissionEvidence,
-            ConfirmedDistributionRights: true,
-            ConfirmedAiProcessingRights: true,
             ExpectedConcurrencyVersion: doc.ConcurrencyVersion);
 
         var result = await handler.ExecuteAsync(request);
@@ -207,27 +187,21 @@ public class CatalogAdminHandlersTests : IDisposable
             Language: doc.Language,
             AuthorOrSourceUrl: doc.AuthorOrSourceUrl,
             AttributionText: doc.AttributionText,
-            PermissionBasis: doc.PermissionBasis,
-            PermissionEvidence: doc.PermissionEvidence,
-            ConfirmedDistributionRights: true,
-            ConfirmedAiProcessingRights: true,
             ExpectedConcurrencyVersion: doc.ConcurrencyVersion);
 
         var result = await handler.ExecuteAsync(request);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Revision.Should().Be(2);
-        result.Value.IsEligibleForPublication.Should().BeFalse();
-        result.Value.UnmetPublicationRequirements.Should().Contain(r => r.Contains("stale") || r.Contains("review"));
+        result.Value.IsEligibleForPublication.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Publish_WithStaleReview_ShouldRejectWithPublicationIneligible()
+    public async Task Publish_WhenNoSlices_ShouldRejectWithPublicationIneligible()
     {
         var doc = CreateSeedDoc(visibility: CatalogVisibility.Draft);
+        doc.Slices.Clear();
         var adminId = Guid.NewGuid();
-        doc.Review(adminId);
-        doc.Revision = 2; // Stale!
 
         await _db.CatalogDocuments.AddAsync(doc);
         await _db.SaveChangesAsync();
@@ -239,7 +213,7 @@ public class CatalogAdminHandlersTests : IDisposable
 
         result.IsSuccess.Should().BeFalse();
         result.Error.Code.Should().Be("Catalog.PublicationIneligible");
-        result.Error.Message.Should().Contain("stale");
+        result.Error.Message.Should().Contain("slice");
     }
 
     [Fact]

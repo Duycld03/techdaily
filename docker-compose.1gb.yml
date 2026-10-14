@@ -1,0 +1,111 @@
+# DeepPace — 1 GB RAM Production Profile
+# Tuned specifically for resource-constrained hosts (e.g. Google Cloud Always Free e2-micro with 1.0 GB RAM)
+# Capped aggregate memory: ~700 MB across all containers, preserving 300+ MB for OS, kernel buffers, and Docker daemon.
+# PREREQUISITE: Requires a 2 GB host swap file (see docs/deployment-1gb-vps.md)
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: deeppace_postgres_prod
+    restart: always
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-deeppace_db}"
+      POSTGRES_USER: "${POSTGRES_USER:-deeppace_user}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=128MB"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "effective_cache_size=512MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=8MB"
+    volumes:
+      - deeppace_pgdata_prod:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 220M
+        reservations:
+          memory: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-deeppace_user} -d ${POSTGRES_DB:-deeppace_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/duycld03/deeppace-backend:latest
+    container_name: deeppace_backend_prod
+    restart: always
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB:-deeppace_db};Username=${POSTGRES_USER:-deeppace_user};Password=${POSTGRES_PASSWORD}"
+      Authentication__Google__ClientId: "${GOOGLE_CLIENT_ID}"
+      Cors__AllowedOrigins__0: "${CORS_ALLOWED_ORIGINS:-https://deeppace.duckdns.org}"
+      Cors__AllowedOrigins__1: "https://techdaily.duckdns.org"
+      # Low-Memory .NET 10 Runtime Invariants
+      DOTNET_gcServer: "0"
+      DOTNET_GCHeapHardLimit: "268435456"
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+        reservations:
+          memory: 180M
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: ghcr.io/duycld03/deeppace-frontend:latest
+    container_name: deeppace_frontend_prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      NUXT_PUBLIC_API_BASE_URL: ""
+      NUXT_PUBLIC_GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-982684500709-75solmbterlbdvut85btisallcsf83ef.apps.googleusercontent.com}"
+      API_INTERNAL_URL: "http://backend:5000"
+      NODE_OPTIONS: "--max-old-space-size=192"
+    deploy:
+      resources:
+        limits:
+          memory: 150M
+        reservations:
+          memory: 64M
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: deeppace_nginx_prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    deploy:
+      resources:
+        limits:
+          memory: 30M
+        reservations:
+          memory: 10M
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  deeppace_pgdata_prod:

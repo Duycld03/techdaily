@@ -20,10 +20,6 @@ public class CatalogDomainTests
             SourceType = SourceType.PdfBook,
             AuthorOrSourceUrl = "Martin Kleppmann",
             AttributionText = "Copyright 2017 Martin Kleppmann. Used under educational permission.",
-            PermissionBasis = "Direct Author Written Consent",
-            PermissionEvidence = "Consent email dated 2026-01-15 archived in secure record.",
-            ConfirmedDistributionRights = true,
-            ConfirmedAiProcessingRights = true,
             ProcessingStatus = ProcessingStatus.Ready,
             TotalSlices = 4,
             Revision = 1
@@ -66,30 +62,27 @@ public class CatalogDomainTests
     }
 
     [Fact]
-    public void Publish_WithoutReview_ShouldThrowInvalidOperationException()
+    public void Publish_WithoutPriorReview_ShouldSucceedDirectly()
     {
         var doc = CreateValidReadyCatalogDocument();
         var adminId = Guid.NewGuid();
 
-        var act = () => doc.Publish(adminId);
+        doc.Publish(adminId);
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*review*");
+        doc.Visibility.Should().Be(CatalogVisibility.Published);
+        doc.PublishedByUserId.Should().Be(adminId);
     }
 
     [Fact]
-    public void Publish_WithStaleReview_ShouldThrowInvalidOperationException()
+    public void Publish_AfterMetadataUpdate_ShouldSucceedDirectly()
     {
         var doc = CreateValidReadyCatalogDocument();
         var adminId = Guid.NewGuid();
 
-        doc.Review(adminId);
-        doc.UpdateMetadata("Updated Title", doc.Description, doc.Category, doc.Language, doc.AuthorOrSourceUrl, doc.AttributionText, doc.PermissionBasis, doc.PermissionEvidence, doc.ConfirmedDistributionRights, doc.ConfirmedAiProcessingRights);
+        doc.UpdateMetadata("Updated Title", doc.Description, doc.Category, doc.Language, doc.AuthorOrSourceUrl, doc.AttributionText);
+        doc.Publish(adminId);
 
-        var act = () => doc.Publish(adminId);
-
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*stale*");
+        doc.Visibility.Should().Be(CatalogVisibility.Published);
     }
 
     [Fact]
@@ -136,20 +129,14 @@ public class CatalogDomainTests
     }
 
     [Theory]
-    [InlineData("", "basis", "evidence", true, true)]
-    [InlineData("attr", "", "evidence", true, true)]
-    [InlineData("attr", "basis", "", true, true)]
-    [InlineData("attr", "basis", "evidence", false, true)]
-    [InlineData("attr", "basis", "evidence", true, false)]
-    public void Publish_WithMissingPermissionOrAttribution_ShouldThrowInvalidOperationException(
-        string attribution, string basis, string evidence, bool distRights, bool aiRights)
+    [InlineData("", "")]
+    [InlineData("   ", "   ")]
+    public void Publish_WithMissingAttribution_ShouldThrowInvalidOperationException(
+        string attribution, string authorUrl)
     {
         var doc = CreateValidReadyCatalogDocument();
         doc.AttributionText = attribution;
-        doc.PermissionBasis = basis;
-        doc.PermissionEvidence = evidence;
-        doc.ConfirmedDistributionRights = distRights;
-        doc.ConfirmedAiProcessingRights = aiRights;
+        doc.AuthorOrSourceUrl = authorUrl;
 
         var adminId = Guid.NewGuid();
         doc.Review(adminId);
@@ -182,7 +169,7 @@ public class CatalogDomainTests
         doc.Review(adminId);
         doc.Publish(adminId);
 
-        var act = () => doc.UpdateMetadata("New Title", doc.Description, doc.Category, doc.Language, doc.AuthorOrSourceUrl, doc.AttributionText, doc.PermissionBasis, doc.PermissionEvidence, doc.ConfirmedDistributionRights, doc.ConfirmedAiProcessingRights);
+        var act = () => doc.UpdateMetadata("New Title", doc.Description, doc.Category, doc.Language, doc.AuthorOrSourceUrl, doc.AttributionText);
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*hidden first*");

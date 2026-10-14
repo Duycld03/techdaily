@@ -4,13 +4,20 @@
  * Left sub-nav rail + wide responsive content panel.
  * Solves the "phone-width single column stretched with dead margins" problem.
  */
-withDefaults(defineProps<{
+const {
+  maxHeight,
+  flush = false,
+  navLabel = 'Settings sections',
+  contentLabel = 'Settings content',
+  navClass = 'md:w-72'
+} = defineProps<{
   maxHeight?: string
   /** Full-bleed variant: drops the glass-card chrome (rounded corners, border, shadow) so the surface fills its container to all four edges. */
   flush?: boolean
   navLabel?: string
   contentLabel?: string
-}>(), { navLabel: 'Settings sections', contentLabel: 'Settings content' })
+  navClass?: string
+}>()
 </script>
 
 <template>
@@ -30,7 +37,8 @@ withDefaults(defineProps<{
     <div class="flex min-h-0 flex-1 flex-col md:flex-row">
       <!-- Left sub-navigation rail -->
       <nav
-        class="shrink-0 gap-1 overflow-x-auto md:overflow-x-visible md:overflow-y-auto border-b border-slate-200/80 p-2.5 sm:p-3 dark:border-white/[0.08] md:w-72 md:border-b-0 md:border-r"
+        class="shrink-0 gap-1 overflow-x-auto md:overflow-x-visible md:overflow-y-auto border-b border-slate-200/80 p-2.5 sm:p-3 dark:border-white/[0.08] md:border-b-0 md:border-r"
+        :class="navClass"
         :aria-label="navLabel"
       >
         <slot name="nav" />

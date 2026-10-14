@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useNow } from '@vueuse/core'
-import { LoaderCircle, RefreshCw, GraduationCap } from 'lucide-vue-next'
+import { LoaderCircle, RefreshCw } from 'lucide-vue-next'
 import { useAdminDashboardStore } from '~/stores/useAdminDashboardStore'
 import AdminObservationRow from './AdminObservationRow.vue'
 const store = useAdminDashboardStore()
@@ -34,9 +34,5 @@ function timestamp(value: string) { return new Intl.DateTimeFormat(locale.value 
     </button>
     <p v-if="cooldown > 0 && !store.isProbing" class="text-xs font-mono text-slate-500 dark:text-slate-400">{{ $t('admin.dashboard.cooldown', { seconds: cooldown }) }}</p>
     <p v-if="store.aiProbe" class="font-mono text-xs text-slate-500 dark:text-slate-400">{{ $t('admin.dashboard.observed_at') }} {{ timestamp(store.aiProbe.checkedAt) }}</p>
-  </section>
-  <section class="glass-card space-y-3 p-4 sm:p-5">
-    <h2 class="text-base sm:text-lg font-bold">{{ $t('admin.dashboard.learning_title') }}</h2><p class="text-sm sm:text-base leading-relaxed text-slate-500 dark:text-slate-400">{{ $t('admin.dashboard.learning_hint') }}</p>
-    <NuxtLink to="/today" class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 dark:border-white/[0.08] px-4 text-sm sm:text-base font-semibold whitespace-nowrap shrink-0"><GraduationCap class="h-5 w-5" aria-hidden="true" />{{ $t('admin.nav.learning') }}</NuxtLink>
   </section>
 </template>

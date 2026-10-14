@@ -238,10 +238,6 @@ public class CatalogEndpointsTests : IAsyncLifetime
             Description = "Desc",
             Category = Category.BackendRuntime,
             AttributionText = "Attribution",
-            PermissionBasis = "Basis",
-            PermissionEvidence = "Evidence",
-            ConfirmedDistributionRights = true,
-            ConfirmedAiProcessingRights = true,
             Visibility = CatalogVisibility.Published,
             ProcessingStatus = ProcessingStatus.Ready,
             TotalSlices = 1
@@ -295,10 +291,6 @@ public class CatalogEndpointsTests : IAsyncLifetime
             Description = "Desc",
             Category = Category.BackendRuntime,
             AttributionText = "Attribution",
-            PermissionBasis = "Basis",
-            PermissionEvidence = "Evidence",
-            ConfirmedDistributionRights = true,
-            ConfirmedAiProcessingRights = true,
             Visibility = CatalogVisibility.Hidden,
             ProcessingStatus = ProcessingStatus.Ready
         };
@@ -333,10 +325,6 @@ public class CatalogEndpointsTests : IAsyncLifetime
             Description = "Desc",
             Category = Category.FrontendWeb,
             AttributionText = "Attr",
-            PermissionBasis = "Basis",
-            PermissionEvidence = "Evidence",
-            ConfirmedDistributionRights = true,
-            ConfirmedAiProcessingRights = true,
             Visibility = CatalogVisibility.Draft,
             SourceType = SourceType.WebDocUrl,
             ProcessingStatus = ProcessingStatus.Pending
@@ -365,10 +353,6 @@ public class CatalogEndpointsTests : IAsyncLifetime
             Description = "Desc",
             Category = Category.FrontendWeb,
             AttributionText = "Attr",
-            PermissionBasis = "Basis",
-            PermissionEvidence = "Evidence",
-            ConfirmedDistributionRights = true,
-            ConfirmedAiProcessingRights = true,
             Visibility = CatalogVisibility.Draft,
             ProcessingStatus = ProcessingStatus.Pending,
             Revision = 1

@@ -13,11 +13,6 @@ public class CatalogDocument : BaseEntity
     public string? AuthorOrSourceUrl { get; set; }
     public string AttributionText { get; set; } = string.Empty;
 
-    // Permission and rights metadata
-    public string PermissionBasis { get; set; } = string.Empty;
-    public string PermissionEvidence { get; set; } = string.Empty;
-    public bool ConfirmedDistributionRights { get; set; } = false;
-    public bool ConfirmedAiProcessingRights { get; set; } = false;
 
     // Visibility and processing lifecycle
     public CatalogVisibility Visibility { get; set; } = CatalogVisibility.Draft;
@@ -85,40 +80,10 @@ public class CatalogDocument : BaseEntity
             }
         }
 
-        if (string.IsNullOrWhiteSpace(AttributionText))
+        if (string.IsNullOrWhiteSpace(AttributionText) && string.IsNullOrWhiteSpace(AuthorOrSourceUrl))
         {
-            unmet.Add("Source attribution text is required.");
+            unmet.Add("Source attribution or author URL is required.");
         }
-
-        if (string.IsNullOrWhiteSpace(PermissionBasis))
-        {
-            unmet.Add("Permission basis is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(PermissionEvidence))
-        {
-            unmet.Add("Permission evidence is required.");
-        }
-
-        if (!ConfirmedDistributionRights)
-        {
-            unmet.Add("Confirmed distribution rights are required.");
-        }
-
-        if (!ConfirmedAiProcessingRights)
-        {
-            unmet.Add("Confirmed AI processing rights are required.");
-        }
-
-        if (ReviewedByUserId == null)
-        {
-            unmet.Add("Explicit administrator review is required before publication.");
-        }
-        else if (ReviewedRevision != Revision)
-        {
-            unmet.Add("Administrator review is stale because content or metadata changed since last review.");
-        }
-
         return (unmet.Count == 0, unmet);
     }
 
@@ -157,11 +122,7 @@ public class CatalogDocument : BaseEntity
         Category category,
         string language,
         string? authorOrSourceUrl,
-        string attributionText,
-        string permissionBasis,
-        string permissionEvidence,
-        bool confirmedDistributionRights,
-        bool confirmedAiProcessingRights)
+        string attributionText)
     {
         if (Visibility == CatalogVisibility.Published)
         {
@@ -173,14 +134,9 @@ public class CatalogDocument : BaseEntity
         Language = language;
         AuthorOrSourceUrl = authorOrSourceUrl;
         AttributionText = attributionText;
-        PermissionBasis = permissionBasis;
-        PermissionEvidence = permissionEvidence;
-        ConfirmedDistributionRights = confirmedDistributionRights;
-        ConfirmedAiProcessingRights = confirmedAiProcessingRights;
 
         Revision++;
         ConcurrencyVersion++;
-        // Review is now stale because Revision was incremented
         MarkUpdated();
     }
 

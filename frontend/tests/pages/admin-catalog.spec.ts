@@ -300,8 +300,8 @@ describe('admin/catalog.vue (MasterDetail Catalog Management)', () => {
     // Trigger an action that returns 403 (revoked permissions)
     mockPost.mockRejectedValueOnce({ status: 403, message: 'Forbidden' })
 
-    const reviewButton = wrapper.findAll('button').find((b) => b.text().includes('admin_catalog.review_confirm'))
-    await reviewButton?.trigger('click')
+    const prepareBtn = wrapper.findAll('button').find((b) => b.text().includes('admin_catalog.prepare_action'))
+    await prepareBtn?.trigger('click')
     await flushPromises()
 
     const catalogStore = useCatalogStore()

@@ -13,8 +13,8 @@ defineEmits<{ menu: [] }>()
       <span class="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-brand-500/20 bg-brand-500/10 px-2.5 py-1 text-xs font-semibold text-brand-600 dark:text-brand-300 whitespace-nowrap shrink-0"><ShieldCheck class="h-3.5 w-3.5" aria-hidden="true" />{{ $t('admin.nav.admin') }}</span>
     </div>
     <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
-      <LocaleSelector :touch-targets="true" />
-      <ThemeToggle :light-label="$t('admin.preferences.light')" :dark-label="$t('admin.preferences.dark')" :toggle-label="$t('admin.preferences.theme')" class="min-h-11 min-w-11" />
+      <LocaleSelector />
+      <ThemeToggle :light-label="$t('admin.preferences.light')" :dark-label="$t('admin.preferences.dark')" :toggle-label="$t('admin.preferences.theme')" />
     </div>
   </header>
 </template>

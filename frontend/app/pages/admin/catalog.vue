@@ -28,7 +28,6 @@ const statusFilter = ref('')
 
 const isSavingMetadata = ref(false)
 const isPreparingSlices = ref(false)
-const isReviewing = ref(false)
 const isPublishing = ref(false)
 const isHiding = ref(false)
 const isRetrying = ref(false)
@@ -82,8 +81,13 @@ async function handleSaveMetadata(payload: any) {
   if (!catalogStore.selectedAdminDocument) return
   await runAction(isSavingMetadata, async () => {
     await catalogStore.updateMetadata(catalogStore.selectedAdminDocument!.id, {
-      ...payload,
-      expectedConcurrencyVersion: catalogStore.selectedAdminDocument!.concurrencyVersion
+      title: payload.title,
+      description: catalogStore.selectedAdminDocument!.description || payload.title,
+      category: payload.category,
+      language: payload.language,
+      authorOrSourceUrl: payload.authorOrSourceUrl,
+      attributionText: payload.attributionText,
+      expectedVersion: catalogStore.selectedAdminDocument!.revision
     })
     toast.success(t('admin_catalog.toasts.metadata_saved'))
     await selectDocument(catalogStore.selectedAdminDocument!.id)
@@ -101,17 +105,6 @@ async function handlePrepareSlices() {
   })
 }
 
-async function handleReviewConfirm() {
-  if (!catalogStore.selectedAdminDocument) return
-  await runAction(isReviewing, async () => {
-    await catalogStore.reviewDocument(catalogStore.selectedAdminDocument!.id, {
-      expectedRevision: catalogStore.selectedAdminDocument!.revision,
-      reviewNotes: 'Verified source content, layout integrity and initial slice summaries.'
-    })
-    toast.success(t('admin_catalog.toasts.review_recorded'))
-    await selectDocument(catalogStore.selectedAdminDocument!.id)
-  })
-}
 
 async function handlePublish() {
   if (!catalogStore.selectedAdminDocument) return
@@ -165,11 +158,12 @@ async function handleDraftCreated(id: string) {
 <template>
   <!-- MasterDetail Workspace for Authorized Administrators -->
   <div v-if="access.isAuthorized" class="h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-3.75rem)] flex flex-col overflow-hidden bg-slate-50 dark:bg-canvas">
-    <MasterDetailLayout flush class="flex-1 min-h-0" :nav-label="$t('admin.nav.documents')" :content-label="$t('admin_catalog.title')">
+    <MasterDetailLayout flush nav-class="md:w-84 lg:w-96" class="flex-1 min-h-0" :nav-label="$t('admin.nav.documents')" :content-label="$t('admin_catalog.title')">
       <!-- Header Slot -->
       <template #header>
         <AdminCatalogHeader
           :is-loading="catalogStore.isAdminLoading"
+          :is-creating-draft="isCreatingNewDraft"
           @refresh="catalogStore.fetchAdminDocuments()"
           @new-draft="isCreatingNewDraft = true; selectedDocId = null"
         />
@@ -205,13 +199,11 @@ async function handleDraftCreated(id: string) {
           :document="catalogStore.selectedAdminDocument"
           :is-saving-metadata="isSavingMetadata"
           :is-preparing-slices="isPreparingSlices"
-          :is-reviewing="isReviewing"
           :is-publishing="isPublishing"
           :is-hiding="isHiding"
           :is-retrying="isRetrying"
           @save-metadata="handleSaveMetadata"
           @prepare-slices="handlePrepareSlices"
-          @confirm-review="handleReviewConfirm"
           @publish="handlePublish"
           @hide="handleHide"
           @retry-processing="handleRetry"

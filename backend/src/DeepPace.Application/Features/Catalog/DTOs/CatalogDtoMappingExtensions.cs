@@ -17,10 +17,7 @@ public static class CatalogDtoMappingExtensions
             SourceType: doc.SourceType,
             AuthorOrSourceUrl: doc.AuthorOrSourceUrl,
             AttributionText: doc.AttributionText,
-            PermissionBasis: doc.PermissionBasis,
-            PermissionEvidence: doc.PermissionEvidence,
-            ConfirmedDistributionRights: doc.ConfirmedDistributionRights,
-            ConfirmedAiProcessingRights: doc.ConfirmedAiProcessingRights,
+
             Visibility: doc.Visibility,
             ProcessingStatus: doc.ProcessingStatus,
             TotalSlices: doc.TotalSlices,

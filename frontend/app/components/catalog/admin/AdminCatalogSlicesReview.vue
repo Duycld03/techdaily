@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { Layers, Clock, CheckCircle2, Eye, Loader2 } from 'lucide-vue-next'
-import type { AdminCatalogDocumentDto } from '~/stores/useCatalogStore'
+import { Layers, Clock, Eye, Loader2 } from 'lucide-vue-next'
+import type { AdminCatalogDocument } from '~/stores/useCatalogStore'
 
 defineProps<{
-  document: AdminCatalogDocumentDto
+  document: AdminCatalogDocument
   isPreparingSlices: boolean
-  isReviewing: boolean
 }>()
 
 defineEmits<{
   (e: 'prepare-slices'): void
-  (e: 'confirm-review'): void
   (e: 'inspect-slice', order: number): void
 }>()
 </script>
@@ -41,17 +39,7 @@ defineEmits<{
           <span class="whitespace-nowrap">{{ isPreparingSlices ? $t('admin_catalog.preparing') : $t('admin_catalog.prepare_action') }}</span>
         </button>
 
-        <!-- Confirm Administrator Review Action -->
-        <button
-          type="button"
-          :disabled="isReviewing || !document.confirmedDistributionRights"
-          @click="$emit('confirm-review')"
-          class="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-all active:scale-95 whitespace-nowrap shrink-0 disabled:opacity-50 cursor-pointer"
-        >
-          <Loader2 v-if="isReviewing" class="w-4 h-4 animate-spin shrink-0" />
-          <CheckCircle2 v-else class="w-4 h-4 shrink-0" />
-          <span class="whitespace-nowrap">{{ $t('admin_catalog.review_confirm') }}</span>
-        </button>
+
       </div>
     </div>
 
