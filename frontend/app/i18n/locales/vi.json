@@ -423,6 +423,8 @@
       "discover": "Khám Phá Danh Mục"
     },
     "reset_filters": "Đặt lại bộ lọc",
+    "filter_modal_title": "Bộ Lọc Thư Viện",
+    "filter_modal_subtitle": "Lọc tài liệu cá nhân theo chuyên mục và ngôn ngữ",
     "discover": {
       "title": "Danh Mục Tài Liệu Tuyển Chọn",
       "subtitle": "Tài liệu kỹ thuật, RFC kiến trúc và phân tích chuyên sâu được chuẩn bị sẵn để luyện tập chủ động",

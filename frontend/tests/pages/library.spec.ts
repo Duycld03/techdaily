@@ -118,7 +118,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     vi.clearAllMocks()
   })
 
-  it('renders category filter chips including Category 4 (Engineering Craft & Mindset), Category 5 (Mental Models), and Category 6 (Habits)', async () => {
+  it('renders quick category filter chips matching Discover and provides access to all 7 categories via advanced filter modal', async () => {
     const wrapper = mount(LibraryPage, {
       global: {
         stubs: {
@@ -127,16 +127,15 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
         }
       }
     })
-
     await flushPromises()
 
-    expect(wrapper.text()).toContain('library.categories.craft')
-    expect(wrapper.text()).toContain('library.categories.system_design')
-    expect(wrapper.text()).toContain('library.categories.database')
     expect(wrapper.text()).toContain('library.categories.backend')
     expect(wrapper.text()).toContain('library.categories.frontend')
-    expect(wrapper.text()).toContain('library.categories.mental_models')
-    expect(wrapper.text()).toContain('library.categories.habits')
+    expect(wrapper.text()).toContain('library.categories.database')
+    expect(wrapper.text()).toContain('library.categories.system_design')
+
+    const advancedBtn = wrapper.find('[data-testid="library-advanced-filter-btn"]')
+    expect(advancedBtn.exists()).toBe(true)
   })
 
   it('detects embedded PDF during URL crawl and renders preview card with direct import action', async () => {
