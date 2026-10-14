@@ -118,7 +118,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     vi.clearAllMocks()
   })
 
-  it('renders category filter chips including Category 4 (Engineering Craft & Mindset), Category 5 (Mental Models), and Category 6 (Habits)', async () => {
+  it('renders quick category filter chips matching Discover and provides access to all 7 categories via advanced filter modal', async () => {
     const wrapper = mount(LibraryPage, {
       global: {
         stubs: {
@@ -127,16 +127,15 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
         }
       }
     })
-
     await flushPromises()
 
-    expect(wrapper.text()).toContain('library.categories.craft')
-    expect(wrapper.text()).toContain('library.categories.system_design')
-    expect(wrapper.text()).toContain('library.categories.database')
     expect(wrapper.text()).toContain('library.categories.backend')
     expect(wrapper.text()).toContain('library.categories.frontend')
-    expect(wrapper.text()).toContain('library.categories.mental_models')
-    expect(wrapper.text()).toContain('library.categories.habits')
+    expect(wrapper.text()).toContain('library.categories.database')
+    expect(wrapper.text()).toContain('library.categories.system_design')
+
+    const advancedBtn = wrapper.find('[data-testid="library-advanced-filter-btn"]')
+    expect(advancedBtn.exists()).toBe(true)
   })
 
   it('detects embedded PDF during URL crawl and renders preview card with direct import action', async () => {
@@ -657,6 +656,94 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
           language: 'en'
         })
       )
+    })
+  })
+
+  describe('Two-Tier Header Filter Bar', () => {
+    it('renders search input and category chips in two tiers with reset button hidden initially', async () => {
+      const wrapper = mount(LibraryPage, {
+        global: {
+          stubs: {
+            NuxtLink: true,
+            Teleport: true
+          }
+        }
+      })
+      await flushPromises()
+
+      const searchInput = wrapper.find('[data-testid="library-search-input"]')
+      expect(searchInput.exists()).toBe(true)
+
+      const categoryContainer = wrapper.find('[data-testid="library-category-chips"]')
+      expect(categoryContainer.exists()).toBe(true)
+
+      const resetBtn = wrapper.find('[data-testid="library-reset-filters-btn"]')
+      expect(resetBtn.exists()).toBe(false)
+    })
+
+    it('shows reset button when category is selected and resets filters when clicked', async () => {
+      const mockReplace = vi.fn()
+      vi.stubGlobal('useRouter', () => ({
+        push: vi.fn(),
+        replace: mockReplace,
+        back: vi.fn()
+      }))
+
+      const wrapper = mount(LibraryPage, {
+        global: {
+          stubs: {
+            NuxtLink: true,
+            Teleport: true
+          }
+        }
+      })
+      await flushPromises()
+
+      const categoryChips = wrapper.findAll('[data-testid="library-category-chips"] button')
+      expect(categoryChips.length).toBeGreaterThan(1)
+
+      await categoryChips[1].trigger('click')
+      await flushPromises()
+
+      const resetBtn = wrapper.find('[data-testid="library-reset-filters-btn"]')
+      expect(resetBtn.exists()).toBe(true)
+
+      await resetBtn.trigger('click')
+      await flushPromises()
+
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: expect.objectContaining({
+            category: undefined,
+            search: undefined
+          })
+        })
+      )
+      expect(wrapper.find('[data-testid="library-reset-filters-btn"]').exists()).toBe(false)
+    })
+
+    it('shows reset button and clear button when search input has value', async () => {
+      const wrapper = mount(LibraryPage, {
+        global: {
+          stubs: {
+            NuxtLink: true,
+            Teleport: true
+          }
+        }
+      })
+      await flushPromises()
+
+      const searchInput = wrapper.find('[data-testid="library-search-input"]')
+      await searchInput.setValue('distributed systems')
+      await flushPromises()
+
+      expect(wrapper.find('[data-testid="library-reset-filters-btn"]').exists()).toBe(true)
+      expect(wrapper.find('button[aria-label="Clear search"]').exists()).toBe(true)
+
+      await wrapper.find('button[aria-label="Clear search"]').trigger('click')
+      await flushPromises()
+
+      expect((searchInput.element as HTMLInputElement).value).toBe('')
     })
   })
 })
