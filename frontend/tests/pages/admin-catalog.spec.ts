@@ -298,12 +298,22 @@ describe('admin/catalog.vue (MasterDetail Catalog Management)', () => {
     await flushPromises()
 
     // Trigger an action that returns 403 (revoked permissions)
+    // First update selectedAdminDocument to have 0 slices and status Pending so prepare action is available
+    const store = useCatalogStore()
+    if (store.selectedAdminDocument) {
+      store.selectedAdminDocument = {
+        ...store.selectedAdminDocument,
+        processingStatus: 'Pending',
+        slices: []
+      }
+    }
+    await wrapper.vm.$nextTick()
+
     mockPost.mockRejectedValueOnce({ status: 403, message: 'Forbidden' })
 
     const prepareBtn = wrapper.findAll('button').find((b) => b.text().includes('admin_catalog.prepare_action'))
     await prepareBtn?.trigger('click')
     await flushPromises()
-
     const catalogStore = useCatalogStore()
     expect(catalogStore.canManageCatalog).toBe(false)
     expect(catalogStore.adminDocuments.length).toBe(0)

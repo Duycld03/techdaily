@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentValidation;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Catalog.DTOs;
@@ -6,7 +7,6 @@ using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Features.Catalog.Admin.UploadPdf;
-
 public record AdminUploadCatalogPdfRequest(
     string Title,
     string Description,
@@ -74,16 +74,50 @@ public class AdminUploadCatalogPdfHandler : IUseCase<AdminUploadCatalogPdfReques
         };
 
         await _dbContext.CatalogDocuments.AddAsync(doc, cancellationToken);
+
+        if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+        {
+            var audit = AdminAuditEvent.Create(
+                actorUserId: request.AdminUserId.Value,
+                action: AdminAuditActions.CatalogUploadPdf,
+                targetType: "CatalogDocument",
+                targetId: doc.Id.ToString(),
+                outcome: AdminAuditOutcome.Accepted,
+                correlationId: doc.Id.ToString(),
+                changedFields: new[] { "Visibility", "ProcessingStatus", "ProcessingGeneration" },
+                statePayload: JsonSerializer.Serialize(new { Visibility = doc.Visibility.ToString(), ProcessingGeneration = doc.ProcessingGeneration }));
+            await _dbContext.AdminAuditEvents.AddAsync(audit, cancellationToken);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await _queue.EnqueueAsync(new PdfIngestJob(
-            TargetId: doc.Id,
-            TempFilePath: request.TempFilePath,
-            DocumentTitle: doc.Title,
-            Category: doc.Category,
-            Language: doc.Language,
-            DestinationType: IngestionDestinationType.CatalogDocument,
-            Generation: doc.ProcessingGeneration), cancellationToken);
+        try
+        {
+            await _queue.EnqueueAsync(new PdfIngestJob(
+                TargetId: doc.Id,
+                TempFilePath: request.TempFilePath,
+                DocumentTitle: doc.Title,
+                Category: doc.Category,
+                Language: doc.Language,
+                DestinationType: IngestionDestinationType.CatalogDocument,
+                Generation: doc.ProcessingGeneration), cancellationToken);
+        }
+        catch (Exception)
+        {
+            if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+            {
+                var failAudit = AdminAuditEvent.Create(
+                    actorUserId: request.AdminUserId.Value,
+                    action: AdminAuditActions.CatalogDispatchFailed,
+                    targetType: "CatalogDocument",
+                    targetId: doc.Id.ToString(),
+                    outcome: AdminAuditOutcome.Failed,
+                    errorCode: "DISPATCH_FAILED",
+                    correlationId: doc.Id.ToString());
+                await _dbContext.AdminAuditEvents.AddAsync(failAudit, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
 
         return doc.ToAdminDto();
     }

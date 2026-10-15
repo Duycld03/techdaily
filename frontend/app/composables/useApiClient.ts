@@ -192,7 +192,7 @@ export function useApiClient() {
       const body = await response.json()
       data = body
       message = body.detail || body.message || body.title || message
-      code = body.code
+      code = body.code || (body.extensions && typeof body.extensions === 'object' ? (body.extensions as Record<string, unknown>).code as string : undefined)
       details = body.errors
     } catch { /* Empty and non-JSON error bodies use the HTTP status. */ }
     code ||= response.status === 401 ? 'UNAUTHORIZED' : response.status === 403 ? 'FORBIDDEN'

@@ -66,6 +66,21 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.IsPushEnabled).HasDefaultValue(false);
         builder.Property(u => u.PreferredStudyTime);
         builder.Property(u => u.StreakAlertTime);
+        builder.Property(u => u.Status)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(AccountStatus.Active)
+            .IsRequired();
+        builder.Property(u => u.AuthenticationVersion)
+            .HasDefaultValue(1)
+            .IsRequired();
+        builder.Property(u => u.AdminControlVersion)
+            .HasDefaultValue(1)
+            .IsConcurrencyToken()
+            .IsRequired();
+        builder.Property(u => u.SuspendedByUserId);
+        builder.Property(u => u.SuspendedAt);
+        builder.Property(u => u.SuspensionReason).HasMaxLength(500);
 
         builder.HasOne(u => u.StreakRecord)
             .WithOne(s => s.User)
@@ -482,6 +497,7 @@ public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
         builder.HasIndex(r => r.FamilyId);
         builder.HasIndex(r => r.UserId);
         builder.Property(r => r.IsPersistent).IsRequired().HasDefaultValue(true);
+        builder.Property(r => r.AuthenticationVersion).IsRequired().HasDefaultValue(1);
 
         builder.HasOne(r => r.User)
             .WithMany(u => u.RefreshTokens)
@@ -592,5 +608,33 @@ public class CatalogSliceConfiguration : IEntityTypeConfiguration<CatalogSlice>
         builder.HasIndex(s => new { s.CatalogDocumentId, s.SliceOrder })
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");
+    }
+}
+
+public class AdminAuditEventConfiguration : IEntityTypeConfiguration<AdminAuditEvent>
+{
+    public void Configure(EntityTypeBuilder<AdminAuditEvent> builder)
+    {
+        builder.ToTable("AdminAuditEvents");
+        builder.HasKey(e => e.Id);
+        builder.Property(e => e.OccurredAt).IsRequired();
+        builder.Property(e => e.ActorUserId).IsRequired();
+        builder.Property(e => e.Action).HasMaxLength(100).IsRequired();
+        builder.Property(e => e.TargetType).HasMaxLength(50).IsRequired();
+        builder.Property(e => e.TargetId).HasMaxLength(100).IsRequired();
+        builder.Property(e => e.Outcome).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(e => e.Reason).HasMaxLength(500);
+        builder.Property(e => e.ErrorCode).HasMaxLength(100);
+        builder.Property(e => e.CorrelationId).HasMaxLength(100);
+        builder.Property(e => e.ChangedFields)
+            .HasConversion(
+                v => ConfigurationHelpers.SerializeStringList(v),
+                v => ConfigurationHelpers.DeserializeStringList(v))
+            .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
+        builder.Property(e => e.StatePayload);
+
+        builder.HasIndex(e => new { e.OccurredAt, e.Id });
+        builder.HasIndex(e => new { e.ActorUserId, e.OccurredAt, e.Id });
+        builder.HasIndex(e => new { e.TargetType, e.TargetId, e.OccurredAt, e.Id });
     }
 }

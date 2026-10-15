@@ -10,7 +10,7 @@ const environment = process as typeof process & { server?: boolean }
 describe('administrator route admission', () => {
   beforeEach(() => {
     setActivePinia(createPinia()); clearAuthStorage(); vi.clearAllMocks(); environment.server = false
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ canManageCatalog: true }))))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ canManageCatalog: true, canManageAccounts: true, canReadAudit: true }))))
   })
   afterEach(() => { environment.server = false; vi.unstubAllGlobals() })
   function signIn() { useAuthStore().setSession(adminTestJwt(), { id: 'admin-1', name: 'Admin', email: 'admin@example.test', preferredLocale: 'en' }) }
@@ -23,7 +23,7 @@ describe('administrator route admission', () => {
   it('verifies administrator permission on SSR before permitting protected rendering', async () => {
     signIn(); environment.server = true
     await run('/admin/catalog')
-    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('/api/v1/catalog/capabilities'), expect.objectContaining({ headers: expect.objectContaining({ Authorization: `Bearer ${adminTestJwt()}` }) }))
+    expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/api\/v1\/(admin|catalog)\/capabilities/), expect.objectContaining({ headers: expect.objectContaining({ Authorization: `Bearer ${adminTestJwt()}` }) }))
     expect(useAdminAccessStore().isAuthorized).toBe(true)
     expect(navigateTo).not.toHaveBeenCalled()
   })

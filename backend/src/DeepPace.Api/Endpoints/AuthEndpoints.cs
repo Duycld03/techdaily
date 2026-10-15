@@ -94,6 +94,10 @@ public static class AuthEndpoints
                 return Error.InvalidCredentials.ToProblem(StatusCodes.Status400BadRequest);
             }
 
+            if (user.Status == DeepPace.Domain.Enums.AccountStatus.Suspended)
+            {
+                return Error.Custom("AUTH_ACCOUNT_SUSPENDED", "Account is suspended.").ToProblem(StatusCodes.Status403Forbidden);
+            }
             if (!PasswordHasher.VerifyPassword(request.Password, user.PasswordHash))
             {
                 return Error.InvalidCredentials.ToProblem(StatusCodes.Status400BadRequest);
@@ -203,8 +207,11 @@ public static class AuthEndpoints
                     return new Error(Error.GoogleTokenInvalid.Code, "Invalid Google token: " + ex.Message).ToProblem(StatusCodes.Status400BadRequest);
                 }
             }
-
             var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user != null && user.Status == DeepPace.Domain.Enums.AccountStatus.Suspended)
+            {
+                return Error.Custom("AUTH_ACCOUNT_SUSPENDED", "Account is suspended.").ToProblem(StatusCodes.Status403Forbidden);
+            }
             if (user == null)
             {
                 user = new User
@@ -297,9 +304,11 @@ public static class AuthEndpoints
             if (!rotateResult.IsSuccess)
             {
                 ClearRefreshTokenCookie(context);
-                return rotateResult.Error.ToProblem(StatusCodes.Status401Unauthorized);
+                var statusCode = rotateResult.Error.Code == "AUTH_ACCOUNT_SUSPENDED"
+                    ? StatusCodes.Status403Forbidden
+                    : StatusCodes.Status401Unauthorized;
+                return rotateResult.Error.ToProblem(statusCode);
             }
-
             var (newRawToken, newToken, user) = rotateResult.Value;
             SetRefreshTokenCookie(context, newRawToken, newToken.IsPersistent);
 
@@ -572,9 +581,9 @@ public static class AuthEndpoints
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, user.Name)
+                new Claim(ClaimTypes.Name, user.Name),
+                new Claim("session_version", user.AuthenticationVersion.ToString())
             }),
-            Expires = DateTime.UtcNow.AddMinutes(expiryMinutes),
             Issuer = issuer,
             Audience = audience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

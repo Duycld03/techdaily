@@ -4,8 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
-
-namespace DeepPace.Infrastructure.Services;
+using DeepPace.Domain.Enums;
 
 public class RefreshTokenService : IRefreshTokenService
 {
@@ -37,6 +36,10 @@ public class RefreshTokenService : IRefreshTokenService
         var rawToken = GenerateRawToken();
         var tokenHash = HashToken(rawToken);
 
+        var user = await _dbContext.Users.AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct);
+        var authVersion = user?.AuthenticationVersion ?? 1;
+
         var token = new RefreshToken
         {
             Id = Guid.NewGuid(),
@@ -45,6 +48,7 @@ public class RefreshTokenService : IRefreshTokenService
             TokenHash = tokenHash,
             ExpiresAt = DateTimeOffset.UtcNow.AddDays(30),
             IsPersistent = isPersistent,
+            AuthenticationVersion = authVersion,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
@@ -70,9 +74,19 @@ public class RefreshTokenService : IRefreshTokenService
             .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.TokenHash == hash, ct);
 
-        if (token == null)
+        if (token == null || token.User == null || token.User.IsDeleted)
         {
             return Error.Custom("AUTH_INVALID_CREDENTIALS", "Invalid refresh token.");
+        }
+
+        if (token.User.Status == AccountStatus.Suspended)
+        {
+            return Error.Custom("AUTH_ACCOUNT_SUSPENDED", "Account is suspended.");
+        }
+
+        if (token.AuthenticationVersion != token.User.AuthenticationVersion)
+        {
+            return Error.Custom("AUTH_INVALID_CREDENTIALS", "Session has been revoked.");
         }
 
         if (token.RevokedAt != null)
@@ -84,7 +98,6 @@ public class RefreshTokenService : IRefreshTokenService
         {
             return Error.Custom("AUTH_REFRESH_TOKEN_EXPIRED", "Refresh token has expired.");
         }
-
         // Check if token was already used
         if (token.UsedAt != null)
         {
@@ -94,13 +107,12 @@ public class RefreshTokenService : IRefreshTokenService
                 var successor = await _dbContext.RefreshTokens
                     .FirstOrDefaultAsync(r => r.Id == token.ReplacedByTokenId.Value, ct);
 
-                if (successor != null && successor.RevokedAt == null && successor.ExpiresAt > now)
+                if (successor != null && successor.RevokedAt == null && successor.ExpiresAt > now && successor.AuthenticationVersion == token.User.AuthenticationVersion)
                 {
                     // Return valid successor context for concurrent tab
                     return (rawRefreshToken, successor, token.User!);
                 }
             }
-
             // Outside grace window: Reuse detected -> revoke entire family!
             var familyTokens = await _dbContext.RefreshTokens
                 .Where(r => r.FamilyId == token.FamilyId && r.RevokedAt == null)

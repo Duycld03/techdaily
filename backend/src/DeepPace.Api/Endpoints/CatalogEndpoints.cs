@@ -310,8 +310,8 @@ public static class CatalogEndpoints
                 body.Language,
                 body.AuthorOrSourceUrl,
                 body.AttributionText,
-                body.ExpectedVersion);
-
+                body.ExpectedVersion,
+                adminUserId);
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Ok(success),
@@ -332,13 +332,15 @@ public static class CatalogEndpoints
         adminGroup.MapPost("/documents/{id:guid}/prepare", async (
             Guid id,
             [FromBody] AdminPrepareCatalogApiRequest? body,
+            ClaimsPrincipal userClaims,
             [FromServices] IUseCase<AdminPrepareCatalogRequest, AdminCatalogDocumentDto> handler,
             CancellationToken ct) =>
         {
+            var adminUserId = GetUserIdFromClaims(userClaims);
             var request = new AdminPrepareCatalogRequest(
                 id,
-                body?.ReplacementTempFilePath);
-
+                body?.ReplacementTempFilePath,
+                adminUserId);
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Accepted($"/api/v1/admin/catalog/documents/{success.Id}", success),

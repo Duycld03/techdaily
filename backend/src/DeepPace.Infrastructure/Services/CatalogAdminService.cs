@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using DeepPace.Application.Interfaces;
+using DeepPace.Domain.Enums;
 
 namespace DeepPace.Infrastructure.Services;
-
 public class CatalogAdminService : ICatalogAdminService
 {
     private readonly IConfiguration _configuration;
@@ -41,6 +41,6 @@ public class CatalogAdminService : ICatalogAdminService
         var user = await _dbContext.Users.AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
-        return user != null && !user.IsDeleted;
+        return user != null && !user.IsDeleted && user.Status == AccountStatus.Active;
     }
 }

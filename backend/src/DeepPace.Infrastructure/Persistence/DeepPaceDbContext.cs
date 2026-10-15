@@ -33,6 +33,7 @@ public class DeepPaceDbContext : DbContext, IDeepPaceDbContext
     public DbSet<EmailOtp> EmailOtps => Set<EmailOtp>();
     public DbSet<CatalogDocument> CatalogDocuments => Set<CatalogDocument>();
     public DbSet<CatalogSlice> CatalogSlices => Set<CatalogSlice>();
+    public DbSet<AdminAuditEvent> AdminAuditEvents => Set<AdminAuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -125,5 +126,31 @@ public class DeepPaceDbContext : DbContext, IDeepPaceDbContext
         var property = Expression.Property(parameter, nameof(BaseEntity.IsDeleted));
         var condition = Expression.Equal(property, Expression.Constant(false));
         return Expression.Lambda(condition, parameter);
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var entry in ChangeTracker.Entries<AdminAuditEvent>())
+        {
+            if (entry.State == EntityState.Modified || entry.State == EntityState.Deleted)
+            {
+                throw new InvalidOperationException("AdminAuditEvent records are append-only and cannot be modified or deleted.");
+            }
+        }
+
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    public override int SaveChanges()
+    {
+        foreach (var entry in ChangeTracker.Entries<AdminAuditEvent>())
+        {
+            if (entry.State == EntityState.Modified || entry.State == EntityState.Deleted)
+            {
+                throw new InvalidOperationException("AdminAuditEvent records are append-only and cannot be modified or deleted.");
+            }
+        }
+
+        return base.SaveChanges();
     }
 }

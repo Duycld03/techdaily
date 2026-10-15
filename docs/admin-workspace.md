@@ -25,8 +25,78 @@ All dashboard routes independently require administrator authorization and send 
 
 Dashboard uses `BentoDashboardLayout`, login `StudioLayout`, and catalog `MasterDetailLayout`, with shared DeepPace styling and English/Vietnamese, dark/light parity. Switch to learning opens `/today` without replacing the account or issuing tokens. Logout ends the shared browser refresh-token family and returns to `/admin/login`; other devices retain their independent sessions. Permission denial clears administrative state while preserving a valid learner session. Account replacement, logout and revoked permission abort privileged requests and discard late results.
 
-The workspace includes inventory overview and existing catalog management. The account total is read-only. Account management, role assignment, infrastructure operations and secrets remain outside this release.
+The workspace includes inventory overview, catalog management, account access control (`/admin/users`), and an immutable administration audit log (`/admin/audit`). Account credentials (passwords, OAuth subjects) and private personal learning records remain strictly outside administrative exposure.
 
+## Account Administration & Access Control
+
+Authorized administrators with `AccountAdmin` permission manage user identity access states at `/admin/users`:
+
+### Account DTOs
+- `AdminAccountSummaryDto`:
+  - `id`: unique user identifier (`Guid`).
+  - `email`: user email address.
+  - `name`: user display name.
+  - `avatarUrl`: optional avatar URL.
+  - `status`: `Active` or `Suspended`.
+  - `createdAt`: account creation timestamp (ISO UTC).
+- `AdminAccountDetailDto`:
+  - Same identity fields plus `preferredLocale`, `adminControlVersion`, `hasPassword` (boolean), `hasGoogleAuth` (boolean), and latest suspension metadata (`suspendedByUserId`, `suspendedAt`, `suspensionReason`).
+  - Explicitly excludes password hashes, OAuth subject tokens, and personal reading notes/quizzes.
+- `AdminAccountActionRequest`:
+  - `reason`: operator-entered reason (required, trimmed, 1-500 characters, no credential/token payloads).
+  - `expectedVersion`: optimistic concurrency version (`AdminControlVersion`).
+
+### Account Mutations
+- `POST /api/v1/admin/users/{id}/suspend`: Transitions account to `Suspended`, revokes all active refresh tokens, advances `AuthenticationVersion` and `AdminControlVersion`, and commits an append-only `AdminAuditEvent`.
+- `POST /api/v1/admin/users/{id}/reactivate`: Transitions account to `Active`, advances `AdminControlVersion`, and commits an audit event. Does NOT revive previously revoked sessions; fresh sign-in is required.
+- `POST /api/v1/admin/users/{id}/revoke-sessions`: Revokes all active refresh tokens and advances `AuthenticationVersion` and `AdminControlVersion`. Deliberate self sign-out is permitted.
+
+### Administrative Safeguards & Error Codes
+- `ACCOUNT_SELF_SUSPENSION_BLOCKED` (409): An administrator cannot suspend their own account.
+- `ACCOUNT_LAST_ADMIN_PROTECTED` (409): Suspension cannot leave zero active configured administrators.
+- `ACCOUNT_CONCURRENCY_CONFLICT` (409): Account was modified by another operator; reload required.
+- `Account.InvalidTransition` (409): Transition invalid (e.g. suspending an already suspended account).
+- `Account.ReasonRequired` (400) / `Account.ReasonTooLong` (400): Reason validation failure.
+- `Account.NotFound` (404): Account does not exist or is soft-deleted.
+- `AUTH_ACCOUNT_SUSPENDED` (403): Suspended account attempting sign-in.
+
+## Administration Audit Log
+
+Authorized administrators with `AuditRead` permission inspect administrative action history at `/admin/audit`:
+
+### Approved Audit Fields
+Events contain:
+- `id`: immutable event identifier (`Guid`).
+- `occurredAt`: server UTC timestamp.
+- `actorUserId`: authenticated administrator identifier.
+- `actorEmail`: looked up dynamically from current identity; remains inspectable by historical ID if user is later renamed or soft-deleted.
+- `action`: typed action identifier (e.g. `User.Suspend`, `User.Reactivate`, `User.RevokeSessions`, `Catalog.UploadPdf`, `Catalog.ImportUrl`, `Catalog.UpdateMetadata`, `Catalog.Prepare`, `Catalog.Review`, `Catalog.Publish`, `Catalog.Hide`, `Catalog.DispatchFailed`).
+- `targetType`: entity type (`User`, `CatalogDocument`).
+- `targetId`: entity identifier.
+- `outcome`: `Succeeded`, `Accepted`, `Rejected`, `Failed`.
+- `reason`: bounded operator reason (trimmed, max 500 chars).
+- `errorCode`: safe machine-readable error code on rejected/failed events.
+- `correlationId`: HTTP trace or job correlation identifier.
+- `changedFields`: list of modified property names.
+- `statePayload`: approved state dictionary (e.g. `Status`, `AuthenticationVersion`, `AdminControlVersion`, `Visibility`, `ProcessingGeneration`).
+
+### Outcome Semantics
+- `Succeeded`: Synchronous state transition completed and committed.
+- `Accepted`: Asynchronous processing command (such as catalog extraction/preparation) was accepted and enqueued. This does NOT assert that extraction or AI processing has finished.
+- `Rejected`: Authorized command was rejected by validation, protection, or concurrency rules. No entity mutation was committed.
+- `Failed`: Infrastructure dispatch or execution failure (e.g., worker queue failure after acceptance commit).
+
+## Capability Policies & Route Admission
+- `GET /api/v1/admin/capabilities`: Authenticated discovery endpoint returning `{ canManageCatalog, canManageAccounts, canReadAudit }` with `Cache-Control: no-store`.
+- Policies:
+  - `CatalogAdmin`: Requires `canManageCatalog`.
+  - `AccountAdmin`: Requires `canManageAccounts`.
+  - `AuditRead`: Requires `canReadAudit`.
+- JWT Admission:
+  - Tokens must contain a positive `session_version` claim.
+  - Server verifies that `session_version == user.AuthenticationVersion` and `user.Status == Active` against the database on each authenticated request.
+  - Stale tokens or tokens for suspended/deleted users return 401.
+  - A database outage returns 503 with problem details, preserving client credentials for retry.
 ## Verification
 
 The implementation was checked with the full backend suite (493 passing tests), the full frontend suite (774 passing tests across 88 files), and a production Nuxt build. Regression coverage includes independent aggregate scopes, authorization, bounded and sanitized probes, area-aware session expiry, account replacement, permission revocation, single-flight refresh, hydration boundaries and shell routing.

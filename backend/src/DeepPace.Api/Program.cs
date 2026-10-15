@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -79,15 +80,70 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var idClaim = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!Guid.TryParse(idClaim, out var userId))
+                {
+                    context.Fail("Missing or invalid user identifier claim.");
+                    return;
+                }
+
+                var sessionVersionClaim = context.Principal?.FindFirst("session_version")?.Value;
+                if (string.IsNullOrWhiteSpace(sessionVersionClaim) || !int.TryParse(sessionVersionClaim, out var sessionVersion) || sessionVersion <= 0)
+                {
+                    context.Fail("Missing or invalid session_version claim.");
+                    return;
+                }
+
+                var authority = context.HttpContext.RequestServices.GetRequiredService<IAccountSessionAuthority>();
+                var validation = await authority.ValidateSessionAsync(userId, sessionVersion, context.HttpContext.RequestAborted);
+
+                if (validation.Status == AccountAuthorityStatus.Valid)
+                {
+                    return;
+                }
+
+                if (validation.Status == AccountAuthorityStatus.Unavailable)
+                {
+                    context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                    context.Response.ContentType = "application/problem+json";
+                    context.Response.Headers.CacheControl = "no-store";
+                    await context.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                    {
+                        Status = StatusCodes.Status503ServiceUnavailable,
+                        Title = "Service Unavailable",
+                        Detail = "Account authority verification is temporarily unavailable."
+                    });
+                    return;
+                }
+
+                context.Fail("Session has been revoked or account is inactive.");
+            }
+        };
     });
 
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.CatalogAdminAuthorizationHandler>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.AccountAdminAuthorizationHandler>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.AuditReadAuthorizationHandler>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("CatalogAdmin", policy =>
     {
         policy.RequireAuthenticatedUser();
         policy.Requirements.Add(new DeepPace.Api.Authorization.CatalogAdminRequirement());
+    });
+    options.AddPolicy("AccountAdmin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new DeepPace.Api.Authorization.AccountAdminRequirement());
+    });
+    options.AddPolicy("AuditRead", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new DeepPace.Api.Authorization.AuditReadRequirement());
     });
 });
 
@@ -298,6 +354,18 @@ app.MapGroup("/api/v1/review")
 app.MapLibraryEndpoints();
 app.MapCatalogEndpoints();
 app.MapAdminDashboardEndpoints();
+app.MapAdminAccountsAndAuditEndpoints();
+
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/v1/admin") ||
+        context.Request.Path.Equals("/api/v1/catalog/capabilities", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers.Pragma = "no-cache";
+    }
+    await next(context);
+});
 
 app.MapNotesEndpoints();
 

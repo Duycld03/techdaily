@@ -72,6 +72,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
     const allowed = await access.verify()
     if (!allowed && access.state === 'denied') return navigateTo(loginRedirectFor(to.fullPath))
+    if (allowed && !access.canAccessDestination(normalizedPath)) return navigateTo(loginRedirectFor(to.fullPath))
     return
   }
   // Guest authentication paths

@@ -1,12 +1,13 @@
+using System.Text.Json;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Catalog.DTOs;
 using DeepPace.Application.Interfaces;
+using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Features.Catalog.Admin.UpdateMetadata;
-
 public record AdminUpdateCatalogMetadataRequest(
     Guid Id,
     string Title,
@@ -15,7 +16,8 @@ public record AdminUpdateCatalogMetadataRequest(
     string Language,
     string? AuthorOrSourceUrl,
     string? AttributionText,
-    int ExpectedConcurrencyVersion);
+    int ExpectedConcurrencyVersion,
+    Guid? AdminUserId = null);
 
 public class AdminUpdateCatalogMetadataValidator : AbstractValidator<AdminUpdateCatalogMetadataRequest>
 {
@@ -63,16 +65,39 @@ public class AdminUpdateCatalogMetadataHandler : IUseCase<AdminUpdateCatalogMeta
 
         if (doc.Visibility == CatalogVisibility.Published)
         {
+            if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+            {
+                var rejectAudit = AdminAuditEvent.Create(
+                    actorUserId: request.AdminUserId.Value,
+                    action: AdminAuditActions.CatalogUpdateMetadata,
+                    targetType: "CatalogDocument",
+                    targetId: doc.Id.ToString(),
+                    outcome: AdminAuditOutcome.Rejected,
+                    errorCode: "Catalog.PublishedImmutable");
+                await _dbContext.AdminAuditEvents.AddAsync(rejectAudit, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
             return Error.Custom("Catalog.PublishedImmutable",
                 "Published documents are immutable. The document must be hidden before editing metadata.");
         }
 
         if (doc.ConcurrencyVersion != request.ExpectedConcurrencyVersion)
         {
+            if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+            {
+                var rejectAudit = AdminAuditEvent.Create(
+                    actorUserId: request.AdminUserId.Value,
+                    action: AdminAuditActions.CatalogUpdateMetadata,
+                    targetType: "CatalogDocument",
+                    targetId: doc.Id.ToString(),
+                    outcome: AdminAuditOutcome.Rejected,
+                    errorCode: "Catalog.ConcurrencyConflict");
+                await _dbContext.AdminAuditEvents.AddAsync(rejectAudit, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
             return Error.Custom("Catalog.ConcurrencyConflict",
                 "Document metadata has been modified by another administrator. Please reload.");
         }
-
         try
         {
             doc.UpdateMetadata(
@@ -82,6 +107,19 @@ public class AdminUpdateCatalogMetadataHandler : IUseCase<AdminUpdateCatalogMeta
                 language: request.Language,
                 authorOrSourceUrl: request.AuthorOrSourceUrl,
                 attributionText: string.IsNullOrWhiteSpace(request.AttributionText) ? (request.AuthorOrSourceUrl ?? request.Title) : request.AttributionText);
+            if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+            {
+                var audit = AdminAuditEvent.Create(
+                    actorUserId: request.AdminUserId.Value,
+                    action: AdminAuditActions.CatalogUpdateMetadata,
+                    targetType: "CatalogDocument",
+                    targetId: doc.Id.ToString(),
+                    outcome: AdminAuditOutcome.Succeeded,
+                    correlationId: doc.Id.ToString(),
+                    changedFields: new[] { "Title", "Description", "Category", "Language", "AuthorOrSourceUrl", "AttributionText", "ConcurrencyVersion" },
+                    statePayload: JsonSerializer.Serialize(new { ConcurrencyVersion = doc.ConcurrencyVersion }));
+                await _dbContext.AdminAuditEvents.AddAsync(audit, cancellationToken);
+            }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
             return doc.ToAdminDto();

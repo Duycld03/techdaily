@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
-import { LayoutDashboard, LibraryBig, GraduationCap, LogOut, ShieldCheck } from 'lucide-vue-next'
+import { LayoutDashboard, LibraryBig, Users, ScrollText, GraduationCap, LogOut, ShieldCheck } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/useAuthStore'
+import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 import { normalizeRoutePath } from '~/utils/adminRoutes'
 
 const props = defineProps<{ mobile?: boolean }>()
 const emit = defineEmits<{ navigate: [] }>()
 const route = useRoute()
 const auth = useAuthStore()
+const access = useAdminAccessStore()
 const isLoggingOut = shallowRef(false)
-const links = [
-  { path: '/admin', label: 'admin.nav.dashboard', icon: LayoutDashboard },
-  { path: '/admin/catalog', label: 'admin.nav.documents', icon: LibraryBig }
+
+const allLinks = [
+  { path: '/admin', label: 'admin.nav.dashboard', icon: LayoutDashboard, canShow: () => access.isAuthorized },
+  { path: '/admin/catalog', label: 'admin.nav.documents', icon: LibraryBig, canShow: () => access.canManageCatalog },
+  { path: '/admin/users', label: 'admin.nav.users', icon: Users, canShow: () => access.canManageAccounts },
+  { path: '/admin/audit', label: 'admin.nav.audit', icon: ScrollText, canShow: () => access.canReadAudit }
 ]
+const links = computed(() => allLinks.filter(l => l.canShow()))
 const activePath = computed(() => normalizeRoutePath(route.path))
 async function logout() {
   if (isLoggingOut.value) return

@@ -13,10 +13,10 @@ describe('server-confirmed administrator admission', () => {
   it('starts withheld and admits only an explicit server capability', async () => {
     const access = useAdminAccessStore()
     expect(access.isAuthorized).toBe(false)
-    get.mockResolvedValue({ canManageCatalog: true })
+    get.mockResolvedValue({ canManageCatalog: true, canManageAccounts: true, canReadAudit: true })
     expect(await access.verify()).toBe(true)
-    expect(get).toHaveBeenCalledWith('/api/v1/catalog/capabilities', { cache: 'no-store' })
-    get.mockResolvedValue({ canManageCatalog: false })
+    expect(get).toHaveBeenCalledWith('/api/v1/admin/capabilities', { cache: 'no-store' })
+    get.mockResolvedValue({ canManageCatalog: false, canManageAccounts: false, canReadAudit: false })
     expect(await access.verify()).toBe(false)
     expect(access.state).toBe('denied')
   })
@@ -40,7 +40,7 @@ describe('server-confirmed administrator admission', () => {
     const access = useAdminAccessStore()
     const check = access.verify()
     auth.setSession(adminTestJwt('learner-2'), { id: 'learner-2', email: 'learner@example.test', name: 'Learner', preferredLocale: 'en' })
-    pending.resolve({ canManageCatalog: true })
+    pending.resolve({ canManageCatalog: true, canManageAccounts: true, canReadAudit: true })
     expect(await check).toBe(false)
     expect(access.isAuthorized).toBe(false)
   })
@@ -51,7 +51,7 @@ describe('server-confirmed administrator admission', () => {
     access.state = 'authorized'
     const dashboard = useAdminDashboardStore()
     dashboard.aiProbe = { checkedAt: '2026-10-14T10:00:00Z' } as never
-    get.mockResolvedValue({ canManageCatalog: false })
+    get.mockResolvedValue({ canManageCatalog: false, canManageAccounts: false, canReadAudit: false })
     expect(await access.verify()).toBe(false)
     expect(access.state).toBe('denied')
     expect(dashboard.aiProbe).toBeNull()

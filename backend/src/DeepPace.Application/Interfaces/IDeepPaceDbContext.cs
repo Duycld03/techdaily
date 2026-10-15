@@ -25,6 +25,7 @@ public interface IDeepPaceDbContext
     DbSet<EmailOtp> EmailOtps { get; }
     DbSet<CatalogDocument> CatalogDocuments { get; }
     DbSet<CatalogSlice> CatalogSlices { get; }
+    DbSet<AdminAuditEvent> AdminAuditEvents { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

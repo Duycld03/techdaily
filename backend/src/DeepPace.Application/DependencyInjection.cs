@@ -114,6 +114,17 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<Features.Catalog.Admin.Publish.AdminPublishCatalogDocumentRequest, Features.Catalog.DTOs.AdminCatalogDocumentDto>, Features.Catalog.Admin.Publish.AdminPublishCatalogDocumentHandler>();
         services.AddScoped<IUseCase<Features.Catalog.Admin.Hide.AdminHideCatalogDocumentRequest, Features.Catalog.DTOs.AdminCatalogDocumentDto>, Features.Catalog.Admin.Hide.AdminHideCatalogDocumentHandler>();
 
+        // Administrator Accounts Handlers
+        services.AddScoped<IUseCase<Features.Admin.Accounts.AdminGetAccountsRequest, Features.Admin.Accounts.DTOs.AdminPagedResult<Features.Admin.Accounts.DTOs.AdminAccountSummaryDto>>, Features.Admin.Accounts.AdminGetAccountsHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Accounts.AdminGetAccountByIdRequest, Features.Admin.Accounts.DTOs.AdminAccountDetailDto>, Features.Admin.Accounts.AdminGetAccountByIdHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Accounts.AdminSuspendUserRequest, Features.Admin.Accounts.DTOs.AdminAccountDetailDto>, Features.Admin.Accounts.AdminSuspendUserHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Accounts.AdminReactivateUserRequest, Features.Admin.Accounts.DTOs.AdminAccountDetailDto>, Features.Admin.Accounts.AdminReactivateUserHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Accounts.AdminRevokeUserSessionsRequest, Features.Admin.Accounts.DTOs.AdminAccountDetailDto>, Features.Admin.Accounts.AdminRevokeUserSessionsHandler>();
+
+        // Administrator Audit Handlers
+        services.AddScoped<IUseCase<Features.Admin.Audit.AdminGetAuditEventsRequest, Features.Admin.Accounts.DTOs.AdminPagedResult<Features.Admin.Audit.DTOs.AdminAuditEventDto>>, Features.Admin.Audit.AdminGetAuditEventsHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Audit.AdminGetAuditEventByIdRequest, Features.Admin.Audit.DTOs.AdminAuditEventDetailDto>, Features.Admin.Audit.AdminGetAuditEventByIdHandler>();
+
         return services;
     }
 }

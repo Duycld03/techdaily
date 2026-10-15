@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using FluentValidation;
 using Microsoft.Extensions.Logging;
@@ -6,7 +7,6 @@ using DeepPace.Application.Features.Catalog.DTOs;
 using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
-
 namespace DeepPace.Application.Features.Catalog.Admin.ImportUrl;
 
 public record AdminImportCatalogUrlRequest(
@@ -108,20 +108,52 @@ public class AdminImportCatalogUrlHandler : IUseCase<AdminImportCatalogUrlReques
             doc.ProcessingStatus = ProcessingStatus.Pending;
             doc.ProcessingStatusMessage = "Detected remote PDF enqueued for extraction";
             await _dbContext.CatalogDocuments.AddAsync(doc, cancellationToken);
+            if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+            {
+                var audit = AdminAuditEvent.Create(
+                    actorUserId: request.AdminUserId.Value,
+                    action: AdminAuditActions.CatalogImportUrl,
+                    targetType: "CatalogDocument",
+                    targetId: doc.Id.ToString(),
+                    outcome: AdminAuditOutcome.Accepted,
+                    correlationId: doc.Id.ToString(),
+                    changedFields: new[] { "Visibility", "ProcessingStatus", "ProcessingGeneration" },
+                    statePayload: JsonSerializer.Serialize(new { Visibility = doc.Visibility.ToString(), ProcessingGeneration = doc.ProcessingGeneration }));
+                await _dbContext.AdminAuditEvents.AddAsync(audit, cancellationToken);
+            }
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            await _pdfQueue.EnqueueAsync(new PdfIngestJob(
-                TargetId: doc.Id,
-                TempFilePath: tempPdfPath,
-                DocumentTitle: doc.Title,
-                Category: doc.Category,
-                Language: doc.Language,
-                DestinationType: IngestionDestinationType.CatalogDocument,
-                Generation: doc.ProcessingGeneration), cancellationToken);
+            try
+            {
+                await _pdfQueue.EnqueueAsync(new PdfIngestJob(
+                    TargetId: doc.Id,
+                    TempFilePath: tempPdfPath,
+                    DocumentTitle: doc.Title,
+                    Category: doc.Category,
+                    Language: doc.Language,
+                    DestinationType: IngestionDestinationType.CatalogDocument,
+                    Generation: doc.ProcessingGeneration), cancellationToken);
+            }
+            catch (Exception)
+            {
+                if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+                {
+                    var failAudit = AdminAuditEvent.Create(
+                        actorUserId: request.AdminUserId.Value,
+                        action: AdminAuditActions.CatalogDispatchFailed,
+                        targetType: "CatalogDocument",
+                        targetId: doc.Id.ToString(),
+                        outcome: AdminAuditOutcome.Failed,
+                        errorCode: "DISPATCH_FAILED",
+                        correlationId: doc.Id.ToString());
+                    await _dbContext.AdminAuditEvents.AddAsync(failAudit, cancellationToken);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+            }
 
             return doc.ToAdminDto();
-        }
 
+        }
         // Web article: split into chunks and prepare
         var rawChunks = SplitIntoChunks(crawlResult.MarkdownContent);
         if (rawChunks.Count == 0)
@@ -208,8 +240,20 @@ public class AdminImportCatalogUrlHandler : IUseCase<AdminImportCatalogUrlReques
         }
 
         await _dbContext.CatalogDocuments.AddAsync(doc, cancellationToken);
+        if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+        {
+            var audit = AdminAuditEvent.Create(
+                actorUserId: request.AdminUserId.Value,
+                action: AdminAuditActions.CatalogImportUrl,
+                targetType: "CatalogDocument",
+                targetId: doc.Id.ToString(),
+                outcome: AdminAuditOutcome.Succeeded,
+                correlationId: doc.Id.ToString(),
+                changedFields: new[] { "Visibility", "ProcessingStatus", "TotalSlices" },
+                statePayload: JsonSerializer.Serialize(new { Visibility = doc.Visibility.ToString(), TotalSlices = doc.TotalSlices }));
+            await _dbContext.AdminAuditEvents.AddAsync(audit, cancellationToken);
+        }
         await _dbContext.SaveChangesAsync(cancellationToken);
-
         return doc.ToAdminDto();
     }
 

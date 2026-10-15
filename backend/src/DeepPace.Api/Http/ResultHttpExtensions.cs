@@ -26,7 +26,7 @@ public static class ResultHttpExtensions
         {
             return StatusCodes.Status401Unauthorized;
         }
-        if (code == "FORBIDDEN")
+        if (code == "FORBIDDEN" || code == "AUTH_FORBIDDEN" || code == "AUTH_ACCOUNT_SUSPENDED")
         {
             return StatusCodes.Status403Forbidden;
         }
@@ -35,7 +35,11 @@ public static class ResultHttpExtensions
             || code.Contains("Ineligible", StringComparison.OrdinalIgnoreCase)
             || code.Contains("Stale", StringComparison.OrdinalIgnoreCase)
             || code.Contains("Busy", StringComparison.OrdinalIgnoreCase)
-            || code.Contains("PublicationFailed", StringComparison.OrdinalIgnoreCase))
+            || code.Contains("PublicationFailed", StringComparison.OrdinalIgnoreCase)
+            || code.Contains("Protected", StringComparison.OrdinalIgnoreCase)
+            || code.Contains("Blocked", StringComparison.OrdinalIgnoreCase)
+            || code.Contains("InvalidTransition", StringComparison.OrdinalIgnoreCase)
+            || code.Contains("PublishedImmutable", StringComparison.OrdinalIgnoreCase))
         {
             return StatusCodes.Status409Conflict;
         }

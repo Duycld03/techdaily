@@ -68,3 +68,33 @@ public enum CatalogVisibility
     Published = 1,
     Hidden = 2
 }
+
+public enum AccountStatus
+{
+    Active = 1,
+    Suspended = 2
+}
+
+public enum AdminAuditOutcome
+{
+    Succeeded = 1,
+    Accepted = 2,
+    Rejected = 3,
+    Failed = 4
+}
+
+public static class AdminAuditActions
+{
+    public const string UserSuspend = "User.Suspend";
+    public const string UserReactivate = "User.Reactivate";
+    public const string UserRevokeSessions = "User.RevokeSessions";
+
+    public const string CatalogUploadPdf = "Catalog.UploadPdf";
+    public const string CatalogImportUrl = "Catalog.ImportUrl";
+    public const string CatalogUpdateMetadata = "Catalog.UpdateMetadata";
+    public const string CatalogPrepare = "Catalog.Prepare";
+    public const string CatalogReview = "Catalog.Review";
+    public const string CatalogPublish = "Catalog.Publish";
+    public const string CatalogHide = "Catalog.Hide";
+    public const string CatalogDispatchFailed = "Catalog.DispatchFailed";
+}

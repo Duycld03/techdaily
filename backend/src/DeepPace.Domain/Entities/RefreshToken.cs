@@ -12,6 +12,7 @@ public class RefreshToken : BaseEntity
     public DateTimeOffset? RevokedAt { get; set; }
     public Guid? ReplacedByTokenId { get; set; }
     public bool IsPersistent { get; set; } = true;
+    public int AuthenticationVersion { get; set; } = 1;
 
     // Navigation properties
     public User? User { get; set; }

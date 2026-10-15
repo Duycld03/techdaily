@@ -73,3 +73,25 @@ If a complete database rollback is deemed necessary during a planned maintenance
    ```
 3. **Data Preservation Rule:**
    Never truncate or drop personal books (`DocumentBooks`) when reverting catalog tables.
+
+---
+
+## 5. Catalog Mutation Audit Integration & Dispatch Recovery
+
+### 5.1 Atomic Mutation and Audit Recording
+All catalog administrative mutations (PDF upload, URL import, metadata update, preparation/retry, review, publication, hiding) atomically stage and commit an append-only `AdminAuditEvent` in the same relational transaction:
+- Synchronous state changes (Metadata update, Slice review, Publication, Hiding) record a `Succeeded` outcome.
+- Asynchronous operations (PDF upload, URL import, Preparation/retry) record an `Accepted` outcome. The `Accepted` event marks explicit command acceptance and generation advancement; it does NOT claim background extraction or AI processing has finished.
+- Validation and authorization rejections record a `Rejected` outcome with the safe error code (e.g., `Catalog.PublicationIneligible`, `Catalog.ConcurrencyConflict`, `Catalog.PublishedImmutable`, `Catalog.Busy`) without mutating catalog document state.
+
+### 5.2 Post-Commit Dispatch and Failure Recovery
+Background queue work (`PdfIngestionQueue.EnqueueAsync`) is intentionally dispatched **after** the acceptance transaction commits. If queue dispatch fails due to an unexpected process or queue fault:
+1. The committed `Accepted` event remains truthful history.
+2. A correlated `CatalogDispatchFailed` event is appended with outcome `Failed` and error code `DISPATCH_FAILED`.
+3. The API returns a recoverable response referencing the created/accepted catalog draft.
+4. The administrator can safely trigger **Retry Preparation** (`POST /api/v1/admin/catalog/documents/{id}/prepare`) from `/admin/catalog`, advancing the processing generation and re-enqueuing the job without data loss.
+
+### 5.3 Migration & Rollback Limits
+Schema changes for administrative account controls and audit logging (`20261015100000_AddAdminAccountsAndAudit`) are strictly additive. Once an account has been suspended, reactivated, or had sessions revoked, or once administrative audit events have been appended:
+- **Forward Repair Preferred:** Any incident must be resolved via forward repair. Reverting the database migration or restoring older binary images that ignore authentication versions and suspension would allow suspended accounts to bypass access controls.
+- **Audit Record Preservation:** Audit records in `AdminAuditEvents` are immutable and append-only. Under no circumstances should audit rows be deleted or truncated during rollback.
