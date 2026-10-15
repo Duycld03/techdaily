@@ -131,18 +131,20 @@ async function handleSubmit() {
       toast.success(t('admin_catalog.toasts.pdf_draft_created'))
       emit('created', res.id)
     } else {
-      if (!sourceUrl.value.trim()) {
+      const targetUrl = previewUrlInput.value.trim() || sourceUrl.value.trim()
+      if (!targetUrl) {
         toast.error(t('admin_catalog.toasts.source_url_required'))
         isSubmitting.value = false
         return
       }
 
       const res = await catalogStore.importUrl({
-        sourceUrl: sourceUrl.value.trim(),
+        url: targetUrl,
         title: title.value.trim(),
         description: title.value.trim(),
         category: category.value,
         language: language.value,
+        authorOrSourceUrl: sourceUrl.value.trim() || undefined,
         attributionText: attribution.value.trim() || undefined
       })
 

@@ -7,7 +7,7 @@ import AdminCatalogDraftForm from '~/components/catalog/admin/AdminCatalogDraftF
 import AdminCatalogSlicesReview from '~/components/catalog/admin/AdminCatalogSlicesReview.vue'
 import AdminCatalogDocumentDetail from '~/components/catalog/admin/AdminCatalogDocumentDetail.vue'
 import AdminCatalogSliceModal from '~/components/catalog/admin/AdminCatalogSliceModal.vue'
-import type { AdminCatalogDocumentDto, AdminCatalogSliceDto } from '~/stores/useCatalogStore'
+import { useCatalogStore, type AdminCatalogDocumentDto, type AdminCatalogSliceDto } from '~/stores/useCatalogStore'
 
 const mockDoc: AdminCatalogDocumentDto = {
   id: 'doc-1',
@@ -164,6 +164,114 @@ describe('AdminCatalogDraftForm.vue', () => {
     expect(cancelBtn).toBeDefined()
     await cancelBtn!.trigger('click')
     expect(wrapper.emitted('cancel')).toBeTruthy()
+  })
+
+  it('submits web URL draft with correct contract payload when target URL is provided via previewUrlInput', async () => {
+    const store = useCatalogStore()
+    const mockImport = vi.fn().mockResolvedValue({ id: 'doc-imported-1' })
+    store.importUrl = mockImport
+
+    const wrapper = mount(AdminCatalogDraftForm, {
+      global: defaultGlobal
+    })
+
+    // Switch to URL mode
+    const urlModeBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.import_url'))
+    expect(urlModeBtn).toBeDefined()
+    await urlModeBtn!.trigger('click')
+
+    // Set title and preview URL
+    const titleInput = wrapper.findAll('input[type="text"]').find(i => i.attributes('placeholder') === 'admin_catalog.form.title_placeholder')
+    expect(titleInput).toBeDefined()
+    await titleInput!.setValue('Next.js Documentation')
+
+    const urlInput = wrapper.find('input[type="url"]')
+    expect(urlInput.exists()).toBe(true)
+    await urlInput.setValue('https://nextjs.org/docs')
+
+    // Submit
+    const submitBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.create_draft_btn'))
+    expect(submitBtn).toBeDefined()
+    await submitBtn!.trigger('click')
+
+    expect(mockImport).toHaveBeenCalledWith({
+      url: 'https://nextjs.org/docs',
+      title: 'Next.js Documentation',
+      description: 'Next.js Documentation',
+      category: 0,
+      language: 'en',
+      authorOrSourceUrl: undefined,
+      attributionText: undefined
+    })
+    expect(wrapper.emitted('created')).toBeTruthy()
+    expect(wrapper.emitted('created')![0]).toEqual(['doc-imported-1'])
+  })
+
+  it('submits web URL draft using sourceUrl and attributionText when metadata fields are filled', async () => {
+    const store = useCatalogStore()
+    const mockImport = vi.fn().mockResolvedValue({ id: 'doc-imported-2' })
+    store.importUrl = mockImport
+
+    const wrapper = mount(AdminCatalogDraftForm, {
+      global: defaultGlobal
+    })
+
+    // Switch to URL mode
+    const urlModeBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.import_url'))
+    await urlModeBtn!.trigger('click')
+
+    // Set title
+    const titleInput = wrapper.findAll('input[type="text"]').find(i => i.attributes('placeholder') === 'admin_catalog.form.title_placeholder')
+    await titleInput!.setValue('Next.js Documentation')
+
+    // Set metadata sourceUrl and attribution
+    const sourceUrlInput = wrapper.findAll('input[type="text"]').find(i => i.attributes('placeholder') === 'admin_catalog.form.url_placeholder')
+    expect(sourceUrlInput).toBeDefined()
+    await sourceUrlInput!.setValue('https://nextjs.org/docs')
+
+    const attributionInput = wrapper.findAll('input[type="text"]').find(i => i.attributes('placeholder') === 'admin_catalog.form.attribution_placeholder')
+    expect(attributionInput).toBeDefined()
+    await attributionInput!.setValue('Vercel')
+
+    // Submit
+    const submitBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.create_draft_btn'))
+    await submitBtn!.trigger('click')
+
+    expect(mockImport).toHaveBeenCalledWith({
+      url: 'https://nextjs.org/docs',
+      title: 'Next.js Documentation',
+      description: 'Next.js Documentation',
+      category: 0,
+      language: 'en',
+      authorOrSourceUrl: 'https://nextjs.org/docs',
+      attributionText: 'Vercel'
+    })
+    expect(wrapper.emitted('created')![0]).toEqual(['doc-imported-2'])
+  })
+
+  it('blocks submission when target URL is missing in web mode', async () => {
+    const store = useCatalogStore()
+    const mockImport = vi.fn()
+    store.importUrl = mockImport
+
+    const wrapper = mount(AdminCatalogDraftForm, {
+      global: defaultGlobal
+    })
+
+    // Switch to URL mode
+    const urlModeBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.import_url'))
+    await urlModeBtn!.trigger('click')
+
+    // Set title only
+    const titleInput = wrapper.findAll('input[type="text"]').find(i => i.attributes('placeholder') === 'admin_catalog.form.title_placeholder')
+    await titleInput!.setValue('Next.js Documentation')
+
+    // Submit without URL
+    const submitBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.create_draft_btn'))
+    await submitBtn!.trigger('click')
+
+    expect(mockImport).not.toHaveBeenCalled()
+    expect(wrapper.emitted('created')).toBeFalsy()
   })
 })
 
