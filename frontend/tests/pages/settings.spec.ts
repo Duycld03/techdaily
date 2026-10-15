@@ -393,4 +393,22 @@ describe('SettingsPage Unified Navigation & Account Tabs', () => {
 
     expect(changePwdSpy).toHaveBeenCalled()
   })
+
+  it('uses canonical deeppace_auto_advance_cards storage key and preserves preference', async () => {
+    localStorage.setItem('deeppace_auto_advance_cards', 'false')
+    const wrapper = mount(SettingsPage, {
+      global: {
+        stubs: {
+          StudioLayout: { template: '<div><slot name="header" /><slot name="main" /></div>' },
+          AppTimePicker: { template: '<div>AppTimePicker</div>' },
+          AppSelect: { template: '<div>AppSelect</div>' }
+        },
+        mocks: {
+          $t: (key: string) => key
+        }
+      }
+    })
+    await flushPromises()
+    expect(localStorage.getItem('techdaily-auto-advance-cards')).toBeNull()
+  })
 })
