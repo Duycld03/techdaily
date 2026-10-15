@@ -19,6 +19,7 @@ import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 import { useAdminAuditStore, type AdminAuditEventSummary } from '~/stores/useAdminAuditStore'
 import BoardLayout from '~/components/layout/BoardLayout.vue'
 import AppModal from '~/components/ui/AppModal.vue'
+import AppSelect, { type SelectOption } from '~/components/common/AppSelect.vue'
 
 definePageMeta({
   layout: 'admin'
@@ -26,6 +27,7 @@ definePageMeta({
 
 const access = useAdminAccessStore()
 const store = useAdminAuditStore()
+const { t } = useI18n()
 
 const selectedOutcome = ref<string>('')
 const actionInput = ref<string>('')
@@ -33,6 +35,28 @@ const targetIdInput = ref<string>('')
 const fromInput = ref<string>('')
 const toInput = ref<string>('')
 
+const outcomeOptions = computed<SelectOption[]>(() => [
+  { value: '', label: t('admin_audit.filter_outcome_all') },
+  { value: 'Succeeded', label: t('admin_audit.outcome_succeeded') },
+  { value: 'Accepted', label: t('admin_audit.outcome_accepted') },
+  { value: 'Rejected', label: t('admin_audit.outcome_rejected') },
+  { value: 'Failed', label: t('admin_audit.outcome_failed') }
+])
+
+function formatOutcome(outcome: string): string {
+  switch (outcome) {
+    case 'Succeeded':
+      return t('admin_audit.outcome_succeeded')
+    case 'Accepted':
+      return t('admin_audit.outcome_accepted')
+    case 'Rejected':
+      return t('admin_audit.outcome_rejected')
+    case 'Failed':
+      return t('admin_audit.outcome_failed')
+    default:
+      return outcome
+  }
+}
 const detailModalOpen = ref(false)
 
 onMounted(async () => {
@@ -118,17 +142,15 @@ const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) |
           />
 
           <!-- Outcome filter select -->
-          <select
-            v-model="selectedOutcome"
-            class="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-canvas-subtle px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            @change="applyFilters"
-          >
-            <option value="">{{ $t('admin_audit.filter_outcome_all') }}</option>
-            <option value="Succeeded">{{ $t('admin_audit.outcome_succeeded') }}</option>
-            <option value="Accepted">{{ $t('admin_audit.outcome_accepted') }}</option>
-            <option value="Rejected">{{ $t('admin_audit.outcome_rejected') }}</option>
-            <option value="Failed">{{ $t('admin_audit.outcome_failed') }}</option>
-          </select>
+          <div class="w-40 shrink-0">
+            <AppSelect
+              v-model="selectedOutcome"
+              :options="outcomeOptions"
+              size="sm"
+              :aria-label="$t('admin_audit.outcome')"
+              @change="applyFilters"
+            />
+          </div>
 
           <!-- Target ID input -->
           <input
@@ -143,7 +165,7 @@ const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) |
           <input
             v-model="fromInput"
             type="text"
-            placeholder="From (YYYY-MM-DD)"
+            :placeholder="$t('admin_audit.filter_from')"
             class="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-canvas-subtle px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             @keydown.enter="applyFilters"
           />
@@ -152,7 +174,7 @@ const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) |
           <input
             v-model="toInput"
             type="text"
-            placeholder="To (YYYY-MM-DD)"
+            :placeholder="$t('admin_audit.filter_to')"
             class="rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-canvas-subtle px-3 py-1.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             @keydown.enter="applyFilters"
           />
@@ -219,7 +241,7 @@ const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) |
                       'bg-rose-500/10 text-rose-600 dark:text-rose-400': evt.outcome === 'Failed'
                     }"
                   >
-                    {{ evt.outcome }}
+                    {{ formatOutcome(evt.outcome) }}
                   </span>
                 </div>
 
@@ -278,7 +300,7 @@ const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) |
           </div>
           <div>
             <span class="text-slate-400 block">{{ $t('admin_audit.outcome') }}</span>
-            <span class="font-semibold">{{ store.selectedEvent.outcome }}</span>
+            <span class="font-semibold">{{ formatOutcome(store.selectedEvent.outcome) }}</span>
           </div>
           <div>
             <span class="text-slate-400 block">{{ $t('admin_audit.actor') }}</span>

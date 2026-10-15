@@ -175,18 +175,13 @@ function handleRetry() {
 
           <!-- Processing Status Badge -->
           <span :class="[
-            'px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 border whitespace-nowrap shrink-0',
+            'px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap shrink-0',
             document.processingStatus === 'Ready'
               ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
               : document.processingStatus === 'Failed'
               ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
               : 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-500/20'
           ]">
-            <span :class="[
-              'w-2 h-2 rounded-full shrink-0',
-              document.processingStatus === 'Ready' ? 'bg-emerald-500' :
-              document.processingStatus === 'Failed' ? 'bg-rose-500' : 'bg-brand-500 animate-pulse'
-            ]"></span>
             <span>{{ getStatusLabel(document.processingStatus) }}</span>
           </span>
 

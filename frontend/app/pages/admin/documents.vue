@@ -31,7 +31,7 @@ definePageMeta({
 const access = useAdminAccessStore()
 const store = useAdminDocumentsStore()
 const toast = useToast()
-
+const { t } = useI18n()
 const searchInput = ref('')
 const selectedScope = ref<'Personal' | 'Catalog' | ''>('')
 const selectedStatus = ref('')
@@ -123,6 +123,53 @@ function formatDate(iso: string | null | undefined): string {
     return iso
   }
 }
+function formatDocumentStatus(status: string): string {
+  switch (status.toLowerCase()) {
+    case 'ready':
+      return t('admin_documents.status_ready')
+    case 'failed':
+      return t('admin_documents.status_failed')
+    case 'processing':
+    case 'running':
+      return t('admin_documents.status_processing')
+    case 'queued':
+    case 'pending':
+      return t('admin_documents.status_queued')
+    default:
+      return status
+  }
+}
+
+function formatScope(scope: string): string {
+  if (scope.toLowerCase() === 'personal') return t('admin_documents.scope_personal')
+  if (scope.toLowerCase() === 'catalog') return t('admin_documents.scope_catalog')
+  return scope
+}
+
+function formatSourceAvailability(availability: string): string {
+  switch (availability.toLowerCase()) {
+    case 'missing':
+      return t('admin_documents.source_missing')
+    case 'available':
+      return t('admin_documents.source_available')
+    case 'permanent':
+      return t('admin_documents.source_permanent')
+    case 'temporary':
+      return t('admin_documents.source_temporary')
+    default:
+      return availability
+  }
+}
+
+function formatIneligibleReason(code?: string | null, fallback?: string | null): string {
+  if (code) {
+    const key = `admin_documents.ineligible_${code}`
+    const translated = t(key)
+    if (translated && translated !== key) return translated
+  }
+  return fallback || t('admin_documents.retry_ineligible')
+}
+
 
 function stateBadgeClass(state: string): string {
   const s = state.toLowerCase()
@@ -270,13 +317,13 @@ function stateBadgeClass(state: string): string {
                   class="rounded-full px-2 py-0.5 text-xs font-semibold border whitespace-nowrap shrink-0"
                   :class="stateBadgeClass(doc.status)"
                 >
-                  {{ doc.status }}
+                  {{ formatDocumentStatus(doc.status) }}
                 </span>
               </div>
 
               <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                 <span class="rounded bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 font-medium whitespace-nowrap shrink-0">
-                  {{ doc.scope }}
+                  {{ formatScope(doc.scope) }}
                 </span>
                 <span class="truncate">
                   {{ doc.ownerName || $t('admin_documents.system_catalog') }}
@@ -295,7 +342,7 @@ function stateBadgeClass(state: string): string {
                 :disabled="store.page <= 1"
                 @click="handlePageChange(store.page - 1)"
               >
-                Prev
+                {{ $t('admin_documents.prev') }}
               </button>
               <button
                 type="button"
@@ -303,7 +350,7 @@ function stateBadgeClass(state: string): string {
                 :disabled="store.page >= totalPages"
                 @click="handlePageChange(store.page + 1)"
               >
-                Next
+                {{ $t('admin_documents.next') }}
               </button>
             </div>
           </div>
@@ -327,10 +374,10 @@ function stateBadgeClass(state: string): string {
             <div>
               <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span class="rounded bg-brand-500/10 text-brand-700 dark:text-brand-300 px-2 py-0.5 text-xs font-semibold border border-brand-500/20 whitespace-nowrap shrink-0">
-                  {{ store.selectedDocument.scope }}
+                  {{ formatScope(store.selectedDocument.scope) }}
                 </span>
                 <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold border whitespace-nowrap shrink-0" :class="stateBadgeClass(store.selectedDocument.status)">
-                  {{ store.selectedDocument.status }}
+                  {{ formatDocumentStatus(store.selectedDocument.status) }}
                 </span>
                 <span class="text-xs text-slate-400 font-mono">
                   v{{ store.selectedDocument.controlVersion }} (gen {{ store.selectedDocument.currentAttemptGeneration }})
@@ -357,7 +404,7 @@ function stateBadgeClass(state: string): string {
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 text-xs text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10"
               >
                 <AlertCircle class="h-4 w-4 text-amber-500 shrink-0" />
-                <span>{{ store.selectedDocument.ineligibleReason || $t('admin_documents.retry_ineligible') }}</span>
+                <span>{{ formatIneligibleReason(store.selectedDocument.ineligibleReasonCode, store.selectedDocument.ineligibleReason) }}</span>
               </div>
             </div>
           </div>
@@ -380,17 +427,17 @@ function stateBadgeClass(state: string): string {
                 {{ store.selectedDocument.category }} ({{ store.selectedDocument.language }})
               </p>
               <p class="text-xs text-slate-500">
-                {{ store.selectedDocument.sourceType }} &bull; {{ store.selectedDocument.sourceAvailability }}
+                {{ store.selectedDocument.sourceType }} &bull; {{ formatSourceAvailability(store.selectedDocument.sourceAvailability) }}
               </p>
             </div>
 
             <div class="p-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-canvas-subtle/50 space-y-1">
-              <span class="text-xs text-slate-400 block">Timestamps</span>
+              <span class="text-xs text-slate-400 block">{{ $t('admin_documents.timestamps_heading') }}</span>
               <p class="text-xs text-slate-700 dark:text-slate-300">
-                Created: {{ formatDate(store.selectedDocument.createdAt) }}
+                {{ $t('admin_documents.created_label') }}: {{ formatDate(store.selectedDocument.createdAt) }}
               </p>
               <p class="text-xs text-slate-500">
-                Observed: {{ formatDate(store.selectedDocument.observedAt) }}
+                {{ $t('admin_documents.observed_label') }}: {{ formatDate(store.selectedDocument.observedAt) }}
               </p>
             </div>
           </div>
@@ -429,14 +476,14 @@ function stateBadgeClass(state: string): string {
                     </span>
                   </div>
                   <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold border whitespace-nowrap shrink-0" :class="stateBadgeClass(att.state)">
-                    {{ att.state }} ({{ att.progressPercent }}%)
+                    {{ formatDocumentStatus(att.state) }} ({{ att.progressPercent }}%)
                   </span>
                 </div>
 
                 <div class="text-xs text-slate-500 flex gap-4 flex-wrap">
-                  <span>Queued: {{ formatDate(att.queuedAtUtc) }}</span>
-                  <span v-if="att.startedAtUtc">Started: {{ formatDate(att.startedAtUtc) }}</span>
-                  <span v-if="att.endedAtUtc">Ended: {{ formatDate(att.endedAtUtc) }}</span>
+                  <span>{{ $t('admin_documents.queued_label') }}: {{ formatDate(att.queuedAtUtc) }}</span>
+                  <span v-if="att.startedAtUtc">{{ $t('admin_documents.started_label') }}: {{ formatDate(att.startedAtUtc) }}</span>
+                  <span v-if="att.endedAtUtc">{{ $t('admin_documents.ended_label') }}: {{ formatDate(att.endedAtUtc) }}</span>
                 </div>
 
                 <div v-if="att.safeErrorCode || att.safeErrorGuidance" class="mt-2 p-2.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-xs text-rose-700 dark:text-rose-300">
