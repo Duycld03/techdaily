@@ -25,6 +25,7 @@ BenchmarkDotNet.Artifacts/
 # Node / Nuxt 4 / Frontend Artifacts
 # --------------------------------------------------------------------
 node_modules/
+node_modules
 .output/
 .nuxt/
 .nitro/
