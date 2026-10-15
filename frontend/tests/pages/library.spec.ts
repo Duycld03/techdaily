@@ -659,8 +659,8 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     })
   })
 
-  describe('Two-Tier Header Filter Bar', () => {
-    it('renders search input and category chips in two tiers with reset button hidden initially', async () => {
+  describe('Single-Row Header Filter Bar Parity', () => {
+    it('renders search input and category chips with Discover parity and no inline reset button', async () => {
       const wrapper = mount(LibraryPage, {
         global: {
           stubs: {
@@ -677,11 +677,12 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       const categoryContainer = wrapper.find('[data-testid="library-category-chips"]')
       expect(categoryContainer.exists()).toBe(true)
 
+      // Inline reset button must be removed for toolbar parity with Discover
       const resetBtn = wrapper.find('[data-testid="library-reset-filters-btn"]')
       expect(resetBtn.exists()).toBe(false)
     })
 
-    it('shows reset button when category is selected and resets filters when clicked', async () => {
+    it('resets category filter when "All" chip is clicked', async () => {
       const mockReplace = vi.fn()
       vi.stubGlobal('useRouter', () => ({
         push: vi.fn(),
@@ -702,27 +703,32 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       const categoryChips = wrapper.findAll('[data-testid="library-category-chips"] button')
       expect(categoryChips.length).toBeGreaterThan(1)
 
+      // Select a category chip
       await categoryChips[1].trigger('click')
-      await flushPromises()
-
-      const resetBtn = wrapper.find('[data-testid="library-reset-filters-btn"]')
-      expect(resetBtn.exists()).toBe(true)
-
-      await resetBtn.trigger('click')
       await flushPromises()
 
       expect(mockReplace).toHaveBeenCalledWith(
         expect.objectContaining({
           query: expect.objectContaining({
-            category: undefined,
-            search: undefined
+            category: '0'
           })
         })
       )
-      expect(wrapper.find('[data-testid="library-reset-filters-btn"]').exists()).toBe(false)
+
+      // Click "All" category chip (first button) to reset category
+      await categoryChips[0].trigger('click')
+      await flushPromises()
+
+      expect(mockReplace).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: expect.objectContaining({
+            category: undefined
+          })
+        })
+      )
     })
 
-    it('shows reset button and clear button when search input has value', async () => {
+    it('shows clear button with X icon when search input has value and clears input on click', async () => {
       const wrapper = mount(LibraryPage, {
         global: {
           stubs: {
@@ -737,10 +743,12 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       await searchInput.setValue('distributed systems')
       await flushPromises()
 
-      expect(wrapper.find('[data-testid="library-reset-filters-btn"]').exists()).toBe(true)
-      expect(wrapper.find('button[aria-label="Clear search"]').exists()).toBe(true)
+      const clearBtn = wrapper.find('button[aria-label="Clear search"]')
+      expect(clearBtn.exists()).toBe(true)
+      // Inline reset button should remain absent
+      expect(wrapper.find('[data-testid="library-reset-filters-btn"]').exists()).toBe(false)
 
-      await wrapper.find('button[aria-label="Clear search"]').trigger('click')
+      await clearBtn.trigger('click')
       await flushPromises()
 
       expect((searchInput.element as HTMLInputElement).value).toBe('')

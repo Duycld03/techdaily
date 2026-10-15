@@ -15,30 +15,61 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+function parseCategory(val: unknown): number | undefined {
+  if (typeof val === 'number' && !isNaN(val)) return val
+  if (typeof val === 'string') {
+    const parsed = parseInt(val, 10)
+    if (!isNaN(parsed)) return parsed
+    const nameMap: Record<string, number> = {
+      frontendweb: 0,
+      frontend: 0,
+      backendruntime: 1,
+      backend: 1,
+      databasestorage: 2,
+      database: 2,
+      systemdesign: 3,
+      engineeringcraft: 4,
+      craft: 4,
+      mentalmodels: 5,
+      habitsproductivity: 6,
+      habits: 6
+    }
+    const lower = val.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (lower in nameMap) return nameMap[lower]
+  }
+  return undefined
+}
+
 const categoryLabel = computed(() => {
-  const cat = props.document.category
+  const cat = parseCategory(props.document.category)
   switch (cat) {
     case 0: return t('library.categories.frontend')
     case 1: return t('library.categories.backend')
     case 2: return t('library.categories.database')
     case 3: return t('library.categories.system_design')
     case 4: return t('library.categories.craft')
-    case 5: return t('library.categories.cloud')
+    case 5: return t('library.categories.mental_models')
+    case 6: return t('library.categories.habits')
     default: return t('library.categories.all')
   }
 })
 
 const sourceTypeBadge = computed(() => {
-  switch (props.document.sourceType) {
-    case 1:
-      return { label: t('library.discover.source_web'), icon: Globe, class: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' }
-    case 2:
-      return { label: t('library.discover.source_pdf'), icon: FileText, class: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' }
-    case 3:
-      return { label: t('library.discover.source_markdown'), icon: Layers, class: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20' }
-    default:
-      return { label: t('library.discover.source_all'), icon: FileText, class: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' }
+  const st = props.document.sourceType
+  const isWeb = st === 1 || String(st).toLowerCase() === 'webdocurl' || String(st).toLowerCase() === 'web'
+  const isPdf = st === 2 || String(st).toLowerCase() === 'pdfbook' || String(st).toLowerCase() === 'pdf'
+  const isMarkdown = st === 3 || String(st).toLowerCase() === 'markdownseries' || String(st).toLowerCase() === 'markdown'
+
+  if (isWeb) {
+    return { label: t('library.discover.source_web'), icon: Globe, class: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' }
   }
+  if (isPdf) {
+    return { label: t('library.discover.source_pdf'), icon: FileText, class: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20' }
+  }
+  if (isMarkdown) {
+    return { label: t('library.discover.source_markdown'), icon: Layers, class: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20' }
+  }
+  return { label: t('library.discover.source_all'), icon: FileText, class: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20' }
 })
 
 const languageBadge = computed(() => {

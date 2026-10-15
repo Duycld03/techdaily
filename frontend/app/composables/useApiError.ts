@@ -85,14 +85,27 @@ export function useApiError() {
     }
 
     // 1. Check for machine-readable error code FIRST against i18n
-    const code =
+    const rawCode =
       (typeof responseData?.code === 'string' ? responseData.code : undefined) ||
+      (typeof (responseData?.extensions as Record<string, unknown> | undefined)?.code === 'string'
+        ? ((responseData?.extensions as Record<string, unknown>).code as string)
+        : undefined) ||
       (typeof errorObj?.code === 'string' ? errorObj.code : undefined)
 
-    if (code && te(`api_errors.${code}`)) {
-      return t(`api_errors.${code}`)
+    if (rawCode) {
+      // Try direct match (e.g. api_errors.Catalog.MissingPdfFile or api_errors.AUTH_INVALID_CREDENTIALS)
+      if (te(`api_errors.${rawCode}`)) {
+        return t(`api_errors.${rawCode}`)
+      }
+      // Try flat SNAKE_CASE alias (e.g. Catalog.MissingPdfFile -> CATALOG_MISSING_PDF_FILE)
+      const snakeCode = rawCode
+        .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+        .replace(/\./g, '_')
+        .toUpperCase()
+      if (te(`api_errors.${snakeCode}`)) {
+        return t(`api_errors.${snakeCode}`)
+      }
     }
-
     // 2. Check for backend detail and error messages BEFORE falling back to fallbackKey:
     if (responseData && typeof responseData === 'object') {
       // If responseData?.title and responseData?.detail, return `${responseData.title}: ${responseData.detail}`

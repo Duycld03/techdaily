@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
-import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb, GraduationCap, ChevronRight, Pencil, Compass, Eye, SlidersHorizontal, RotateCcw } from 'lucide-vue-next'
+import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb, GraduationCap, ChevronRight, Pencil, Compass, Eye, SlidersHorizontal } from 'lucide-vue-next'
 import AppModal from '~/components/ui/AppModal.vue'
 import BasePagination from '~/components/common/BasePagination.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
@@ -1003,12 +1003,11 @@ async function handleSaveEditBook() {
                 class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
                 aria-label="Clear search"
               >
-                <RotateCcw class="w-3.5 h-3.5" :stroke-width="1.5" />
-                <span>{{ $t('library.reset_filters') }}</span>
+                <X class="w-3.5 h-3.5" :stroke-width="1.5" />
               </button>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto" data-testid="library-category-chips">
+            <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar sm:overflow-visible py-0.5" data-testid="library-category-chips">
               <!-- Quick Category Chips matching Discover -->
               <button
                 v-for="cat in quickCategories"
@@ -1042,17 +1041,6 @@ async function handleSaveEditBook() {
                 </span>
               </button>
 
-              <!-- Reset Active Filters Trigger -->
-              <button
-                v-if="selectedCategory !== undefined || searchQuery || selectedLanguage"
-                type="button"
-                data-testid="library-reset-filters-btn"
-                @click="resetFilters"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <RotateCcw class="w-3.5 h-3.5" :stroke-width="1.5" />
-                <span>{{ $t('library.reset_filters') }}</span>
-              </button>
             </div>
           </div>
 
@@ -1076,7 +1064,7 @@ async function handleSaveEditBook() {
               </button>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar sm:overflow-visible py-0.5">
               <!-- Category Quick Pills -->
               <button
                 v-for="cat in quickDiscoverCategories"

@@ -47,10 +47,58 @@ const editAttribution = ref('')
 const editSourceUrl = ref('')
 const retryPdfFile = ref<File | null>(null)
 
+function parseCategory(val: unknown): number {
+  if (typeof val === 'number' && !isNaN(val)) return val
+  if (typeof val === 'string') {
+    const parsed = parseInt(val, 10)
+    if (!isNaN(parsed)) return parsed
+    const nameMap: Record<string, number> = {
+      frontendweb: 0,
+      frontend: 0,
+      backendruntime: 1,
+      backend: 1,
+      databasestorage: 2,
+      database: 2,
+      systemdesign: 3,
+      engineeringcraft: 4,
+      craft: 4,
+      mentalmodels: 5,
+      habitsproductivity: 6,
+      habits: 6
+    }
+    const lower = val.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (lower in nameMap) return nameMap[lower]
+  }
+  return 0
+}
+
+function formatUnmetRequirement(req: string): string {
+  if (!req) return ''
+  if (req.includes('Document processing must be complete')) {
+    return t('admin_catalog.unmet_processing_ready')
+  }
+  if (req.includes('at least one extracted slice')) {
+    return t('admin_catalog.unmet_slices_min')
+  }
+  if (req.includes('readable source content')) {
+    return t('admin_catalog.unmet_slices_readable')
+  }
+  const targetMatch = req.match(/First (\d+) initial slices require AI initial formatting/)
+  if (targetMatch) {
+    return t('admin_catalog.unmet_initial_slices_formatted', { target: targetMatch[1] })
+  }
+  if (req.includes('Source attribution or author URL is required')) {
+    return t('admin_catalog.unmet_attribution_required')
+  }
+  return req
+}
+
+const isPublished = computed(() => props.document?.visibility === 'Published')
+
 watch(() => props.document, (doc) => {
   if (doc) {
     editTitle.value = doc.title
-    editCategory.value = doc.category
+    editCategory.value = parseCategory(doc.category)
     editLanguage.value = doc.language || 'en'
     editAttribution.value = doc.attributionText || ''
     editSourceUrl.value = doc.authorOrSourceUrl || ''
@@ -227,7 +275,7 @@ function handleRetry() {
         </h3>
         <button
           type="button"
-          :disabled="isSavingMetadata"
+          :disabled="isSavingMetadata || isPublished"
           @click="handleSave"
           class="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 transition-all active:scale-95 whitespace-nowrap shrink-0 disabled:opacity-50 cursor-pointer"
         >
@@ -237,6 +285,16 @@ function handleRetry() {
         </button>
       </div>
 
+      <!-- Published Read-Only Notice Banner -->
+      <div
+        v-if="isPublished"
+        data-testid="admin-catalog-published-notice"
+        class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-start gap-2.5 text-xs sm:text-sm text-amber-800 dark:text-amber-300"
+      >
+        <AlertTriangle class="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+        <span>{{ $t('admin_catalog.metadata_published_readonly') }}</span>
+      </div>
+
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="sm:col-span-2 space-y-1.5">
           <label class="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
@@ -244,8 +302,9 @@ function handleRetry() {
           </label>
           <input
             v-model="editTitle"
+            :disabled="isPublished"
             type="text"
-            class="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 focus:outline-none focus:border-brand-500 transition-colors"
+            class="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -256,6 +315,7 @@ function handleRetry() {
           <AppSelect
             v-model="editCategory"
             :options="categoryOptions"
+            :disabled="isPublished"
             size="md"
           />
         </div>
@@ -267,6 +327,7 @@ function handleRetry() {
           <AppSelect
             v-model="editLanguage"
             :options="languageOptions"
+            :disabled="isPublished"
             size="md"
           />
         </div>
@@ -277,8 +338,9 @@ function handleRetry() {
           </label>
           <input
             v-model="editSourceUrl"
+            :disabled="isPublished"
             type="text"
-            class="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 focus:outline-none focus:border-brand-500 transition-colors"
+            class="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -288,8 +350,9 @@ function handleRetry() {
           </label>
           <input
             v-model="editAttribution"
+            :disabled="isPublished"
             type="text"
-            class="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 focus:outline-none focus:border-brand-500 transition-colors"
+            class="w-full px-3.5 py-2 text-xs sm:text-sm rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 focus:outline-none focus:border-brand-500 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           />
         </div>
 
@@ -321,7 +384,7 @@ function handleRetry() {
         </div>
         <ul class="list-disc list-inside space-y-1 text-amber-700 dark:text-amber-400 pl-1">
           <li v-for="req in document.unmetPublicationRequirements" :key="req">
-            {{ req }}
+            {{ formatUnmetRequirement(req) }}
           </li>
         </ul>
       </div>
@@ -348,7 +411,9 @@ function handleRetry() {
           </button>
 
           <!-- Publish Button -->
+          <!-- Publish Button (hidden when already published) -->
           <button
+            v-if="document.visibility !== 'Published'"
             type="button"
             :disabled="!document.isEligibleForPublication || isPublishing"
             @click="$emit('publish')"

@@ -17,15 +17,42 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+function parseCategory(val: unknown): number | undefined {
+  if (typeof val === 'number' && !isNaN(val)) return val
+  if (typeof val === 'string') {
+    const parsed = parseInt(val, 10)
+    if (!isNaN(parsed)) return parsed
+    const nameMap: Record<string, number> = {
+      frontendweb: 0,
+      frontend: 0,
+      backendruntime: 1,
+      backend: 1,
+      databasestorage: 2,
+      database: 2,
+      systemdesign: 3,
+      engineeringcraft: 4,
+      craft: 4,
+      mentalmodels: 5,
+      habitsproductivity: 6,
+      habits: 6
+    }
+    const lower = val.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (lower in nameMap) return nameMap[lower]
+  }
+  return undefined
+}
+
 const categoryLabel = computed(() => {
   if (!props.document) return ''
-  switch (props.document.category) {
+  const cat = parseCategory(props.document.category)
+  switch (cat) {
     case 0: return t('library.categories.frontend')
     case 1: return t('library.categories.backend')
     case 2: return t('library.categories.database')
     case 3: return t('library.categories.system_design')
     case 4: return t('library.categories.craft')
-    case 5: return t('library.categories.cloud')
+    case 5: return t('library.categories.mental_models')
+    case 6: return t('library.categories.habits')
     default: return t('library.categories.all')
   }
 })

@@ -26,7 +26,7 @@ const props = withDefaults(
     size?: 'sm' | 'md'
   }>(),
   {
-    placeholder: 'Select option...',
+    placeholder: '',
     disabled: false,
     options: () => [],
     teleport: true,
@@ -50,10 +50,28 @@ const selectedOption = computed(() => {
   return props.options.find(opt => String(opt.value) === String(props.modelValue))
 })
 
+let i18nInstance: { t: (key: string) => string; te?: (key: string) => boolean } | null = null
+try {
+  i18nInstance = useI18n()
+} catch {
+  // Not in i18n context
+}
+
+const effectivePlaceholder = computed(() => {
+  if (props.placeholder) return props.placeholder
+  if (i18nInstance?.te && i18nInstance.te('common.select_option')) {
+    return i18nInstance.t('common.select_option')
+  }
+  if (i18nInstance) {
+    const translated = i18nInstance.t('common.select_option')
+    if (translated && translated !== 'common.select_option') return translated
+  }
+  return 'Select option...'
+})
+
 const selectedLabel = computed(() => {
   return selectedOption.value?.label ?? ''
 })
-
 const sizeClasses = computed(() => {
   if (props.size === 'sm') {
     return 'h-8 px-3 gap-2 text-xs sm:text-sm'
@@ -272,7 +290,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (ev
       :aria-expanded="isOpen"
       :aria-haspopup="'listbox'"
       :aria-controls="listboxId"
-      :aria-label="ariaLabel || placeholder"
+      :aria-label="ariaLabel || effectivePlaceholder"
       :aria-activedescendant="isOpen && highlightedIndex >= 0 ? `${componentId}-opt-${highlightedIndex}` : undefined"
       :disabled="disabled"
       @click="toggleDropdown"
@@ -300,7 +318,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (ev
           class="truncate"
           :class="!selectedLabel ? 'text-slate-400 dark:text-slate-500' : ''"
         >
-          {{ selectedLabel || placeholder }}
+          {{ selectedLabel || effectivePlaceholder }}
         </span>
       </div>
 
@@ -328,7 +346,7 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (ev
           :id="listboxId"
           role="listbox"
           tabindex="-1"
-          :aria-label="ariaLabel || placeholder"
+          :aria-label="ariaLabel || effectivePlaceholder"
           @keydown="handleListboxKeydown"
           :style="floatingStyle"
           :class="[

@@ -129,4 +129,41 @@ describe('useApiError', () => {
     const result = formatError(error, 'settings.web_push_test_error')
     expect(result).toBe('api_errors.PUSH_NO_SUBSCRIPTIONS')
   })
+
+  it('resolves dotted domain error codes like Catalog.MissingPdfFile and Crawler.Failed', () => {
+    const { formatError } = useApiError()
+    const error = {
+      data: {
+        detail: 'Temporary upload file is no longer available.',
+        extensions: {
+          code: 'Catalog.MissingPdfFile'
+        }
+      }
+    }
+    const result = formatError(error)
+    expect(result).toBe('api_errors.Catalog.MissingPdfFile')
+  })
+
+  it('resolves flat SNAKE_CASE alias when dotted key is not found', () => {
+    const originalUseI18n = Reflect.get(globalThis, 'useI18n')
+    Reflect.set(globalThis, 'useI18n', () => ({
+      locale: { value: 'en' },
+      t: (key: string) => key,
+      te: (key: string) => key === 'api_errors.CATALOG_MISSING_PDF_FILE'
+    }))
+
+    try {
+      const { formatError } = useApiError()
+      const error = {
+        data: {
+          code: 'Catalog.MissingPdfFile',
+          detail: 'Raw detail'
+        }
+      }
+      const result = formatError(error)
+      expect(result).toBe('api_errors.CATALOG_MISSING_PDF_FILE')
+    } finally {
+      Reflect.set(globalThis, 'useI18n', originalUseI18n)
+    }
+  })
 })

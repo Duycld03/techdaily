@@ -22,13 +22,19 @@ defineEmits<{
           <span>{{ $t('admin_catalog.slices_review') }}</span>
         </h3>
         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          {{ $t('admin_catalog.document.slices_extracted_summary', { total: document.totalSlices }) }}
+          <span v-if="document.slices && document.slices.length > 0">
+            {{ $t('admin_catalog.slices_ready_summary', { total: document.totalSlices }) }}
+          </span>
+          <span v-else>
+            {{ $t('admin_catalog.document.slices_extracted_summary', { total: document.totalSlices }) }}
+          </span>
         </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-        <!-- Prepare Initial Slices Action -->
+        <!-- Prepare Initial Slices Action: only rendered when slices are unextracted / document not ready -->
         <button
+          v-if="(!document.slices || document.slices.length === 0) && document.processingStatus !== 'Ready'"
           type="button"
           :disabled="isPreparingSlices || document.processingStatus === 'Processing'"
           @click="$emit('prepare-slices')"
@@ -38,8 +44,6 @@ defineEmits<{
           <Clock v-else class="w-4 h-4 shrink-0" />
           <span class="whitespace-nowrap">{{ isPreparingSlices ? $t('admin_catalog.preparing') : $t('admin_catalog.prepare_action') }}</span>
         </button>
-
-
       </div>
     </div>
 

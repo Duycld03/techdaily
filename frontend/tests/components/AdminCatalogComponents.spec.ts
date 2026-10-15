@@ -168,7 +168,7 @@ describe('AdminCatalogDraftForm.vue', () => {
 })
 
 describe('AdminCatalogSlicesReview.vue', () => {
-  it('renders slices list and emits action events', async () => {
+  it('renders slices list and slices-ready summary when slices exist', async () => {
     const wrapper = mount(AdminCatalogSlicesReview, {
       props: {
         document: mockDoc,
@@ -179,14 +179,12 @@ describe('AdminCatalogSlicesReview.vue', () => {
 
     expect(wrapper.text()).toContain('Primer on Web Performance')
     expect(wrapper.text()).toContain('TCP Optimization')
+    expect(wrapper.text()).toContain('admin_catalog.slices_ready_summary')
 
-    // Find prepare and review buttons
+    // Prepare button must NOT be rendered when document is ready or has slices
     const buttons = wrapper.findAll('button')
     const prepareBtn = buttons.find(b => b.text().includes('admin_catalog.prepare_action'))
-    expect(prepareBtn).toBeDefined()
-    await prepareBtn!.trigger('click')
-    expect(wrapper.emitted('prepare-slices')).toBeTruthy()
-
+    expect(prepareBtn).toBeUndefined()
 
     // Inspect slice button
     const inspectBtn = wrapper.find('button[title]')
@@ -194,10 +192,31 @@ describe('AdminCatalogSlicesReview.vue', () => {
     expect(wrapper.emitted('inspect-slice')).toBeTruthy()
     expect(wrapper.emitted('inspect-slice')![0]).toEqual([1])
   })
+
+  it('renders prepare initial slices button when document has 0 slices and status is not Ready', async () => {
+    const unextractedDoc: AdminCatalogDocumentDto = {
+      ...mockDoc,
+      processingStatus: 'Pending',
+      slices: []
+    }
+    const wrapper = mount(AdminCatalogSlicesReview, {
+      props: {
+        document: unextractedDoc,
+        isPreparingSlices: false
+      },
+      global: defaultGlobal
+    })
+
+    const buttons = wrapper.findAll('button')
+    const prepareBtn = buttons.find(b => b.text().includes('admin_catalog.prepare_action'))
+    expect(prepareBtn).toBeDefined()
+    await prepareBtn!.trigger('click')
+    expect(wrapper.emitted('prepare-slices')).toBeTruthy()
+  })
 })
 
 describe('AdminCatalogDocumentDetail.vue', () => {
-  it('renders document overview, metadata editor, and publication controls', async () => {
+  it('renders document overview, metadata editor, and publication controls for Draft document', async () => {
     const wrapper = mount(AdminCatalogDocumentDetail, {
       props: {
         document: mockDoc,
@@ -212,13 +231,83 @@ describe('AdminCatalogDocumentDetail.vue', () => {
 
     expect(wrapper.text()).toContain('High Performance Browser Networking')
     expect(wrapper.text()).toContain('https://hpbn.co')
-    expect(wrapper.text()).toContain('Administrator review is required before publication.')
 
-    // Save metadata
+    // Save metadata is enabled for draft
     const saveBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.save_changes'))
     expect(saveBtn).toBeDefined()
+    expect(saveBtn!.attributes('disabled')).toBeUndefined()
     await saveBtn!.trigger('click')
     expect(wrapper.emitted('save-metadata')).toBeTruthy()
+
+    // Publish button is rendered in Draft mode
+    const publishBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.publish_action'))
+    expect(publishBtn).toBeDefined()
+  })
+
+  it('normalizes string enum category to numeric index', async () => {
+    const docWithStringEnum = {
+      ...mockDoc,
+      category: 'SystemDesign' as unknown as number
+    }
+    const wrapper = mount(AdminCatalogDocumentDetail, {
+      props: {
+        document: docWithStringEnum,
+        isSavingMetadata: false,
+        isPreparingSlices: false,
+        isPublishing: false,
+        isHiding: false,
+        isRetrying: false
+      },
+      global: defaultGlobal
+    })
+
+    // Trigger save and ensure category is normalized to 3 (SystemDesign)
+    const saveBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.save_changes'))
+    await saveBtn!.trigger('click')
+    expect(wrapper.emitted('save-metadata')![0][0]).toMatchObject({
+      category: 3
+    })
+  })
+
+  it('enforces read-only metadata state, disabled save, notice banner, and hides Publish button when Published', async () => {
+    const publishedDoc: AdminCatalogDocumentDto = {
+      ...mockDoc,
+      visibility: 'Published',
+      isEligibleForPublication: true,
+      unmetPublicationRequirements: []
+    }
+    const wrapper = mount(AdminCatalogDocumentDetail, {
+      props: {
+        document: publishedDoc,
+        isSavingMetadata: false,
+        isPreparingSlices: false,
+        isPublishing: false,
+        isHiding: false,
+        isRetrying: false
+      },
+      global: defaultGlobal
+    })
+
+    // Notice banner is rendered
+    expect(wrapper.find('[data-testid="admin-catalog-published-notice"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('admin_catalog.metadata_published_readonly')
+
+    // Save button is disabled
+    const saveBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.save_changes'))
+    expect(saveBtn).toBeDefined()
+    expect(saveBtn!.attributes('disabled')).toBeDefined()
+
+    // Input fields are disabled
+    const titleInput = wrapper.find('input[type="text"]')
+    expect(titleInput.attributes('disabled')).toBeDefined()
+
+    // Publish button is hidden on Published documents
+    const publishBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.publish_action'))
+    expect(publishBtn).toBeUndefined()
+
+    // Hide button is rendered
+    const hideBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.hide_action'))
+    expect(hideBtn).toBeDefined()
   })
 })
 
