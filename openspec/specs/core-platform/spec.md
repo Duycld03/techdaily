@@ -366,7 +366,7 @@ The system SHALL run a background service (`DailyPushNotificationWorker`) execut
 
 #### Scenario: Morning study reminder dispatch within user's local window
 - **WHEN** the worker evaluates a user whose local time in their configured `TimeZone` matches their `PreferredStudyTime` (within the current 15-minute slot), and the user has not completed today's reading or quiz
-- **THEN** the worker dispatches a push notification with title `"TechDaily Study Time 📚"` and deep link to `/today`, recording the dispatch to prevent duplicate messages on subsequent ticks.
+- **THEN** the worker dispatches a push notification with title `"DeepPace Study Time 📚"` and deep link to `/today`, recording the dispatch to prevent duplicate messages on subsequent ticks.
 
 #### Scenario: Evening streak preservation alert
 - **WHEN** the worker evaluates a user whose local time matches their `StreakAlertTime`, and the user has an active streak (`CurrentStreak > 0`) but has not yet studied today

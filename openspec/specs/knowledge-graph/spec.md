@@ -208,7 +208,7 @@ The canvas SHALL support smooth mouse and touch pan, zoom (bounded between 0.2x 
 
 ### Requirement: Multi-Dimensional Graph Filtering & Live Search
 The knowledge graph view SHALL include a floating glassmorphic control bar (`GraphControlBar.vue`) positioned above the canvas, providing real-time client-side filtering across multiple dimensions and engine modes without triggering backend network requests:
-1. **Engine Mode Switcher (2D / 3D):** A prominent dual-button toggle allowing the user to seamlessly switch between the **2D Planar Canvas** (Cytoscape.js) and the **3D WebGL Cosmos** (`3d-force-graph` / Three.js). The active mode SHALL persist in `localStorage` under key `techdaily_graph_view_mode`.
+1. **Engine Mode Switcher (2D / 3D):** A prominent dual-button toggle allowing the user to seamlessly switch between the **2D Planar Canvas** (Cytoscape.js) and the **3D WebGL Cosmos** (`3d-force-graph` / Three.js). The active mode SHALL persist in `localStorage` under key `deeppace_graph_view_mode`.
 2. **Pillar Category Filter:** Filter chips allowing the user to view all nodes or isolate a specific pillar (`All`, `Mental Models & Decisions`, `Habits & Deep Work`, `Backend Runtime`, `Database & Storage`, `Distributed Systems`, `Frontend & Web`, `Engineering Craft`). The filter container SHALL employ a responsive wrapping layout (`flex-wrap gap-1.5`) without hidden scrollbars or box-model clipping across both English and Vietnamese locales, ensuring that all 8 pill options remain 100% visible and discoverable. All category pills SHALL resolve explicit localization keys without falling back to raw untranslated strings.
 3. **Node Type Toggles:** Toggle buttons to show or hide specific node types (`Books`, `Chunks`, `Flashcards`, `Highlights`).
 4. **Mastery Status Filter:** Dropdown or pill selector to filter flashcard nodes by SM-2 status (`All`, `Learning`, `Reviewing`, `Mastered`). When `Mastered` is selected, the active indicator SHALL display primary brand violet styling (`bg-brand-600 text-white`) instead of emerald green.
@@ -446,7 +446,7 @@ The legend panel SHALL present:
 6. **Collapsible Header, Safe Clearance & Persistence:**
    - The expanded card container width SHALL be standardized to 224 pixels (`w-56`), guaranteeing at least 80 pixels of horizontal clearance between the legend card and the 2D Minimap on 768px tablet viewports with the navigation sidebar open.
    - On viewports narrower than 1024 pixels (tablet and mobile devices), the legend panel SHALL default to a collapsed pill trigger button (`[ ? Visual Legend ^ ]` / `[ ? Bảng Chú Thích ^ ]`) on initial page load when no user preference is stored in `localStorage`.
-   - The collapsed state SHALL persist in `localStorage` under `techdaily_graph_legend_collapsed`.
+   - The collapsed state SHALL persist in `localStorage` under `deeppace_graph_legend_collapsed`.
 
 #### Scenario: Legend displays entity hierarchy and SM-2 status color keys
 - **GIVEN** a user is on `/graph` in either 2D or 3D view mode
@@ -492,7 +492,7 @@ The legend panel SHALL present:
 - **THEN** the collapsed state is automatically preserved.
 
 #### Scenario: Default collapsed state on tablet and mobile viewports
-- **GIVEN** a user on a tablet ($768\text{px}$) or mobile device ($< 1024\text{px}$) with no prior `techdaily_graph_legend_collapsed` preference in `localStorage`
+- **GIVEN** a user on a tablet ($768\text{px}$) or mobile device ($< 1024\text{px}$) with no prior `deeppace_graph_legend_collapsed` preference in `localStorage`
 - **WHEN** the user navigates to `/graph`
 - **THEN** the visual legend initializes in the collapsed state as a floating pill button (`[ ? Visual Legend ^ ]` / `[ ? Bảng Chú Thích ^ ]`).
 

@@ -43,6 +43,20 @@ Every route at `/admin` or beneath `/admin/`, except `/admin/login`, SHALL requi
 - **THEN** protected content stays hidden behind a neutral retry state
 - **AND** the failure is not treated as permission approval or grounds to destroy a valid session.
 
+#### Scenario: Account or audit deep link
+- **WHEN** a guest or learner requests `/admin/users` or `/admin/audit`, including through SSR
+- **THEN** the browser reaches admin login with a validated local return destination
+- **AND** account identities and audit events are never rendered or fetched before admission.
+
+#### Scenario: New privileged request resolves after account replacement
+- **WHEN** an account, audit or document-operations request resolves after logout, permission denial or a change of signed-in account
+- **THEN** its result is discarded and cannot appear in the next session's workspace.
+
+#### Scenario: Document operations deep link
+- **WHEN** a guest or learner requests `/admin/documents` with a selected document or processing filter
+- **THEN** no document metadata or attempt history is fetched or rendered before destination admission
+- **AND** only a validated local return path is preserved for admin sign-in.
+
 ### Requirement: Distinct administrator navigation
 Authorized admin routes SHALL show dedicated admin navigation with Dashboard and Documents destinations, active-route indication, locale/theme controls, logout and Switch to learning. Learner sidebar, learning telemetry and learner command palette SHALL NOT appear in the admin shell. Admin login SHALL show neither protected shell.
 1. **Uninterrupted SPA Transitions**: Client-side navigation across admin routes (`/admin` $\leftrightarrow$ `/admin/catalog`) SHALL maintain `isAuthorized = true` during background capability re-verification, ensuring `AdminShell` remains mounted without visual flash, unmounting, or simulated page reload.
@@ -66,6 +80,21 @@ Authorized admin routes SHALL show dedicated admin navigation with Dashboard and
 - **WHEN** an administrator views the admin header
 - **THEN** the locale toggle displays compact sizing matching the user header and the color theme toggle displays its icon centered within its bounding box.
 
+#### Scenario: Navigate to new destinations
+- **WHEN** an administrator selects Accounts or Administration log
+- **THEN** `/admin/users` or `/admin/audit` opens within the same admin shell with the correct active destination
+- **AND** the mobile menu dismisses without leaving duplicate navigation or trapped focus.
+
+#### Scenario: Navigation reflects permission
+- **WHEN** the server does not confirm a destination's required capability
+- **THEN** its protected navigation entry is unavailable
+- **AND** removing or adding a browser menu entry cannot grant backend access.
+
+#### Scenario: Editing and operations remain distinct
+- **WHEN** an administrator selects Catalog or Documents
+- **THEN** Catalog opens publication/editing at `/admin/catalog` and Documents opens metadata/ingestion operations at `/admin/documents`
+- **AND** personal document operations show no personal-content preview or edit action.
+
 ### Requirement: Shared session and admin logout
 Admin and learner interfaces SHALL use the same account/session system. Explicit administrator logout SHALL revoke the refresh session, clear local credentials and privileged state, and return to `/admin/login`. Switching interfaces SHALL preserve the session; switching accounts SHALL discard previous-user privileged state.
 
@@ -78,7 +107,24 @@ Admin and learner interfaces SHALL use the same account/session system. Explicit
 - **THEN** its result is discarded and cannot populate the new account's state.
 
 ### Requirement: DeepPace design system parity
-Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons and accessible controls. Login SHALL use StudioLayout, dashboard BentoDashboardLayout and catalog MasterDetailLayout. The separate shell SHALL NOT introduce a competing theme, CSS framework or unconstrained page wrappers. On `/admin/login`, the StudioLayout main stage (`#main`) and context dock (`#dock`) SHALL align to a common top baseline on desktop viewports ($\ge 1024\text{px}$) with structured hairline-bordered overview cards in the dock, preventing vertical drifting or bottom-weighted misalignments.
+Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons and accessible controls. Login SHALL use StudioLayout, dashboard BentoDashboardLayout, catalog and accounts MasterDetailLayout, audit BoardLayout, and document operations MasterDetailLayout. The separate shell SHALL NOT introduce a competing theme, CSS framework or unconstrained page wrappers. On `/admin/login`, the StudioLayout main stage (`#main`) and context dock (`#dock`) SHALL align to a common top baseline on desktop viewports ($\ge 1024\text{px}$) with structured hairline-bordered overview cards in the dock, preventing vertical drifting or bottom-weighted misalignments.
+
+1. **Accessible Control Parity**:
+- Native HTML form select elements (`<select><option>`) are strictly prohibited across all administration pages.
+- The outcome filter on `/admin/audit` SHALL use `AppSelect.vue` with accessible listbox keyboard navigation, dark theme glass styling, and viewport-aware floating positioning.
+
+2. **Complete Bilingual Localization Parity**:
+- All visible text, placeholders, status pills, pagination buttons, metadata labels, attempt states, and ineligible reason notices on `/admin/audit` and `/admin/documents` SHALL resolve from locale dictionaries (`en.json` and `vi.json`) via `$t()` and `t()`.
+- On `/admin/audit`:
+  - Date filter placeholders SHALL render localized strings (`"Từ ngày (YYYY-MM-DD)"` / `"From (YYYY-MM-DD)"` and `"Đến ngày (YYYY-MM-DD)"` / `"To (YYYY-MM-DD)"`).
+  - Event outcome badges in both the event list and detail modal SHALL display localized outcome labels (`"Thành công"`, `"Đã tiếp nhận"`, `"Bị từ chối"`, `"Thất bại"` in Vietnamese, and `"Succeeded"`, `"Accepted"`, `"Rejected"`, `"Failed"` in English).
+- On `/admin/documents`:
+  - Document status pills in both master card items and the detail header SHALL render localized labels (`"Sẵn sàng"`, `"Thất bại"`, `"Đang xử lý"`, `"Trong hàng đợi"` in Vietnamese, and `"Ready"`, `"Failed"`, `"Processing"`, `"Queued"` in English).
+  - Scope badges SHALL display localized strings (`"Cá nhân"` / `"Personal"`, `"Catalog"` / `"Catalog"`).
+  - Navigation list pagination buttons SHALL display localized labels (`"Trước"` / `"Prev"` and `"Sau"` / `"Next"`).
+  - Ineligible retry warning banners SHALL map `ineligibleReasonCode` to user-facing localized guidance instead of displaying raw English backend messages.
+  - Source availability indicators SHALL render localized labels (`"Thiếu nguồn"` / `"Missing"`, `"Khả dụng"` / `"Available"`).
+  - Metadata Timestamps cards and attempt execution records SHALL display localized prefix labels (`"Mốc thời gian"`, `"Tạo lúc:"`, `"Ghi nhận:"`, `"Hàng đợi:"`, `"Bắt đầu:"`, `"Kết thúc:"`).
 
 #### Scenario: Bilingual responsive admin surfaces
 - **WHEN** admin login, dashboard and catalog are viewed in English and Vietnamese at 1440x900 and 390x844
@@ -97,3 +143,30 @@ Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons 
 #### Scenario: Mobile viewport responsive stacking
 - **WHEN** a user accesses `/admin/login` on a mobile viewport ($< 1024\text{px}$)
 - **THEN** the sign-in form fills 100% of the stage width and the context overview cards stack cleanly below the form without clipping or horizontal overflow.
+
+#### Scenario: Accessible account and audit controls
+- **WHEN** an administrator uses keyboard or touch to filter accounts/history or confirm an account action
+- **THEN** custom select controls and confirmation dialogs provide labels, focus management and clear localized feedback
+- **AND** Escape closes a cancelable dialog without submitting the action.
+
+#### Scenario: Accessible document history and retry
+- **WHEN** an administrator filters document operations, opens attempt history or confirms a retry
+- **THEN** reusable custom selects, paginated detail and teleported dialogs expose labels, focus management, safe localized errors and explicit cancellation
+- **AND** long titles, identifiers and reasons remain readable on mobile and desktop.
+
+#### Scenario: Audit log outcome filter uses accessible AppSelect
+- **WHEN** an administrator opens `/admin/audit`
+- **THEN** the outcome filter control is an `AppSelect` component rather than a native HTML `<select>`
+- **AND** opening the dropdown presents styled options without native browser popovers.
+
+#### Scenario: Audit log viewed in Vietnamese
+- **WHEN** an administrator views `/admin/audit` with locale set to Vietnamese (`vi`)
+- **THEN** the date filter inputs display placeholders `"Từ ngày (YYYY-MM-DD)"` and `"Đến ngày (YYYY-MM-DD)"`
+- **AND** all event outcome badges in the list and detail modal display Vietnamese labels (`"Thành công"`, `"Bị từ chối"`, `"Đã tiếp nhận"`, `"Thất bại"`).
+
+#### Scenario: Document operations viewed in Vietnamese
+- **WHEN** an administrator views `/admin/documents` with locale set to Vietnamese (`vi`)
+- **THEN** document status badges in the master rail and detail view display `"Sẵn sàng"`, `"Thất bại"`, `"Đang xử lý"`, or `"Trong hàng đợi"`
+- **AND** pagination controls display `"Trước"` and `"Sau"`
+- **AND** metadata timestamp cards and attempt history render Vietnamese headers and timestamp prefixes
+- **AND** any ineligible retry message displays localized guidance.

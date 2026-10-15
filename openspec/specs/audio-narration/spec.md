@@ -655,7 +655,7 @@ The reader audio narration system SHALL support a **System TTS** engine mode (`e
 ### Requirement: Continuous Cross-Slice Auto-Advance
 The reader audio player SHALL provide an automatic slice progression mechanism that continues narration to subsequent document slices without manual user intervention.
 
-1. **Auto-Advance Toggle**: The player SHALL render an "Auto Next" (`autoAdvance`) toggle control, defaulted to enabled (`true`) and persisted in `localStorage` (`techdaily_reader_audio_auto_advance`).
+1. **Auto-Advance Toggle**: The player SHALL render an "Auto Next" (`autoAdvance`) toggle control, defaulted to enabled (`true`) and persisted in `localStorage` (`deeppace_reader_audio_auto_advance`).
 2. **Strict Natural Completion Trigger**: Progression to the next slice SHALL trigger strictly and solely upon genuine natural completion of the slice's narration:
    - For Cloud and Device modes: When the assembled audio track reaches its natural conclusion (`ended` event) while `isUserPaused === false`.
    - For System mode: When the final sentence chunk completes (`systemSentenceIndex >= systemSentences.length`) while `isSystemStopped === false`.
@@ -698,7 +698,7 @@ The reader audio system SHALL integrate with the Web Media Session API (`navigat
 1. **Metadata Synchronization**: When narration begins or advances, the system SHALL update `navigator.mediaSession.metadata` with:
    - `title`: Current slice title or slice section heading.
    - `artist`: Document or book title.
-   - `album`: "TechDaily Reader".
+   - `album`: "DeepPace Reader".
    - `artwork`: Document cover thumbnail image.
 2. **Remote Action Handlers**: The system SHALL register action handlers for:
    - `play`: Resumes audio playback or speech synthesis.
@@ -827,3 +827,17 @@ When switching between synthesis engines (System, Cloud, Device) within the same
 - **AND** the user switches the engine to "Device"
 - **THEN** Device synthesis or cached audio loads and resumes playback at 0:45
 - **AND** playback does not reset to 0:00
+
+---
+
+### Requirement: Canonical narration cache database
+The on-device narration cache SHALL use `deeppace-audio` with its existing supported store/key schemas and eviction limits. Known legacy cache data SHALL be handled only by the shared client-storage migration. Ordinary playback SHALL not open the legacy database, and migration SHALL not invoke synthesis or change voice/content identity.
+
+#### Scenario: Playback after cache migration
+- **WHEN** a compatible legacy audio entry has transferred to the canonical database
+- **THEN** the existing cache key identifies the same complete audio without re-synthesis.
+
+#### Scenario: New cache write or partial entry
+- **WHEN** narration caches a complete or partial result
+- **THEN** it writes to the canonical database under the existing appropriate store/key schema
+- **AND** current partial-cache validation and eviction behavior remain applicable.

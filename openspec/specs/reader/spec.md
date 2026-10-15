@@ -106,8 +106,8 @@ The top navigation bar SHALL display a persistent progress bar showing percentag
 ---
 
 ### Requirement: Local Bookmark & Progress Persistence
-The system SHALL automatically record the user's latest read slice for each book in `localStorage` (`techdaily_bookmark_{bookId}`) so navigating back to `/read/[bookId]` automatically resumes at the bookmarked slice.
-
+The system SHALL automatically record the user's latest read slice for each book in `localStorage` (`deeppace_bookmark_{bookId}`) so navigating back to `/read/[bookId]` automatically resumes at the bookmarked slice.
+The reader SHALL store its local completed-slice set at `deeppace_completed_{bookId}`. Known legacy state SHALL transfer only through the centralized client-storage migration; local markers SHALL not bypass ownership or independently alter server learning progress.
 #### Scenario: User returns to a previously read book
 - **WHEN** user navigates back to `/read/[bookId]` without explicit `?slice=` parameter
 - **THEN** reader retrieves stored bookmark and resumes display at the bookmarked slice.
@@ -591,7 +591,7 @@ The typography engine SHALL support the following configuration dimensions:
    - **Wide:** `max-w-4xl` (~896px, optimal for multi-column code comparisons).
    - **Full:** `max-w-full` (fluid edge-to-edge reading container).
 5. **Preference Persistence:**
-   - Settings SHALL automatically save to `localStorage` under key `techdaily_reader_typography` as a serialized JSON object.
+   - Settings SHALL automatically save to `localStorage` under key `deeppace_reader_typography` as a serialized JSON object.
    - Upon mounting `/read/[bookId]`, the reader SHALL hydrate typography state from `localStorage`, gracefully falling back to defaults (`{ fontSize: 'base', fontFamily: 'sans', lineSpacing: 'relaxed', readingWidth: 'standard' }`) if no saved preferences exist.
 6. **Paragraph Formatting & Rhythm:**
    - Prose text inside the reader container SHALL render cleanly separated `<p>` tags with vertical margins (`my-4` to `my-5`) rather than merging into a continuous wall of text.
@@ -632,7 +632,7 @@ The typography engine SHALL support the following configuration dimensions:
 #### Scenario: Typography preferences persist across sessions and books via LocalStorage
 - **GIVEN** a user configures font size `lg`, font family `serif`, line spacing `loose`, and reading width `wide`
 - **WHEN** the user navigates away to `/library` or reloads the browser tab
-- **THEN** `localStorage.getItem('techdaily_reader_typography')` contains the updated preferences
+- **THEN** `localStorage.getItem('deeppace_reader_typography')` contains the updated preferences
 - **AND** opening any book at `/read/[bookId]` automatically hydrates and applies the saved typography settings.
 
 #### Scenario: Paragraph breaks render cleanly as distinct HTML <p> tags with vertical margins
@@ -682,13 +682,13 @@ The reading article body at `/read/[bookId]` SHALL render inside a centered cont
 ### Requirement: Audio-Driven Automated Slice Progression and Bookmark Synchronization
 When reader audio auto-advances to a subsequent slice, the reader view SHALL automatically synchronize reading state, content display, and progress tracking.
 1. **View Transition**: The reader SHALL update `activeChunkIndex`, switch the visible slice content, re-render markdown formatting, and reset the reader viewport to the top of the new slice.
-2. **Bookmark Persistence**: Upon audio-driven progression, the reader SHALL immediately persist the new slice index to local storage (`techdaily_bookmark_{bookId}`), ensuring that reloading the reader resumes at the newly reached slice.
+2. **Bookmark Persistence**: Upon audio-driven progression, the reader SHALL immediately persist the new slice index to local storage (`deeppace_bookmark_{bookId}`), ensuring that reloading the reader resumes at the newly reached slice.
 3. **Pacer Synchronization**: The reader SHALL trigger progress synchronization with the backend `UserBookPacer` API (`completedSlices` update), crediting reading time and streak milestones without requiring manual navigation card clicks.
 4. **Active Slice Audio Isolation**: The previous slice's audio or synthesis tasks SHALL be fully detached and stopped before the new slice begins, preventing audio overlap or duplicate workers.
 
 #### Scenario: Audio auto-advances and synchronizes reader bookmark
 - **WHEN** audio narration completes on slice 2 and auto-advances to slice 3
-- **THEN** the reader view displays slice 3 content, `localStorage.getItem('techdaily_bookmark_<bookId>')` is updated to index 3, and reading progress is recorded with the backend pacer.
+- **THEN** the reader view displays slice 3 content, `localStorage.getItem('deeppace_bookmark_<bookId>')` is updated to index 3, and reading progress is recorded with the backend pacer.
 
 #### Scenario: User refreshes page after audio auto-advance
 - **WHEN** the user refreshes `/read/[bookId]` after audio has auto-advanced through 3 slices

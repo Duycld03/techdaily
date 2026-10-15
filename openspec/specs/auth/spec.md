@@ -183,13 +183,12 @@ The client-side authentication store SHALL decode the JWT payload `exp` claim an
 
 #### Scenario: User visits app with an expired token
 - **WHEN** user loads the application after being away for longer than the token lifetime
-- **THEN** `authStore.init()` detects that `exp` is in the past, purges `techdaily_token` and `techdaily_user`, and sets `isLoggedIn = false`.
+- **THEN** `authStore.init()` detects that `exp` is in the past, purges `deeppace_token` and `deeppace_user`, and sets `isLoggedIn = false`.
 - **THEN** user avatar and protected UI elements display the unauthenticated state rather than a ghost session.
 
 #### Scenario: User evaluates login state with active token
 - **WHEN** user has a valid token where `exp * 1000 > Date.now()`
 - **THEN** `authStore.isLoggedIn` evaluates to `true`.
-
 ---
 
 ### Requirement: Global 401 Session Expiration Interception
@@ -228,14 +227,15 @@ The authentication endpoints (`/api/v1/auth/login`, `/register`, `/google`) SHAL
 - **THEN** the returned JWT access token has an expiration set to 60 minutes from creation time
 
 ### Requirement: Route Middleware Token Expiry Validation
-The client-side route guard (`frontend/middleware/auth.global.ts`) SHALL enforce a strict **Default-Deny** security posture: all platform routes require active authentication by default, with only explicit guest authentication routes (`/login`, `/register`, `/forgot-password`, `/reset-password`, `/admin/login`) and local development playgrounds (`/playground/*`, `/showcase`) exempted.
+The client-side route guard (`frontend/app/middleware/auth.global.ts`) SHALL enforce a strict **Default-Deny** security posture: all platform routes require active authentication by default, with only explicit guest authentication routes (`/login`, `/register`, `/forgot-password`, `/reset-password`, `/admin/login`) and local development playgrounds (`/playground/*`, `/showcase`) exempted.
 
 The numbered rules and existing scenarios below govern learner routes. Admin routes SHALL follow the administrator-specific rules at the end of this requirement. `/admin/login` SHALL remain accessible to authenticated non-admin accounts and SHALL NOT use the learner guest-page redirect.
 
 1. **Server-Side Rendering (SSR) Route Guard & Expiration Verification**:
-   - On Server-Side Rendering (`import.meta.server`), when an incoming HTTP request targets any protected route (such as `/library`, `/today`, `/notes`), the middleware SHALL inspect request cookies for session credentials (`techdaily_token` and `refreshToken`).
-   - If **neither** `techdaily_token` nor `refreshToken` cookie is present, the SSR middleware SHALL immediately redirect the HTTP request to `/login` with `redirect={targetUrl}`.
-   - If `techdaily_token` is present, the SSR middleware SHALL decode the JWT payload `exp` claim. If `exp * 1000 <= Date.now()` (the token has expired) and no `refreshToken` cookie is available to renew it, the SSR middleware SHALL immediately issue an HTTP 302 redirect to `/login` with `redirect={targetUrl}` before rendering the protected application shell (`<AppHeader>`, `<AppSidebar>`).
+   - On Server-Side Rendering (`import.meta.server`), when an incoming HTTP request targets any protected route (such as `/library`, `/today`, `/notes`), the middleware SHALL inspect request cookies for session credentials (`deeppace_token` and `refreshToken`).
+   - If **neither** `deeppace_token` nor `refreshToken` cookie is present and the shared migration boundary reports no unresolved legacy cookie candidate, the SSR middleware SHALL immediately redirect the HTTP request to `/login` with `redirect={targetUrl}`.
+   - If only legacy cookie evidence is present, SSR SHALL use the neutral admission boundary from `client-storage` until browser storage resolves canonical identity; it SHALL NOT authorize that legacy token or render protected markup. Normal canonical admission resumes after that boundary resolves.
+   - If `deeppace_token` is present, the SSR middleware SHALL decode the JWT payload `exp` claim. If `exp * 1000 <= Date.now()` (the token has expired) and no `refreshToken` cookie is available to renew it, the SSR middleware SHALL immediately issue an HTTP 302 redirect to `/login` with `redirect={targetUrl}` before rendering the protected application shell (`<AppHeader>`, `<AppSidebar>`).
    - Under no circumstances SHALL the server render a protected application shell with user telemetry and then delegate expired token rejection to client-side hydration, which triggers DOM hydration mismatch collisions.
 
 2. **Client-Side Hydration & Resilient Token Refresh**:
@@ -272,11 +272,11 @@ The numbered rules and existing scenarios below govern learner routes. Admin rou
 - **AND** zero HTML of the protected page or its layout container is rendered in the server response.
 
 #### Scenario: Returning user with expired access token visits protected route on SSR
-- **WHEN** a visitor with an expired `techdaily_token` cookie visits `/library`
+- **WHEN** a visitor with an expired `deeppace_token` cookie visits `/library`
 - **THEN** the SSR route middleware decodes JWT expiration on the server, issues an immediate HTTP 302 redirect to `/login?redirect=/library` if no refresh token is present, and suppresses rendering the protected application shell.
 
 #### Scenario: Server-side request with an expired access token
-- **WHEN** a visitor makes an HTTP request to `/today` with an expired `techdaily_token` cookie and no refresh token cookie
+- **WHEN** a visitor makes an HTTP request to `/today` with an expired `deeppace_token` cookie and no refresh token cookie
 - **THEN** the server SHALL respond with an HTTP 302 redirect to `/login?redirect=/today`
 - **AND** the server SHALL NOT render `<AppHeader>` or `<AppSidebar>` into the HTML response body
 - **AND** client-side hydration SHALL mount cleanly on `/login` with zero hydration node mismatch errors.
@@ -298,6 +298,11 @@ The numbered rules and existing scenarios below govern learner routes. Admin rou
 #### Scenario: Permission verification cannot complete
 - **WHEN** an SSR or client permission check encounters a transient failure
 - **THEN** protected UI remains hidden, a neutral retry state is shown and valid session credentials are retained.
+
+#### Scenario: Canonical identity requires browser migration
+- **WHEN** only legacy cookie evidence is visible to SSR and browser storage must resolve canonical identity
+- **THEN** the shared migration boundary shows neutral admission without protected shell/content or privileged requests
+- **AND** client migration completes before canonical route checks, refresh and permission verification continue.
 ### Requirement: Mandatory secret configuration at startup
 The application SHALL fail fast during startup if the `Jwt:Secret` configuration value is missing, empty, or has fewer than 256 bits of cryptographically random entropy. The `Jwt:Secret` value MUST be generated using a CSPRNG; human-readable, example, or default secrets SHALL NOT be used. The application SHALL NOT fall back to any hardcoded default JWT signing key. The same fail-fast behavior SHALL apply to VAPID key configuration (`WebPush:PrivateKey`, `WebPush:PublicKey`).
 
@@ -610,7 +615,7 @@ The Studio Auth canvas SHALL maintain a clean layout without redundant bottom te
 The `/login` "Remember session" checkbox SHALL control whether the authenticated session survives a browser restart, end-to-end across the client and server. The email/password login and registration requests SHALL carry a `rememberMe` boolean; when the field is omitted, the server SHALL treat it as `true` to preserve backward compatibility.
 
 1. **Persistent session (checkbox checked, the default)**:
-   - The frontend SHALL persist the access token and user in a 30-day `techdaily_token` / `techdaily_user` cookie and in `localStorage`.
+   - The frontend SHALL persist the access token and user in a 30-day `deeppace_token` / `deeppace_user` cookie and in `localStorage`.
    - The backend SHALL issue the `refreshToken` cookie as a persistent cookie with a 30-day `Expires`/`Max-Age` (see `refresh-tokens`).
    - The session SHALL remain valid after the browser is fully closed and reopened, subject to token expiry.
 
@@ -628,7 +633,7 @@ The refresh token's server-side absolute expiry SHALL remain 30 days in both mod
 #### Scenario: Login with Remember session checked persists across restart
 - **WHEN** a user signs in via email/password with the "Remember session" checkbox checked
 - **THEN** the login request body includes `"rememberMe": true`
-- **AND** the client stores `techdaily_token` / `techdaily_user` in a 30-day cookie and `localStorage`
+   - **AND** the client stores `deeppace_token` / `deeppace_user` in a 30-day cookie and `localStorage`
 - **AND** after fully closing and reopening the browser, `authStore.init()` restores the session and `isLoggedIn` evaluates to `true` (subject to token expiry).
 
 #### Scenario: Login with Remember session unchecked ends on browser close
@@ -663,29 +668,34 @@ The system SHALL issue short-lived JWT access tokens with a lifespan of 60 minut
 ---
 
 ### Requirement: DeepPace Client Session Persistence & Token Storage Migration
-The web frontend and authentication service SHALL standardize session credentials on `deeppace_*` keys while preserving seamless backward-compatible migration for existing sessions:
+The web frontend and authentication service SHALL standardize session credentials on `deeppace_*` keys through the versioned `client-storage` migration contract:
 
 1. **Cookie & LocalStorage Identifiers**:
-   - The primary access token SHALL be persisted to `deeppace_token` (cookie and `localStorage`).
-   - The active user profile SHALL be persisted to `deeppace_user` (cookie and `localStorage`).
-   - Secondary reader and roadmap preferences SHALL use prefix `deeppace_*` (e.g. `deeppace_reader_typography`, `deeppace_roadmap_view_mode`).
+   - The primary access token SHALL use `deeppace_token` and the active profile SHALL use `deeppace_user` in cookies and the appropriate local/session storage according to the session's persistence mode.
+   - Secondary reader and roadmap preferences SHALL use registered `deeppace_*` identifiers.
 2. **Transparent Session Migration**:
-   - During frontend initialization (`authStore.init()`), if `deeppace_token` is absent, the client SHALL inspect legacy keys `techdaily_token` and `techdaily_user`.
-   - If a valid legacy token is present, the store SHALL automatically write it to `deeppace_token` and `deeppace_user`, and clear legacy keys, preventing existing logged-in users from being forcefully logged out.
+   - Known legacy credentials SHALL be imported only through the centralized migration boundary before canonical session consumers initialize.
+   - Existing canonical credentials SHALL take precedence; token/profile identity and known persistence mode SHALL remain consistent.
+   - Successful transfer SHALL remove known legacy entries. Completed identity migration and logout SHALL prevent subsequent legacy fallback or session resurrection.
+   - Invalid or expired legacy credentials SHALL use existing refresh/login recovery without weakening backend JWT or permission checks.
 3. **JWT Configuration Invariants**:
    - The default JWT Issuer SHALL be `"DeepPace"`, and the default JWT Audience SHALL be `"DeepPaceUsers"`.
 
-#### Scenario: Existing user loads application with legacy cookies
-- **GIVEN** a browser holding `techdaily_token` and `techdaily_user` but no `deeppace_token`
-- **WHEN** the application initializes on client-side mount
-- **THEN** `authStore.init()` copies the credentials to `deeppace_token` and `deeppace_user`
-- **AND** removes the legacy `techdaily_token` and `techdaily_user` entries
-- **AND** evaluates `isLoggedIn = true` without redirecting the user to `/login`.
+#### Scenario: Existing user loads application with legacy credentials
+- **GIVEN** a browser holding recognized legacy credentials and no canonical `deeppace_token`
+- **WHEN** client startup initializes through the migration coordinator
+- **THEN** valid legacy credentials transfer to `deeppace_token` and `deeppace_user`
+- **AND** superseded legacy entries are removed without forcing an unprompted logout
+- **AND** `authStore.isLoggedIn` evaluates to `true`.
 
 #### Scenario: New user signs in and receives DeepPace credentials
 - **WHEN** a user logs in via `POST /api/v1/auth/login`
 - **THEN** the client stores the access token into `deeppace_token`
 - **AND** the token payload reflects Issuer `"DeepPace"`.
+
+#### Scenario: Session-only legacy credentials preserve mode
+- **WHEN** recognized legacy credentials exist only in session storage
+- **THEN** canonical migration writes no persistent access token or profile.
 
 ---
 
@@ -703,24 +713,30 @@ Every catalog management operation SHALL require a valid authenticated identity 
 ---
 
 ### Requirement: Operator-controlled administrator designation
-Catalog administrator access SHALL be assigned only by trusted deployment configuration referencing existing active user identifiers. An empty designation SHALL grant no administrator access. Registration, OAuth, profile updates and token refresh SHALL NOT let users choose or acquire administrator permission.
+Catalog, account-management and audit-read access SHALL be assigned only by trusted deployment configuration referencing existing Active, non-deleted user identifiers. The existing configured administrator cohort SHALL receive these capabilities. An empty designation SHALL grant no administrator access. Registration, OAuth, profile updates and token refresh SHALL NOT let users choose or acquire administrator permission.
 
 #### Scenario: No configured administrator
 - **WHEN** no valid administrator identifiers are configured
-- **THEN** all authenticated users are denied catalog management while published learner discovery remains usable.
+- **THEN** all authenticated users are denied catalog management while published learner discovery remains usable
+- **AND** account administration and audit history are also denied.
 
 #### Scenario: Administrator removal
 - **WHEN** an operator removes a user from the designation and the updated configuration is loaded
-- **THEN** that user's subsequent management requests return 403 even with an unexpired access token.
+- **THEN** that user's subsequent management requests return 403 even with an unexpired access token
+- **AND** account-management and audit-read requests also lose permission.
 
 #### Scenario: Spoofed administrator field
 - **WHEN** a regular user supplies administrator fields during registration or profile editing or alters browser storage
 - **THEN** the user gains no management permission.
 
+#### Scenario: Designated account is suspended
+- **WHEN** a configured administrator account is Suspended
+- **THEN** it receives no administrator capabilities or authenticated access until it is reactivated and signs in again.
+
 ---
 
 ### Requirement: Administrator capability discovery and route protection
-The server SHALL expose the current user's catalog management capability to support navigation. Every protected administrator route SHALL verify this capability before rendering protected UI or requesting administrative data. Anonymous visitors and authenticated non-administrators SHALL be redirected to `/admin/login` with a validated local administrator return path. Transient permission-check failures SHALL retain valid session credentials and show a neutral retry state without protected content.
+The server SHALL expose the current user's catalog-management, account-management and audit-read capabilities. Every protected admin route SHALL verify its required capability before rendering UI or fetching data. Anonymous or denied visitors SHALL reach `/admin/login` with a validated local admin return path. Transient checks SHALL retain valid credentials and show a neutral retry state without protected content.
 
 #### Scenario: Administrator opens management page
 - **WHEN** a designated administrator opens `/admin/catalog`
@@ -735,3 +751,152 @@ The server SHALL expose the current user's catalog management capability to supp
 - **WHEN** an authenticated non-administrator visits a protected administrator route
 - **THEN** the browser redirects to `/admin/login` without rendering protected SSR markup or fetching draft data
 - **AND** the existing learner session remains available for switching to learning.
+
+#### Scenario: New administration destinations
+- **WHEN** a user opens `/admin/users` or `/admin/audit`
+- **THEN** the required account-management or audit-read capability is verified independently of browser navigation visibility
+- **AND** a learner cannot enter by spoofing cached flags or using a direct URL.
+
+#### Scenario: Legacy catalog capability consumer
+- **WHEN** an existing client requests the catalog-management capability through its current endpoint
+- **THEN** the existing catalog capability contract remains available with its original permission meaning.
+
+---
+
+### Requirement: Server-enforced account and audit administration permission
+Account administration SHALL require a valid authenticated identity and server-verified account-management permission. Reading administrative history SHALL require server-verified audit-read permission. Anonymous requests SHALL receive 401; authenticated callers without the required permission SHALL receive 403. Client role fields or cached capabilities SHALL NOT grant access.
+
+#### Scenario: Learner calls account or audit APIs directly
+- **WHEN** an authenticated learner requests account details, submits suspension or reads audit events without the required permission
+- **THEN** the server returns 403 without disclosing administrative data or changing state.
+
+#### Scenario: Guest calls account or audit APIs
+- **WHEN** a caller without valid authentication requests account administration or audit history
+- **THEN** the server returns 401.
+
+---
+
+### Requirement: Active account authentication admission
+Only an existing Active, non-deleted account SHALL establish or renew an authenticated session or use protected APIs. Suspended accounts SHALL be blocked across password and Google sign-in, refresh and access-token authentication. Reactivation SHALL require fresh sign-in; password recovery or OAuth linkage SHALL NOT clear suspension.
+
+#### Scenario: Suspended account signs in with password
+- **WHEN** correct password credentials belong to a Suspended account
+- **THEN** sign-in returns 403 with localized code `AUTH_ACCOUNT_SUSPENDED` without issuing access or refresh tokens.
+
+#### Scenario: Suspended account signs in with Google
+- **WHEN** a valid Google identity maps to a Suspended account
+- **THEN** sign-in returns 403 with `AUTH_ACCOUNT_SUSPENDED` without recreating the account or issuing a session.
+
+#### Scenario: Suspended account presents existing credentials
+- **WHEN** a Suspended account presents a previously valid access token or refresh cookie
+- **THEN** the request returns 401 without protected data or replacement credentials.
+
+#### Scenario: Password recovery while suspended
+- **WHEN** a Suspended account completes the existing password recovery flow
+- **THEN** the recovery flow does not reactivate the account or grant authenticated access.
+
+---
+
+### Requirement: Server-verifiable session revocation
+Protected API authentication SHALL verify the presented access token against current server account/session state, in addition to existing signature, issuer, audience and expiry checks. Suspension and administrator all-device sign-out SHALL invalidate previously issued access tokens and all refresh families after commit. Normal per-device logout SHALL retain its existing isolation.
+
+#### Scenario: Access token has not expired
+- **WHEN** an account presents an unexpired, correctly signed access token issued before a committed all-device sign-out
+- **THEN** authentication returns 401 without allowing a learner or administrator operation.
+
+#### Scenario: Refresh races with revocation
+- **WHEN** session issuance or refresh overlaps suspension or all-device sign-out
+- **THEN** no credentials based on the pre-revocation session state authorize requests after that revocation commits
+- **AND** refresh grace-window handling cannot revive a revoked session.
+
+#### Scenario: Ordinary device logout
+- **WHEN** a user revokes one refresh-token family through normal logout
+- **THEN** other devices' valid sessions remain usable according to existing per-family behavior.
+
+#### Scenario: Browser receives terminal authentication rejection
+- **WHEN** an old access token returns 401 and refresh is definitively rejected
+- **THEN** session and privileged state are cleared and the browser redirects once to the login for its current area
+- **AND** late administrative responses cannot restore account or audit data.
+
+---
+
+### Requirement: Session-version token deployment compatibility
+An access token missing the required server-verifiable session version SHALL NOT authorize protected requests. An existing eligible refresh session SHALL be able to obtain a versioned replacement token while preserving its persistence mode. Missing, expired or revoked refresh sessions SHALL require sign-in rather than bypassing the new check.
+
+#### Scenario: Existing browser can renew its token
+- **WHEN** a browser holds an older access token without a session version and a valid unrevoked refresh cookie for an Active account
+- **THEN** the protected request is rejected, transparent refresh obtains a versioned access token, and the request can be retried normally.
+
+#### Scenario: Legacy token arrives through administrator SSR
+- **WHEN** an administrator deep link arrives with an older access token and a refresh cookie that may renew the session
+- **THEN** server rendering exposes only a neutral admission boundary until client refresh and capability verification complete
+- **AND** no protected content is rendered while renewal remains uncertain.
+
+#### Scenario: Revoked legacy session
+- **WHEN** administrator sign-out revokes an account's legacy refresh families
+- **THEN** neither its older access tokens nor refreshing those families restores access.
+
+#### Scenario: Existing browser cannot renew its token
+- **WHEN** a browser holds an older access token without an eligible refresh session
+- **THEN** protected requests remain rejected and the normal sign-in flow is required.
+
+---
+
+### Requirement: Account authority availability handling
+When current account or session state cannot be verified because of a temporary service failure, protected access and session issuance SHALL fail closed with an unavailable response rather than invalid-credential or permission-denied feedback. Clients SHALL preserve stored credentials while presenting retry, without treating uncertainty as authorization.
+
+#### Scenario: Account state store is temporarily unavailable
+- **WHEN** authentication cannot read authoritative account/session state due to a database outage
+- **THEN** the server returns 503 without protected data or replacement tokens
+- **AND** the client preserves credentials and offers retry instead of a forced logout.
+
+---
+
+### Requirement: Server-verified document operations capability
+The admin capability response SHALL add `canManageDocumentOperations` alongside existing catalog, account and audit flags. Operator-designated active administrators SHALL initially receive it; learners SHALL receive false. Document-operations APIs SHALL independently enforce this permission and current account/session authority, returning 401 for invalid authentication and 403 for denied permission. Client fields SHALL NOT grant access.
+
+#### Scenario: Capability discovery remains compatible
+- **WHEN** an authenticated client reads `/api/v1/admin/capabilities`
+- **THEN** it receives the current document-operations flag alongside existing destination flags
+- **AND** `/api/v1/catalog/capabilities` retains its existing catalog-management response contract.
+
+#### Scenario: Direct unauthorized operations call
+- **WHEN** a caller without a valid session requests inventory, history or retry
+- **THEN** the response is 401 without protected metadata.
+- **WHEN** an authenticated learner or account without operations permission makes that request
+- **THEN** the response is 403 without protected metadata or processing side effects.
+
+#### Scenario: Catalog mutation needs catalog authority too
+- **WHEN** an account has document-operations permission but lacks catalog-management permission
+- **THEN** catalog source retry returns 403 without changing catalog content or dispatching work
+- **AND** metadata-only operations do not become a catalog-editing grant.
+
+#### Scenario: Operator designation or account state changes
+- **WHEN** permission is removed, the actor is suspended or their session is revoked before a retry commits
+- **THEN** current server authority rejects the command despite cached capabilities or an unexpired earlier token
+- **AND** no retry is accepted under stale authority.
+
+#### Scenario: Spoofed fields or personal ownership
+- **WHEN** a caller alters browser flags or supplies actor, role or owner fields to an operations command
+- **THEN** those fields cannot grant permission or change the trusted actor/owner.
+- **WHEN** an administrator calls another user's owner-only source replacement endpoint
+- **THEN** operations permission does not satisfy ownership.
+
+---
+
+### Requirement: Private operations admission and caching
+Protected operations routes SHALL confirm their destination capability before fetching or rendering data on server or client. Operations, source-recovery and capability responses SHALL use `Cache-Control: no-store`. Definitive denial SHALL clear pending privileged work; transient authority failure SHALL return unavailable feedback without approving access or destroying valid credentials.
+
+#### Scenario: Anonymous deep link or SSR renewal
+- **WHEN** a guest opens `/admin/documents` or a session requires client-side renewal before admission
+- **THEN** protected metadata is absent from SSR output and hydration until admission succeeds
+- **AND** existing area-aware login/refresh behavior is retained.
+
+#### Scenario: Authority temporarily unavailable
+- **WHEN** capability or account authority cannot be verified
+- **THEN** protected content remains behind the neutral retry state
+- **AND** a valid learner/admin credential is not cleared merely because of that transient failure.
+
+#### Scenario: Shared or browser cache
+- **WHEN** an operations, capability or source-recovery response is returned, including rejection
+- **THEN** it is marked no-store and cannot be reused as protected data or permission evidence for another session.

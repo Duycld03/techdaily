@@ -37,7 +37,7 @@ The system SHALL allow users to click any unlocked or completed reading slice (`
 - **THEN** the application navigates to that slice's focus view in review mode, allowing the user to re-read the material and view the scenario challenge explanation.
 
 ### Requirement: Roadmap Dual-View Switcher
-The system SHALL provide a dual-view switcher on the `/roadmap` page allowing users to toggle between a linear milestone timeline view (`timeline`) and an interactive hierarchical tree mindmap view (`mindmap`). The active view mode SHALL be stored in `localStorage` under key `techdaily_roadmap_view_mode` and restored upon subsequent page visits, defaulting to `timeline` when no prior preference exists. All switcher buttons and badges SHALL enforce `whitespace-nowrap shrink-0` to prevent text wrapping across both English and Vietnamese locales.
+The system SHALL provide a dual-view switcher on the `/roadmap` page allowing users to toggle between a linear milestone timeline view (`timeline`) and an interactive hierarchical tree mindmap view (`mindmap`). The active view mode SHALL be stored in `localStorage` under key `deeppace_roadmap_view_mode` and restored upon subsequent page visits, defaulting to `timeline` when no prior preference exists. All switcher buttons and badges SHALL enforce `whitespace-nowrap shrink-0` to prevent text wrapping across both English and Vietnamese locales.
 
 The dual-view switcher container SHALL adhere to the Dev-Learning Studio design system, rendering as a sleek glassmorphic segmented container (`.glass-panel`) with neutral obsidian tokens (`bg-slate-100 dark:bg-canvas-subtle/80`, `border-slate-200/80 dark:border-white/[0.08]`), and active tab buttons elevated with `dark:bg-canvas-elevated` and subtle hairline border treatments, completely eliminating legacy slate-800 and slate-900 surfaces.
 
@@ -49,7 +49,7 @@ The dual-view switcher container SHALL adhere to the Dev-Learning Studio design 
 #### Scenario: View mode preference preserved in localStorage
 - **GIVEN** a user switches the roadmap view mode to `mindmap`
 - **WHEN** the user reloads the page or navigates away and returns to `/roadmap`
-- **THEN** the application reads `techdaily_roadmap_view_mode` from `localStorage` and automatically renders the `mindmap` view as the active view.
+- **THEN** the application reads `deeppace_roadmap_view_mode` from `localStorage` and automatically renders the `mindmap` view as the active view.
 
 #### Scenario: Responsive switch buttons layout
 - **WHEN** user views the roadmap dual-view switcher on any viewport size
