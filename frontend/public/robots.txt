@@ -1,5 +1,5 @@
 # ==============================================================================
-# DeepPace (formerly TechDaily) — Robots & Crawler Directives
+# DeepPace — Robots & Crawler Directives
 # ==============================================================================
 
 # Block aggressive AI scrapers and automated training harvesters
@@ -57,5 +57,5 @@ Disallow: /health
 Disallow: /uploads/
 
 # Canonical Sitemaps
-Sitemap: https://techdaily.duckdns.org/sitemap.xml
+Sitemap: https://deeppace.duckdns.org/sitemap.xml
 Sitemap: https://deeppace.duckdns.org/sitemap.xml

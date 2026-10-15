@@ -22,8 +22,9 @@ describe('administrator route admission', () => {
   })
   it('verifies administrator permission on SSR before permitting protected rendering', async () => {
     signIn(); environment.server = true
+    const token = useAuthStore().token
     await run('/admin/catalog')
-    expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/api\/v1\/(admin|catalog)\/capabilities/), expect.objectContaining({ headers: expect.objectContaining({ Authorization: `Bearer ${adminTestJwt()}` }) }))
+    expect(fetch).toHaveBeenCalledWith(expect.stringMatching(/\/api\/v1\/(admin|catalog)\/capabilities/), expect.objectContaining({ headers: expect.objectContaining({ Authorization: `Bearer ${token}` }) }))
     expect(useAdminAccessStore().isAuthorized).toBe(true)
     expect(navigateTo).not.toHaveBeenCalled()
   })

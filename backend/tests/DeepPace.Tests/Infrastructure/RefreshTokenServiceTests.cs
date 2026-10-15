@@ -26,7 +26,7 @@ public class RefreshTokenServiceTests : IDisposable
         var user = new User
         {
             Id = _userId,
-            Email = "refresh_test@techdaily.local",
+            Email = "refresh_test@deeppace.test",
             Name = "Refresh Tester",
             PasswordHash = "mock-hash",
             PreferredLocale = "en"

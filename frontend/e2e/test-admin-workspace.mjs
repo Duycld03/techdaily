@@ -42,11 +42,11 @@ function state(session, locale = 'en', theme = 'light', refreshOnly = false) {
   return {
     cookies: [
       ...(session?.cookies || []), cookie('i18n_redirected', locale),
-      ...(!session || refreshOnly ? [] : [cookie('techdaily_token', session.token), cookie('techdaily_user', encodeURIComponent(JSON.stringify(session.user)))])
+      ...(!session || refreshOnly ? [] : [cookie('deeppace_token', session.token), cookie('deeppace_user', encodeURIComponent(JSON.stringify(session.user)))])
     ],
     origins: [{ origin: new URL(targetUrl).origin, localStorage: [
       { name: 'nuxt-color-mode', value: theme },
-      ...(!session || refreshOnly ? [] : [{ name: 'techdaily_token', value: session.token }, { name: 'techdaily_user', value: JSON.stringify(session.user) }])
+      ...(!session || refreshOnly ? [] : [{ name: 'deeppace_token', value: session.token }, { name: 'deeppace_user', value: JSON.stringify(session.user) }])
     ] }]
   }
 }

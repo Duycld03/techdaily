@@ -42,7 +42,7 @@ public class UpdateHighlightHandlerTests : IDisposable
         var user = new User
         {
             Id = userId,
-            Email = $"dev_{Guid.NewGuid()}@techdaily.local",
+            Email = $"dev_{Guid.NewGuid()}@deeppace.test",
             Name = "Senior Engineer"
         };
         await _db.Users.AddAsync(user);

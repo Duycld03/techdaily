@@ -39,7 +39,7 @@ public class SwitchBookHandlerTests : IDisposable
         // Arrange
         var user = new User
         {
-            Email = "architect@techdaily.io",
+            Email = "architect@deeppace.test",
             Name = "Senior Architect",
             PasswordHash = "hash123"
         };

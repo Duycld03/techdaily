@@ -102,7 +102,7 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
 
         using (var db = new DeepPaceDbContext(_dbOptions))
         {
-            var user = new User { Id = _userId, Email = "graph@techdaily.local", Name = "Graph User" };
+            var user = new User { Id = _userId, Email = "graph@deeppace.test", Name = "Graph User" };
             var book = new DocumentBook
             {
                 Id = Guid.NewGuid(),
@@ -176,7 +176,7 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, UserId.ToString()),
-                new Claim(ClaimTypes.Email, "test@techdaily.local")
+                new Claim(ClaimTypes.Email, "test@deeppace.test")
             };
             var identity = new ClaimsIdentity(claims, "Test");
             var principal = new ClaimsPrincipal(identity);

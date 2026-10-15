@@ -40,7 +40,7 @@ public class E2EAccountSeederTests : IDisposable
         // Arrange
         var inMemorySettings = new Dictionary<string, string?>
         {
-            { "E2E_PROD_EMAIL", "test_seeder@techdaily.local" },
+            { "E2E_PROD_EMAIL", "test_seeder@deeppace.test" },
             { "E2E_PROD_PASSWORD", "SecretPassword123!" }
         };
         var config = new ConfigurationBuilder()
@@ -51,9 +51,9 @@ public class E2EAccountSeederTests : IDisposable
         await E2EAccountSeeder.SeedAsync(_db, config, NullLogger.Instance);
 
         // Assert
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == "test_seeder@techdaily.local");
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == "test_seeder@deeppace.test");
         user.Should().NotBeNull();
-        user!.Email.Should().Be("test_seeder@techdaily.local");
+        user!.Email.Should().Be("test_seeder@deeppace.test");
         PasswordHasher.VerifyPassword("SecretPassword123!", user.PasswordHash!).Should().BeTrue();
     }
 
@@ -63,7 +63,7 @@ public class E2EAccountSeederTests : IDisposable
         // Arrange
         var inMemorySettings = new Dictionary<string, string?>
         {
-            { "E2E_PROD_EMAIL", "test_seeder@techdaily.local" },
+            { "E2E_PROD_EMAIL", "test_seeder@deeppace.test" },
             { "E2E_PROD_PASSWORD", "NewRotatedPassword2026!" }
         };
         var config = new ConfigurationBuilder()
@@ -74,7 +74,7 @@ public class E2EAccountSeederTests : IDisposable
         var oldConfig = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                { "E2E_PROD_EMAIL", "test_seeder@techdaily.local" },
+                { "E2E_PROD_EMAIL", "test_seeder@deeppace.test" },
                 { "E2E_PROD_PASSWORD", "OldPassword1!" }
             })
             .Build();
@@ -84,7 +84,7 @@ public class E2EAccountSeederTests : IDisposable
         await E2EAccountSeeder.SeedAsync(_db, config, NullLogger.Instance);
 
         // Assert
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == "test_seeder@techdaily.local");
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == "test_seeder@deeppace.test");
         user.Should().NotBeNull();
         PasswordHasher.VerifyPassword("NewRotatedPassword2026!", user!.PasswordHash!).Should().BeTrue();
         PasswordHasher.VerifyPassword("OldPassword1!", user.PasswordHash!).Should().BeFalse();

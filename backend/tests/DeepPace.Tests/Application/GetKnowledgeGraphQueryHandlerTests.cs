@@ -56,7 +56,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_WhenAuthenticatedUserRequestsGraph_ShouldReturnScopedNodesAndEdges()
     {
         // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "user@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = Guid.NewGuid(), Email = "user@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
 
@@ -144,8 +144,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_UserDataIsolation_UserAShouldNotSeeUserBCardsOrHighlights()
     {
         // Arrange
-        var userA = new User { Id = Guid.NewGuid(), Email = "userA@techdaily.local", Name = "User A" };
-        var userB = new User { Id = Guid.NewGuid(), Email = "userB@techdaily.local", Name = "User B" };
+        var userA = new User { Id = Guid.NewGuid(), Email = "userA@deeppace.test", Name = "User A" };
+        var userB = new User { Id = Guid.NewGuid(), Email = "userB@deeppace.test", Name = "User B" };
         await _db.Users.AddRangeAsync(userA, userB);
 
 
@@ -216,8 +216,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_BookNodes_ShouldExcludeBooksOwnedByOtherUsers()
     {
         // Arrange — task 1.1: books are scoped to the caller (parity with the Library page).
-        var owner = new User { Id = Guid.NewGuid(), Email = "owner@techdaily.local", Name = "Owner" };
-        var stranger = new User { Id = Guid.NewGuid(), Email = "stranger@techdaily.local", Name = "Stranger" };
+        var owner = new User { Id = Guid.NewGuid(), Email = "owner@deeppace.test", Name = "Owner" };
+        var stranger = new User { Id = Guid.NewGuid(), Email = "stranger@deeppace.test", Name = "Stranger" };
         await _db.Users.AddRangeAsync(owner, stranger);
 
         var ownBook = new DocumentBook
@@ -255,7 +255,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_OwnerBooks_ShouldExcludeUnpublishedAndSoftDeleted()
     {
         // Arrange — book nodes require owned + published + not-deleted.
-        var user = new User { Id = Guid.NewGuid(), Email = "filter@techdaily.local", Name = "Filter Tester" };
+        var user = new User { Id = Guid.NewGuid(), Email = "filter@deeppace.test", Name = "Filter Tester" };
         await _db.Users.AddAsync(user);
 
         var publishedBook = new DocumentBook
@@ -310,7 +310,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_ChunkNodes_ShouldEmitOnlyChunksTheUserHasTouched()
     {
         // Arrange — a chunk is emitted only when a card or highlight references it.
-        var user = new User { Id = Guid.NewGuid(), Email = "touched@techdaily.local", Name = "Touched" };
+        var user = new User { Id = Guid.NewGuid(), Email = "touched@deeppace.test", Name = "Touched" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -363,7 +363,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_PillarHubs_ShouldEmitOnlyForActiveCategories()
     {
         // Arrange — task 1.3: only Backend & Runtime activity, so exactly one pillar hub is returned.
-        var user = new User { Id = Guid.NewGuid(), Email = "pillar@techdaily.local", Name = "Pillar User" };
+        var user = new User { Id = Guid.NewGuid(), Email = "pillar@deeppace.test", Name = "Pillar User" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -413,7 +413,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_CurriculumTitledBook_ShouldConnectOnlyToItsOwnPillar_NoFanOut()
     {
         // Arrange — task 1.4: the removed master-curriculum fan-out no longer links a book to all pillars.
-        var user = new User { Id = Guid.NewGuid(), Email = "curriculum@techdaily.local", Name = "Curriculum User" };
+        var user = new User { Id = Guid.NewGuid(), Email = "curriculum@deeppace.test", Name = "Curriculum User" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -445,7 +445,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_BookCategory_ShouldUseStoredCategoryWithoutCrossPillarRemap()
     {
         // Arrange — task 1.4: GetEffectiveBookCategory's FrontendWeb->BackendRuntime remap is removed.
-        var user = new User { Id = Guid.NewGuid(), Email = "category@techdaily.local", Name = "Category User" };
+        var user = new User { Id = Guid.NewGuid(), Email = "category@deeppace.test", Name = "Category User" };
         await _db.Users.AddAsync(user);
 
         // Historically remapped to BackendRuntime by keyword; now kept as stored.
@@ -478,7 +478,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_ChunkToBook_ShouldConnectChunksWithoutCartesianBlowout()
     {
         // Arrange — direct ChunkToBook edges are generated only for that book's own emitted chunks.
-        var user = new User { Id = Guid.NewGuid(), Email = "cartesian@techdaily.local", Name = "Cartesian User" };
+        var user = new User { Id = Guid.NewGuid(), Email = "cartesian@deeppace.test", Name = "Cartesian User" };
         await _db.Users.AddAsync(user);
 
         var book1 = new DocumentBook
@@ -546,7 +546,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_SM2MasteryCategorization_ShouldCategorizeCardsCorrectly()
     {
         // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "sm2@techdaily.local", Name = "SM2 Tester" };
+        var user = new User { Id = Guid.NewGuid(), Email = "sm2@deeppace.test", Name = "SM2 Tester" };
         await _db.Users.AddAsync(user);
 
 
@@ -591,7 +591,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_SharedTagIntersections_ShouldDerivePairwiseEdgesForHighlightsSharingTags()
     {
         // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "tags@techdaily.local", Name = "Tag Tester" };
+        var user = new User { Id = Guid.NewGuid(), Email = "tags@deeppace.test", Name = "Tag Tester" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -668,7 +668,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_HighlightToChunk_ShouldDeriveEdgeWhenHighlightTargetsChunk()
     {
         // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "tagmatch@techdaily.local", Name = "Matcher" };
+        var user = new User { Id = Guid.NewGuid(), Email = "tagmatch@deeppace.test", Name = "Matcher" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -721,8 +721,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     {
         // Arrange — task 1.6: a brand-new user with no owned artifacts gets an empty personal graph,
         // even when seeded topics and other users' books exist.
-        var newUser = new User { Id = Guid.NewGuid(), Email = "newbie@techdaily.local", Name = "New User" };
-        var otherUser = new User { Id = Guid.NewGuid(), Email = "other@techdaily.local", Name = "Other" };
+        var newUser = new User { Id = Guid.NewGuid(), Email = "newbie@deeppace.test", Name = "New User" };
+        var otherUser = new User { Id = Guid.NewGuid(), Email = "other@deeppace.test", Name = "Other" };
         await _db.Users.AddRangeAsync(newUser, otherUser);
 
 
@@ -763,8 +763,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_SoftDeletedHighlight_ShouldBeExcludedAndUnanchoredNodesDropped()
     {
         // Arrange — soft-deleting the only artifact referencing a chunk drops the highlight, its edges, and unreferenced chunk.
-        var user = new User { Id = Guid.NewGuid(), Email = "softdelete@techdaily.local", Name = "Soft Delete" };
-        var otherUser = new User { Id = Guid.NewGuid(), Email = "seedowner@techdaily.local", Name = "Seed Owner" };
+        var user = new User { Id = Guid.NewGuid(), Email = "softdelete@deeppace.test", Name = "Soft Delete" };
+        var otherUser = new User { Id = Guid.NewGuid(), Email = "seedowner@deeppace.test", Name = "Seed Owner" };
         await _db.Users.AddRangeAsync(user, otherUser);
 
         // Book is NOT owned by the caller, so it never becomes a node and cannot keep the pillar alive.
@@ -823,7 +823,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_AllEdges_ShouldReferenceOnlyPresentNodes_AndOrphanCardForcesPillar()
     {
         // Arrange — task 1.5: exercise every edge type and assert no edge dangles to a missing node.
-        var user = new User { Id = Guid.NewGuid(), Email = "edges@techdaily.local", Name = "Edge User" };
+        var user = new User { Id = Guid.NewGuid(), Email = "edges@deeppace.test", Name = "Edge User" };
         await _db.Users.AddAsync(user);
 
 
@@ -916,7 +916,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_DeepPaceMentalModelsAndHabitsBooks_ShouldEmitPillarHubsWithoutDanglingEdges()
     {
         // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "deeppace@techdaily.local", Name = "DeepPace User" };
+        var user = new User { Id = Guid.NewGuid(), Email = "deeppace@deeppace.test", Name = "DeepPace User" };
         await _db.Users.AddAsync(user);
 
         var mentalBook = new DocumentBook
@@ -972,7 +972,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     public async Task ExecuteAsync_CardLinkedToHabitsChunk_ShouldAnchorToHabitsPillarHub()
     {
         // Arrange
-        var user = new User { Id = Guid.NewGuid(), Email = "habitscard@techdaily.local", Name = "Habits Card User" };
+        var user = new User { Id = Guid.NewGuid(), Email = "habitscard@deeppace.test", Name = "Habits Card User" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook

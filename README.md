@@ -253,5 +253,11 @@ When activating `https://deeppace.duckdns.org`, register the domain origins in G
    - `https://deeppace.duckdns.org`
    - `https://deeppace.duckdns.org/login`
 ---
+## Browser Storage Compatibility
+
+Current application and browser QA sessions use `deeppace_token` and `deeppace_user`; narration uses the `deeppace-audio` database. A versioned startup boundary transfers recognized legacy browser state once on the same origin, preserves existing canonical values and session persistence, and resumes incomplete storage/cache cleanup without generating audio.
+
+Behavioral requirements and migration specifications are defined in OpenSpec. The repository slug, checkout/VPS paths, compatibility hosts and database restoration resource names keep their actual operational identities.
+
 ## 📜 License
 MIT License. Built for lifelong learners, knowledge workers, and builders pursuing deliberate practice and lasting mastery.

@@ -599,12 +599,6 @@ function loadBookmarks() {
         const bookId = key.replace('deeppace_bookmark_', '')
         const slice = parseInt(localStorage.getItem(key) || '1', 10)
         loaded[bookId] = slice
-      } else if (key?.startsWith('techdaily_bookmark_')) {
-        const bookId = key.replace('techdaily_bookmark_', '')
-        if (!loaded[bookId]) {
-          const slice = parseInt(localStorage.getItem(key) || '1', 10)
-          loaded[bookId] = slice
-        }
       }
     }
     bookmarks.value = loaded

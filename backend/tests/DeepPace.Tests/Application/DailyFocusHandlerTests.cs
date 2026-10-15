@@ -41,7 +41,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
         await _db.SaveChangesAsync();
 
@@ -62,7 +62,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -122,7 +122,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -181,7 +181,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -249,7 +249,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -318,7 +318,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "reader@techdaily.local", Name = "Reader Dev" };
+        var user = new User { Id = userId, Email = "reader@deeppace.test", Name = "Reader Dev" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -387,7 +387,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -440,7 +440,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -543,7 +543,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -620,7 +620,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook
@@ -693,7 +693,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var streak = StreakRecord.Create(userId);
@@ -719,7 +719,7 @@ public class DailyFocusHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook

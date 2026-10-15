@@ -779,7 +779,7 @@ async function handleResend() {
                     v-model="email"
                     required
                     type="email"
-                    placeholder="dev@techdaily.io"
+                    placeholder="learner@example.com"
                     class="w-full pl-9 pr-4 py-2.5 bg-transparent border-0 text-sm font-mono text-slate-900 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-600 focus:ring-0 focus:outline-none"
                   />
                 </div>

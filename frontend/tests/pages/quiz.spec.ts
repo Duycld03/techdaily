@@ -100,16 +100,16 @@ describe('formatSeniorityLevel helper', () => {
 })
 
 describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     setActivePinia(createPinia())
     const authStore = useAuthStore()
-    authStore.token = 'mock-jwt-token'
-    authStore.user = {
+    const token = `e30.${btoa(JSON.stringify({ sub: 'usr-1', exp: Math.floor(Date.now() / 1000) + 3600 }))}.signature`
+    await authStore.setSession(token, {
       id: 'usr-1',
-      email: 'staff.dev@techdaily.dev',
+      email: 'staff.dev@deeppace.test',
       name: 'Taylor TechLead',
       preferredLocale: 'en'
-    }
+    })
   })
 
   it('renders 4-card Bento Grid Dashboard with distinct seniority levels', async () => {

@@ -24,7 +24,7 @@ public class AuthEndpointsTests : IAsyncLifetime
     private readonly DbContextOptions<DeepPaceDbContext> _dbOptions;
     private WebApplication _app = null!;
     private HttpClient _client = null!;
-    private const string Email = "remember@techdaily.local";
+    private const string Email = "remember@deeppace.test";
     private const string Password = "password123";
 
     public AuthEndpointsTests()

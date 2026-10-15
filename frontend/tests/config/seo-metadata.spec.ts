@@ -57,7 +57,7 @@ describe('SEO Metadata & Structured Data Configuration', () => {
       expect(parsed['@context']).toBe('https://schema.org')
       expect(parsed['@type']).toEqual(expect.arrayContaining(['WebApplication', 'EducationalApplication']))
       expect(parsed.name).toBe('DeepPace')
-      expect(parsed.alternateName).toBe('TechDaily')
+      expect(parsed.alternateName).toBeUndefined()
       expect(parsed.url).toBe('https://deeppace.duckdns.org')
       expect(parsed.applicationCategory).toBe('EducationalApplication')
       expect(parsed.operatingSystem).toBe('All')

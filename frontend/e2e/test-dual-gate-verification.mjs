@@ -63,13 +63,13 @@ try {
   // Set cookies
   await desktopContext.addCookies([
     {
-      name: 'techdaily_token',
+      name: 'deeppace_token',
       value: token,
       domain: 'localhost',
       path: '/'
     },
     {
-      name: 'techdaily_user',
+      name: 'deeppace_user',
       value: encodeURIComponent(JSON.stringify(user)),
       domain: 'localhost',
       path: '/'
@@ -80,8 +80,8 @@ try {
 
   // Set localStorage via addInitScript before loading
   await page.addInitScript(({ token, user }) => {
-    localStorage.setItem('techdaily_token', token)
-    localStorage.setItem('techdaily_user', JSON.stringify(user))
+    localStorage.setItem('deeppace_token', token)
+    localStorage.setItem('deeppace_user', JSON.stringify(user))
   }, { token, user })
 
   // 1. Navigate to Home
@@ -148,13 +148,13 @@ try {
 
   await mobileContext.addCookies([
     {
-      name: 'techdaily_token',
+      name: 'deeppace_token',
       value: token,
       domain: 'localhost',
       path: '/'
     },
     {
-      name: 'techdaily_user',
+      name: 'deeppace_user',
       value: encodeURIComponent(JSON.stringify(user)),
       domain: 'localhost',
       path: '/'
@@ -163,8 +163,8 @@ try {
 
   const mobilePage = await mobileContext.newPage()
   await mobilePage.addInitScript(({ token, user }) => {
-    localStorage.setItem('techdaily_token', token)
-    localStorage.setItem('techdaily_user', JSON.stringify(user))
+    localStorage.setItem('deeppace_token', token)
+    localStorage.setItem('deeppace_user', JSON.stringify(user))
   }, { token, user })
 
   console.log('Navigating mobile to home...')
@@ -192,7 +192,7 @@ try {
   const expiredJwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiZXhwIjoxNTE2MjM5MDIyfQ.invalid'
   await expiredContext.addCookies([
     {
-      name: 'techdaily_token',
+      name: 'deeppace_token',
       value: expiredJwt,
       domain: 'localhost',
       path: '/'

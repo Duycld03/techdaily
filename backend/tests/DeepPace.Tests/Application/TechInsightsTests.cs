@@ -98,7 +98,7 @@ public class TechInsightsTests : IDisposable
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Email = "test@techdaily.io",
+            Email = "test@deeppace.test",
             Name = "Test Engineer",
             CreatedAt = DateTime.UtcNow
         };
@@ -153,7 +153,7 @@ public class TechInsightsTests : IDisposable
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Email = "dev@techdaily.io",
+            Email = "dev@deeppace.test",
             Name = "Dev",
             CreatedAt = DateTime.UtcNow
         };

@@ -85,10 +85,10 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
     {
         using (var db = new DeepPaceDbContext(_dbOptions))
         {
-            var adminUser = new User { Id = _adminUserId, Email = "admin@techdaily.local", Name = "Curator Admin", IsDeleted = false };
-            var learner1 = new User { Id = _learner1UserId, Email = "learner1@techdaily.local", Name = "Learner One", IsDeleted = false };
-            var learner2 = new User { Id = _learner2UserId, Email = "learner2@techdaily.local", Name = "Learner Two", IsDeleted = false };
-            var learner3 = new User { Id = _learner3UserId, Email = "learner3@techdaily.local", Name = "Learner Three", IsDeleted = false };
+            var adminUser = new User { Id = _adminUserId, Email = "admin@deeppace.test", Name = "Curator Admin", IsDeleted = false };
+            var learner1 = new User { Id = _learner1UserId, Email = "learner1@deeppace.test", Name = "Learner One", IsDeleted = false };
+            var learner2 = new User { Id = _learner2UserId, Email = "learner2@deeppace.test", Name = "Learner Two", IsDeleted = false };
+            var learner3 = new User { Id = _learner3UserId, Email = "learner3@deeppace.test", Name = "Learner Three", IsDeleted = false };
 
             await db.Users.AddRangeAsync(adminUser, learner1, learner2, learner3);
             await db.SaveChangesAsync();
@@ -633,7 +633,7 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-                new Claim(ClaimTypes.Email, $"{userId:N}@techdaily.local")
+                new Claim(ClaimTypes.Email, $"{userId:N}@deeppace.test")
             };
 
             var identity = new ClaimsIdentity(claims, "Test");

@@ -1,5 +1,6 @@
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
+import { useClientAdmission } from '~/composables/useClientAdmission'
 import { isAdminRoute, isAdminLogin, normalizeRoutePath, loginRedirectFor, safeAdminReturnPath } from '~/utils/adminRoutes'
 
 export function isJwtExpired(jwt: string | null): boolean {
@@ -35,6 +36,8 @@ export function isJwtExpired(jwt: string | null): boolean {
 }
 export default defineNuxtRouteMiddleware(async (to) => {
   const authStore = useAuthStore()
+  const { state: admissionState } = useClientAdmission()
+  if (admissionState.value !== 'ready') return
 
   // Always initialize store state from cookies and local storage
   authStore.init()
@@ -58,7 +61,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
       if (serverRenderedHydration) return
     }
     if (isServer) {
-      const token = useCookie<string | null>('deeppace_token').value || useCookie<string | null>('techdaily_token').value
+      const token = useCookie<string | null>('deeppace_token').value
       if (!token || isJwtExpired(token)) {
         if (useCookie<string | null>('refreshToken').value) { access.reset(); return }
         return navigateTo(loginRedirectFor(to.fullPath))
@@ -94,10 +97,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // causes severe DOM hydration mismatches when client hydration rejects the expired token.
   if (isServer && isAuthRequired) {
     const tokenCookie = useCookie<string | null>('deeppace_token')
-    const legacyTokenCookie = useCookie<string | null>('techdaily_token')
     const refreshCookie = useCookie<string | null>('refreshToken')
 
-    const activeToken = tokenCookie.value || legacyTokenCookie.value
+    const activeToken = tokenCookie.value
     const hasValidToken = Boolean(activeToken && !isJwtExpired(activeToken))
     const hasRefreshCookie = Boolean(refreshCookie.value)
 

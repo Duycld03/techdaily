@@ -6,7 +6,7 @@ vi.mock('~/stores/useAuthStore', () => ({
   useAuthStore: () => ({
     isAuthenticated: true,
     isLoggedIn: true,
-    user: { id: 'usr-1', email: 'dev@techdaily.io', name: 'Dev', preferredLocale: 'en' }
+    user: { id: 'usr-1', email: 'dev@deeppace.test', name: 'Dev', preferredLocale: 'en' }
   })
 }))
 import { useInsightsStore } from '~/stores/useInsightsStore'

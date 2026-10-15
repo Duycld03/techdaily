@@ -114,9 +114,8 @@ describe('useApiClient 401 Interceptor', () => {
   it('does not purge session credentials when token refresh encounters a network drop or 502/503 during server restart', async () => {
     _resetRedirectingToLogin()
     const auth = useAuthStore()
-    auth.token = 'active-jwt-token'
-    auth.user = { id: 'u-1', email: 'test@example.com', name: 'Test', preferredLocale: 'en' }
-    localStorage.setItem('deeppace_token', 'active-jwt-token')
+    const activeToken = `e30.${btoa(JSON.stringify({ sub: 'u-1', exp: Math.floor(Date.now() / 1000) + 3600 }))}.signature`
+    await auth.setSession(activeToken, { id: 'u-1', email: 'test@example.com', name: 'Test', preferredLocale: 'en' }, true)
 
     // Initial request returns 401, but the subsequent refresh call throws a network error (server restarting)
     globalThis.fetch = vi.fn().mockImplementation((url: string) => {
@@ -134,9 +133,9 @@ describe('useApiClient 401 Interceptor', () => {
 
     await expect(api.get('/api/v1/daily/today')).rejects.toThrow()
     // Session credentials must NOT be purged on network error
-    expect(auth.token).toBe('active-jwt-token')
+    expect(auth.token).toBe(activeToken)
     expect(auth.user?.email).toBe('test@example.com')
-    expect(localStorage.getItem('deeppace_token')).toBe('active-jwt-token')
+    expect(localStorage.getItem('deeppace_token')).toBe(activeToken)
 
     // Must NOT navigate to /login
     expect((globalThis as unknown as GlobalWithNavigateTo).navigateTo).not.toHaveBeenCalled()
@@ -147,7 +146,7 @@ describe('useApiClient Base URL Resolution', () => {
   it('prepends runtimeConfig.public.apiBaseUrl to requests when configured', async () => {
     const originalRuntimeConfig = (globalThis as any).useRuntimeConfig
     ;(globalThis as any).useRuntimeConfig = () => ({
-      public: { apiBaseUrl: 'https://api.techdaily.app' }
+      public: { apiBaseUrl: 'https://api.deeppace.test' }
     })
 
     const fetchSpy = vi.fn().mockResolvedValue({
@@ -161,7 +160,7 @@ describe('useApiClient Base URL Resolution', () => {
     try {
       const api = useApiClient()
       await api.get('/api/v1/health')
-      expect(fetchSpy).toHaveBeenCalledWith('https://api.techdaily.app/api/v1/health', expect.any(Object))
+      expect(fetchSpy).toHaveBeenCalledWith('https://api.deeppace.test/api/v1/health', expect.any(Object))
     } finally {
       ;(globalThis as any).useRuntimeConfig = originalRuntimeConfig
     }

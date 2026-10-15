@@ -1,5 +1,5 @@
 # ====================================================================
-# .gitignore for TechDaily (.NET 10 + Nuxt 4 + PostgreSQL + Docker)
+# .gitignore for DeepPace (.NET 10 + Nuxt 4 + PostgreSQL + Docker)
 # ====================================================================
 
 # --------------------------------------------------------------------
@@ -81,4 +81,3 @@ skills-lock.json
 .windsurf/
 .copilot/
 .archify/
-

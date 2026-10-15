@@ -7,7 +7,7 @@ function createMockJwt(expOffsetSeconds: number): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
   const payload = btoa(JSON.stringify({
     nameid: 'u-100',
-    email: 'test@techdaily.io',
+    email: 'test@deeppace.test',
     unique_name: 'Test Engineer',
     exp: Math.floor(Date.now() / 1000) + expOffsetSeconds
   }))
@@ -23,8 +23,8 @@ describe('auth.global route middleware', () => {
     sessionStorage.clear()
     useCookie('deeppace_token').value = null
     useCookie('deeppace_user').value = null
-    useCookie('techdaily_token').value = null
-    useCookie('techdaily_user').value = null
+    useCookie('deeppace_token').value = null
+    useCookie('deeppace_user').value = null
     useCookie('refreshToken').value = null
     authStore = useAuthStore()
     vi.clearAllMocks()
@@ -90,9 +90,8 @@ describe('auth.global route middleware', () => {
   })
 
   describe('authenticated user access', () => {
-    beforeEach(() => {
-      authStore.token = 'valid-token'
-      authStore.user = { id: 'u1', email: 'test@techdaily.local', name: 'Test User' } as any
+    beforeEach(async () => {
+      await authStore.setSession(createMockJwt(3600), { id: 'u-100', email: 'test@deeppace.test', name: 'Test User', preferredLocale: 'en' })
     })
 
     it('permits authenticated user on /library without redirect', async () => {
@@ -164,7 +163,7 @@ describe('auth.global route middleware', () => {
       const originalServer = proc.server
       proc.server = true
       try {
-        useCookie('techdaily_token').value = null
+        useCookie('deeppace_token').value = null
         useCookie('refreshToken').value = null
         const to = { path: '/library', fullPath: '/library' }
         const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
@@ -180,13 +179,13 @@ describe('auth.global route middleware', () => {
       }
     })
 
-    it('permits navigation during SSR when a valid unexpired techdaily_token cookie is present', async () => {
+    it('permits navigation during SSR when a valid unexpired deeppace_token cookie is present', async () => {
       const proc = process as unknown as { server?: boolean }
       const originalServer = proc.server
       proc.server = true
       try {
         useCookie('deeppace_token').value = null
-        useCookie('techdaily_token').value = createMockJwt(3600)
+        useCookie('deeppace_token').value = createMockJwt(3600)
         useCookie('refreshToken').value = null
         const to = { path: '/library', fullPath: '/library' }
         const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
@@ -200,13 +199,13 @@ describe('auth.global route middleware', () => {
       }
     })
 
-    it('immediately redirects to /login during SSR when techdaily_token is expired and no refreshToken exists', async () => {
+    it('immediately redirects to /login during SSR when deeppace_token is expired and no refreshToken exists', async () => {
       const proc = process as unknown as { server?: boolean }
       const originalServer = proc.server
       proc.server = true
       try {
         useCookie('deeppace_token').value = null
-        useCookie('techdaily_token').value = createMockJwt(-120)
+        useCookie('deeppace_token').value = createMockJwt(-120)
         useCookie('refreshToken').value = null
         const to = { path: '/library', fullPath: '/library' }
         const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>
@@ -228,7 +227,7 @@ describe('auth.global route middleware', () => {
       proc.server = true
       try {
         useCookie('deeppace_token').value = null
-        useCookie('techdaily_token').value = createMockJwt(-120)
+        useCookie('deeppace_token').value = createMockJwt(-120)
         useCookie('refreshToken').value = 'mock-refresh-token'
         const to = { path: '/library', fullPath: '/library' }
         const middleware = authMiddleware as unknown as (to: unknown) => Promise<unknown>

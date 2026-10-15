@@ -9,12 +9,15 @@ import AdminShell from '~/components/admin/AdminShell.vue'
 import AdminAuthorizationBoundary from '~/components/admin/AdminAuthorizationBoundary.vue'
 import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 import { isAdminRoute, isAdminLogin } from '~/utils/adminRoutes'
+import { useClientAdmission } from '~/composables/useClientAdmission'
+import SessionAdmissionBoundary from '~/components/auth/SessionAdmissionBoundary.vue'
 const deferredRoute = useRoute()
 const router = useRouter()
 // Shell transitions must follow the committed router location even when the
 // authorization boundary temporarily replaces NuxtPage and delays page finish.
 const route = computed(() => router.currentRoute?.value || deferredRoute)
 const authStore = useAuthStore()
+const { state: admissionState } = useClientAdmission()
 const adminAccess = useAdminAccessStore()
 const isAdminPage = computed(() => isAdminRoute(route.value.path) && !isAdminLogin(route.value.path))
 
@@ -43,6 +46,8 @@ onMounted(() => {
     <template v-if="isAuthPage">
       <NuxtPage :page-key="route => route.fullPath" />
     </template>
+
+    <SessionAdmissionBoundary v-else-if="admissionState !== 'ready'" />
 
     <template v-else-if="isAdminPage">
       <AdminShell v-if="adminAccess.isAuthorized"><NuxtPage :page-key="route => route.fullPath" /></AdminShell>

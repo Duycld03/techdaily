@@ -23,15 +23,24 @@ public class WebPushService : IWebPushService
     private readonly ILogger<WebPushService> _logger;
     private readonly VapidDetails? _vapidDetails;
     private readonly WebPushClient _client;
+    private readonly Func<PushSubscription, string, VapidDetails, CancellationToken, Task> _send;
 
     public string PublicKey => _vapidDetails?.PublicKey ?? string.Empty;
 
     public WebPushService(IConfiguration configuration, ILogger<WebPushService> logger)
+        : this(configuration, logger, null)
+    {
+    }
+
+    internal WebPushService(IConfiguration configuration, ILogger<WebPushService> logger,
+        Func<PushSubscription, string, VapidDetails, CancellationToken, Task>? send)
     {
         _logger = logger;
         _client = new WebPushClient();
+        _send = send ?? ((subscription, payload, vapid, cancellationToken) =>
+            _client.SendNotificationAsync(subscription, payload, vapid, cancellationToken));
 
-        var subject = configuration["WebPush:Subject"] ?? "mailto:support@techdaily.app";
+        var subject = configuration["WebPush:Subject"] ?? "mailto:support@deeppace.app";
         var publicKey = configuration["WebPush:PublicKey"];
         var privateKey = configuration["WebPush:PrivateKey"];
 
@@ -66,11 +75,11 @@ public class WebPushService : IWebPushService
                 title = payload.Title,
                 body = payload.Body,
                 url = payload.Url ?? "/today",
-                tag = payload.Tag ?? "techdaily-daily",
+                tag = payload.Tag ?? "deeppace-daily",
                 icon = payload.Icon ?? "/icon.png"
             });
 
-            await _client.SendNotificationAsync(subscription, jsonPayload, _vapidDetails, cancellationToken);
+            await _send(subscription, jsonPayload, _vapidDetails, cancellationToken);
             return true;
         }
         catch (WebPushException ex) when (ex.StatusCode == HttpStatusCode.NotFound || ex.StatusCode == HttpStatusCode.Gone)

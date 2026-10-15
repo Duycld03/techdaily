@@ -117,14 +117,14 @@ public class ExportBookMarkdownHandlerTests : IDisposable
         var user = new User
         {
             Id = userId,
-            Email = "architect@techdaily.io",
+            Email = "architect@deeppace.test",
             Name = "Senior Architect",
             PasswordHash = "hash"
         };
         var otherUser = new User
         {
             Id = otherUserId,
-            Email = "other@techdaily.io",
+            Email = "other@deeppace.test",
             Name = "Other Engineer",
             PasswordHash = "hash"
         };

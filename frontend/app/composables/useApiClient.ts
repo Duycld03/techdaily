@@ -75,21 +75,8 @@ export function useApiClient() {
   }
 
   function getAuthToken(): string | null {
-    const tokenCookie = useCookie<string | null>('deeppace_token')
-    if (tokenCookie.value) {
-      return tokenCookie.value
-    }
-    const legacyCookie = useCookie<string | null>('techdaily_token')
-    if (legacyCookie.value) {
-      return legacyCookie.value
-    }
-    if (import.meta.client && typeof window !== 'undefined') {
-      const local = localStorage.getItem('deeppace_token') || localStorage.getItem('techdaily_token')
-      if (local) return local
-      const session = sessionStorage.getItem('deeppace_token') || sessionStorage.getItem('techdaily_token')
-      if (session) return session
-    }
-    return null
+    auth.init()
+    return auth.token
   }
 
   async function executeRefresh(): Promise<string | null> {
@@ -134,15 +121,8 @@ export function useApiClient() {
     }
 
     if (generation !== auth.sessionGeneration) throw new ApiError('The account changed during renewal.', 409, 'SESSION_CHANGED')
-    try {
-      auth.setSession(newToken, returnedUser || auth.user)
-    } catch {
-      const tokenCookie = useCookie<string | null>('deeppace_token')
-      tokenCookie.value = newToken
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('deeppace_token', newToken)
-      }
-    }
+    await auth.setSession(newToken, returnedUser || auth.user)
+    if (generation !== auth.sessionGeneration) throw new ApiError('The account changed during renewal.', 409, 'SESSION_CHANGED')
 
     return newToken
   }
@@ -235,7 +215,7 @@ export function useApiClient() {
       }
       if (generation !== auth.sessionGeneration) throw new ApiError('The account changed during the request.', 409, 'SESSION_CHANGED')
       if (response.status === 401) {
-        auth.clearSession()
+        await auth.clearSession()
         try { useToast().warning(translate?.('auth.session_expired') || 'Session expired. Please log in again.') } catch { /* No toast outside UI context. */ }
         redirectToLogin()
       }

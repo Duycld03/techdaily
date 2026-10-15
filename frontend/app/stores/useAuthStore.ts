@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed, shallowRef } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
+import { CLIENT_STORAGE, browserStorage, isCurrentSessionToken, profileForToken, readCanonicalSession } from '~/utils/clientStorage'
+import { browserMigrationEnvironment, clearLegacyCredentials, commitSessionChange, retireLegacyIdentity } from '~/utils/legacyStorageMigration'
 
 export interface AuthUser {
   id: string
@@ -12,46 +14,14 @@ export interface AuthUser {
 
 export const useAuthStore = defineStore('auth', () => {
   const tokenCookie = useCookie<string | null>('deeppace_token', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
-  const legacyTokenCookie = useCookie<string | null>('techdaily_token', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
   const userCookie = useCookie<AuthUser | null>('deeppace_user', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
-  const legacyUserCookie = useCookie<AuthUser | null>('techdaily_user', { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' })
-
-  function parseJwtPayload(jwt: string): any | null {
-    try {
-      const parts = jwt.split('.')
-      const base64Url = parts[1]
-      if (!base64Url) return null
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-      const jsonPayload = decodeURIComponent(
-        atob(base64)
-          .split('')
-          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      )
-      return JSON.parse(jsonPayload)
-    } catch {
-      return null
-    }
-  }
 
   function isTokenExpired(jwt: string | null): boolean {
-    if (!jwt) return true
-    const payload = parseJwtPayload(jwt)
-    if (payload && typeof payload.exp === 'number') {
-      return payload.exp * 1000 <= Date.now()
-    }
-    return false
+    return !isCurrentSessionToken(jwt)
   }
 
   function parseUserFromJwt(jwt: string): AuthUser | null {
-    const payload = parseJwtPayload(jwt)
-    if (!payload) return null
-    return {
-      id: payload.nameid || payload.sub || '',
-      email: payload.email || '',
-      name: payload.unique_name || payload.name || (payload.email ? payload.email.split('@')[0] : 'User'),
-      preferredLocale: 'en'
-    }
+    return profileForToken(jwt, null)
   }
 
   function clearSession() {
@@ -60,33 +30,31 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     user.value = null
     tokenCookie.value = null
-    legacyTokenCookie.value = null
     userCookie.value = null
-    legacyUserCookie.value = null
+    let pending = Promise.resolve()
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('deeppace_token')
-      localStorage.removeItem('deeppace_user')
-      localStorage.removeItem('deeppace_refresh_token')
-      sessionStorage.removeItem('deeppace_token')
-      sessionStorage.removeItem('deeppace_user')
-      localStorage.removeItem('techdaily_token')
-      localStorage.removeItem('techdaily_user')
-      localStorage.removeItem('techdaily_refresh_token')
-      sessionStorage.removeItem('techdaily_token')
-      sessionStorage.removeItem('techdaily_user')
+      const env = browserMigrationEnvironment()
+      const epoch = retireLegacyIdentity(env)
+      const cleanup = () => {
+        tokenCookie.value = null
+        userCookie.value = null
+        for (const storage of [env.local, env.session]) {
+          for (const key of [CLIENT_STORAGE.token, CLIENT_STORAGE.user]) {
+            try { storage?.removeItem(key) } catch { /* Other storage scopes still need cleanup. */ }
+          }
+        }
+        try { clearLegacyCredentials(env) } catch { /* The retirement fence prevents reimport. */ }
+      }
+      cleanup()
+      pending = commitSessionChange(env, epoch, cleanup)
     }
-    try {
-      const catalogStore = useCatalogStore()
-      catalogStore.cleanup()
-    } catch {
-      // Pinia may not be available in isolated tests
-    }
+    try { useCatalogStore().cleanup() } catch { /* Pinia may be unavailable in isolated tests. */ }
+    return pending
   }
 
-  const initialToken = tokenCookie.value || legacyTokenCookie.value || null
-  const initialUser = userCookie.value || legacyUserCookie.value || (initialToken ? parseUserFromJwt(initialToken) : null)
+  const initialToken = tokenCookie.value || null
   const token = ref<string | null>(initialToken)
-  const user = ref<AuthUser | null>(initialUser)
+  const user = ref<AuthUser | null>(profileForToken(initialToken, userCookie.value))
   const isInitialized = ref(false)
   const sessionGeneration = shallowRef(0)
   const adminGeneration = shallowRef(0)
@@ -95,94 +63,26 @@ export const useAuthStore = defineStore('auth', () => {
   function invalidateAdminAccess() {
     adminGeneration.value++
   }
-  // Whether the current session is persistent (Remember me) or session-scoped
-  const isPersistentSession = ref(true)
+
+  function invalidateStoredSession() {
+    sessionGeneration.value++
+    adminGeneration.value++
+    token.value = null
+    user.value = null
+    isInitialized.value = true
+  }
+  const isPersistentSession = ref(false)
 
   const isLoggedIn = computed(() => !!token.value && !isTokenExpired(token.value))
   const isAuthenticated = computed(() => !!token.value && !isTokenExpired(token.value))
 
-  function init() {
-    if (!token.value) {
-      if (tokenCookie.value) {
-        token.value = tokenCookie.value
-      } else if (legacyTokenCookie.value) {
-        token.value = legacyTokenCookie.value
-      }
-    }
-    if (!user.value) {
-      if (userCookie.value) {
-        user.value = userCookie.value
-      } else if (legacyUserCookie.value) {
-        user.value = legacyUserCookie.value
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      if (!token.value) {
-        token.value = localStorage.getItem('deeppace_token')
-          || sessionStorage.getItem('deeppace_token')
-          || localStorage.getItem('techdaily_token')
-          || sessionStorage.getItem('techdaily_token')
-      }
-      if (!user.value) {
-        const storedUser = localStorage.getItem('deeppace_user')
-          || sessionStorage.getItem('deeppace_user')
-          || localStorage.getItem('techdaily_user')
-          || sessionStorage.getItem('techdaily_user')
-        if (storedUser) {
-          try {
-            user.value = JSON.parse(storedUser)
-          } catch {
-            user.value = null
-          }
-        }
-      }
-      // Migrate legacy keys if present in storage
-      if (localStorage.getItem('techdaily_token')) {
-        if (!localStorage.getItem('deeppace_token')) {
-          localStorage.setItem('deeppace_token', localStorage.getItem('techdaily_token')!)
-        }
-        localStorage.removeItem('techdaily_token')
-      }
-      if (localStorage.getItem('techdaily_user')) {
-        if (!localStorage.getItem('deeppace_user')) {
-          localStorage.setItem('deeppace_user', localStorage.getItem('techdaily_user')!)
-        }
-        localStorage.removeItem('techdaily_user')
-      }
-      if (sessionStorage.getItem('techdaily_token')) {
-        if (!sessionStorage.getItem('deeppace_token')) {
-          sessionStorage.setItem('deeppace_token', sessionStorage.getItem('techdaily_token')!)
-        }
-        sessionStorage.removeItem('techdaily_token')
-      }
-      if (sessionStorage.getItem('techdaily_user')) {
-        if (!sessionStorage.getItem('deeppace_user')) {
-          sessionStorage.setItem('deeppace_user', sessionStorage.getItem('techdaily_user')!)
-        }
-        sessionStorage.removeItem('techdaily_user')
-      }
-      // Session-scoped only when the token lives in sessionStorage and not localStorage
-      isPersistentSession.value = !(sessionStorage.getItem('deeppace_token') !== null && localStorage.getItem('deeppace_token') === null)
-    }
-
-    if (token.value && !user.value) {
-      const parsed = parseUserFromJwt(token.value)
-      if (parsed) {
-        user.value = parsed
-        userCookie.value = parsed
-      }
-    }
-
-    if (typeof window !== 'undefined' && !isInitialized.value) {
-      if (token.value && !tokenCookie.value) {
-        tokenCookie.value = token.value
-      }
-      if (user.value && !userCookie.value) {
-        userCookie.value = user.value
-      }
-      isInitialized.value = true
-    }
+  function init(force = false) {
+    if (isInitialized.value && !force) return
+    const resolved = readCanonicalSession(tokenCookie.value, userCookie.value)
+    token.value = resolved.token
+    user.value = resolved.user
+    isPersistentSession.value = resolved.persistent
+    isInitialized.value = true
   }
 
   async function login(email: string, password: string, rememberMe: boolean = true) {
@@ -193,7 +93,7 @@ export const useAuthStore = defineStore('auth', () => {
       rememberMe
     })
     const jwt = response.accessToken || response.token || ''
-    setSession(jwt, response.user, rememberMe)
+    await setSession(jwt, response.user, rememberMe)
     return { ...response, token: jwt }
   }
 
@@ -217,7 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
       rememberMe
     })
     const jwt = response.accessToken || response.token || ''
-    setSession(jwt, response.user, rememberMe)
+    await setSession(jwt, response.user, rememberMe)
     return { ...response, token: jwt }
   }
 
@@ -247,53 +147,52 @@ export const useAuthStore = defineStore('auth', () => {
     const payload = isAccessToken ? { accessToken: token } : { idToken: token }
     const response = await api.post<{ token?: string; accessToken?: string; user: AuthUser }>('/api/v1/auth/google', payload)
     const jwt = response.accessToken || response.token || ''
-    setSession(jwt, response.user, true)
+    await setSession(jwt, response.user, true)
     return { ...response, token: jwt }
   }
 
-  function setSession(newToken: string, newUser?: AuthUser | null, remember: boolean = isPersistentSession.value) {
-    const nextUserId = newUser?.id || parseUserFromJwt(newToken)?.id || user.value?.id
-    if (nextUserId !== user.value?.id) {
+  async function setSession(newToken: string, newUser?: AuthUser | null, remember: boolean = isPersistentSession.value) {
+    const resolvedUser = profileForToken(newToken, newUser)
+    if (resolvedUser?.id !== user.value?.id) {
       sessionGeneration.value++
       adminGeneration.value++
     }
+    const generation = sessionGeneration.value
     isPersistentSession.value = remember
     token.value = newToken
-
+    user.value = resolvedUser
+    isInitialized.value = true
     const cookieOpts = remember
       ? { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' as const }
       : { path: '/', sameSite: 'lax' as const }
-    useCookie<string | null>('deeppace_token', cookieOpts).value = newToken
-    useCookie<string | null>('techdaily_token').value = null
-
-    if (typeof window !== 'undefined') {
-      const primary = remember ? window.localStorage : window.sessionStorage
-      const secondary = remember ? window.sessionStorage : window.localStorage
-      primary.setItem('deeppace_token', newToken)
-      secondary.removeItem('deeppace_token')
-      localStorage.removeItem('deeppace_refresh_token')
-      localStorage.removeItem('techdaily_token')
-      sessionStorage.removeItem('techdaily_token')
-      localStorage.removeItem('techdaily_refresh_token')
-    }
-
-    if (newUser) {
-      user.value = newUser
-      useCookie<AuthUser | null>('deeppace_user', cookieOpts).value = newUser
-      useCookie<AuthUser | null>('techdaily_user').value = null
-      if (typeof window !== 'undefined') {
-        const primary = remember ? window.localStorage : window.sessionStorage
-        const secondary = remember ? window.sessionStorage : window.localStorage
-        primary.setItem('deeppace_user', JSON.stringify(newUser))
-        secondary.removeItem('deeppace_user')
-        localStorage.removeItem('techdaily_user')
-        sessionStorage.removeItem('techdaily_user')
+    // Capture Nuxt refs before awaiting the browser lock so context remains request scoped.
+    const accessCookie = useCookie<string | null>(CLIENT_STORAGE.token, cookieOpts)
+    const profileCookie = useCookie<AuthUser | null>(CLIENT_STORAGE.user, cookieOpts)
+    const persist = () => {
+      if (generation !== sessionGeneration.value) return
+      accessCookie.value = newToken
+      profileCookie.value = resolvedUser
+      if (typeof window === 'undefined') return
+      const primary = browserStorage(remember ? 'localStorage' : 'sessionStorage')
+      const secondary = browserStorage(remember ? 'sessionStorage' : 'localStorage')
+      for (const [key, value] of [[CLIENT_STORAGE.token, newToken], [CLIENT_STORAGE.user, JSON.stringify(resolvedUser)]]) {
+        try { primary?.setItem(key!, value!) } catch { /* In-memory access remains usable when storage is denied. */ }
+        try { secondary?.removeItem(key!) } catch { /* Scope cleanup is best effort behind the identity fence. */ }
       }
+    }
+    if (typeof window === 'undefined') persist()
+    else {
+      const env = browserMigrationEnvironment()
+      const epoch = retireLegacyIdentity(env)
+      await commitSessionChange(env, epoch, () => {
+        persist()
+        try { clearLegacyCredentials(env) } catch { /* An incomplete cleanup cannot reimport retired identity. */ }
+      })
     }
   }
 
   async function logout(redirectPath: string = '/login') {
-    clearSession()
+    await clearSession()
     try {
       const api = useApiClient()
       await api.post('/api/v1/auth/revoke', undefined, { credentials: 'include' } as RequestInit)
@@ -307,20 +206,13 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function updateUser(updated: Partial<AuthUser>) {
-    if (user.value) {
-      user.value = { ...user.value, ...updated }
-      const cookieOpts = isPersistentSession.value
-        ? { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' as const }
-        : { path: '/', sameSite: 'lax' as const }
-      useCookie<AuthUser | null>('deeppace_user', cookieOpts).value = user.value
-      useCookie<AuthUser | null>('techdaily_user').value = null
-      if (typeof window !== 'undefined') {
-        const primary = isPersistentSession.value ? window.localStorage : window.sessionStorage
-        primary.setItem('deeppace_user', JSON.stringify(user.value))
-        window.localStorage.removeItem('techdaily_user')
-        window.sessionStorage.removeItem('techdaily_user')
-      }
-    }
+    if (!user.value) return
+    user.value = { ...user.value, ...updated, id: user.value.id }
+    const cookieOpts = isPersistentSession.value
+      ? { maxAge: 60 * 60 * 24 * 30, path: '/', sameSite: 'lax' as const }
+      : { path: '/', sameSite: 'lax' as const }
+    useCookie<AuthUser | null>(CLIENT_STORAGE.user, cookieOpts).value = user.value
+    try { browserStorage(isPersistentSession.value ? 'localStorage' : 'sessionStorage')?.setItem(CLIENT_STORAGE.user, JSON.stringify(user.value)) } catch { /* Storage can be unavailable. */ }
   }
   async function tryRefreshToken(): Promise<boolean> {
     lastRefreshError.value = null
@@ -328,11 +220,11 @@ export const useAuthStore = defineStore('auth', () => {
       const api = useApiClient()
       const newToken = await api.refreshAuthToken()
       if (newToken) {
-        setSession(newToken, user.value || parseUserFromJwt(newToken))
+        await setSession(newToken, user.value || parseUserFromJwt(newToken))
         return true
       }
       if (isTokenExpired(token.value)) {
-        clearSession()
+        await clearSession()
       }
       return false
     } catch (err: any) {
@@ -342,7 +234,7 @@ export const useAuthStore = defineStore('auth', () => {
         return false
       }
       if (err?.status === 401 || err?.status === 403) {
-        clearSession()
+        await clearSession()
         lastRefreshError.value = err.status
       } else {
         lastRefreshError.value = 503
@@ -357,6 +249,7 @@ export const useAuthStore = defineStore('auth', () => {
     lastRefreshError,
     isPersistentSession,
     invalidateAdminAccess,
+    invalidateStoredSession,
     token,
     user,
     isLoggedIn,

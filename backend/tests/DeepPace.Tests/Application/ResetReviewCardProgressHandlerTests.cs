@@ -40,7 +40,7 @@ public class ResetReviewCardProgressHandlerTests : IDisposable
         var user = new User
         {
             Id = userId,
-            Email = $"dev_{Guid.NewGuid()}@techdaily.local",
+            Email = $"dev_{Guid.NewGuid()}@deeppace.test",
             Name = "Mastery Student"
         };
         await _db.Users.AddAsync(user);
@@ -137,7 +137,7 @@ public class ResetReviewCardProgressHandlerTests : IDisposable
         var otherUser = new User
         {
             Id = otherUserId,
-            Email = $"other_{otherUserId}@techdaily.local",
+            Email = $"other_{otherUserId}@deeppace.test",
             Name = "Other User"
         };
         await _db.Users.AddAsync(otherUser);

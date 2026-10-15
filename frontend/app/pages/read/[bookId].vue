@@ -264,8 +264,6 @@ onMounted(async () => {
   try {
     const savedCompleted = localStorage.getItem(
       `deeppace_completed_${bookId.value}`,
-    ) || localStorage.getItem(
-      `techdaily_completed_${bookId.value}`,
     );
     if (savedCompleted) {
       completedSlices.value = new Set(JSON.parse(savedCompleted));
@@ -292,8 +290,6 @@ onMounted(async () => {
     } else {
       const savedBookmark = localStorage.getItem(
         `deeppace_bookmark_${bookId.value}`,
-      ) || localStorage.getItem(
-        `techdaily_bookmark_${bookId.value}`,
       );
       if (savedBookmark) {
         const bookmarkSlice = parseInt(savedBookmark, 10);

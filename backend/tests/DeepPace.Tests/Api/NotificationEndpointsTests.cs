@@ -85,7 +85,7 @@ public class NotificationEndpointsTests : IAsyncLifetime
             db.Users.Add(new User
             {
                 Id = _userId,
-                Email = "learner@techdaily.local",
+                Email = "learner@deeppace.test",
                 Name = "Learner",
                 TimeZone = "UTC",
                 IsPushEnabled = false
@@ -131,7 +131,7 @@ public class NotificationEndpointsTests : IAsyncLifetime
             db.Users.Add(new User
             {
                 Id = _userId,
-                Email = "invalidtz@techdaily.local",
+                Email = "invalidtz@deeppace.test",
                 Name = "Learner Invalid",
                 TimeZone = "Asia/Tokyo",
                 IsPushEnabled = false
@@ -174,7 +174,7 @@ public class NotificationEndpointsTests : IAsyncLifetime
             db.Users.Add(new User
             {
                 Id = _userId,
-                Email = "nulltz@techdaily.local",
+                Email = "nulltz@deeppace.test",
                 Name = "Learner Null TZ",
                 TimeZone = "Asia/Tokyo",
                 IsPushEnabled = false
@@ -217,7 +217,7 @@ public class NotificationEndpointsTests : IAsyncLifetime
             var user = new User
             {
                 Id = _userId,
-                Email = "update@techdaily.local",
+                Email = "update@deeppace.test",
                 Name = "Learner Update",
                 TimeZone = "America/New_York",
                 IsPushEnabled = true
@@ -286,7 +286,7 @@ public class NotificationEndpointsTests : IAsyncLifetime
             db.Users.Add(new User
             {
                 Id = _userId,
-                Email = "valid-sub@techdaily.local",
+                Email = "valid-sub@deeppace.test",
                 Name = "Valid User",
                 IsPushEnabled = true
             });
@@ -325,7 +325,7 @@ public class NotificationEndpointsTests : IAsyncLifetime
             db.Users.Add(new User
             {
                 Id = _userId,
-                Email = "expired-sub@techdaily.local",
+                Email = "expired-sub@deeppace.test",
                 Name = "Expired User",
                 IsPushEnabled = true
             });
@@ -377,7 +377,7 @@ public class NotificationEndpointsTests : IAsyncLifetime
             db.Users.Add(new User
             {
                 Id = _userId,
-                Email = "mixed-sub@techdaily.local",
+                Email = "mixed-sub@deeppace.test",
                 Name = "Mixed User",
                 IsPushEnabled = true
             });
@@ -433,7 +433,7 @@ public class NotificationEndpointsTests : IAsyncLifetime
             db.Users.Add(new User
             {
                 Id = _userId,
-                Email = "no-sub@techdaily.local",
+                Email = "no-sub@deeppace.test",
                 Name = "No Sub User",
                 IsPushEnabled = false
             });
@@ -496,7 +496,7 @@ public class NotificationEndpointsTests : IAsyncLifetime
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, UserId.ToString()),
-                new Claim(ClaimTypes.Email, "test@techdaily.local")
+                new Claim(ClaimTypes.Email, "test@deeppace.test")
             };
             var identity = new ClaimsIdentity(claims, "Test");
             var principal = new ClaimsPrincipal(identity);

@@ -9,7 +9,6 @@ export interface ReaderTypography {
 }
 
 export const TYPOGRAPHY_STORAGE_KEY = 'deeppace_reader_typography'
-export const LEGACY_TYPOGRAPHY_STORAGE_KEY = 'techdaily_reader_typography'
 
 export const DEFAULT_TYPOGRAPHY: ReaderTypography = {
   fontSize: 'base',
@@ -54,7 +53,7 @@ export function initTypography(force = false) {
   if (isInitialized && !force) return
 
   try {
-    const saved = localStorage.getItem(TYPOGRAPHY_STORAGE_KEY) || localStorage.getItem(LEGACY_TYPOGRAPHY_STORAGE_KEY)
+    const saved = localStorage.getItem(TYPOGRAPHY_STORAGE_KEY)
     if (saved) {
       const parsed = JSON.parse(saved)
       if (parsed && typeof parsed === 'object') {

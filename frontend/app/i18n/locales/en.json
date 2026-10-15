@@ -1132,6 +1132,9 @@
     "month_reset": "Resets every 1st of month"
   },
   "auth": {
+    "admission_checking": "Verifying your session…",
+    "admission_unavailable": "We couldn't verify your session. Please try again.",
+    "admission_retry": "Try again",
     "welcome_title": "Sign in to DeepPace",
     "welcome_subtitle": "Deep learning at a sustainable daily pace",
     "sign_in_tab": "Sign In",
@@ -1232,8 +1235,7 @@
     "soc2_compliance": "SOC2 TYPE II COMPLIANT",
     "jwt_handshake": "RFC-7519 JWT HANDSHAKE",
     "engine_cipher_meta": "ENGINE: SM-2r4  CIPHER: AES-256-GCM  © 2026 DEEPPACE",
-    "google_sign_in_with": "Sign in with Google",
-    "sign_in_to_techdaily": "Sign in to DeepPace"
+    "google_sign_in_with": "Sign in with Google"
   },
   "quiz": {
     "title": "Reflex Practice",

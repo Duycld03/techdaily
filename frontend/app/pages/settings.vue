@@ -63,7 +63,7 @@ function setTab(tab: SettingsTab | 'profile') {
 const name = ref('')
 const targetRole = ref('Deep Work & Focus Practitioner')
 const dailyGoalMinutes = ref(10)
-const autoAdvanceCards = useStorage('techdaily-auto-advance-cards', true)
+const autoAdvanceCards = useStorage('deeppace_auto_advance_cards', true)
 const isSaving = ref(false)
 
 const masteryTrackOptions = computed(() => [

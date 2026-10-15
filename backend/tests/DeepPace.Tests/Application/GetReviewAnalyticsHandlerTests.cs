@@ -39,7 +39,7 @@ public class GetReviewAnalyticsHandlerTests : IDisposable
         await _db.Users.AddAsync(new User
         {
             Id = userId,
-            Email = $"dev_{Guid.NewGuid()}@techdaily.local",
+            Email = $"dev_{Guid.NewGuid()}@deeppace.test",
             Name = "Retention Analytics Dev"
         });
         await _db.SaveChangesAsync();
@@ -94,7 +94,7 @@ public class GetReviewAnalyticsHandlerTests : IDisposable
         await _db.Users.AddAsync(new User
         {
             Id = otherUserId,
-            Email = $"other_{otherUserId}@techdaily.local",
+            Email = $"other_{otherUserId}@deeppace.test",
             Name = "Other Dev"
         });
         var otherCard = Card(otherUserId, CardSourceType.DocumentChunk, "other");

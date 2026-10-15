@@ -1132,6 +1132,9 @@
     "month_reset": "Cấp lại 2 lượt vào ngày 1 hàng tháng"
   },
   "auth": {
+    "admission_checking": "Đang xác minh phiên đăng nhập…",
+    "admission_unavailable": "Chưa thể xác minh phiên đăng nhập. Vui lòng thử lại.",
+    "admission_retry": "Thử lại",
     "welcome_title": "Đăng nhập vào DeepPace",
     "welcome_subtitle": "Học sâu với nhịp độ bền bỉ mỗi ngày",
     "sign_in_tab": "Đăng Nhập",
@@ -1232,8 +1235,7 @@
     "soc2_compliance": "TUÂN THỦ SOC2 TYPE II",
     "jwt_handshake": "RFC-7519 JWT HANDSHAKE",
     "engine_cipher_meta": "ENGINE: SM-2r4  CIPHER: AES-256-GCM  © 2026 DEEPPACE",
-    "google_sign_in_with": "Đăng nhập với Google",
-    "sign_in_to_techdaily": "Đăng nhập vào DeepPace"
+    "google_sign_in_with": "Đăng nhập với Google"
   },
   "quiz": {
     "title": "Luyện Phản Xạ Tư Duy",

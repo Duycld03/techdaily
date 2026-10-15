@@ -151,8 +151,8 @@ describe('pages/login.vue', () => {
 
   it('redirects to /today when user is already logged in on mount', async () => {
     const authStore = useAuthStore()
-    authStore.token = 'existing-token'
-    authStore.user = { id: 'u1', email: 'test@example.com', name: 'Tester', preferredLocale: 'en' }
+    const token = `e30.${btoa(JSON.stringify({ sub: 'u1', exp: Math.floor(Date.now() / 1000) + 3600 }))}.signature`
+    await authStore.setSession(token, { id: 'u1', email: 'test@example.com', name: 'Tester', preferredLocale: 'en' })
 
     mount(LoginPage, {
       global: {
@@ -439,11 +439,11 @@ describe('pages/login.vue', () => {
     expect(wrapper.text()).toContain('auth.recover_cockpit_title')
 
     // Step 1: submit email -> requests a reset code
-    await wrapper.find('input[type="email"]').setValue('developer@techdaily.io')
+    await wrapper.find('input[type="email"]').setValue('developer@deeppace.test')
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
 
-    expect(forgotSpy).toHaveBeenCalledWith('developer@techdaily.io')
+    expect(forgotSpy).toHaveBeenCalledWith('developer@deeppace.test')
     // Advances to the OTP + new-password sub-step
     expect(wrapper.find('#otpCode').exists()).toBe(true)
     expect(wrapper.find('#newPassword').exists()).toBe(true)
@@ -455,7 +455,7 @@ describe('pages/login.vue', () => {
     await wrapper.find('form').trigger('submit.prevent')
     await flushPromises()
 
-    expect(resetSpy).toHaveBeenCalledWith('developer@techdaily.io', '123456', 'brandnew123')
+    expect(resetSpy).toHaveBeenCalledWith('developer@deeppace.test', '123456', 'brandnew123')
     // Returns to sign-in after a successful reset
     expect(wrapper.text()).toContain('auth.welcome_title')
   })

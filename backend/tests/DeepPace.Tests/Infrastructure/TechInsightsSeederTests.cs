@@ -66,7 +66,7 @@ public class TechInsightsSeederTests : IDisposable
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Email = "bookmark_tester@techdaily.local",
+            Email = "bookmark_tester@deeppace.test",
             PasswordHash = "hash",
             Name = "Bookmark Tester",
             PreferredLocale = "en"

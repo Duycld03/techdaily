@@ -264,7 +264,7 @@ public class LibraryEndpointsTests : IAsyncLifetime
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, UserId.ToString()),
-                new Claim(ClaimTypes.Email, "test@techdaily.local")
+                new Claim(ClaimTypes.Email, "test@deeppace.test")
             };
             var identity = new ClaimsIdentity(claims, "Test");
             var principal = new ClaimsPrincipal(identity);

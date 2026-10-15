@@ -5,7 +5,7 @@ import { useProfileStore } from '~/stores/useProfileStore'
 const mockProfile = {
   user: {
     id: 'u-1',
-    email: 'architect@techdaily.local',
+    email: 'architect@deeppace.test',
     name: 'Senior Architect',
     avatarUrl: undefined,
     preferredLocale: 'en',
@@ -39,7 +39,7 @@ vi.mock('~/composables/useApiClient', () => ({
       if (url.includes('/profile')) {
         return {
           id: 'u-1',
-          email: 'architect@techdaily.local',
+          email: 'architect@deeppace.test',
           name: body.name || 'Updated Name',
           targetRole: body.targetRole || 'Principal Architect',
           dailyGoalMinutes: body.dailyGoalMinutes || 15,

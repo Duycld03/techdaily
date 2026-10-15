@@ -7,11 +7,13 @@
 // production uses IndexedDB via `idb-keyval`.
 
 import { createStore, del as idbDel, get as idbGet, set as idbSet } from 'idb-keyval'
+import { CLIENT_STORAGE } from './clientStorage'
 
 export interface KvBackend {
   get<T = unknown>(key: string): Promise<T | undefined>
   set(key: string, value: unknown): Promise<void>
   del(key: string): Promise<void>
+  exclusive?<T>(work: () => Promise<T>): Promise<T>
 }
 
 export interface SliceAudioCacheOptions {
@@ -41,9 +43,13 @@ interface LruEntry {
   lastAccess: number
 }
 
-const META_KEY = '__slice_audio_lru__'
-const DEFAULT_MAX_BYTES = 300 * 1024 * 1024
-const DEFAULT_MAX_ENTRIES = 60
+export const AUDIO_META_KEY = '__slice_audio_lru__'
+export const AUDIO_MAX_BYTES = 300 * 1024 * 1024
+export const AUDIO_MAX_ENTRIES = 60
+export const AUDIO_STORAGE_LOCK = 'deeppace_audio_storage'
+const META_KEY = AUDIO_META_KEY
+const DEFAULT_MAX_BYTES = AUDIO_MAX_BYTES
+const DEFAULT_MAX_ENTRIES = AUDIO_MAX_ENTRIES
 
 /** Compose the cache key from the slice, its voice, and the content hash (v2 avoids stale partial caches). */
 export function buildAudioKey(chunkId: string, voice: string, contentHash: string): string {
@@ -109,7 +115,14 @@ export function createSliceAudioCache(backend: KvBackend, opts: SliceAudioCacheO
     await backend.del(`partial::${key}`)
   }
 
-  return { get, set, getPartial, savePartial, deletePartial }
+  const exclusive = <T>(work: () => Promise<T>) => backend.exclusive ? backend.exclusive(work) : work()
+  return {
+    get: key => exclusive(() => get(key)),
+    set: (key, blob) => exclusive(() => set(key, blob)),
+    getPartial: key => exclusive(() => getPartial(key)),
+    savePartial: (key, data) => exclusive(() => savePartial(key, data)),
+    deletePartial: key => exclusive(() => deletePartial(key)),
+  }
 }
 
 /** In-memory backend for tests. */
@@ -130,10 +143,12 @@ export function createMemoryBackend(): KvBackend {
 
 /** IndexedDB-backed store for production (client only). */
 export function createIdbBackend(storeName = 'slice-audio'): KvBackend {
-  const store = createStore('techdaily-audio', storeName)
+  const store = createStore(CLIENT_STORAGE.audioDatabase, storeName)
   return {
     get: <T>(key: string) => idbGet<T>(key, store),
     set: (key: string, value: unknown) => idbSet(key, value, store),
     del: (key: string) => idbDel(key, store),
+    exclusive: work => typeof navigator !== 'undefined' && navigator.locks?.request
+      ? navigator.locks.request(AUDIO_STORAGE_LOCK, work) : work(),
   }
 }

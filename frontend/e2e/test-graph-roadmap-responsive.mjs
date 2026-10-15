@@ -74,13 +74,13 @@ async function runResponsiveSmokeSuite() {
         const urlObj = new URL(targetBaseUrl)
         await context.addCookies([
           {
-            name: 'techdaily_token',
+            name: 'deeppace_token',
             value: authToken,
             domain: urlObj.hostname,
             path: '/'
           },
           {
-            name: 'techdaily_user',
+            name: 'deeppace_user',
             value: encodeURIComponent(authUser),
             domain: urlObj.hostname,
             path: '/'
@@ -90,8 +90,8 @@ async function runResponsiveSmokeSuite() {
 
       await context.addInitScript(({ token, user }) => {
         try {
-          localStorage.setItem('techdaily_token', token)
-          localStorage.setItem('techdaily_user', user)
+          localStorage.setItem('deeppace_token', token)
+          localStorage.setItem('deeppace_user', user)
         } catch {}
       }, { token: authToken, user: authUser })
       const page = await context.newPage()

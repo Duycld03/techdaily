@@ -46,16 +46,16 @@ try {
   })
 
   await desktopContext.addCookies([
-    { name: 'techdaily_token', value: token, domain: 'localhost', path: '/' },
-    { name: 'techdaily_user', value: encodeURIComponent(JSON.stringify(user)), domain: 'localhost', path: '/' },
+    { name: 'deeppace_token', value: token, domain: 'localhost', path: '/' },
+    { name: 'deeppace_user', value: encodeURIComponent(JSON.stringify(user)), domain: 'localhost', path: '/' },
     { name: 'deeppace_token', value: token, domain: 'localhost', path: '/' },
     { name: 'deeppace_user', value: encodeURIComponent(JSON.stringify(user)), domain: 'localhost', path: '/' }
   ])
 
   const page = await desktopContext.newPage()
   await page.addInitScript(({ token, user }) => {
-    localStorage.setItem('techdaily_token', token)
-    localStorage.setItem('techdaily_user', JSON.stringify(user))
+    localStorage.setItem('deeppace_token', token)
+    localStorage.setItem('deeppace_user', JSON.stringify(user))
     localStorage.setItem('deeppace_token', token)
     localStorage.setItem('deeppace_user', JSON.stringify(user))
   }, { token, user })
@@ -96,16 +96,16 @@ try {
     isMobile: true
   })
   await mobileContext.addCookies([
-    { name: 'techdaily_token', value: token, domain: 'localhost', path: '/' },
-    { name: 'techdaily_user', value: encodeURIComponent(JSON.stringify(user)), domain: 'localhost', path: '/' },
+    { name: 'deeppace_token', value: token, domain: 'localhost', path: '/' },
+    { name: 'deeppace_user', value: encodeURIComponent(JSON.stringify(user)), domain: 'localhost', path: '/' },
     { name: 'deeppace_token', value: token, domain: 'localhost', path: '/' },
     { name: 'deeppace_user', value: encodeURIComponent(JSON.stringify(user)), domain: 'localhost', path: '/' }
   ])
 
   const mobilePage = await mobileContext.newPage()
   await mobilePage.addInitScript(({ token, user }) => {
-    localStorage.setItem('techdaily_token', token)
-    localStorage.setItem('techdaily_user', JSON.stringify(user))
+    localStorage.setItem('deeppace_token', token)
+    localStorage.setItem('deeppace_user', JSON.stringify(user))
     localStorage.setItem('deeppace_token', token)
     localStorage.setItem('deeppace_user', JSON.stringify(user))
   }, { token, user })

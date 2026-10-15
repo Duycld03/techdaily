@@ -446,7 +446,7 @@ public class CatalogEndpointsTests : IAsyncLifetime
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, CurrentUserId.ToString()),
-                new Claim(ClaimTypes.Email, "catalog-user@techdaily.local")
+                new Claim(ClaimTypes.Email, "catalog-user@deeppace.test")
             };
             claims.AddRange(ExtraClaims);
 

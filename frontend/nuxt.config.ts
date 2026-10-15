@@ -150,7 +150,6 @@ export default defineNuxtConfig({
             '@context': 'https://schema.org',
             '@type': ['WebApplication', 'EducationalApplication'],
             name: 'DeepPace',
-            alternateName: 'TechDaily',
             url: 'https://deeppace.duckdns.org',
             description: 'Daily deliberate practice and senior engineering active recall platform with SM-2 spaced repetition and codecraft insights.',
             applicationCategory: 'EducationalApplication',

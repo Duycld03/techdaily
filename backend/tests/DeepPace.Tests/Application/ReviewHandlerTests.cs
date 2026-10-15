@@ -40,7 +40,7 @@ public class ReviewHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var today = new DateOnly(2026, 3, 15);
@@ -70,7 +70,7 @@ public class ReviewHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "dev@techdaily.local", Name = "Senior Dev" };
+        var user = new User { Id = userId, Email = "dev@deeppace.test", Name = "Senior Dev" };
         await _db.Users.AddAsync(user);
 
         var card = SpacedRepetitionCard.CreateFromDrillMistake(userId, null, "Front", "Back", new DateOnly(2026, 3, 15));
@@ -99,7 +99,7 @@ public class ReviewHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "reader@techdaily.local", Name = "Reader" };
+        var user = new User { Id = userId, Email = "reader@deeppace.test", Name = "Reader" };
         await _db.Users.AddAsync(user);
 
         var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Designing Data-Intensive Applications", Slug = "ddia", Category = Category.DatabaseStorage };
@@ -139,7 +139,7 @@ public class ReviewHandlerTests : IDisposable
     {
         // Arrange
         var userId = Guid.NewGuid();
-        var user = new User { Id = userId, Email = "reader2@techdaily.local", Name = "Reader 2" };
+        var user = new User { Id = userId, Email = "reader2@deeppace.test", Name = "Reader 2" };
         await _db.Users.AddAsync(user);
 
         var book2 = new DocumentBook { Id = Guid.NewGuid(), Title = "Database Internals", Slug = "db-internals", Category = Category.DatabaseStorage };

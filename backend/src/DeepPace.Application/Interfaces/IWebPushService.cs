@@ -4,7 +4,7 @@ public record PushNotificationPayload(
     string Title,
     string Body,
     string? Url = "/today",
-    string? Tag = "techdaily-daily",
+    string? Tag = "deeppace-daily",
     string? Icon = "/icon.png"
 );
 

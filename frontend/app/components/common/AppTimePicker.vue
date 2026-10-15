@@ -58,7 +58,7 @@ function onInput(e: Event) {
       <Clock class="w-4 h-4" :stroke-width="1.75" />
     </div>
 
-    <!-- Native Time Input Styled to TechDaily Design System -->
+    <!-- Native Time Input Styled to DeepPace Design System -->
     <input
       ref="inputRef"
       type="time"

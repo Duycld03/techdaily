@@ -1,16 +1,16 @@
 import { ref, onMounted } from 'vue'
+import { browserStorage, readStored } from '~/utils/clientStorage'
 
 export type RoadmapViewMode = 'timeline' | 'mindmap'
 
 export const ROADMAP_VIEW_MODE_STORAGE_KEY = 'deeppace_roadmap_view_mode'
-export const LEGACY_ROADMAP_VIEW_MODE_STORAGE_KEY = 'techdaily_roadmap_view_mode'
 
 export function useRoadmapViewMode() {
   const viewMode = ref<RoadmapViewMode>('timeline')
 
   function init() {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const stored = window.localStorage.getItem(ROADMAP_VIEW_MODE_STORAGE_KEY) || window.localStorage.getItem(LEGACY_ROADMAP_VIEW_MODE_STORAGE_KEY)
+    if (typeof window !== 'undefined') {
+      const stored = readStored(browserStorage('localStorage'), ROADMAP_VIEW_MODE_STORAGE_KEY)
       if (stored === 'timeline' || stored === 'mindmap') {
         viewMode.value = stored
       }
@@ -20,9 +20,7 @@ export function useRoadmapViewMode() {
   function setViewMode(mode: RoadmapViewMode) {
     if (mode !== 'timeline' && mode !== 'mindmap') return
     viewMode.value = mode
-    if (typeof window !== 'undefined' && window.localStorage) {
-      window.localStorage.setItem(ROADMAP_VIEW_MODE_STORAGE_KEY, mode)
-    }
+    try { browserStorage('localStorage')?.setItem(ROADMAP_VIEW_MODE_STORAGE_KEY, mode) } catch { /* Keep the in-memory choice usable. */ }
   }
 
   onMounted(() => {
@@ -30,7 +28,7 @@ export function useRoadmapViewMode() {
   })
 
   // Synchronous initialization for non-SSR / test environments
-  if (typeof window !== 'undefined' && window.localStorage) {
+  if (typeof window !== 'undefined') {
     init()
   }
 

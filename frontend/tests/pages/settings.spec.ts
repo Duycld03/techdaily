@@ -277,7 +277,7 @@ describe('SettingsPage Unified Navigation & Account Tabs', () => {
     const profileStore = useProfileStore()
     const updateSpy = vi.spyOn(profileStore, 'updateProfile').mockResolvedValueOnce({
       id: 'usr-1',
-      email: 'test@techdaily.dev',
+      email: 'test@deeppace.test',
       name: 'Alex Principal',
       targetRole: 'Principal Architect',
       dailyGoalMinutes: 15,

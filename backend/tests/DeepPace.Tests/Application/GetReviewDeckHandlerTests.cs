@@ -38,7 +38,7 @@ public class GetReviewDeckHandlerTests : IDisposable
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Email = $"dev_{Guid.NewGuid()}@techdaily.local",
+            Email = $"dev_{Guid.NewGuid()}@deeppace.test",
             Name = "Deck Review Dev"
         };
         await _db.Users.AddAsync(user);

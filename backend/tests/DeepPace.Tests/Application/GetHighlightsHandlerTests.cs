@@ -41,7 +41,7 @@ public class GetHighlightsHandlerTests : IDisposable
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Email = email ?? $"dev_{Guid.NewGuid():N}@techdaily.local",
+            Email = email ?? $"dev_{Guid.NewGuid():N}@deeppace.test",
             Name = "Highlight User"
         };
         await _db.Users.AddAsync(user);
@@ -127,8 +127,8 @@ public class GetHighlightsHandlerTests : IDisposable
     public async Task GetHighlights_EnforcesUserIsolation_DoesNotMarkCardFromAnotherUser()
     {
         // Arrange
-        var (userA, _, highlightA) = await SeedHighlightAsync("userA@techdaily.local");
-        var (userB, _, _) = await SeedHighlightAsync("userB@techdaily.local");
+        var (userA, _, highlightA) = await SeedHighlightAsync("userA@deeppace.test");
+        var (userB, _, _) = await SeedHighlightAsync("userB@deeppace.test");
 
         // User B has a card referencing highlightA.Id, but belonging to userB
         var cardOfUserB = SpacedRepetitionCard.CreateFromHighlight(
