@@ -24,6 +24,42 @@ namespace DeepPace.Infrastructure.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DeepPace.Domain.Entities.AccountSourceQuota", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("ChargedBytes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("ReservedBytes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId")
+                        .IsUnique();
+
+                    b.ToTable("AccountSourceQuotas", (string)null);
+                });
+
             modelBuilder.Entity("DeepPace.Domain.Entities.AdminAuditEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -118,6 +154,9 @@ namespace DeepPace.Infrastructure.Migrations
                     b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CurrentAttemptId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
@@ -207,6 +246,8 @@ namespace DeepPace.Infrastructure.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CurrentAttemptId");
 
                     b.HasIndex("ProcessingStatus");
 
@@ -365,8 +406,26 @@ namespace DeepPace.Infrastructure.Migrations
                     b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<long>("CurrentAttemptGeneration")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.Property<Guid?>("CurrentAttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DeclaredLanguage")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
                     b.Property<string>("ErrorMessage")
                         .HasColumnType("text");
+
+                    b.Property<int>("IngestionControlVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
@@ -427,6 +486,8 @@ namespace DeepPace.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("CurrentAttemptId");
 
                     b.HasIndex("IsFeatured");
 
@@ -624,6 +685,178 @@ namespace DeepPace.Infrastructure.Migrations
                     b.HasIndex("Email", "Purpose");
 
                     b.ToTable("EmailOtps", (string)null);
+                });
+
+            modelBuilder.Entity("DeepPace.Domain.Entities.IngestionAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ClaimExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ClaimToken")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CommandFingerprint")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("EndedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long>("Generation")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid?>("InitiatorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Origin")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid?>("PredecessorAttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ProgressPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTimeOffset>("QueuedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequestId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SafeErrorGuidance")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<Guid>("TargetDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TargetScope")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QueuedAtUtc");
+
+                    b.HasIndex("State", "ClaimExpiresAtUtc");
+
+                    b.HasIndex("TargetScope", "TargetDocumentId")
+                        .IsUnique()
+                        .HasFilter("\"State\" IN ('Queued', 'Running')");
+
+                    b.ToTable("IngestionAttempts", (string)null);
+                });
+
+            modelBuilder.Entity("DeepPace.Domain.Entities.IngestionSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Availability")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<long>("ByteLength")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeclaredLanguage")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("en");
+
+                    b.Property<string>("DeletionState")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTimeOffset?>("FirstFailureAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IntegritySha256")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("QuotaAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("RetentionExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SourceKind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("StorageIdentity")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuotaAccountId");
+
+                    b.HasIndex("RetentionExpiresAtUtc", "Availability");
+
+                    b.ToTable("IngestionSources", (string)null);
                 });
 
             modelBuilder.Entity("DeepPace.Domain.Entities.InterviewQuestion", b =>
@@ -890,6 +1123,58 @@ namespace DeepPace.Infrastructure.Migrations
                     b.ToTable("SpacedRepetitionCards");
                 });
 
+            modelBuilder.Entity("DeepPace.Domain.Entities.StorageReservation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsCommitted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsReleased")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("ReservationToken")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long>("ReservedBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservationToken")
+                        .IsUnique();
+
+                    b.HasIndex("AccountId", "ExpiresAtUtc");
+
+                    b.ToTable("StorageReservations", (string)null);
+                });
+
             modelBuilder.Entity("DeepPace.Domain.Entities.StreakRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1087,6 +1372,7 @@ namespace DeepPace.Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
                     b.Property<int>("AdminControlVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAdd()
@@ -1097,7 +1383,6 @@ namespace DeepPace.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(1);
-
 
                     b.Property<string>("AvatarUrl")
                         .HasMaxLength(500)
@@ -1141,12 +1426,18 @@ namespace DeepPace.Infrastructure.Migrations
                         .HasColumnType("character varying(10)")
                         .HasDefaultValue("en");
 
+                    b.Property<TimeOnly?>("PreferredStudyTime")
+                        .HasColumnType("time without time zone");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasDefaultValue("Active");
+
+                    b.Property<TimeOnly?>("StreakAlertTime")
+                        .HasColumnType("time without time zone");
 
                     b.Property<DateTimeOffset?>("SuspendedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1157,12 +1448,6 @@ namespace DeepPace.Infrastructure.Migrations
                     b.Property<string>("SuspensionReason")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
-
-                    b.Property<TimeOnly?>("PreferredStudyTime")
-                        .HasColumnType("time without time zone");
-
-                    b.Property<TimeOnly?>("StreakAlertTime")
-                        .HasColumnType("time without time zone");
 
                     b.Property<string>("TargetRole")
                         .IsRequired()

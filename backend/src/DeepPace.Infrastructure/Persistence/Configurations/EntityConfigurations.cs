@@ -143,8 +143,12 @@ public class DocumentBookConfiguration : IEntityTypeConfiguration<DocumentBook>
         builder.Property(b => b.ProgressPercentage).HasDefaultValue(0);
         builder.Property(b => b.StatusMessage).HasMaxLength(500);
         builder.Property(b => b.ErrorMessage);
+        builder.Property(b => b.IngestionControlVersion).HasDefaultValue(1).IsConcurrencyToken();
+        builder.Property(b => b.CurrentAttemptId);
+        builder.Property(b => b.CurrentAttemptGeneration).HasDefaultValue(0);
+        builder.Property(b => b.DeclaredLanguage).HasMaxLength(10);
         builder.HasIndex(b => b.Status);
-
+        builder.HasIndex(b => b.CurrentAttemptId);
         builder.HasMany(b => b.Chunks)
             .WithOne(c => c.DocumentBook)
             .HasForeignKey(c => c.DocumentBookId)
@@ -578,7 +582,8 @@ public class CatalogDocumentConfiguration : IEntityTypeConfiguration<CatalogDocu
         builder.Property(c => c.ConcurrencyVersion).HasDefaultValue(1).IsConcurrencyToken();
         builder.Property(c => c.ProcessingGeneration).HasDefaultValue(0);
         builder.Property(c => c.ProcessingStatusMessage).HasMaxLength(500);
-
+        builder.Property(c => c.CurrentAttemptId);
+        builder.HasIndex(c => c.CurrentAttemptId);
         builder.HasMany(c => c.Slices)
             .WithOne(s => s.CatalogDocument)
             .HasForeignKey(s => s.CatalogDocumentId)
@@ -636,5 +641,84 @@ public class AdminAuditEventConfiguration : IEntityTypeConfiguration<AdminAuditE
         builder.HasIndex(e => new { e.OccurredAt, e.Id });
         builder.HasIndex(e => new { e.ActorUserId, e.OccurredAt, e.Id });
         builder.HasIndex(e => new { e.TargetType, e.TargetId, e.OccurredAt, e.Id });
+    }
+}
+
+public class IngestionAttemptConfiguration : IEntityTypeConfiguration<IngestionAttempt>
+{
+    public void Configure(EntityTypeBuilder<IngestionAttempt> builder)
+    {
+        builder.ToTable("IngestionAttempts");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.TargetScope).HasConversion<string>().HasMaxLength(20).IsRequired();
+        builder.Property(a => a.TargetDocumentId).IsRequired();
+        builder.Property(a => a.Origin).HasConversion<string>().HasMaxLength(30).IsRequired();
+        builder.Property(a => a.RequestId).HasMaxLength(100).IsRequired();
+        builder.Property(a => a.CommandFingerprint).HasMaxLength(256);
+        builder.Property(a => a.Generation).IsRequired();
+        builder.Property(a => a.Stage).HasConversion<string>().HasMaxLength(30).IsRequired();
+        builder.Property(a => a.State).HasConversion<string>().HasMaxLength(30).IsRequired();
+        builder.Property(a => a.ProgressPercent).HasDefaultValue(0);
+        builder.Property(a => a.ClaimToken).HasMaxLength(100);
+        builder.Property(a => a.ErrorCode).HasMaxLength(100);
+        builder.Property(a => a.SafeErrorGuidance).HasMaxLength(1000);
+
+        builder.HasIndex(a => new { a.TargetScope, a.TargetDocumentId });
+        builder.HasIndex(a => a.QueuedAtUtc);
+        builder.HasIndex(a => new { a.State, a.ClaimExpiresAtUtc });
+        builder.HasIndex(a => new { a.TargetScope, a.TargetDocumentId })
+            .IsUnique()
+            .HasFilter("\"State\" IN ('Queued', 'Running')");
+    }
+}
+
+public class IngestionSourceConfiguration : IEntityTypeConfiguration<IngestionSource>
+{
+    public void Configure(EntityTypeBuilder<IngestionSource> builder)
+    {
+        builder.ToTable("IngestionSources");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.SourceKind).HasConversion<string>().HasMaxLength(30).IsRequired();
+        builder.Property(s => s.StorageIdentity).HasMaxLength(500).IsRequired();
+        builder.Property(s => s.ByteLength).IsRequired();
+        builder.Property(s => s.IntegritySha256).HasMaxLength(128).IsRequired();
+        builder.Property(s => s.QuotaAccountId).IsRequired();
+        builder.Property(s => s.DeclaredLanguage).HasMaxLength(10).HasDefaultValue("en").IsRequired();
+        builder.Property(s => s.Availability).HasConversion<string>().HasMaxLength(30).IsRequired();
+        builder.Property(s => s.DeletionState).HasConversion<string>().HasMaxLength(30).IsRequired();
+
+        builder.HasIndex(s => s.QuotaAccountId);
+        builder.HasIndex(s => new { s.RetentionExpiresAtUtc, s.Availability });
+    }
+}
+
+public class AccountSourceQuotaConfiguration : IEntityTypeConfiguration<AccountSourceQuota>
+{
+    public void Configure(EntityTypeBuilder<AccountSourceQuota> builder)
+    {
+        builder.ToTable("AccountSourceQuotas");
+        builder.HasKey(q => q.Id);
+        builder.Property(q => q.AccountId).IsRequired();
+        builder.Property(q => q.ChargedBytes).HasDefaultValue(0);
+        builder.Property(q => q.ReservedBytes).HasDefaultValue(0);
+
+        builder.HasIndex(q => q.AccountId).IsUnique();
+    }
+}
+
+public class StorageReservationConfiguration : IEntityTypeConfiguration<StorageReservation>
+{
+    public void Configure(EntityTypeBuilder<StorageReservation> builder)
+    {
+        builder.ToTable("StorageReservations");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.ReservationToken).HasMaxLength(100).IsRequired();
+        builder.Property(r => r.AccountId).IsRequired();
+        builder.Property(r => r.ReservedBytes).IsRequired();
+        builder.Property(r => r.IsReleased).HasDefaultValue(false);
+        builder.Property(r => r.IsCommitted).HasDefaultValue(false);
+
+        builder.HasIndex(r => r.ReservationToken).IsUnique();
+        builder.HasIndex(r => new { r.AccountId, r.ExpiresAtUtc });
     }
 }

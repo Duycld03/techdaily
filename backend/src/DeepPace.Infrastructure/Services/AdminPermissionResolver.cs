@@ -37,13 +37,13 @@ public class AdminPermissionResolver : IAdminPermissionResolver
     {
         if (userId == Guid.Empty)
         {
-            return new AdminCapabilitiesDto(false, false, false);
+            return new AdminCapabilitiesDto(false, false, false, false);
         }
 
         var adminIds = GetConfiguredAdminIds();
         if (!adminIds.Contains(userId))
         {
-            return new AdminCapabilitiesDto(false, false, false);
+            return new AdminCapabilitiesDto(false, false, false, false);
         }
 
         // Active-user and non-deleted check against authoritative database state
@@ -52,13 +52,14 @@ public class AdminPermissionResolver : IAdminPermissionResolver
 
         if (user == null || user.IsDeleted || user.Status != AccountStatus.Active)
         {
-            return new AdminCapabilitiesDto(false, false, false);
+            return new AdminCapabilitiesDto(false, false, false, false);
         }
 
         return new AdminCapabilitiesDto(
             CanManageCatalog: true,
             CanManageAccounts: true,
-            CanReadAudit: true);
+            CanReadAudit: true,
+            CanManageDocumentOperations: true);
     }
 
     public async Task<bool> HasPermissionAsync(Guid userId, AdminPermission permission, CancellationToken ct = default)
@@ -69,6 +70,7 @@ public class AdminPermissionResolver : IAdminPermissionResolver
             AdminPermission.ManageCatalog => capabilities.CanManageCatalog,
             AdminPermission.ManageAccounts => capabilities.CanManageAccounts,
             AdminPermission.ReadAudit => capabilities.CanReadAudit,
+            AdminPermission.ManageDocumentOperations => capabilities.CanManageDocumentOperations,
             _ => false
         };
     }

@@ -4,13 +4,15 @@ public enum AdminPermission
 {
     ManageCatalog,
     ManageAccounts,
-    ReadAudit
+    ReadAudit,
+    ManageDocumentOperations
 }
 
 public record AdminCapabilitiesDto(
     bool CanManageCatalog,
     bool CanManageAccounts,
-    bool CanReadAudit);
+    bool CanReadAudit,
+    bool CanManageDocumentOperations = true);
 
 public interface IAdminPermissionResolver
 {

@@ -19,10 +19,16 @@ public class DocumentBook : BaseEntity
     public int ProgressPercentage { get; set; } = 0;
     public string? StatusMessage { get; set; }
     public string? ErrorMessage { get; set; }
+
+    // Control version and attempt tracking
+    public int IngestionControlVersion { get; set; } = 1;
+    public Guid? CurrentAttemptId { get; set; }
+    public long CurrentAttemptGeneration { get; set; } = 0;
+    public string? DeclaredLanguage { get; set; }
+
     // Ownership
     public Guid? CreatedByUserId { get; set; }
     public User? CreatedByUser { get; set; }
-
 
     // Curated catalog provenance
     public Guid? SourceCatalogDocumentId { get; set; }
@@ -32,6 +38,47 @@ public class DocumentBook : BaseEntity
     // Navigation properties
     public ICollection<DocumentChunk> Chunks { get; set; } = new List<DocumentChunk>();
 
+
+    public void AdvanceControlVersion()
+    {
+        IngestionControlVersion++;
+        MarkUpdated();
+    }
+
+    public void SetDeclaredLanguage(string language)
+    {
+        if (string.IsNullOrWhiteSpace(language))
+        {
+            throw new ArgumentException("Language cannot be empty.", nameof(language));
+        }
+
+        var normalized = language.Trim().ToLowerInvariant();
+        if (DeclaredLanguage != normalized)
+        {
+            DeclaredLanguage = normalized;
+            AdvanceControlVersion();
+        }
+    }
+
+    public void AssignAttempt(Guid attemptId)
+    {
+        if (attemptId == Guid.Empty)
+        {
+            throw new ArgumentException("Attempt ID cannot be empty.", nameof(attemptId));
+        }
+
+        CurrentAttemptId = attemptId;
+        CurrentAttemptGeneration++;
+        AdvanceControlVersion();
+    }
+
+    public void UpdateHeartbeatProgress(int percent, string? message = null)
+    {
+        ProgressPercentage = Math.Clamp(percent, 0, 100);
+        StatusMessage = message;
+        // Progress heartbeats do not advance IngestionControlVersion
+        MarkUpdated();
+    }
     public static DocumentBook CreateFromCatalogSnapshot(
         CatalogDocument catalogDoc,
         Guid targetUserId,

@@ -72,7 +72,7 @@ Authorized admin routes SHALL show dedicated navigation with Dashboard, Catalog,
 - **AND** personal document operations show no personal-content preview or edit action.
 
 ### Requirement: DeepPace design system parity
-Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons and accessible controls. Login SHALL use StudioLayout, dashboard BentoDashboardLayout, catalog/accounts/document operations MasterDetailLayout, and audit BoardLayout. The separate shell SHALL NOT introduce a competing theme, CSS framework or unconstrained page wrappers.
+Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons and accessible controls. Login SHALL use StudioLayout, dashboard BentoDashboardLayout, catalog/accounts/document operations MasterDetailLayout, and audit BoardLayout. The separate shell SHALL NOT introduce a competing theme, CSS framework or unconstrained page wrappers. On `/admin/login`, the StudioLayout main stage (`#main`) and context dock (`#dock`) SHALL align to a common top baseline on desktop viewports ($\ge 1024\text{px}$) with structured hairline-bordered overview cards in the dock, preventing vertical drifting or bottom-weighted misalignments.
 
 #### Scenario: Bilingual responsive admin surfaces
 - **WHEN** admin login, dashboard, catalog, accounts, audit and document operations are viewed in English and Vietnamese at 1440x900 and 390x844 in light and dark themes
@@ -82,6 +82,15 @@ Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons 
 #### Scenario: Accessible mobile menu
 - **WHEN** an administrator opens the mobile navigation using keyboard or touch
 - **THEN** focus is managed, Escape closes it, and navigation dismisses it without trapping focus or obscuring the destination.
+
+#### Scenario: Desktop StudioLayout baseline alignment on admin login
+- **WHEN** a user or administrator opens `/admin/login` on desktop viewports ($\ge 1024\text{px}$)
+- **THEN** the main action stage heading ("Administrator sign in") and the context dock heading ("Your system overview") align horizontally on a synchronized top baseline
+- **AND** the workspace overview items in the dock render within elevated hairline-bordered cards (`border-slate-200 dark:border-white/[0.08]`) with icon badges, preventing content from being pushed down into the bottom-right half of the screen.
+
+#### Scenario: Mobile viewport responsive stacking
+- **WHEN** a user accesses `/admin/login` on a mobile viewport ($< 1024\text{px}$)
+- **THEN** the sign-in form fills 100% of the stage width and the context overview cards stack cleanly below the form without clipping or horizontal overflow.
 
 #### Scenario: Accessible account and audit controls
 - **WHEN** an administrator uses keyboard or touch to filter accounts/history or confirm an account action

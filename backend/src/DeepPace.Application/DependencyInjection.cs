@@ -125,6 +125,12 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<Features.Admin.Audit.AdminGetAuditEventsRequest, Features.Admin.Accounts.DTOs.AdminPagedResult<Features.Admin.Audit.DTOs.AdminAuditEventDto>>, Features.Admin.Audit.AdminGetAuditEventsHandler>();
         services.AddScoped<IUseCase<Features.Admin.Audit.AdminGetAuditEventByIdRequest, Features.Admin.Audit.DTOs.AdminAuditEventDetailDto>, Features.Admin.Audit.AdminGetAuditEventByIdHandler>();
 
+        // Administrator Document Operations Handlers
+        services.AddScoped<IUseCase<Features.Admin.Documents.DTOs.AdminDocumentInventoryQuery, Features.Admin.Accounts.DTOs.AdminPagedResult<Features.Admin.Documents.DTOs.AdminDocumentInventoryItemDto>>, Features.Admin.Documents.AdminGetDocumentInventoryHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Documents.AdminGetDocumentDetailRequest, Features.Admin.Documents.DTOs.AdminDocumentDetailDto>, Features.Admin.Documents.AdminGetDocumentDetailHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Documents.AdminGetDocumentAttemptsRequest, Features.Admin.Accounts.DTOs.AdminPagedResult<Features.Admin.Documents.DTOs.AdminDocumentAttemptItemDto>>, Features.Admin.Documents.AdminGetDocumentAttemptsHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Documents.DTOs.AdminRetryDocumentCommand, Features.Admin.Documents.DTOs.AdminRetryDocumentResponseDto>, Features.Admin.Documents.AdminRetryDocumentHandler>();
+
         return services;
     }
 }

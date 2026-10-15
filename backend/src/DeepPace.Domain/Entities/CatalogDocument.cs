@@ -29,7 +29,7 @@ public class CatalogDocument : BaseEntity
     public DateTimeOffset? ProcessingLeaseExpiresAt { get; set; }
     public string? ProcessingStatusMessage { get; set; }
     public string? ProcessingErrorMessage { get; set; }
-
+    public Guid? CurrentAttemptId { get; set; }
     // Ownership and audit fields
     public Guid? CreatedByUserId { get; set; }
     public Guid? ReviewedByUserId { get; set; }
@@ -51,6 +51,19 @@ public class CatalogDocument : BaseEntity
         MarkUpdated();
     }
 
+
+    public void AssignAttempt(Guid attemptId)
+    {
+        if (attemptId == Guid.Empty)
+        {
+            throw new ArgumentException("Attempt ID cannot be empty.", nameof(attemptId));
+        }
+
+        CurrentAttemptId = attemptId;
+        ProcessingGeneration++;
+        ConcurrencyVersion++;
+        MarkUpdated();
+    }
     public (bool IsEligible, List<string> UnmetRequirements) CheckPublicationEligibility()
     {
         var unmet = new List<string>();

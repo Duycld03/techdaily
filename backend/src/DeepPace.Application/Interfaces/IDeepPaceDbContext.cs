@@ -26,6 +26,9 @@ public interface IDeepPaceDbContext
     DbSet<CatalogDocument> CatalogDocuments { get; }
     DbSet<CatalogSlice> CatalogSlices { get; }
     DbSet<AdminAuditEvent> AdminAuditEvents { get; }
-
+    DbSet<IngestionAttempt> IngestionAttempts { get; }
+    DbSet<IngestionSource> IngestionSources { get; }
+    DbSet<AccountSourceQuota> AccountSourceQuotas { get; }
+    DbSet<StorageReservation> StorageReservations { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -34,7 +34,10 @@ public class DeepPaceDbContext : DbContext, IDeepPaceDbContext
     public DbSet<CatalogDocument> CatalogDocuments => Set<CatalogDocument>();
     public DbSet<CatalogSlice> CatalogSlices => Set<CatalogSlice>();
     public DbSet<AdminAuditEvent> AdminAuditEvents => Set<AdminAuditEvent>();
-
+    public DbSet<IngestionAttempt> IngestionAttempts => Set<IngestionAttempt>();
+    public DbSet<IngestionSource> IngestionSources => Set<IngestionSource>();
+    public DbSet<AccountSourceQuota> AccountSourceQuotas => Set<AccountSourceQuota>();
+    public DbSet<StorageReservation> StorageReservations => Set<StorageReservation>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

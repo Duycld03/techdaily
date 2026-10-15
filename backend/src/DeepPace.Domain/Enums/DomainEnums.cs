@@ -97,4 +97,71 @@ public static class AdminAuditActions
     public const string CatalogPublish = "Catalog.Publish";
     public const string CatalogHide = "Catalog.Hide";
     public const string CatalogDispatchFailed = "Catalog.DispatchFailed";
+
+    public const string DocumentIngestionRetryRequested = "Document.IngestionRetryRequested";
+    public const string DocumentIngestionRetryCompleted = "Document.IngestionRetryCompleted";
+    public const string DocumentSourceReplaced = "Document.SourceReplaced";
+}
+
+public enum IngestionAttemptOrigin
+{
+    UserUpload = 1,
+    UserUrl = 2,
+    UserMarkdown = 3,
+    AdminCatalogUpload = 4,
+    AdminCatalogUrl = 5,
+    AdminRetry = 6,
+    UserReplacement = 7,
+    AdminCatalogReplacement = 8
+}
+
+public enum IngestionStage
+{
+    Admission = 1,
+    Fetch = 2,
+    Extraction = 3,
+    Slicing = 4,
+    InitialFormatting = 5,
+    Enrichment = 6,
+    Finalization = 7
+}
+
+public enum IngestionAttemptState
+{
+    Queued = 1,
+    Running = 2,
+    Succeeded = 3,
+    Failed = 4,
+    Interrupted = 5,
+    Cancelled = 6
+}
+
+public enum IngestionTargetScope
+{
+    Personal = 1,
+    Catalog = 2
+}
+
+public enum IngestionSourceKind
+{
+    Pdf = 1,
+    WebArticle = 2,
+    Markdown = 3
+}
+
+public enum IngestionSourceAvailability
+{
+    Available = 1,
+    Missing = 2,
+    Expired = 3,
+    Revoked = 4,
+    Deleted = 5
+}
+
+public enum SourceDeletionState
+{
+    Retained = 1,
+    PendingDeletion = 2,
+    Deleted = 3,
+    DeletionFailed = 4
 }
