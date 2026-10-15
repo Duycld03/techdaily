@@ -34,6 +34,17 @@ public class AdminHideCatalogDocumentHandler : IUseCase<AdminHideCatalogDocument
             return Error.Custom("Catalog.NotFound", "Catalog document not found.");
         }
 
+        var hasActiveAttempt = await _dbContext.IngestionAttempts
+            .AnyAsync(a => a.TargetScope == IngestionTargetScope.Catalog &&
+                           a.TargetDocumentId == doc.Id &&
+                           (a.State == IngestionAttemptState.Queued || a.State == IngestionAttemptState.Running),
+                cancellationToken);
+
+        if (hasActiveAttempt)
+        {
+            return Error.Custom("Catalog.ActiveAttemptInProgress", "Cannot hide document while ingestion is actively in progress.");
+        }
+
         if (doc.ConcurrencyVersion != request.ExpectedConcurrencyVersion)
         {
             if (request.AdminUserId != Guid.Empty)

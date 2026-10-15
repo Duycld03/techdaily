@@ -128,6 +128,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.CatalogAdminAuthorizationHandler>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.AccountAdminAuthorizationHandler>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.AuditReadAuthorizationHandler>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.DocumentOperationsAdminAuthorizationHandler>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("CatalogAdmin", policy =>
@@ -144,6 +145,11 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireAuthenticatedUser();
         policy.Requirements.Add(new DeepPace.Api.Authorization.AuditReadRequirement());
+    });
+    options.AddPolicy("DocumentOperationsAdmin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new DeepPace.Api.Authorization.DocumentOperationsAdminRequirement());
     });
 });
 
@@ -355,6 +361,7 @@ app.MapLibraryEndpoints();
 app.MapCatalogEndpoints();
 app.MapAdminDashboardEndpoints();
 app.MapAdminAccountsAndAuditEndpoints();
+app.MapAdminDocumentOperationsEndpoints();
 
 app.Use(async (context, next) =>
 {

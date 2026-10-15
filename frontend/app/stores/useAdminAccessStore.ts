@@ -10,6 +10,7 @@ export interface AdminCapabilities {
   canManageCatalog: boolean
   canManageAccounts: boolean
   canReadAudit: boolean
+  canManageDocumentOperations: boolean
 }
 
 export const useAdminAccessStore = defineStore('admin-access', () => {
@@ -19,16 +20,19 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
   const capabilities = shallowRef<AdminCapabilities>({
     canManageCatalog: false,
     canManageAccounts: false,
-    canReadAudit: false
+    canReadAudit: false,
+    canManageDocumentOperations: false
   })
 
   const canManageCatalog = computed(() => capabilities.value.canManageCatalog)
   const canManageAccounts = computed(() => capabilities.value.canManageAccounts)
   const canReadAudit = computed(() => capabilities.value.canReadAudit)
+  const canManageDocumentOperations = computed(() => capabilities.value.canManageDocumentOperations)
   const hasAnyCapability = computed(() =>
     capabilities.value.canManageCatalog ||
     capabilities.value.canManageAccounts ||
-    capabilities.value.canReadAudit
+    capabilities.value.canReadAudit ||
+    capabilities.value.canManageDocumentOperations
   )
 
   const isAuthorized = computed(() => state.value === 'authorized')
@@ -42,7 +46,8 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
     capabilities.value = {
       canManageCatalog: false,
       canManageAccounts: false,
-      canReadAudit: false
+      canReadAudit: false,
+      canManageDocumentOperations: false
     }
   }
 
@@ -58,6 +63,9 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
     }
     if (norm === '/admin/audit' || norm.startsWith('/admin/audit/')) {
       return capabilities.value.canReadAudit
+    }
+    if (norm === '/admin/documents' || norm.startsWith('/admin/documents/')) {
+      return capabilities.value.canManageDocumentOperations
     }
     return isAuthorized.value
   }
@@ -76,11 +84,12 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
         const newCaps: AdminCapabilities = {
           canManageCatalog: Boolean(res.canManageCatalog),
           canManageAccounts: Boolean(res.canManageAccounts),
-          canReadAudit: Boolean(res.canReadAudit)
+          canReadAudit: Boolean(res.canReadAudit),
+          canManageDocumentOperations: Boolean(res.canManageDocumentOperations)
         }
         capabilities.value = newCaps
 
-        if (!newCaps.canManageCatalog && !newCaps.canManageAccounts && !newCaps.canReadAudit) {
+        if (!newCaps.canManageCatalog && !newCaps.canManageAccounts && !newCaps.canReadAudit && !newCaps.canManageDocumentOperations) {
           auth.invalidateAdminAccess()
           state.value = 'denied'
           return false
@@ -116,6 +125,7 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
     canManageCatalog,
     canManageAccounts,
     canReadAudit,
+    canManageDocumentOperations,
     hasAnyCapability,
     isAuthorized,
     canAccessDestination,

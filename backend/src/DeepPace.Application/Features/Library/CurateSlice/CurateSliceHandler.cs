@@ -49,7 +49,16 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
             return Error.NotFound;
         }
 
+        var hasActiveAttempt = await _dbContext.IngestionAttempts
+            .AnyAsync(a => a.TargetScope == DeepPace.Domain.Enums.IngestionTargetScope.Personal &&
+                           a.TargetDocumentId == request.BookId &&
+                           (a.State == DeepPace.Domain.Enums.IngestionAttemptState.Queued || a.State == DeepPace.Domain.Enums.IngestionAttemptState.Running),
+                cancellationToken);
 
+        if (hasActiveAttempt)
+        {
+            return Error.Custom("Document.ActiveAttemptInProgress", "Cannot curate slice while document ingestion is actively in progress.");
+        }
         if (!chunk.IsAiFormatted)
         {
             var lockKey = $"{request.BookId:N}:{request.ChunkOrder}";

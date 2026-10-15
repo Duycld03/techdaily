@@ -63,6 +63,17 @@ public class AdminUpdateCatalogMetadataHandler : IUseCase<AdminUpdateCatalogMeta
             return Error.Custom("Catalog.NotFound", "Catalog document not found.");
         }
 
+        var hasActiveAttempt = await _dbContext.IngestionAttempts
+            .AnyAsync(a => a.TargetScope == IngestionTargetScope.Catalog &&
+                           a.TargetDocumentId == doc.Id &&
+                           (a.State == IngestionAttemptState.Queued || a.State == IngestionAttemptState.Running),
+                cancellationToken);
+
+        if (hasActiveAttempt)
+        {
+            return Error.Custom("Catalog.ActiveAttemptInProgress", "Cannot modify metadata while document ingestion is actively in progress.");
+        }
+
         if (doc.Visibility == CatalogVisibility.Published)
         {
             if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)

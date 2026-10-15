@@ -51,6 +51,23 @@ public class CreateHighlightHandler : IUseCase<CreateHighlightRequest, CreateHig
         {
             return Error.Custom("Validation.Failed", validation.Errors.First().ErrorMessage);
         }
+        var chunk = await _dbContext.DocumentChunks
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == request.DocumentChunkId, cancellationToken);
+
+        if (chunk != null)
+        {
+            var hasActiveAttempt = await _dbContext.IngestionAttempts
+                .AnyAsync(a => a.TargetScope == DeepPace.Domain.Enums.IngestionTargetScope.Personal &&
+                               a.TargetDocumentId == chunk.DocumentBookId &&
+                               (a.State == DeepPace.Domain.Enums.IngestionAttemptState.Queued || a.State == DeepPace.Domain.Enums.IngestionAttemptState.Running),
+                    cancellationToken);
+
+            if (hasActiveAttempt)
+            {
+                return Error.Custom("Document.ActiveAttemptInProgress", "Cannot add highlights while document ingestion is actively in progress.");
+            }
+        }
 
         var trimmedText = request.SelectedText?.Trim() ?? string.Empty;
 

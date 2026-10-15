@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
-import { LayoutDashboard, LibraryBig, Users, ScrollText, GraduationCap, LogOut, ShieldCheck } from 'lucide-vue-next'
+import { LayoutDashboard, LibraryBig, FileCog, Users, ScrollText, GraduationCap, LogOut, ShieldCheck } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 import { normalizeRoutePath } from '~/utils/adminRoutes'
@@ -15,6 +15,7 @@ const isLoggingOut = shallowRef(false)
 const allLinks = [
   { path: '/admin', label: 'admin.nav.dashboard', icon: LayoutDashboard, canShow: () => access.isAuthorized },
   { path: '/admin/catalog', label: 'admin.nav.documents', icon: LibraryBig, canShow: () => access.canManageCatalog },
+  { path: '/admin/documents', label: 'admin.nav.operations', icon: FileCog, canShow: () => access.canManageDocumentOperations },
   { path: '/admin/users', label: 'admin.nav.users', icon: Users, canShow: () => access.canManageAccounts },
   { path: '/admin/audit', label: 'admin.nav.audit', icon: ScrollText, canShow: () => access.canReadAudit }
 ]

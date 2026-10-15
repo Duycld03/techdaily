@@ -353,6 +353,35 @@ export const useLibraryStore = defineStore("library", () => {
     const defaultName = `${slug || 'book'}-notes.md`;
     await api.download(`/api/v1/library/books/${bookId}/export-markdown`, defaultName);
   }
+  async function replaceBookSource(
+    id: string,
+    file: File,
+    expectedVersion: number,
+    explicitLanguage?: string
+  ) {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const api = useApiClient();
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('expectedVersion', expectedVersion.toString());
+      formData.append('requestId', crypto.randomUUID());
+      if (explicitLanguage) {
+        formData.append('explicitLanguage', explicitLanguage);
+      }
+      const res = await api.postRaw<{ attemptId: string; documentId: string; state: string; resultingVersion: number }>(
+        `/api/v1/library/books/${id}/source/pdf`,
+        formData
+      );
+      return res;
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Failed to replace book source.';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  }
 
 
 
@@ -378,5 +407,6 @@ export const useLibraryStore = defineStore("library", () => {
     updateBook,
     curateSlice,
     exportBookMarkdown,
+    replaceBookSource,
   };
 });

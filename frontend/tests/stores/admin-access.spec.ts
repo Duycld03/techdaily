@@ -58,4 +58,20 @@ describe('server-confirmed administrator admission', () => {
     expect(auth.isLoggedIn).toBe(true)
     expect(auth.user?.id).toBe('admin-1')
   })
+  it('correctly tracks canManageDocumentOperations capability and controls /admin/documents access', async () => {
+    const access = useAdminAccessStore()
+    get.mockResolvedValue({
+      canManageCatalog: false,
+      canManageAccounts: false,
+      canReadAudit: false,
+      canManageDocumentOperations: true
+    })
+
+    expect(await access.verify()).toBe(true)
+    expect(access.canManageDocumentOperations).toBe(true)
+    expect(access.canAccessDestination('/admin/documents')).toBe(true)
+    expect(access.canAccessDestination('/admin/catalog')).toBe(false)
+    expect(access.canAccessDestination('/admin/users')).toBe(false)
+    expect(access.canAccessDestination('/admin/audit')).toBe(false)
+  })
 })

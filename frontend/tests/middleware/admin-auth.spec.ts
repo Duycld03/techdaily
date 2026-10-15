@@ -14,7 +14,7 @@ describe('administrator route admission', () => {
   })
   afterEach(() => { environment.server = false; vi.unstubAllGlobals() })
   function signIn() { useAuthStore().setSession(adminTestJwt(), { id: 'admin-1', name: 'Admin', email: 'admin@example.test', preferredLocale: 'en' }) }
-  it.each(['/admin', '/admin/catalog', '/admin/missing'])('redirects unauthenticated SSR request %s to administrator login', async path => {
+  it.each(['/admin', '/admin/catalog', '/admin/documents', '/admin/missing'])('redirects unauthenticated SSR request %s to administrator login', async path => {
     environment.server = true
     await run(path)
     expect(navigateTo).toHaveBeenCalledWith({ path: '/admin/login', query: { redirect: path } })
@@ -84,5 +84,16 @@ describe('administrator route admission', () => {
     signIn()
     await run('/admin/login', { redirect: '//example.test/admin' })
     expect(navigateTo).toHaveBeenCalledWith('/admin')
+  })
+  it('redirects from /admin/documents when canManageDocumentOperations is false', async () => {
+    signIn()
+    vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({
+      canManageCatalog: true,
+      canManageAccounts: true,
+      canReadAudit: true,
+      canManageDocumentOperations: false
+    })))
+    await run('/admin/documents')
+    expect(navigateTo).toHaveBeenCalledWith({ path: '/admin/login', query: { redirect: '/admin/documents' } })
   })
 })

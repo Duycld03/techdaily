@@ -172,11 +172,21 @@ public class PdfIngestionWorker : BackgroundService
                 book.ErrorMessage = "Document processing was interrupted by a server restart. Please import or retry.";
             }
 
-            if (interruptedCatalogDocs.Count > 0 || interruptedBooks.Count > 0)
+            // 3. Recover Ingestion Attempts
+            var interruptedAttempts = await dbContext.IngestionAttempts
+                .Where(a => a.State == IngestionAttemptState.Running)
+                .ToListAsync(cancellationToken);
+
+            foreach (var attempt in interruptedAttempts)
+            {
+                attempt.MarkInterrupted(DateTimeOffset.UtcNow);
+            }
+
+            if (interruptedCatalogDocs.Count > 0 || interruptedBooks.Count > 0 || interruptedAttempts.Count > 0)
             {
                 await dbContext.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Startup recovery completed: {CatalogCount} catalog docs and {BookCount} personal books marked recoverable.",
-                    interruptedCatalogDocs.Count, interruptedBooks.Count);
+                _logger.LogInformation("Startup recovery completed: {CatalogCount} catalog docs, {BookCount} personal books, {AttemptCount} attempts marked recoverable.",
+                    interruptedCatalogDocs.Count, interruptedBooks.Count, interruptedAttempts.Count);
             }
         }
         catch (Exception ex)

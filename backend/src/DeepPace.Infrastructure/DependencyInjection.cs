@@ -69,7 +69,10 @@ public static class DependencyInjection
         services.AddScoped<IAccountSessionAuthority, Services.AccountSessionAuthority>();
         services.AddScoped<ISessionIssuer, Services.SessionIssuer>();
         services.AddScoped<IAdministrativeUnitOfWork, Services.AdministrativeUnitOfWork>();
-        services.AddSingleton<IDocumentMutationGuard, Services.DocumentMutationGuard>();
+        services.AddScoped<IDocumentMutationGuard, Services.DocumentMutationGuard>();
+        services.AddSingleton<IIngestionSourceStorage, Services.LocalFileIngestionSourceStorage>();
+        services.AddScoped<IIngestionQuotaService, Services.IngestionQuotaService>();
+        services.AddScoped<IIngestionClaimService, Services.IngestionClaimService>();
         // Ingestion Destinations
         services.AddScoped<Workers.IngestionDestinations.PersonalBookDestination>();
         services.AddScoped<Workers.IngestionDestinations.CatalogDocumentDestination>();

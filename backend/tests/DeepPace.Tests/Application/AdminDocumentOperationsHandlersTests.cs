@@ -1,3 +1,4 @@
+using System.Text;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -353,5 +354,165 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
         result.Error.Code.Should().Be("Command.RequestIdConflict");
     }
 
+
+    #region Task 3.6: Source Replacement Handlers
+
+    [Fact]
+    public async Task ReplacePersonalSource_ValidOwner_ShouldCreateQueuedAttemptAndAdvanceControlVersion()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"source_replace_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var storageConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Ingestion:SourceStoragePath"] = tempDir
+        }).Build();
+        var storage = new LocalFileIngestionSourceStorage(storageConfig, Microsoft.Extensions.Logging.Abstractions.NullLogger<LocalFileIngestionSourceStorage>.Instance);
+        var quotaService = new IngestionQuotaService(_db, _config);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Rust Concurrency",
+            CreatedByUserId = _learnerUserId,
+            Status = ProcessingStatus.Failed,
+            DeclaredLanguage = "en",
+            IngestionControlVersion = 2,
+            IsDeleted = false
+        };
+        _db.DocumentBooks.Add(book);
+        await _db.SaveChangesAsync();
+
+        var handler = new ReplacePersonalDocumentSourceHandler(_db, storage, quotaService, _mutationGuard);
+
+        var pdfBytes = Encoding.UTF8.GetBytes("%PDF-1.4 mock pdf content");
+        using var stream = new MemoryStream(pdfBytes);
+
+        var command = new ReplacePersonalDocumentSourceCommand(
+            DocumentId: book.Id,
+            RequestingUserId: _learnerUserId,
+            ExpectedVersion: 2,
+            RequestId: "replace-req-1",
+            ExplicitLanguage: null,
+            SourceStream: stream,
+            FileName: "rust.pdf",
+            ByteLength: pdfBytes.Length);
+
+        var result = await handler.ExecuteAsync(command);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.DocumentId.Should().Be(book.Id);
+        result.Value.State.Should().Be("Queued");
+        result.Value.ResultingVersion.Should().Be(3);
+
+        // Verify attempt and source records
+        var attempt = await _db.IngestionAttempts.FirstOrDefaultAsync(a => a.Id == result.Value.AttemptId);
+        attempt.Should().NotBeNull();
+        attempt!.Origin.Should().Be(IngestionAttemptOrigin.UserReplacement);
+        attempt.SourceId.Should().NotBeNull();
+
+        Directory.Delete(tempDir, true);
+    }
+
+    [Fact]
+    public async Task ReplacePersonalSource_CrossOwner_ShouldReturn404()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"source_cross_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var storageConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Ingestion:SourceStoragePath"] = tempDir
+        }).Build();
+        var storage = new LocalFileIngestionSourceStorage(storageConfig, Microsoft.Extensions.Logging.Abstractions.NullLogger<LocalFileIngestionSourceStorage>.Instance);
+        var quotaService = new IngestionQuotaService(_db, _config);
+
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(),
+            Title = "Secrets",
+            CreatedByUserId = _learnerUserId, // Owned by learner
+            Status = ProcessingStatus.Failed,
+            IngestionControlVersion = 1,
+            IsDeleted = false
+        };
+        _db.DocumentBooks.Add(book);
+        await _db.SaveChangesAsync();
+
+        var handler = new ReplacePersonalDocumentSourceHandler(_db, storage, quotaService, _mutationGuard);
+
+        using var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+        var command = new ReplacePersonalDocumentSourceCommand(
+            DocumentId: book.Id,
+            RequestingUserId: _adminUserId, // Different user attempting replacement
+            ExpectedVersion: 1,
+            RequestId: "cross-owner-req",
+            ExplicitLanguage: null,
+            SourceStream: stream,
+            FileName: "file.pdf",
+            ByteLength: 3);
+
+        var result = await handler.ExecuteAsync(command);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Document.NotFound"); // Cross-owner 404 security contract
+
+        Directory.Delete(tempDir, true);
+    }
+
+    [Fact]
+    public async Task ReplaceCatalogSource_ValidAdmin_ShouldCreateQueuedAttemptAndAudit()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"cat_replace_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var storageConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Ingestion:SourceStoragePath"] = tempDir
+        }).Build();
+        var storage = new LocalFileIngestionSourceStorage(storageConfig, Microsoft.Extensions.Logging.Abstractions.NullLogger<LocalFileIngestionSourceStorage>.Instance);
+        var quotaService = new IngestionQuotaService(_db, _config);
+
+        var doc = new CatalogDocument
+        {
+            Id = Guid.NewGuid(),
+            Title = "Catalog Microservices",
+            Visibility = CatalogVisibility.Draft,
+            ProcessingStatus = ProcessingStatus.Failed,
+            ConcurrencyVersion = 2,
+            IsDeleted = false
+        };
+        _db.CatalogDocuments.Add(doc);
+        await _db.SaveChangesAsync();
+
+        var handler = new ReplaceCatalogDocumentSourceHandler(_db, storage, quotaService, _permissionResolver, _mutationGuard);
+
+        var pdfBytes = Encoding.UTF8.GetBytes("%PDF-1.4 mock catalog pdf");
+        using var stream = new MemoryStream(pdfBytes);
+
+        var command = new ReplaceCatalogDocumentSourceCommand(
+            DocumentId: doc.Id,
+            ActorUserId: _adminUserId,
+            ExpectedVersion: 2,
+            RequestId: "cat-replace-1",
+            Reason: "Provide corrected PDF layout",
+            SourceStream: stream,
+            FileName: "microservices.pdf",
+            ByteLength: pdfBytes.Length);
+
+        var result = await handler.ExecuteAsync(command);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.DocumentId.Should().Be(doc.Id);
+        result.Value.State.Should().Be("Queued");
+        result.Value.ResultingVersion.Should().Be(3);
+
+        // Verify audit event persisted
+        var audit = await _db.AdminAuditEvents.FirstOrDefaultAsync(e => e.CorrelationId == "cat-replace-1");
+        audit.Should().NotBeNull();
+        audit!.Action.Should().Be(AdminAuditActions.DocumentSourceReplaced);
+        audit.TargetId.Should().Be(doc.Id.ToString());
+
+        Directory.Delete(tempDir, true);
+    }
+
+    #endregion
     #endregion
 }

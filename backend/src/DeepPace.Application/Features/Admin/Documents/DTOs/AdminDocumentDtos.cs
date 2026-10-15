@@ -84,3 +84,29 @@ public record AdminDocumentAttemptsQuery(
     DateTimeOffset? ToUtc = null,
     int Page = 1,
     int PageSize = 20);
+
+public record ReplacePersonalDocumentSourceCommand(
+    Guid DocumentId,
+    Guid RequestingUserId,
+    int ExpectedVersion,
+    string RequestId,
+    string? ExplicitLanguage,
+    Stream SourceStream,
+    string FileName,
+    long ByteLength);
+
+public record ReplaceCatalogDocumentSourceCommand(
+    Guid DocumentId,
+    Guid ActorUserId,
+    int ExpectedVersion,
+    string RequestId,
+    string Reason,
+    Stream SourceStream,
+    string FileName,
+    long ByteLength);
+
+public record SourceReplacementResponseDto(
+    Guid AttemptId,
+    Guid DocumentId,
+    string State,
+    int ResultingVersion);

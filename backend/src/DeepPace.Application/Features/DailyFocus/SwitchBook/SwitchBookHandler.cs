@@ -50,6 +50,18 @@ public class SwitchBookHandler : IUseCase<SwitchBookRequest, PacerDto>
         {
             return Error.NotFound;
         }
+
+        var hasActiveAttempt = await _dbContext.IngestionAttempts
+            .AnyAsync(a => a.TargetScope == IngestionTargetScope.Personal &&
+                           a.TargetDocumentId == targetBook.Id &&
+                           (a.State == IngestionAttemptState.Queued || a.State == IngestionAttemptState.Running),
+                cancellationToken);
+
+        if (hasActiveAttempt)
+        {
+            return Error.Custom("Document.ActiveAttemptInProgress", "Cannot switch pacer while document ingestion is actively in progress.");
+        }
+
         if (targetBook.CreatedByUserId != null && targetBook.CreatedByUserId != request.UserId)
         {
             return Error.NotFound;

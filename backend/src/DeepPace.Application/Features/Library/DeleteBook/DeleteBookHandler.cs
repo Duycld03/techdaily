@@ -35,6 +35,18 @@ public class DeleteBookHandler : IUseCase<DeleteBookRequest, DeleteBookResponse>
             return Error.Custom("LIBRARY_FORBIDDEN", "You do not have permission to delete this book.");
         }
 
+        var hasActiveAttempt = await _dbContext.IngestionAttempts
+            .AnyAsync(a => a.TargetScope == DeepPace.Domain.Enums.IngestionTargetScope.Personal &&
+                           a.TargetDocumentId == book.Id &&
+                           (a.State == DeepPace.Domain.Enums.IngestionAttemptState.Queued || a.State == DeepPace.Domain.Enums.IngestionAttemptState.Running),
+                cancellationToken);
+
+        if (hasActiveAttempt)
+        {
+            return Error.Custom("Document.ActiveAttemptInProgress", "Cannot delete book while document ingestion is actively in progress.");
+        }
+
+        book.AdvanceControlVersion();
         // Soft delete book and all its chunks
         book.IsDeleted = true;
         book.UpdatedAt = DateTime.UtcNow;

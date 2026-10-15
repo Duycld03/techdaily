@@ -130,6 +130,8 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<Features.Admin.Documents.AdminGetDocumentDetailRequest, Features.Admin.Documents.DTOs.AdminDocumentDetailDto>, Features.Admin.Documents.AdminGetDocumentDetailHandler>();
         services.AddScoped<IUseCase<Features.Admin.Documents.AdminGetDocumentAttemptsRequest, Features.Admin.Accounts.DTOs.AdminPagedResult<Features.Admin.Documents.DTOs.AdminDocumentAttemptItemDto>>, Features.Admin.Documents.AdminGetDocumentAttemptsHandler>();
         services.AddScoped<IUseCase<Features.Admin.Documents.DTOs.AdminRetryDocumentCommand, Features.Admin.Documents.DTOs.AdminRetryDocumentResponseDto>, Features.Admin.Documents.AdminRetryDocumentHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Documents.DTOs.ReplacePersonalDocumentSourceCommand, Features.Admin.Documents.DTOs.SourceReplacementResponseDto>, Features.Admin.Documents.ReplacePersonalDocumentSourceHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Documents.DTOs.ReplaceCatalogDocumentSourceCommand, Features.Admin.Documents.DTOs.SourceReplacementResponseDto>, Features.Admin.Documents.ReplaceCatalogDocumentSourceHandler>();
 
         return services;
     }
