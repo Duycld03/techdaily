@@ -45,6 +45,9 @@ Every route at `/admin` or beneath `/admin/`, except `/admin/login`, SHALL requi
 
 ### Requirement: Distinct administrator navigation
 Authorized admin routes SHALL show dedicated admin navigation with Dashboard and Documents destinations, active-route indication, locale/theme controls, logout and Switch to learning. Learner sidebar, learning telemetry and learner command palette SHALL NOT appear in the admin shell. Admin login SHALL show neither protected shell.
+1. **Uninterrupted SPA Transitions**: Client-side navigation across admin routes (`/admin` $\leftrightarrow$ `/admin/catalog`) SHALL maintain `isAuthorized = true` during background capability re-verification, ensuring `AdminShell` remains mounted without visual flash, unmounting, or simulated page reload.
+2. **Polished Header Controls**: The admin header SHALL render a compact `LocaleSelector` matching the learner header dimensions and an optically centered `ThemeToggle` button.
+3. **Focused Dashboard**: The admin dashboard telemetry dock SHALL strictly display system operational services (API, PostgreSQL, AI Generation, Embeddings) and SHALL NOT render duplicate learner navigation cards.
 
 #### Scenario: Navigate from dashboard to catalog
 - **WHEN** an admin opens Documents
@@ -54,6 +57,14 @@ Authorized admin routes SHALL show dedicated admin navigation with Dashboard and
 - **WHEN** the admin selects Switch to learning
 - **THEN** `/today` opens using the learner shell with the same session
 - **AND** no login, token issuance or privilege change is required.
+
+#### Scenario: Switching between Dashboard and Documents via Sidebar
+- **WHEN** an authenticated administrator clicks Documents or Dashboard in the admin sidebar
+- **THEN** the route transitions smoothly via Vue Router without unmounting `AdminShell` or flashing the full-screen authorization boundary.
+
+#### Scenario: Admin header controls alignment
+- **WHEN** an administrator views the admin header
+- **THEN** the locale toggle displays compact sizing matching the user header and the color theme toggle displays its icon centered within its bounding box.
 
 ### Requirement: Shared session and admin logout
 Admin and learner interfaces SHALL use the same account/session system. Explicit administrator logout SHALL revoke the refresh session, clear local credentials and privileged state, and return to `/admin/login`. Switching interfaces SHALL preserve the session; switching accounts SHALL discard previous-user privileged state.
@@ -67,7 +78,7 @@ Admin and learner interfaces SHALL use the same account/session system. Explicit
 - **THEN** its result is discarded and cannot populate the new account's state.
 
 ### Requirement: DeepPace design system parity
-Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons and accessible controls. Login SHALL use StudioLayout, dashboard BentoDashboardLayout and catalog MasterDetailLayout. The separate shell SHALL NOT introduce a competing theme, CSS framework or unconstrained page wrappers.
+Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons and accessible controls. Login SHALL use StudioLayout, dashboard BentoDashboardLayout and catalog MasterDetailLayout. The separate shell SHALL NOT introduce a competing theme, CSS framework or unconstrained page wrappers. On `/admin/login`, the StudioLayout main stage (`#main`) and context dock (`#dock`) SHALL align to a common top baseline on desktop viewports ($\ge 1024\text{px}$) with structured hairline-bordered overview cards in the dock, preventing vertical drifting or bottom-weighted misalignments.
 
 #### Scenario: Bilingual responsive admin surfaces
 - **WHEN** admin login, dashboard and catalog are viewed in English and Vietnamese at 1440x900 and 390x844
@@ -77,3 +88,12 @@ Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons 
 #### Scenario: Accessible mobile menu
 - **WHEN** an administrator opens the mobile navigation using keyboard or touch
 - **THEN** focus is managed, Escape closes it, and navigation dismisses it without trapping focus or obscuring the destination.
+
+#### Scenario: Desktop StudioLayout baseline alignment on admin login
+- **WHEN** a user or administrator opens `/admin/login` on desktop viewports ($\ge 1024\text{px}$)
+- **THEN** the main action stage heading ("Administrator sign in") and the context dock heading ("Your system overview") align horizontally on a synchronized top baseline
+- **AND** the workspace overview items in the dock render within elevated hairline-bordered cards (`border-slate-200 dark:border-white/[0.08]`) with icon badges, preventing content from being pushed down into the bottom-right half of the screen.
+
+#### Scenario: Mobile viewport responsive stacking
+- **WHEN** a user accesses `/admin/login` on a mobile viewport ($< 1024\text{px}$)
+- **THEN** the sign-in form fills 100% of the stage width and the context overview cards stack cleanly below the form without clipping or horizontal overflow.

@@ -384,7 +384,9 @@ The `/library` page SHALL render numbered pagination controls (`< 1 2 3 ... 8 >`
 - **THEN** pagination controls condense the numbered buttons to the current page and immediate neighbors while maintaining minimum touch target dimensions ($\ge 40\text{px} \times 40\text{px}$) and touch accessibility.
 
 ### Requirement: Consistent Book Card Status Badge Baseline Alignment
-The library catalog on `/library` SHALL align the bookmark resume badge, ready badge, and in-progress ingestion status indicator to a consistent bottom baseline across all book cards within each row of the library grid, regardless of variable title lengths (1-line vs 2-line) or the presence/absence of the author or source URL subtitle.
+The library catalog on `/library` SHALL align the bookmark resume badge, ready badge, and in-progress ingestion status indicator to a consistent bottom baseline across all book cards.
+
+Alignment SHALL remain consistent within each row of the library grid, regardless of variable title lengths (1-line vs 2-line) or the presence/absence of the author or source URL subtitle.
 
 1. **Flex-Stretched Card Content Structure:**
    - The book card upper content container SHALL flex-stretch (`flex flex-col flex-1`) to occupy all available vertical space above the card action footer.
@@ -392,21 +394,25 @@ The library catalog on `/library` SHALL align the bookmark resume badge, ready b
 2. **Bottom-Anchored Status Container:**
    - The status indicator elements (bookmark resume badge, ready badge, and processing ingestion indicator) SHALL reside within a bottom-anchored container (`mt-auto pt-3`) inside the upper content wrapper.
    - The status container SHALL maintain an identical vertical distance directly above the card footer divider (`pt-4 border-t`) across adjacent cards of differing content heights.
+3. **Primary Status and Progress Row:**
+   - The book card status area SHALL display the primary ingestion or resume badge (`Ready to Read`, `Resumes at Slice X`, or `Processing`).
+   - The card SHALL NOT render duplicate status text (`● Sẵn sàng` / `● Ready to read`) immediately above the progress bar, reserving that row strictly for numeric slice counts and reading completion percentages.
 
 #### Scenario: Book card with 1-line title aligns status badge with 2-line title card
-- **WHEN** multiple book cards with differing title line counts (e.g. a 1-line title alongside 2-line titles) are rendered in the `/library` grid
-- **THEN** both cards' status badges are pinned to the bottom of the content container via `mt-auto`
-- **AND** the top edges and baselines of the badges align horizontally across the grid row directly above the card footer action divider.
+- **WHEN** a book with a short single-line title is displayed next to a book with a two-line title
+- **THEN** both cards' bottom-anchored status elements and action rows align horizontally across the row.
 
 #### Scenario: Book card without author or source URL maintains bottom-aligned badge
-- **WHEN** a book card without an author or source URL subtitle is rendered alongside cards with subtitle text
-- **THEN** the status badge container uses `mt-auto` to anchor directly above the card footer divider
-- **AND** the absence of the subtitle does not cause the status badge to float higher up in the card body.
+- **WHEN** a book has no author or source URL metadata
+- **THEN** the upper container flexes to fill available vertical space and the status badge remains anchored to the bottom baseline.
 
 #### Scenario: In-progress ingestion indicator aligns with completed and bookmarked cards
-- **WHEN** a book with processing status `Processing` is rendered in a grid row alongside a `Ready` book or a bookmarked book
-- **THEN** the processing ingestion indicator is bottom-anchored within the upper content container via `mt-auto pt-3`
-- **AND** its bottom edge sits immediately above the card footer action divider consistent with adjacent cards.
+- **WHEN** an ingesting book is displayed alongside completed or active reading books
+- **THEN** all cards maintain identical outer heights and aligned action footers.
+
+#### Scenario: Book card rendering for unread document
+- **WHEN** an unread document card is displayed in the learner library
+- **THEN** it renders the top status badge and slice count without duplicating "Ready to read" or "Sẵn sàng" above the progress bar.
 
 ### Requirement: Book Card Category Badge and Ingestion Status Localization
 The library catalog on `/library` SHALL display localized category badges and localized background ingestion progress indicators on each document card.
@@ -772,15 +778,19 @@ When formatting slices:
 - **THEN** all callouts, takeaways, and scenario challenges are generated in English.
 
 ### Requirement: Category Filter Bar Layout Stability
-The `/library` catalog page SHALL provide responsive category filter pills to filter documents across all 7 DeepPace categories plus the "All" pill:
-1. `All`: "Tất Cả" / "All"
-2. `MentalModels (5)`: "Mô Hình Tư Duy" / "Mental Models"
-3. `HabitsProductivity (6)`: "Thói Quen & Tập Trung" / "Habits & Focus"
-4. `EngineeringCraft (4)`: "Thiết Kế Mã" / "Software Design"
-5. `SystemDesign (3)`: "Hệ Thống Phân Tán" / "System Design"
-6. `BackendRuntime (1)`: "Backend & Runtime" / "Backend & Runtime"
-7. `FrontendWeb (0)`: "Frontend & Web" / "Frontend & Web"
-8. `DatabaseStorage (2)`: "Cơ Sở Dữ Liệu" / "Database & Storage"
+The `/library` catalog page SHALL provide a unified, responsive search and filter toolbar layout synchronized across both the "My Library" and "Discover" tabs.
+
+On both "My Library" and "Discover" tabs, the primary toolbar SHALL present:
+1. A search input (`sm:w-72 sm:flex-initial`) with dedicated clear trigger (`X`) and search execution on Enter or clear.
+2. Quick category pills for top technical domains:
+   - `All`: "Tất Cả" / "All"
+   - `FrontendWeb (0)`: "Frontend & Web"
+   - `BackendRuntime (1)`: "Backend & Runtime"
+   - `DatabaseStorage (2)`: "Cơ Sở Dữ Liệu" / "Database & Storage"
+   - `SystemDesign (3)`: "Hệ Thống Phân Tán" / "Distributed Systems"
+3. An Advanced Filter trigger button (`[ 🎛️ Bộ Lọc ]` / "Filter") displaying an active filter badge counter when any non-default filter is applied.
+
+Clicking the Advanced Filter trigger button SHALL open an accessible filter dialog modal permitting users to filter documents by all 7 DeepPace categories (`FrontendWeb`, `BackendRuntime`, `DatabaseStorage`, `SystemDesign`, `EngineeringCraft`, `MentalModels`, `HabitsProductivity`), content language, and document format, with dedicated reset and apply actions.
 
 Filter pills SHALL maintain `font-semibold` across active and inactive states with `transition-colors duration-150` to guarantee zero layout shift when switching categories.
 
@@ -803,6 +813,23 @@ Filter pills SHALL maintain `font-semibold` across active and inactive states wi
 - **THEN** the category filter state is cleared
 - **AND** the tab switches cleanly with smooth color transitions and zero width shift.
 
+#### Scenario: User filters My Library with quick category chips
+- **WHEN** user clicks "Backend & Runtime" in My Library
+- **THEN** the book list updates to show only personal books under `BackendRuntime (1)`
+- **AND** the button styling transitions with zero layout shift or width jumping.
+
+#### Scenario: User opens advanced filter modal in My Library
+- **WHEN** user clicks the "Bộ Lọc" button in My Library
+- **THEN** the advanced filter modal opens, displaying all 7 domain categories, language options, and source formats
+- **AND** the trigger button displays the active filter count badge when filters are applied.
+
+#### Scenario: User applies deep category filter from modal in My Library
+- **WHEN** user selects `EngineeringCraft (4)` or `MentalModels (5)` in the advanced filter modal and clicks Apply
+- **THEN** the modal closes, the catalog updates to display the matching personal books, and the filter counter badge increments.
+
+#### Scenario: User clears or resets filters in My Library
+- **WHEN** user clicks Reset in the filter modal or clicks the "Tất Cả" quick pill
+- **THEN** all category and search filters are cleared, and the book list reloads all documents.
 ---
 
 ### Requirement: DeepPace Category Keyword Inference
