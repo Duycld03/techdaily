@@ -85,11 +85,17 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
     {
         using (var db = new DeepPaceDbContext(_dbOptions))
         {
-            var adminUser = new User { Id = _adminUserId, Email = "admin@deeppace.test", Name = "Curator Admin", IsDeleted = false };
-            var learner1 = new User { Id = _learner1UserId, Email = "learner1@deeppace.test", Name = "Learner One", IsDeleted = false };
-            var learner2 = new User { Id = _learner2UserId, Email = "learner2@deeppace.test", Name = "Learner Two", IsDeleted = false };
-            var learner3 = new User { Id = _learner3UserId, Email = "learner3@deeppace.test", Name = "Learner Three", IsDeleted = false };
+            var adminUser = new User { Id = _adminUserId, Email = "admin@deeppace.test", Name = "Curator Admin", IsDeleted = false, RoleId = RoleDefaults.AdminRoleId };
+            var learner1 = new User { Id = _learner1UserId, Email = "learner1@deeppace.test", Name = "Learner One", IsDeleted = false, RoleId = RoleDefaults.LearnerRoleId };
+            var learner2 = new User { Id = _learner2UserId, Email = "learner2@deeppace.test", Name = "Learner Two", IsDeleted = false, RoleId = RoleDefaults.LearnerRoleId };
+            var learner3 = new User { Id = _learner3UserId, Email = "learner3@deeppace.test", Name = "Learner Three", IsDeleted = false, RoleId = RoleDefaults.LearnerRoleId };
 
+            db.AuthorizationInitializations.Add(new AuthorizationInitialization
+            {
+                Scope = AuthorizationInitialization.DefaultScope,
+                CompletedAt = DateTimeOffset.UtcNow,
+                ImportedAdminUserIds = new List<Guid> { _adminUserId }
+            });
             await db.Users.AddRangeAsync(adminUser, learner1, learner2, learner3);
             await db.SaveChangesAsync();
         }
@@ -97,8 +103,6 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
 
-        // Configure CatalogAdministration allowlist with _adminUserId
-        builder.Configuration["CatalogAdministration:UserIds:0"] = _adminUserId.ToString();
 
         builder.Services.AddRouting();
         builder.Services.AddOpenApi();
@@ -107,7 +111,9 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
         builder.Services.AddApplicationServices();
 
         builder.Services.AddScoped<ICatalogAdoptionService, CatalogAdoptionService>();
+        builder.Services.AddScoped<IAdminPermissionResolver, AdminPermissionResolver>();
         builder.Services.AddScoped<ICatalogAdminService, CatalogAdminService>();
+        builder.Services.AddScoped<IAuthorizationReadinessService, AuthorizationReadinessService>();
         builder.Services.AddScoped<IPdfIngestionQueue, FakePdfQueue>();
         builder.Services.AddScoped<IWebArticleCrawler, FakeArticleCrawler>();
         builder.Services.AddScoped<IAiMarkdownFormatter, FakeAiMarkdownFormatter>();

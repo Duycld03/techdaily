@@ -1530,6 +1530,44 @@
       "dimension": "The embedding service returned an unexpected dimension.",
       "database": "Database connectivity is unavailable.",
       "probe_failed": "Some AI services could not be verified. See the observations above."
+    },
+    "users": {
+      "role": "Role",
+      "currentRole": "Current Role",
+      "changeRole": "Change Role",
+      "assignRole": "Assign Role",
+      "selectRole": "Select a new role",
+      "roleAssignmentTitle": "Change User Role",
+      "roleAssignmentWarning": "Assigning a new role will immediately revoke all active sessions across all devices for this user. They will need to sign in again to receive new permissions.",
+      "roleReasonPlaceholder": "Provide a clear reason for this role change (required, 1-500 characters)",
+      "roleReasonLabel": "Reason for change",
+      "roleReasonRequired": "Reason is required",
+      "roleReasonTooLong": "Reason cannot exceed 500 characters",
+      "roleSameError": "Target user already has the selected role",
+      "roleSelfChangeError": "You cannot change your own role",
+      "roleLastAdminError": "Cannot reassign role: at least one active administrator must remain",
+      "roleConcurrencyError": "Account was modified by another administrator. Please reload and verify before retrying.",
+      "roleAssignSuccess": "Role successfully updated. All active user sessions were revoked.",
+      "supportedPermissions": "Supported Permissions",
+      "reloadAccount": "Reload Account"
+    },
+    "roles": {
+      "learner": {
+        "name": "Learner",
+        "description": "Standard user with active recall, study history, and catalog reading access"
+      },
+      "admin": {
+        "name": "Administrator",
+        "description": "Privileged system administrator with full access to administration workspaces"
+      }
+    },
+    "permissions": {
+      "ViewAdminDashboard": "View Dashboard",
+      "ManageCatalog": "Manage Catalog",
+      "ManageAccounts": "Manage Accounts",
+      "ReadAudit": "Read Audit Log",
+      "ManageDocumentOperations": "Manage Documents",
+      "ManageRoles": "Manage Roles"
     }
   }
 ,
@@ -1563,7 +1601,25 @@
     "modal_revoke_desc": "Revokes every active session and refresh token. Deliberate self sign-out will terminate this session.",
     "cancel": "Cancel",
     "confirm": "Confirm action",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "role": "Role",
+    "currentRole": "Current Role",
+    "changeRole": "Change Role",
+    "assignRole": "Assign Role",
+    "selectRole": "Select a new role",
+    "roleAssignmentTitle": "Change User Role",
+    "roleAssignmentWarning": "Assigning a new role will immediately revoke all active sessions across all devices for this user. They will need to sign in again to receive new permissions.",
+    "roleReasonPlaceholder": "Provide a clear reason for this role change (required, 1-500 characters)",
+    "roleReasonLabel": "Reason for change",
+    "roleReasonRequired": "Reason is required",
+    "roleReasonTooLong": "Reason cannot exceed 500 characters",
+    "roleSameError": "Target user already has the selected role",
+    "roleSelfChangeError": "You cannot change your own role",
+    "roleLastAdminError": "Cannot reassign role: at least one active administrator must remain",
+    "roleConcurrencyError": "Account was modified by another administrator. Please reload and verify before retrying.",
+    "roleAssignSuccess": "Role successfully updated. All active user sessions were revoked.",
+    "supportedPermissions": "Supported Permissions",
+    "reloadAccount": "Reload Account"
   },
   "admin_audit": {
     "title": "Administration log",

@@ -19,7 +19,14 @@ const submitting = shallowRef(false)
 const error = shallowRef<string | null>(null)
 async function verifyAndEnter() {
   const allowed = await access.verify()
-  if (allowed) await navigateTo(safeAdminReturnPath(route.query.redirect))
+  if (allowed) {
+    const requested = safeAdminReturnPath(route.query.redirect)
+    const firstAccessible = access.getFirstAccessibleAdminRoute()
+    const target = access.canAccessDestination(requested)
+      ? requested
+      : (firstAccessible !== '/login' ? firstAccessible : requested)
+    await navigateTo(target)
+  }
 }
 async function submit(payload: { email: string; password: string; rememberMe: boolean }) {
   if (submitting.value) return

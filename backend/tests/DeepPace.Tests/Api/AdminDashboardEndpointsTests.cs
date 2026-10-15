@@ -21,6 +21,7 @@ using DeepPace.Application.Features.AdminDashboard.DTOs;
 using DeepPace.Application.Features.AdminDashboard.GetOverview;
 using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
+using DeepPace.Domain.Enums;
 using DeepPace.Infrastructure.Persistence;
 using DeepPace.Infrastructure.Services;
 using Xunit;
@@ -46,29 +47,29 @@ public class AdminDashboardEndpointsTests : IAsyncLifetime
         await using (var db = new DeepPaceDbContext(dbOptions))
         {
             await db.Database.EnsureCreatedAsync();
-            db.Users.AddRange(new User { Id = _admin, Email = "admin@example.test" },
-                new User { Id = _otherAdmin, Email = "other-admin@example.test" },
-                new User { Id = _learner, Email = "learner@example.test" });
+            db.Users.AddRange(new User { Id = _admin, Email = "admin@example.test", RoleId = RoleDefaults.AdminRoleId },
+                new User { Id = _otherAdmin, Email = "other-admin@example.test", RoleId = RoleDefaults.AdminRoleId },
+                new User { Id = _learner, Email = "learner@example.test", RoleId = RoleDefaults.LearnerRoleId });
             await db.SaveChangesAsync();
         }
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Configuration["CatalogAdministration:UserIds:0"] = _admin.ToString();
-        builder.Configuration["CatalogAdministration:UserIds:1"] = _otherAdmin.ToString();
         builder.Services.AddRouting();
         builder.Services.AddOpenApi();
         builder.Services.AddScoped(_ => new DeepPaceDbContext(dbOptions));
         builder.Services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
-        builder.Services.AddScoped<ICatalogAdminService, CatalogAdminService>();
-        builder.Services.AddScoped<IAuthorizationHandler, CatalogAdminAuthorizationHandler>();
+        builder.Services.AddScoped<IAdminPermissionResolver, AdminPermissionResolver>();
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AdminAuthorizationMiddlewareResultHandler>();
+        builder.Services.AddScoped<IAuthorizationHandler, ViewAdminDashboardAuthorizationHandler>();
         builder.Services.AddSingleton<IUseCase<GetAdminDashboardOverviewRequest, AdminDashboardOverviewDto>>(_overview);
         builder.Services.AddSingleton<IAdminSystemStatusService>(_status);
         builder.Services.AddSingleton<IAiHealthProbe>(_probe);
         builder.Services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, DashboardTestAuthHandler>("Test", _ => { });
-        builder.Services.AddAuthorization(options => options.AddPolicy("CatalogAdmin", policy =>
+        builder.Services.AddAuthorization(options => options.AddPolicy("ViewAdminDashboard", policy =>
         {
             policy.RequireAuthenticatedUser();
-            policy.Requirements.Add(new CatalogAdminRequirement());
+            policy.Requirements.Add(new ViewAdminDashboardRequirement());
         }));
         builder.Services.AddAdminDashboardRateLimiting();
         _app = builder.Build();
@@ -150,6 +151,54 @@ public class AdminDashboardEndpointsTests : IAsyncLifetime
         paths.GetProperty("/api/v1/admin/dashboard/ai-probe").GetProperty("post")
             .GetProperty("responses").GetProperty("429").ValueKind.Should().Be(JsonValueKind.Object);
         json.Should().Contain("15-second").And.NotContain("ApiKey").And.NotContain("PasswordHash");
+    }
+
+    [Fact]
+    public async Task CatalogOnlyRole_CannotProbeOrAccessOverview_ShouldReturn403WithoutCallingServices()
+    {
+        var catalogOnlyUser = Guid.NewGuid();
+        var catalogRoleId = Guid.NewGuid();
+        await using (var db = new DeepPaceDbContext(new DbContextOptionsBuilder<DeepPaceDbContext>().UseSqlite(_connection).Options))
+        {
+            var role = Role.Create("cat-only", "Catalog Only", "Chi catalog", isProtected: false, id: catalogRoleId);
+            db.Roles.Add(role);
+            db.RolePermissions.Add(RolePermission.Create(catalogRoleId, PermissionKeys.ManageCatalog));
+            db.Users.Add(new User { Id = catalogOnlyUser, Email = "cat@example.test", RoleId = catalogRoleId, Status = AccountStatus.Active });
+            await db.SaveChangesAsync();
+        }
+
+        var initialProbeCalls = _probe.Calls;
+        var initialOverviewCalls = _overview.Calls;
+
+        var overviewRes = await SendAsync("GET", "overview", catalogOnlyUser);
+        overviewRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var probeRes = await SendAsync("POST", "ai-probe", catalogOnlyUser);
+        probeRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        _probe.Calls.Should().Be(initialProbeCalls, "No external AI probe may be dispatched for catalog-only role");
+        _overview.Calls.Should().Be(initialOverviewCalls);
+    }
+
+    [Fact]
+    public async Task DashboardOnlyRole_IsAdmittedIndependently()
+    {
+        var dashboardOnlyUser = Guid.NewGuid();
+        var dashboardRoleId = Guid.NewGuid();
+        await using (var db = new DeepPaceDbContext(new DbContextOptionsBuilder<DeepPaceDbContext>().UseSqlite(_connection).Options))
+        {
+            var role = Role.Create("dash-only", "Dashboard Only", "Chi dashboard", isProtected: false, id: dashboardRoleId);
+            db.Roles.Add(role);
+            db.RolePermissions.Add(RolePermission.Create(dashboardRoleId, PermissionKeys.ViewAdminDashboard));
+            db.Users.Add(new User { Id = dashboardOnlyUser, Email = "dash@example.test", RoleId = dashboardRoleId, Status = AccountStatus.Active });
+            await db.SaveChangesAsync();
+        }
+
+        var overviewRes = await SendAsync("GET", "overview", dashboardOnlyUser);
+        overviewRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var statusRes = await SendAsync("GET", "status", dashboardOnlyUser);
+        statusRes.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     private Task<HttpResponseMessage> SendAsync(string method, string endpoint, Guid? user)

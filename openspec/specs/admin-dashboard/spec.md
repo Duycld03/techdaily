@@ -21,11 +21,26 @@ The dashboard SHALL show non-deleted account count, personal document count, cat
 - **AND** deleted accounts and documents do not inflate counts.
 
 ### Requirement: Restricted aggregate visibility
-Dashboard APIs SHALL require server-verified administrator permission and return aggregates rather than account emails, document text, private notes, tokens or configuration secrets. Anonymous callers SHALL receive 401; authenticated non-admin callers SHALL receive 403.
+Dashboard overview, status and explicit AI-probe APIs SHALL require current server-verified ViewAdminDashboard, independently of catalog or other administrative grants. Responses SHALL expose aggregates and sanitized operational observations, not emails, document text, private notes, tokens or secrets. Invalid authentication SHALL receive 401, insufficient permission 403, and unavailable authority 503.
 
 #### Scenario: Direct unauthorized request
-- **WHEN** a learner calls the overview API with a valid learner token
+- **WHEN** a Learner calls the overview API with a valid token
 - **THEN** the response is 403 and contains no aggregate metrics.
+
+#### Scenario: Catalog-only role cannot probe infrastructure
+- **WHEN** an account has ManageCatalog but lacks ViewAdminDashboard and requests overview, status or an AI probe
+- **THEN** the API returns 403 without metrics or operational details
+- **AND** no external AI probe is dispatched.
+
+#### Scenario: Dashboard-only role is admitted independently
+- **WHEN** an account has ViewAdminDashboard but lacks ManageCatalog and document-operations permission
+- **THEN** dashboard reads and an explicitly requested rate-limited probe are permitted
+- **AND** catalog actions and document drill-downs remain unavailable.
+
+#### Scenario: Dashboard authority is temporarily unavailable
+- **WHEN** current role authority cannot be verified
+- **THEN** the response is 503 rather than 403 or invented healthy/zero values
+- **AND** no protected observation or external probe is produced.
 
 ### Requirement: Measured system status
 The dashboard SHALL show API responsiveness, database connectivity and text-generation/embedding probe status with observation times. AI statuses SHALL be Not checked until an explicit probe succeeds or fails. Missing or stale observations SHALL NOT be presented as current healthy status; raw provider errors and secrets SHALL NOT be displayed.

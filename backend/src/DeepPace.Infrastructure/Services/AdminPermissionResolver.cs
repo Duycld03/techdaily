@@ -1,77 +1,106 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using DeepPace.Application.Common;
 using DeepPace.Application.Interfaces;
+using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 
 namespace DeepPace.Infrastructure.Services;
 
 public class AdminPermissionResolver : IAdminPermissionResolver
 {
-    private readonly IConfiguration _configuration;
     private readonly IDeepPaceDbContext _dbContext;
 
-    public AdminPermissionResolver(IConfiguration configuration, IDeepPaceDbContext dbContext)
+    public AdminPermissionResolver(IDeepPaceDbContext dbContext)
     {
-        _configuration = configuration;
         _dbContext = dbContext;
     }
 
-    private HashSet<Guid> GetConfiguredAdminIds()
-    {
-        var configuredIds = _configuration.GetSection("CatalogAdministration:UserIds").Get<string[]>()
-            ?? _configuration.GetSection("CatalogAdministration__UserIds").Get<string[]>()
-            ?? Array.Empty<string>();
-
-        var set = new HashSet<Guid>();
-        foreach (var idStr in configuredIds)
-        {
-            if (Guid.TryParse(idStr, out var id) && id != Guid.Empty)
-            {
-                set.Add(id);
-            }
-        }
-        return set;
-    }
-
-    public async Task<AdminCapabilitiesDto> GetCapabilitiesAsync(Guid userId, CancellationToken ct = default)
+    public async Task<Result<AdminCapabilitiesDto>> GetCapabilitiesAsync(Guid userId, CancellationToken ct = default)
     {
         if (userId == Guid.Empty)
         {
-            return new AdminCapabilitiesDto(false, false, false, false);
+            return Result<AdminCapabilitiesDto>.Success(new AdminCapabilitiesDto());
         }
 
-        var adminIds = GetConfiguredAdminIds();
-        if (!adminIds.Contains(userId))
+        try
         {
-            return new AdminCapabilitiesDto(false, false, false, false);
+            var user = await _dbContext.Users.AsNoTracking()
+                .Where(u => u.Id == userId && !u.IsDeleted && u.Status == AccountStatus.Active)
+                .Select(u => new
+                {
+                    u.RoleId,
+                    Role = _dbContext.Roles.AsNoTracking()
+                        .Where(r => r.Id == u.RoleId && !r.IsDeleted)
+                        .Select(r => new
+                        {
+                            r.Id,
+                            r.Key,
+                            Permissions = r.Permissions.Select(p => p.PermissionKey).ToList()
+                        })
+                        .FirstOrDefault()
+                })
+                .FirstOrDefaultAsync(ct);
+
+            if (user == null || user.Role == null)
+            {
+                return Result<AdminCapabilitiesDto>.Success(new AdminCapabilitiesDto());
+            }
+
+            var recognizedKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var key in user.Role.Permissions)
+            {
+                if (RolePermission.SupportedPermissionKeys.Contains(key))
+                {
+                    recognizedKeys.Add(key);
+                }
+            }
+
+            var canManageCatalog = recognizedKeys.Contains(PermissionKeys.ManageCatalog);
+            var canManageAccounts = recognizedKeys.Contains(PermissionKeys.ManageAccounts);
+            var canReadAudit = recognizedKeys.Contains(PermissionKeys.ReadAudit);
+            var canManageDocOps = recognizedKeys.Contains(PermissionKeys.ManageDocumentOperations);
+            var canViewDashboard = recognizedKeys.Contains(PermissionKeys.ViewAdminDashboard);
+            var canManageRoles = recognizedKeys.Contains(PermissionKeys.ManageRoles) && canManageAccounts;
+
+            var dto = new AdminCapabilitiesDto(
+                CanManageCatalog: canManageCatalog,
+                CanManageAccounts: canManageAccounts,
+                CanReadAudit: canReadAudit,
+                CanManageDocumentOperations: canManageDocOps,
+                CanViewAdminDashboard: canViewDashboard,
+                CanManageRoles: canManageRoles);
+
+            return Result<AdminCapabilitiesDto>.Success(dto);
         }
-
-        // Active-user and non-deleted check against authoritative database state
-        var user = await _dbContext.Users.AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == userId, ct);
-
-        if (user == null || user.IsDeleted || user.Status != AccountStatus.Active)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return new AdminCapabilitiesDto(false, false, false, false);
+            return Result<AdminCapabilitiesDto>.Failure(
+                Error.Custom("Authority.Unavailable", "Database authority store is temporarily unavailable."));
         }
-
-        return new AdminCapabilitiesDto(
-            CanManageCatalog: true,
-            CanManageAccounts: true,
-            CanReadAudit: true,
-            CanManageDocumentOperations: true);
     }
 
-    public async Task<bool> HasPermissionAsync(Guid userId, AdminPermission permission, CancellationToken ct = default)
+    public async Task<AuthorityResult> HasPermissionAsync(Guid userId, AdminPermission permission, CancellationToken ct = default)
     {
-        var capabilities = await GetCapabilitiesAsync(userId, ct);
-        return permission switch
+        var capResult = await GetCapabilitiesAsync(userId, ct);
+        if (capResult.IsFailure)
         {
-            AdminPermission.ManageCatalog => capabilities.CanManageCatalog,
-            AdminPermission.ManageAccounts => capabilities.CanManageAccounts,
-            AdminPermission.ReadAudit => capabilities.CanReadAudit,
-            AdminPermission.ManageDocumentOperations => capabilities.CanManageDocumentOperations,
+            return AuthorityResult.Unavailable(capResult.Error.Message);
+        }
+
+        var caps = capResult.Value;
+        var isAuthorized = permission switch
+        {
+            AdminPermission.ViewAdminDashboard => caps.CanViewAdminDashboard,
+            AdminPermission.ManageCatalog => caps.CanManageCatalog,
+            AdminPermission.ManageAccounts => caps.CanManageAccounts,
+            AdminPermission.ReadAudit => caps.CanReadAudit,
+            AdminPermission.ManageDocumentOperations => caps.CanManageDocumentOperations,
+            AdminPermission.ManageRoles => caps.CanManageRoles,
             _ => false
         };
+
+        return isAuthorized
+            ? AuthorityResult.Authorized()
+            : AuthorityResult.Denied();
     }
 }

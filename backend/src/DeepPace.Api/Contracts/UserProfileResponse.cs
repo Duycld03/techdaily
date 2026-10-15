@@ -1,3 +1,5 @@
+using DeepPace.Application.Features.Admin.Accounts.DTOs;
+
 namespace DeepPace.Api.Contracts;
 
 /// <summary>
@@ -22,7 +24,8 @@ public record UserProfileDto(
     string TimeZone,
     bool IsPushEnabled,
     bool HasPassword,
-    bool IsGoogleLinked
+    bool IsGoogleLinked,
+    RoleDescriptorDto Role
 );
 
 /// <summary>

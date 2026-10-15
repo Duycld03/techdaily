@@ -1,3 +1,4 @@
+using DeepPace.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Admin.Accounts.DTOs;
@@ -61,7 +62,10 @@ public class AdminGetAccountsHandler : IUseCase<AdminGetAccountsRequest, AdminPa
                 u.Name,
                 u.AvatarUrl,
                 u.Status,
-                u.CreatedAt))
+                u.CreatedAt,
+                u.Role != null
+                    ? new RoleDescriptorDto(u.Role.Id, u.Role.Key, u.Role.NameEn, u.Role.NameVi)
+                    : new RoleDescriptorDto(RoleDefaults.LearnerRoleId, RoleDefaults.LearnerKey, "Learner", "Người học")))
             .ToListAsync(cancellationToken);
 
         return new AdminPagedResult<AdminAccountSummaryDto>(items, totalCount, page, pageSize);

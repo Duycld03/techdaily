@@ -10,8 +10,8 @@ public static class E2EAccountSeeder
 {
     public static async Task SeedAsync(DeepPaceDbContext context, IConfiguration configuration, ILogger logger)
     {
-        var email = configuration["E2E_PROD_EMAIL"] ?? configuration["E2e:Email"] ?? "e2e_prod_agent@deeppace.local";
-        var password = configuration["E2E_PROD_PASSWORD"] ?? configuration["E2e:Password"] ?? "E2eLiveTestPass2026!";
+        var email = configuration["E2E_PROD_EMAIL"] ?? configuration["E2e:Email"];
+        var password = configuration["E2E_PROD_PASSWORD"] ?? configuration["E2e:Password"];
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
@@ -35,6 +35,7 @@ public static class E2EAccountSeeder
                     PasswordHash = PasswordHasher.HashPassword(password),
                     PreferredLocale = "vi",
                     TargetRole = "Senior System Architect",
+                    RoleId = RoleDefaults.LearnerRoleId,
                     DailyGoalMinutes = 15,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow

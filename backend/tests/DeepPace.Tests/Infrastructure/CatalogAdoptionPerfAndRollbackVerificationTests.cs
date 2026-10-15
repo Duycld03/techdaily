@@ -1,3 +1,4 @@
+using Npgsql;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Reflection;
@@ -19,7 +20,15 @@ namespace DeepPace.Tests.Infrastructure;
 public class CatalogAdoptionPerfAndRollbackVerificationTests
 {
     private const string PostgresConnStr = "Host=localhost;Port=5432;Database=deeppace_db;Username=deeppace_user;Password=techdaily_password_secret";
+    private static readonly NpgsqlDataSource DataSource;
     private readonly ITestOutputHelper _output;
+
+    static CatalogAdoptionPerfAndRollbackVerificationTests()
+    {
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(PostgresConnStr);
+        dataSourceBuilder.UseVector();
+        DataSource = dataSourceBuilder.Build();
+    }
 
     public CatalogAdoptionPerfAndRollbackVerificationTests(ITestOutputHelper output)
     {
@@ -29,8 +38,7 @@ public class CatalogAdoptionPerfAndRollbackVerificationTests
     private static DbContextOptions<DeepPaceDbContext> CreatePostgresOptions(params IInterceptor[] interceptors)
     {
         var builder = new DbContextOptionsBuilder<DeepPaceDbContext>()
-            .UseNpgsql(PostgresConnStr, o => o.UseVector());
-
+            .UseNpgsql(DataSource, o => o.UseVector());
         if (interceptors.Length > 0)
         {
             builder.AddInterceptors(interceptors);

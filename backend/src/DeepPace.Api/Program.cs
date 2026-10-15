@@ -124,6 +124,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, DeepPace.Api.Authorization.AdminAuthorizationMiddlewareResultHandler>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.ViewAdminDashboardAuthorizationHandler>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.RoleAdminAuthorizationHandler>();
 
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.CatalogAdminAuthorizationHandler>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.AccountAdminAuthorizationHandler>();
@@ -150,6 +154,16 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireAuthenticatedUser();
         policy.Requirements.Add(new DeepPace.Api.Authorization.DocumentOperationsAdminRequirement());
+    });
+    options.AddPolicy("ViewAdminDashboard", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new DeepPace.Api.Authorization.ViewAdminDashboardRequirement());
+    });
+    options.AddPolicy("RoleAdmin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new DeepPace.Api.Authorization.RoleAdminRequirement());
     });
 });
 
@@ -182,6 +196,7 @@ builder.Services.AddRateLimiter(options =>
     options.OnRejected = async (context, token) =>
     {
         context.HttpContext.Response.ContentType = "application/problem+json";
+        context.HttpContext.Response.Headers.RetryAfter = "60";
         await context.HttpContext.Response.WriteAsJsonAsync(new
         {
             type = "https://tools.ietf.org/html/rfc6585#section-4",
@@ -215,6 +230,38 @@ builder.Services.AddRateLimiter(options =>
         return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
         {
             PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 6,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy("AdminRolesReadPolicy", httpContext =>
+    {
+        var partitionKey = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? httpContext.Connection.RemoteIpAddress?.ToString()
+            ?? "anonymous";
+
+        return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 120,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 6,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy("AdminRolesWritePolicy", httpContext =>
+    {
+        var partitionKey = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? httpContext.Connection.RemoteIpAddress?.ToString()
+            ?? "anonymous";
+
+        return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
             Window = TimeSpan.FromMinutes(1),
             SegmentsPerWindow = 6,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
@@ -312,8 +359,6 @@ using (var scope = app.Services.CreateScope())
             logger.LogInformation("PostgreSQL database migrations applied successfully.");
             await TechInsightsSeeder.SeedAsync(context);
             logger.LogInformation("Tech Insights Catalog seeded successfully.");
-            await E2EAccountSeeder.SeedAsync(context, app.Configuration, logger);
-
             try
             {
                 var poisonedEntries = await context.TermExplanationCaches
@@ -373,6 +418,46 @@ app.Use(async (context, next) =>
     }
     await next(context);
 });
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.Equals("/health", StringComparison.OrdinalIgnoreCase))
+    {
+        await next(context);
+        return;
+    }
+
+    var readiness = context.RequestServices.GetRequiredService<IAuthorizationReadinessService>();
+    var status = await readiness.GetReadinessAsync(context.RequestAborted);
+    if (!status.IsReady || !status.HasRequiredSchemaAndRoles)
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            type = "https://tools.ietf.org/html/rfc7807",
+            title = "Service Unavailable",
+            status = StatusCodes.Status503ServiceUnavailable,
+            detail = status.FailureReason ?? "Required database schema or authorization seeds are missing."
+        });
+        return;
+    }
+    if (!status.IsInitialized && context.Request.Path.StartsWithSegments("/api/v1/admin"))
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            type = "https://tools.ietf.org/html/rfc7807",
+            title = "Service Unavailable",
+            status = StatusCodes.Status503ServiceUnavailable,
+            detail = "Privileged authorization has not been initialized."
+        });
+        return;
+    }
+
+    await next(context);
+});
+
 
 app.MapNotesEndpoints();
 
@@ -398,25 +483,23 @@ app.MapGroup("/api/v1/system")
     .WithTags("System Diagnostics & Health")
     .MapSystemEndpoints();
 // Health Check Endpoint
-app.MapGet("/health", async (DeepPaceDbContext db) =>
+app.MapGet("/health", async (IAuthorizationReadinessService readinessService) =>
 {
-    try
-    {
-        var canConnect = await db.Database.CanConnectAsync();
-        return Results.Ok(new HealthStatusResponse(
-            Status: canConnect ? "healthy" : "degraded",
-            Database: canConnect ? "connected" : "unavailable",
-            Error: null,
-            Timestamp: DateTime.UtcNow));
-    }
-    catch (Exception ex)
+    var readiness = await readinessService.GetReadinessAsync();
+    if (!readiness.IsReady || !readiness.HasRequiredSchemaAndRoles)
     {
         return Results.Json(new HealthStatusResponse(
             Status: "unhealthy",
-            Database: "error",
-            Error: ex.Message,
+            Database: readiness.IsDatabaseConnected ? "schema_unready" : "disconnected",
+            Error: readiness.FailureReason,
             Timestamp: DateTime.UtcNow), statusCode: StatusCodes.Status503ServiceUnavailable);
     }
+
+    return Results.Ok(new HealthStatusResponse(
+        Status: "healthy",
+        Database: "connected",
+        Error: null,
+        Timestamp: DateTime.UtcNow));
 })
 .WithName("HealthCheck")
 .WithTags("System Diagnostics & Health")
@@ -424,5 +507,44 @@ app.MapGet("/health", async (DeepPaceDbContext db) =>
 .WithDescription("Checks system health, core API readiness, and live PostgreSQL database connectivity.")
 .Produces<HealthStatusResponse>(StatusCodes.Status200OK)
 .Produces<HealthStatusResponse>(StatusCodes.Status503ServiceUnavailable);
+if (args.Length > 0 && args[0].Equals("authorization", StringComparison.OrdinalIgnoreCase))
+{
+    if (args.Length >= 2 && args[1].Equals("initialize", StringComparison.OrdinalIgnoreCase))
+    {
+        var adminIds = new List<Guid>();
+        for (int i = 2; i < args.Length; i++)
+        {
+            if ((args[i] == "--admin-user-id" || args[i] == "-a") && i + 1 < args.Length)
+            {
+                if (Guid.TryParse(args[i + 1], out var parsedId))
+                {
+                    adminIds.Add(parsedId);
+                }
+                else
+                {
+                    Console.Error.WriteLine($"Malformed administrator UUID: '{args[i + 1]}'");
+                    return 1;
+                }
+                i++;
+            }
+        }
+
+        using var scope = app.Services.CreateScope();
+        var initService = scope.ServiceProvider.GetRequiredService<IAuthorizationInitializationService>();
+        var initResult = await initService.InitializeAsync(adminIds);
+        if (!initResult.IsSuccess)
+        {
+            Console.Error.WriteLine($"Authorization initialization failed: {initResult.Error.Code} - {initResult.Error.Message}");
+            return 1;
+        }
+
+        Console.WriteLine($"Authorization initialization completed successfully. Scope: '{initResult.Value.Scope}', Imported {initResult.Value.ImportedAdminUserIds.Count} administrator(s).");
+        return 0;
+    }
+
+    Console.Error.WriteLine($"Unknown authorization command: '{string.Join(" ", args)}'. Supported commands: authorization initialize --admin-user-id <uuid>");
+    return 1;
+}
 
 app.Run();
+return 0;

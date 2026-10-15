@@ -55,7 +55,7 @@ public static class AdminDashboardEndpoints
     {
         var group = app.MapGroup("/api/v1/admin/dashboard")
             .WithTags("Administrator Dashboard")
-            .RequireAuthorization("CatalogAdmin");
+            .RequireAuthorization("ViewAdminDashboard");
 
         group.MapGet("/overview", async (
             IUseCase<GetAdminDashboardOverviewRequest, AdminDashboardOverviewDto> handler,

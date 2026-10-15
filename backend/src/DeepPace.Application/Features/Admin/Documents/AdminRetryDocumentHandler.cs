@@ -57,7 +57,13 @@ public class AdminRetryDocumentHandler : IUseCase<AdminRetryDocumentCommand, Adm
         var targetScope = scopeStr == "personal" ? IngestionTargetScope.Personal : IngestionTargetScope.Catalog;
 
         // Permissions check
-        var capabilities = await _permissionResolver.GetCapabilitiesAsync(command.ActorUserId, cancellationToken);
+        var capabilitiesResult = await _permissionResolver.GetCapabilitiesAsync(command.ActorUserId, cancellationToken);
+        if (capabilitiesResult.IsFailure)
+        {
+            return capabilitiesResult.Error;
+        }
+
+        var capabilities = capabilitiesResult.Value;
         if (!capabilities.CanManageDocumentOperations)
         {
             return new Error("Authorization.Denied", "Actor lacks permission to manage document operations.");
@@ -107,12 +113,22 @@ public class AdminRetryDocumentHandler : IUseCase<AdminRetryDocumentCommand, Adm
         }
 
         // Execute retry within mutation guard
+        var requiredPerms = targetScope == IngestionTargetScope.Catalog
+            ? new[] { AdminPermission.ManageDocumentOperations, AdminPermission.ManageCatalog }
+            : new[] { AdminPermission.ManageDocumentOperations };
+
         return await _mutationGuard.ExecuteWithMutationGuardAsync<Result<AdminRetryDocumentResponseDto>>(
             command.DocumentId,
             targetScope,
             async () =>
             {
-                var now = DateTimeOffset.UtcNow;
+                return await _unitOfWork.ExecutePrivilegedMutationAsync<AdminRetryDocumentResponseDto>(
+                    command.ActorUserId,
+                    command.PresentedSessionVersion,
+                    requiredPerms,
+                    async () =>
+                    {
+                        var now = DateTimeOffset.UtcNow;
                         // Retrieve predecessor attempt
                         var predecessor = await _dbContext.IngestionAttempts
                             .FirstOrDefaultAsync(a => a.Id == command.AttemptId && a.TargetDocumentId == command.DocumentId, cancellationToken);
@@ -193,7 +209,7 @@ public class AdminRetryDocumentHandler : IUseCase<AdminRetryDocumentCommand, Adm
                             _dbContext.AdminAuditEvents.Add(auditEvent);
                             await _dbContext.SaveChangesAsync(cancellationToken);
 
-                            return dto;
+                            return Result<AdminRetryDocumentResponseDto>.Success(dto);
                         }
                         else
                         {
@@ -250,8 +266,10 @@ public class AdminRetryDocumentHandler : IUseCase<AdminRetryDocumentCommand, Adm
                             _dbContext.AdminAuditEvents.Add(auditEvent);
                             await _dbContext.SaveChangesAsync(cancellationToken);
 
-                            return dto;
+                            return Result<AdminRetryDocumentResponseDto>.Success(dto);
                         }
+                    },
+                    cancellationToken);
             },
             cancellationToken);
     }

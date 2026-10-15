@@ -7,10 +7,12 @@ import { normalizeRoutePath } from '~/utils/adminRoutes'
 export type AdminAccessState = 'pending' | 'checking' | 'authorized' | 'denied' | 'unavailable'
 
 export interface AdminCapabilities {
+  canViewAdminDashboard: boolean
   canManageCatalog: boolean
   canManageAccounts: boolean
   canReadAudit: boolean
   canManageDocumentOperations: boolean
+  canManageRoles: boolean
 }
 
 export const useAdminAccessStore = defineStore('admin-access', () => {
@@ -18,21 +20,27 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
   const api = useApiClient()
   const state = shallowRef<AdminAccessState>('pending')
   const capabilities = shallowRef<AdminCapabilities>({
+    canViewAdminDashboard: false,
     canManageCatalog: false,
     canManageAccounts: false,
     canReadAudit: false,
-    canManageDocumentOperations: false
+    canManageDocumentOperations: false,
+    canManageRoles: false
   })
 
+  const canViewAdminDashboard = computed(() => capabilities.value.canViewAdminDashboard)
   const canManageCatalog = computed(() => capabilities.value.canManageCatalog)
   const canManageAccounts = computed(() => capabilities.value.canManageAccounts)
   const canReadAudit = computed(() => capabilities.value.canReadAudit)
   const canManageDocumentOperations = computed(() => capabilities.value.canManageDocumentOperations)
+  const canManageRoles = computed(() => capabilities.value.canManageRoles)
   const hasAnyCapability = computed(() =>
+    capabilities.value.canViewAdminDashboard ||
     capabilities.value.canManageCatalog ||
     capabilities.value.canManageAccounts ||
     capabilities.value.canReadAudit ||
-    capabilities.value.canManageDocumentOperations
+    capabilities.value.canManageDocumentOperations ||
+    capabilities.value.canManageRoles
   )
 
   const isAuthorized = computed(() => state.value === 'authorized')
@@ -44,10 +52,12 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
     flight = null
     state.value = 'pending'
     capabilities.value = {
+      canViewAdminDashboard: false,
       canManageCatalog: false,
       canManageAccounts: false,
       canReadAudit: false,
-      canManageDocumentOperations: false
+      canManageDocumentOperations: false,
+      canManageRoles: false
     }
   }
 
@@ -55,6 +65,9 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
 
   function canAccessDestination(path: string): boolean {
     const norm = normalizeRoutePath(path)
+    if (norm === '/admin' || norm === '/admin/dashboard' || norm.startsWith('/admin/dashboard/')) {
+      return capabilities.value.canViewAdminDashboard
+    }
     if (norm === '/admin/catalog' || norm.startsWith('/admin/catalog/')) {
       return capabilities.value.canManageCatalog
     }
@@ -67,7 +80,16 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
     if (norm === '/admin/documents' || norm.startsWith('/admin/documents/')) {
       return capabilities.value.canManageDocumentOperations
     }
-    return isAuthorized.value
+    return false
+  }
+
+  function getFirstAccessibleAdminRoute(): string {
+    if (capabilities.value.canViewAdminDashboard) return '/admin/dashboard'
+    if (capabilities.value.canManageCatalog) return '/admin/catalog'
+    if (capabilities.value.canManageAccounts) return '/admin/users'
+    if (capabilities.value.canManageDocumentOperations) return '/admin/documents'
+    if (capabilities.value.canReadAudit) return '/admin/audit'
+    return '/login'
   }
 
   function verify(): Promise<boolean> {
@@ -82,14 +104,23 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
         if (requestGeneration !== generation) return false
 
         const newCaps: AdminCapabilities = {
+          canViewAdminDashboard: Boolean(res.canViewAdminDashboard),
           canManageCatalog: Boolean(res.canManageCatalog),
           canManageAccounts: Boolean(res.canManageAccounts),
           canReadAudit: Boolean(res.canReadAudit),
-          canManageDocumentOperations: Boolean(res.canManageDocumentOperations)
+          canManageDocumentOperations: Boolean(res.canManageDocumentOperations),
+          canManageRoles: Boolean(res.canManageRoles)
         }
         capabilities.value = newCaps
 
-        if (!newCaps.canManageCatalog && !newCaps.canManageAccounts && !newCaps.canReadAudit && !newCaps.canManageDocumentOperations) {
+        if (
+          !newCaps.canViewAdminDashboard &&
+          !newCaps.canManageCatalog &&
+          !newCaps.canManageAccounts &&
+          !newCaps.canReadAudit &&
+          !newCaps.canManageDocumentOperations &&
+          !newCaps.canManageRoles
+        ) {
           auth.invalidateAdminAccess()
           state.value = 'denied'
           return false
@@ -122,13 +153,16 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
   return {
     state,
     capabilities,
+    canViewAdminDashboard,
     canManageCatalog,
     canManageAccounts,
     canReadAudit,
     canManageDocumentOperations,
+    canManageRoles,
     hasAnyCapability,
     isAuthorized,
     canAccessDestination,
+    getFirstAccessibleAdminRoute,
     verify,
     reset,
     setUnavailable

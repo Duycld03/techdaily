@@ -1,3 +1,5 @@
+using DeepPace.Application.Features.Admin.Accounts.DTOs;
+
 namespace DeepPace.Api.Contracts;
 
 /// <summary>
@@ -17,5 +19,6 @@ public record AuthUserDto(
     string PreferredLocale,
     string TargetRole,
     int DailyGoalMinutes,
-    string? AvatarUrl
+    string? AvatarUrl,
+    RoleDescriptorDto Role
 );

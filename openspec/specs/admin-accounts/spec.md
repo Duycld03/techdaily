@@ -7,38 +7,38 @@ Enable authorized administrators to inspect account identity and control account
 ## Requirements
 
 ### Requirement: Paginated account directory
-Authorized administrators SHALL search existing non-deleted accounts by name, email or identifier, filter by Active/Suspended status, and receive bounded pages with a total count and stable ordering. Unverified pending registrations SHALL NOT appear as accounts.
+Authorized administrators SHALL search non-deleted accounts by name, email or identifier, filter by Active/Suspended status, and receive bounded pages with total count and stable ordering. Entries SHALL include their authoritative role descriptor alongside identity, status and creation time. Unverified pending registrations SHALL NOT appear as accounts.
 
 #### Scenario: Search and filter accounts
 - **WHEN** an administrator searches an email fragment and selects Suspended
-- **THEN** only matching suspended accounts appear with identity, status and creation time
-- **AND** the response includes pagination metadata and a stable creation-time/identifier ordering.
+- **THEN** only matching suspended accounts appear with identity, status, role and creation time
+- **AND** pagination metadata and stable creation-time/identifier ordering are returned.
 
 #### Scenario: No matching accounts
-- **WHEN** no account matches the current criteria
-- **THEN** an empty result and zero count are returned without fabricated accounts or changing filters.
+- **WHEN** no account matches the criteria
+- **THEN** an empty result and zero count are returned without fabricated accounts or changed filters.
 
 #### Scenario: Deleted and unverified identities
-- **WHEN** an administrator searches for a soft-deleted account or an unverified pending registration
-- **THEN** it is absent from the directory and cannot be selected for account actions.
+- **WHEN** an administrator searches a soft-deleted account or unverified pending registration
+- **THEN** it is absent from the directory and cannot be selected for actions.
 
 ### Requirement: Bounded account inspection
-Account details SHALL expose only identifier, name, email, avatar, locale, creation time, status, sign-in method availability, and administrative access-state metadata. Email and credentials SHALL remain user-managed. These endpoints SHALL NOT expose credential material, personal document content, notes or learning answers, or grant support access.
+Account details SHALL expose only identifier, name, email, avatar, locale, creation time, status, role descriptor, sign-in method availability and administrative access-state metadata. Credentials and email SHALL remain user-managed. Inspection SHALL NOT expose credential material, private documents, notes or learning answers, or grant support access. Roles SHALL remain distinct from learning-goal metadata.
 
 #### Scenario: Inspect account identity
 - **WHEN** an administrator selects an account
-- **THEN** details show its identity, available password/Google sign-in methods, status and latest suspension metadata
-- **AND** no password hash, OAuth subject, token, private document body or personal learning record is returned.
+- **THEN** details show identity, role, password/Google sign-in availability, status and latest suspension metadata
+- **AND** no password hash, OAuth subject, token, private document body or learning record is returned.
 
 #### Scenario: Attempt credential or identity editing
-- **WHEN** an administrator attempts to submit an email, password or sign-in linkage change through account administration
-- **THEN** the operation is rejected without changing those fields
-- **AND** the account interface offers only the authorized access-control actions.
+- **WHEN** an administrator submits an email, password or sign-in linkage change through account administration
+- **THEN** those changes are rejected without mutation
+- **AND** only separately authorized account-control and role-assignment actions are offered.
 
 #### Scenario: Personal content remains owner-restricted
-- **WHEN** an administrator inspects an account or requests that user's personal document through a learner endpoint
-- **THEN** account inspection grants no document-content permission
-- **AND** existing owner isolation continues to apply.
+- **WHEN** an administrator inspects an account or requests its personal document through a learner endpoint
+- **THEN** inspection grants no document-content permission
+- **AND** owner isolation continues to apply.
 
 ### Requirement: Account suspension and reactivation
 Administrators SHALL suspend an Active account or reactivate a Suspended account with a required reason. Suspension SHALL preserve the account and its learning data while preventing authenticated use. Reactivation SHALL permit fresh sign-in without restoring revoked sessions or changing credentials or administrator designation.
@@ -75,36 +75,42 @@ Administrators SHALL revoke every session of an Active account with a required r
 - **AND** the current browser clears privileged state and returns to admin login.
 
 ### Requirement: Administrative lockout protection
-Suspension SHALL reject a target equal to the acting administrator and SHALL NOT leave zero active, non-deleted configured administrators. Safeguards SHALL be enforced by the server against the current account and designation state, including concurrent requests. Rejected operations SHALL NOT change account or session state.
+Suspension and role reassignment SHALL NOT leave zero Active, non-deleted accounts in the protected Admin role. Self-suspension and self-role changes SHALL be rejected. Safeguards SHALL use current persisted membership and account state across concurrent role/status commands, not configured user-ID lists. Rejection SHALL preserve account, role and session state.
 
 #### Scenario: Administrator attempts self-suspension
-- **WHEN** an administrator submits a suspension for their own account through the UI or directly through the API
-- **THEN** the server rejects it with a machine-readable protection error and leaves the session usable.
+- **WHEN** an administrator submits suspension for their own account through UI or API
+- **THEN** a machine-readable protection error is returned and the session remains usable.
 
 #### Scenario: Last active administrator
-- **WHEN** a suspension would remove the last active configured administrator
-- **THEN** the server rejects it and retains administrative access.
+- **WHEN** suspension or role reassignment would remove the last Active, non-deleted protected Admin
+- **THEN** the operation is rejected and administrative access is retained.
 
 #### Scenario: Concurrent administrator suspensions
-- **WHEN** concurrent requests attempt to suspend the remaining configured administrators
-- **THEN** the committed outcome retains at least one active configured administrator
-- **AND** a request from an actor suspended by the competing operation cannot authorize a later mutation.
+- **WHEN** concurrent commands attempt to suspend the remaining protected administrators
+- **THEN** at least one active protected administrator remains
+- **AND** an actor suspended by a competing operation cannot authorize a later mutation.
+
+#### Scenario: Concurrent demotion and suspension
+- **WHEN** role reassignment races with suspension or another demotion of the remaining protected administrators
+- **THEN** the committed outcome retains at least one active protected Admin
+- **AND** every committed command used current actor grants and target version.
 
 ### Requirement: Validated reasons and stale-action rejection
-Account mutations SHALL require a trimmed, non-empty reason of at most 500 characters and the account version last inspected by the administrator. Missing or invalid fields SHALL be rejected. A stale version or invalid status transition SHALL return a conflict without changing state or repeating session revocation.
+Account mutations, including role reassignment, SHALL require a trimmed, non-empty reason of at most 500 characters and the inspected account version. Missing or invalid fields SHALL be rejected. A stale version, unchanged-role assignment or invalid status transition SHALL return conflict without changing state or repeating session revocation.
 
 #### Scenario: Missing reason
-- **WHEN** an administrator submits suspension, reactivation or all-device sign-out with a blank reason
-- **THEN** validation blocks the action in the interface and the server independently rejects a direct request.
+- **WHEN** an administrator submits suspension, reactivation, all-device sign-out or role assignment with a blank reason
+- **THEN** the interface blocks submission and the server independently rejects a direct request.
 
 #### Scenario: Competing account update
-- **WHEN** another action changes the selected account before a pending confirmation is submitted
-- **THEN** the server returns a conflict and the interface offers reload while preserving the entered reason.
+- **WHEN** another command changes the selected account before confirmation
+- **THEN** conflict feedback offers reload while preserving entered reason and pending role selection
+- **AND** submission remains gated until current state is successfully reloaded and the administrator deliberately reconfirms.
 
 #### Scenario: Retry after a lost success response
-- **WHEN** the same account action is resubmitted with its old version after the first request committed
-- **THEN** the retry cannot repeat the mutation or invalidate sessions issued after the original commit
-- **AND** reloading reveals the current account state.
+- **WHEN** an account action is resubmitted with its old version after its first commit
+- **THEN** it cannot repeat the mutation or invalidate sessions issued after that commit
+- **AND** reloading reveals current state.
 
 ### Requirement: Account workspace interaction states
 The account workspace SHALL provide localized loading, empty, failed, selected-account and submitting states. Access-control actions SHALL use accessible confirmation forms showing the account, consequence and required reason. Errors SHALL preserve input, and success SHALL refresh the affected account and directory.
@@ -121,3 +127,35 @@ The account workspace SHALL provide localized loading, empty, failed, selected-a
 - **WHEN** an account action is awaiting its response
 - **THEN** its confirmation cannot submit duplicate requests
 - **AND** a result arriving after logout or account replacement cannot repopulate privileged account data.
+
+### Requirement: Role assignment workspace
+The existing account workspace SHALL show localized current-role metadata to account inspectors. A role-change action SHALL appear only with effective role-assignment permission and SHALL show target identity, current/selected role, mandatory reason and session consequences in an accessible confirmation form. No role-definition editor SHALL be offered.
+
+#### Scenario: Account inspector cannot assign roles
+- **WHEN** the actor has ManageAccounts but lacks ManageRoles
+- **THEN** account role labels remain visible, but role options are not fetched and no role-change action is available
+- **AND** existing authorized status/session actions remain independent.
+
+#### Scenario: Assignment succeeds
+- **WHEN** a permitted administrator confirms another account's valid role change
+- **THEN** the account detail and directory refresh to the committed role/version
+- **AND** feedback explains that previous target sessions ended, without signing out the acting administrator.
+
+#### Scenario: Role form validation or service failure
+- **WHEN** submission fails because of validation, conflict or temporary service failure
+- **THEN** selected role and reason remain available with localized feedback
+- **AND** success is not claimed; a failed reload cannot silently replace the inspected version or enable resubmission.
+
+#### Scenario: Keyboard confirmation and cancellation
+- **WHEN** the form is used with keyboard or assistive technology
+- **THEN** the actual custom combobox and reason field expose labels and associated errors, dialog focus is contained, and background controls are unavailable
+- **AND** the first Escape closes an open role list without also closing the dialog; cancellation restores focus to the surviving initiating control.
+
+#### Scenario: Late result follows account replacement
+- **WHEN** a role-option or assignment response arrives after logout, definitive denial or account replacement
+- **THEN** its result is discarded and cannot repopulate privileged state.
+
+#### Scenario: Bilingual responsive role confirmation
+- **WHEN** current/selected role labels, protection errors and the 500-character reason are viewed in English and Vietnamese at desktop and mobile widths
+- **THEN** the identity, selected value, warning, errors and actions remain readable and operable without clipping or collision
+- **AND** the full role name is obtainable without hover-only interaction, while action labels and compact badges retain the project's no-wrap invariant.

@@ -38,6 +38,7 @@ pnpm-debug.log*
 .pnpm-store/
 frontend/e2e/screenshots/
 **/screenshots/
+docs/screenshots/
 
 # --------------------------------------------------------------------
 # Environment & Secrets (NEVER COMMIT SECRETS)

@@ -198,6 +198,7 @@ function handleTriggerKeydown(event: KeyboardEvent) {
     case 'Escape':
       if (isOpen.value) {
         event.preventDefault()
+        event.stopPropagation()
         closeDropdown()
       }
       break
@@ -228,6 +229,7 @@ function handleListboxKeydown(event: KeyboardEvent) {
       break
     case 'Escape':
       event.preventDefault()
+      event.stopPropagation()
       closeDropdown()
       break
     case 'Tab':

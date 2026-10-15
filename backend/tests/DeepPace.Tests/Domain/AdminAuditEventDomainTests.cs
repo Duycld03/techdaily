@@ -102,4 +102,54 @@ public class AdminAuditEventDomainTests
         act.Should().Throw<ArgumentException>()
             .WithMessage("*sensitive*");
     }
+
+    [Fact]
+    public void Create_UserAssignRole_ShouldConstructValidAuditEventWithSafePayload()
+    {
+        var prevRoleId = RoleDefaults.LearnerRoleId;
+        var newRoleId = RoleDefaults.AdminRoleId;
+        var statePayload = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            PreviousRoleId = prevRoleId,
+            NewRoleId = newRoleId,
+            ResultingAuthenticationVersion = 2,
+            ResultingAdminControlVersion = 2
+        });
+
+        var evt = AdminAuditEvent.Create(
+            actorUserId: _actorId,
+            action: AdminAuditActions.UserAssignRole,
+            targetType: "User",
+            targetId: _targetId.ToString(),
+            outcome: AdminAuditOutcome.Succeeded,
+            reason: "Promoting team member to administrator",
+            correlationId: "corr-role-assign-1",
+            changedFields: new[] { "RoleId", "AuthenticationVersion", "AdminControlVersion" },
+            statePayload: statePayload);
+
+        evt.Action.Should().Be(AdminAuditActions.UserAssignRole);
+        evt.TargetType.Should().Be("User");
+        evt.TargetId.Should().Be(_targetId.ToString());
+        evt.ActorUserId.Should().Be(_actorId);
+        evt.ChangedFields.Should().Equal("RoleId", "AuthenticationVersion", "AdminControlVersion");
+        evt.StatePayload.Should().Contain(prevRoleId.ToString());
+        evt.StatePayload.Should().Contain(newRoleId.ToString());
+        evt.StatePayload.Should().NotContain("password");
+        evt.StatePayload.Should().NotContain("hash");
+    }
+
+    [Fact]
+    public void Create_UserAssignRole_RejectsEmptyActorId_PreventingFakeActorFabrication()
+    {
+        var act = () => AdminAuditEvent.Create(
+            actorUserId: Guid.Empty,
+            action: AdminAuditActions.UserAssignRole,
+            targetType: "User",
+            targetId: _targetId.ToString(),
+            outcome: AdminAuditOutcome.Succeeded,
+            reason: "Bootstrap operation");
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*Actor user ID cannot be empty*");
+    }
 }

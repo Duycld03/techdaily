@@ -13,7 +13,7 @@ const access = useAdminAccessStore()
 const isLoggingOut = shallowRef(false)
 
 const allLinks = [
-  { path: '/admin', label: 'admin.nav.dashboard', icon: LayoutDashboard, canShow: () => access.isAuthorized },
+  { path: '/admin', label: 'admin.nav.dashboard', icon: LayoutDashboard, canShow: () => access.canViewAdminDashboard },
   { path: '/admin/catalog', label: 'admin.nav.documents', icon: LibraryBig, canShow: () => access.canManageCatalog },
   { path: '/admin/documents', label: 'admin.nav.operations', icon: FileCog, canShow: () => access.canManageDocumentOperations },
   { path: '/admin/users', label: 'admin.nav.users', icon: Users, canShow: () => access.canManageAccounts },
@@ -21,6 +21,9 @@ const allLinks = [
 ]
 const links = computed(() => allLinks.filter(l => l.canShow()))
 const activePath = computed(() => normalizeRoutePath(route.path))
+function isActive(path: string): boolean {
+  return activePath.value === path || (path === '/admin' && activePath.value === '/admin/dashboard')
+}
 async function logout() {
   if (isLoggingOut.value) return
   isLoggingOut.value = true
@@ -36,9 +39,9 @@ async function logout() {
       <span class="text-sm sm:text-base font-semibold">{{ $t('admin.nav.workspace') }}</span>
     </div>
     <nav class="flex flex-col gap-2 px-3 pb-5" :aria-label="$t('admin.nav.title')">
-      <NuxtLink v-for="link in links" :key="link.path" :to="link.path" :aria-current="activePath === link.path ? 'page' : undefined"
+      <NuxtLink v-for="link in links" :key="link.path" :to="link.path" :aria-current="isActive(link.path) ? 'page' : undefined"
         class="flex min-h-11 items-center gap-3 rounded-xl px-4 py-3 text-sm sm:text-base font-semibold transition-colors whitespace-nowrap shrink-0"
-        :class="activePath === link.path ? 'bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20' : 'text-slate-600 dark:text-slate-400 border border-transparent hover:bg-slate-100 dark:hover:bg-white/[0.04]'"
+        :class="isActive(link.path) ? 'bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20' : 'text-slate-600 dark:text-slate-400 border border-transparent hover:bg-slate-100 dark:hover:bg-white/[0.04]'"
         @click="emit('navigate')">
         <component :is="link.icon" class="h-5 w-5 shrink-0" :stroke-width="1.5" aria-hidden="true" />{{ $t(link.label) }}
       </NuxtLink>

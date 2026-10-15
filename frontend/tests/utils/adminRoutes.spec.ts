@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isAdminRoute, isAdminLogin, safeAdminReturnPath, loginRedirectFor } from '~/utils/adminRoutes'
+import { isAdminRoute, isAdminLogin, safeAdminReturnPath, loginRedirectFor, getFirstAccessibleAdminRoute, canAccessAdminDestination } from '~/utils/adminRoutes'
 
 describe('administrator route boundaries', () => {
   it.each(['/admin', '/admin/', '/admin/catalog', '/admin/missing'])('recognizes protected area %s', path => {
@@ -19,5 +19,48 @@ describe('administrator route boundaries', () => {
     expect(safeAdminReturnPath('/admin/catalog/?page=2')).toBe('/admin/catalog?page=2')
     expect(loginRedirectFor('/admin/catalog?page=2')).toEqual({ path: '/admin/login', query: { redirect: '/admin/catalog?page=2' } })
     expect(loginRedirectFor('/library?page=2')).toEqual({ path: '/login', query: { redirect: '/library?page=2' } })
+  })
+
+  describe('deterministic landing and destination access', () => {
+    it('resolves deterministic landing in order: dashboard, catalog, users, documents, audit, fallback to login', () => {
+      expect(getFirstAccessibleAdminRoute({ canViewAdminDashboard: true, canManageCatalog: true })).toBe('/admin/dashboard')
+      expect(getFirstAccessibleAdminRoute({ canManageCatalog: true, canManageAccounts: true })).toBe('/admin/catalog')
+      expect(getFirstAccessibleAdminRoute({ canManageAccounts: true, canReadAudit: true })).toBe('/admin/users')
+      expect(getFirstAccessibleAdminRoute({ canManageDocumentOperations: true, canReadAudit: true })).toBe('/admin/documents')
+      expect(getFirstAccessibleAdminRoute({ canReadAudit: true })).toBe('/admin/audit')
+      expect(getFirstAccessibleAdminRoute({ canManageRoles: true })).toBe('/login')
+      expect(getFirstAccessibleAdminRoute(null)).toBe('/login')
+      expect(getFirstAccessibleAdminRoute({})).toBe('/login')
+    })
+
+    it('verifies destination access per registered capability and denies unknown destinations', () => {
+      const allCaps = {
+        canViewAdminDashboard: true,
+        canManageCatalog: true,
+        canManageAccounts: true,
+        canReadAudit: true,
+        canManageDocumentOperations: true,
+        canManageRoles: true
+      }
+
+      expect(canAccessAdminDestination('/admin', allCaps)).toBe(true)
+      expect(canAccessAdminDestination('/admin/dashboard', allCaps)).toBe(true)
+      expect(canAccessAdminDestination('/admin/catalog', allCaps)).toBe(true)
+      expect(canAccessAdminDestination('/admin/users', allCaps)).toBe(true)
+      expect(canAccessAdminDestination('/admin/documents', allCaps)).toBe(true)
+      expect(canAccessAdminDestination('/admin/audit', allCaps)).toBe(true)
+      expect(canAccessAdminDestination('/admin/unknown', allCaps)).toBe(false)
+      expect(canAccessAdminDestination('/admin/missing', allCaps)).toBe(false)
+    })
+
+    it('denies all admin destinations when account only has canManageRoles', () => {
+      const rolesOnly = { canManageRoles: true }
+      expect(canAccessAdminDestination('/admin', rolesOnly)).toBe(false)
+      expect(canAccessAdminDestination('/admin/dashboard', rolesOnly)).toBe(false)
+      expect(canAccessAdminDestination('/admin/catalog', rolesOnly)).toBe(false)
+      expect(canAccessAdminDestination('/admin/users', rolesOnly)).toBe(false)
+      expect(canAccessAdminDestination('/admin/documents', rolesOnly)).toBe(false)
+      expect(canAccessAdminDestination('/admin/audit', rolesOnly)).toBe(false)
+    })
   })
 })

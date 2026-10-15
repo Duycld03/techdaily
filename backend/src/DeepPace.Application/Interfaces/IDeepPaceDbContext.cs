@@ -6,6 +6,9 @@ namespace DeepPace.Application.Interfaces;
 public interface IDeepPaceDbContext
 {
     DbSet<User> Users { get; }
+    DbSet<Role> Roles { get; }
+    DbSet<RolePermission> RolePermissions { get; }
+    DbSet<AuthorizationInitialization> AuthorizationInitializations { get; }
     DbSet<InterviewQuestion> InterviewQuestions { get; }
     DbSet<DocumentBook> DocumentBooks { get; }
     DbSet<DocumentChunk> DocumentChunks { get; }

@@ -21,12 +21,21 @@ export interface StorageAdapter {
   key(index: number): string | null
 }
 
+export interface RoleDescriptor {
+  id: string
+  key: string
+  nameEn: string
+  nameVi: string
+  isProtected: boolean
+}
+
 export interface SessionProfile {
   id: string
   email: string
   name: string
   preferredLocale: string
   avatarUrl?: string
+  role?: RoleDescriptor
 }
 
 export function decodeSessionToken(token: string | null): Record<string, unknown> | null {

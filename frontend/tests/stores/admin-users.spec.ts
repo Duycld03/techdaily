@@ -4,14 +4,15 @@ import { useAdminUsersStore } from '~/stores/useAdminUsersStore'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { clearAuthStorage } from '../helpers/admin'
 
-const { get, post } = vi.hoisted(() => ({
+const { get, post, put } = vi.hoisted(() => ({
   get: vi.fn(),
-  post: vi.fn()
+  post: vi.fn(),
+  put: vi.fn()
 }))
 
 vi.mock('~/composables/useApiClient', async importOriginal => ({
   ...await importOriginal<typeof import('~/composables/useApiClient')>(),
-  useApiClient: () => ({ get, post })
+  useApiClient: () => ({ get, post, put })
 }))
 
 describe('useAdminUsersStore', () => {
@@ -20,8 +21,8 @@ describe('useAdminUsersStore', () => {
     clearAuthStorage()
     get.mockReset()
     post.mockReset()
+    put.mockReset()
   })
-
   it('initializes with default state', () => {
     const store = useAdminUsersStore()
     expect(store.users).toEqual([])
@@ -42,7 +43,8 @@ describe('useAdminUsersStore', () => {
           name: 'User 1',
           avatarUrl: null,
           status: 'Active',
-          createdAt: '2026-10-15T10:00:00Z'
+          createdAt: '2026-10-15T10:00:00Z',
+          role: { id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', isProtected: false }
         }
       ],
       totalCount: 1,
@@ -86,9 +88,9 @@ describe('useAdminUsersStore', () => {
       hasGoogleAuth: false,
       suspendedByUserId: null,
       suspendedAt: null,
-      suspensionReason: null
+      suspensionReason: null,
+      role: { id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', isProtected: false }
     })
-
     const detail = await store.selectUser('u-1')
 
     expect(get).toHaveBeenCalledWith('/api/v1/admin/users/u-1', { cache: 'no-store' })
@@ -112,7 +114,8 @@ describe('useAdminUsersStore', () => {
       hasGoogleAuth: false,
       suspendedByUserId: 'admin-id',
       suspendedAt: '2026-10-15T12:00:00Z',
-      suspensionReason: 'Violation of Terms'
+      suspensionReason: 'Violation of Terms',
+      role: { id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', isProtected: false }
     })
     get.mockResolvedValueOnce({ items: [], totalCount: 0, page: 1, pageSize: 20 })
 
@@ -135,7 +138,8 @@ describe('useAdminUsersStore', () => {
       name: 'User 1',
       avatarUrl: null,
       status: 'Active',
-      createdAt: '2026-10-15T10:00:00Z'
+      createdAt: '2026-10-15T10:00:00Z',
+      role: { id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', isProtected: false }
     }]
     store.selectedUser = {
       id: '1',
@@ -150,13 +154,104 @@ describe('useAdminUsersStore', () => {
       hasGoogleAuth: false,
       suspendedByUserId: null,
       suspendedAt: null,
-      suspensionReason: null
+      suspensionReason: null,
+      role: { id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', isProtected: false }
     }
-
+    store.roles = [{
+      id: 'r-1',
+      key: 'Learner',
+      nameEn: 'Learner',
+      nameVi: 'Học viên',
+      isProtected: false,
+      supportedPermissions: []
+    }]
     const auth = useAuthStore()
     auth.sessionGeneration++
 
     expect(store.users).toEqual([])
     expect(store.selectedUser).toBeNull()
+  })
+
+  it('fetchRoles loads available admin roles', async () => {
+    const store = useAdminUsersStore()
+    const roleList = [
+      { id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', isProtected: false, supportedPermissions: [] },
+      { id: 'r-2', key: 'Admin', nameEn: 'Admin', nameVi: 'Quản trị viên', isProtected: true, supportedPermissions: ['ManageAccounts', 'ManageRoles'] }
+    ]
+    get.mockResolvedValueOnce({ items: roleList, totalCount: 2, page: 1, pageSize: 100 })
+
+    await store.fetchRoles()
+
+    expect(get).toHaveBeenCalledWith('/api/v1/admin/roles?page=1&pageSize=100', { cache: 'no-store' })
+    expect(store.roles).toEqual(roleList)
+    expect(store.isLoadingRoles).toBe(false)
+    expect(store.rolesError).toBeNull()
+  })
+
+  it('assignRole calls PUT endpoint with exact payload and updates user', async () => {
+    const store = useAdminUsersStore()
+    const updatedDetail = {
+      id: 'u-1',
+      email: 'user1@example.com',
+      name: 'User 1',
+      avatarUrl: null,
+      status: 'Active' as const,
+      createdAt: '2026-10-15T10:00:00Z',
+      preferredLocale: 'en',
+      adminControlVersion: 2,
+      hasPassword: true,
+      hasGoogleAuth: false,
+      suspendedByUserId: null,
+      suspendedAt: null,
+      suspensionReason: null,
+      role: { id: 'r-2', key: 'Admin', nameEn: 'Admin', nameVi: 'Quản trị viên', isProtected: true }
+    }
+    put.mockResolvedValueOnce(updatedDetail)
+    get.mockResolvedValueOnce({ items: [updatedDetail], totalCount: 1, page: 1, pageSize: 20 })
+
+    const result = await store.assignRole('u-1', 'r-2', 'Promotion to Admin', 1)
+
+    expect(result).toEqual({ success: true })
+    expect(put).toHaveBeenCalledWith('/api/v1/admin/users/u-1/role', {
+      roleId: 'r-2',
+      reason: 'Promotion to Admin',
+      expectedVersion: 1
+    })
+    expect(store.selectedUser).toEqual(updatedDetail)
+    expect(get).toHaveBeenCalledWith('/api/v1/admin/users', expect.any(Object))
+  })
+
+  it('assignRole extracts RFC 7807 error detail and code on failure', async () => {
+    const store = useAdminUsersStore()
+    put.mockRejectedValueOnce({
+      status: 409,
+      code: 'VERSION_CONFLICT',
+      data: {
+        code: 'VERSION_CONFLICT',
+        detail: 'The account was modified by another administrator.'
+      }
+    })
+
+    const result = await store.assignRole('u-1', 'r-2', 'Promotion', 1)
+
+    expect(result.success).toBe(false)
+    expect(result.errorCode).toBe('VERSION_CONFLICT')
+    expect(result.errorMessage).toBe('The account was modified by another administrator.')
+    expect(store.error).toBe('The account was modified by another administrator.')
+    expect(store.isActionInFlight).toBe(false)
+  })
+
+  it('discards late fetchRoles response after session reset', async () => {
+    const store = useAdminUsersStore()
+    const auth = useAuthStore()
+    const { promise, resolve } = Promise.withResolvers<unknown>()
+    get.mockReturnValueOnce(promise)
+
+    const call = store.fetchRoles()
+    auth.sessionGeneration++
+    resolve({ items: [{ id: 'r-1', key: 'Learner' }] })
+    await call
+
+    expect(store.roles).toEqual([])
   })
 })

@@ -21,6 +21,7 @@ public class AdminGetAccountByIdHandler : IUseCase<AdminGetAccountByIdRequest, A
         CancellationToken cancellationToken = default)
     {
         var user = await _dbContext.Users.AsNoTracking()
+            .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Id == request.Id && !u.IsDeleted, cancellationToken);
 
         if (user == null)
@@ -41,7 +42,8 @@ public class AdminGetAccountByIdHandler : IUseCase<AdminGetAccountByIdRequest, A
             !string.IsNullOrWhiteSpace(user.GoogleSubjectId),
             user.SuspendedByUserId,
             user.SuspendedAt,
-            user.SuspensionReason);
+            user.SuspensionReason,
+            user.Role.ToDescriptor());
 
         return dto;
     }

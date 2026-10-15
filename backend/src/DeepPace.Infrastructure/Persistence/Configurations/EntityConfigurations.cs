@@ -81,7 +81,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.SuspendedByUserId);
         builder.Property(u => u.SuspendedAt);
         builder.Property(u => u.SuspensionReason).HasMaxLength(500);
-
+        builder.Property(u => u.RoleId)
+            .HasDefaultValue(RoleDefaults.LearnerRoleId)
+            .IsRequired();
+        builder.HasIndex(u => new { u.RoleId, u.Status });
+        builder.HasOne(u => u.Role)
+            .WithMany(r => r.Users)
+            .HasForeignKey(u => u.RoleId)
+            .OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(u => u.StreakRecord)
             .WithOne(s => s.User)
             .HasForeignKey<StreakRecord>(s => s.UserId)
@@ -720,5 +727,84 @@ public class StorageReservationConfiguration : IEntityTypeConfiguration<StorageR
 
         builder.HasIndex(r => r.ReservationToken).IsUnique();
         builder.HasIndex(r => new { r.AccountId, r.ExpiresAtUtc });
+    }
+}
+
+public class RoleConfiguration : IEntityTypeConfiguration<Role>
+{
+    public void Configure(EntityTypeBuilder<Role> builder)
+    {
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Key).HasMaxLength(64).IsRequired();
+        builder.HasIndex(r => r.Key)
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
+        builder.Property(r => r.NameEn).HasMaxLength(100).IsRequired();
+        builder.Property(r => r.NameVi).HasMaxLength(100).IsRequired();
+        builder.Property(r => r.IsProtected).HasDefaultValue(false).IsRequired();
+
+        var seedCreatedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        builder.HasData(
+            new
+            {
+                Id = RoleDefaults.LearnerRoleId,
+                Key = RoleDefaults.LearnerKey,
+                NameEn = "Learner",
+                NameVi = "Người học",
+                IsProtected = true,
+                CreatedAt = seedCreatedAt,
+                IsDeleted = false
+            },
+            new
+            {
+                Id = RoleDefaults.AdminRoleId,
+                Key = RoleDefaults.AdminKey,
+                NameEn = "Administrator",
+                NameVi = "Quản trị viên",
+                IsProtected = true,
+                CreatedAt = seedCreatedAt,
+                IsDeleted = false
+            }
+        );
+    }
+}
+
+public class RolePermissionConfiguration : IEntityTypeConfiguration<RolePermission>
+{
+    public void Configure(EntityTypeBuilder<RolePermission> builder)
+    {
+        builder.HasKey(rp => new { rp.RoleId, rp.PermissionKey });
+        builder.Property(rp => rp.PermissionKey).HasMaxLength(64).IsRequired();
+        builder.HasOne(rp => rp.Role)
+            .WithMany(r => r.Permissions)
+            .HasForeignKey(rp => rp.RoleId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasData(
+            new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ViewAdminDashboard },
+            new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ManageCatalog },
+            new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ManageAccounts },
+            new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ReadAudit },
+            new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ManageDocumentOperations },
+            new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ManageRoles }
+        );
+    }
+}
+
+public class AuthorizationInitializationConfiguration : IEntityTypeConfiguration<AuthorizationInitialization>
+{
+    public void Configure(EntityTypeBuilder<AuthorizationInitialization> builder)
+    {
+        builder.HasKey(ai => ai.Scope);
+        builder.Property(ai => ai.Scope).HasMaxLength(64).IsRequired();
+        builder.Property(ai => ai.CompletedAt).IsRequired();
+        builder.Property(ai => ai.ImportedAdminUserIds)
+            .HasConversion(
+                v => JsonSerializer.Serialize(v ?? new List<Guid>(), (JsonSerializerOptions)null!),
+                v => string.IsNullOrWhiteSpace(v)
+                    ? new List<Guid>()
+                    : JsonSerializer.Deserialize<List<Guid>>(v, (JsonSerializerOptions)null!) ?? new List<Guid>())
+            .HasColumnType("text")
+            .IsRequired();
     }
 }

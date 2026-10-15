@@ -47,7 +47,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (isAdminRoute(normalizedPath)) {
     const access = useAdminAccessStore()
     if (isAdminLogin(normalizedPath)) {
-      if (authStore.isLoggedIn && await access.verify()) return navigateTo(safeAdminReturnPath(to.query?.redirect))
+      if (authStore.isLoggedIn && await access.verify()) {
+        const requested = safeAdminReturnPath(to.query?.redirect)
+        const target = access.canAccessDestination(requested)
+          ? requested
+          : access.getFirstAccessibleAdminRoute()
+        if (target !== '/login') return navigateTo(target)
+      }
       return
     }
     // Match server-confirmed markup during hydration. The neutral boundary renews

@@ -18,6 +18,12 @@ public static class AdminAccountsAndAuditEndpoints
         var idClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return Guid.TryParse(idClaim, out var userId) ? userId : null;
     }
+    private static int GetSessionVersion(ClaimsPrincipal principal)
+    {
+        var claim = principal.FindFirst("session_version")?.Value;
+        return int.TryParse(claim, out var v) && v > 0 ? v : 1;
+    }
+
 
     public static WebApplication MapAdminAccountsAndAuditEndpoints(this WebApplication app)
     {
@@ -33,8 +39,12 @@ public static class AdminAccountsAndAuditEndpoints
                 return Results.Unauthorized();
             }
 
-            var capabilities = await resolver.GetCapabilitiesAsync(userId.Value, ct);
-            return Results.Ok(capabilities);
+            var result = await resolver.GetCapabilitiesAsync(userId.Value, ct);
+            if (result.IsFailure)
+            {
+                return result.Error.ToProblem(result.Error.ToStatusCode());
+            }
+            return Results.Ok(result.Value);
         })
         .WithName("GetAdminCapabilities")
         .WithSummary("Get Administrator Capabilities")
@@ -42,6 +52,37 @@ public static class AdminAccountsAndAuditEndpoints
         .Produces<AdminCapabilitiesDto>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status401Unauthorized)
         .RequireAuthorization();
+        // Roles directory for role assignment
+        app.MapGet("/api/v1/admin/roles", async (
+            ClaimsPrincipal principal,
+            [FromServices] IUseCase<AdminGetRolesRequest, AdminPagedResult<AdminRoleOptionDto>> handler,
+            [FromQuery] string? search,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            CancellationToken ct = default) =>
+        {
+            var actorId = GetUserId(principal);
+            if (!actorId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var request = new AdminGetRolesRequest(actorId.Value, search, page, pageSize);
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
+        })
+        .WithName("GetAdminRoles")
+        .WithSummary("List administrative roles")
+        .WithDescription("Returns paginated list of system roles and supported permissions for role assignment.")
+        .Produces<AdminPagedResult<AdminRoleOptionDto>>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+        .RequireAuthorization("RoleAdmin")
+        .RequireRateLimiting("AdminRolesReadPolicy");
+
 
         // 2. Accounts Directory and Access-Control Actions
         var usersGroup = app.MapGroup("/api/v1/admin/users")
@@ -99,7 +140,8 @@ public static class AdminAccountsAndAuditEndpoints
             }
 
             var correlationId = context.TraceIdentifier;
-            var request = new AdminSuspendUserRequest(id, actorId.Value, body.Reason, body.ExpectedVersion, correlationId);
+            var sessionVersion = GetSessionVersion(principal);
+            var request = new AdminSuspendUserRequest(id, actorId.Value, body.Reason, body.ExpectedVersion, correlationId, sessionVersion);
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
         })
@@ -128,7 +170,8 @@ public static class AdminAccountsAndAuditEndpoints
             }
 
             var correlationId = context.TraceIdentifier;
-            var request = new AdminReactivateUserRequest(id, actorId.Value, body.Reason, body.ExpectedVersion, correlationId);
+            var sessionVersion = GetSessionVersion(principal);
+            var request = new AdminReactivateUserRequest(id, actorId.Value, body.Reason, body.ExpectedVersion, correlationId, sessionVersion);
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
         })
@@ -157,7 +200,8 @@ public static class AdminAccountsAndAuditEndpoints
             }
 
             var correlationId = context.TraceIdentifier;
-            var request = new AdminRevokeUserSessionsRequest(id, actorId.Value, body.Reason, body.ExpectedVersion, correlationId);
+            var sessionVersion = GetSessionVersion(principal);
+            var request = new AdminRevokeUserSessionsRequest(id, actorId.Value, body.Reason, body.ExpectedVersion, correlationId, sessionVersion);
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
         })
@@ -170,6 +214,40 @@ public static class AdminAccountsAndAuditEndpoints
         .ProducesProblem(StatusCodes.Status403Forbidden)
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status409Conflict);
+        usersGroup.MapPut("/{id:guid}/role", async (
+            Guid id,
+            [FromBody] AdminAssignRoleActionRequest body,
+            ClaimsPrincipal principal,
+            HttpContext context,
+            [FromServices] IUseCase<AdminAssignRoleRequest, AdminAccountDetailDto> handler,
+            CancellationToken ct) =>
+        {
+            var actorId = GetUserId(principal);
+            if (!actorId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var correlationId = context.TraceIdentifier;
+            var sessionVersion = GetSessionVersion(principal);
+            var request = new AdminAssignRoleRequest(id, actorId.Value, body.RoleId, body.Reason, body.ExpectedVersion, correlationId, sessionVersion);
+            var result = await handler.ExecuteAsync(request, ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error.ToProblem();
+        })
+        .WithName("AssignAdminAccountRole")
+        .WithSummary("Assign role to user account")
+        .WithDescription("Assigns a database-backed role to an account, advances control version, revokes active sessions, and writes audit record.")
+        .Produces<AdminAccountDetailDto>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status429TooManyRequests)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+        .RequireAuthorization("RoleAdmin")
+        .RequireRateLimiting("AdminRolesWritePolicy");
+
 
         // 3. Audit History Read-Only Endpoints
         var auditGroup = app.MapGroup("/api/v1/admin/audit")

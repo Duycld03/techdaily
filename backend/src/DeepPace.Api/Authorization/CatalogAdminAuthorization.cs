@@ -8,11 +8,12 @@ public class CatalogAdminRequirement : IAuthorizationRequirement
 {
 }
 
-public class CatalogAdminAuthorizationHandler : AuthorizationHandler<CatalogAdminRequirement>
+public class CatalogAdminAuthorizationHandler : BaseAdminAuthorizationHandler<CatalogAdminRequirement>
 {
     private readonly ICatalogAdminService _adminService;
 
-    public CatalogAdminAuthorizationHandler(ICatalogAdminService adminService)
+    public CatalogAdminAuthorizationHandler(ICatalogAdminService adminService, IHttpContextAccessor? httpContextAccessor = null)
+        : base(httpContextAccessor)
     {
         _adminService = adminService;
     }
@@ -25,7 +26,14 @@ public class CatalogAdminAuthorizationHandler : AuthorizationHandler<CatalogAdmi
             return;
         }
 
-        if (await _adminService.IsAdminAsync(userId))
+        var auth = await _adminService.CheckCatalogAdminAsync(userId);
+        if (auth.IsUnavailable)
+        {
+            SetUnavailable(context, auth.Reason);
+            return;
+        }
+
+        if (auth.IsAuthorized)
         {
             context.Succeed(requirement);
         }

@@ -30,3 +30,42 @@ export function loginRedirectFor(path: string) {
     ? { path: '/admin/login', query: { redirect: safeAdminReturnPath(path) } }
     : { path: '/login', query: { redirect: path } }
 }
+
+export interface AdminCapabilityFlags {
+  canViewAdminDashboard?: boolean
+  canManageCatalog?: boolean
+  canManageAccounts?: boolean
+  canReadAudit?: boolean
+  canManageDocumentOperations?: boolean
+  canManageRoles?: boolean
+}
+
+export function getFirstAccessibleAdminRoute(capabilities?: AdminCapabilityFlags | null): string {
+  if (capabilities?.canViewAdminDashboard) return '/admin/dashboard'
+  if (capabilities?.canManageCatalog) return '/admin/catalog'
+  if (capabilities?.canManageAccounts) return '/admin/users'
+  if (capabilities?.canManageDocumentOperations) return '/admin/documents'
+  if (capabilities?.canReadAudit) return '/admin/audit'
+  return '/login'
+}
+
+export function canAccessAdminDestination(path: string, capabilities?: AdminCapabilityFlags | null): boolean {
+  if (!capabilities) return false
+  const norm = normalizeRoutePath(path)
+  if (norm === '/admin' || norm === '/admin/dashboard' || norm.startsWith('/admin/dashboard/')) {
+    return Boolean(capabilities.canViewAdminDashboard)
+  }
+  if (norm === '/admin/catalog' || norm.startsWith('/admin/catalog/')) {
+    return Boolean(capabilities.canManageCatalog)
+  }
+  if (norm === '/admin/users' || norm.startsWith('/admin/users/')) {
+    return Boolean(capabilities.canManageAccounts)
+  }
+  if (norm === '/admin/audit' || norm.startsWith('/admin/audit/')) {
+    return Boolean(capabilities.canReadAudit)
+  }
+  if (norm === '/admin/documents' || norm.startsWith('/admin/documents/')) {
+    return Boolean(capabilities.canManageDocumentOperations)
+  }
+  return false
+}

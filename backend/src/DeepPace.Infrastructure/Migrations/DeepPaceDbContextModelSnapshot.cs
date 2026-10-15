@@ -122,6 +122,24 @@ namespace DeepPace.Infrastructure.Migrations
                     b.ToTable("AdminAuditEvents", (string)null);
                 });
 
+            modelBuilder.Entity("DeepPace.Domain.Entities.AuthorizationInitialization", b =>
+                {
+                    b.Property<string>("Scope")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImportedAdminUserIds")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Scope");
+
+                    b.ToTable("AuthorizationInitializations");
+                });
+
             modelBuilder.Entity("DeepPace.Domain.Entities.CatalogDocument", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1039,6 +1057,118 @@ namespace DeepPace.Infrastructure.Migrations
                     b.ToTable("RefreshTokens", (string)null);
                 });
 
+            modelBuilder.Entity("DeepPace.Domain.Entities.Role", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsProtected")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NameVi")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("20000000-0000-4000-8000-000000000001"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            IsProtected = true,
+                            Key = "learner",
+                            NameEn = "Learner",
+                            NameVi = "Người học"
+                        },
+                        new
+                        {
+                            Id = new Guid("20000000-0000-4000-8000-000000000002"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDeleted = false,
+                            IsProtected = true,
+                            Key = "admin",
+                            NameEn = "Administrator",
+                            NameVi = "Quản trị viên"
+                        });
+                });
+
+            modelBuilder.Entity("DeepPace.Domain.Entities.RolePermission", b =>
+                {
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PermissionKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("RoleId", "PermissionKey");
+
+                    b.ToTable("RolePermissions");
+
+                    b.HasData(
+                        new
+                        {
+                            RoleId = new Guid("20000000-0000-4000-8000-000000000002"),
+                            PermissionKey = "ViewAdminDashboard"
+                        },
+                        new
+                        {
+                            RoleId = new Guid("20000000-0000-4000-8000-000000000002"),
+                            PermissionKey = "ManageCatalog"
+                        },
+                        new
+                        {
+                            RoleId = new Guid("20000000-0000-4000-8000-000000000002"),
+                            PermissionKey = "ManageAccounts"
+                        },
+                        new
+                        {
+                            RoleId = new Guid("20000000-0000-4000-8000-000000000002"),
+                            PermissionKey = "ReadAudit"
+                        },
+                        new
+                        {
+                            RoleId = new Guid("20000000-0000-4000-8000-000000000002"),
+                            PermissionKey = "ManageDocumentOperations"
+                        },
+                        new
+                        {
+                            RoleId = new Guid("20000000-0000-4000-8000-000000000002"),
+                            PermissionKey = "ManageRoles"
+                        });
+                });
+
             modelBuilder.Entity("DeepPace.Domain.Entities.SpacedRepetitionCard", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1429,6 +1559,11 @@ namespace DeepPace.Infrastructure.Migrations
                     b.Property<TimeOnly?>("PreferredStudyTime")
                         .HasColumnType("time without time zone");
 
+                    b.Property<Guid>("RoleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValue(new Guid("20000000-0000-4000-8000-000000000001"));
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -1468,6 +1603,8 @@ namespace DeepPace.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("RoleId", "Status");
 
                     b.ToTable("Users");
                 });
@@ -1811,6 +1948,17 @@ namespace DeepPace.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DeepPace.Domain.Entities.RolePermission", b =>
+                {
+                    b.HasOne("DeepPace.Domain.Entities.Role", "Role")
+                        .WithMany("Permissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Role");
+                });
+
             modelBuilder.Entity("DeepPace.Domain.Entities.SpacedRepetitionCard", b =>
                 {
                     b.HasOne("DeepPace.Domain.Entities.DocumentChunk", "SourceDocumentChunk")
@@ -1852,6 +2000,17 @@ namespace DeepPace.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DeepPace.Domain.Entities.User", b =>
+                {
+                    b.HasOne("DeepPace.Domain.Entities.Role", "Role")
+                        .WithMany("Users")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("DeepPace.Domain.Entities.UserBookPacer", b =>
@@ -1970,6 +2129,13 @@ namespace DeepPace.Infrastructure.Migrations
             modelBuilder.Entity("DeepPace.Domain.Entities.QuizQuestion", b =>
                 {
                     b.Navigation("UserProgresses");
+                });
+
+            modelBuilder.Entity("DeepPace.Domain.Entities.Role", b =>
+                {
+                    b.Navigation("Permissions");
+
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("DeepPace.Domain.Entities.User", b =>

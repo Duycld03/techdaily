@@ -7,93 +7,112 @@ Provide a distinct administrator entry and navigation experience while retaining
 ## Requirements
 
 ### Requirement: Dedicated administrator login
-The system SHALL provide `/admin/login` with administrator-specific identity and sign-in feedback. Successful administrator sign-in SHALL open `/admin` by default or a validated local protected admin return path. A regular account SHALL remain on admin login with a localized permission message and no protected content.
+The system SHALL provide `/admin/login` with administrator-specific identity and feedback. Successful sign-in SHALL use a validated local protected return path only when its destination permission is confirmed; otherwise it SHALL choose the first permitted registered admin destination. Protected Admin SHALL default to `/admin`. An account with no permitted destination SHALL remain at admin login without protected content, preserving its learner session.
 
 #### Scenario: Administrator signs in
-- **WHEN** an administrator submits valid credentials without a return destination
+- **WHEN** a protected Admin submits valid credentials without a return destination
 - **THEN** the dashboard at `/admin` opens after server permission confirmation.
 
 #### Scenario: Regular account signs in
-- **WHEN** valid credentials belong to an account without administrator permission
-- **THEN** the user remains on `/admin/login` with a permission message
-- **AND** no admin shell, dashboard or catalog data is loaded.
+- **WHEN** valid credentials belong to an account without a permitted administrative destination
+- **THEN** the account remains on `/admin/login` with localized permission feedback
+- **AND** no admin shell, dashboard or catalog data loads.
 
 #### Scenario: Existing non-admin session
 - **WHEN** a signed-in learner visits `/admin/login`
-- **THEN** the login page remains accessible to enter another account's credentials without bouncing to `/today` or `/admin`.
+- **THEN** login remains accessible for another account's credentials without bouncing to `/today` or `/admin`.
 
 #### Scenario: Unsafe return path
 - **WHEN** a return parameter is external, protocol-relative, a login route or outside the protected admin area
-- **THEN** successful admin sign-in uses `/admin` instead.
+- **THEN** it is discarded and sign-in uses the first permitted destination, `/admin` for protected Admin.
+
+#### Scenario: Restricted role has no dashboard permission
+- **WHEN** an account with an authorized destination but no dashboard permission signs in
+- **THEN** it lands on its first permitted destination without requesting dashboard data or flashing the dashboard
+- **AND** landing selection follows the registered deterministic order, initially Dashboard, Catalog, Documents, Accounts and Audit.
+
+#### Scenario: Return path is safe but forbidden
+- **WHEN** the local return destination is valid but its capability is denied
+- **THEN** successful sign-in uses another permitted destination rather than looping between that destination and admin login.
 
 ### Requirement: Administrator route admission
-Every route at `/admin` or beneath `/admin/`, except `/admin/login`, SHALL require server-confirmed administrator permission. Missing authentication or denied permission SHALL redirect to `/admin/login` without exposing protected SSR markup or client content. Backend administration APIs SHALL independently enforce authorization.
+Every `/admin` route except `/admin/login` SHALL require current server-confirmed permission for its registered destination. Dashboard admission SHALL require canViewAdminDashboard; other destinations SHALL retain their independent capabilities. Missing authentication or definitive denial SHALL redirect to admin login without protected SSR or client data. Backend APIs SHALL independently enforce permission. A role label or unrelated grant SHALL NOT authorize a destination.
 
 #### Scenario: Guest or learner opens an admin deep link
-- **WHEN** a guest or non-admin requests `/admin/catalog` directly or through client navigation
-- **THEN** the browser reaches `/admin/login` with a safe return destination
+- **WHEN** a guest or non-admin requests `/admin/catalog` directly or by client navigation
+- **THEN** admin login receives a safe return destination
 - **AND** no protected data appears before or during hydration.
 
 #### Scenario: Permission revoked while open
-- **WHEN** an admin request returns a definitive permission denial after access is removed
-- **THEN** privileged state and pending privileged requests are cleared and the user is redirected once to `/admin/login`.
+- **WHEN** an admin request definitively denies access after permission removal
+- **THEN** privileged state and pending requests are cleared and the user is redirected once to `/admin/login`.
 
 #### Scenario: Permission check temporarily unavailable
-- **WHEN** permission verification fails due to network or server failure
-- **THEN** protected content stays hidden behind a neutral retry state
-- **AND** the failure is not treated as permission approval or grounds to destroy a valid session.
+- **WHEN** permission verification fails due to network or service failure
+- **THEN** protected content stays behind a neutral retry boundary
+- **AND** uncertainty neither approves access nor destroys a valid session.
 
 #### Scenario: Account or audit deep link
-- **WHEN** a guest or learner requests `/admin/users` or `/admin/audit`, including through SSR
-- **THEN** the browser reaches admin login with a validated local return destination
-- **AND** account identities and audit events are never rendered or fetched before admission.
+- **WHEN** a guest or learner requests `/admin/users` or `/admin/audit`, including SSR
+- **THEN** admin login receives a validated local return destination
+- **AND** identities and audit events are neither fetched nor rendered before admission.
 
 #### Scenario: New privileged request resolves after account replacement
-- **WHEN** an account, audit or document-operations request resolves after logout, permission denial or a change of signed-in account
-- **THEN** its result is discarded and cannot appear in the next session's workspace.
+- **WHEN** an account, role-option, role-assignment, audit or document-operations request resolves after logout, denial or account replacement
+- **THEN** its result is discarded and cannot populate the new session's workspace.
 
 #### Scenario: Document operations deep link
 - **WHEN** a guest or learner requests `/admin/documents` with a selected document or processing filter
-- **THEN** no document metadata or attempt history is fetched or rendered before destination admission
-- **AND** only a validated local return path is preserved for admin sign-in.
+- **THEN** no metadata or attempt history is fetched or rendered before destination admission
+- **AND** only a validated local return path is preserved.
+
+#### Scenario: Restricted role accesses only its destination
+- **WHEN** an account has ReadAudit but lacks dashboard, catalog, account and document-operations grants
+- **THEN** `/admin/audit` is admitted and the other destinations are denied independently
+- **AND** the shell does not require catalog authority as an umbrella administrator check.
 
 ### Requirement: Distinct administrator navigation
-Authorized admin routes SHALL show dedicated admin navigation with Dashboard and Documents destinations, active-route indication, locale/theme controls, logout and Switch to learning. Learner sidebar, learning telemetry and learner command palette SHALL NOT appear in the admin shell. Admin login SHALL show neither protected shell.
-1. **Uninterrupted SPA Transitions**: Client-side navigation across admin routes (`/admin` $\leftrightarrow$ `/admin/catalog`) SHALL maintain `isAuthorized = true` during background capability re-verification, ensuring `AdminShell` remains mounted without visual flash, unmounting, or simulated page reload.
-2. **Polished Header Controls**: The admin header SHALL render a compact `LocaleSelector` matching the learner header dimensions and an optically centered `ThemeToggle` button.
-3. **Focused Dashboard**: The admin dashboard telemetry dock SHALL strictly display system operational services (API, PostgreSQL, AI Generation, Embeddings) and SHALL NOT render duplicate learner navigation cards.
+Authorized routes SHALL retain dedicated navigation, active-route indication, locale/theme controls, logout and Switch to learning. Dashboard, Catalog, Documents, Accounts and Audit SHALL appear only when their destination capabilities are confirmed. Learner sidebar, telemetry and command palette SHALL remain absent; admin login SHALL show neither protected shell. Navigation SHALL NOT use role-name comparisons or assume every admitted account may view Dashboard.
+
+Client transitions within the same verified session SHALL retain the mounted shell during background capability verification without admitting the new protected outlet before its destination check. Compact locale/theme controls SHALL retain alignment. Dashboard telemetry SHALL remain focused on API, PostgreSQL, generation and embedding health, without duplicate learner navigation cards.
 
 #### Scenario: Navigate from dashboard to catalog
-- **WHEN** an admin opens Documents
-- **THEN** `/admin/catalog` uses the admin shell and existing catalog functionality without duplicate learner navigation.
+- **WHEN** an administrator opens Catalog with the required capability
+- **THEN** `/admin/catalog` retains existing functionality inside the admin shell without duplicate learner navigation.
 
 #### Scenario: Switch to learning
-- **WHEN** the admin selects Switch to learning
-- **THEN** `/today` opens using the learner shell with the same session
-- **AND** no login, token issuance or privilege change is required.
+- **WHEN** Switch to learning is selected
+- **THEN** `/today` opens in the learner shell with the same session
+- **AND** no login, token issuance or privilege change occurs.
 
 #### Scenario: Switching between Dashboard and Documents via Sidebar
-- **WHEN** an authenticated administrator clicks Documents or Dashboard in the admin sidebar
-- **THEN** the route transitions smoothly via Vue Router without unmounting `AdminShell` or flashing the full-screen authorization boundary.
+- **WHEN** an administrator navigates between confirmed sidebar destinations
+- **THEN** routing remains SPA-based without unmounting the shell or flashing a full-screen boundary
+- **AND** each destination's protected data remains gated by its own capability.
 
 #### Scenario: Admin header controls alignment
-- **WHEN** an administrator views the admin header
-- **THEN** the locale toggle displays compact sizing matching the user header and the color theme toggle displays its icon centered within its bounding box.
+- **WHEN** the header renders
+- **THEN** locale controls remain compact and theme icons optically centered.
 
 #### Scenario: Navigate to new destinations
-- **WHEN** an administrator selects Accounts or Administration log
-- **THEN** `/admin/users` or `/admin/audit` opens within the same admin shell with the correct active destination
-- **AND** the mobile menu dismisses without leaving duplicate navigation or trapped focus.
+- **WHEN** a permitted administrator selects Accounts or Administration log
+- **THEN** `/admin/users` or `/admin/audit` opens in the same shell with correct active indication
+- **AND** the mobile menu closes without duplicate navigation or trapped focus.
 
 #### Scenario: Navigation reflects permission
-- **WHEN** the server does not confirm a destination's required capability
-- **THEN** its protected navigation entry is unavailable
-- **AND** removing or adding a browser menu entry cannot grant backend access.
+- **WHEN** a destination's capability is not confirmed
+- **THEN** its navigation entry is unavailable
+- **AND** menu manipulation cannot grant backend access.
 
 #### Scenario: Editing and operations remain distinct
-- **WHEN** an administrator selects Catalog or Documents
-- **THEN** Catalog opens publication/editing at `/admin/catalog` and Documents opens metadata/ingestion operations at `/admin/documents`
-- **AND** personal document operations show no personal-content preview or edit action.
+- **WHEN** Catalog or Documents is selected
+- **THEN** Catalog opens publication/editing and Documents opens metadata/ingestion operations
+- **AND** personal document operations offer no personal-content preview or edit action.
+
+#### Scenario: Dashboard entry is independently hidden
+- **WHEN** an admitted role lacks canViewAdminDashboard
+- **THEN** Dashboard is absent from both desktop and mobile navigation and is not used as an unconditional logo/home destination
+- **AND** the account can still use its other confirmed destinations and Switch to learning.
 
 ### Requirement: Shared session and admin logout
 Admin and learner interfaces SHALL use the same account/session system. Explicit administrator logout SHALL revoke the refresh session, clear local credentials and privileged state, and return to `/admin/login`. Switching interfaces SHALL preserve the session; switching accounts SHALL discard previous-user privileged state.

@@ -1,3 +1,4 @@
+using DeepPace.Application.Features.Admin.Accounts.DTOs;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,7 @@ public static class UserEndpoints
 
             var user = await db.Users
                 .Include(u => u.StreakRecord)
+                .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Id == userId.Value);
 
             if (user == null)
@@ -62,7 +64,8 @@ public static class UserEndpoints
                     TimeZone: user.TimeZone,
                     IsPushEnabled: user.IsPushEnabled,
                     HasPassword: !string.IsNullOrEmpty(user.PasswordHash),
-                    IsGoogleLinked: !string.IsNullOrEmpty(user.GoogleSubjectId)),
+                    IsGoogleLinked: !string.IsNullOrEmpty(user.GoogleSubjectId),
+                    Role: user.Role.ToDescriptor()),
                 Stats: new ProfileStatsDto(
                     CurrentStreak: user.StreakRecord?.CalculateEffectiveStreak(DateOnly.FromDateTime(DateTime.UtcNow)) ?? 0,
                     LongestStreak: user.StreakRecord?.LongestStreak ?? 0,

@@ -28,6 +28,21 @@ public class PdfIngestionWorker : BackgroundService
     {
         _logger.LogInformation("PdfIngestionWorker started listening for PDF ingestion jobs.");
 
+        // Verify database and schema readiness before admitting work
+        using (var readyScope = _scopeFactory.CreateScope())
+        {
+            var readiness = readyScope.ServiceProvider.GetService<IAuthorizationReadinessService>();
+            if (readiness != null)
+            {
+                var status = await readiness.GetReadinessAsync(stoppingToken);
+                if (!status.IsReady || !status.HasRequiredSchemaAndRoles)
+                {
+                    _logger.LogWarning("PdfIngestionWorker suspended startup: database schema or authorization seeds not ready ({Reason})", status.FailureReason);
+                    return;
+                }
+            }
+        }
+
         // Interrupted-work recovery on worker startup
         await RecoverInterruptedJobsAsync(stoppingToken);
 

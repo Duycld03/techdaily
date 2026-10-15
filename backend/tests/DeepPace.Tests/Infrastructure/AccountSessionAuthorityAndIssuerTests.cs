@@ -190,6 +190,39 @@ public class AccountSessionAuthorityAndIssuerTests : IDisposable
     }
 
     [Fact]
+    public async Task GraceWindow_WhenUserAuthenticationVersionIncremented_ShouldRejectGraceReuse()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "grace-ver@example.com",
+            Name = "Grace User",
+            Status = AccountStatus.Active,
+            AuthenticationVersion = 1,
+            RoleId = RoleDefaults.LearnerRoleId
+        };
+        await _db.Users.AddAsync(user);
+        await _db.SaveChangesAsync();
+
+        // Tab 1 issues initial session
+        var issueRes = await _issuer.IssueSessionAsync(user.Id);
+        var rawToken1 = issueRes.Value.RawRefreshToken;
+
+        // Tab 1 rotates token
+        var rotateRes1 = await _issuer.RotateSessionAsync(rawToken1);
+        rotateRes1.IsSuccess.Should().BeTrue();
+
+        // Role assignment or admin forced sign-out occurs, incrementing AuthenticationVersion
+        user.AuthenticationVersion = 2;
+        await _db.SaveChangesAsync();
+
+        // Tab 2 attempts to use rawToken1 within the 60-second grace window
+        var graceRes = await _issuer.RotateSessionAsync(rawToken1);
+        graceRes.IsSuccess.Should().BeFalse("Grace window successor must be rejected when account version has advanced");
+        graceRes.Error.Code.Should().Be("AUTH_INVALID_CREDENTIALS");
+    }
+
+    [Fact]
     public async Task AuditEvent_PersistenceGuard_UpdateShouldThrowInvalidOperationException()
     {
         var evt = AdminAuditEvent.Create(

@@ -39,6 +39,7 @@ public static class ResultHttpExtensions
             || code.Contains("Protected", StringComparison.OrdinalIgnoreCase)
             || code.Contains("Blocked", StringComparison.OrdinalIgnoreCase)
             || code.Contains("InvalidTransition", StringComparison.OrdinalIgnoreCase)
+            || code.Contains("Unchanged", StringComparison.OrdinalIgnoreCase)
             || code.Contains("PublishedImmutable", StringComparison.OrdinalIgnoreCase))
         {
             return StatusCodes.Status409Conflict;

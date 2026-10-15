@@ -1,3 +1,4 @@
+using DeepPace.Application.Features.Admin.Accounts.DTOs;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -87,7 +88,7 @@ public static class AuthEndpoints
             }
 
             var normalizedEmail = request.Email.Trim().ToLowerInvariant();
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+            var user = await db.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
 
             if (user == null || string.IsNullOrWhiteSpace(user.PasswordHash))
             {
@@ -124,7 +125,8 @@ public static class AuthEndpoints
                     PreferredLocale: user.PreferredLocale,
                     TargetRole: user.TargetRole,
                     DailyGoalMinutes: user.DailyGoalMinutes,
-                    AvatarUrl: user.AvatarUrl)));
+                    AvatarUrl: user.AvatarUrl,
+                    Role: user.Role.ToDescriptor())));
         })
         .WithName("Login")
         .WithSummary("Login User")
@@ -207,13 +209,19 @@ public static class AuthEndpoints
                     return new Error(Error.GoogleTokenInvalid.Code, "Invalid Google token: " + ex.Message).ToProblem(StatusCodes.Status400BadRequest);
                 }
             }
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var user = await db.Users.Include(u => u.Role).FirstOrDefaultAsync(u => u.Email == email);
             if (user != null && user.Status == DeepPace.Domain.Enums.AccountStatus.Suspended)
             {
                 return Error.Custom("AUTH_ACCOUNT_SUSPENDED", "Account is suspended.").ToProblem(StatusCodes.Status403Forbidden);
             }
             if (user == null)
             {
+                var defaultRole = await db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == RoleDefaults.LearnerRoleId && !r.IsDeleted, ct);
+                if (defaultRole == null)
+                {
+                    return Error.Custom("Role.DefaultMissing", "System default role is unavailable.").ToProblem(StatusCodes.Status503ServiceUnavailable);
+                }
+
                 user = new User
                 {
                     Email = email!,
@@ -222,7 +230,8 @@ public static class AuthEndpoints
                     GoogleSubjectId = subject,
                     PreferredLocale = "vi",
                     TargetRole = "Deep Work & Focus Practitioner",
-                    DailyGoalMinutes = 10
+                    DailyGoalMinutes = 10,
+                    RoleId = RoleDefaults.LearnerRoleId
                 };
                 await db.Users.AddAsync(user);
 
@@ -230,7 +239,6 @@ public static class AuthEndpoints
                 await db.StreakRecords.AddAsync(streak);
 
                 await db.SaveChangesAsync(ct);
-
             }
             else
             {
@@ -281,7 +289,8 @@ public static class AuthEndpoints
                     PreferredLocale: user.PreferredLocale,
                     TargetRole: user.TargetRole,
                     DailyGoalMinutes: user.DailyGoalMinutes,
-                    AvatarUrl: user.AvatarUrl)));
+                    AvatarUrl: user.AvatarUrl,
+                    Role: user.Role.ToDescriptor())));
         })
         .WithName("GoogleLogin")
         .WithSummary("Google Login")
@@ -322,7 +331,8 @@ public static class AuthEndpoints
                     PreferredLocale: user.PreferredLocale,
                     TargetRole: user.TargetRole,
                     DailyGoalMinutes: user.DailyGoalMinutes,
-                    AvatarUrl: user.AvatarUrl)));
+                    AvatarUrl: user.AvatarUrl,
+                    Role: user.Role.ToDescriptor())));
         })
         .WithName("RefreshToken")
         .WithSummary("Refresh Access Token")
@@ -381,6 +391,12 @@ public static class AuthEndpoints
                 return Error.OtpInvalid.ToProblem();
             }
 
+            var defaultRole = await db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == RoleDefaults.LearnerRoleId && !r.IsDeleted, ct);
+            if (defaultRole == null)
+            {
+                return Error.Custom("Role.DefaultMissing", "System default role is unavailable.").ToProblem(StatusCodes.Status503ServiceUnavailable);
+            }
+
             var user = new User
             {
                 Email = normalizedEmail,
@@ -388,7 +404,8 @@ public static class AuthEndpoints
                 PasswordHash = otp.PendingPasswordHash!,
                 PreferredLocale = otp.PendingLocale ?? "en",
                 TargetRole = "Deep Work & Focus Practitioner",
-                DailyGoalMinutes = 10
+                DailyGoalMinutes = 10,
+                RoleId = RoleDefaults.LearnerRoleId
             };
 
             await db.Users.AddAsync(user, ct);
@@ -409,7 +426,8 @@ public static class AuthEndpoints
                     PreferredLocale: user.PreferredLocale,
                     TargetRole: user.TargetRole,
                     DailyGoalMinutes: user.DailyGoalMinutes,
-                    AvatarUrl: user.AvatarUrl)));
+                    AvatarUrl: user.AvatarUrl,
+                    Role: defaultRole.ToDescriptor())));
         })
         .WithName("RegisterVerify")
         .WithSummary("Verify Registration Code")

@@ -58,10 +58,16 @@ public class CatalogEndpointsTests : IAsyncLifetime
         // Seed users
         using (var db = new DeepPaceDbContext(_dbOptions))
         {
-            var adminUser = new User { Id = _adminUserId, Email = "admin@example.com", Name = "Admin User", IsDeleted = false };
-            var regularUser = new User { Id = _regularUserId, Email = "regular@example.com", Name = "Regular User", IsDeleted = false };
-            var deletedAdmin = new User { Id = _deletedAdminUserId, Email = "deleted_admin@example.com", Name = "Deleted Admin", IsDeleted = true };
+            var adminUser = new User { Id = _adminUserId, Email = "admin@example.com", Name = "Admin User", IsDeleted = false, RoleId = RoleDefaults.AdminRoleId };
+            var regularUser = new User { Id = _regularUserId, Email = "regular@example.com", Name = "Regular User", IsDeleted = false, RoleId = RoleDefaults.LearnerRoleId };
+            var deletedAdmin = new User { Id = _deletedAdminUserId, Email = "deleted_admin@example.com", Name = "Deleted Admin", IsDeleted = true, RoleId = RoleDefaults.AdminRoleId };
 
+            db.AuthorizationInitializations.Add(new AuthorizationInitialization
+            {
+                Scope = AuthorizationInitialization.DefaultScope,
+                CompletedAt = DateTimeOffset.UtcNow,
+                ImportedAdminUserIds = new List<Guid> { _adminUserId }
+            });
             await db.Users.AddRangeAsync(adminUser, regularUser, deletedAdmin);
             await db.SaveChangesAsync();
         }
@@ -73,10 +79,6 @@ public class CatalogEndpointsTests : IAsyncLifetime
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
 
-        // Configure CatalogAdministration allowlist with _adminUserId and _deletedAdminUserId
-        builder.Configuration["CatalogAdministration:UserIds:0"] = _adminUserId.ToString();
-        builder.Configuration["CatalogAdministration:UserIds:1"] = _deletedAdminUserId.ToString();
-        _configuration = builder.Configuration;
 
         builder.Services.AddRouting();
         builder.Services.AddOpenApi();
@@ -84,7 +86,9 @@ public class CatalogEndpointsTests : IAsyncLifetime
         builder.Services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
         builder.Services.AddApplicationServices();
         builder.Services.AddScoped<ICatalogAdoptionService, CatalogAdoptionService>();
+        builder.Services.AddScoped<IAdminPermissionResolver, AdminPermissionResolver>();
         builder.Services.AddScoped<ICatalogAdminService, CatalogAdminService>();
+        builder.Services.AddScoped<IAuthorizationReadinessService, AuthorizationReadinessService>();
         builder.Services.AddScoped<IPdfIngestionQueue, FakePdfQueue>();
         builder.Services.AddScoped<IWebArticleCrawler, FakeArticleCrawler>();
 
@@ -221,9 +225,13 @@ public class CatalogEndpointsTests : IAsyncLifetime
         var initialRes = await _client.GetAsync("/api/v1/admin/catalog/documents");
         initialRes.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Operator revokes admin by removing ID from configuration
-        _configuration["CatalogAdministration:UserIds:0"] = Guid.NewGuid().ToString();
-
+        // Operator revokes admin by reassigning role in database
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            var user = await db.Users.FindAsync(_adminUserId);
+            user!.RoleId = RoleDefaults.LearnerRoleId;
+            await db.SaveChangesAsync();
+        }
         var revokedRes = await _client.GetAsync("/api/v1/admin/catalog/documents");
         revokedRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }

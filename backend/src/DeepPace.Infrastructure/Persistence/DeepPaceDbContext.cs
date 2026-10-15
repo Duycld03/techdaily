@@ -14,6 +14,9 @@ public class DeepPaceDbContext : DbContext, IDeepPaceDbContext
     }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<Role> Roles => Set<Role>();
+    public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<AuthorizationInitialization> AuthorizationInitializations => Set<AuthorizationInitialization>();
     public DbSet<InterviewQuestion> InterviewQuestions => Set<InterviewQuestion>();
     public DbSet<DocumentBook> DocumentBooks => Set<DocumentBook>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();

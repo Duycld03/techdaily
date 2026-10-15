@@ -88,6 +88,7 @@ public static class AdminAuditActions
     public const string UserSuspend = "User.Suspend";
     public const string UserReactivate = "User.Reactivate";
     public const string UserRevokeSessions = "User.RevokeSessions";
+    public const string UserAssignRole = "User.AssignRole";
 
     public const string CatalogUploadPdf = "Catalog.UploadPdf";
     public const string CatalogImportUrl = "Catalog.ImportUrl";

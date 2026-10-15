@@ -1531,6 +1531,44 @@
       "dimension": "Dịch vụ vector trả về số chiều không phù hợp.",
       "database": "Chưa thể kết nối cơ sở dữ liệu.",
       "probe_failed": "Chưa xác minh được một số dịch vụ AI. Xem kết quả phía trên."
+    },
+    "users": {
+      "role": "Vai trò",
+      "currentRole": "Vai trò hiện tại",
+      "changeRole": "Đổi vai trò",
+      "assignRole": "Phân vai trò",
+      "selectRole": "Chọn vai trò mới",
+      "roleAssignmentTitle": "Thay đổi vai trò người dùng",
+      "roleAssignmentWarning": "Gán vai trò mới sẽ ngay lập tức hủy tất cả các phiên đăng nhập đang hoạt động trên mọi thiết bị của người dùng này. Họ sẽ cần đăng nhập lại để nhận quyền mới.",
+      "roleReasonPlaceholder": "Cung cấp lý do rõ ràng cho việc thay đổi vai trò (bắt buộc, 1-500 ký tự)",
+      "roleReasonLabel": "Lý do thay đổi",
+      "roleReasonRequired": "Lý do là bắt buộc",
+      "roleReasonTooLong": "Lý do không được vượt quá 500 ký tự",
+      "roleSameError": "Người dùng đã có vai trò này rồi",
+      "roleSelfChangeError": "Bạn không thể tự thay đổi vai trò của chính mình",
+      "roleLastAdminError": "Không thể chuyển vai trò: hệ thống phải còn ít nhất một quản trị viên đang hoạt động",
+      "roleConcurrencyError": "Tài khoản đã bị quản trị viên khác chỉnh sửa. Vui lòng tải lại và kiểm tra trước khi thử lại.",
+      "roleAssignSuccess": "Cập nhật vai trò thành công. Tất cả các phiên đăng nhập của người dùng đã được thu hồi.",
+      "supportedPermissions": "Các quyền được cấp",
+      "reloadAccount": "Tải lại tài khoản"
+    },
+    "roles": {
+      "learner": {
+        "name": "Học viên",
+        "description": "Người dùng tiêu chuẩn với quyền truy cập ghi nhớ chủ động, lịch sử học tập và đọc tài liệu"
+      },
+      "admin": {
+        "name": "Quản trị viên",
+        "description": "Quản trị viên hệ thống có toàn quyền truy cập các không gian làm việc quản trị"
+      }
+    },
+    "permissions": {
+      "ViewAdminDashboard": "Xem bảng điều khiển",
+      "ManageCatalog": "Quản lý danh mục",
+      "ManageAccounts": "Quản lý tài khoản",
+      "ReadAudit": "Xem nhật ký kiểm toán",
+      "ManageDocumentOperations": "Quản lý tài liệu",
+      "ManageRoles": "Quản lý vai trò"
     }
   }
 ,
@@ -1564,7 +1602,25 @@
     "modal_revoke_desc": "Thu hồi toàn bộ phiên làm việc và refresh token. Đăng xuất chính mình sẽ kết thúc phiên hiện tại.",
     "cancel": "Hủy bỏ",
     "confirm": "Xác nhận",
-    "processing": "Đang xử lý..."
+    "processing": "Đang xử lý...",
+    "role": "Vai trò",
+    "currentRole": "Vai trò hiện tại",
+    "changeRole": "Đổi vai trò",
+    "assignRole": "Phân vai trò",
+    "selectRole": "Chọn vai trò mới",
+    "roleAssignmentTitle": "Thay đổi vai trò người dùng",
+    "roleAssignmentWarning": "Gán vai trò mới sẽ ngay lập tức hủy tất cả các phiên đăng nhập đang hoạt động trên mọi thiết bị của người dùng này. Họ sẽ cần đăng nhập lại để nhận quyền mới.",
+    "roleReasonPlaceholder": "Cung cấp lý do rõ ràng cho việc thay đổi vai trò (bắt buộc, 1-500 ký tự)",
+    "roleReasonLabel": "Lý do thay đổi",
+    "roleReasonRequired": "Lý do là bắt buộc",
+    "roleReasonTooLong": "Lý do không được vượt quá 500 ký tự",
+    "roleSameError": "Người dùng đã có vai trò này rồi",
+    "roleSelfChangeError": "Bạn không thể tự thay đổi vai trò của chính mình",
+    "roleLastAdminError": "Không thể chuyển vai trò: hệ thống phải còn ít nhất một quản trị viên đang hoạt động",
+    "roleConcurrencyError": "Tài khoản đã bị quản trị viên khác chỉnh sửa. Vui lòng tải lại và kiểm tra trước khi thử lại.",
+    "roleAssignSuccess": "Cập nhật vai trò thành công. Tất cả các phiên đăng nhập của người dùng đã được thu hồi.",
+    "supportedPermissions": "Các quyền được cấp",
+    "reloadAccount": "Tải lại tài khoản"
   },
   "admin_audit": {
     "title": "Nhật ký quản trị",

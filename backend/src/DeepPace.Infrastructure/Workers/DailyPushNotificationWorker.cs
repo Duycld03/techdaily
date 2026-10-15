@@ -35,6 +35,20 @@ public class DailyPushNotificationWorker : BackgroundService
         {
             try
             {
+                using (var readyScope = _scopeFactory.CreateScope())
+                {
+                    var readiness = readyScope.ServiceProvider.GetService<IAuthorizationReadinessService>();
+                    if (readiness != null)
+                    {
+                        var status = await readiness.GetReadinessAsync(stoppingToken);
+                        if (!status.IsReady || !status.HasRequiredSchemaAndRoles)
+                        {
+                            _logger.LogWarning("DailyPushNotificationWorker skipped cycle: database schema or authorization seeds not ready ({Reason})", status.FailureReason);
+                            continue;
+                        }
+                    }
+                }
+
                 await EvaluateAndDispatchNotificationsAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)

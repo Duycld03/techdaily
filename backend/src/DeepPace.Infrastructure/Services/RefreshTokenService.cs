@@ -31,14 +31,23 @@ public class RefreshTokenService : IRefreshTokenService
         Guid userId,
         Guid? familyId = null,
         bool isPersistent = true,
+        int? authenticationVersion = null,
         CancellationToken ct = default)
     {
         var rawToken = GenerateRawToken();
         var tokenHash = HashToken(rawToken);
 
-        var user = await _dbContext.Users.AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == userId, ct);
-        var authVersion = user?.AuthenticationVersion ?? 1;
+        int authVersion;
+        if (authenticationVersion.HasValue)
+        {
+            authVersion = authenticationVersion.Value;
+        }
+        else
+        {
+            var user = await _dbContext.Users.AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == userId, ct);
+            authVersion = user?.AuthenticationVersion ?? 1;
+        }
 
         var token = new RefreshToken
         {
@@ -72,6 +81,7 @@ public class RefreshTokenService : IRefreshTokenService
 
         var token = await _dbContext.RefreshTokens
             .Include(r => r.User)
+            .ThenInclude(u => u!.Role)
             .FirstOrDefaultAsync(r => r.TokenHash == hash, ct);
 
         if (token == null || token.User == null || token.User.IsDeleted)
@@ -129,8 +139,12 @@ public class RefreshTokenService : IRefreshTokenService
         }
 
         // Active unused token: Issue successor and rotate
-        var (newRawToken, newToken) = await IssueTokenAsync(token.UserId, token.FamilyId, token.IsPersistent, ct);
-
+        var (newRawToken, newToken) = await IssueTokenAsync(
+            token.UserId,
+            token.FamilyId,
+            token.IsPersistent,
+            authenticationVersion: token.User.AuthenticationVersion,
+            ct: ct);
         token.UsedAt = now;
         token.ReplacedByTokenId = newToken.Id;
         token.MarkUpdated();

@@ -35,11 +35,34 @@ public static class CatalogEndpoints
         learnerGroup.MapGet("/capabilities", async (
             ClaimsPrincipal userClaims,
             [FromServices] ICatalogAdminService adminService,
+            [FromServices] IAuthorizationReadinessService readinessService,
             CancellationToken ct) =>
         {
             var userId = GetUserIdFromClaims(userClaims);
-            var canManage = userId.HasValue && await adminService.IsAdminAsync(userId.Value, ct);
-            return Results.Ok(new CatalogCapabilitiesDto(canManage));
+            if (!userId.HasValue)
+            {
+                return Results.Unauthorized();
+            }
+
+            var readiness = await readinessService.GetReadinessAsync(ct);
+            if (!readiness.IsInitialized)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status503ServiceUnavailable,
+                    title: "Authorization Service Unavailable",
+                    detail: "Privileged authorization has not been initialized.");
+            }
+
+            var auth = await adminService.CheckCatalogAdminAsync(userId.Value, ct);
+            if (auth.IsUnavailable)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status503ServiceUnavailable,
+                    title: "Authorization Service Unavailable",
+                    detail: auth.Reason ?? "Privileged authorization is currently unavailable.");
+            }
+
+            return Results.Ok(new CatalogCapabilitiesDto(auth.IsAuthorized));
         })
         .WithName("GetCatalogCapabilities")
         .WithSummary("Get Catalog Management Capability")

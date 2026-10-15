@@ -12,7 +12,8 @@ public record AdminReactivateUserRequest(
     Guid ActorUserId,
     string Reason,
     int ExpectedVersion,
-    string? CorrelationId = null);
+    string? CorrelationId = null,
+    int PresentedSessionVersion = 1);
 
 public class AdminReactivateUserHandler : IUseCase<AdminReactivateUserRequest, AdminAccountDetailDto>
 {
@@ -40,6 +41,8 @@ public class AdminReactivateUserHandler : IUseCase<AdminReactivateUserRequest, A
 
         return await _unitOfWork.ExecuteAccountControlCommandAsync(
             request.ActorUserId,
+            request.PresentedSessionVersion,
+            new[] { AdminPermission.ManageAccounts },
             request.TargetUserId,
             request.ExpectedVersion,
             AdminAuditActions.UserReactivate,
@@ -92,7 +95,8 @@ public class AdminReactivateUserHandler : IUseCase<AdminReactivateUserRequest, A
                     !string.IsNullOrWhiteSpace(target.GoogleSubjectId),
                     target.SuspendedByUserId,
                     target.SuspendedAt,
-                    target.SuspensionReason);
+                    target.SuspensionReason,
+                    target.Role.ToDescriptor());
 
                 return Task.FromResult(Result<(AdminAccountDetailDto Result, AdminAuditEvent AuditEvent)>.Success((dto, auditEvent)));
             },

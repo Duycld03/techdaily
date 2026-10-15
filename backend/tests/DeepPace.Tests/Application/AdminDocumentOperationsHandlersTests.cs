@@ -36,15 +36,9 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
 
         _db = new DeepPaceDbContext(options);
         _db.Database.EnsureCreated();
-
-        var dict = new Dictionary<string, string?>
-        {
-            ["CatalogAdministration:UserIds:0"] = _adminUserId.ToString()
-        };
-        _config = new ConfigurationBuilder().AddInMemoryCollection(dict).Build();
-
-        _uow = new AdministrativeUnitOfWork(_db, _config);
-        _permissionResolver = new AdminPermissionResolver(_config, _db);
+        _config = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        _uow = new AdministrativeUnitOfWork(_db);
+        _permissionResolver = new AdminPermissionResolver(_db);
         _mutationGuard = new DocumentMutationGuard(_db);
 
         // Seed Admin and Learner users
@@ -53,7 +47,8 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
             Id = _adminUserId,
             Email = "admin@techdaily.local",
             Name = "Admin User",
-            Status = AccountStatus.Active
+            Status = AccountStatus.Active,
+            RoleId = RoleDefaults.AdminRoleId
         };
 
         var learner = new User
@@ -61,7 +56,8 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
             Id = _learnerUserId,
             Email = "learner@techdaily.local",
             Name = "Learner User",
-            Status = AccountStatus.Active
+            Status = AccountStatus.Active,
+            RoleId = RoleDefaults.LearnerRoleId
         };
 
         _db.Users.AddRange(admin, learner);

@@ -85,7 +85,7 @@ public class SessionIssuer : ISessionIssuer
             return Error.Custom("AUTH_ACCOUNT_SUSPENDED", "Account is suspended.");
         }
 
-        var (rawRefreshToken, tokenEntity) = await _tokenService.IssueTokenAsync(user.Id, isPersistent: isPersistent, ct: ct);
+        var (rawRefreshToken, tokenEntity) = await _tokenService.IssueTokenAsync(user.Id, isPersistent: isPersistent, authenticationVersion: user.AuthenticationVersion, ct: ct);
         var accessToken = GenerateJwtToken(user, user.AuthenticationVersion);
 
         return new IssuedSessionDto(accessToken, rawRefreshToken, tokenEntity, user, user.AuthenticationVersion);

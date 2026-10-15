@@ -18,6 +18,7 @@ public class User : BaseEntity
     public string TimeZone { get; set; } = "UTC";
     public bool IsPushEnabled { get; set; } = false;
     public AccountStatus Status { get; set; } = AccountStatus.Active;
+    public Guid RoleId { get; set; } = RoleDefaults.LearnerRoleId;
     public int AuthenticationVersion { get; set; } = 1;
     public int AdminControlVersion { get; set; } = 1;
     public Guid? SuspendedByUserId { get; set; }
@@ -25,6 +26,7 @@ public class User : BaseEntity
     public string? SuspensionReason { get; set; }
 
     // Navigation properties
+    public Role? Role { get; set; }
     public StreakRecord? StreakRecord { get; set; }
     public ICollection<DailyDrill> DailyDrills { get; set; } = new List<DailyDrill>();
     public ICollection<SpacedRepetitionCard> SpacedRepetitionCards { get; set; } = new List<SpacedRepetitionCard>();
@@ -118,6 +120,41 @@ public class User : BaseEntity
             throw new ArgumentException("Revocation reason cannot exceed 500 characters.", nameof(reason));
         }
 
+        AuthenticationVersion++;
+        AdminControlVersion++;
+        MarkUpdated();
+    }
+
+    public void AssignRole(Guid actorUserId, Guid newRoleId, string reason, DateTimeOffset? now = null)
+    {
+        if (actorUserId == Guid.Empty)
+        {
+            throw new ArgumentException("Actor user ID cannot be empty.", nameof(actorUserId));
+        }
+        if (actorUserId == Id)
+        {
+            throw new InvalidOperationException("An administrator cannot change their own role.");
+        }
+        if (newRoleId == Guid.Empty)
+        {
+            throw new ArgumentException("New role ID cannot be empty.", nameof(newRoleId));
+        }
+        if (newRoleId == RoleId)
+        {
+            throw new InvalidOperationException("User already has the specified role.");
+        }
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new ArgumentException("Role assignment reason cannot be empty.", nameof(reason));
+        }
+
+        var trimmed = reason.Trim();
+        if (trimmed.Length > 500)
+        {
+            throw new ArgumentException("Role assignment reason cannot exceed 500 characters.", nameof(reason));
+        }
+
+        RoleId = newRoleId;
         AuthenticationVersion++;
         AdminControlVersion++;
         MarkUpdated();

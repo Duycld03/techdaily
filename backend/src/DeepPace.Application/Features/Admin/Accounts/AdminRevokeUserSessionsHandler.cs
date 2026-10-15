@@ -12,7 +12,8 @@ public record AdminRevokeUserSessionsRequest(
     Guid ActorUserId,
     string Reason,
     int ExpectedVersion,
-    string? CorrelationId = null);
+    string? CorrelationId = null,
+    int PresentedSessionVersion = 1);
 
 public class AdminRevokeUserSessionsHandler : IUseCase<AdminRevokeUserSessionsRequest, AdminAccountDetailDto>
 {
@@ -44,6 +45,8 @@ public class AdminRevokeUserSessionsHandler : IUseCase<AdminRevokeUserSessionsRe
 
         return await _unitOfWork.ExecuteAccountControlCommandAsync<AdminAccountDetailDto>(
             request.ActorUserId,
+            request.PresentedSessionVersion,
+            new[] { AdminPermission.ManageAccounts },
             request.TargetUserId,
             request.ExpectedVersion,
             AdminAuditActions.UserRevokeSessions,
@@ -96,7 +99,8 @@ public class AdminRevokeUserSessionsHandler : IUseCase<AdminRevokeUserSessionsRe
                     !string.IsNullOrWhiteSpace(target.GoogleSubjectId),
                     target.SuspendedByUserId,
                     target.SuspendedAt,
-                    target.SuspensionReason);
+                    target.SuspensionReason,
+                    target.Role.ToDescriptor());
 
                 return (dto, auditEvent);
             },

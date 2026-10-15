@@ -47,7 +47,7 @@ public class AdminDocumentOperationsApiTests : IAsyncLifetime
         {
             await db.Database.EnsureCreatedAsync();
 
-            var admin = new User { Id = _adminId, Email = "admin@example.com", Name = "Admin", Status = AccountStatus.Active };
+            var admin = new User { Id = _adminId, Email = "admin@example.com", Name = "Admin", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId };
             var learner = new User { Id = _learnerId, Email = "learner@example.com", Name = "Learner", Status = AccountStatus.Active };
             var book = new DocumentBook
             {
@@ -74,7 +74,6 @@ public class AdminDocumentOperationsApiTests : IAsyncLifetime
 
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Configuration["CatalogAdministration:UserIds:0"] = _adminId.ToString();
 
         builder.Services.AddRouting();
         builder.Services.AddScoped(_ => new DeepPaceDbContext(dbOptions));

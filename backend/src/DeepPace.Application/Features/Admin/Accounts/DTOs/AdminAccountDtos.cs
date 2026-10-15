@@ -1,6 +1,20 @@
+using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Features.Admin.Accounts.DTOs;
+
+public record RoleDescriptorDto(
+    Guid Id,
+    string Key,
+    string NameEn,
+    string NameVi);
+
+public record AdminRoleOptionDto(
+    Guid Id,
+    string Key,
+    string NameEn,
+    string NameVi,
+    IReadOnlyList<string> PermissionKeys);
 
 public record AdminAccountSummaryDto(
     Guid Id,
@@ -8,7 +22,8 @@ public record AdminAccountSummaryDto(
     string Name,
     string? AvatarUrl,
     AccountStatus Status,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    RoleDescriptorDto Role);
 
 public record AdminAccountDetailDto(
     Guid Id,
@@ -23,7 +38,8 @@ public record AdminAccountDetailDto(
     bool HasGoogleAuth,
     Guid? SuspendedByUserId,
     DateTimeOffset? SuspendedAt,
-    string? SuspensionReason);
+    string? SuspensionReason,
+    RoleDescriptorDto Role);
 
 public record AdminPagedResult<T>(
     IReadOnlyList<T> Items,
@@ -34,3 +50,20 @@ public record AdminPagedResult<T>(
 public record AdminAccountActionRequest(
     string Reason,
     int ExpectedVersion);
+
+public record AdminAssignRoleActionRequest(
+    Guid RoleId,
+    string Reason,
+    int ExpectedVersion);
+
+public static class RoleMappingExtensions
+{
+    public static readonly RoleDescriptorDto DefaultLearnerDescriptor =
+        new(RoleDefaults.LearnerRoleId, RoleDefaults.LearnerKey, "Learner", "Người học");
+
+    public static RoleDescriptorDto ToDescriptor(this Role? role)
+    {
+        if (role == null) return DefaultLearnerDescriptor;
+        return new RoleDescriptorDto(role.Id, role.Key, role.NameEn, role.NameVi);
+    }
+}

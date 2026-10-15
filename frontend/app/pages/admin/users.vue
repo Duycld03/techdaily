@@ -5,6 +5,7 @@ import {
   Search,
   RefreshCw,
   AlertTriangle,
+  Shield,
   ShieldAlert,
   ShieldCheck,
   LogOut,
@@ -17,8 +18,11 @@ import {
 } from 'lucide-vue-next'
 import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 import { useAdminUsersStore, type AdminAccountSummary } from '~/stores/useAdminUsersStore'
+import { useAuthStore } from '~/stores/useAuthStore'
+import { useToast } from '~/composables/useToast'
 import MasterDetailLayout from '~/components/layout/MasterDetailLayout.vue'
 import AppModal from '~/components/ui/AppModal.vue'
+import AdminRoleModal from '~/components/admin/AdminRoleModal.vue'
 
 definePageMeta({
   layout: 'admin'
@@ -26,6 +30,9 @@ definePageMeta({
 
 const access = useAdminAccessStore()
 const store = useAdminUsersStore()
+const auth = useAuthStore()
+const toast = useToast()
+const { t, te, locale } = useI18n()
 
 const searchInput = ref('')
 const selectedStatus = ref<'Active' | 'Suspended' | ''>('')
@@ -35,6 +42,8 @@ const selectedId = ref<string | null>(null)
 const activeModal = ref<'suspend' | 'reactivate' | 'revoke' | null>(null)
 const actionReason = ref('')
 const formError = ref<string | null>(null)
+const isRoleModalOpen = ref(false)
+const changeRoleButtonRef = ref<HTMLButtonElement | null>(null)
 
 onMounted(async () => {
   if (access.canManageAccounts) {
@@ -44,6 +53,18 @@ onMounted(async () => {
     }
   }
 })
+watch(
+  () => access.canManageAccounts,
+  async (canManage) => {
+    if (canManage && store.users.length === 0) {
+      await store.fetchUsers()
+      if (store.users.length > 0 && !selectedId.value) {
+        handleSelect(store.users[0])
+      }
+    }
+  }
+)
+
 
 function handleSearch() {
   store.search = searchInput.value
@@ -116,6 +137,26 @@ async function submitAction() {
     formError.value = store.error || 'Action failed'
   }
 }
+function getRoleBadgeLabel(role?: { key: string; nameEn?: string; nameVi?: string }) {
+  if (!role) return ''
+  const nameKey = `admin.roles.${role.key}.name`
+  return te && te(nameKey) ? t(nameKey) : (locale.value === 'vi' ? role.nameVi : role.nameEn) || role.nameEn || role.key
+}
+
+function getRoleDescription(role?: { key: string }) {
+  if (!role) return ''
+  const descKey = `admin.roles.${role.key}.description`
+  return te && te(descKey) ? t(descKey) : ''
+}
+
+function openRoleModal() {
+  isRoleModalOpen.value = true
+}
+
+function handleRoleSuccess() {
+  toast.success(t('admin.users.roleAssignSuccess'))
+}
+
 
 const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) || 1)
 </script>
@@ -213,12 +254,21 @@ const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) |
                 <div class="font-semibold text-sm text-slate-900 dark:text-white truncate">
                   {{ user.name || user.email }}
                 </div>
-                <span
-                  class="shrink-0 px-2 py-0.5 text-[11px] font-semibold rounded-md"
-                  :class="user.status === 'Active' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'"
-                >
-                  {{ user.status === 'Active' ? $t('admin_users.status_active') : $t('admin_users.status_suspended') }}
-                </span>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span
+                    v-if="user.role"
+                    class="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20 whitespace-nowrap shrink-0"
+                    data-testid="user-role-badge"
+                  >
+                    {{ getRoleBadgeLabel(user.role) }}
+                  </span>
+                  <span
+                    class="px-2 py-0.5 text-[11px] font-semibold rounded-md whitespace-nowrap shrink-0"
+                    :class="user.status === 'Active' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'"
+                  >
+                    {{ user.status === 'Active' ? $t('admin_users.status_active') : $t('admin_users.status_suspended') }}
+                  </span>
+                </div>
               </div>
               <div class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                 {{ user.email }}
@@ -266,6 +316,15 @@ const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) |
                   <p class="text-sm text-slate-500 dark:text-slate-400 font-mono">
                     {{ store.selectedUser.email }}
                   </p>
+                  <div v-if="store.selectedUser.role" class="flex flex-wrap items-center gap-2 mt-2">
+                    <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20 whitespace-nowrap shrink-0" data-testid="detail-role-badge">
+                      <Shield class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      {{ getRoleBadgeLabel(store.selectedUser.role) }}
+                    </span>
+                    <span v-if="getRoleDescription(store.selectedUser.role)" class="text-xs text-slate-500 dark:text-slate-400">
+                      {{ getRoleDescription(store.selectedUser.role) }}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -325,6 +384,19 @@ const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) |
             </h3>
 
             <div class="flex flex-wrap gap-3">
+              <!-- Change Role Action -->
+              <button
+                v-if="access.canManageRoles && store.selectedUser.id !== auth.user?.id"
+                ref="changeRoleButtonRef"
+                type="button"
+                class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                data-testid="change-role-btn"
+                @click="openRoleModal"
+              >
+                <Shield class="h-4 w-4 shrink-0" aria-hidden="true" />
+                {{ $t('admin.users.changeRole') }}
+              </button>
+
               <!-- Suspend Action (Active only) -->
               <button
                 v-if="store.selectedUser.status === 'Active'"
@@ -430,5 +502,14 @@ const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) |
         </div>
       </template>
     </AppModal>
+
+    <!-- Role Assignment Modal -->
+    <AdminRoleModal
+      :open="isRoleModalOpen"
+      :user="store.selectedUser"
+      :initiating-button="changeRoleButtonRef"
+      @close="isRoleModalOpen = false"
+      @success="handleRoleSuccess"
+    />
   </div>
 </template>

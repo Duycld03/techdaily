@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, shallowRef } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
-import { CLIENT_STORAGE, browserStorage, isCurrentSessionToken, profileForToken, readCanonicalSession } from '~/utils/clientStorage'
+import { CLIENT_STORAGE, browserStorage, isCurrentSessionToken, profileForToken, readCanonicalSession, type RoleDescriptor } from '~/utils/clientStorage'
 import { browserMigrationEnvironment, clearLegacyCredentials, commitSessionChange, retireLegacyIdentity } from '~/utils/legacyStorageMigration'
 
 export interface AuthUser {
@@ -10,6 +10,7 @@ export interface AuthUser {
   name: string
   preferredLocale: string
   avatarUrl?: string
+  role?: RoleDescriptor
 }
 
 export const useAuthStore = defineStore('auth', () => {

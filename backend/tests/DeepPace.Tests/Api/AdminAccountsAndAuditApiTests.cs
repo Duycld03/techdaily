@@ -46,21 +46,28 @@ public class AdminAccountsAndAuditApiTests : IAsyncLifetime
         {
             await db.Database.EnsureCreatedAsync();
             db.Users.AddRange(
-                new User { Id = _adminId, Email = "admin@example.com", Name = "Admin", Status = AccountStatus.Active },
-                new User { Id = _learnerId, Email = "learner@example.com", Name = "Learner", Status = AccountStatus.Active });
+                new User { Id = _adminId, Email = "admin@example.com", Name = "Admin", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId },
+                new User { Id = _learnerId, Email = "learner@example.com", Name = "Learner", Status = AccountStatus.Active, RoleId = RoleDefaults.LearnerRoleId });
+            db.AuthorizationInitializations.Add(new AuthorizationInitialization
+            {
+                Scope = AuthorizationInitialization.DefaultScope,
+                CompletedAt = DateTimeOffset.UtcNow,
+                ImportedAdminUserIds = new List<Guid> { _adminId }
+            });
             await db.SaveChangesAsync();
         }
 
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
-        builder.Configuration["CatalogAdministration:UserIds:0"] = _adminId.ToString();
 
         builder.Services.AddRouting();
+        builder.Services.AddOpenApi();
         builder.Services.AddScoped(_ => new DeepPaceDbContext(dbOptions));
         builder.Services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
         builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         builder.Services.AddScoped<IAdminPermissionResolver, AdminPermissionResolver>();
         builder.Services.AddScoped<ICatalogAdminService, CatalogAdminService>();
+        builder.Services.AddScoped<IAuthorizationReadinessService, AuthorizationReadinessService>();
         builder.Services.AddScoped<IAdministrativeUnitOfWork, AdministrativeUnitOfWork>();
 
         // Handlers
@@ -71,6 +78,8 @@ public class AdminAccountsAndAuditApiTests : IAsyncLifetime
         builder.Services.AddScoped<IUseCase<AdminRevokeUserSessionsRequest, AdminAccountDetailDto>, AdminRevokeUserSessionsHandler>();
         builder.Services.AddScoped<IUseCase<AdminGetAuditEventsRequest, AdminPagedResult<AdminAuditEventDto>>, AdminGetAuditEventsHandler>();
         builder.Services.AddScoped<IUseCase<AdminGetAuditEventByIdRequest, AdminAuditEventDetailDto>, AdminGetAuditEventByIdHandler>();
+        builder.Services.AddScoped<IUseCase<AdminGetRolesRequest, AdminPagedResult<AdminRoleOptionDto>>, AdminGetRolesHandler>();
+        builder.Services.AddScoped<IUseCase<AdminAssignRoleRequest, AdminAccountDetailDto>, AdminAssignRoleHandler>();
 
         builder.Services.AddAuthentication("Test")
             .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", _ => { });
@@ -78,6 +87,9 @@ public class AdminAccountsAndAuditApiTests : IAsyncLifetime
         builder.Services.AddScoped<IAuthorizationHandler, CatalogAdminAuthorizationHandler>();
         builder.Services.AddScoped<IAuthorizationHandler, AccountAdminAuthorizationHandler>();
         builder.Services.AddScoped<IAuthorizationHandler, AuditReadAuthorizationHandler>();
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, AdminAuthorizationMiddlewareResultHandler>();
+        builder.Services.AddScoped<IAuthorizationHandler, RoleAdminAuthorizationHandler>();
 
         builder.Services.AddAuthorization(options =>
         {
@@ -95,6 +107,11 @@ public class AdminAccountsAndAuditApiTests : IAsyncLifetime
             {
                 policy.RequireAuthenticatedUser();
                 policy.Requirements.Add(new AuditReadRequirement());
+            });
+            options.AddPolicy("RoleAdmin", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.Requirements.Add(new RoleAdminRequirement());
             });
         });
 
@@ -116,6 +133,7 @@ public class AdminAccountsAndAuditApiTests : IAsyncLifetime
 
         _app.MapCatalogEndpoints();
         _app.MapAdminAccountsAndAuditEndpoints();
+        _app.MapOpenApi();
 
         await _app.StartAsync();
         _client = _app.GetTestClient();
@@ -149,8 +167,10 @@ public class AdminAccountsAndAuditApiTests : IAsyncLifetime
         body!.CanManageCatalog.Should().BeTrue();
         body.CanManageAccounts.Should().BeTrue();
         body.CanReadAudit.Should().BeTrue();
+        body.CanManageDocumentOperations.Should().BeTrue();
+        body.CanViewAdminDashboard.Should().BeTrue();
+        body.CanManageRoles.Should().BeTrue();
     }
-
     [Fact]
     public async Task GetCapabilities_Learner_ShouldReturnAllFalseAndNoStore()
     {
@@ -165,8 +185,10 @@ public class AdminAccountsAndAuditApiTests : IAsyncLifetime
         body!.CanManageCatalog.Should().BeFalse();
         body.CanManageAccounts.Should().BeFalse();
         body.CanReadAudit.Should().BeFalse();
+        body.CanManageDocumentOperations.Should().BeFalse();
+        body.CanViewAdminDashboard.Should().BeFalse();
+        body.CanManageRoles.Should().BeFalse();
     }
-
     [Fact]
     public async Task LegacyCatalogCapabilities_ShouldBePreserved()
     {
@@ -178,6 +200,43 @@ public class AdminAccountsAndAuditApiTests : IAsyncLifetime
 
         var json = await res.Content.ReadAsStringAsync();
         json.Should().Contain("canManageCatalog");
+    }
+
+    [Fact]
+    public async Task RolesEndpoint_PolicyEnforcement_ShouldEnforceRoleAdminConjunction()
+    {
+        // 1. Anonymous -> 401
+        var anonRes = await _client.GetAsync("/api/v1/admin/roles");
+        anonRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // 2. Learner -> 403
+        var learnerReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/roles");
+        learnerReq.Headers.Add("X-Test-User", _learnerId.ToString());
+        var learnerRes = await _client.SendAsync(learnerReq);
+        learnerRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        // 3. User with ManageRoles but lacking ManageAccounts -> 403 (conjunctive failure)
+        var rolesOnlyUserId = Guid.NewGuid();
+        var rolesOnlyRoleId = Guid.NewGuid();
+        await using (var db = new DeepPaceDbContext(new DbContextOptionsBuilder<DeepPaceDbContext>().UseSqlite(_connection).Options))
+        {
+            var role = Role.Create("roles-only", "Roles Only", "Chi roles", isProtected: false, id: rolesOnlyRoleId);
+            db.Roles.Add(role);
+            db.RolePermissions.Add(RolePermission.Create(rolesOnlyRoleId, PermissionKeys.ManageRoles));
+            db.Users.Add(new User { Id = rolesOnlyUserId, Email = "rolesonly@example.com", Name = "Roles Only", RoleId = rolesOnlyRoleId, Status = AccountStatus.Active });
+            await db.SaveChangesAsync();
+        }
+
+        var rolesOnlyReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/roles");
+        rolesOnlyReq.Headers.Add("X-Test-User", rolesOnlyUserId.ToString());
+        var rolesOnlyRes = await _client.SendAsync(rolesOnlyReq);
+        rolesOnlyRes.StatusCode.Should().Be(HttpStatusCode.Forbidden, "ManageRoles alone cannot satisfy RoleAdmin without ManageAccounts");
+
+        // 4. Admin (has both ManageAccounts and ManageRoles) -> 200 OK
+        var adminReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/roles");
+        adminReq.Headers.Add("X-Test-User", _adminId.ToString());
+        var adminRes = await _client.SendAsync(adminReq);
+        adminRes.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -252,12 +311,185 @@ public class AdminAccountsAndAuditApiTests : IAsyncLifetime
     [Fact]
     public async Task AuditEndpoints_Admin_ShouldListAndInspectEvents()
     {
-        // Audit read
+        // 1. Role manager lacking ReadAudit is forbidden
+        var roleManagerOnlyId = Guid.NewGuid();
+        var roleManagerRoleId = Guid.NewGuid();
+        await using (var db = new DeepPaceDbContext(new DbContextOptionsBuilder<DeepPaceDbContext>().UseSqlite(_connection).Options))
+        {
+            var role = Role.Create("role-mgr-no-audit", "Role Manager", "Quan ly vai tro", isProtected: false, id: roleManagerRoleId);
+            db.Roles.Add(role);
+            db.RolePermissions.AddRange(
+                RolePermission.Create(roleManagerRoleId, PermissionKeys.ManageAccounts),
+                RolePermission.Create(roleManagerRoleId, PermissionKeys.ManageRoles)
+            );
+            db.Users.Add(new User { Id = roleManagerOnlyId, Email = "rolemgr@example.com", Name = "Role Manager", RoleId = roleManagerRoleId, Status = AccountStatus.Active });
+            await db.SaveChangesAsync();
+        }
+
+        var roleMgrReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/audit");
+        roleMgrReq.Headers.Add("X-Test-User", roleManagerOnlyId.ToString());
+        var roleMgrRes = await _client.SendAsync(roleMgrReq);
+        roleMgrRes.StatusCode.Should().Be(HttpStatusCode.Forbidden, "ManageRoles permission must NOT grant ReadAudit authority");
+
+        // 2. Audit read with Admin
         var auditReq = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/audit?pageSize=10");
         auditReq.Headers.Add("X-Test-User", _adminId.ToString());
         var auditRes = await _client.SendAsync(auditReq);
         auditRes.StatusCode.Should().Be(HttpStatusCode.OK);
         auditRes.Headers.CacheControl?.NoStore.Should().BeTrue();
+
+        // 3. Filter by User.AssignRole action
+        var filterReq = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/audit?action={AdminAuditActions.UserAssignRole}&pageSize=10");
+        filterReq.Headers.Add("X-Test-User", _adminId.ToString());
+        var filterRes = await _client.SendAsync(filterReq);
+        filterRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var page = await filterRes.Content.ReadFromJsonAsync<AdminPagedResult<AdminAuditEventDto>>();
+        page.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task AssignRole_HttpIntegration_ContractsMatrix()
+    {
+        var targetId = Guid.NewGuid();
+        await using (var db = new DeepPaceDbContext(new DbContextOptionsBuilder<DeepPaceDbContext>().UseSqlite(_connection).Options))
+        {
+            db.Users.Add(new User
+            {
+                Id = targetId,
+                Email = "candidate@example.com",
+                Name = "Candidate",
+                RoleId = RoleDefaults.LearnerRoleId,
+                AdminControlVersion = 1,
+                AuthenticationVersion = 1,
+                Status = AccountStatus.Active
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // 1. Anonymous -> 401
+        var anonReq = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{targetId}/role")
+        {
+            Content = JsonContent.Create(new AdminAssignRoleActionRequest(RoleDefaults.AdminRoleId, "Promotion", 1))
+        };
+        var anonRes = await _client.SendAsync(anonReq);
+        anonRes.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // 2. Learner -> 403
+        var learnerReq = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{targetId}/role")
+        {
+            Content = JsonContent.Create(new AdminAssignRoleActionRequest(RoleDefaults.AdminRoleId, "Promotion", 1))
+        };
+        learnerReq.Headers.Add("X-Test-User", _learnerId.ToString());
+        var learnerRes = await _client.SendAsync(learnerReq);
+        learnerRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        // 3. Bad request: empty reason -> 400
+        var emptyReasonReq = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{targetId}/role")
+        {
+            Content = JsonContent.Create(new AdminAssignRoleActionRequest(RoleDefaults.AdminRoleId, "", 1))
+        };
+        emptyReasonReq.Headers.Add("X-Test-User", _adminId.ToString());
+        var emptyReasonRes = await _client.SendAsync(emptyReasonReq);
+        emptyReasonRes.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // 4. Missing target user -> 404
+        var missingTargetReq = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{Guid.NewGuid()}/role")
+        {
+            Content = JsonContent.Create(new AdminAssignRoleActionRequest(RoleDefaults.AdminRoleId, "Promotion", 1))
+        };
+        missingTargetReq.Headers.Add("X-Test-User", _adminId.ToString());
+        var missingTargetRes = await _client.SendAsync(missingTargetReq);
+        missingTargetRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        // 5. Missing role -> 404
+        var missingRoleReq = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{targetId}/role")
+        {
+            Content = JsonContent.Create(new AdminAssignRoleActionRequest(Guid.NewGuid(), "Promotion", 1))
+        };
+        missingRoleReq.Headers.Add("X-Test-User", _adminId.ToString());
+        var missingRoleRes = await _client.SendAsync(missingRoleReq);
+        missingRoleRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        // 6. Self-role assignment -> 409 ACCOUNT_SELF_ROLE_CHANGE_BLOCKED
+        var selfReq = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{_adminId}/role")
+        {
+            Content = JsonContent.Create(new AdminAssignRoleActionRequest(RoleDefaults.LearnerRoleId, "Self demotion", 1))
+        };
+        selfReq.Headers.Add("X-Test-User", _adminId.ToString());
+        var selfRes = await _client.SendAsync(selfReq);
+        selfRes.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var selfBody = await selfRes.Content.ReadAsStringAsync();
+        selfBody.Should().Contain("ACCOUNT_SELF_ROLE_CHANGE_BLOCKED");
+
+        // 7. Unchanged role -> 409 ACCOUNT_ROLE_UNCHANGED
+        var sameRoleReq = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{targetId}/role")
+        {
+            Content = JsonContent.Create(new AdminAssignRoleActionRequest(RoleDefaults.LearnerRoleId, "Same role", 1))
+        };
+        sameRoleReq.Headers.Add("X-Test-User", _adminId.ToString());
+        var sameRoleRes = await _client.SendAsync(sameRoleReq);
+        sameRoleRes.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var sameRoleBody = await sameRoleRes.Content.ReadAsStringAsync();
+        sameRoleBody.Should().Contain("ACCOUNT_ROLE_UNCHANGED");
+
+        // 8. Concurrency version mismatch -> 409 ACCOUNT_CONCURRENCY_CONFLICT
+        var staleReq = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{targetId}/role")
+        {
+            Content = JsonContent.Create(new AdminAssignRoleActionRequest(RoleDefaults.AdminRoleId, "Promotion", 99))
+        };
+        staleReq.Headers.Add("X-Test-User", _adminId.ToString());
+        var staleRes = await _client.SendAsync(staleReq);
+        staleRes.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var staleBody = await staleRes.Content.ReadAsStringAsync();
+        staleBody.Should().Contain("ACCOUNT_CONCURRENCY_CONFLICT");
+
+        // 9. Valid role assignment -> 200 OK
+        var validReq = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{targetId}/role")
+        {
+            Content = JsonContent.Create(new AdminAssignRoleActionRequest(RoleDefaults.AdminRoleId, "Promotion to Admin", 1))
+        };
+        validReq.Headers.Add("X-Test-User", _adminId.ToString());
+        var validRes = await _client.SendAsync(validReq);
+        validRes.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var detail = await validRes.Content.ReadFromJsonAsync<AdminAccountDetailDto>();
+        detail.Should().NotBeNull();
+        detail!.Role.Id.Should().Be(RoleDefaults.AdminRoleId);
+        detail.Role.Key.Should().Be("admin");
+        detail.AdminControlVersion.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task OpenApi_ShouldExposeRoleEndpointsAndStatusCodes()
+    {
+        var json = await _client.GetStringAsync("/openapi/v1.json");
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var paths = document.RootElement.GetProperty("paths");
+
+        // 1. GET /api/v1/admin/roles
+        paths.TryGetProperty("/api/v1/admin/roles", out var rolesPath).Should().BeTrue();
+        var rolesGet = rolesPath.GetProperty("get");
+        var rolesResponses = rolesGet.GetProperty("responses");
+        rolesResponses.TryGetProperty("200", out _).Should().BeTrue();
+        rolesResponses.TryGetProperty("400", out _).Should().BeTrue();
+        rolesResponses.TryGetProperty("401", out _).Should().BeTrue();
+        rolesResponses.TryGetProperty("403", out _).Should().BeTrue();
+        rolesResponses.TryGetProperty("429", out _).Should().BeTrue();
+        rolesResponses.TryGetProperty("503", out _).Should().BeTrue();
+
+        // 2. PUT /api/v1/admin/users/{id}/role
+        paths.TryGetProperty("/api/v1/admin/users/{id}/role", out var roleAssignPath).Should().BeTrue();
+        var roleAssignPut = roleAssignPath.GetProperty("put");
+        var assignResponses = roleAssignPut.GetProperty("responses");
+        assignResponses.TryGetProperty("200", out _).Should().BeTrue();
+        assignResponses.TryGetProperty("400", out _).Should().BeTrue();
+        assignResponses.TryGetProperty("401", out _).Should().BeTrue();
+        assignResponses.TryGetProperty("403", out _).Should().BeTrue();
+        assignResponses.TryGetProperty("404", out _).Should().BeTrue();
+        assignResponses.TryGetProperty("409", out _).Should().BeTrue();
+        assignResponses.TryGetProperty("429", out _).Should().BeTrue();
+        assignResponses.TryGetProperty("503", out _).Should().BeTrue();
     }
 
     private class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>

@@ -15,19 +15,22 @@ public class ReplaceCatalogDocumentSourceHandler : IUseCase<ReplaceCatalogDocume
     private readonly IIngestionQuotaService _quotaService;
     private readonly IAdminPermissionResolver _permissionResolver;
     private readonly IDocumentMutationGuard _mutationGuard;
+    private readonly IAdministrativeUnitOfWork? _unitOfWork;
 
     public ReplaceCatalogDocumentSourceHandler(
         IDeepPaceDbContext dbContext,
         IIngestionSourceStorage sourceStorage,
         IIngestionQuotaService quotaService,
         IAdminPermissionResolver permissionResolver,
-        IDocumentMutationGuard mutationGuard)
+        IDocumentMutationGuard mutationGuard,
+        IAdministrativeUnitOfWork? unitOfWork = null)
     {
         _dbContext = dbContext;
         _sourceStorage = sourceStorage;
         _quotaService = quotaService;
         _permissionResolver = permissionResolver;
         _mutationGuard = mutationGuard;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result<SourceReplacementResponseDto>> ExecuteAsync(
@@ -49,7 +52,13 @@ public class ReplaceCatalogDocumentSourceHandler : IUseCase<ReplaceCatalogDocume
             return new Error("Source.InvalidLength", "Source stream byte length must be positive.");
         }
 
-        var capabilities = await _permissionResolver.GetCapabilitiesAsync(command.ActorUserId, cancellationToken);
+        var capabilitiesResult = await _permissionResolver.GetCapabilitiesAsync(command.ActorUserId, cancellationToken);
+        if (capabilitiesResult.IsFailure)
+        {
+            return capabilitiesResult.Error;
+        }
+
+        var capabilities = capabilitiesResult.Value;
         if (!capabilities.CanManageCatalog)
         {
             return new Error("Authorization.Denied", "Catalog management permission is required to replace catalog document source.");
@@ -125,54 +134,112 @@ public class ReplaceCatalogDocumentSourceHandler : IUseCase<ReplaceCatalogDocume
                     throw;
                 }
 
-                var now = DateTimeOffset.UtcNow;
-                var source = IngestionSource.Create(
-                    IngestionSourceKind.Pdf,
-                    storageIdentity,
-                    command.ByteLength,
-                    integrityHash,
-                    command.ActorUserId,
-                    doc.Language,
-                    now);
+                if (_unitOfWork != null)
+                {
+                    return await _unitOfWork.ExecutePrivilegedMutationAsync<SourceReplacementResponseDto>(
+                        command.ActorUserId,
+                        command.PresentedSessionVersion,
+                        new[] { AdminPermission.ManageCatalog },
+                        async () =>
+                        {
+                            var now = DateTimeOffset.UtcNow;
+                            var source = IngestionSource.Create(
+                                IngestionSourceKind.Pdf,
+                                storageIdentity,
+                                command.ByteLength,
+                                integrityHash,
+                                command.ActorUserId,
+                                doc.Language,
+                                now);
 
-                _dbContext.IngestionSources.Add(source);
+                            _dbContext.IngestionSources.Add(source);
 
-                var attempt = IngestionAttempt.CreateQueued(
-                    IngestionTargetScope.Catalog,
-                    doc.Id,
-                    IngestionAttemptOrigin.AdminCatalogReplacement,
-                    command.RequestId,
-                    generation: doc.ProcessingGeneration + 1,
-                    sourceId: source.Id,
-                    predecessorAttemptId: doc.CurrentAttemptId,
-                    initiatorUserId: command.ActorUserId,
-                    queuedAtUtc: now);
+                            var attempt = IngestionAttempt.CreateQueued(
+                                IngestionTargetScope.Catalog,
+                                doc.Id,
+                                IngestionAttemptOrigin.AdminCatalogReplacement,
+                                command.RequestId,
+                                generation: doc.ProcessingGeneration + 1,
+                                sourceId: source.Id,
+                                predecessorAttemptId: doc.CurrentAttemptId,
+                                initiatorUserId: command.ActorUserId,
+                                queuedAtUtc: now);
 
-                _dbContext.IngestionAttempts.Add(attempt);
+                            _dbContext.IngestionAttempts.Add(attempt);
 
-                doc.ProcessingStatus = ProcessingStatus.Pending;
-                doc.AssignAttempt(attempt.Id);
+                            doc.ProcessingStatus = ProcessingStatus.Pending;
+                            doc.AssignAttempt(attempt.Id);
 
-                // Record audit event
-                var auditEvent = AdminAuditEvent.Create(
-                    actorUserId: command.ActorUserId,
-                    action: AdminAuditActions.DocumentSourceReplaced,
-                    targetType: "CatalogDocument",
-                    targetId: doc.Id.ToString(),
-                    outcome: AdminAuditOutcome.Accepted,
-                    reason: command.Reason.Trim(),
-                    correlationId: command.RequestId,
-                    changedFields: new[] { "ProcessingStatus", "CurrentAttemptId", "ConcurrencyVersion" });
+                            var auditEvent = AdminAuditEvent.Create(
+                                actorUserId: command.ActorUserId,
+                                action: AdminAuditActions.DocumentSourceReplaced,
+                                targetType: "CatalogDocument",
+                                targetId: doc.Id.ToString(),
+                                outcome: AdminAuditOutcome.Accepted,
+                                reason: command.Reason.Trim(),
+                                correlationId: command.RequestId,
+                                changedFields: new[] { "ProcessingStatus", "CurrentAttemptId", "ConcurrencyVersion" });
 
-                _dbContext.AdminAuditEvents.Add(auditEvent);
+                            _dbContext.AdminAuditEvents.Add(auditEvent);
+                            await _dbContext.SaveChangesAsync(cancellationToken);
 
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                            return Result<SourceReplacementResponseDto>.Success(new SourceReplacementResponseDto(
+                                attempt.Id,
+                                doc.Id,
+                                attempt.State.ToString(),
+                                doc.ConcurrencyVersion));
+                        },
+                        cancellationToken);
+                }
+                else
+                {
+                    var now = DateTimeOffset.UtcNow;
+                    var source = IngestionSource.Create(
+                        IngestionSourceKind.Pdf,
+                        storageIdentity,
+                        command.ByteLength,
+                        integrityHash,
+                        command.ActorUserId,
+                        doc.Language,
+                        now);
 
-                return new SourceReplacementResponseDto(
-                    attempt.Id,
-                    doc.Id,
-                    attempt.State.ToString(),
-                    doc.ConcurrencyVersion);
+                    _dbContext.IngestionSources.Add(source);
+
+                    var attempt = IngestionAttempt.CreateQueued(
+                        IngestionTargetScope.Catalog,
+                        doc.Id,
+                        IngestionAttemptOrigin.AdminCatalogReplacement,
+                        command.RequestId,
+                        generation: doc.ProcessingGeneration + 1,
+                        sourceId: source.Id,
+                        predecessorAttemptId: doc.CurrentAttemptId,
+                        initiatorUserId: command.ActorUserId,
+                        queuedAtUtc: now);
+
+                    _dbContext.IngestionAttempts.Add(attempt);
+
+                    doc.ProcessingStatus = ProcessingStatus.Pending;
+                    doc.AssignAttempt(attempt.Id);
+
+                    var auditEvent = AdminAuditEvent.Create(
+                        actorUserId: command.ActorUserId,
+                        action: AdminAuditActions.DocumentSourceReplaced,
+                        targetType: "CatalogDocument",
+                        targetId: doc.Id.ToString(),
+                        outcome: AdminAuditOutcome.Accepted,
+                        reason: command.Reason.Trim(),
+                        correlationId: command.RequestId,
+                        changedFields: new[] { "ProcessingStatus", "CurrentAttemptId", "ConcurrencyVersion" });
+
+                    _dbContext.AdminAuditEvents.Add(auditEvent);
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+
+                    return new SourceReplacementResponseDto(
+                        attempt.Id,
+                        doc.Id,
+                        attempt.State.ToString(),
+                        doc.ConcurrencyVersion);
+                }
             },
             cancellationToken);
     }

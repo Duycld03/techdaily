@@ -70,7 +70,8 @@ public record AdminRetryDocumentCommand(
     int ExpectedVersion,
     string RequestId,
     string Reason,
-    Guid ActorUserId);
+    Guid ActorUserId,
+    int PresentedSessionVersion = 1);
 
 public record AdminRetryDocumentResponseDto(
     Guid AttemptId,
@@ -103,7 +104,8 @@ public record ReplaceCatalogDocumentSourceCommand(
     string Reason,
     Stream SourceStream,
     string FileName,
-    long ByteLength);
+    long ByteLength,
+    int PresentedSessionVersion = 1);
 
 public record SourceReplacementResponseDto(
     Guid AttemptId,

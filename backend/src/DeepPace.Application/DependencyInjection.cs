@@ -120,6 +120,8 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<Features.Admin.Accounts.AdminSuspendUserRequest, Features.Admin.Accounts.DTOs.AdminAccountDetailDto>, Features.Admin.Accounts.AdminSuspendUserHandler>();
         services.AddScoped<IUseCase<Features.Admin.Accounts.AdminReactivateUserRequest, Features.Admin.Accounts.DTOs.AdminAccountDetailDto>, Features.Admin.Accounts.AdminReactivateUserHandler>();
         services.AddScoped<IUseCase<Features.Admin.Accounts.AdminRevokeUserSessionsRequest, Features.Admin.Accounts.DTOs.AdminAccountDetailDto>, Features.Admin.Accounts.AdminRevokeUserSessionsHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Accounts.AdminGetRolesRequest, Features.Admin.Accounts.DTOs.AdminPagedResult<Features.Admin.Accounts.DTOs.AdminRoleOptionDto>>, Features.Admin.Accounts.AdminGetRolesHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Accounts.AdminAssignRoleRequest, Features.Admin.Accounts.DTOs.AdminAccountDetailDto>, Features.Admin.Accounts.AdminAssignRoleHandler>();
 
         // Administrator Audit Handlers
         services.AddScoped<IUseCase<Features.Admin.Audit.AdminGetAuditEventsRequest, Features.Admin.Accounts.DTOs.AdminPagedResult<Features.Admin.Audit.DTOs.AdminAuditEventDto>>, Features.Admin.Audit.AdminGetAuditEventsHandler>();

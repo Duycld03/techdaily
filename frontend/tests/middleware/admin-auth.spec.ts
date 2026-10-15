@@ -10,7 +10,14 @@ const environment = process as typeof process & { server?: boolean }
 describe('administrator route admission', () => {
   beforeEach(() => {
     setActivePinia(createPinia()); clearAuthStorage(); vi.clearAllMocks(); environment.server = false
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ canManageCatalog: true, canManageAccounts: true, canReadAudit: true }))))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      canViewAdminDashboard: true,
+      canManageCatalog: true,
+      canManageAccounts: true,
+      canReadAudit: true,
+      canManageDocumentOperations: true,
+      canManageRoles: true
+    }))))
   })
   afterEach(() => { environment.server = false; vi.unstubAllGlobals() })
   function signIn() { useAuthStore().setSession(adminTestJwt(), { id: 'admin-1', name: 'Admin', email: 'admin@example.test', preferredLocale: 'en' }) }
@@ -96,5 +103,56 @@ describe('administrator route admission', () => {
     })))
     await run('/admin/documents')
     expect(navigateTo).toHaveBeenCalledWith({ path: '/admin/login', query: { redirect: '/admin/documents' } })
+  })
+
+  it('redirects safe-but-forbidden return destinations to the first accessible admin route on login', async () => {
+    signIn()
+    vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({
+      canViewAdminDashboard: false,
+      canManageCatalog: true,
+      canManageAccounts: false,
+      canReadAudit: false,
+      canManageDocumentOperations: false,
+      canManageRoles: false
+    })))
+    await run('/admin/login', { redirect: '/admin/audit' })
+    expect(navigateTo).toHaveBeenCalledWith('/admin/catalog')
+  })
+
+  it('denies access to unknown destinations for an admitted administrator', async () => {
+    signIn()
+    await run('/admin/unknown-zone')
+    expect(navigateTo).toHaveBeenCalledWith({ path: '/admin/login', query: { redirect: '/admin/unknown-zone' } })
+  })
+
+  it('denies access to /admin/users when account has only ManageRoles without ManageAccounts', async () => {
+    signIn()
+    vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({
+      canViewAdminDashboard: false,
+      canManageCatalog: false,
+      canManageAccounts: false,
+      canReadAudit: false,
+      canManageDocumentOperations: false,
+      canManageRoles: true
+    })))
+    await run('/admin/users')
+    expect(navigateTo).toHaveBeenCalledWith({ path: '/admin/login', query: { redirect: '/admin/users' } })
+  })
+
+  it('admits audit-only role to /admin/audit and denies /admin/catalog', async () => {
+    signIn()
+    vi.mocked(fetch).mockImplementation(async () => new Response(JSON.stringify({
+      canViewAdminDashboard: false,
+      canManageCatalog: false,
+      canManageAccounts: false,
+      canReadAudit: true,
+      canManageDocumentOperations: false,
+      canManageRoles: false
+    })))
+    await run('/admin/audit')
+    expect(navigateTo).not.toHaveBeenCalled()
+
+    await run('/admin/catalog')
+    expect(navigateTo).toHaveBeenCalledWith({ path: '/admin/login', query: { redirect: '/admin/catalog' } })
   })
 })

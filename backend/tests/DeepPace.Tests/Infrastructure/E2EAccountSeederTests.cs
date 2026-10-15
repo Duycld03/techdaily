@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using DeepPace.Domain.Entities;
 using DeepPace.Infrastructure.Persistence;
 using DeepPace.Infrastructure.Persistence.Seeders;
 using DeepPace.Infrastructure.Security;
@@ -55,6 +56,7 @@ public class E2EAccountSeederTests : IDisposable
         user.Should().NotBeNull();
         user!.Email.Should().Be("test_seeder@deeppace.test");
         PasswordHasher.VerifyPassword("SecretPassword123!", user.PasswordHash!).Should().BeTrue();
+        user.RoleId.Should().Be(RoleDefaults.LearnerRoleId, "Seeded QA account must receive explicit Learner role, never Admin");
     }
 
     [Fact]
@@ -88,5 +90,17 @@ public class E2EAccountSeederTests : IDisposable
         user.Should().NotBeNull();
         PasswordHasher.VerifyPassword("NewRotatedPassword2026!", user!.PasswordHash!).Should().BeTrue();
         PasswordHasher.VerifyPassword("OldPassword1!", user.PasswordHash!).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SeedAsync_WhenConfigOmitted_DoesNotCreateAnyAccountOrFallbackToCommittedDefault()
+    {
+        // Empty config
+        var config = new ConfigurationBuilder().Build();
+
+        await E2EAccountSeeder.SeedAsync(_db, config, NullLogger.Instance);
+
+        var users = await _db.Users.ToListAsync();
+        users.Should().BeEmpty("Seeder must not create any default account or fallback when configuration is omitted");
     }
 }

@@ -74,4 +74,166 @@ describe('server-confirmed administrator admission', () => {
     expect(access.canAccessDestination('/admin/users')).toBe(false)
     expect(access.canAccessDestination('/admin/audit')).toBe(false)
   })
+
+  it('tracks all 6 capabilities and hasAnyCapability getter', async () => {
+    const access = useAdminAccessStore()
+    get.mockResolvedValue({
+      canViewAdminDashboard: true,
+      canManageCatalog: false,
+      canManageAccounts: false,
+      canReadAudit: false,
+      canManageDocumentOperations: false,
+      canManageRoles: false
+    })
+
+    expect(await access.verify()).toBe(true)
+    expect(access.canViewAdminDashboard).toBe(true)
+    expect(access.canManageCatalog).toBe(false)
+    expect(access.canManageAccounts).toBe(false)
+    expect(access.canReadAudit).toBe(false)
+    expect(access.canManageDocumentOperations).toBe(false)
+    expect(access.canManageRoles).toBe(false)
+    expect(access.hasAnyCapability).toBe(true)
+  })
+
+  it('denies access and invalidates admin session if all 6 capability flags are false', async () => {
+    const auth = useAuthStore()
+    auth.setSession(adminTestJwt(), { id: 'admin-1', email: 'admin@example.test', name: 'Admin', preferredLocale: 'en' })
+    const access = useAdminAccessStore()
+    const prevAdminGen = auth.adminGeneration
+
+    get.mockResolvedValue({
+      canViewAdminDashboard: false,
+      canManageCatalog: false,
+      canManageAccounts: false,
+      canReadAudit: false,
+      canManageDocumentOperations: false,
+      canManageRoles: false
+    })
+
+    expect(await access.verify()).toBe(false)
+    expect(access.state).toBe('denied')
+    expect(auth.adminGeneration).toBeGreaterThan(prevAdminGen)
+  })
+
+  it('ManageRoles alone does not grant access to /admin/users or any admin destination', async () => {
+    const access = useAdminAccessStore()
+    get.mockResolvedValue({
+      canViewAdminDashboard: false,
+      canManageCatalog: false,
+      canManageAccounts: false,
+      canReadAudit: false,
+      canManageDocumentOperations: false,
+      canManageRoles: true
+    })
+
+    expect(await access.verify()).toBe(true)
+    expect(access.canManageRoles).toBe(true)
+    expect(access.canAccessDestination('/admin')).toBe(false)
+    expect(access.canAccessDestination('/admin/dashboard')).toBe(false)
+    expect(access.canAccessDestination('/admin/catalog')).toBe(false)
+    expect(access.canAccessDestination('/admin/users')).toBe(false)
+    expect(access.canAccessDestination('/admin/documents')).toBe(false)
+    expect(access.canAccessDestination('/admin/audit')).toBe(false)
+    expect(access.getFirstAccessibleAdminRoute()).toBe('/login')
+  })
+
+  it('denies access to unknown destinations', async () => {
+    const access = useAdminAccessStore()
+    get.mockResolvedValue({
+      canViewAdminDashboard: true,
+      canManageCatalog: true,
+      canManageAccounts: true,
+      canReadAudit: true,
+      canManageDocumentOperations: true,
+      canManageRoles: true
+    })
+
+    expect(await access.verify()).toBe(true)
+    expect(access.canAccessDestination('/admin/unknown')).toBe(false)
+    expect(access.canAccessDestination('/admin/missing')).toBe(false)
+    expect(access.canAccessDestination('/other')).toBe(false)
+  })
+
+  it('computes deterministic landing route in priority order', async () => {
+    const access = useAdminAccessStore()
+
+    // 1. Dashboard priority
+    get.mockResolvedValueOnce({
+      canViewAdminDashboard: true,
+      canManageCatalog: true,
+      canManageAccounts: true,
+      canReadAudit: true,
+      canManageDocumentOperations: true
+    })
+    await access.verify()
+    expect(access.getFirstAccessibleAdminRoute()).toBe('/admin/dashboard')
+
+    // 2. Catalog priority
+    access.reset()
+    get.mockResolvedValueOnce({
+      canViewAdminDashboard: false,
+      canManageCatalog: true,
+      canManageAccounts: true,
+      canReadAudit: true,
+      canManageDocumentOperations: true
+    })
+    await access.verify()
+    expect(access.getFirstAccessibleAdminRoute()).toBe('/admin/catalog')
+
+    // 3. Accounts priority
+    access.reset()
+    get.mockResolvedValueOnce({
+      canViewAdminDashboard: false,
+      canManageCatalog: false,
+      canManageAccounts: true,
+      canReadAudit: true,
+      canManageDocumentOperations: true
+    })
+    await access.verify()
+    expect(access.getFirstAccessibleAdminRoute()).toBe('/admin/users')
+
+    // 4. Documents priority
+    access.reset()
+    get.mockResolvedValueOnce({
+      canViewAdminDashboard: false,
+      canManageCatalog: false,
+      canManageAccounts: false,
+      canReadAudit: true,
+      canManageDocumentOperations: true
+    })
+    await access.verify()
+    expect(access.getFirstAccessibleAdminRoute()).toBe('/admin/documents')
+
+    // 5. Audit priority
+    access.reset()
+    get.mockResolvedValueOnce({
+      canViewAdminDashboard: false,
+      canManageCatalog: false,
+      canManageAccounts: false,
+      canReadAudit: true,
+      canManageDocumentOperations: false
+    })
+    await access.verify()
+    expect(access.getFirstAccessibleAdminRoute()).toBe('/admin/audit')
+
+    // Fallback: /login
+    access.reset()
+    expect(access.getFirstAccessibleAdminRoute()).toBe('/login')
+  })
+
+  it('treats 401 and 403 as denied and invalidates admin access', async () => {
+    const auth = useAuthStore()
+    auth.setSession(adminTestJwt(), { id: 'admin-1', email: 'admin@example.test', name: 'Admin', preferredLocale: 'en' })
+    const access = useAdminAccessStore()
+
+    get.mockRejectedValueOnce(Object.assign(new Error('Unauthorized'), { status: 401 }))
+    expect(await access.verify()).toBe(false)
+    expect(access.state).toBe('denied')
+
+    access.reset()
+    get.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { status: 403 }))
+    expect(await access.verify()).toBe(false)
+    expect(access.state).toBe('denied')
+  })
 })

@@ -1,6 +1,6 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using DeepPace.Application.Common;
 using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
@@ -15,33 +15,22 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
     private static readonly SemaphoreSlim NonPostgresLock = new(1, 1);
 
     private readonly DeepPaceDbContext _dbContext;
-    private readonly IConfiguration _configuration;
+    private readonly DbContextOptions<DeepPaceDbContext>? _dbContextOptions;
+    private readonly IServiceProvider? _serviceProvider;
 
-    public AdministrativeUnitOfWork(DeepPaceDbContext dbContext, IConfiguration configuration)
+    public AdministrativeUnitOfWork(
+        DeepPaceDbContext dbContext,
+        DbContextOptions<DeepPaceDbContext>? dbContextOptions = null,
+        IServiceProvider? serviceProvider = null)
     {
         _dbContext = dbContext;
-        _configuration = configuration;
+        _dbContextOptions = dbContextOptions;
+        _serviceProvider = serviceProvider;
     }
-
-    private HashSet<Guid> GetConfiguredAdminGuids()
-    {
-        var configuredIds = _configuration.GetSection("CatalogAdministration:UserIds").Get<string[]>()
-            ?? _configuration.GetSection("CatalogAdministration__UserIds").Get<string[]>()
-            ?? Array.Empty<string>();
-
-        var set = new HashSet<Guid>();
-        foreach (var idStr in configuredIds)
-        {
-            if (Guid.TryParse(idStr, out var id) && id != Guid.Empty)
-            {
-                set.Add(id);
-            }
-        }
-        return set;
-    }
-
     public async Task<Result<TResult>> ExecuteAccountControlCommandAsync<TResult>(
         Guid actorUserId,
+        int presentedSessionVersion,
+        IReadOnlyCollection<AdminPermission> requiredPermissions,
         Guid targetUserId,
         int expectedVersion,
         string commandName,
@@ -98,11 +87,42 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
             }
 
             // Recheck authoritative actor state inside the locked transaction
-            var configuredAdmins = GetConfiguredAdminGuids();
-            if (actor == null || actor.IsDeleted || actor.Status != AccountStatus.Active || !configuredAdmins.Contains(actor.Id))
+            if (actor == null || actor.IsDeleted || actor.Status != AccountStatus.Active)
             {
                 await tx.RollbackAsync(ct);
                 return Error.Custom("AUTH_FORBIDDEN", "The actor account does not hold active administrator permission.");
+            }
+
+            // Presented session version check: reject stale actor tokens
+            if (actor.AuthenticationVersion != presentedSessionVersion)
+            {
+                await tx.RollbackAsync(ct);
+                return Error.Custom("AUTH_FORBIDDEN", "The actor session is stale or has been invalidated.");
+            }
+
+            // Verify actor holds all required permissions from authoritative database grants
+            var actorPerms = await _dbContext.RolePermissions.AsNoTracking()
+                .Where(p => p.RoleId == actor.RoleId)
+                .Select(p => p.PermissionKey)
+                .ToListAsync(ct);
+
+            var permSet = new HashSet<string>(actorPerms, StringComparer.Ordinal);
+            var hasAllPermissions = requiredPermissions.All(perm => perm switch
+            {
+                AdminPermission.ManageCatalog => permSet.Contains(PermissionKeys.ManageCatalog),
+                AdminPermission.ManageAccounts => permSet.Contains(PermissionKeys.ManageAccounts),
+                AdminPermission.ReadAudit => permSet.Contains(PermissionKeys.ReadAudit),
+                AdminPermission.ManageDocumentOperations => permSet.Contains(PermissionKeys.ManageDocumentOperations),
+                AdminPermission.ViewAdminDashboard => permSet.Contains(PermissionKeys.ViewAdminDashboard),
+                // Conjunction: ManageRoles requires BOTH ManageRoles AND ManageAccounts
+                AdminPermission.ManageRoles => permSet.Contains(PermissionKeys.ManageRoles) && permSet.Contains(PermissionKeys.ManageAccounts),
+                _ => false
+            });
+
+            if (!hasAllPermissions)
+            {
+                await tx.RollbackAsync(ct);
+                return Error.Custom("AUTH_FORBIDDEN", "The actor account does not hold the required administrator permissions.");
             }
 
             // Recheck authoritative target existence
@@ -116,29 +136,43 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
             if (target.AdminControlVersion != expectedVersion)
             {
                 await tx.RollbackAsync(ct);
-                await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_CONCURRENCY_CONFLICT", correlationId, ct);
+                var recRes = await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_CONCURRENCY_CONFLICT", correlationId, ct);
+                if (recRes.IsFailure) return recRes.Error;
                 return Error.Custom("ACCOUNT_CONCURRENCY_CONFLICT", "Account was modified by another administrator. Please reload.");
             }
 
-            // Self-suspension protection
-            if (commandName == AdminAuditActions.UserSuspend && actorUserId == targetUserId)
+            // Self-action protections
+            if (actorUserId == targetUserId)
             {
-                await tx.RollbackAsync(ct);
-                await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_SELF_SUSPENSION_BLOCKED", correlationId, ct);
-                return Error.Custom("ACCOUNT_SELF_SUSPENSION_BLOCKED", "An administrator cannot suspend their own account.");
+                if (commandName == AdminAuditActions.UserSuspend)
+                {
+                    await tx.RollbackAsync(ct);
+                    var recRes = await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_SELF_SUSPENSION_BLOCKED", correlationId, ct);
+                    if (recRes.IsFailure) return recRes.Error;
+                    return Error.Custom("ACCOUNT_SELF_SUSPENSION_BLOCKED", "An administrator cannot suspend their own account.");
+                }
+                if (commandName == AdminAuditActions.UserAssignRole)
+                {
+                    await tx.RollbackAsync(ct);
+                    var recRes = await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_SELF_ROLE_CHANGE_BLOCKED", correlationId, ct);
+                    if (recRes.IsFailure) return recRes.Error;
+                    return Error.Custom("ACCOUNT_SELF_ROLE_CHANGE_BLOCKED", "An administrator cannot change their own role.");
+                }
             }
 
             // Last active administrator protection
-            if (commandName == AdminAuditActions.UserSuspend && configuredAdmins.Contains(targetUserId))
+            if ((commandName == AdminAuditActions.UserSuspend || commandName == AdminAuditActions.UserAssignRole)
+                && target.RoleId == RoleDefaults.AdminRoleId)
             {
                 var activeAdminCount = await _dbContext.Users
-                    .CountAsync(u => configuredAdmins.Contains(u.Id) && !u.IsDeleted && u.Status == AccountStatus.Active, ct);
+                    .CountAsync(u => u.RoleId == RoleDefaults.AdminRoleId && !u.IsDeleted && u.Status == AccountStatus.Active, ct);
 
                 if (activeAdminCount <= 1)
                 {
                     await tx.RollbackAsync(ct);
-                    await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_LAST_ADMIN_PROTECTED", correlationId, ct);
-                    return Error.Custom("ACCOUNT_LAST_ADMIN_PROTECTED", "Cannot suspend the last active administrator.");
+                    var recRes = await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_LAST_ADMIN_PROTECTED", correlationId, ct);
+                    if (recRes.IsFailure) return recRes.Error;
+                    return Error.Custom("ACCOUNT_LAST_ADMIN_PROTECTED", "Cannot modify the last active administrator.");
                 }
             }
 
@@ -147,7 +181,9 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
             if (!commandResult.IsSuccess)
             {
                 await tx.RollbackAsync(ct);
-                await RecordRejectionAsync(actorUserId, commandName, targetUserId, commandResult.Error.Code, correlationId, ct);
+                _dbContext.ChangeTracker.Clear();
+                var recRes = await RecordRejectionAsync(actorUserId, commandName, targetUserId, commandResult.Error.Code, correlationId, ct);
+                if (recRes.IsFailure) return recRes.Error;
                 return commandResult.Error;
             }
 
@@ -169,7 +205,97 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
         }
     }
 
-    private async Task RecordRejectionAsync(
+    public async Task<Result<TResult>> ExecutePrivilegedMutationAsync<TResult>(
+        Guid actorUserId,
+        int presentedSessionVersion,
+        IReadOnlyCollection<AdminPermission> requiredPermissions,
+        Func<Task<Result<TResult>>> mutation,
+        CancellationToken ct = default)
+    {
+        var isNpgsql = _dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+
+        if (!isNpgsql)
+        {
+            await NonPostgresLock.WaitAsync(ct);
+        }
+
+        try
+        {
+            await using var tx = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+
+            if (isNpgsql)
+            {
+                // Acquire shared row lock on the actor in PostgreSQL (conflicts with exclusive row locks on actor)
+                await _dbContext.Database.ExecuteSqlRawAsync(
+                    "SELECT \"Id\" FROM \"Users\" WHERE \"Id\" = {0} FOR SHARE",
+                    new object[] { actorUserId },
+                    ct);
+            }
+
+            // Read fresh authoritative actor state from database
+            var actor = await _dbContext.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == actorUserId, ct);
+
+            if (actor == null || actor.IsDeleted || actor.Status != AccountStatus.Active)
+            {
+                await tx.RollbackAsync(ct);
+                return Error.Custom("AUTH_FORBIDDEN", "The actor account does not hold active administrator permission.");
+            }
+
+            if (actor.AuthenticationVersion != presentedSessionVersion)
+            {
+                await tx.RollbackAsync(ct);
+                return Error.Custom("AUTH_FORBIDDEN", "The actor session is stale or has been invalidated.");
+            }
+
+            // Verify actor holds all required permissions from authoritative database grants
+            var actorPerms = await _dbContext.RolePermissions
+                .AsNoTracking()
+                .Where(p => p.RoleId == actor.RoleId)
+                .Select(p => p.PermissionKey)
+                .ToListAsync(ct);
+
+            var permSet = new HashSet<string>(actorPerms, StringComparer.Ordinal);
+            var hasAllPermissions = requiredPermissions.All(perm => perm switch
+            {
+                AdminPermission.ManageCatalog => permSet.Contains(PermissionKeys.ManageCatalog),
+                AdminPermission.ManageAccounts => permSet.Contains(PermissionKeys.ManageAccounts),
+                AdminPermission.ReadAudit => permSet.Contains(PermissionKeys.ReadAudit),
+                AdminPermission.ManageDocumentOperations => permSet.Contains(PermissionKeys.ManageDocumentOperations),
+                AdminPermission.ViewAdminDashboard => permSet.Contains(PermissionKeys.ViewAdminDashboard),
+                AdminPermission.ManageRoles => permSet.Contains(PermissionKeys.ManageRoles) && permSet.Contains(PermissionKeys.ManageAccounts),
+                _ => false
+            });
+
+            if (!hasAllPermissions)
+            {
+                await tx.RollbackAsync(ct);
+                return Error.Custom("AUTH_FORBIDDEN", "The actor account does not hold the required administrator permissions.");
+            }
+
+            // Execute the privileged mutation under the transaction
+            var mutationResult = await mutation();
+            if (!mutationResult.IsSuccess)
+            {
+                await tx.RollbackAsync(ct);
+                _dbContext.ChangeTracker.Clear();
+                return mutationResult;
+            }
+
+            await tx.CommitAsync(ct);
+            return mutationResult;
+        }
+        finally
+        {
+            if (!isNpgsql)
+            {
+                NonPostgresLock.Release();
+            }
+        }
+    }
+
+    private async Task<Result<bool>> RecordRejectionAsync(
         Guid actorUserId,
         string commandName,
         Guid targetUserId,
@@ -188,19 +314,52 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
                 errorCode: errorCode,
                 correlationId: correlationId);
 
-            await AppendCleanAuditEventAsync(rejectEvent, ct);
+            if (_serviceProvider != null)
+            {
+                await using var scope = _serviceProvider.CreateAsyncScope();
+                var cleanDb = scope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+                await cleanDb.AdminAuditEvents.AddAsync(rejectEvent, ct);
+                await cleanDb.SaveChangesAsync(ct);
+            }
+            else if (_dbContextOptions != null)
+            {
+                await using var cleanDb = new DeepPaceDbContext(_dbContextOptions);
+                await cleanDb.AdminAuditEvents.AddAsync(rejectEvent, ct);
+                await cleanDb.SaveChangesAsync(ct);
+            }
+            else
+            {
+                await _dbContext.AdminAuditEvents.AddAsync(rejectEvent, ct);
+                await _dbContext.SaveChangesAsync(ct);
+            }
+
+            return true;
         }
-        catch
+        catch (Exception ex)
         {
-            // Do not mask original error if writing rejection fails
+            return Error.Custom("AUDIT_PERSISTENCE_UNAVAILABLE", $"Audit history persistence failed: {ex.Message}");
         }
     }
 
     public async Task AppendCleanAuditEventAsync(AdminAuditEvent auditEvent, CancellationToken ct = default)
     {
-        await using var cleanTx = await _dbContext.Database.BeginTransactionAsync(ct);
-        await _dbContext.AdminAuditEvents.AddAsync(auditEvent, ct);
-        await _dbContext.SaveChangesAsync(ct);
-        await cleanTx.CommitAsync(ct);
+        if (_serviceProvider != null)
+        {
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            var cleanDb = scope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            await cleanDb.AdminAuditEvents.AddAsync(auditEvent, ct);
+            await cleanDb.SaveChangesAsync(ct);
+        }
+        else if (_dbContextOptions != null)
+        {
+            await using var cleanDb = new DeepPaceDbContext(_dbContextOptions);
+            await cleanDb.AdminAuditEvents.AddAsync(auditEvent, ct);
+            await cleanDb.SaveChangesAsync(ct);
+        }
+        else
+        {
+            await _dbContext.AdminAuditEvents.AddAsync(auditEvent, ct);
+            await _dbContext.SaveChangesAsync(ct);
+        }
     }
 }

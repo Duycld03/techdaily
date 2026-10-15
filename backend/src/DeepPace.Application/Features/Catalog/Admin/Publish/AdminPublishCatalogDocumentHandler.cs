@@ -10,20 +10,42 @@ namespace DeepPace.Application.Features.Catalog.Admin.Publish;
 public record AdminPublishCatalogDocumentRequest(
     Guid Id,
     Guid AdminUserId,
-    int ExpectedConcurrencyVersion);
+    int ExpectedConcurrencyVersion,
+    int PresentedSessionVersion = 1);
 
 public class AdminPublishCatalogDocumentHandler : IUseCase<AdminPublishCatalogDocumentRequest, AdminCatalogDocumentDto>
 {
     private readonly IDeepPaceDbContext _dbContext;
+    private readonly IAdministrativeUnitOfWork? _unitOfWork;
 
-    public AdminPublishCatalogDocumentHandler(IDeepPaceDbContext dbContext)
+    public AdminPublishCatalogDocumentHandler(
+        IDeepPaceDbContext dbContext,
+        IAdministrativeUnitOfWork? unitOfWork = null)
     {
         _dbContext = dbContext;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result<AdminCatalogDocumentDto>> ExecuteAsync(
         AdminPublishCatalogDocumentRequest request,
         CancellationToken cancellationToken = default)
+    {
+        if (_unitOfWork != null && request.AdminUserId != Guid.Empty)
+        {
+            return await _unitOfWork.ExecutePrivilegedMutationAsync(
+                request.AdminUserId,
+                request.PresentedSessionVersion,
+                new[] { AdminPermission.ManageCatalog },
+                () => PublishInternalAsync(request, cancellationToken),
+                cancellationToken);
+        }
+
+        return await PublishInternalAsync(request, cancellationToken);
+    }
+
+    private async Task<Result<AdminCatalogDocumentDto>> PublishInternalAsync(
+        AdminPublishCatalogDocumentRequest request,
+        CancellationToken cancellationToken)
     {
         var doc = await _dbContext.CatalogDocuments
             .Include(d => d.Slices)

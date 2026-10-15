@@ -216,4 +216,138 @@ public class UserAccountDomainTests
         token.RevokedAt.Should().NotBeNull();
         token.AuthenticationVersion.Should().Be(1);
     }
+
+    [Fact]
+    public void AssignRole_ValidTransition_ShouldAdvanceVersionsAndPreserveAccountState()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "target@example.com",
+            Name = "Target User",
+            PasswordHash = "hash123",
+            GoogleSubjectId = "google-sub-456",
+            TargetRole = "Senior Architect",
+            DailyGoalMinutes = 30,
+            RoleId = RoleDefaults.LearnerRoleId
+        };
+
+        var beforeAuthVersion = user.AuthenticationVersion;
+        var beforeControlVersion = user.AdminControlVersion;
+        var now = DateTimeOffset.UtcNow;
+
+        user.AssignRole(_actorId, RoleDefaults.AdminRoleId, "Promotion to administrator", now);
+
+        user.RoleId.Should().Be(RoleDefaults.AdminRoleId);
+        user.AuthenticationVersion.Should().Be(beforeAuthVersion + 1);
+        user.AdminControlVersion.Should().Be(beforeControlVersion + 1);
+        user.UpdatedAt.Should().BeCloseTo(now, TimeSpan.FromSeconds(1));
+        // Preserves account credentials, status, and learning preferences
+        user.Status.Should().Be(AccountStatus.Active);
+        user.PasswordHash.Should().Be("hash123");
+        user.GoogleSubjectId.Should().Be("google-sub-456");
+        user.TargetRole.Should().Be("Senior Architect");
+        user.DailyGoalMinutes.Should().Be(30);
+    }
+
+    [Fact]
+    public void AssignRole_SuspendedUser_ShouldChangeRoleAndAdvanceVersionsWhileKeepingStatusSuspended()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "suspended@example.com",
+            Name = "Suspended User",
+            RoleId = RoleDefaults.LearnerRoleId
+        };
+        var suspendTime = DateTimeOffset.UtcNow.AddDays(-1);
+        user.Suspend(_actorId, "Temporary investigation", suspendTime);
+
+        var authVersionBeforeRoleChange = user.AuthenticationVersion;
+        var controlVersionBeforeRoleChange = user.AdminControlVersion;
+
+        user.AssignRole(_actorId, RoleDefaults.AdminRoleId, "Role change while suspended");
+
+        user.RoleId.Should().Be(RoleDefaults.AdminRoleId);
+        user.Status.Should().Be(AccountStatus.Suspended);
+        user.SuspendedByUserId.Should().Be(_actorId);
+        user.SuspendedAt.Should().Be(suspendTime);
+        user.SuspensionReason.Should().Be("Temporary investigation");
+        user.AuthenticationVersion.Should().Be(authVersionBeforeRoleChange + 1);
+        user.AdminControlVersion.Should().Be(controlVersionBeforeRoleChange + 1);
+    }
+
+    [Fact]
+    public void AssignRole_SameRole_ShouldThrowInvalidOperationExceptionAndNotMutateVersions()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "learner@example.com",
+            Name = "Learner",
+            RoleId = RoleDefaults.LearnerRoleId
+        };
+
+        var act = () => user.AssignRole(_actorId, RoleDefaults.LearnerRoleId, "Assigning same role");
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*already has the specified role*");
+        user.RoleId.Should().Be(RoleDefaults.LearnerRoleId);
+        user.AuthenticationVersion.Should().Be(1);
+        user.AdminControlVersion.Should().Be(1);
+    }
+
+    [Fact]
+    public void AssignRole_SelfRole_ShouldThrowInvalidOperationExceptionAndNotMutateVersions()
+    {
+        var adminId = Guid.NewGuid();
+        var user = new User
+        {
+            Id = adminId,
+            Email = "admin@example.com",
+            Name = "Admin",
+            RoleId = RoleDefaults.AdminRoleId
+        };
+
+        var act = () => user.AssignRole(adminId, RoleDefaults.LearnerRoleId, "Self demotion attempt");
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*cannot change their own role*");
+        user.RoleId.Should().Be(RoleDefaults.AdminRoleId);
+        user.AuthenticationVersion.Should().Be(1);
+        user.AdminControlVersion.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void AssignRole_BlankReason_ShouldThrowArgumentException(string? reason)
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "user@example.com", Name = "User", RoleId = RoleDefaults.LearnerRoleId };
+        var act = () => user.AssignRole(_actorId, RoleDefaults.AdminRoleId, reason!);
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void AssignRole_OverlongReason_ShouldThrowArgumentException()
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "user@example.com", Name = "User", RoleId = RoleDefaults.LearnerRoleId };
+        var longReason = new string('x', 501);
+        var act = () => user.AssignRole(_actorId, RoleDefaults.AdminRoleId, longReason);
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*500 characters*");
+    }
+
+    [Fact]
+    public void AssignRole_EmptyActorOrRoleId_ShouldThrowArgumentException()
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "user@example.com", Name = "User", RoleId = RoleDefaults.LearnerRoleId };
+
+        var actEmptyActor = () => user.AssignRole(Guid.Empty, RoleDefaults.AdminRoleId, "Reason");
+        actEmptyActor.Should().Throw<ArgumentException>();
+
+        var actEmptyRole = () => user.AssignRole(_actorId, Guid.Empty, "Reason");
+        actEmptyRole.Should().Throw<ArgumentException>();
+    }
 }
