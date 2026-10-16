@@ -12,22 +12,31 @@ namespace DeepPace.Tests.Infrastructure;
 
 public class PostgresCatalogAdoptionTests
 {
-    private static string PostgresConnStr => Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION")
-        ?? throw new InvalidOperationException("TEST_POSTGRES_CONNECTION must identify an isolated PostgreSQL test database.");
+    private static string? PostgresConnStr => Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION");
 
     private static DbContextOptions<DeepPaceDbContext> CreatePostgresOptions()
     {
         return new DbContextOptionsBuilder<DeepPaceDbContext>()
-            .UseNpgsql(PostgresConnStr, o => o.UseVector())
+            .UseNpgsql(PostgresConnStr ?? "Host=localhost;Database=deeppace_empty;Username=none", o => o.UseVector())
             .Options;
     }
 
     private static bool IsPostgresAvailable()
     {
+        if (string.IsNullOrWhiteSpace(PostgresConnStr))
+        {
+            return false;
+        }
+
         try
         {
             using var db = new DeepPaceDbContext(CreatePostgresOptions());
-            return db.Database.CanConnect();
+            var canConnect = db.Database.CanConnect();
+            if (canConnect)
+            {
+                db.Database.Migrate();
+            }
+            return canConnect;
         }
         catch
         {

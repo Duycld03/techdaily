@@ -20,6 +20,20 @@ jobs:
   backend-ci:
     name: Backend CI (.NET 10)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -44,6 +58,8 @@ jobs:
         run: dotnet build backend/DeepPace.sln --configuration Release --no-restore
 
       - name: Run Backend Tests (DeepPace.Tests)
+        env:
+          TEST_POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres_test_password
         run: dotnet test backend/DeepPace.sln --configuration Release --no-build --verbosity normal
 
   frontend-ci:

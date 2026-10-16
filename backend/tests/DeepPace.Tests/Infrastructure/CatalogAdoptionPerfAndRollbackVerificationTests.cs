@@ -18,16 +18,26 @@ namespace DeepPace.Tests.Infrastructure;
 
 public class CatalogAdoptionPerfAndRollbackVerificationTests
 {
-    private static string PostgresConnStr => Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION")
-        ?? throw new InvalidOperationException("TEST_POSTGRES_CONNECTION must identify an isolated PostgreSQL test database.");
-    private static readonly NpgsqlDataSource DataSource;
+    private static string? PostgresConnStr => Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION");
+    private static readonly NpgsqlDataSource? DataSource;
     private readonly ITestOutputHelper _output;
 
     static CatalogAdoptionPerfAndRollbackVerificationTests()
     {
-        var dataSourceBuilder = new NpgsqlDataSourceBuilder(PostgresConnStr);
-        dataSourceBuilder.UseVector();
-        DataSource = dataSourceBuilder.Build();
+        var connStr = PostgresConnStr;
+        if (!string.IsNullOrWhiteSpace(connStr))
+        {
+            try
+            {
+                var dataSourceBuilder = new NpgsqlDataSourceBuilder(connStr);
+                dataSourceBuilder.UseVector();
+                DataSource = dataSourceBuilder.Build();
+            }
+            catch
+            {
+                DataSource = null;
+            }
+        }
     }
 
     public CatalogAdoptionPerfAndRollbackVerificationTests(ITestOutputHelper output)
@@ -37,8 +47,20 @@ public class CatalogAdoptionPerfAndRollbackVerificationTests
 
     private static DbContextOptions<DeepPaceDbContext> CreatePostgresOptions(params IInterceptor[] interceptors)
     {
-        var builder = new DbContextOptionsBuilder<DeepPaceDbContext>()
-            .UseNpgsql(DataSource, o => o.UseVector());
+        var builder = new DbContextOptionsBuilder<DeepPaceDbContext>();
+        if (DataSource != null)
+        {
+            builder.UseNpgsql(DataSource, o => o.UseVector());
+        }
+        else if (!string.IsNullOrWhiteSpace(PostgresConnStr))
+        {
+            builder.UseNpgsql(PostgresConnStr, o => o.UseVector());
+        }
+        else
+        {
+            builder.UseNpgsql("Host=localhost;Database=deeppace_empty;Username=none", o => o.UseVector());
+        }
+
         if (interceptors.Length > 0)
         {
             builder.AddInterceptors(interceptors);
@@ -49,10 +71,20 @@ public class CatalogAdoptionPerfAndRollbackVerificationTests
 
     private static bool IsPostgresAvailable()
     {
+        if (string.IsNullOrWhiteSpace(PostgresConnStr) || DataSource == null)
+        {
+            return false;
+        }
+
         try
         {
             using var db = new DeepPaceDbContext(CreatePostgresOptions());
-            return db.Database.CanConnect();
+            var canConnect = db.Database.CanConnect();
+            if (canConnect)
+            {
+                db.Database.Migrate();
+            }
+            return canConnect;
         }
         catch
         {
@@ -174,7 +206,7 @@ public class CatalogAdoptionPerfAndRollbackVerificationTests
         // Storage analysis from PostgreSQL engine in an isolated connection
         int bookRowBytes;
         long totalChunksBytes, totalEmbeddingBytes, totalMarkdownBytes;
-        using (var rawConn = new Npgsql.NpgsqlConnection(PostgresConnStr))
+        using (var rawConn = new Npgsql.NpgsqlConnection(PostgresConnStr!))
         {
             await rawConn.OpenAsync();
             await using var cmd = rawConn.CreateCommand();
@@ -385,7 +417,7 @@ public class CatalogAdoptionPerfAndRollbackVerificationTests
         // Storage measurement for 50-slice document
         int bookRowBytes;
         long totalChunksBytes, totalEmbeddingBytes, totalMarkdownBytes;
-        using (var rawConn = new Npgsql.NpgsqlConnection(PostgresConnStr))
+        using (var rawConn = new Npgsql.NpgsqlConnection(PostgresConnStr!))
         {
             await rawConn.OpenAsync();
             await using var cmd = rawConn.CreateCommand();

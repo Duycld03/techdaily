@@ -11,8 +11,7 @@ namespace DeepPace.Tests.Infrastructure;
 
 public class PostgresRoleSchemaAndBackfillTests
 {
-    private static string PostgresConnStr => Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION")
-        ?? throw new InvalidOperationException("TEST_POSTGRES_CONNECTION must identify an isolated PostgreSQL test database.");
+    private static string? PostgresConnStr => Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION");
     private readonly ITestOutputHelper _output;
 
     public PostgresRoleSchemaAndBackfillTests(ITestOutputHelper output)
@@ -22,11 +21,20 @@ public class PostgresRoleSchemaAndBackfillTests
 
     private static bool CheckPostgresConnection()
     {
+        if (string.IsNullOrWhiteSpace(PostgresConnStr))
+        {
+            return false;
+        }
+
         try
         {
-            using var conn = new NpgsqlConnection(PostgresConnStr);
-            conn.Open();
-            return true;
+            using var db = new DeepPaceDbContext(CreatePostgresOptions());
+            var canConnect = db.Database.CanConnect();
+            if (canConnect)
+            {
+                db.Database.Migrate();
+            }
+            return canConnect;
         }
         catch
         {
@@ -37,7 +45,7 @@ public class PostgresRoleSchemaAndBackfillTests
     private static DbContextOptions<DeepPaceDbContext> CreatePostgresOptions()
     {
         return new DbContextOptionsBuilder<DeepPaceDbContext>()
-            .UseNpgsql(PostgresConnStr, o => o.UseVector())
+            .UseNpgsql(PostgresConnStr ?? "Host=localhost;Database=deeppace_empty;Username=none", o => o.UseVector())
             .Options;
     }
 
