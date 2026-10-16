@@ -134,6 +134,17 @@ public class AdminAssignRoleHandler : IUseCase<AdminAssignRoleRequest, AdminAcco
             request.CorrelationId,
             async (actor, target) =>
             {
+                // Re-verify last active administrator under row lock within unit of work
+                if (target.RoleId == RoleDefaults.AdminRoleId && request.RoleId != RoleDefaults.AdminRoleId)
+                {
+                    var activeAdminCount = await _dbContext.Users
+                        .CountAsync(u => u.RoleId == RoleDefaults.AdminRoleId && !u.IsDeleted && u.Status == AccountStatus.Active, cancellationToken);
+
+                    if (activeAdminCount <= 1)
+                    {
+                        return Error.Custom("ACCOUNT_LAST_ADMIN_PROTECTED", "Cannot reassign role: at least one active administrator must remain.");
+                    }
+                }
                 var prevRoleId = target.RoleId;
                 try
                 {

@@ -1,16 +1,28 @@
+/**
+ * Trims trailing slashes from a path while preserving root '/'.
+ */
 export function normalizeRoutePath(path: string): string {
   return path.replace(/\/+$/, '') || '/'
 }
 
+/**
+ * Returns true if the path is within the administration hierarchy (/admin or /admin/*).
+ */
 export function isAdminRoute(path: string): boolean {
   const normalized = normalizeRoutePath(path)
   return normalized === '/admin' || normalized.startsWith('/admin/')
 }
 
+/**
+ * Returns true if the path is the administrator login screen.
+ */
 export function isAdminLogin(path: string): boolean {
   return normalizeRoutePath(path) === '/admin/login'
 }
 
+/**
+ * Sanitizes an untrusted return-url parameter to ensure it safely resolves within /admin.
+ */
 export function safeAdminReturnPath(value: unknown): string {
   if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || /[\\\u0000-\u0020]/.test(value)) return '/admin'
   const path = value.split(/[?#]/)[0] || ''
@@ -25,6 +37,9 @@ export function safeAdminReturnPath(value: unknown): string {
   }
 }
 
+/**
+ * Constructs an appropriate login redirection object preserving the destination.
+ */
 export function loginRedirectFor(path: string) {
   return isAdminRoute(path.split(/[?#]/)[0] || '/')
     ? { path: '/admin/login', query: { redirect: safeAdminReturnPath(path) } }
@@ -41,6 +56,9 @@ export interface AdminCapabilityFlags {
   canManageCategories?: boolean
 }
 
+/**
+ * Resolves the primary landing route for an administrator based on granted capabilities.
+ */
 export function getFirstAccessibleAdminRoute(capabilities?: AdminCapabilityFlags | null): string {
   if (capabilities?.canViewAdminDashboard) return '/admin/dashboard'
   if (capabilities?.canManageCatalog) return '/admin/catalog'
@@ -51,6 +69,9 @@ export function getFirstAccessibleAdminRoute(capabilities?: AdminCapabilityFlags
   return '/login'
 }
 
+/**
+ * Checks whether the current capability set grants access to a specific admin route.
+ */
 export function canAccessAdminDestination(path: string, capabilities?: AdminCapabilityFlags | null): boolean {
   if (!capabilities) return false
   const norm = normalizeRoutePath(path)

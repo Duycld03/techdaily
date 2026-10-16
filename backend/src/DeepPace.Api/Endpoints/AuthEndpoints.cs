@@ -7,6 +7,7 @@ using Google.Apis.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using DeepPace.Api.Contracts;
 using DeepPace.Api.Http;
@@ -140,6 +141,7 @@ public static class AuthEndpoints
             HttpContext context,
             DeepPaceDbContext db,
             IRefreshTokenService tokenService,
+            ILoggerFactory loggerFactory,
             IConfiguration config,
             CancellationToken ct) =>
         {
@@ -205,7 +207,7 @@ public static class AuthEndpoints
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[GoogleAuth Error] Token validation failed: {ex.Message}");
+                    loggerFactory.CreateLogger("GoogleAuth").LogWarning(ex, "Google token validation failed: {Message}", ex.Message);
                     return new Error(Error.GoogleTokenInvalid.Code, "Invalid Google token: " + ex.Message).ToProblem(StatusCodes.Status400BadRequest);
                 }
             }
