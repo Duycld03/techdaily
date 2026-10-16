@@ -160,6 +160,64 @@ describe('FlashcardDeck.vue', () => {
     expect(wrapper.text()).toContain('Next Question Challenge')
     expect(wrapper.text()).not.toContain('Separation of concerns isolates responsibilities')
   })
+
+  it('renders structured multiple-choice options as HTML list elements (ul, li, strong) on front face', () => {
+    const quizCard: ReviewCard = {
+      ...mockCard,
+      id: 'quiz-card-1',
+      frontMarkdown: 'Which habit strategy is most effective?\n\n- **A.** Intensive 3-day overhaul\n- **B.** 1% daily atomic rule\n- **C.** Complete rewrite\n- **D.** Weekly sprint rush',
+      backMarkdown: '**Correct Option: B. 1% daily atomic rule**\n\nSmall incremental improvements compound exponentially over time without inducing technical debt.'
+    }
+    const wrapper = mount(FlashcardDeck, {
+      props: {
+        card: quizCard,
+        remainingCount: 3
+      }
+    })
+
+    // Renders list structure rather than raw unparsed markdown
+    const ul = wrapper.find('ul')
+    expect(ul.exists()).toBe(true)
+    const listItems = wrapper.findAll('li')
+    expect(listItems.length).toBe(4)
+    expect(listItems[0].find('strong').text()).toBe('A.')
+    expect(listItems[0].text()).toContain('Intensive 3-day overhaul')
+    expect(listItems[1].find('strong').text()).toBe('B.')
+    expect(listItems[1].text()).toContain('1% daily atomic rule')
+
+    // Must not display raw unparsed asterisks
+    expect(wrapper.find('h2').exists()).toBe(false)
+    expect(wrapper.html()).not.toContain('- **A.**')
+  })
+
+  it('renders markdown answer with bold callout and distinct explanation paragraphs on back face', async () => {
+    const quizCard: ReviewCard = {
+      ...mockCard,
+      id: 'quiz-card-2',
+      frontMarkdown: 'Question prompt',
+      backMarkdown: '**Correct Option: B. Raft consensus**\n\nRaft decomposes consensus into leader election and log replication.\n\nThis minimizes cognitive load during incident recovery.'
+    }
+    const wrapper = mount(FlashcardDeck, {
+      props: {
+        card: quizCard,
+        remainingCount: 2
+      }
+    })
+
+    // Flip to back
+    const flipButton = wrapper.findAll('button').find((b) => b.text().includes('review.show_answer'))
+    await flipButton!.trigger('click')
+
+    // Strong tag for correct option
+    const strong = wrapper.find('strong')
+    expect(strong.exists()).toBe(true)
+    expect(strong.text()).toBe('Correct Option: B. Raft consensus')
+
+    // Paragraph tags for explanation
+    const paragraphs = wrapper.findAll('p')
+    expect(paragraphs.length).toBeGreaterThanOrEqual(2)
+    expect(wrapper.html()).not.toContain('**Correct Option:')
+  })
 })
 
 describe('Sm2GradingButtons.vue', () => {

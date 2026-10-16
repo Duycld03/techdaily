@@ -260,10 +260,10 @@ The `/review` route SHALL implement the **Dev-Learning Studio** visual language 
    - The root `/review` page SHALL render with `dark:bg-canvas` (`#09090b` obsidian base) with hairline divider borders (`border-white/[0.06]`).
    - The dual-mode tab switcher (`Review Session` / `Deck Management`) SHALL use refined glass styling consistent with the global studio standard.
 
-2. **Front/Back Card Content Isolation & 3D Flip Perspective:**
-   - The interactive flashcard container SHALL enforce strict front/back content isolation:
-     - **Front Face (Prompt)**: SHALL render solely the question or topic challenge (`card.topicTitle` or `card.frontMarkdown`), category pill (`CategoryBadge`), repetition counter (`Repetition #X`), difficulty level, and SM-2 telemetry indicators (Ease Factor, Interval). The front face SHALL NOT display the answer summary (`card.topicSummary`) or deep-dive markdown (`card.topicDeepDiveMarkdown`).
-     - **Back Face (Answer)**: When flipped (`isFlipped === true`), the back face SHALL reveal the core technical explanation (`card.topicSummary` or `card.backMarkdown`) and technical deep dive with Shiki syntax-highlighted code blocks (`card.topicDeepDiveMarkdown`).
+2. **Front/Back Card Content Isolation & Markdown Rendering:**
+   - The interactive flashcard container (`FlashcardDeck.vue`) SHALL enforce strict front/back content isolation and rich Markdown rendering:
+     - **Front Face (Prompt)**: SHALL render the question prompt or challenge (`card.frontMarkdown`), category pill, repetition counter (`Repetition #X`), difficulty level, and SM-2 telemetry indicators. The front face SHALL NOT display the answer or explanation. Both question text and list options (such as multiple-choice items `- **A.** ...`) SHALL be parsed and rendered as rich HTML via `useMarkdownRenderer` inside a styled prose container (`prose dark:prose-invert max-w-none`) rather than raw unparsed text.
+     - **Back Face (Answer)**: When flipped (`isFlipped === true`), the back face SHALL reveal the core technical explanation and solution (`card.backMarkdown`), parsed and rendered as rich HTML via `useMarkdownRenderer` with code syntax highlighting and prose formatting, preserving paragraph breaks, bold headings (`**Correct Option: ...**`), and code blocks.
    - The card container SHALL support a smooth 3D flip perspective (`perspective: 1000px`, `transform-style: preserve-3d`) or refined animated transition with glassmorphism styling (`.glass-card`, subtle backdrops, and hairline borders `dark:border-white/[0.08]`).
 
 3. **Keyboard Navigation Ergonomics:**
@@ -296,6 +296,18 @@ The `/review` route SHALL implement the **Dev-Learning Studio** visual language 
 - **WHEN** the card is in the face-up state (`isFlipped === false`)
 - **THEN** the card displays the topic question, category badge, and repetition count
 - **AND** the answer summary and deep-dive technical explanations are completely hidden from the viewport.
+
+#### Scenario: Multiple-choice flashcard renders structured options list on front face
+- **GIVEN** an active flashcard created from a quiz mistake with front markdown containing a question and bulleted options `- **A.** ...`, `- **B.** ...`
+- **WHEN** the card is rendered in `FlashcardDeck.vue`
+- **THEN** the markdown renderer parses the content into structured HTML (`<ul>` and `<li>` elements) with bold option indicators
+- **AND** the options render across separate list items rather than collapsing into a single unformatted plain text line.
+
+#### Scenario: Back face renders markdown solution with bold callout and paragraph breaks
+- **GIVEN** an active flashcard with back markdown containing `**Correct Option: B. ...**` and an explanation paragraph
+- **WHEN** the user reveals the back face
+- **THEN** the explanation is parsed with `useMarkdownRenderer`
+- **AND** the correct option displays in bold (`<strong>`) followed by a distinct paragraph break separating the analytical explanation.
 
 #### Scenario: User flips card using keyboard shortcut
 - **GIVEN** an active flashcard is face-up

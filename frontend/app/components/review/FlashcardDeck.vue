@@ -2,10 +2,8 @@
 import { ref, computed, watch } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import {
-  Layers,
   Eye,
   EyeOff,
-  Sparkles,
   BookOpen,
   HelpCircle,
   CheckCircle2,
@@ -83,14 +81,17 @@ const formattedInterval = computed(() => {
   return `${val}d`
 })
 
-const questionText = computed(() => {
-  return props.card.frontMarkdown?.trim() || ''
+const renderedQuestion = computed(() => {
+  const _ = isHighlighterReady.value
+  const content = props.card.frontMarkdown?.trim() || ''
+  return renderMarkdown(content)
 })
 
-const answerText = computed(() => {
-  return props.card.backMarkdown?.trim() || ''
+const renderedAnswer = computed(() => {
+  const _ = isHighlighterReady.value
+  const content = props.card.backMarkdown?.trim() || ''
+  return renderMarkdown(content)
 })
-
 const hasDistinctDeepDive = computed(() => {
   return false
 })
@@ -249,15 +250,16 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
         </div>
 
         <!-- Prompt Heading -->
-        <div class="space-y-2">
+        <div class="space-y-2 max-h-[380px] sm:max-h-[460px] overflow-y-auto pr-1">
           <div class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             <HelpCircle class="w-3.5 h-3.5 text-brand-500" />
             <span>{{ $t('review.question_prompt') }}</span>
           </div>
 
-          <h2 class="text-base sm:text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-relaxed tracking-tight">
-            {{ questionText }}
-          </h2>
+          <div
+            class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-relaxed tracking-tight prose dark:prose-invert max-w-none prose-p:my-1.5 prose-ul:my-2 prose-li:my-0.5"
+            v-html="renderedQuestion"
+          ></div>
         </div>
 
         <!-- Core Concepts Tags -->
@@ -318,11 +320,13 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
           </button>
         </div>
 
-        <!-- Summary -->
-        <p class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-relaxed">
-          {{ answerText }}
-        </p>
-
+        <!-- Summary / Solution -->
+        <div class="space-y-2 max-h-[380px] sm:max-h-[460px] overflow-y-auto pr-1">
+          <div
+            class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-relaxed prose dark:prose-invert max-w-none prose-p:my-1.5 prose-ul:my-2 prose-strong:text-brand-600 dark:prose-strong:text-brand-400"
+            v-html="renderedAnswer"
+          ></div>
+        </div>
         <!-- Technical Mechanics (Deep Dive) -->
         <div
           v-if="hasDistinctDeepDive"
