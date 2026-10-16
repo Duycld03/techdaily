@@ -143,12 +143,12 @@ function handleKeydown(event: KeyboardEvent) {
     if (event.shiftKey) {
       if (document.activeElement === first || !dialogShellRef.value.contains(document.activeElement)) {
         event.preventDefault()
-        last.focus()
+        last?.focus()
       }
     } else {
       if (document.activeElement === last || !dialogShellRef.value.contains(document.activeElement)) {
         event.preventDefault()
-        first.focus()
+        first?.focus()
       }
     }
   }
@@ -177,7 +177,7 @@ watch(
         if (dialogShellRef.value) {
           const focusable = getFocusableElements(dialogShellRef.value)
           if (focusable.length > 0) {
-            focusable[0].focus()
+            focusable[0]?.focus()
           }
         }
       })
