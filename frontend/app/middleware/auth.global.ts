@@ -1,7 +1,7 @@
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 import { useClientAdmission } from '~/composables/useClientAdmission'
-import { isAdminRoute, isAdminLogin, normalizeRoutePath, loginRedirectFor, safeAdminReturnPath } from '~/utils/adminRoutes'
+import { isAdminRoute, isAdminLogin, normalizeRoutePath, loginRedirectFor, safeAdminReturnPath, safeUserReturnPath } from '~/utils/adminRoutes'
 
 export function isJwtExpired(jwt: string | null): boolean {
   if (!jwt) return true
@@ -96,6 +96,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     normalizedPath === '/reset-password'
 
   // Local development / testing exemptions
+  // Public design system showcase exemptions
   const isDevExempt = to.path.startsWith('/showcase')
 
   // Default-Deny: all routes require authentication unless explicitly exempted
@@ -138,12 +139,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // Logged-in users cannot visit guest auth paths like /login
   if (isGuestAuthPath && hasToken) {
-    const redirectTarget =
-      typeof to.query?.redirect === 'string' &&
-      to.query.redirect.startsWith('/') &&
-      !to.query.redirect.startsWith('/login')
-        ? to.query.redirect
-        : '/today'
+    const redirectTarget = safeUserReturnPath(to.query?.redirect, '/today')
     return navigateTo(redirectTarget)
   }
 })

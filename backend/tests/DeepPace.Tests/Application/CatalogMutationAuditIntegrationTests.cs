@@ -2,6 +2,7 @@ using FluentAssertions;
 using FluentValidation;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Catalog.Admin.Hide;
@@ -15,6 +16,7 @@ using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 using DeepPace.Infrastructure.Persistence;
+using DeepPace.Infrastructure.Services;
 using Xunit;
 
 namespace DeepPace.Tests.Application;
@@ -218,6 +220,234 @@ public class CatalogMutationAuditIntegrationTests : IDisposable
         finally
         {
             if (File.Exists(tempFile)) File.Delete(tempFile);
+        }
+    }
+
+    private CatalogDocument CreateSeedDoc(CatalogVisibility visibility = CatalogVisibility.Draft)
+    {
+        var doc = new CatalogDocument
+        {
+            Id = Guid.NewGuid(),
+            Title = "Admin Test Document",
+            Description = "Admin description",
+            CategoryId = CategoryDefaults.BackendRuntimeId,
+            Language = "en",
+            SourceType = SourceType.PdfBook,
+            AttributionText = "Attribution text",
+            Visibility = visibility,
+            ProcessingStatus = ProcessingStatus.Ready,
+            Revision = 1,
+            ConcurrencyVersion = 1,
+            TotalSlices = 2
+        };
+
+        for (int i = 1; i <= 2; i++)
+        {
+            doc.Slices.Add(new CatalogSlice
+            {
+                Id = Guid.NewGuid(),
+                CatalogDocumentId = doc.Id,
+                SliceOrder = i,
+                ChapterTitle = $"Chapter {i}",
+                OriginalTextMarkdown = $"Source text {i}",
+                SummaryMarkdown = $"Summary {i}",
+                KeyTakeaways = new() { $"T{i}" },
+                EstimatedReadMinutes = 4,
+                IsAiFormatted = true
+            });
+        }
+
+        return doc;
+    }
+
+    [Fact]
+    public async Task Publish_StaleRevision_ShouldPersistOneDurableRejectedEvent_AndLeaveDocUnchanged()
+    {
+        var doc = CreateSeedDoc(CatalogVisibility.Draft);
+        doc.Review(_adminUserId);
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+
+        var uow = new AdministrativeUnitOfWork(_db);
+        var handler = new AdminPublishCatalogDocumentHandler(_db, uow);
+
+        var request = new AdminPublishCatalogDocumentRequest(doc.Id, _adminUserId, doc.ConcurrencyVersion + 99, PresentedSessionVersion: 1);
+        var result = await handler.ExecuteAsync(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("Catalog.ConcurrencyConflict");
+
+        var docReread = await _db.CatalogDocuments.FindAsync(doc.Id);
+        docReread!.Visibility.Should().Be(CatalogVisibility.Draft);
+        docReread.PublishedAt.Should().BeNull();
+
+        var audits = await _db.AdminAuditEvents.Where(a => a.TargetId == doc.Id.ToString()).ToListAsync();
+        audits.Should().HaveCount(1);
+        audits[0].Outcome.Should().Be(AdminAuditOutcome.Rejected);
+        audits[0].Action.Should().Be(AdminAuditActions.CatalogPublish);
+        audits[0].ErrorCode.Should().Be("Catalog.ConcurrencyConflict");
+    }
+
+    [Fact]
+    public async Task Publish_UnmetRequirements_ShouldPersistOneDurableRejectedEvent_AndLeaveDocUnchanged()
+    {
+        var doc = CreateSeedDoc(CatalogVisibility.Draft);
+        doc.Slices.Clear();
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+
+        var uow = new AdministrativeUnitOfWork(_db);
+        var handler = new AdminPublishCatalogDocumentHandler(_db, uow);
+
+        var request = new AdminPublishCatalogDocumentRequest(doc.Id, _adminUserId, doc.ConcurrencyVersion, PresentedSessionVersion: 1);
+        var result = await handler.ExecuteAsync(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("Catalog.PublicationIneligible");
+
+        var docReread = await _db.CatalogDocuments.FindAsync(doc.Id);
+        docReread!.Visibility.Should().Be(CatalogVisibility.Draft);
+
+        var audits = await _db.AdminAuditEvents.Where(a => a.TargetId == doc.Id.ToString()).ToListAsync();
+        audits.Should().HaveCount(1);
+        audits[0].Outcome.Should().Be(AdminAuditOutcome.Rejected);
+        audits[0].Action.Should().Be(AdminAuditActions.CatalogPublish);
+        audits[0].ErrorCode.Should().Be("Catalog.PublicationIneligible");
+    }
+
+    [Fact]
+    public async Task Publish_RejectionPersistenceFailure_ShouldReturnUnavailableWithoutSilentFailure()
+    {
+        var doc = CreateSeedDoc(CatalogVisibility.Draft);
+        doc.Slices.Clear();
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+
+        var brokenOptions = new DbContextOptionsBuilder<DeepPaceDbContext>()
+            .UseSqlite("DataSource=file::memory:?cache=shared;Mode=ReadOnly")
+            .Options;
+        var brokenUow = new AdministrativeUnitOfWork(_db, brokenOptions);
+        var handler = new AdminPublishCatalogDocumentHandler(_db, brokenUow);
+
+        var request = new AdminPublishCatalogDocumentRequest(doc.Id, _adminUserId, doc.ConcurrencyVersion, PresentedSessionVersion: 1);
+        var result = await handler.ExecuteAsync(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("AUDIT_PERSISTENCE_UNAVAILABLE");
+
+        var docReread = await _db.CatalogDocuments.FindAsync(doc.Id);
+        docReread!.Visibility.Should().Be(CatalogVisibility.Draft);
+    }
+
+    [Fact]
+    public async Task Hide_StaleRevision_ShouldPersistOneDurableRejectedEvent_AndLeaveDocUnchanged()
+    {
+        var doc = CreateSeedDoc();
+        doc.Publish(_adminUserId);
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+        await _db.Entry(doc).ReloadAsync();
+        var handler = new AdminHideCatalogDocumentHandler(_db, new AdministrativeUnitOfWork(_db));
+
+        var result = await handler.ExecuteAsync(new AdminHideCatalogDocumentRequest(
+            doc.Id, _adminUserId, doc.ConcurrencyVersion - 1, PresentedSessionVersion: 1));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Catalog.ConcurrencyConflict");
+        result.Error.Message.Should().Be("Document has been modified by another administrator. Please reload.");
+        _db.Database.CurrentTransaction.Should().BeNull();
+        await AssertHideDidNotChangeDocumentAsync(doc);
+
+        var audits = await _db.AdminAuditEvents.AsNoTracking()
+            .Where(a => a.TargetId == doc.Id.ToString()).ToListAsync();
+        audits.Should().ContainSingle();
+        audits[0].ActorUserId.Should().Be(_adminUserId);
+        audits[0].Action.Should().Be(AdminAuditActions.CatalogHide);
+        audits[0].TargetType.Should().Be("CatalogDocument");
+        audits[0].Outcome.Should().Be(AdminAuditOutcome.Rejected);
+        audits[0].ErrorCode.Should().Be("Catalog.ConcurrencyConflict");
+    }
+
+    [Fact]
+    public async Task Hide_RejectionPersistenceFailure_ShouldReturnSafeUnavailableWithoutMutationOrHistory()
+    {
+        var doc = CreateSeedDoc();
+        doc.Publish(_adminUserId);
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+        await _db.Entry(doc).ReloadAsync();
+        var auditOptions = new DbContextOptionsBuilder<DeepPaceDbContext>()
+            .UseSqlite(_connection)
+            .AddInterceptors(new FailingRejectionAuditInterceptor())
+            .Options;
+        var handler = new AdminHideCatalogDocumentHandler(
+            _db, new AdministrativeUnitOfWork(_db, auditOptions));
+
+        var result = await handler.ExecuteAsync(new AdminHideCatalogDocumentRequest(
+            doc.Id, _adminUserId, doc.ConcurrencyVersion - 1, PresentedSessionVersion: 1));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("AUDIT_PERSISTENCE_UNAVAILABLE");
+        result.Error.Message.Should().NotContain("secret-provider-detail");
+        _db.Database.CurrentTransaction.Should().BeNull();
+        await AssertHideDidNotChangeDocumentAsync(doc);
+        (await _db.AdminAuditEvents.AsNoTracking().ToListAsync()).Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(false, 1)]
+    [InlineData(true, 2)]
+    public async Task Hide_DeniedOrStaleActor_ShouldNotCreateAttributedRejection(
+        bool removePermission, int presentedSessionVersion)
+    {
+        var actor = await _db.Users.SingleAsync(user => user.Id == _adminUserId);
+        actor.AuthenticationVersion = 2;
+        if (removePermission)
+        {
+            actor.RoleId = RoleDefaults.LearnerRoleId;
+        }
+        await _db.SaveChangesAsync();
+        var doc = CreateSeedDoc();
+        doc.Publish(_adminUserId);
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+        await _db.Entry(doc).ReloadAsync();
+        var handler = new AdminHideCatalogDocumentHandler(_db, new AdministrativeUnitOfWork(_db));
+
+        var result = await handler.ExecuteAsync(new AdminHideCatalogDocumentRequest(
+            doc.Id, _adminUserId, doc.ConcurrencyVersion - 1, presentedSessionVersion));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("AUTH_FORBIDDEN");
+        _db.Database.CurrentTransaction.Should().BeNull();
+        await AssertHideDidNotChangeDocumentAsync(doc);
+        (await _db.AdminAuditEvents.AsNoTracking().ToListAsync()).Should().BeEmpty();
+    }
+
+    private async Task AssertHideDidNotChangeDocumentAsync(CatalogDocument expected)
+    {
+        var persisted = await _db.CatalogDocuments.AsNoTracking().SingleAsync(d => d.Id == expected.Id);
+        persisted.Visibility.Should().Be(CatalogVisibility.Published);
+        persisted.ConcurrencyVersion.Should().Be(expected.ConcurrencyVersion);
+        persisted.Revision.Should().Be(expected.Revision);
+        persisted.HiddenAt.Should().BeNull();
+        persisted.HiddenByUserId.Should().BeNull();
+        persisted.PublishedAt.Should().Be(expected.PublishedAt);
+        persisted.PublishedByUserId.Should().Be(expected.PublishedByUserId);
+    }
+
+    private sealed class FailingRejectionAuditInterceptor : SaveChangesInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context!.ChangeTracker.Entries<AdminAuditEvent>()
+                .Any(entry => entry.Entity.Outcome == AdminAuditOutcome.Rejected))
+            {
+                throw new DbUpdateException("secret-provider-detail");
+            }
+            return ValueTask.FromResult(result);
         }
     }
 

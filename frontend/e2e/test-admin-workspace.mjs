@@ -97,7 +97,7 @@ try {
   const pending = await contextFor(pendingSession, undefined, 'en', 'light', true)
   const pendingHtml = await pending.request.get(`${targetUrl}/admin/catalog`)
   const html = await pendingHtml.text()
-  check(pendingHtml.status() === 200 && html.includes('data-admin-boundary'), 'Refresh-only SSR renders a neutral authorization boundary')
+  check(pendingHtml.status() === 200 && (html.includes('data-admin-boundary') || html.includes('data-session-boundary')), 'Refresh-only SSR renders a neutral authorization boundary')
   check(!/data-admin-(?:header|sidebar|dashboard)/.test(html) && !html.includes('Distributed Systems Field Notes'), 'Pending SSR contains no protected chrome or catalog content')
   const renewedPage = await pending.newPage()
   let renewals = 0

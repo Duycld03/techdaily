@@ -18,6 +18,7 @@ using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 using DeepPace.Infrastructure.Persistence;
+using DeepPace.Infrastructure.Services;
 using Xunit;
 
 namespace DeepPace.Tests.Application;
@@ -27,6 +28,7 @@ public class CatalogAdminHandlersTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly DeepPaceDbContext _db;
     private readonly Guid _adminUserId = Guid.NewGuid();
+    private readonly AdministrativeUnitOfWork _uow;
     private readonly List<string> _tempFilesToCleanup = new();
 
     public CatalogAdminHandlersTests()
@@ -50,6 +52,7 @@ public class CatalogAdminHandlersTests : IDisposable
             AuthenticationVersion = 1
         });
         _db.SaveChanges();
+        _uow = new AdministrativeUnitOfWork(_db);
     }
 
     public void Dispose()
@@ -214,14 +217,14 @@ public class CatalogAdminHandlersTests : IDisposable
     {
         var doc = CreateSeedDoc(visibility: CatalogVisibility.Draft);
         doc.Slices.Clear();
-        var adminId = Guid.NewGuid();
+        var adminId = _adminUserId;
 
         await _db.CatalogDocuments.AddAsync(doc);
         await _db.SaveChangesAsync();
 
-        var handler = new AdminPublishCatalogDocumentHandler(_db);
+        var handler = new AdminPublishCatalogDocumentHandler(_db, _uow);
 
-        var request = new AdminPublishCatalogDocumentRequest(doc.Id, adminId, doc.ConcurrencyVersion);
+        var request = new AdminPublishCatalogDocumentRequest(doc.Id, adminId, doc.ConcurrencyVersion, PresentedSessionVersion: 1);
         var result = await handler.ExecuteAsync(request);
 
         result.IsSuccess.Should().BeFalse();
@@ -233,15 +236,15 @@ public class CatalogAdminHandlersTests : IDisposable
     public async Task Publish_ValidReviewedDoc_ShouldSucceedAndRecordPublishData()
     {
         var doc = CreateSeedDoc(visibility: CatalogVisibility.Draft);
-        var adminId = Guid.NewGuid();
+        var adminId = _adminUserId;
         doc.Review(adminId);
 
         await _db.CatalogDocuments.AddAsync(doc);
         await _db.SaveChangesAsync();
 
-        var handler = new AdminPublishCatalogDocumentHandler(_db);
+        var handler = new AdminPublishCatalogDocumentHandler(_db, _uow);
 
-        var request = new AdminPublishCatalogDocumentRequest(doc.Id, adminId, doc.ConcurrencyVersion);
+        var request = new AdminPublishCatalogDocumentRequest(doc.Id, adminId, doc.ConcurrencyVersion, PresentedSessionVersion: 1);
         var result = await handler.ExecuteAsync(request);
 
         result.IsSuccess.Should().BeTrue();
@@ -254,20 +257,125 @@ public class CatalogAdminHandlersTests : IDisposable
     public async Task Hide_PublishedDoc_ShouldSucceedAndRecordHiddenData()
     {
         var doc = CreateSeedDoc(visibility: CatalogVisibility.Published);
-        var adminId = Guid.NewGuid();
+        var adminId = _adminUserId;
 
         await _db.CatalogDocuments.AddAsync(doc);
         await _db.SaveChangesAsync();
 
-        var handler = new AdminHideCatalogDocumentHandler(_db);
+        var handler = new AdminHideCatalogDocumentHandler(_db, _uow);
 
-        var request = new AdminHideCatalogDocumentRequest(doc.Id, adminId, doc.ConcurrencyVersion);
+        var request = new AdminHideCatalogDocumentRequest(doc.Id, adminId, doc.ConcurrencyVersion, PresentedSessionVersion: 1);
         var result = await handler.ExecuteAsync(request);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Visibility.Should().Be(CatalogVisibility.Hidden);
         result.Value.HiddenByUserId.Should().Be(adminId);
         result.Value.HiddenAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Review_DraftDoc_ShouldSucceedAndRecordReviewData()
+    {
+        var doc = CreateSeedDoc(visibility: CatalogVisibility.Draft);
+        var adminId = _adminUserId;
+
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+
+        var handler = new AdminReviewCatalogHandler(_db, _uow);
+
+        var request = new AdminReviewCatalogRequest(doc.Id, adminId, PresentedSessionVersion: 1);
+        var result = await handler.ExecuteAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.ReviewedByUserId.Should().Be(adminId);
+        result.Value.ReviewedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Publish_WithUnitOfWork_EligibleNonInitialSessionVersion_ShouldSucceed()
+    {
+        var doc = CreateSeedDoc(visibility: CatalogVisibility.Draft);
+        var admin = await _db.Users.FindAsync(_adminUserId);
+        admin!.AuthenticationVersion = 2;
+        await _db.SaveChangesAsync();
+
+        doc.Review(_adminUserId);
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+
+        var uow = new AdministrativeUnitOfWork(_db);
+        var handler = new AdminPublishCatalogDocumentHandler(_db, uow);
+
+        var request = new AdminPublishCatalogDocumentRequest(doc.Id, _adminUserId, doc.ConcurrencyVersion, PresentedSessionVersion: 2);
+        var result = await handler.ExecuteAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Visibility.Should().Be(CatalogVisibility.Published);
+    }
+
+    [Fact]
+    public async Task Publish_WithUnitOfWork_StaleSessionVersion_ShouldFailWithAuthForbidden()
+    {
+        var doc = CreateSeedDoc(visibility: CatalogVisibility.Draft);
+        var admin = await _db.Users.FindAsync(_adminUserId);
+        admin!.AuthenticationVersion = 2;
+        await _db.SaveChangesAsync();
+
+        doc.Review(_adminUserId);
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+
+        var uow = new AdministrativeUnitOfWork(_db);
+        var handler = new AdminPublishCatalogDocumentHandler(_db, uow);
+
+        var request = new AdminPublishCatalogDocumentRequest(doc.Id, _adminUserId, doc.ConcurrencyVersion, PresentedSessionVersion: 1);
+        var result = await handler.ExecuteAsync(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("AUTH_FORBIDDEN");
+    }
+
+    [Fact]
+    public async Task Hide_WithUnitOfWork_StaleSessionVersion_ShouldFailWithAuthForbidden()
+    {
+        var doc = CreateSeedDoc(visibility: CatalogVisibility.Published);
+        var admin = await _db.Users.FindAsync(_adminUserId);
+        admin!.AuthenticationVersion = 2;
+        await _db.SaveChangesAsync();
+
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+
+        var uow = new AdministrativeUnitOfWork(_db);
+        var handler = new AdminHideCatalogDocumentHandler(_db, uow);
+
+        var request = new AdminHideCatalogDocumentRequest(doc.Id, _adminUserId, doc.ConcurrencyVersion, PresentedSessionVersion: 1);
+        var result = await handler.ExecuteAsync(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("AUTH_FORBIDDEN");
+    }
+
+    [Fact]
+    public async Task Review_WithUnitOfWork_StaleSessionVersion_ShouldFailWithAuthForbidden()
+    {
+        var doc = CreateSeedDoc(visibility: CatalogVisibility.Draft);
+        var admin = await _db.Users.FindAsync(_adminUserId);
+        admin!.AuthenticationVersion = 2;
+        await _db.SaveChangesAsync();
+
+        await _db.CatalogDocuments.AddAsync(doc);
+        await _db.SaveChangesAsync();
+
+        var uow = new AdministrativeUnitOfWork(_db);
+        var handler = new AdminReviewCatalogHandler(_db, uow);
+
+        var request = new AdminReviewCatalogRequest(doc.Id, _adminUserId, PresentedSessionVersion: 1);
+        var result = await handler.ExecuteAsync(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Error.Code.Should().Be("AUTH_FORBIDDEN");
     }
 
     [Fact]

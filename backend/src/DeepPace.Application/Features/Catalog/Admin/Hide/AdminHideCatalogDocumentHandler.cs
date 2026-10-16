@@ -10,20 +10,58 @@ namespace DeepPace.Application.Features.Catalog.Admin.Hide;
 public record AdminHideCatalogDocumentRequest(
     Guid Id,
     Guid AdminUserId,
-    int ExpectedConcurrencyVersion);
+    int ExpectedConcurrencyVersion,
+    int PresentedSessionVersion);
 
 public class AdminHideCatalogDocumentHandler : IUseCase<AdminHideCatalogDocumentRequest, AdminCatalogDocumentDto>
 {
     private readonly IDeepPaceDbContext _dbContext;
+    private readonly IAdministrativeUnitOfWork _unitOfWork;
 
-    public AdminHideCatalogDocumentHandler(IDeepPaceDbContext dbContext)
+    public AdminHideCatalogDocumentHandler(
+        IDeepPaceDbContext dbContext,
+        IAdministrativeUnitOfWork unitOfWork)
     {
         _dbContext = dbContext;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result<AdminCatalogDocumentDto>> ExecuteAsync(
         AdminHideCatalogDocumentRequest request,
         CancellationToken cancellationToken = default)
+    {
+        var result = await _unitOfWork.ExecutePrivilegedMutationAsync(
+            request.AdminUserId,
+            request.PresentedSessionVersion,
+            new[] { AdminPermission.ManageCatalog },
+            () => HideInternalAsync(request, cancellationToken),
+            cancellationToken);
+
+        if (result.IsFailure && result.Error.Code == "Catalog.ConcurrencyConflict")
+        {
+            try
+            {
+                var rejectAudit = AdminAuditEvent.Create(
+                    actorUserId: request.AdminUserId,
+                    action: AdminAuditActions.CatalogHide,
+                    targetType: "CatalogDocument",
+                    targetId: request.Id.ToString(),
+                    outcome: AdminAuditOutcome.Rejected,
+                    errorCode: result.Error.Code);
+
+                await _unitOfWork.AppendCleanAuditEventAsync(rejectAudit, cancellationToken);
+            }
+            catch (Exception)
+            {
+                return Error.Custom("AUDIT_PERSISTENCE_UNAVAILABLE", "Hide rejection audit history could not be persisted.");
+            }
+        }
+
+        return result;
+    }
+    private async Task<Result<AdminCatalogDocumentDto>> HideInternalAsync(
+        AdminHideCatalogDocumentRequest request,
+        CancellationToken cancellationToken)
     {
         var doc = await _dbContext.CatalogDocuments
             .Include(d => d.Slices)
@@ -47,18 +85,6 @@ public class AdminHideCatalogDocumentHandler : IUseCase<AdminHideCatalogDocument
 
         if (doc.ConcurrencyVersion != request.ExpectedConcurrencyVersion)
         {
-            if (request.AdminUserId != Guid.Empty)
-            {
-                var rejectAudit = AdminAuditEvent.Create(
-                    actorUserId: request.AdminUserId,
-                    action: AdminAuditActions.CatalogHide,
-                    targetType: "CatalogDocument",
-                    targetId: doc.Id.ToString(),
-                    outcome: AdminAuditOutcome.Rejected,
-                    errorCode: "Catalog.ConcurrencyConflict");
-                await _dbContext.AdminAuditEvents.AddAsync(rejectAudit, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
             return Error.Custom("Catalog.ConcurrencyConflict",
                 "Document has been modified by another administrator. Please reload.");
         }

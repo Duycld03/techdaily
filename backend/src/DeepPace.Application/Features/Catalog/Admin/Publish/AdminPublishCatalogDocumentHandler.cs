@@ -11,16 +11,16 @@ public record AdminPublishCatalogDocumentRequest(
     Guid Id,
     Guid AdminUserId,
     int ExpectedConcurrencyVersion,
-    int PresentedSessionVersion = 1);
+    int PresentedSessionVersion);
 
 public class AdminPublishCatalogDocumentHandler : IUseCase<AdminPublishCatalogDocumentRequest, AdminCatalogDocumentDto>
 {
     private readonly IDeepPaceDbContext _dbContext;
-    private readonly IAdministrativeUnitOfWork? _unitOfWork;
+    private readonly IAdministrativeUnitOfWork _unitOfWork;
 
     public AdminPublishCatalogDocumentHandler(
         IDeepPaceDbContext dbContext,
-        IAdministrativeUnitOfWork? unitOfWork = null)
+        IAdministrativeUnitOfWork unitOfWork)
     {
         _dbContext = dbContext;
         _unitOfWork = unitOfWork;
@@ -30,19 +30,35 @@ public class AdminPublishCatalogDocumentHandler : IUseCase<AdminPublishCatalogDo
         AdminPublishCatalogDocumentRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (_unitOfWork != null && request.AdminUserId != Guid.Empty)
+        var result = await _unitOfWork.ExecutePrivilegedMutationAsync(
+            request.AdminUserId,
+            request.PresentedSessionVersion,
+            new[] { AdminPermission.ManageCatalog },
+            () => PublishInternalAsync(request, cancellationToken),
+            cancellationToken);
+
+        if (result.IsFailure && result.Error.Code is "Catalog.ConcurrencyConflict" or "Catalog.PublicationIneligible")
         {
-            return await _unitOfWork.ExecutePrivilegedMutationAsync(
-                request.AdminUserId,
-                request.PresentedSessionVersion,
-                new[] { AdminPermission.ManageCatalog },
-                () => PublishInternalAsync(request, cancellationToken),
-                cancellationToken);
+            try
+            {
+                var rejectAudit = AdminAuditEvent.Create(
+                    actorUserId: request.AdminUserId,
+                    action: AdminAuditActions.CatalogPublish,
+                    targetType: "CatalogDocument",
+                    targetId: request.Id.ToString(),
+                    outcome: AdminAuditOutcome.Rejected,
+                    errorCode: result.Error.Code);
+
+                await _unitOfWork.AppendCleanAuditEventAsync(rejectAudit, cancellationToken);
+            }
+            catch (Exception)
+            {
+                return Error.Custom("AUDIT_PERSISTENCE_UNAVAILABLE", "Publication rejection audit history could not be persisted.");
+            }
         }
 
-        return await PublishInternalAsync(request, cancellationToken);
+        return result;
     }
-
     private async Task<Result<AdminCatalogDocumentDto>> PublishInternalAsync(
         AdminPublishCatalogDocumentRequest request,
         CancellationToken cancellationToken)
@@ -69,18 +85,6 @@ public class AdminPublishCatalogDocumentHandler : IUseCase<AdminPublishCatalogDo
 
         if (doc.ConcurrencyVersion != request.ExpectedConcurrencyVersion)
         {
-            if (request.AdminUserId != Guid.Empty)
-            {
-                var rejectAudit = AdminAuditEvent.Create(
-                    actorUserId: request.AdminUserId,
-                    action: AdminAuditActions.CatalogPublish,
-                    targetType: "CatalogDocument",
-                    targetId: doc.Id.ToString(),
-                    outcome: AdminAuditOutcome.Rejected,
-                    errorCode: "Catalog.ConcurrencyConflict");
-                await _dbContext.AdminAuditEvents.AddAsync(rejectAudit, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
             return Error.Custom("Catalog.ConcurrencyConflict",
                 "Document has been modified by another administrator. Please reload.");
         }
@@ -88,18 +92,6 @@ public class AdminPublishCatalogDocumentHandler : IUseCase<AdminPublishCatalogDo
         var (isEligible, unmet) = doc.CheckPublicationEligibility();
         if (!isEligible)
         {
-            if (request.AdminUserId != Guid.Empty)
-            {
-                var rejectAudit = AdminAuditEvent.Create(
-                    actorUserId: request.AdminUserId,
-                    action: AdminAuditActions.CatalogPublish,
-                    targetType: "CatalogDocument",
-                    targetId: doc.Id.ToString(),
-                    outcome: AdminAuditOutcome.Rejected,
-                    errorCode: "Catalog.PublicationIneligible");
-                await _dbContext.AdminAuditEvents.AddAsync(rejectAudit, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
             return Error.Custom("Catalog.PublicationIneligible",
                 $"Cannot publish document: {string.Join(" ", unmet)}");
         }

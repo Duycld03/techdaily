@@ -107,6 +107,7 @@ public class PdfIngestionWorkerTests : IDisposable
         services.AddScoped<IPdfExtractor>(_ => fakeExtractor);
         services.AddScoped<IAiMarkdownFormatter>(_ => fakeFormatter);
         services.AddScoped<ILookAheadBufferService>(_ => null!);
+        services.AddScoped<IAuthorizationReadinessService>(_ => new FakeReadinessService());
         var serviceProvider = services.BuildServiceProvider();
 
         var worker = new PdfIngestionWorker(queue, serviceProvider.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
@@ -183,6 +184,157 @@ public class PdfIngestionWorkerTests : IDisposable
         savedDocument.CategoryId.Should().Be(category.Id);
         savedDocument.ProcessingStatus.Should().Be(ProcessingStatus.Ready);
         savedDocument.Visibility.Should().Be(CatalogVisibility.Draft);
+    }
+
+    [Fact]
+    public async Task PdfIngestionWorker_WhenReadinessServiceNotRegistered_ThrowsInvalidOperationException()
+    {
+        var services = new ServiceCollection();
+        services.AddDbContext<DeepPaceDbContext>(o => o.UseSqlite(_connectionString));
+        services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
+        // Note: IAuthorizationReadinessService is deliberately NOT registered
+        var sp = services.BuildServiceProvider();
+        var queue = new PdfIngestionQueue();
+        var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
+
+        var act = async () =>
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await worker.StartAsync(cts.Token);
+            if (worker.ExecuteTask != null)
+            {
+                await worker.ExecuteTask;
+            }
+        };
+        await act.Should().ThrowAsync<InvalidOperationException>("Bypassing readiness without a registered service is prohibited");
+    }
+
+    [Fact]
+    public async Task PdfIngestionWorker_WhenReadinessFails_ThrowsInvalidOperationExceptionAndStopsStartup()
+    {
+        var services = new ServiceCollection();
+        services.AddDbContext<DeepPaceDbContext>(o => o.UseSqlite(_connectionString));
+        services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
+        var unreadyStatus = new AuthorizationReadinessStatus(IsReady: false, IsDatabaseConnected: true, HasRequiredSchemaAndRoles: false, IsInitialized: false, FailureReason: "Admin role protected permissions do not match");
+        services.AddScoped<IAuthorizationReadinessService>(_ => new FakeReadinessService(unreadyStatus));
+        var sp = services.BuildServiceProvider();
+        var queue = new PdfIngestionQueue();
+        var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
+
+        var act = async () =>
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await worker.StartAsync(cts.Token);
+            if (worker.ExecuteTask != null)
+            {
+                await worker.ExecuteTask;
+            }
+        };
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.WithMessage("*required authorization schema or seeds not ready*");
+    }
+
+    [Fact]
+    public async Task PdfIngestionWorker_WhenSchemaAwaitingInitialization_PermitsLearnerProcessing()
+    {
+        var services = new ServiceCollection();
+        services.AddDbContext<DeepPaceDbContext>(o => o.UseSqlite(_connectionString));
+        services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
+        // Valid schema awaiting initialization: IsReady = true, HasRequiredSchemaAndRoles = true, IsInitialized = false
+        var awaitingInitStatus = new AuthorizationReadinessStatus(IsReady: true, IsDatabaseConnected: true, HasRequiredSchemaAndRoles: true, IsInitialized: false, FailureReason: null);
+        services.AddScoped<IAuthorizationReadinessService>(_ => new FakeReadinessService(awaitingInitStatus));
+        var sp = services.BuildServiceProvider();
+        var queue = new PdfIngestionQueue();
+        var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        // Should start cleanly without throwing
+        await worker.StartAsync(cts.Token);
+        await worker.StopAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task PdfIngestionWorker_StartupRecovery_PreservesQueuedAttemptsAndMarksRunningInterrupted()
+    {
+        var options = new DbContextOptionsBuilder<DeepPaceDbContext>().UseSqlite(_connectionString).Options;
+        var queuedAttemptId = Guid.NewGuid();
+        var runningAttemptId = Guid.NewGuid();
+
+        using (var setupDb = new DeepPaceDbContext(options))
+        {
+            var category = DocumentCategory.Create("rec-cat-" + Guid.NewGuid().ToString("N")[..6], "Recovery Cat", "DanhMuc");
+            setupDb.DocumentCategories.Add(category);
+
+            var queuedAttempt = IngestionAttempt.CreateQueued(IngestionTargetScope.Personal, Guid.NewGuid(), IngestionAttemptOrigin.UserUpload, "req-queued", 1);
+            var runningAttempt = IngestionAttempt.CreateQueued(IngestionTargetScope.Personal, Guid.NewGuid(), IngestionAttemptOrigin.UserUpload, "req-running", 1);
+            runningAttempt.Claim("token-claim", DateTimeOffset.UtcNow.AddMinutes(5), DateTimeOffset.UtcNow);
+            queuedAttemptId = queuedAttempt.Id;
+            runningAttemptId = runningAttempt.Id;
+
+            setupDb.IngestionAttempts.AddRange(queuedAttempt, runningAttempt);
+            await setupDb.SaveChangesAsync();
+        }
+
+        var services = new ServiceCollection();
+        services.AddDbContext<DeepPaceDbContext>(o => o.UseSqlite(_connectionString));
+        services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
+        services.AddScoped<IAuthorizationReadinessService>(_ => new FakeReadinessService());
+        var sp = services.BuildServiceProvider();
+        var queue = new PdfIngestionQueue();
+        var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await worker.StartAsync(cts.Token);
+
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (DateTime.UtcNow < deadline)
+        {
+            using var checkDb = new DeepPaceDbContext(options);
+            var att = await checkDb.IngestionAttempts.FindAsync(runningAttemptId);
+            if (att?.State == IngestionAttemptState.Interrupted) break;
+            await Task.Delay(50);
+        }
+
+        await worker.StopAsync(CancellationToken.None);
+        using (var verifyDb = new DeepPaceDbContext(options))
+        {
+            var queued = await verifyDb.IngestionAttempts.FindAsync(queuedAttemptId);
+            queued!.State.Should().Be(IngestionAttemptState.Queued, "Queued attempt must be preserved across restart");
+
+            var running = await verifyDb.IngestionAttempts.FindAsync(runningAttemptId);
+            running!.State.Should().Be(IngestionAttemptState.Interrupted, "Running attempt must be marked Interrupted on startup recovery");
+        }
+    }
+
+    [Fact]
+    public async Task PdfIngestionWorker_WhenShutdownCancelled_StopsNormally()
+    {
+        var services = new ServiceCollection();
+        services.AddDbContext<DeepPaceDbContext>(o => o.UseSqlite(_connectionString));
+        services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
+        services.AddScoped<IAuthorizationReadinessService>(_ => new FakeReadinessService());
+        var sp = services.BuildServiceProvider();
+        var queue = new PdfIngestionQueue();
+        var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
+
+        using var cts = new CancellationTokenSource();
+        var startTask = worker.StartAsync(cts.Token);
+        cts.Cancel();
+        await worker.StopAsync(CancellationToken.None);
+    }
+
+    private class FakeReadinessService : IAuthorizationReadinessService
+    {
+        private readonly AuthorizationReadinessStatus _status;
+        public FakeReadinessService(AuthorizationReadinessStatus? status = null)
+        {
+            _status = status ?? new AuthorizationReadinessStatus(true, true, true, false, null);
+        }
+
+        public Task<AuthorizationReadinessStatus> GetReadinessAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_status);
+        }
     }
 
     private class FakePdfExtractor : IPdfExtractor

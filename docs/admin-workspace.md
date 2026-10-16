@@ -13,11 +13,11 @@ DeepPace defines supported permission keys in code, not user-defined permissions
 - `ReadAudit`: Read immutable administrative audit event history.
 - `ManageDocumentOperations`: Inspect ingestion queues, retry processing, and replace document sources.
 - `ManageRoles`: Assign roles to user accounts (enforced in conjunction with `ManageAccounts`).
+- `ManageCategories`: Manage document taxonomy categories (create, update, delete, view).
 
 Every account has exactly one persistent role enforced by foreign key (`Users.RoleId -> Roles.Id`). DeepPace seeds two system-protected roles:
 1. `Learner` (`20000000-0000-4000-8000-000000000001`, key `learner`): Default role for all registered and OAuth-provisioned users, with zero administrative grants.
-2. `Admin` (`20000000-0000-4000-8000-000000000002`, key `admin`): Protected administrator role with all six administrative permissions.
-
+2. `Admin` (`20000000-0000-4000-8000-000000000002`, key `admin`): Protected administrator role with all seven administrative permissions (`ViewAdminDashboard`, `ManageCatalog`, `ManageAccounts`, `ReadAudit`, `ManageDocumentOperations`, `ManageRoles`, `ManageCategories`).
 ### Absence of Role / Grant Editor
 DeepPace intentionally does NOT provide a dynamic role-creation or arbitrary permission-grant editor. System roles and their supported permissions are immutable database-backed definitions defined by the schema and migrations. Administrators cannot invent new permissions, modify existing role grant sets, or create bespoke custom roles; account administration only permits assigning accounts to bounded, existing database roles.
 
@@ -39,10 +39,17 @@ Initialization behavior:
 - Generates zero user-attributed audit entries (initialization is operational evidence, not user action).
 - Refuses subsequent or repeated initialization runs (`AUTHORIZATION_ALREADY_INITIALIZED`).
 
-### 2. Readiness Gating
-- If role schema or protected seed roles/permissions are missing, `/health` and API readiness return `503 Service Unavailable` with Problem Details, preventing work admission.
-- If schema is ready but operator initialization has not yet occurred, real Learner registration and sign-in remain fully available, while capability discovery (`/api/v1/catalog/capabilities`) and privileged administration APIs (`/api/v1/admin/*`) return `503 Service Unavailable`.
-
+### 2. Readiness Gating & 401/403/503 Precedence
+- **Required Protected-Grant Baseline**: Authorization readiness requires an exact-case match against the baseline set of all seven protected grants (`RoleDefaults.ProtectedAdminGrants`), not a coarse grant count. If any grant is missing or corrupted, if `Learner` holds any permissions, or if receipt lookup encounters a database error, required readiness fails.
+- **Host Startup Failure (F03, F08, F09)**: When required readiness fails on startup, the application logs a critical error and halts with a non-zero exit code (`1`). It does not run HTTP listener or worker loops, preventing a "zombie" host where endpoints are reachable but ingestion consumers are dead.
+- **Uninitialized Schema (Awaiting One-Time Initialization)**: When required schema and roles are intact but `AuthorizationInitializations` receipt is absent, the host starts normally:
+  - **Real Learners**: Registration, sign-in, profile, and learning workflows operate without interruption.
+  - **Administrative Endpoints (`/api/v1/admin/*`, `/api/v1/catalog/capabilities`)**: Evaluated with strict 401/403/503 precedence:
+    1. **Anonymous / Stale Requests**: Fail authentication first, returning `401 Unauthorized` with `Cache-Control: no-store`.
+    2. **Authenticated Learners (Uninitialized)**: Return `503 Service Unavailable` with `Cache-Control: no-store` and ProblemDetails (`Privileged authorization has not been initialized.`). This check runs between authentication and grant authorization, preventing grant policies from masking pending initialization with a misleading `403 Forbidden`.
+    3. **Authenticated Learners (Initialized)**: Once initialized, grant policy evaluation runs; lacking administrative permissions yields `403 Forbidden` with `Cache-Control: no-store`.
+- **Public Request & JWT Contracts**: Public request structures and JWT contracts remain unchanged; bearer tokens require valid user identity and matching `session_version`.
+- **Safe Public Readiness Failures**: Administrative `503` responses and public `/health` failures expose only stable availability feedback and coarse readiness state. Provider/schema diagnostics remain in structured server logs, never response bodies.
 ### 3. Startup Identity Hardening
 - Production startup no longer creates default accounts or fallbacks (e.g. legacy `e2e_prod_agent@deeppace.local`).
 - Any needed QA identity provisioning is confined to explicit isolated test fixtures.
@@ -88,34 +95,43 @@ Authorized administrators with `AccountAdmin` permission manage user identity ac
   - `avatarUrl`: optional avatar URL.
   - `status`: `Active` or `Suspended`.
   - `createdAt`: account creation timestamp (ISO UTC).
+  - `role`: authoritative `RoleDescriptorDto` (`id`, `key`, `nameEn`, `nameVi`) loaded directly from the database; never falls back to a synthetic or fabricated Learner role. Missing or unjoined roles return an availability error rather than masked defaults.
 - `AdminAccountDetailDto`:
-  - Same identity fields plus `preferredLocale`, `adminControlVersion`, `hasPassword` (boolean), `hasGoogleAuth` (boolean), and latest suspension metadata (`suspendedByUserId`, `suspendedAt`, `suspensionReason`).
+  - Same identity fields plus `role` (`RoleDescriptorDto`), `preferredLocale`, `adminControlVersion`, `hasPassword` (boolean), `hasGoogleAuth` (boolean), and latest suspension metadata (`suspendedByUserId`, `suspendedAt`, `suspensionReason`).
   - Explicitly excludes password hashes, OAuth subject tokens, and personal reading notes/quizzes.
 - `AdminAccountActionRequest`:
   - `reason`: operator-entered reason (required, trimmed, 1-500 characters, no credential/token payloads).
   - `expectedVersion`: optimistic concurrency version (`AdminControlVersion`).
 
 ### Account Mutations
-- `POST /api/v1/admin/users/{id}/suspend`: Transitions account to `Suspended`, revokes all active refresh tokens, advances `AuthenticationVersion` and `AdminControlVersion`, and commits an append-only `AdminAuditEvent`.
-- `POST /api/v1/admin/users/{id}/reactivate`: Transitions account to `Active`, advances `AdminControlVersion`, and commits an audit event. Does NOT revive previously revoked sessions; fresh sign-in is required.
-- `POST /api/v1/admin/users/{id}/revoke-sessions`: Revokes all active refresh tokens and advances `AuthenticationVersion` and `AdminControlVersion`. Deliberate self sign-out is permitted.
+- `POST /api/v1/admin/users/{id}/suspend`: Transitions account to `Suspended`, revokes all active refresh tokens, advances `AuthenticationVersion` and `AdminControlVersion`, and commits an append-only `AdminAuditEvent`. Preserves authoritative target role descriptor in response.
+- `POST /api/v1/admin/users/{id}/reactivate`: Transitions account to `Active`, advances `AdminControlVersion`, and commits an audit event. Does NOT revive previously revoked sessions; fresh sign-in is required. Preserves authoritative target role descriptor in response.
+- `POST /api/v1/admin/users/{id}/revoke-sessions`: Revokes all active refresh tokens and advances `AuthenticationVersion` and `AdminControlVersion`. Deliberate self sign-out is permitted. Preserves authoritative target role descriptor in response.
 - `PUT /api/v1/admin/users/{id}/role`: Assigns a database-backed role to an account (`AdminAssignRoleActionRequest`). Enforces the conjunctive `RoleAdmin` policy requiring BOTH `ManageAccounts` AND `ManageRoles` grants simultaneously. Advances `AdminControlVersion` and `AuthenticationVersion`, atomically revoking all active refresh token families for the target user across all devices to force immediate sign-out. Commits an atomic `User.AssignRole` audit record.
+  - **Suspended Admin Role Changes**: The last-active administrator protection (`ACCOUNT_LAST_ADMIN_PROTECTED`) strictly applies only to the removal or demotion of an `Active` administrator. Reassigning the role of an already-`Suspended` administrator succeeds without violating minimum-active-admin constraints, preserving all suspension metadata (`suspendedAt`, `suspendedByUserId`, `suspensionReason`), advancing account/session versions, and revoking old refresh token families.
+  - **Evaluation Precedence**: Unchanged role assignment (`ACCOUNT_ROLE_UNCHANGED`) is evaluated before evaluating minimum active administrator counts.
 
 ### Role Listing & Assignment Boundary
 - `GET /api/v1/admin/roles`: Paginated directory of system roles and supported permissions for role assignment (`AdminGetRolesRequest` / `AdminRoleOptionDto`). Enforces `RoleAdmin` policy (requires both `ManageAccounts` and `ManageRoles`) and rate-limited to 120 reads/minute per user (`AdminRolesReadPolicy`). An administrator with `ManageRoles` alone cannot access `/admin/users` or retrieve role options.
 - All-device session revocation: changing a user's role advances `AuthenticationVersion` and revokes all refresh token families. Any existing bearer token for that user fails validation against the fresh version check, requiring the user to sign in again to obtain credentials with the updated role.
+- **Producer-Shaped Permission Explanations (F13, F14)**: `AdminRoleModal` consumes canonical `permissionKeys` from role option descriptors directly, displaying localized permission explanation badges (including Category permissions) and descriptions without consumer-side wire aliases or empty block collisions. Role discovery in `useAdminUsersStore` maintains dedicated loading and generation tracking independent of account directory pagination.
+- **Retained Conflict Drafts & Matching Reload (F12, F14)**: When a 409 Concurrency Conflict occurs (`ACCOUNT_CONCURRENCY_CONFLICT`), the modal surfaces an explicit warning banner and a "Reload Account" (`admin.users.roleConflictReload`) button. Clicking reload reloads target user state while preserving draft justification reason and selected role inputs, clearing the conflict gate only upon matching non-null reload.
 ### Administrative Safeguards & Error Codes
 - `ACCOUNT_SELF_SUSPENSION_BLOCKED` (409): An administrator cannot suspend their own account.
 - `ACCOUNT_SELF_ROLE_CHANGE_BLOCKED` (409): An administrator cannot change their own role.
-- `ACCOUNT_LAST_ADMIN_PROTECTED` (409): Demotion or suspension cannot leave zero active configured administrators.
+- `ACCOUNT_LAST_ADMIN_PROTECTED` (409): Demotion or suspension cannot leave zero active configured administrators. Does not block modifying accounts that are already suspended.
 - `ACCOUNT_ROLE_UNCHANGED` (409): Target user already has the specified role.
 - `ACCOUNT_CONCURRENCY_CONFLICT` (409): Account was modified by another operator; reload required.
 - `Account.InvalidTransition` (409): Transition invalid (e.g. suspending an already suspended account).
-- `Account.ReasonRequired` (400) / `Account.ReasonTooLong` (400): Reason validation failure.
+- `Account.ReasonRequired` (400) / `Account.ReasonTooLong` (400) / `Account.InvalidReason` (400): Reason validation failure (blank, overlong >500 chars, or containing sensitive credential/token patterns).
+- `Validation.ExpectedVersionInvalid` (400): Expected version must be a positive integer.
 - `Role.InvalidId` (400): Role ID cannot be empty.
 - `Account.NotFound` (404): Account does not exist or is soft-deleted.
 - `Role.NotFound` (404): The specified role does not exist or is deleted.
+- `Account.RoleUnavailable` (500/503): The target account's assigned role is unavailable or corrupted in the database.
 - `AUTH_ACCOUNT_SUSPENDED` (403): Suspended account attempting sign-in.
+- `AUTH_FORBIDDEN` (403): Unadmitted actor (inactive account, stale session token version, or missing required permission grants).
+- `AUDIT_PERSISTENCE_UNAVAILABLE` (503): Administrative audit history could not be committed.
 - `AUTHORIZATION_UNAVAILABLE` (503): Privileged authority or database is temporarily unavailable.
 - `Too Many Requests` (429): Exceeded named per-user limit with `Retry-After: 60`.
 ## Administration Audit Log
@@ -128,25 +144,29 @@ Events contain:
 - `occurredAt`: server UTC timestamp.
 - `actorUserId`: authenticated administrator identifier.
 - `actorEmail`: looked up dynamically from current identity; remains inspectable by historical ID if user is later renamed or soft-deleted.
-- `action`: typed action identifier (e.g. `User.Suspend`, `User.Reactivate`, `User.RevokeSessions`, `Catalog.UploadPdf`, `Catalog.ImportUrl`, `Catalog.UpdateMetadata`, `Catalog.Prepare`, `Catalog.Review`, `Catalog.Publish`, `Catalog.Hide`, `Catalog.DispatchFailed`).
-- `targetType`: entity type (`User`, `CatalogDocument`).
+- `action`: typed action identifier (e.g. `User.Suspend`, `User.Reactivate`, `User.RevokeSessions`, `User.AssignRole`, `Catalog.UploadPdf`, `Catalog.ImportUrl`, `Catalog.UpdateMetadata`, `Catalog.Prepare`, `Catalog.Review`, `Catalog.Publish`, `Catalog.Hide`, `Catalog.DispatchFailed`).
+- `targetType`: entity type (`User`, `CatalogDocument`, `Category`).
 - `targetId`: entity identifier.
 - `outcome`: `Succeeded`, `Accepted`, `Rejected`, `Failed`.
-- `reason`: bounded operator reason (trimmed, max 500 chars).
+- `reason`: bounded operator reason (trimmed, max 500 chars). Omitted (null) on rejections involving sensitive or excessive inputs.
 - `errorCode`: safe machine-readable error code on rejected/failed events.
 - `correlationId`: HTTP trace or job correlation identifier.
 - `changedFields`: list of modified property names.
 - `statePayload`: approved state dictionary (e.g. `Status`, `AuthenticationVersion`, `AdminControlVersion`, `Visibility`, `ProcessingGeneration`).
 
-### Outcome Semantics
+### Outcome Semantics & Eligible Rejection Isolation
 - `Succeeded`: Synchronous state transition completed and committed.
 - `Accepted`: Asynchronous processing command (such as catalog extraction/preparation) was accepted and enqueued. This does NOT assert that extraction or AI processing has finished.
 - `Rejected`: Authorized command was rejected by validation, protection, or concurrency rules. No entity mutation was committed.
+  - **Actor Admission Barrier**: Rejection logging requires successful actor admission (active administrator, current presented session version, required permission grants). Unadmitted attempts and non-existent targets persist zero audit records.
+  - **Isolated Clean Persistence**: Failed command transactions are completely rolled back and change tracking is discarded before eligible rejections are appended in an isolated, clean persistence context.
+  - **Sanitized Metadata**: Invalid request bodies, overlong reasons, and sensitive inputs are never copied or truncated into history; the `reason` field is omitted on such rejections.
+  - **Fail-Safe Persistence**: If rejection audit persistence fails, the operation safely returns `AUDIT_PERSISTENCE_UNAVAILABLE` (503) rather than failing silently or inventing unpersisted state.
 - `Failed`: Infrastructure dispatch or execution failure (e.g., worker queue failure after acceptance commit).
 
 ## Capability Policies & Route Admission
 - `GET /api/v1/admin/capabilities`: Authenticated discovery endpoint returning:
-  `{ canManageCatalog, canManageAccounts, canReadAudit, canManageDocumentOperations, canViewAdminDashboard, canManageRoles }`
+  `{ canManageCatalog, canManageAccounts, canReadAudit, canManageDocumentOperations, canViewAdminDashboard, canManageRoles, canManageCategories }`
   with `Cache-Control: no-store`.
 - Policies:
   - `ViewAdminDashboard`: Requires `canViewAdminDashboard`.
@@ -155,6 +175,9 @@ Events contain:
   - `AuditRead`: Requires `canReadAudit`.
   - `DocumentOperationsAdmin`: Requires `canManageDocumentOperations`.
   - `RoleAdmin`: Conjunction requiring BOTH `canManageAccounts` AND `canManageRoles`.
+  - `CategoryAdmin`: Requires `canManageCategories`.
+- **Contextual Returns (F15)**: Validated return URL pathnames preserve safe query parameters (e.g. `?search=architecture`) and hash fragments (`#category-systems`) upon successful administrator authentication or already-authenticated login entry. Unpermitted destinations fall back safely to the first accessible administrative route without loops or context loss.
+- **Destination-Specific Recovery & Outlet Gating (F11)**: The committed admin outlet in `app.vue` is reactively gated by current-session destination permission (`adminAccess.canAccessDestination(route.path)`). When capabilities return transient 503, `AdminAuthorizationBoundary` displays a neutral recovery view with a localized "Try again" ("Thử lại") button. Permitted recovery restores access to the requested workspace without full-page reloads or loops. Unpermitted access denies cleanly.
 - Rate Limiting:
   - `AdminRolesReadPolicy`: 120 requests/minute per administrator.
   - `AdminRolesWritePolicy`: 30 requests/minute per administrator.
@@ -166,24 +189,48 @@ Events contain:
   - A database outage or missing receipt returns 503 with problem details, preserving client credentials for retry.
 ## Verification
 
-The implementation was checked with the full backend suite (493 passing tests), the full frontend suite (774 passing tests across 88 files), and a production Nuxt build. Regression coverage includes independent aggregate scopes, authorization, bounded and sanitized probes, area-aware session expiry, account replacement, permission revocation, single-flight refresh, hydration boundaries and shell routing.
+The latest pre-push verification passed all 899 backend tests with no skips against an isolated, migrated PostgreSQL database, all 1008 frontend tests across 104 files, and the production Nuxt build. Executable-line coverage across modified non-generated backend production files was 82.75% (2874/3473 lines). The actual `Program` is exercised through `WebApplicationFactory<Program>` rather than a copied middleware pipeline, including initialization, current-session admission, required-grant startup refusal, and safe administrative/public-health failures.
+
+Before running backend tests, set `TEST_POSTGRES_CONNECTION` to an isolated, migrated PostgreSQL database with `pgvector` installed before test connections open. The actual-host fixture also requires that test role to create/drop private databases and install the extension. Missing configuration fails clearly; connection strings are not included in fixture errors. Do not point this setting at production.
+The backend CI service installs `vector` before launching the test runner, so a datasource cannot cache PostgreSQL type information before the extension exists. This preparation changes only the disposable CI database, not deployment schema or production authority.
+
+Frontend lint currently passes with zero errors and 214 warnings. `npm run typecheck` still fails on existing application diagnostics present in `HEAD`; it is not a passing gate and is not replaced by the successful build. Existing transitive `System.Security.Cryptography.Pkcs` 10.0.0 advisories also remain outside this authorization change.
 
 Commands from the repository root:
 
 ```sh
-dotnet test backend/tests/DeepPace.Tests/DeepPace.Tests.csproj --no-restore --verbosity minimal
+dotnet test backend/DeepPace.sln --configuration Release --no-restore --verbosity minimal --collect:"XPlat Code Coverage"
 cd frontend
 npm test
 NUXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5001 API_INTERNAL_URL=http://127.0.0.1:5001 npm run build
 ```
 
-`frontend/e2e/test-admin-workspace.mjs` uses real API login responses and refresh cookies, never fabricated browser identities. Run it against an isolated, migrated QA database containing active administrator and ordinary accounts plus a published catalog title named `Distributed Systems Field Notes`. Configure `CatalogAdministration__UserIds__0` for that administrator. Supply `ADMIN_QA_EMAIL`, `ADMIN_QA_PASSWORD`, `LEARNER_QA_EMAIL` and `LEARNER_QA_PASSWORD` through the environment; the administrator pair can also come from the gitignored `.env` E2E entries. An optional `ADMIN_QA_ACCOUNTS_FILE` is a private QA fixture file with `ordinaryEmail` and `ordinaryPassword` fields. Never commit credentials or browser storage states.
+`frontend/e2e/test-admin-workspace.mjs` uses real API login responses and refresh cookies, never fabricated browser identities. Run it against an isolated, migrated QA database containing active administrator and ordinary accounts plus a published catalog title named `Distributed Systems Field Notes`. Initialize the QA database authority using the one-time operator initialization command:
+```sh
+dotnet run --project backend/src/DeepPace.Api/DeepPace.Api.csproj -- authorization initialize --admin-user-id <admin_user_uuid>
+```
+Supply `ADMIN_QA_EMAIL`, `ADMIN_QA_PASSWORD`, `LEARNER_QA_EMAIL` and `LEARNER_QA_PASSWORD` through the environment; the administrator pair can also come from the gitignored `.env` E2E entries. An optional `ADMIN_QA_ACCOUNTS_FILE` is a private QA fixture file with `ordinaryEmail` and `ordinaryPassword` fields. Configuration-based allowlists (`CatalogAdministration__UserIds__*`) are completely obsolete and ignored. Never commit credentials or browser storage states.
 
 ```sh
 TARGET_URL=http://127.0.0.1:3001 API_URL=http://127.0.0.1:5001 node e2e/test-admin-workspace.mjs
 ```
 
 The browser suite passed 149 assertions and captured 39 screenshots. It covers real sign-in, regular-account denial, account replacement, remember-me cookies, SSR admission, refresh-only hydration, unknown administrator paths, direct API 401/403 rejection, catalog navigation, learning switch and shared logout. It simulates network/permission failures with Playwright response interception while retaining authentic sessions. The explicit health-probe button contacts the configured AI services once; loading the dashboard does not. A controlled browser clock verifies stale observations. Screenshots cover 1440×900 and 390×844 in English/Vietnamese and light/dark, including drawer keyboard focus, retries, denial and service states. Images and the assertion report are written to gitignored `frontend/e2e/screenshots/admin-workspace/`, inspected directly and presented with the implementation report.
+
+### Automated Headless Chromium Role Authorization Verification
+To verify the complete matrix of role authorization boundaries, contextual returns, transient recovery, and role modal conflict workflows:
+This suite requires all four `ADMIN_QA_EMAIL`, `ADMIN_QA_PASSWORD`, `LEARNER_QA_EMAIL` and `LEARNER_QA_PASSWORD` environment variables. It has no embedded credentials or fallback identities and fails before authentication when any value is absent.
+```sh
+node frontend/e2e/verify-role-authorization-boundaries.mjs
+```
+The suite executes 31 assertions across 5 core journeys with real API tokens (`POST /api/v1/auth/login`) and captures 10 visual screenshots in `frontend/e2e/screenshots/role-authorization/`:
+1. **Contextual Returns (F15)**: Authenticated administrator accessing `/admin/login?redirect=...` preserves query parameters (`?search=architecture`) and hash fragment (`#category-systems`) upon entry to `/admin/catalog`.
+2. **Boundary Unavailable & Retry (F11, F12)**: Transient 503 capabilities render the neutral boundary with localized "Try again" ("Thử lại") button; clicking retry recovers into the authorized catalog shell.
+3. **Producer-Shaped Permission Explanations (F13, F14)**: Role assignment modal displays localized permission tags (`ManageCategories`, etc.) from canonical `permissionKeys` on both Desktop (`1440x900`) and Mobile (`390x844`) in English and Vietnamese with verified body typography, zero clipping, and button collision safety.
+4. **Role Conflict & Draft Preservation (F12, F14)**: 409 Conflict triggers warning banner with "Reload Account" ("Tải lại tài khoản") button; reload updates version while preserving draft justification text. A completion from a closed/reopened or replaced confirmation cannot change the current error, conflict gate or loading state. Only a matching accepted reload permits deliberate resubmission; actual close restores the initiating trigger without stealing focus on closed-dialog account selection.
+5. **Destination Denial (F11)**: Unauthenticated or ordinary learner account is safely denied without privileged chrome exposure.
+
+The pre-push browser check used authentic local QA sessions against the production frontend build at 1440×900 and 390×844 in English and Vietnamese. It exercised an intercepted conflict, a deferred superseded `503`, same-target close/reopen, retained drafts, a real matching account reload, and keyboard-close focus restoration. Controlled error interception sent no real role mutations. These checks supplement the component regressions; they do not claim a complete accessibility or production-deployment audit.
 
 Before archive, `openspec validate add-admin-workspace-dashboard --strict` passed. The four capability deltas were merged into the main specifications and all 27 main specs passed `openspec validate --specs`. The complete planning artifacts and 19 finished tasks are archived at `openspec/changes/archive/2026-10-15-add-admin-workspace-dashboard/`. The catalog-auth prerequisite is represented in the main specification, with its previous inline denial replaced by administrator-login redirection.
 

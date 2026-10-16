@@ -96,6 +96,11 @@ public static class AuthEndpoints
                 return Error.InvalidCredentials.ToProblem(StatusCodes.Status400BadRequest);
             }
 
+            if (user.Role == null)
+            {
+                return Error.Custom("Role.Unavailable", "Account role is unavailable.").ToProblem(StatusCodes.Status503ServiceUnavailable);
+            }
+
             if (user.Status == DeepPace.Domain.Enums.AccountStatus.Suspended)
             {
                 return Error.Custom("AUTH_ACCOUNT_SUSPENDED", "Account is suspended.").ToProblem(StatusCodes.Status403Forbidden);
@@ -218,7 +223,7 @@ public static class AuthEndpoints
             }
             if (user == null)
             {
-                var defaultRole = await db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == RoleDefaults.LearnerRoleId && !r.IsDeleted, ct);
+                var defaultRole = await db.Roles.FirstOrDefaultAsync(r => r.Id == RoleDefaults.LearnerRoleId && !r.IsDeleted, ct);
                 if (defaultRole == null)
                 {
                     return Error.Custom("Role.DefaultMissing", "System default role is unavailable.").ToProblem(StatusCodes.Status503ServiceUnavailable);
@@ -233,7 +238,8 @@ public static class AuthEndpoints
                     PreferredLocale = "vi",
                     TargetRole = "Deep Work & Focus Practitioner",
                     DailyGoalMinutes = 10,
-                    RoleId = RoleDefaults.LearnerRoleId
+                    RoleId = RoleDefaults.LearnerRoleId,
+                    Role = defaultRole
                 };
                 await db.Users.AddAsync(user);
 
@@ -275,6 +281,15 @@ public static class AuthEndpoints
                 {
                     user.UpdatedAt = DateTime.UtcNow;
                     await db.SaveChangesAsync();
+                }
+            }
+
+            if (user.Role == null)
+            {
+                user.Role = await db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == user.RoleId && !r.IsDeleted, ct);
+                if (user.Role == null)
+                {
+                    return Error.Custom("Role.Unavailable", "Account role is unavailable.").ToProblem(StatusCodes.Status503ServiceUnavailable);
                 }
             }
 
@@ -322,6 +337,10 @@ public static class AuthEndpoints
             }
             var (newRawToken, newToken, user) = rotateResult.Value;
             SetRefreshTokenCookie(context, newRawToken, newToken.IsPersistent);
+            if (user.Role == null)
+            {
+                return Error.Custom("Role.Unavailable", "Account role is unavailable.").ToProblem(StatusCodes.Status503ServiceUnavailable);
+            }
 
             var newAccessToken = GenerateJwtToken(user, jwtSecret, jwtIssuer, jwtAudience, jwtExpiryMinutes);
             return Results.Ok(new AuthSessionResponse(
@@ -604,6 +623,7 @@ public static class AuthEndpoints
                 new Claim(ClaimTypes.Name, user.Name),
                 new Claim("session_version", user.AuthenticationVersion.ToString())
             }),
+            Expires = DateTime.UtcNow.AddMinutes(expiryMinutes),
             Issuer = issuer,
             Audience = audience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

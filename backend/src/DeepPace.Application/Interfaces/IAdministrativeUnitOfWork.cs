@@ -13,7 +13,8 @@ public interface IAdministrativeUnitOfWork
         int expectedVersion,
         string commandName,
         string? correlationId,
-        Func<User, User, Task<Result<(TResult Result, AdminAuditEvent AuditEvent)>>> command,
+        Func<User, Task<Result>>? preTargetValidation,
+        Func<User, User, Role, Task<Result<(TResult Result, AdminAuditEvent AuditEvent)>>> command,
         CancellationToken ct = default);
 
     Task<Result<TResult>> ExecuteCategoryCommandAsync<TResult>(

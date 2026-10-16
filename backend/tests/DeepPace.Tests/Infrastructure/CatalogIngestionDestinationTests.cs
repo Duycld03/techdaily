@@ -96,6 +96,7 @@ public class CatalogIngestionDestinationTests : IDisposable
         services.AddScoped<IAiMarkdownFormatter>(_ => new FakeAiFormatter());
         services.AddScoped<CatalogDocumentDestination>();
         services.AddScoped<PersonalBookDestination>();
+        services.AddScoped<IAuthorizationReadinessService, FakeReadinessService>();
 
         var sp = services.BuildServiceProvider();
         var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
@@ -164,6 +165,7 @@ public class CatalogIngestionDestinationTests : IDisposable
         services.AddScoped<IPdfExtractor>(_ => new FakePdfExtractor(new PdfExtractionResult("Title", 1, new())));
         services.AddScoped<IAiMarkdownFormatter>(_ => new FakeAiFormatter());
         services.AddScoped<CatalogDocumentDestination>();
+        services.AddScoped<IAuthorizationReadinessService, FakeReadinessService>();
 
         var sp = services.BuildServiceProvider();
         var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
@@ -212,6 +214,7 @@ public class CatalogIngestionDestinationTests : IDisposable
         services.AddScoped<IPdfExtractor>(_ => new FakePdfExtractor(new PdfExtractionResult("Title", 1, new())));
         services.AddScoped<IAiMarkdownFormatter>(_ => new FakeAiFormatter());
         services.AddScoped<CatalogDocumentDestination>();
+        services.AddScoped<IAuthorizationReadinessService, FakeReadinessService>();
 
         var sp = services.BuildServiceProvider();
         var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
@@ -279,6 +282,7 @@ public class CatalogIngestionDestinationTests : IDisposable
         services.AddScoped<IPdfExtractor>(_ => fakeExtractor);
         services.AddScoped<IAiMarkdownFormatter>(_ => failingAi);
         services.AddScoped<CatalogDocumentDestination>();
+        services.AddScoped<IAuthorizationReadinessService, FakeReadinessService>();
 
         var sp = services.BuildServiceProvider();
         var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
@@ -362,6 +366,7 @@ public class CatalogIngestionDestinationTests : IDisposable
         services.AddScoped<IPdfExtractor>(_ => fakeExtractor);
         services.AddScoped<IAiMarkdownFormatter>(_ => new FakeAiFormatter());
         services.AddScoped<CatalogDocumentDestination>();
+        services.AddScoped<IAuthorizationReadinessService, FakeReadinessService>();
 
         var sp = services.BuildServiceProvider();
         var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
@@ -420,6 +425,7 @@ public class CatalogIngestionDestinationTests : IDisposable
         services.AddScoped<IPdfExtractor>(_ => new FakePdfExtractor(new PdfExtractionResult("Title", 1, new())));
         services.AddScoped<IAiMarkdownFormatter>(_ => new FakeAiFormatter());
         services.AddScoped<CatalogDocumentDestination>();
+        services.AddScoped<IAuthorizationReadinessService, FakeReadinessService>();
 
         var sp = services.BuildServiceProvider();
         var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
@@ -475,6 +481,7 @@ public class CatalogIngestionDestinationTests : IDisposable
         services.AddScoped<IPdfExtractor>(_ => fakeExtractor);
         services.AddScoped<IAiMarkdownFormatter>(_ => new FakeAiFormatter());
         services.AddScoped<CatalogDocumentDestination>();
+        services.AddScoped<IAuthorizationReadinessService, FakeReadinessService>();
 
         var sp = services.BuildServiceProvider();
         var worker = new PdfIngestionWorker(queue, sp.GetRequiredService<IServiceScopeFactory>(), NullLogger<PdfIngestionWorker>.Instance);
@@ -590,5 +597,11 @@ public class CatalogIngestionDestinationTests : IDisposable
         {
             return _channel.Reader.ReadAllAsync(cancellationToken);
         }
+    }
+
+    private class FakeReadinessService : IAuthorizationReadinessService
+    {
+        public Task<AuthorizationReadinessStatus> GetReadinessAsync(CancellationToken ct = default)
+            => Task.FromResult(new AuthorizationReadinessStatus(true, true, true, true, null));
     }
 }

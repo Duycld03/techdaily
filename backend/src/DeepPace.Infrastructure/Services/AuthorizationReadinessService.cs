@@ -60,13 +60,19 @@ public class AuthorizationReadinessService : IAuthorizationReadinessService
                     FailureReason: "Required protected seed roles (Learner/Admin) are missing or unprotected.");
             }
 
-            // Verify Admin has all 6 required permissions
-            int adminPermCount;
+            // Verify Learner retains its empty-grant set and Admin has the exact required protected grants
+            List<string> adminPerms;
+            int learnerPermCount;
             try
             {
-                adminPermCount = await _dbContext.RolePermissions.AsNoTracking()
-                    .Where(p => p.RoleId == RoleDefaults.AdminRoleId)
+                learnerPermCount = await _dbContext.RolePermissions.AsNoTracking()
+                    .Where(p => p.RoleId == RoleDefaults.LearnerRoleId)
                     .CountAsync(ct);
+
+                adminPerms = await _dbContext.RolePermissions.AsNoTracking()
+                    .Where(p => p.RoleId == RoleDefaults.AdminRoleId)
+                    .Select(p => p.PermissionKey)
+                    .ToListAsync(ct);
             }
             catch (Exception ex)
             {
@@ -78,14 +84,25 @@ public class AuthorizationReadinessService : IAuthorizationReadinessService
                     FailureReason: $"Required role permissions schema is missing: {ex.Message}");
             }
 
-            if (adminPermCount < 6)
+            if (learnerPermCount > 0)
             {
                 return new AuthorizationReadinessStatus(
                     IsReady: false,
                     IsDatabaseConnected: true,
                     HasRequiredSchemaAndRoles: false,
                     IsInitialized: false,
-                    FailureReason: $"Admin role requires at least 6 protected permissions; found {adminPermCount}.");
+                    FailureReason: $"Learner role must not hold any permissions; found {learnerPermCount}.");
+            }
+
+            var actualAdminGrants = new HashSet<string>(adminPerms, StringComparer.Ordinal);
+            if (!RoleDefaults.ProtectedAdminGrants.SetEquals(actualAdminGrants))
+            {
+                return new AuthorizationReadinessStatus(
+                    IsReady: false,
+                    IsDatabaseConnected: true,
+                    HasRequiredSchemaAndRoles: false,
+                    IsInitialized: false,
+                    FailureReason: "Admin role protected permissions do not match the required baseline set.");
             }
 
             // Validate the schema independently of administrator-managed category rows.
@@ -104,16 +121,21 @@ public class AuthorizationReadinessService : IAuthorizationReadinessService
                     FailureReason: $"Required DocumentCategories table is missing or invalid: {ex.Message}");
             }
 
-            // Check initialization receipt
+            // Check initialization receipt: lookup failure is a readiness failure, distinct from successfully finding no receipt
             bool isInitialized;
             try
             {
                 isInitialized = await _dbContext.AuthorizationInitializations.AsNoTracking()
                     .AnyAsync(i => i.Scope == AuthorizationInitialization.DefaultScope, ct);
             }
-            catch
+            catch (Exception ex)
             {
-                isInitialized = false;
+                return new AuthorizationReadinessStatus(
+                    IsReady: false,
+                    IsDatabaseConnected: true,
+                    HasRequiredSchemaAndRoles: false,
+                    IsInitialized: false,
+                    FailureReason: $"Required authorization initialization receipt schema is missing or invalid: {ex.Message}");
             }
 
             return new AuthorizationReadinessStatus(

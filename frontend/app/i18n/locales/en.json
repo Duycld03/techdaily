@@ -1569,7 +1569,9 @@
       "roleConcurrencyError": "Account was modified by another administrator. Please reload and verify before retrying.",
       "roleAssignSuccess": "Role successfully updated. All active user sessions were revoked.",
       "supportedPermissions": "Supported Permissions",
-      "reloadAccount": "Reload Account"
+      "reloadAccount": "Reload Account",
+      "noPermissions": "No administrative permissions granted for this role.",
+      "reloadFailed": "Could not reload account. Please try again."
     },
     "roles": {
       "learner": {

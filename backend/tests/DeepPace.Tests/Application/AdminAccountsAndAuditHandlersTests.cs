@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using DeepPace.Application.Interfaces;
+using DeepPace.Application.Common;
 using DeepPace.Application.Features.Admin.Accounts;
 using DeepPace.Application.Features.Admin.Accounts.DTOs;
 using DeepPace.Application.Features.Admin.Audit;
@@ -211,7 +212,8 @@ public class AdminAccountsAndAuditHandlersTests : IDisposable
             1,
             AdminAuditActions.UserSuspend,
             "corr-rej-staged",
-            async (act, tgt) =>
+            preTargetValidation: null,
+            command: async (act, tgt, role) =>
             {
                 tgt.Status = AccountStatus.Suspended;
                 tgt.AdminControlVersion = 99;
@@ -264,12 +266,236 @@ public class AdminAccountsAndAuditHandlersTests : IDisposable
             1,
             AdminAuditActions.UserSuspend,
             "corr-broken",
-            async (act, tgt) =>
+            preTargetValidation: null,
+            command: async (act, tgt, role) =>
             {
                 return DeepPace.Application.Common.Error.Custom("FAIL", "Rejection trigger");
             });
 
         res.IsSuccess.Should().BeFalse();
         res.Error.Code.Should().Be("AUDIT_PERSISTENCE_UNAVAILABLE", "Audit failure must return unavailable and not fail silently");
+    }
+
+    [Fact]
+    public async Task AccountControl_DeniedOrStaleActor_ShouldNotPersistAuditEvents()
+    {
+        var targetId = Guid.NewGuid();
+        var target = new User
+        {
+            Id = targetId,
+            Email = "target-unauth@example.com",
+            Name = "Target User",
+            Status = AccountStatus.Active,
+            RoleId = RoleDefaults.LearnerRoleId,
+            AuthenticationVersion = 1,
+            AdminControlVersion = 1
+        };
+        await _db.Users.AddAsync(target);
+        await _db.SaveChangesAsync();
+
+        // 1. Stale session version
+        var staleRes = await _uow.ExecuteAccountControlCommandAsync<bool>(
+            _adminUserId,
+            presentedSessionVersion: 999, // Stale!
+            new[] { AdminPermission.ManageAccounts },
+            targetId,
+            expectedVersion: 1,
+            AdminAuditActions.UserSuspend,
+            "corr-stale-actor",
+            preTargetValidation: null,
+            command: (act, tgt, role) => Task.FromResult(Result<(bool, AdminAuditEvent)>.Success((true, AdminAuditEvent.Create(_adminUserId, AdminAuditActions.UserSuspend, "User", targetId.ToString(), AdminAuditOutcome.Succeeded)))));
+
+        staleRes.IsSuccess.Should().BeFalse();
+        staleRes.Error.Code.Should().Be("AUTH_FORBIDDEN");
+
+        var staleAudits = await _db.AdminAuditEvents.Where(e => e.CorrelationId == "corr-stale-actor").ToListAsync();
+        staleAudits.Should().BeEmpty("Stale actor must not produce any audit records");
+
+        // 2. Inactive actor
+        var inactiveAdminId = Guid.NewGuid();
+        var inactiveAdmin = new User
+        {
+            Id = inactiveAdminId,
+            Email = "inactive-admin@example.com",
+            Name = "Inactive Admin",
+            Status = AccountStatus.Suspended,
+            RoleId = RoleDefaults.AdminRoleId,
+            AuthenticationVersion = 1,
+            AdminControlVersion = 1
+        };
+        await _db.Users.AddAsync(inactiveAdmin);
+        await _db.SaveChangesAsync();
+
+        var inactiveRes = await _uow.ExecuteAccountControlCommandAsync<bool>(
+            inactiveAdminId,
+            presentedSessionVersion: 1,
+            new[] { AdminPermission.ManageAccounts },
+            targetId,
+            expectedVersion: 1,
+            AdminAuditActions.UserSuspend,
+            "corr-inactive-actor",
+            preTargetValidation: null,
+            command: (act, tgt, role) => Task.FromResult(Result<(bool, AdminAuditEvent)>.Success((true, AdminAuditEvent.Create(inactiveAdminId, AdminAuditActions.UserSuspend, "User", targetId.ToString(), AdminAuditOutcome.Succeeded)))));
+
+        inactiveRes.IsSuccess.Should().BeFalse();
+        inactiveRes.Error.Code.Should().Be("AUTH_FORBIDDEN");
+
+        var inactiveAudits = await _db.AdminAuditEvents.Where(e => e.CorrelationId == "corr-inactive-actor").ToListAsync();
+        inactiveAudits.Should().BeEmpty("Inactive actor must not produce any audit records");
+    }
+
+    [Fact]
+    public async Task AccountControl_MissingTarget_ShouldNotPersistAuditEvents()
+    {
+        var nonExistentTargetId = Guid.NewGuid();
+
+        var res = await _uow.ExecuteAccountControlCommandAsync<bool>(
+            _adminUserId,
+            presentedSessionVersion: 1,
+            new[] { AdminPermission.ManageAccounts },
+            nonExistentTargetId,
+            expectedVersion: 1,
+            AdminAuditActions.UserSuspend,
+            "corr-missing-target",
+            preTargetValidation: null,
+            command: (act, tgt, role) => Task.FromResult(Result<(bool, AdminAuditEvent)>.Success((true, AdminAuditEvent.Create(_adminUserId, AdminAuditActions.UserSuspend, "User", nonExistentTargetId.ToString(), AdminAuditOutcome.Succeeded)))));
+
+        res.IsSuccess.Should().BeFalse();
+        res.Error.Code.Should().Be("Account.NotFound");
+
+        var audits = await _db.AdminAuditEvents.Where(e => e.CorrelationId == "corr-missing-target").ToListAsync();
+        audits.Should().BeEmpty("Missing target account must not produce any audit records");
+    }
+
+    [Fact]
+    public async Task AccountControl_SuccessfulMutation_ShouldCommitAtomicallyWithAuditEvent()
+    {
+        var targetId = Guid.NewGuid();
+        var target = new User
+        {
+            Id = targetId,
+            Email = "target-success@example.com",
+            Name = "Target User",
+            Status = AccountStatus.Active,
+            RoleId = RoleDefaults.LearnerRoleId,
+            AuthenticationVersion = 1,
+            AdminControlVersion = 1
+        };
+        await _db.Users.AddAsync(target);
+        await _db.SaveChangesAsync();
+
+        var res = await _uow.ExecuteAccountControlCommandAsync<bool>(
+            _adminUserId,
+            presentedSessionVersion: 1,
+            new[] { AdminPermission.ManageAccounts },
+            targetId,
+            expectedVersion: 1,
+            AdminAuditActions.UserSuspend,
+            "corr-atomic-success",
+            preTargetValidation: null,
+            command: async (act, tgt, role) =>
+            {
+                tgt.Status = AccountStatus.Suspended;
+                tgt.AdminControlVersion++;
+                var audit = AdminAuditEvent.Create(
+                    actorUserId: act.Id,
+                    action: AdminAuditActions.UserSuspend,
+                    targetType: "User",
+                    targetId: tgt.Id.ToString(),
+                    outcome: AdminAuditOutcome.Succeeded,
+                    correlationId: "corr-atomic-success");
+                return Result<(bool, AdminAuditEvent)>.Success((true, audit));
+            });
+
+        res.IsSuccess.Should().BeTrue();
+
+        // Verify target mutation committed
+        var targetReread = await _db.Users.FindAsync(targetId);
+        targetReread!.Status.Should().Be(AccountStatus.Suspended);
+        targetReread.AdminControlVersion.Should().Be(2);
+
+        // Verify succeeded audit committed
+        var audits = await _db.AdminAuditEvents.Where(e => e.CorrelationId == "corr-atomic-success").ToListAsync();
+        audits.Should().HaveCount(1);
+        audits[0].Outcome.Should().Be(AdminAuditOutcome.Succeeded);
+    }
+
+    [Fact]
+    public async Task AccountActions_OnAdminTarget_ShouldPreserveAdminRoleDescriptor_RatherThanLearnerFallback()
+    {
+        var admin2Id = Guid.NewGuid();
+        var admin2 = new User
+        {
+            Id = admin2Id,
+            Email = "admin2@example.com",
+            Name = "Second Administrator",
+            Status = AccountStatus.Active,
+            RoleId = RoleDefaults.AdminRoleId,
+            AuthenticationVersion = 1,
+            AdminControlVersion = 1
+        };
+        await _db.Users.AddAsync(admin2);
+        await _db.SaveChangesAsync();
+
+        var suspendHandler = new AdminSuspendUserHandler(_uow, _tokenService);
+        var reactivateHandler = new AdminReactivateUserHandler(_uow);
+        var revokeHandler = new AdminRevokeUserSessionsHandler(_uow, _tokenService);
+
+        // Suspend
+        var suspendRes = await suspendHandler.ExecuteAsync(new AdminSuspendUserRequest(
+            admin2Id, _adminUserId, "Temporary security review", 1, PresentedSessionVersion: 1));
+        suspendRes.IsSuccess.Should().BeTrue();
+        suspendRes.Value.Role.Key.Should().Be(RoleDefaults.AdminKey, "Response role descriptor must be Admin, not synthetic Learner");
+        suspendRes.Value.Role.Id.Should().Be(RoleDefaults.AdminRoleId);
+
+        // Reactivate
+        var reactivateRes = await reactivateHandler.ExecuteAsync(new AdminReactivateUserRequest(
+            admin2Id, _adminUserId, "Review complete", 2, PresentedSessionVersion: 1));
+        reactivateRes.IsSuccess.Should().BeTrue();
+        reactivateRes.Value.Role.Key.Should().Be(RoleDefaults.AdminKey, "Response role descriptor must be Admin, not synthetic Learner");
+        reactivateRes.Value.Role.Id.Should().Be(RoleDefaults.AdminRoleId);
+
+        // Revoke sessions
+        var revokeRes = await revokeHandler.ExecuteAsync(new AdminRevokeUserSessionsRequest(
+            admin2Id, _adminUserId, "Credential rotation", 3, PresentedSessionVersion: 1));
+        revokeRes.IsSuccess.Should().BeTrue();
+        revokeRes.Value.Role.Key.Should().Be(RoleDefaults.AdminKey, "Response role descriptor must be Admin, not synthetic Learner");
+        revokeRes.Value.Role.Id.Should().Be(RoleDefaults.AdminRoleId);
+    }
+
+    [Fact]
+    public async Task AccountActions_WhenTargetRoleMissing_ShouldFailAndNeverReturnFabricatedRole()
+    {
+        var tempRole = Role.Create("temp-broken-role", "Temp", "Temp", isProtected: false);
+        await _db.Roles.AddAsync(tempRole);
+        await _db.SaveChangesAsync();
+
+        var brokenTargetId = Guid.NewGuid();
+        var brokenTarget = new User
+        {
+            Id = brokenTargetId,
+            Email = "broken-role@example.com",
+            Name = "Broken Role User",
+            Status = AccountStatus.Active,
+            RoleId = tempRole.Id,
+            AuthenticationVersion = 1,
+            AdminControlVersion = 1
+        };
+        await _db.Users.AddAsync(brokenTarget);
+        await _db.SaveChangesAsync();
+
+        tempRole.IsDeleted = true;
+        await _db.SaveChangesAsync();
+        var suspendHandler = new AdminSuspendUserHandler(_uow, _tokenService);
+        var suspendRes = await suspendHandler.ExecuteAsync(new AdminSuspendUserRequest(
+            brokenTargetId, _adminUserId, "Suspending corrupt account", 1, PresentedSessionVersion: 1));
+
+        suspendRes.IsSuccess.Should().BeFalse();
+        suspendRes.Error.Code.Should().Be("Role.NotFound");
+
+        var getByIdHandler = new AdminGetAccountByIdHandler(_db);
+        var getByIdRes = await getByIdHandler.ExecuteAsync(new AdminGetAccountByIdRequest(brokenTargetId));
+        getByIdRes.IsSuccess.Should().BeFalse();
+        getByIdRes.Error.Code.Should().Be("Account.RoleUnavailable");
     }
 }

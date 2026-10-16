@@ -257,7 +257,8 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
             ExpectedVersion: book.IngestionControlVersion,
             RequestId: "retry-req-1",
             Reason: "Retry after transient network glitch",
-            ActorUserId: _adminUserId);
+            ActorUserId: _adminUserId,
+            PresentedSessionVersion: 1);
 
         var result = await handler.ExecuteAsync(command);
 
@@ -313,7 +314,8 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
             ExpectedVersion: 1,
             RequestId: "retry-cat-1",
             Reason: "Retry catalog",
-            ActorUserId: _adminUserId);
+            ActorUserId: _adminUserId,
+            PresentedSessionVersion: 1);
 
         var result = await handler.ExecuteAsync(command);
 
@@ -348,7 +350,8 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
             ExpectedVersion: 1,
             RequestId: "existing-request-id", // Same request ID
             Reason: "Different reason here",   // Produces different fingerprint
-            ActorUserId: _adminUserId);
+            ActorUserId: _adminUserId,
+            PresentedSessionVersion: 1);
 
         var result = await handler.ExecuteAsync(command);
 
@@ -500,7 +503,8 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
             Reason: "Provide corrected PDF layout",
             SourceStream: stream,
             FileName: "microservices.pdf",
-            ByteLength: pdfBytes.Length);
+            ByteLength: pdfBytes.Length,
+            PresentedSessionVersion: 1);
 
         var result = await handler.ExecuteAsync(command);
 

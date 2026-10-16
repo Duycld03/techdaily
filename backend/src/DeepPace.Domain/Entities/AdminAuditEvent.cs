@@ -83,7 +83,7 @@ public class AdminAuditEvent
         };
     }
 
-    private static bool ContainsSensitivePatterns(string text)
+    public static bool ContainsSensitivePatterns(string text)
     {
         if (text.Contains("Bearer ", StringComparison.OrdinalIgnoreCase) ||
             text.Contains("eyJh", StringComparison.OrdinalIgnoreCase) ||

@@ -83,7 +83,7 @@ Administrators SHALL see processing progress and errors and explicitly initiate 
 ---
 
 ### Requirement: Reviewed publication lifecycle
-Catalog entries SHALL support Draft, Published and Hidden visibility. Publication SHALL require prepared readable slices and basic attribution. Publication SHALL NOT require a separate prerequisite administrator review record (`ReviewedByUserId`) or permission compliance proofs; an administrator's direct publish action SHALL constitute explicit review and authorization. Missing requirements SHALL block publication with actionable errors.
+Catalog entries SHALL support Draft, Published and Hidden visibility. Publication SHALL require prepared readable slices and basic attribution. Publication SHALL NOT require a separate prerequisite administrator review record (`ReviewedByUserId`) or permission compliance proofs; an administrator's direct publish action SHALL constitute explicit review and authorization. Missing requirements SHALL block publication with actionable errors. Publication, hiding and explicit review SHALL use current account/session authority and catalog permission at final mutation admission; a prior request-level permission check SHALL NOT authorize a write after a competing revocation has already won admission.
 1. **Published Document Immutability & UI Controls**:
 - Documents in `Published` visibility SHALL be treated as immutable in the administration interface.
 - When `visibility === 'Published'`, the document metadata fields (title, category assignment, language, attribution, source URL) and the Save Changes action SHALL be disabled/read-only, with an explanation that the document must be hidden before editing metadata.
@@ -119,6 +119,17 @@ Catalog entries SHALL support Draft, Published and Hidden visibility. Publicatio
 - **WHEN** a published document's category is renamed or deactivated
 - **THEN** its published content, attribution, revision, and visibility remain unchanged
 - **AND** the current category name/status is shown without invoking AI or requiring republication.
+
+#### Scenario: Revocation wins before hiding or explicit review
+- **GIVEN** a hide or explicit review request has passed its initial authentication and catalog permission checks
+- **WHEN** a competing role, suspension or session-revocation command commits before the request obtains final actor admission
+- **THEN** hiding or explicit review is rejected without changing visibility, revision, review attribution or document state
+- **AND** no successful catalog mutation event or new processing work is committed under the revoked authority.
+
+#### Scenario: Catalog mutation wins before actor revocation
+- **WHEN** a permitted hide or explicit review command obtains final actor admission before a competing revocation
+- **THEN** that admitted mutation and its successful audit event can commit before revocation completes
+- **AND** the later revocation still invalidates the actor's old credentials without undoing the earlier committed document action.
 
 ### Requirement: Authenticated discovery and bounded preview
 Authenticated learners SHALL browse only published entries using paginated search and category-ID, language and source-type filters. Inactive categories SHALL remain filterable for existing published entries. Details SHALL include current category metadata, attribution, description, slice count, reading-time estimate, table of contents and the first slice as a preview. Internal processing errors and permission evidence SHALL remain administrator-only.

@@ -51,7 +51,8 @@ public class AdminSuspendUserHandler : IUseCase<AdminSuspendUserRequest, AdminAc
             request.ExpectedVersion,
             AdminAuditActions.UserSuspend,
             request.CorrelationId,
-            async (actor, target) =>
+            preTargetValidation: null,
+            command: async (actor, target, targetRole) =>
             {
                 try
                 {
@@ -100,7 +101,7 @@ public class AdminSuspendUserHandler : IUseCase<AdminSuspendUserRequest, AdminAc
                     target.SuspendedByUserId,
                     target.SuspendedAt,
                     target.SuspensionReason,
-                    target.Role.ToDescriptor());
+                    targetRole.ToDescriptor());
 
                 return (dto, auditEvent);
             },

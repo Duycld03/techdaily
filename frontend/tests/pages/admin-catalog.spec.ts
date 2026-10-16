@@ -154,7 +154,17 @@ describe('admin/catalog.vue (MasterDetail Catalog Management)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
-    useAdminAccessStore().state = 'authorized'
+    const access = useAdminAccessStore()
+    access.state = 'authorized'
+    access.capabilities = {
+      canViewAdminDashboard: false,
+      canManageCatalog: true,
+      canManageAccounts: false,
+      canReadAudit: false,
+      canManageDocumentOperations: false,
+      canManageRoles: false,
+      canManageCategories: false
+    }
   })
 
   it('withholds catalog data until the shared administrator gate admits the account', async () => {

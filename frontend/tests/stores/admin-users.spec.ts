@@ -162,21 +162,21 @@ describe('useAdminUsersStore', () => {
       key: 'Learner',
       nameEn: 'Learner',
       nameVi: 'Học viên',
-      isProtected: false,
-      supportedPermissions: []
+      permissionKeys: []
     }]
     const auth = useAuthStore()
     auth.sessionGeneration++
 
     expect(store.users).toEqual([])
     expect(store.selectedUser).toBeNull()
+    expect(store.roles).toEqual([])
   })
 
-  it('fetchRoles loads available admin roles', async () => {
+  it('fetchRoles loads available admin roles with canonical permissionKeys', async () => {
     const store = useAdminUsersStore()
     const roleList = [
-      { id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', isProtected: false, supportedPermissions: [] },
-      { id: 'r-2', key: 'Admin', nameEn: 'Admin', nameVi: 'Quản trị viên', isProtected: true, supportedPermissions: ['ManageAccounts', 'ManageRoles'] }
+      { id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', permissionKeys: [] },
+      { id: 'r-2', key: 'Admin', nameEn: 'Admin', nameVi: 'Quản trị viên', permissionKeys: ['ManageAccounts', 'ManageRoles', 'ManageCategories'] }
     ]
     get.mockResolvedValueOnce({ items: roleList, totalCount: 2, page: 1, pageSize: 100 })
 
@@ -188,6 +188,120 @@ describe('useAdminUsersStore', () => {
     expect(store.rolesError).toBeNull()
   })
 
+  it('role discovery ownership is independent of directory requests (search, filter, page, fetchUsers)', async () => {
+    const store = useAdminUsersStore()
+    const roleList = [
+      { id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', permissionKeys: [] },
+      { id: 'r-2', key: 'Admin', nameEn: 'Admin', nameVi: 'Quản trị viên', permissionKeys: ['ManageAccounts', 'ManageRoles'] }
+    ]
+
+    const { promise: deferredRoles, resolve: resolveRoles } = Promise.withResolvers<unknown>()
+    get.mockImplementation((url: string) => {
+      if (url.includes('/api/v1/admin/roles')) return deferredRoles
+      return Promise.resolve({ items: [], totalCount: 0, page: 1, pageSize: 20 })
+    })
+
+    // 1. Role request starts and enters loading state
+    const rolePromise = store.fetchRoles()
+    expect(store.isLoadingRoles).toBe(true)
+
+    // 2. While role request is in flight, directory operations occur
+    store.search = 'test'
+    store.statusFilter = 'Active'
+    store.page = 2
+    await store.fetchUsers()
+
+    // 3. Deferred role request settles
+    resolveRoles({ items: roleList, totalCount: 2, page: 1, pageSize: 100 })
+    await rolePromise
+
+    // 4. Role options settle without being dropped by directory operations
+    expect(store.roles).toEqual(roleList)
+    expect(store.isLoadingRoles).toBe(false)
+    expect(store.rolesError).toBeNull()
+  })
+
+  it('role discovery handles failure, sets error, and recovers on retry', async () => {
+    const store = useAdminUsersStore()
+    const roleList = [
+      { id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', permissionKeys: [] }
+    ]
+
+    // First attempt fails
+    get.mockRejectedValueOnce(new Error('Network error loading roles'))
+    await store.fetchRoles()
+    expect(store.roles).toEqual([])
+    expect(store.isLoadingRoles).toBe(false)
+    expect(store.rolesError).toBe('Network error loading roles')
+
+    // Retry succeeds
+    get.mockResolvedValueOnce({ items: roleList, totalCount: 1, page: 1, pageSize: 100 })
+    await store.fetchRoles()
+    expect(store.roles).toEqual(roleList)
+    expect(store.isLoadingRoles).toBe(false)
+    expect(store.rolesError).toBeNull()
+  })
+
+  it('superseded role requests cannot publish or clear newer loading', async () => {
+    const store = useAdminUsersStore()
+    const oldRoles = [{ id: 'old-1', key: 'Old', nameEn: 'Old', nameVi: 'Cũ', permissionKeys: [] }]
+    const newRoles = [{ id: 'new-1', key: 'New', nameEn: 'New', nameVi: 'Mới', permissionKeys: [] }]
+
+    const { promise: deferredOld, resolve: resolveOld } = Promise.withResolvers<unknown>()
+    const { promise: deferredNew, resolve: resolveNew } = Promise.withResolvers<unknown>()
+
+    let callCount = 0
+    get.mockImplementation((url: string) => {
+      if (url.includes('/api/v1/admin/roles')) {
+        callCount++
+        return callCount === 1 ? deferredOld : deferredNew
+      }
+      return Promise.resolve({ items: [] })
+    })
+
+    // Start request 1 (slow)
+    const req1 = store.fetchRoles()
+    // Start request 2 (supersedes request 1)
+    const req2 = store.fetchRoles()
+
+    // Resolve request 2 first
+    resolveNew({ items: newRoles, totalCount: 1, page: 1, pageSize: 100 })
+    await req2
+    expect(store.roles).toEqual(newRoles)
+    expect(store.isLoadingRoles).toBe(false)
+
+    // Stale request 1 settles later
+    resolveOld({ items: oldRoles, totalCount: 1, page: 1, pageSize: 100 })
+    await req1
+
+    // Stale request 1 did NOT overwrite request 2
+    expect(store.roles).toEqual(newRoles)
+  })
+
+  it('session and admin reset fence invalidates outstanding role requests', async () => {
+    const store = useAdminUsersStore()
+    const auth = useAuthStore()
+    const roleList = [{ id: 'r-1', key: 'Learner', nameEn: 'Learner', nameVi: 'Học viên', permissionKeys: [] }]
+
+    const { promise: deferredRoles, resolve: resolveRoles } = Promise.withResolvers<unknown>()
+    get.mockImplementation(() => deferredRoles)
+
+    const rolePromise = store.fetchRoles()
+    expect(store.isLoadingRoles).toBe(true)
+
+    // Session change triggers reset
+    auth.sessionGeneration++
+    expect(store.roles).toEqual([])
+    expect(store.isLoadingRoles).toBe(false)
+
+    // Outstanding request resolves after session change
+    resolveRoles({ items: roleList, totalCount: 1, page: 1, pageSize: 100 })
+    await rolePromise
+
+    // Discarded; does not publish to the reset store
+    expect(store.roles).toEqual([])
+    expect(store.isLoadingRoles).toBe(false)
+  })
   it('assignRole calls PUT endpoint with exact payload and updates user', async () => {
     const store = useAdminUsersStore()
     const updatedDetail = {

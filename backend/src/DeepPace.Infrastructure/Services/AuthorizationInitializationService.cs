@@ -75,6 +75,16 @@ public class AuthorizationInitializationService : IAuthorizationInitializationSe
             }
 
             // 2. Verify protected role and grant seed integrity
+            var learnerRole = await _dbContext.Roles
+                .Include(r => r.Permissions)
+                .FirstOrDefaultAsync(r => r.Id == RoleDefaults.LearnerRoleId, ct);
+
+            if (learnerRole == null || !learnerRole.IsProtected || learnerRole.Permissions.Count > 0)
+            {
+                await tx.RollbackAsync(ct);
+                return Error.Custom("INIT_SEED_CORRUPT", "Protected Learner role seed is missing or holds unexpected permissions.");
+            }
+
             var adminRole = await _dbContext.Roles
                 .Include(r => r.Permissions)
                 .FirstOrDefaultAsync(r => r.Id == RoleDefaults.AdminRoleId, ct);
@@ -86,22 +96,11 @@ public class AuthorizationInitializationService : IAuthorizationInitializationSe
             }
 
             var adminPerms = adminRole.Permissions.Select(p => p.PermissionKey).ToHashSet(StringComparer.Ordinal);
-            var requiredPerms = new[]
-            {
-                PermissionKeys.ViewAdminDashboard,
-                PermissionKeys.ManageCatalog,
-                PermissionKeys.ManageAccounts,
-                PermissionKeys.ReadAudit,
-                PermissionKeys.ManageDocumentOperations,
-                PermissionKeys.ManageRoles
-            };
-
-            if (!requiredPerms.All(p => adminPerms.Contains(p)))
+            if (!RoleDefaults.ProtectedAdminGrants.SetEquals(adminPerms))
             {
                 await tx.RollbackAsync(ct);
                 return Error.Custom("INIT_SEED_CORRUPT", "Protected Admin role permissions are missing or corrupted.");
             }
-
             // 3. Lock candidate users in deterministic GUID order
             if (isNpgsql)
             {

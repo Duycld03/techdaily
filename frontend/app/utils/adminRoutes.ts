@@ -38,12 +38,29 @@ export function safeAdminReturnPath(value: unknown): string {
 }
 
 /**
+ * Sanitizes an untrusted return-url parameter for standard user routes.
+ */
+export function safeUserReturnPath(value: unknown, fallback: string = '/today'): string {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || /[\\\u0000-\u0020]/.test(value)) return fallback
+  const path = value.split(/[?#]/)[0] || ''
+  if (path.includes('%') || path.split('/').some(segment => segment === '.' || segment === '..')) return fallback
+  if (path === '/login' || path.startsWith('/login/') || path === '/admin/login' || path.startsWith('/admin/login/')) return fallback
+  try {
+    const url = new URL(value, 'https://deeppace.invalid')
+    if (url.origin !== 'https://deeppace.invalid') return fallback
+    return normalizeRoutePath(url.pathname) + url.search + url.hash
+  } catch {
+    return fallback
+  }
+}
+
+/**
  * Constructs an appropriate login redirection object preserving the destination.
  */
 export function loginRedirectFor(path: string) {
   return isAdminRoute(path.split(/[?#]/)[0] || '/')
     ? { path: '/admin/login', query: { redirect: safeAdminReturnPath(path) } }
-    : { path: '/login', query: { redirect: path } }
+    : { path: '/login', query: { redirect: safeUserReturnPath(path, '/today') } }
 }
 
 export interface AdminCapabilityFlags {
@@ -74,7 +91,8 @@ export function getFirstAccessibleAdminRoute(capabilities?: AdminCapabilityFlags
  */
 export function canAccessAdminDestination(path: string, capabilities?: AdminCapabilityFlags | null): boolean {
   if (!capabilities) return false
-  const norm = normalizeRoutePath(path)
+  const pathname = path.split(/[?#]/)[0] || '/'
+  const norm = normalizeRoutePath(pathname)
   if (norm === '/admin' || norm === '/admin/dashboard' || norm.startsWith('/admin/dashboard/')) {
     return Boolean(capabilities.canViewAdminDashboard)
   }

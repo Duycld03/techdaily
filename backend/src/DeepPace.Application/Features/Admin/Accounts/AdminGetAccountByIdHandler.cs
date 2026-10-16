@@ -21,12 +21,19 @@ public class AdminGetAccountByIdHandler : IUseCase<AdminGetAccountByIdRequest, A
         CancellationToken cancellationToken = default)
     {
         var user = await _dbContext.Users.AsNoTracking()
-            .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Id == request.Id && !u.IsDeleted, cancellationToken);
 
         if (user == null)
         {
             return Error.Custom("Account.NotFound", "Account not found.");
+        }
+
+        var role = await _dbContext.Roles.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == user.RoleId && !r.IsDeleted, cancellationToken);
+
+        if (role == null)
+        {
+            return Error.Custom("Account.RoleUnavailable", "The account's assigned role is unavailable or corrupted.");
         }
 
         var dto = new AdminAccountDetailDto(
@@ -43,7 +50,7 @@ public class AdminGetAccountByIdHandler : IUseCase<AdminGetAccountByIdRequest, A
             user.SuspendedByUserId,
             user.SuspendedAt,
             user.SuspensionReason,
-            user.Role.ToDescriptor());
+            role.ToDescriptor());
 
         return dto;
     }

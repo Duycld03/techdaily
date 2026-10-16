@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onUnmounted, useTemplateRef } from 'vue'
 import {
   Shield,
   ShieldAlert,
@@ -28,9 +28,7 @@ const authStore = useAuthStore()
 
 const { t, te, locale } = useI18n()
 
-const dialogShellRef = ref<HTMLElement | null>(null)
-const closeButtonRef = ref<HTMLButtonElement | null>(null)
-const reasonTextareaRef = ref<HTMLTextAreaElement | null>(null)
+const dialogShellRef = useTemplateRef<HTMLElement>('dialogShellRef')
 const capturedTriggerElement = ref<HTMLElement | null>(null)
 
 const selectedRoleId = ref<string>('')
@@ -40,6 +38,15 @@ const isSubmitting = ref(false)
 const isReloading = ref(false)
 const formError = ref<string | null>(null)
 const isConflict = ref(false)
+const reloadedUser = ref<AdminAccountDetail | null>(null)
+const effectiveUser = computed(() => reloadedUser.value || props.user)
+
+let currentTargetUserId: string | null = null
+let currentActorId: string | null = null
+let currentSessionGen = -1
+let currentAdminGen = -1
+let currentDialogInteractionId = 0
+let currentReloadRequestId = 0
 
 const dialogTitleId = 'admin-role-dialog-title'
 const roleSelectLabelId = 'admin-role-select-label'
@@ -65,8 +72,8 @@ const selectedRoleOption = computed(() => {
 })
 
 const currentRoleName = computed(() => {
-  if (!props.user?.role) return ''
-  const role = props.user.role
+  const role = effectiveUser.value?.role
+  if (!role) return ''
   const nameKey = `admin.roles.${role.key}.name`
   return te && te(nameKey)
     ? t(nameKey)
@@ -74,20 +81,21 @@ const currentRoleName = computed(() => {
 })
 
 const currentRoleDescription = computed(() => {
-  if (!props.user?.role) return ''
-  const descKey = `admin.roles.${props.user.role.key}.description`
+  const role = effectiveUser.value?.role
+  if (!role) return ''
+  const descKey = `admin.roles.${role.key}.description`
   return te && te(descKey) ? t(descKey) : ''
 })
 
 const isSameRole = computed(() => {
-  if (!props.user?.role?.id || !selectedRoleId.value) return false
-  return selectedRoleId.value === props.user.role.id
+  const roleId = effectiveUser.value?.role?.id
+  if (!roleId || !selectedRoleId.value) return false
+  return selectedRoleId.value === roleId
 })
 
 const isSelfChange = computed(() => {
-  return Boolean(props.user?.id && authStore.user?.id && props.user.id === authStore.user.id)
+  return Boolean(effectiveUser.value?.id && authStore.user?.id && effectiveUser.value.id === authStore.user.id)
 })
-
 const isReasonValid = computed(() => {
   const trimmed = reason.value.trim()
   return trimmed.length >= 1 && trimmed.length <= 500
@@ -154,18 +162,45 @@ function handleKeydown(event: KeyboardEvent) {
   }
 }
 
+function invalidateReload() {
+  currentDialogInteractionId++
+  isReloading.value = false
+}
+
 watch(
-  () => props.open,
-  async (isOpen) => {
+  [() => authStore.user?.id, () => authStore.sessionGeneration, () => authStore.adminGeneration],
+  invalidateReload,
+  { flush: 'sync' }
+)
+
+watch(
+  [() => props.open, () => props.user?.id],
+  ([isOpen, targetUserId], [wasOpen]) => {
+    invalidateReload()
     if (typeof document === 'undefined') return
 
     if (isOpen) {
       capturedTriggerElement.value = props.initiatingButton || (document.activeElement instanceof HTMLElement ? document.activeElement : null)
-      selectedRoleId.value = ''
-      reason.value = ''
-      formSubmitted.value = false
-      formError.value = null
-      isConflict.value = false
+
+      const isSameTargetAndSession =
+        targetUserId === currentTargetUserId &&
+        authStore.user?.id === currentActorId &&
+        authStore.sessionGeneration === currentSessionGen &&
+        authStore.adminGeneration === currentAdminGen
+
+      if (!isSameTargetAndSession) {
+        currentTargetUserId = targetUserId || null
+        currentActorId = authStore.user?.id || null
+        currentSessionGen = authStore.sessionGeneration
+        currentAdminGen = authStore.adminGeneration
+
+        selectedRoleId.value = ''
+        reason.value = ''
+        reloadedUser.value = null
+        isConflict.value = false
+        formError.value = null
+        formSubmitted.value = false
+      }
 
       if (typeof usersStore.fetchRoles === 'function' && (!usersStore.roles || usersStore.roles.length === 0) && !usersStore.isLoadingRoles) {
         usersStore.fetchRoles()
@@ -184,37 +219,73 @@ watch(
     } else {
       document.body.style.overflow = ''
       const targetToFocus = capturedTriggerElement.value || props.initiatingButton
-      if (targetToFocus && typeof targetToFocus.focus === 'function') {
+      if (wasOpen && targetToFocus && typeof targetToFocus.focus === 'function') {
         nextTick(() => {
           targetToFocus.focus()
         })
       }
     }
-  }
+  },
+  { immediate: true }
 )
+onUnmounted(() => {
+  invalidateReload()
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = ''
+  }
+})
+
 
 function closeModal() {
+  invalidateReload()
   emit('close')
 }
 
 async function handleReloadAccount() {
-  if (!props.user?.id) return
+  const targetId = effectiveUser.value?.id
+  if (!targetId) return
   isReloading.value = true
+
+  const interactionId = currentDialogInteractionId
+  const requestId = ++currentReloadRequestId
+  const expectedActorId = authStore.user?.id
+  const expectedSessionGen = authStore.sessionGeneration
+  const expectedAdminGen = authStore.adminGeneration
+
+  const ownsCurrentReload = () =>
+    props.open &&
+    props.user?.id === targetId &&
+    effectiveUser.value?.id === targetId &&
+    currentDialogInteractionId === interactionId &&
+    currentReloadRequestId === requestId &&
+    authStore.user?.id === expectedActorId &&
+    authStore.sessionGeneration === expectedSessionGen &&
+    authStore.adminGeneration === expectedAdminGen
+
   try {
-    await usersStore.selectUser(props.user.id)
-    isConflict.value = false
-    formError.value = null
+    const reloadedDetail = await usersStore.selectUser(targetId)
+
+    if (!ownsCurrentReload()) return
+
+    if (reloadedDetail?.id === targetId) {
+      reloadedUser.value = reloadedDetail
+      isConflict.value = false
+      formError.value = null
+    } else if (!reloadedDetail) {
+      formError.value = usersStore.error || t('admin.users.reloadFailed')
+    }
   } catch (err: unknown) {
+    if (!ownsCurrentReload()) return
     const message = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Failed to reload account'
     formError.value = message
   } finally {
-    isReloading.value = false
+    if (ownsCurrentReload()) isReloading.value = false
   }
 }
-
 async function submitRoleAssignment() {
   formSubmitted.value = true
-  if (!props.user || !canSubmit.value) return
+  const target = effectiveUser.value
+  if (!target || !canSubmit.value) return
 
   if (isSelfChange.value) {
     formError.value = t('admin.users.roleSelfChangeError')
@@ -240,15 +311,18 @@ async function submitRoleAssignment() {
   formError.value = null
 
   try {
+
     const result = await usersStore.assignRole(
-      props.user.id,
+      target.id,
       selectedRoleId.value,
       reason.value.trim(),
-      props.user.adminControlVersion
+      target.adminControlVersion
     )
-
     if (result && result.success) {
-      emit('success', usersStore.selectedUser || props.user)
+      emit('success', usersStore.selectedUser || reloadedUser.value || target)
+      currentTargetUserId = null
+      reloadedUser.value = null
+      isConflict.value = false
       closeModal()
     } else {
       const code = result?.errorCode
@@ -311,12 +385,11 @@ async function submitRoleAssignment() {
               <h2 :id="dialogTitleId" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white truncate">
                 {{ $t('admin.users.roleAssignmentTitle') }}
               </h2>
-              <p v-if="user" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                {{ user.name || user.email }} ({{ user.email }})
+              <p v-if="effectiveUser" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                {{ effectiveUser.name || effectiveUser.email }} ({{ effectiveUser.email }})
               </p>
             </div>
             <button
-              ref="closeButtonRef"
               type="button"
               :aria-label="$t('admin_users.cancel')"
               class="min-h-11 min-w-11 p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors shrink-0 cursor-pointer flex items-center justify-center whitespace-nowrap"
@@ -360,6 +433,22 @@ async function submitRoleAssignment() {
                 <Loader2 class="h-4 w-4 animate-spin text-slate-400 mr-2 shrink-0" />
                 <span class="text-xs text-slate-400">{{ $t('admin_users.processing') }}</span>
               </div>
+              <!-- Error State & Retry -->
+              <div
+                v-else-if="usersStore.rolesError"
+                class="rounded-xl border border-rose-300 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 p-3 flex items-center justify-between text-xs text-rose-700 dark:text-rose-300"
+                data-testid="role-error-state"
+              >
+                <span>{{ usersStore.rolesError }}</span>
+                <button
+                  type="button"
+                  class="flex items-center gap-1 font-semibold text-rose-800 dark:text-rose-200 hover:underline shrink-0 cursor-pointer"
+                  @click="usersStore.fetchRoles()"
+                >
+                  <RefreshCw class="h-3.5 w-3.5" />
+                  {{ $t('common.retry') }}
+                </button>
+              </div>
 
               <!-- Accessible Combobox -->
               <AppSelect
@@ -371,7 +460,6 @@ async function submitRoleAssignment() {
                 size="md"
                 data-testid="admin-role-select"
               />
-
               <!-- Same Role Error Note -->
               <p v-if="isSameRole" class="text-xs text-amber-600 dark:text-amber-400 font-medium">
                 {{ $t('admin.users.roleSameError') }}
@@ -380,7 +468,7 @@ async function submitRoleAssignment() {
 
             <!-- Supported Permissions of selected role -->
             <div
-              v-if="selectedRoleOption && selectedRoleOption.supportedPermissions && selectedRoleOption.supportedPermissions.length > 0"
+              v-if="selectedRoleOption && selectedRoleOption.permissionKeys && selectedRoleOption.permissionKeys.length > 0"
               class="space-y-2"
               data-testid="supported-permissions-block"
             >
@@ -389,7 +477,7 @@ async function submitRoleAssignment() {
               </div>
               <div class="flex flex-wrap gap-1.5">
                 <span
-                  v-for="perm in selectedRoleOption.supportedPermissions"
+                  v-for="perm in selectedRoleOption.permissionKeys"
                   :key="perm"
                   class="rounded-md bg-slate-100 dark:bg-white/[0.08] px-2 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10 whitespace-nowrap shrink-0"
                 >
@@ -398,6 +486,14 @@ async function submitRoleAssignment() {
               </div>
             </div>
 
+            <!-- Empty grant list indicator (e.g. Learner) -->
+            <div
+              v-else-if="selectedRoleOption && (!selectedRoleOption.permissionKeys || selectedRoleOption.permissionKeys.length === 0)"
+              class="space-y-1 text-xs text-slate-500 dark:text-slate-400 italic"
+              data-testid="empty-permissions-block"
+            >
+              {{ $t('admin.users.noPermissions') }}
+            </div>
             <!-- Reason Textarea -->
             <div class="space-y-1.5">
               <label for="role-change-reason" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -405,7 +501,6 @@ async function submitRoleAssignment() {
               </label>
               <textarea
                 id="role-change-reason"
-                ref="reasonTextareaRef"
                 v-model="reason"
                 rows="3"
                 maxlength="500"

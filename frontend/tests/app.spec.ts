@@ -85,9 +85,19 @@ describe('app.vue shell isolation and page keying', () => {
     expect(wrapper.findComponent({ name: 'AppSidebar' }).exists()).toBe(false)
   })
 
-  it('selects only administrator chrome for authorized admin routes', () => {
+  it('selects only administrator chrome for authorized admin routes when destination permission is held', () => {
     currentRoute.value = { path: '/admin/catalog', fullPath: '/admin/catalog' }
-    useAdminAccessStore().state = 'authorized'
+    const access = useAdminAccessStore()
+    access.state = 'authorized'
+    access.capabilities = {
+      canViewAdminDashboard: false,
+      canManageCatalog: true,
+      canManageAccounts: false,
+      canReadAudit: false,
+      canManageDocumentOperations: false,
+      canManageRoles: false,
+      canManageCategories: false
+    }
     const wrapper = mount(App, { global: { stubs: {
       AdminShell: { template: '<section data-admin-shell><slot /></section>' },
       AppHeader: true, AppSidebar: true, AppCommandPalette: true, AppToastContainer: true,
@@ -98,6 +108,32 @@ describe('app.vue shell isolation and page keying', () => {
     expect(wrapper.findComponent({ name: 'AppHeader' }).exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'AppSidebar' }).exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'AppCommandPalette' }).exists()).toBe(false)
+  })
+
+  it('withholds admin shell and protected page when authorized admin lacks permission for destination route (F11)', () => {
+    currentRoute.value = { path: '/admin/catalog', fullPath: '/admin/catalog' }
+    const access = useAdminAccessStore()
+    access.state = 'authorized'
+    // Audit-only admin
+    access.capabilities = {
+      canViewAdminDashboard: false,
+      canManageCatalog: false,
+      canManageAccounts: false,
+      canReadAudit: true,
+      canManageDocumentOperations: false,
+      canManageRoles: false,
+      canManageCategories: false
+    }
+    const wrapper = mount(App, { global: { stubs: {
+      AdminShell: { template: '<section data-admin-shell><slot /></section>' },
+      AdminAuthorizationBoundary: { template: '<section data-neutral-boundary />' },
+      AppHeader: true, AppSidebar: true, AppCommandPalette: true, AppToastContainer: true,
+      NuxtPage: { template: '<div data-protected-page />' }
+    } } })
+    // Neutral boundary rendered; shell and catalog page never mounted
+    expect(wrapper.find('[data-neutral-boundary]').exists()).toBe(true)
+    expect(wrapper.find('[data-admin-shell]').exists()).toBe(false)
+    expect(wrapper.find('[data-protected-page]').exists()).toBe(false)
   })
 
   it('opens the login page after denial even before Nuxt finishes the previous protected page', () => {

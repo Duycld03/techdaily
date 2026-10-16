@@ -75,6 +75,20 @@ describe('server-confirmed administrator admission', () => {
     expect(access.canAccessDestination('/admin/audit')).toBe(false)
   })
 
+  it('preserves query and hash contexts when verifying destination access (F15)', async () => {
+    const access = useAdminAccessStore()
+    get.mockResolvedValue({
+      canManageCatalog: true,
+      canManageCategories: true,
+      canManageDocumentOperations: true
+    })
+    await access.verify()
+
+    expect(access.canAccessDestination('/admin/catalog?search=vue#section-1')).toBe(true)
+    expect(access.canAccessDestination('/admin/categories?page=2#active')).toBe(true)
+    expect(access.canAccessDestination('/admin/documents?status=Processing#details')).toBe(true)
+    expect(access.canAccessDestination('/admin/users?query=test')).toBe(false)
+  })
   it('tracks all 7 capabilities and hasAnyCapability getter', async () => {
     const access = useAdminAccessStore()
     get.mockResolvedValue({

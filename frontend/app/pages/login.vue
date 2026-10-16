@@ -26,6 +26,7 @@ import AppLogo from '~/components/common/AppLogo.vue'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
 import LocaleSelector from '~/components/common/LocaleSelector.vue'
 import { useApiError } from '~/composables/useApiError'
+import { safeUserReturnPath } from '~/utils/adminRoutes'
 import { useAuthStore } from '~/stores/useAuthStore'
 
 const authStore = useAuthStore()
@@ -83,11 +84,7 @@ const formSubtitle = computed(() => {
 })
 
 function getRedirectTarget() {
-  const redirectQuery = route.query?.redirect
-  if (typeof redirectQuery === 'string' && redirectQuery.startsWith('/') && !redirectQuery.startsWith('/login')) {
-    return redirectQuery
-  }
-  return '/today'
+  return safeUserReturnPath(route.query?.redirect, '/today')
 }
 
 async function setAuthMode(mode: 'login' | 'register' | 'forgot-password') {

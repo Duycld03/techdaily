@@ -47,7 +47,8 @@ public class AuthorizationInitializationTests : IDisposable
                 RolePermission.Create(RoleDefaults.AdminRoleId, PermissionKeys.ManageAccounts),
                 RolePermission.Create(RoleDefaults.AdminRoleId, PermissionKeys.ReadAudit),
                 RolePermission.Create(RoleDefaults.AdminRoleId, PermissionKeys.ManageDocumentOperations),
-                RolePermission.Create(RoleDefaults.AdminRoleId, PermissionKeys.ManageRoles)
+                RolePermission.Create(RoleDefaults.AdminRoleId, PermissionKeys.ManageRoles),
+                RolePermission.Create(RoleDefaults.AdminRoleId, PermissionKeys.ManageCategories)
             );
         }
 
@@ -238,5 +239,83 @@ public class AuthorizationInitializationTests : IDisposable
         var res2 = await _initService.InitializeAsync(new[] { candidateId });
         res2.IsSuccess.Should().BeFalse();
         res2.Error.Code.Should().Be("AUTHORIZATION_ALREADY_INITIALIZED");
+    }
+
+    [Fact]
+    public async Task Initialize_WhenAdminHasWrongCaseOrMissingGrants_ShouldFailWithSeedCorrupt()
+    {
+        var adminUser = new User { Id = Guid.NewGuid(), Email = "cand1@example.com", Name = "Cand", Status = AccountStatus.Active, RoleId = RoleDefaults.LearnerRoleId };
+        await _db.Users.AddAsync(adminUser);
+        await _db.SaveChangesAsync();
+
+        var catPerm = await _db.RolePermissions.FirstAsync(p => p.RoleId == RoleDefaults.AdminRoleId && p.PermissionKey == PermissionKeys.ManageCategories);
+        _db.RolePermissions.Remove(catPerm);
+        await _db.SaveChangesAsync();
+
+        var res = await _initService.InitializeAsync(new[] { adminUser.Id });
+        res.IsSuccess.Should().BeFalse();
+        res.Error.Code.Should().Be("INIT_SEED_CORRUPT");
+    }
+
+    [Fact]
+    public async Task Initialize_WhenAdminMissingManageRolesMaskedBySixOtherRows_ShouldFailWithSeedCorrupt()
+    {
+        var adminUser = new User { Id = Guid.NewGuid(), Email = "cand1b@example.com", Name = "Cand", Status = AccountStatus.Active, RoleId = RoleDefaults.LearnerRoleId };
+        await _db.Users.AddAsync(adminUser);
+        await _db.SaveChangesAsync();
+
+        var rolesPerm = await _db.RolePermissions.FirstAsync(p => p.RoleId == RoleDefaults.AdminRoleId && p.PermissionKey == PermissionKeys.ManageRoles);
+        _db.RolePermissions.Remove(rolesPerm);
+        await _db.SaveChangesAsync();
+
+        var count = await _db.RolePermissions.CountAsync(p => p.RoleId == RoleDefaults.AdminRoleId);
+        count.Should().Be(6);
+
+        var res = await _initService.InitializeAsync(new[] { adminUser.Id });
+        res.IsSuccess.Should().BeFalse();
+        res.Error.Code.Should().Be("INIT_SEED_CORRUPT");
+    }
+
+    [Fact]
+    public async Task Initialize_WhenAdminHasWrongCaseGrant_ShouldFailWithSeedCorrupt()
+    {
+        var adminUser = new User { Id = Guid.NewGuid(), Email = "cand1c@example.com", Name = "Cand", Status = AccountStatus.Active, RoleId = RoleDefaults.LearnerRoleId };
+        await _db.Users.AddAsync(adminUser);
+        await _db.SaveChangesAsync();
+
+        var catalogPerm = await _db.RolePermissions.FirstAsync(p => p.RoleId == RoleDefaults.AdminRoleId && p.PermissionKey == PermissionKeys.ManageCatalog);
+        _db.RolePermissions.Remove(catalogPerm);
+        _db.RolePermissions.Add(new RolePermission { RoleId = RoleDefaults.AdminRoleId, PermissionKey = "managecatalog" });
+        await _db.SaveChangesAsync();
+
+        var res = await _initService.InitializeAsync(new[] { adminUser.Id });
+        res.IsSuccess.Should().BeFalse();
+        res.Error.Code.Should().Be("INIT_SEED_CORRUPT");
+    }
+
+    [Fact]
+    public async Task Initialize_WhenAdminHasExtraUnsupportedGrants_ShouldFailWithSeedCorrupt()
+    {
+        var adminUser = new User { Id = Guid.NewGuid(), Email = "cand2@example.com", Name = "Cand", Status = AccountStatus.Active, RoleId = RoleDefaults.LearnerRoleId };
+        await _db.Users.AddAsync(adminUser);
+        _db.RolePermissions.Add(new RolePermission { RoleId = RoleDefaults.AdminRoleId, PermissionKey = "SuperAdminPermission" });
+        await _db.SaveChangesAsync();
+
+        var res = await _initService.InitializeAsync(new[] { adminUser.Id });
+        res.IsSuccess.Should().BeFalse();
+        res.Error.Code.Should().Be("INIT_SEED_CORRUPT");
+    }
+
+    [Fact]
+    public async Task Initialize_WhenLearnerHoldsPermissions_ShouldFailWithSeedCorrupt()
+    {
+        var adminUser = new User { Id = Guid.NewGuid(), Email = "cand3@example.com", Name = "Cand", Status = AccountStatus.Active, RoleId = RoleDefaults.LearnerRoleId };
+        await _db.Users.AddAsync(adminUser);
+        _db.RolePermissions.Add(RolePermission.Create(RoleDefaults.LearnerRoleId, PermissionKeys.ReadAudit));
+        await _db.SaveChangesAsync();
+
+        var res = await _initService.InitializeAsync(new[] { adminUser.Id });
+        res.IsSuccess.Should().BeFalse();
+        res.Error.Code.Should().Be("INIT_SEED_CORRUPT");
     }
 }

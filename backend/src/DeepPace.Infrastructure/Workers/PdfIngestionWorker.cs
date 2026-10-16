@@ -28,18 +28,15 @@ public class PdfIngestionWorker : BackgroundService
     {
         _logger.LogInformation("PdfIngestionWorker started listening for PDF ingestion jobs.");
 
-        // Verify database and schema readiness before admitting work
+        // Verify database and schema readiness before admitting work (mandatory readiness; fail loud to stop host)
         using (var readyScope = _scopeFactory.CreateScope())
         {
-            var readiness = readyScope.ServiceProvider.GetService<IAuthorizationReadinessService>();
-            if (readiness != null)
+            var readiness = readyScope.ServiceProvider.GetRequiredService<IAuthorizationReadinessService>();
+            var status = await readiness.GetReadinessAsync(stoppingToken);
+            if (!status.IsReady || !status.HasRequiredSchemaAndRoles)
             {
-                var status = await readiness.GetReadinessAsync(stoppingToken);
-                if (!status.IsReady || !status.HasRequiredSchemaAndRoles)
-                {
-                    _logger.LogWarning("PdfIngestionWorker suspended startup: database schema or authorization seeds not ready ({Reason})", status.FailureReason);
-                    return;
-                }
+                _logger.LogError("PdfIngestionWorker startup failed: required authorization schema or seeds not ready ({Reason})", status.FailureReason);
+                throw new InvalidOperationException($"PdfIngestionWorker startup failed: required authorization schema or seeds not ready ({status.FailureReason})");
             }
         }
 
@@ -203,6 +200,10 @@ public class PdfIngestionWorker : BackgroundService
                 _logger.LogInformation("Startup recovery completed: {CatalogCount} catalog docs, {BookCount} personal books, {AttemptCount} attempts marked recoverable.",
                     interruptedCatalogDocs.Count, interruptedBooks.Count, interruptedAttempts.Count);
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Normal shutdown cancellation during startup recovery
         }
         catch (Exception ex)
         {

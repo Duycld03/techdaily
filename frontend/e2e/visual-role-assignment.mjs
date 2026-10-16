@@ -62,22 +62,21 @@ const rolesList = [
     key: 'learner',
     nameEn: 'Learner',
     nameVi: 'Học viên',
-    isProtected: false,
-    supportedPermissions: []
+    permissionKeys: []
   },
   {
     id: '20000000-0000-4000-8000-000000000002',
     key: 'admin',
     nameEn: 'Administrator',
     nameVi: 'Quản trị viên',
-    isProtected: true,
-    supportedPermissions: [
+    permissionKeys: [
       'ViewAdminDashboard',
       'ManageCatalog',
       'ManageAccounts',
       'ReadAudit',
       'ManageDocumentOperations',
-      'ManageRoles'
+      'ManageRoles',
+      'ManageCategories'
     ]
   }
 ]

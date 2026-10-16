@@ -108,15 +108,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
                 if (validation.Status == AccountAuthorityStatus.Unavailable)
                 {
-                    context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-                    context.Response.ContentType = "application/problem+json";
-                    context.Response.Headers.CacheControl = "no-store";
-                    await context.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
-                    {
-                        Status = StatusCodes.Status503ServiceUnavailable,
-                        Title = "Service Unavailable",
-                        Detail = "Account authority verification is temporarily unavailable."
-                    });
+                    context.Fail("Account authority verification is temporarily unavailable.");
+                    context.HttpContext.Items["SessionAuthorityUnavailable"] = true;
                     return;
                 }
 
@@ -378,8 +371,83 @@ if (app.Environment.IsDevelopment())
     app.MapGet("/swagger/index.html", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
 }
 
-app.UseAdminDashboardNoStore();
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/api/v1/admin") ||
+        context.Request.Path.Equals("/api/v1/catalog/capabilities", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers.Pragma = "no-cache";
+    }
+    await next(context);
+});
+
 app.UseAuthentication();
+
+app.Use(async (context, next) =>
+{
+    if (context.Items.ContainsKey("SessionAuthorityUnavailable"))
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.ContentType = "application/problem+json";
+        context.Response.Headers.CacheControl = "no-store";
+        await context.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+        {
+            Status = StatusCodes.Status503ServiceUnavailable,
+            Title = "Service Unavailable",
+            Detail = "Account authority verification is temporarily unavailable."
+        });
+        return;
+    }
+
+    await next(context);
+});
+
+app.Use(async (context, next) =>
+{
+    var isAdminRoute = context.Request.Path.StartsWithSegments("/api/v1/admin") ||
+                       context.Request.Path.Equals("/api/v1/catalog/capabilities", StringComparison.OrdinalIgnoreCase);
+
+    if (!isAdminRoute)
+    {
+        await next(context);
+        return;
+    }
+
+    var readiness = context.RequestServices.GetRequiredService<IAuthorizationReadinessService>();
+    var status = await readiness.GetReadinessAsync(context.RequestAborted);
+    if (!status.IsReady || !status.HasRequiredSchemaAndRoles)
+    {
+        app.Logger.LogWarning("Administrative authorization readiness check failed: {Reason}", status.FailureReason);
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            type = "https://tools.ietf.org/html/rfc7807",
+            title = "Service Unavailable",
+            status = StatusCodes.Status503ServiceUnavailable,
+            detail = "Administrative authorization is temporarily unavailable."
+        });
+        return;
+    }
+
+    if (!status.IsInitialized && context.User?.Identity?.IsAuthenticated == true)
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            type = "https://tools.ietf.org/html/rfc7807",
+            title = "Service Unavailable",
+            status = StatusCodes.Status503ServiceUnavailable,
+            detail = "Privileged authorization has not been initialized."
+        });
+        return;
+    }
+
+    await next(context);
+});
+
 app.UseAuthorization();
 app.UseRateLimiter();
 
@@ -447,55 +515,7 @@ app.MapAdminAccountsAndAuditEndpoints();
 app.MapAdminDocumentOperationsEndpoints();
 app.MapAdminCategoriesEndpoints();
 
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path.StartsWithSegments("/api/v1/admin") ||
-        context.Request.Path.Equals("/api/v1/catalog/capabilities", StringComparison.OrdinalIgnoreCase))
-    {
-        context.Response.Headers.CacheControl = "no-store";
-        context.Response.Headers.Pragma = "no-cache";
-    }
-    await next(context);
-});
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path.Equals("/health", StringComparison.OrdinalIgnoreCase))
-    {
-        await next(context);
-        return;
-    }
 
-    var readiness = context.RequestServices.GetRequiredService<IAuthorizationReadinessService>();
-    var status = await readiness.GetReadinessAsync(context.RequestAborted);
-    if (!status.IsReady || !status.HasRequiredSchemaAndRoles)
-    {
-        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-        context.Response.ContentType = "application/problem+json";
-        await context.Response.WriteAsJsonAsync(new
-        {
-            type = "https://tools.ietf.org/html/rfc7807",
-            title = "Service Unavailable",
-            status = StatusCodes.Status503ServiceUnavailable,
-            detail = status.FailureReason ?? "Required database schema or authorization seeds are missing."
-        });
-        return;
-    }
-    if (!status.IsInitialized && context.Request.Path.StartsWithSegments("/api/v1/admin"))
-    {
-        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-        context.Response.ContentType = "application/problem+json";
-        await context.Response.WriteAsJsonAsync(new
-        {
-            type = "https://tools.ietf.org/html/rfc7807",
-            title = "Service Unavailable",
-            status = StatusCodes.Status503ServiceUnavailable,
-            detail = "Privileged authorization has not been initialized."
-        });
-        return;
-    }
-
-    await next(context);
-});
 
 
 app.MapNotesEndpoints();
@@ -527,10 +547,11 @@ app.MapGet("/health", async (IAuthorizationReadinessService readinessService) =>
     var readiness = await readinessService.GetReadinessAsync();
     if (!readiness.IsReady || !readiness.HasRequiredSchemaAndRoles)
     {
+        app.Logger.LogWarning("Health readiness check failed: {Reason}", readiness.FailureReason);
         return Results.Json(new HealthStatusResponse(
             Status: "unhealthy",
             Database: readiness.IsDatabaseConnected ? "schema_unready" : "disconnected",
-            Error: readiness.FailureReason,
+            Error: "Authorization readiness is temporarily unavailable.",
             Timestamp: DateTime.UtcNow), statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 
@@ -584,6 +605,20 @@ if (args.Length > 0 && args[0].Equals("authorization", StringComparison.OrdinalI
     Console.Error.WriteLine($"Unknown authorization command: '{string.Join(" ", args)}'. Supported commands: authorization initialize --admin-user-id <uuid>");
     return 1;
 }
+using (var scope = app.Services.CreateScope())
+{
+    var readinessService = scope.ServiceProvider.GetRequiredService<IAuthorizationReadinessService>();
+    var readiness = await readinessService.GetReadinessAsync();
+    if (!readiness.IsReady)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogCritical("Required authorization readiness check failed on host startup: {Reason}. Halting process.", readiness.FailureReason);
+        Console.Error.WriteLine($"Startup failed: Authorization readiness check failed - {readiness.FailureReason}");
+        return 1;
+    }
+}
 
 app.Run();
 return 0;
+
+public partial class Program { }

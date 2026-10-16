@@ -58,12 +58,9 @@ public record AdminAssignRoleActionRequest(
 
 public static class RoleMappingExtensions
 {
-    public static readonly RoleDescriptorDto DefaultLearnerDescriptor =
-        new(RoleDefaults.LearnerRoleId, RoleDefaults.LearnerKey, "Learner", "Người học");
-
-    public static RoleDescriptorDto ToDescriptor(this Role? role)
+    public static RoleDescriptorDto ToDescriptor(this Role role)
     {
-        if (role == null) return DefaultLearnerDescriptor;
+        ArgumentNullException.ThrowIfNull(role);
         return new RoleDescriptorDto(role.Id, role.Key, role.NameEn, role.NameVi);
     }
 }

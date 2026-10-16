@@ -1,9 +1,14 @@
 using System.Diagnostics;
+using System.Threading;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using DeepPace.Application.Common;
 using DeepPace.Application.Features.Admin.Accounts;
+using DeepPace.Application.Features.Admin.Accounts.DTOs;
 using DeepPace.Application.Features.Catalog.Admin.Publish;
+using DeepPace.Application.Features.Catalog.Admin.Hide;
+using DeepPace.Application.Features.Catalog.Admin.Review;
 using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
@@ -25,8 +30,13 @@ public class PostgresAccountConcurrencyTests
 
     private static string GetConnectionString()
     {
-        return Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION")
-            ?? throw new InvalidOperationException("TEST_POSTGRES_CONNECTION must identify an isolated PostgreSQL test database.");
+        var connectionString = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException("TEST_POSTGRES_CONNECTION must point to an isolated PostgreSQL test database.");
+        }
+
+        return connectionString;
     }
 
     private static DbContextOptions<DeepPaceDbContext> CreatePostgresOptions()
@@ -36,22 +46,20 @@ public class PostgresAccountConcurrencyTests
             .Options;
     }
 
-    private bool CheckPostgresConnection()
+    private void EnsurePostgresConnected()
     {
         try
         {
             using var db = new DeepPaceDbContext(CreatePostgresOptions());
-            var canConnect = db.Database.CanConnect();
-            if (canConnect)
+            if (!db.Database.CanConnect())
             {
-                db.Database.Migrate();
+                throw new InvalidOperationException("The isolated PostgreSQL test database is unavailable. Verify TEST_POSTGRES_CONNECTION.");
             }
-            return canConnect;
+            db.Database.Migrate();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not InvalidOperationException)
         {
-            _output.WriteLine($"[PostgresAccountConcurrencyTests] PostgreSQL fixture unavailable: {ex.Message}");
-            return false;
+            throw new InvalidOperationException("The isolated PostgreSQL test database connection or migration failed. Verify TEST_POSTGRES_CONNECTION.", ex);
         }
     }
 
@@ -69,11 +77,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task ConcurrentSuspensions_ShouldSerializeAndRetainAtLeastOneActiveAdmin()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var admin1Id = Guid.NewGuid();
@@ -124,11 +128,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task CompetingAccountUpdates_StaleVersion_ShouldReturnConflictAndRecordRejection()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var adminId = Guid.NewGuid();
@@ -171,11 +171,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task Rollback_WhenAuditInsertionFails_ShouldRevertStatusAndTokenRevocations()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var adminId = Guid.NewGuid();
@@ -213,7 +209,8 @@ public class PostgresAccountConcurrencyTests
                 1,
                 AdminAuditActions.UserSuspend,
                 "corr-fail",
-                async (actUser, tgtUser) =>
+                preTargetValidation: null,
+                command: async (actUser, tgtUser, targetRole) =>
                 {
                     tgtUser.Suspend(actUser.Id, "Reason to rollback");
                     token.RevokedAt = DateTimeOffset.UtcNow;
@@ -239,11 +236,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task SessionRevocation_PreRevocationCredentialsFail_FreshLoginSucceeds()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var db = new DeepPaceDbContext(CreatePostgresOptions());
         var adminId = Guid.NewGuid();
@@ -294,11 +287,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task RoleAssignment_DemotionVersusConcurrentSuspension_ShouldSerializeAndRetainAtLeastOneActiveAdmin()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var admin1Id = Guid.NewGuid();
@@ -344,11 +333,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task RoleAssignment_ActorSessionVersionLoss_ShouldRejectWithForbidden()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var adminId = Guid.NewGuid();
@@ -375,11 +360,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task RoleAssignment_LastProtectedAdminRetention_ShouldRejectDemotingOnlyActiveAdmin()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var existingAdmins = await dbSetup.Users
@@ -421,11 +402,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task RoleAssignment_SelfTargetRule_ShouldReject()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var adminId = Guid.NewGuid();
@@ -447,11 +424,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task RoleAssignment_SuspendedTarget_ShouldAssignRoleAndRevokeTokensWhilePreservingSuspendedStatus()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var adminId = Guid.NewGuid();
@@ -509,11 +482,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task RoleAssignment_LostResponseRetry_ShouldFailStaleVersionWithoutRepeatedRevocation()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var adminId = Guid.NewGuid();
@@ -572,11 +541,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task PrivilegedCatalogAdmission_WhenSessionRevocationCommitsFirst_ShouldPreventPrivilegedMutation()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var adminId = Guid.NewGuid();
@@ -653,11 +618,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task PrivilegedCatalogAdmission_ConcurrentWithAccountRevocation_ShouldSerializeWithoutDeadlock()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var admin1Id = Guid.NewGuid();
@@ -741,11 +702,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task SessionRace_PromotionDemotionDuringIssuanceAndRotation_ShouldRejectStaleAndPermitFreshLogin()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         var adminId = Guid.NewGuid();
@@ -836,11 +793,7 @@ public class PostgresAccountConcurrencyTests
     [Fact]
     public async Task AuthorizationInitialization_ConcurrentRuns_ShouldSerializeAndSucceedExactlyOnce()
     {
-        if (!CheckPostgresConnection())
-        {
-            _output.WriteLine("REPORT: PostgreSQL unavailable on localhost:5432. Concurrency test reported fixture status.");
-            return;
-        }
+        EnsurePostgresConnected();
 
         using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
         // Clear previous initialization receipt for isolated concurrency test
@@ -880,5 +833,454 @@ public class PostgresAccountConcurrencyTests
         using var dbVerify = new DeepPaceDbContext(CreatePostgresOptions());
         var receipts = await dbVerify.AuthorizationInitializations.ToListAsync();
         receipts.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task AccountActions_FreshPostgresContext_SuspensionReactivationSignOut_PreserveAuthoritativeRoleDescriptors()
+    {
+        EnsurePostgresConnected();
+
+        using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
+        var adminId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+        var customRoleId = Guid.NewGuid();
+
+        var roleKey = $"auditor_{Guid.NewGuid():N}"[..20];
+        var customRole = Role.Create(roleKey, "Custom Auditor", "Kiem toan vien", isProtected: false, id: customRoleId);
+        var admin = new User { Id = adminId, Email = $"admin-{Guid.NewGuid():N}@example.com", Name = "Admin Actor", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+        var target = new User { Id = targetId, Email = $"target-{Guid.NewGuid():N}@example.com", Name = "Target User", Status = AccountStatus.Active, RoleId = customRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+
+        await dbSetup.Roles.AddAsync(customRole);
+        await dbSetup.Users.AddRangeAsync(admin, target);
+        await dbSetup.SaveChangesAsync();
+
+        // 1. Suspension in fresh context
+        using (var db1 = new DeepPaceDbContext(CreatePostgresOptions()))
+        {
+            var uow = new AdministrativeUnitOfWork(db1);
+            var tokenService = new RefreshTokenService(db1);
+            var handler = new AdminSuspendUserHandler(uow, tokenService);
+
+            var res = await handler.ExecuteAsync(new AdminSuspendUserRequest(targetId, adminId, "Suspended for audit", 1));
+            res.IsSuccess.Should().BeTrue();
+            res.Value.Role.Id.Should().Be(customRoleId);
+            res.Value.Role.Key.Should().Be(roleKey);
+            res.Value.Role.NameEn.Should().Be("Custom Auditor");
+            res.Value.Role.NameVi.Should().Be("Kiem toan vien");
+            res.Value.Status.Should().Be(AccountStatus.Suspended);
+        }
+
+        // 2. Reactivation in fresh context
+        using (var db2 = new DeepPaceDbContext(CreatePostgresOptions()))
+        {
+            var uow = new AdministrativeUnitOfWork(db2);
+            var handler = new AdminReactivateUserHandler(uow);
+
+            var res = await handler.ExecuteAsync(new AdminReactivateUserRequest(targetId, adminId, "Reactivated after review", 2));
+            res.IsSuccess.Should().BeTrue();
+            res.Value.Role.Id.Should().Be(customRoleId);
+            res.Value.Role.Key.Should().Be(roleKey);
+            res.Value.Role.NameEn.Should().Be("Custom Auditor");
+            res.Value.Role.NameVi.Should().Be("Kiem toan vien");
+            res.Value.Status.Should().Be(AccountStatus.Active);
+        }
+
+        // 3. Session revocation in fresh context
+        using (var db3 = new DeepPaceDbContext(CreatePostgresOptions()))
+        {
+            var uow = new AdministrativeUnitOfWork(db3);
+            var tokenService = new RefreshTokenService(db3);
+            var handler = new AdminRevokeUserSessionsHandler(uow, tokenService);
+
+            var res = await handler.ExecuteAsync(new AdminRevokeUserSessionsRequest(targetId, adminId, "Revoking all sessions", 3));
+            res.IsSuccess.Should().BeTrue();
+            res.Value.Role.Id.Should().Be(customRoleId);
+            res.Value.Role.Key.Should().Be(roleKey);
+            res.Value.Role.NameEn.Should().Be("Custom Auditor");
+            res.Value.Role.NameVi.Should().Be("Kiem toan vien");
+        }
+
+        // 4. Missing role authority on PostgreSQL returns Role.NotFound without fabricating success
+        var deletedRoleId = Guid.NewGuid();
+        var brokenTargetId = Guid.NewGuid();
+        var delRoleKey = $"del_{Guid.NewGuid():N}"[..20];
+        var deletedRole = Role.Create(delRoleKey, "Deleted Role", "Vai tro da xoa", isProtected: false, id: deletedRoleId);
+        deletedRole.IsDeleted = true; // Soft-deleted role
+        var brokenTarget = new User { Id = brokenTargetId, Email = $"broken-{Guid.NewGuid():N}@example.com", Name = "Broken User", Status = AccountStatus.Active, RoleId = deletedRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+
+        using (var dbBreak = new DeepPaceDbContext(CreatePostgresOptions()))
+        {
+            await dbBreak.Roles.AddAsync(deletedRole);
+            await dbBreak.Users.AddAsync(brokenTarget);
+            await dbBreak.SaveChangesAsync();
+        }
+
+        using (var db4 = new DeepPaceDbContext(CreatePostgresOptions()))
+        {
+            var uow = new AdministrativeUnitOfWork(db4);
+            var tokenService = new RefreshTokenService(db4);
+            var handler = new AdminSuspendUserHandler(uow, tokenService);
+
+            var res = await handler.ExecuteAsync(new AdminSuspendUserRequest(brokenTargetId, adminId, "Attempt suspend broken", 1));
+            res.IsSuccess.Should().BeFalse();
+            res.Error.Code.Should().Be("Role.NotFound");
+        }
+    }
+
+    [Fact]
+    public async Task HideDocument_VersusConcurrentAccountRevocation_DeterministicBarriers()
+    {
+        EnsurePostgresConnected();
+
+        using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
+        var adminAId = Guid.NewGuid();
+        var adminBId = Guid.NewGuid();
+        var docId = Guid.NewGuid();
+
+        var adminA = new User { Id = adminAId, Email = $"adminA-{Guid.NewGuid():N}@example.com", Name = "Admin A", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+        var adminB = new User { Id = adminBId, Email = $"adminB-{Guid.NewGuid():N}@example.com", Name = "Admin B", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+
+        var doc = new CatalogDocument
+        {
+            Id = docId,
+            Title = "Postgres Hide Concurrency Test Doc",
+            Description = "Desc",
+            CategoryId = CategoryDefaults.BackendRuntimeId,
+            AttributionText = "DeepPace Attrib",
+            Visibility = CatalogVisibility.Published,
+            ProcessingStatus = ProcessingStatus.Ready,
+            TotalSlices = 1,
+            ConcurrencyVersion = 1
+        };
+
+        await dbSetup.Users.AddRangeAsync(adminA, adminB);
+        await dbSetup.CatalogDocuments.AddAsync(doc);
+        await dbSetup.SaveChangesAsync();
+
+        // Order 1: Admin B revokes Admin A's sessions FIRST.
+        using (var dbRevoke = new DeepPaceDbContext(CreatePostgresOptions()))
+        {
+            var uowRevoke = new AdministrativeUnitOfWork(dbRevoke);
+            var tokenService = new RefreshTokenService(dbRevoke);
+            var revokeHandler = new AdminRevokeUserSessionsHandler(uowRevoke, tokenService);
+            var revokeRes = await revokeHandler.ExecuteAsync(new AdminRevokeUserSessionsRequest(adminAId, adminBId, "Security logout", 1));
+            revokeRes.IsSuccess.Should().BeTrue();
+        }
+
+        // Now Admin A attempts to hide the document with stale PresentedSessionVersion = 1
+        using (var dbHide = new DeepPaceDbContext(CreatePostgresOptions()))
+        {
+            var uowHide = new AdministrativeUnitOfWork(dbHide);
+            var hideHandler = new AdminHideCatalogDocumentHandler(dbHide, uowHide);
+            var hideRes = await hideHandler.ExecuteAsync(new AdminHideCatalogDocumentRequest(docId, adminAId, 1, PresentedSessionVersion: 1));
+
+            hideRes.IsSuccess.Should().BeFalse("Stale admin session version must reject hide command");
+            hideRes.Error.Code.Should().Be("AUTH_FORBIDDEN");
+        }
+
+        // Verify document state remains UNCHANGED (Published, version 1)
+        using (var dbVerify = new DeepPaceDbContext(CreatePostgresOptions()))
+        {
+            var docVerify = await dbVerify.CatalogDocuments.FindAsync(docId);
+            docVerify!.Visibility.Should().Be(CatalogVisibility.Published);
+            docVerify.ConcurrencyVersion.Should().Be(1);
+        }
+
+        // Order 2: Now Admin A uses fresh PresentedSessionVersion = 2 and hides document
+        using (var dbHideFresh = new DeepPaceDbContext(CreatePostgresOptions()))
+        {
+            var uowHide = new AdministrativeUnitOfWork(dbHideFresh);
+            var hideHandler = new AdminHideCatalogDocumentHandler(dbHideFresh, uowHide);
+            var hideRes = await hideHandler.ExecuteAsync(new AdminHideCatalogDocumentRequest(docId, adminAId, 1, PresentedSessionVersion: 2));
+
+            hideRes.IsSuccess.Should().BeTrue();
+        }
+
+        using (var dbVerify2 = new DeepPaceDbContext(CreatePostgresOptions()))
+        {
+            var docVerify2 = await dbVerify2.CatalogDocuments.FindAsync(docId);
+            docVerify2!.Visibility.Should().Be(CatalogVisibility.Hidden);
+            docVerify2.ConcurrencyVersion.Should().Be(2);
+        }
+    }
+
+    [Fact]
+    public async Task ActiveAdminRemoval_CompetingDemotions_DeterministicBarrier()
+    {
+        EnsurePostgresConnected();
+
+        using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
+        // Suspend any pre-existing active admins so exactly 2 active admins exist
+        var existingAdmins = await dbSetup.Users.Where(u => u.RoleId == RoleDefaults.AdminRoleId && u.Status == AccountStatus.Active).ToListAsync();
+        foreach (var a in existingAdmins)
+        {
+            a.Status = AccountStatus.Suspended;
+        }
+        await dbSetup.SaveChangesAsync();
+
+        var managerRoleId = Guid.NewGuid();
+        var managerRole = Role.Create($"mgr-{Guid.NewGuid():N}"[..20], "Manager", "Quan ly", isProtected: false, id: managerRoleId);
+        await dbSetup.Roles.AddAsync(managerRole);
+        await dbSetup.RolePermissions.AddRangeAsync(
+            RolePermission.Create(managerRoleId, PermissionKeys.ManageAccounts),
+            RolePermission.Create(managerRoleId, PermissionKeys.ManageRoles)
+        );
+
+        var managerId = Guid.NewGuid();
+        var admin1Id = Guid.NewGuid();
+        var admin2Id = Guid.NewGuid();
+
+        var manager = new User { Id = managerId, Email = $"mgr-{Guid.NewGuid():N}@example.com", Name = "Manager", Status = AccountStatus.Active, RoleId = managerRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+        var admin1 = new User { Id = admin1Id, Email = $"admin1-{Guid.NewGuid():N}@example.com", Name = "Admin 1", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+        var admin2 = new User { Id = admin2Id, Email = $"admin2-{Guid.NewGuid():N}@example.com", Name = "Admin 2", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+
+        await dbSetup.Users.AddRangeAsync(manager, admin1, admin2);
+        await dbSetup.SaveChangesAsync();
+
+        var barrier = new Barrier(2);
+
+        var task1 = Task.Run(async () =>
+        {
+            barrier.SignalAndWait();
+            using var db1 = new DeepPaceDbContext(CreatePostgresOptions());
+            var uow = new AdministrativeUnitOfWork(db1);
+            var tokenService = new RefreshTokenService(db1);
+            var permResolver = new AdminPermissionResolver(db1);
+            var handler = new AdminAssignRoleHandler(db1, uow, tokenService, permResolver);
+            return await handler.ExecuteAsync(new AdminAssignRoleRequest(admin1Id, managerId, RoleDefaults.LearnerRoleId, "Manager demoting Admin 1", 1, "corr-barrier-mgr-1", 1));
+        });
+
+        var task2 = Task.Run(async () =>
+        {
+            barrier.SignalAndWait();
+            using var db2 = new DeepPaceDbContext(CreatePostgresOptions());
+            var uow = new AdministrativeUnitOfWork(db2);
+            var tokenService = new RefreshTokenService(db2);
+            var permResolver = new AdminPermissionResolver(db2);
+            var handler = new AdminAssignRoleHandler(db2, uow, tokenService, permResolver);
+            return await handler.ExecuteAsync(new AdminAssignRoleRequest(admin2Id, managerId, RoleDefaults.LearnerRoleId, "Manager demoting Admin 2", 1, "corr-barrier-mgr-2", 1));
+        });
+
+        var results = await Task.WhenAll(task1, task2);
+
+        var successCount = results.Count(r => r.IsSuccess);
+        var failureCount = results.Count(r => !r.IsSuccess);
+
+        successCount.Should().Be(1, "Exactly one demotion may succeed");
+        failureCount.Should().Be(1, "The competing demotion must be serialized and rejected");
+
+        var failed = results.First(r => !r.IsSuccess);
+        failed.Error.Code.Should().Be("ACCOUNT_LAST_ADMIN_PROTECTED");
+
+        using var dbVerify = new DeepPaceDbContext(CreatePostgresOptions());
+        var u1 = await dbVerify.Users.FindAsync(admin1Id);
+        var u2 = await dbVerify.Users.FindAsync(admin2Id);
+
+        var activeAdminCount = (u1!.RoleId == RoleDefaults.AdminRoleId && u1.Status == AccountStatus.Active ? 1 : 0) +
+                               (u2!.RoleId == RoleDefaults.AdminRoleId && u2.Status == AccountStatus.Active ? 1 : 0);
+        activeAdminCount.Should().Be(1, "At least one active protected admin must be retained in PostgreSQL");
+    }
+
+    [Fact]
+    public async Task ActiveAdminRemoval_MutualDemotion_DeterministicBarrier()
+    {
+        EnsurePostgresConnected();
+
+        using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
+        var admin1Id = Guid.NewGuid();
+        var admin2Id = Guid.NewGuid();
+
+        var admin1 = new User { Id = admin1Id, Email = $"admin1-{Guid.NewGuid():N}@example.com", Name = "Admin 1", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+        var admin2 = new User { Id = admin2Id, Email = $"admin2-{Guid.NewGuid():N}@example.com", Name = "Admin 2", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+
+        await dbSetup.Users.AddRangeAsync(admin1, admin2);
+        await dbSetup.SaveChangesAsync();
+
+        var barrier = new Barrier(2);
+
+        var task1 = Task.Run(async () =>
+        {
+            barrier.SignalAndWait();
+            using var db1 = new DeepPaceDbContext(CreatePostgresOptions());
+            var uow = new AdministrativeUnitOfWork(db1);
+            var tokenService = new RefreshTokenService(db1);
+            var permResolver = new AdminPermissionResolver(db1);
+            var handler = new AdminAssignRoleHandler(db1, uow, tokenService, permResolver);
+            return await handler.ExecuteAsync(new AdminAssignRoleRequest(admin2Id, admin1Id, RoleDefaults.LearnerRoleId, "Admin 1 demoting Admin 2", 1, "corr-barrier-mut-1", 1));
+        });
+
+        var task2 = Task.Run(async () =>
+        {
+            barrier.SignalAndWait();
+            using var db2 = new DeepPaceDbContext(CreatePostgresOptions());
+            var uow = new AdministrativeUnitOfWork(db2);
+            var tokenService = new RefreshTokenService(db2);
+            var permResolver = new AdminPermissionResolver(db2);
+            var handler = new AdminAssignRoleHandler(db2, uow, tokenService, permResolver);
+            return await handler.ExecuteAsync(new AdminAssignRoleRequest(admin1Id, admin2Id, RoleDefaults.LearnerRoleId, "Admin 2 demoting Admin 1", 1, "corr-barrier-mut-2", 1));
+        });
+
+        var results = await Task.WhenAll(task1, task2);
+
+        var successCount = results.Count(r => r.IsSuccess);
+        var failureCount = results.Count(r => !r.IsSuccess);
+
+        successCount.Should().Be(1, "Exactly one demotion may succeed");
+        failureCount.Should().Be(1, "The competing demotion must be rejected");
+
+        var failed = results.First(r => !r.IsSuccess);
+        failed.Error.Code.Should().Be("AUTH_FORBIDDEN", "The demoted administrator must immediately lose authority for the competing command");
+    }
+
+    [Fact]
+    public async Task DemotionOfSuspendedAdmin_SucceedsWhilePreservingSuspendedStatus()
+    {
+        EnsurePostgresConnected();
+
+        using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
+        var activeAdminId = Guid.NewGuid();
+        var suspendedAdminId = Guid.NewGuid();
+
+        var activeAdmin = new User { Id = activeAdminId, Email = $"active-{Guid.NewGuid():N}@example.com", Name = "Active Admin", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+        var suspendedAdmin = new User { Id = suspendedAdminId, Email = $"susp-{Guid.NewGuid():N}@example.com", Name = "Suspended Admin", Status = AccountStatus.Suspended, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+
+        await dbSetup.Users.AddRangeAsync(activeAdmin, suspendedAdmin);
+        await dbSetup.SaveChangesAsync();
+
+        using var db = new DeepPaceDbContext(CreatePostgresOptions());
+        var uow = new AdministrativeUnitOfWork(db);
+        var tokenService = new RefreshTokenService(db);
+        var permResolver = new AdminPermissionResolver(db);
+        var handler = new AdminAssignRoleHandler(db, uow, tokenService, permResolver);
+
+        var res = await handler.ExecuteAsync(new AdminAssignRoleRequest(suspendedAdminId, activeAdminId, RoleDefaults.LearnerRoleId, "Demote suspended admin", 1, "corr-demote-susp", 1));
+        res.IsSuccess.Should().BeTrue("Demoting a suspended administrator must succeed when an active admin remains");
+
+        using var dbVerify = new DeepPaceDbContext(CreatePostgresOptions());
+        var verifyUser = await dbVerify.Users.FindAsync(suspendedAdminId);
+        verifyUser!.RoleId.Should().Be(RoleDefaults.LearnerRoleId);
+        verifyUser.Status.Should().Be(AccountStatus.Suspended, "Demoted account must retain Suspended status");
+    }
+
+    [Fact]
+    public async Task RoleAssignment_EligibleRejection_PersistsSingleRejectionInCleanContextOnPostgres()
+    {
+        EnsurePostgresConnected();
+
+        using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
+        var adminId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+
+        var admin = new User { Id = adminId, Email = $"admin-{Guid.NewGuid():N}@example.com", Name = "Admin Actor", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+        var target = new User { Id = targetId, Email = $"target-{Guid.NewGuid():N}@example.com", Name = "Target User", Status = AccountStatus.Active, RoleId = RoleDefaults.LearnerRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+
+        await dbSetup.Users.AddRangeAsync(admin, target);
+        await dbSetup.SaveChangesAsync();
+
+        using var db = new DeepPaceDbContext(CreatePostgresOptions());
+        var uow = new AdministrativeUnitOfWork(db);
+        var tokenService = new RefreshTokenService(db);
+        var permResolver = new AdminPermissionResolver(db);
+        var handler = new AdminAssignRoleHandler(db, uow, tokenService, permResolver);
+        var correlationId = $"corr-pg-rej-{Guid.NewGuid():N}";
+        // Version conflict: expectedVersion = 99
+        var res = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, adminId, RoleDefaults.AdminRoleId, "Role assignment version conflict", 99, correlationId, 1));
+        res.IsSuccess.Should().BeFalse();
+        res.Error.Code.Should().Be("ACCOUNT_CONCURRENCY_CONFLICT");
+
+        // Verify separate context observes exactly 1 Rejected event, no Succeeded event, target unchanged
+        using var dbVerify = new DeepPaceDbContext(CreatePostgresOptions());
+        var targetCheck = await dbVerify.Users.FindAsync(targetId);
+        targetCheck!.RoleId.Should().Be(RoleDefaults.LearnerRoleId, "Target role must remain unchanged");
+        targetCheck.AdminControlVersion.Should().Be(1);
+
+        var audits = await dbVerify.AdminAuditEvents.Where(e => e.CorrelationId == correlationId).ToListAsync();
+        audits[0].Outcome.Should().Be(AdminAuditOutcome.Rejected);
+        audits[0].ErrorCode.Should().Be("ACCOUNT_CONCURRENCY_CONFLICT");
+        audits[0].ActorUserId.Should().Be(adminId);
+    }
+
+    [Fact]
+    public async Task PublicationRejection_PersistsSingleRejectionInCleanContextOnPostgres()
+    {
+        EnsurePostgresConnected();
+
+        using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
+        var adminId = Guid.NewGuid();
+        var docId = Guid.NewGuid();
+
+        var admin = new User { Id = adminId, Email = $"admin-pub-{Guid.NewGuid():N}@example.com", Name = "Admin Pub", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+        var doc = new CatalogDocument
+        {
+            Id = docId,
+            Title = "Zero Slice Doc",
+            Description = "Desc",
+            CategoryId = CategoryDefaults.BackendRuntimeId,
+            AttributionText = "Attrib",
+            Visibility = CatalogVisibility.Draft,
+            ProcessingStatus = ProcessingStatus.Ready,
+            TotalSlices = 0,
+            ConcurrencyVersion = 1
+        };
+
+        await dbSetup.Users.AddAsync(admin);
+        await dbSetup.CatalogDocuments.AddAsync(doc);
+        await dbSetup.SaveChangesAsync();
+
+        using var db = new DeepPaceDbContext(CreatePostgresOptions());
+        var uow = new AdministrativeUnitOfWork(db);
+        var handler = new AdminPublishCatalogDocumentHandler(db, uow);
+
+        var res = await handler.ExecuteAsync(new AdminPublishCatalogDocumentRequest(docId, adminId, 1, PresentedSessionVersion: 1));
+        res.IsSuccess.Should().BeFalse();
+        res.Error.Code.Should().Be("Catalog.PublicationIneligible");
+
+        // Verify document state unchanged in DB and exactly 1 Rejected event persisted
+        using var dbVerify = new DeepPaceDbContext(CreatePostgresOptions());
+        var docCheck = await dbVerify.CatalogDocuments.FindAsync(docId);
+        docCheck!.Visibility.Should().Be(CatalogVisibility.Draft);
+        docCheck.ConcurrencyVersion.Should().Be(1);
+
+        var audits = await dbVerify.AdminAuditEvents.Where(e => e.TargetId == docId.ToString() && e.Action == AdminAuditActions.CatalogPublish).ToListAsync();
+        audits.Should().HaveCount(1);
+        audits[0].Outcome.Should().Be(AdminAuditOutcome.Rejected);
+        audits[0].ErrorCode.Should().Be("Catalog.PublicationIneligible");
+    }
+
+    [Fact]
+    public async Task AccountControl_InjectedAuditFailureOnPostgres_ReturnsUnavailableWithoutHistoryClaim()
+    {
+        EnsurePostgresConnected();
+
+        using var dbSetup = new DeepPaceDbContext(CreatePostgresOptions());
+        var adminId = Guid.NewGuid();
+        var targetId = Guid.NewGuid();
+
+        var admin = new User { Id = adminId, Email = $"admin-{Guid.NewGuid():N}@example.com", Name = "Admin Actor", Status = AccountStatus.Active, RoleId = RoleDefaults.AdminRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+        var target = new User { Id = targetId, Email = $"target-{Guid.NewGuid():N}@example.com", Name = "Target User", Status = AccountStatus.Active, RoleId = RoleDefaults.LearnerRoleId, AuthenticationVersion = 1, AdminControlVersion = 1 };
+
+        await dbSetup.Users.AddRangeAsync(admin, target);
+        await dbSetup.SaveChangesAsync();
+
+        using var dbMain = new DeepPaceDbContext(CreatePostgresOptions());
+        // Broken clean context options pointing to invalid database/port to fail rejection persistence
+        var brokenOptions = new DbContextOptionsBuilder<DeepPaceDbContext>()
+            .UseNpgsql("Host=127.0.0.1;Port=54321;Database=nonexistent;Username=bad;Password=bad;Timeout=1;CommandTimeout=1")
+            .Options;
+        var brokenUow = new AdministrativeUnitOfWork(dbMain, brokenOptions);
+
+        var res = await brokenUow.ExecuteAccountControlCommandAsync<bool>(
+            adminId,
+            1,
+            new[] { AdminPermission.ManageAccounts },
+            targetId,
+            1,
+            AdminAuditActions.UserSuspend,
+            "corr-pg-broken",
+            preTargetValidation: null,
+            command: (act, tgt, role) => Task.FromResult(Result<(bool, AdminAuditEvent)>.Failure(Error.Custom("BUSINESS_FAIL", "Trigger clean rejection"))));
+
+        res.IsSuccess.Should().BeFalse();
+        res.Error.Code.Should().Be("AUDIT_PERSISTENCE_UNAVAILABLE");
     }
 }

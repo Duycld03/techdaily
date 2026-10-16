@@ -16,8 +16,7 @@ export interface AdminRoleOption {
   key: string
   nameEn: string
   nameVi: string
-  isProtected: boolean
-  supportedPermissions: string[]
+  permissionKeys: string[]
 }
 
 export interface AdminAccountSummary {
@@ -127,7 +126,6 @@ export const useAdminUsersStore = defineStore('admin-users', () => {
 
   async function fetchRoles(): Promise<void> {
     const currentRolesGen = ++rolesGeneration
-    const currentFetchGen = fetchGeneration
     isLoadingRoles.value = true
     rolesError.value = null
 
@@ -136,14 +134,14 @@ export const useAdminUsersStore = defineStore('admin-users', () => {
         cache: 'no-store'
       })
 
-      if (currentRolesGen !== rolesGeneration || currentFetchGen !== fetchGeneration) return
+      if (currentRolesGen !== rolesGeneration) return
 
       roles.value = Array.isArray(res) ? res : (res && Array.isArray(res.items) ? res.items : [])
     } catch (err: unknown) {
-      if (currentRolesGen !== rolesGeneration || currentFetchGen !== fetchGeneration) return
+      if (currentRolesGen !== rolesGeneration) return
       rolesError.value = err instanceof Error ? err.message : 'Failed to load roles'
     } finally {
-      if (currentRolesGen === rolesGeneration && currentFetchGen === fetchGeneration) {
+      if (currentRolesGen === rolesGeneration) {
         isLoadingRoles.value = false
       }
     }

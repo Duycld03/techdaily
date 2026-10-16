@@ -106,3 +106,53 @@ Expected operational baseline:
 - `deeppace_frontend_prod`: ~50–65 MB / 150 MB
 - `deeppace_nginx_prod`: ~4–8 MB / 30 MB
 - Total physical memory usage: $\le 650\text{ MB}$.
+
+---
+
+## 5. Authorization Readiness & Failed-Startup Recovery (F03, F08, F09)
+
+### 5.1 Deployment State Distinctions
+
+DeepPace strictly enforces authorization readiness before accepting traffic or starting background ingestion consumers:
+
+1. **Ready & Initialized**: All seven system-protected grants (`RoleDefaults.ProtectedAdminGrants`) match the database baseline exactly, receipt schema is readable, and one-time operator initialization is complete. Both learner workflows and administrative routes (`/admin/*`) are operational.
+2. **Ready & Uninitialized**: Schema and seed roles are intact, but one-time operator initialization has not yet occurred. Host startup succeeds for real Learners (registration, login, reading); administrative APIs and capability checks return `503 Service Unavailable` with `Cache-Control: no-store`.
+3. **Unready Authority (Failed Required Readiness)**: If required schema is missing, seed roles or permissions are corrupted/missing, learner role holds unauthorized permissions, or receipt lookup encounters a database error:
+   - Host startup terminates before `app.Run` with exit code `1`.
+   - HTTP listener and ingestion worker do NOT start.
+   - The host's health endpoint is **completely unavailable** (connection refused), preventing a "zombie" host where web traffic is accepted while the ingestion consumer is dead.
+
+### 5.2 Restart & Recovery Procedure
+
+If a host fails startup admission due to temporary database unreadiness or grant mismatches:
+
+1. **Inspect Host Logs**:
+   ```bash
+   docker compose -f docker-compose.1gb.yml logs --tail=50 backend
+   ```
+   Confirm the explicit readiness failure message:
+   `Startup failed: Authorization readiness check failed - <Reason>`
+
+2. **Restore Required Authority**:
+   Ensure the database is running, migrations are applied, and the exact seven protected admin grants are present. If initializing a fresh deployment, run:
+   ```bash
+   docker compose -f docker-compose.1gb.yml exec backend dotnet DeepPace.Api.dll authorization initialize --admin-user-id <admin_uuid>
+   ```
+
+3. **Restart the Host**:
+   ```bash
+   docker compose -f docker-compose.1gb.yml restart backend
+   ```
+   Verify health endpoint returns `200 OK`:
+   ```bash
+   curl -s http://127.0.0.1:5000/health
+   # Expected: {"status":"healthy","database":"connected","error":null,"timestamp":"..."}
+   ```
+
+4. **Queue & Attempt Integrity Verification**:
+   Upon successful restart, `PdfIngestionWorker` starts listening and resumes processing. Any attempts that were queued prior to failed startup are picked up using their original attempt IDs without generating extraneous retries or leaving orphaned queued records.
+
+> **Operational Invariants**:
+> - Do NOT change the Compose container restart policy.
+> - Do NOT introduce an in-code startup retry loop around readiness checks.
+> - NEVER describe or treat a failed host's health endpoint as available.

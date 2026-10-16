@@ -22,6 +22,12 @@ public static class AdminDocumentOperationsEndpoints
         return Guid.TryParse(idClaim, out var userId) ? userId : null;
     }
 
+    private static int GetSessionVersion(ClaimsPrincipal principal)
+    {
+        var claim = principal.FindFirst("session_version")?.Value;
+        return int.TryParse(claim, out var v) && v > 0 ? v : 1;
+    }
+
     public static WebApplication MapAdminDocumentOperationsEndpoints(this WebApplication app)
     {
         var adminGroup = app.MapGroup("/api/v1/admin/documents")
@@ -133,7 +139,8 @@ public static class AdminDocumentOperationsEndpoints
                 ExpectedVersion: payload.ExpectedVersion,
                 RequestId: payload.RequestId,
                 Reason: payload.Reason,
-                ActorUserId: userId.Value);
+                ActorUserId: userId.Value,
+                PresentedSessionVersion: GetSessionVersion(principal));
 
             var result = await handler.ExecuteAsync(command, ct);
             return result.IsSuccess
@@ -228,7 +235,8 @@ public static class AdminDocumentOperationsEndpoints
                 Reason: reason,
                 SourceStream: stream,
                 FileName: file.FileName,
-                ByteLength: file.Length);
+                ByteLength: file.Length,
+                PresentedSessionVersion: GetSessionVersion(principal));
 
             var result = await handler.ExecuteAsync(command, ct);
             return result.IsSuccess

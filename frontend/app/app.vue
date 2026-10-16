@@ -50,7 +50,7 @@ onMounted(() => {
     <SessionAdmissionBoundary v-else-if="admissionState !== 'ready'" />
 
     <template v-else-if="isAdminPage">
-      <AdminShell v-if="adminAccess.isAuthorized"><NuxtPage :page-key="route => route.fullPath" /></AdminShell>
+      <AdminShell v-if="adminAccess.isAuthorized && adminAccess.canAccessDestination(route.path)"><NuxtPage :page-key="route => route.fullPath" /></AdminShell>
       <AdminAuthorizationBoundary v-else />
     </template>
 

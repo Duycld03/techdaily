@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, shallowRef, watch } from 'vue'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useApiClient } from '~/composables/useApiClient'
-import { normalizeRoutePath } from '~/utils/adminRoutes'
+import { canAccessAdminDestination, getFirstAccessibleAdminRoute as resolveFirstAccessibleAdminRoute } from '~/utils/adminRoutes'
 
 export type AdminAccessState = 'pending' | 'checking' | 'authorized' | 'denied' | 'unavailable'
 
@@ -69,36 +69,11 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
   watch([() => auth.user?.id, () => auth.sessionGeneration, () => auth.adminGeneration], reset, { flush: 'sync' })
 
   function canAccessDestination(path: string): boolean {
-    const norm = normalizeRoutePath(path)
-    if (norm === '/admin' || norm === '/admin/dashboard' || norm.startsWith('/admin/dashboard/')) {
-      return capabilities.value.canViewAdminDashboard
-    }
-    if (norm === '/admin/catalog' || norm.startsWith('/admin/catalog/')) {
-      return capabilities.value.canManageCatalog
-    }
-    if (norm === '/admin/categories' || norm.startsWith('/admin/categories/')) {
-      return capabilities.value.canManageCategories
-    }
-    if (norm === '/admin/users' || norm.startsWith('/admin/users/')) {
-      return capabilities.value.canManageAccounts
-    }
-    if (norm === '/admin/audit' || norm.startsWith('/admin/audit/')) {
-      return capabilities.value.canReadAudit
-    }
-    if (norm === '/admin/documents' || norm.startsWith('/admin/documents/')) {
-      return capabilities.value.canManageDocumentOperations
-    }
-    return false
+    return canAccessAdminDestination(path, capabilities.value)
   }
 
   function getFirstAccessibleAdminRoute(): string {
-    if (capabilities.value.canViewAdminDashboard) return '/admin/dashboard'
-    if (capabilities.value.canManageCatalog) return '/admin/catalog'
-    if (capabilities.value.canManageCategories) return '/admin/categories'
-    if (capabilities.value.canManageAccounts) return '/admin/users'
-    if (capabilities.value.canManageDocumentOperations) return '/admin/documents'
-    if (capabilities.value.canReadAudit) return '/admin/audit'
-    return '/login'
+    return resolveFirstAccessibleAdminRoute(capabilities.value)
   }
 
   function verify(): Promise<boolean> {

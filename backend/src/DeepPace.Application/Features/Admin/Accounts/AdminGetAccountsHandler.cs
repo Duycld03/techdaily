@@ -63,9 +63,7 @@ public class AdminGetAccountsHandler : IUseCase<AdminGetAccountsRequest, AdminPa
                 u.AvatarUrl,
                 u.Status,
                 u.CreatedAt,
-                u.Role != null
-                    ? new RoleDescriptorDto(u.Role.Id, u.Role.Key, u.Role.NameEn, u.Role.NameVi)
-                    : new RoleDescriptorDto(RoleDefaults.LearnerRoleId, RoleDefaults.LearnerKey, "Learner", "Người học")))
+                new RoleDescriptorDto(u.Role!.Id, u.Role.Key, u.Role.NameEn, u.Role.NameVi)))
             .ToListAsync(cancellationToken);
 
         return new AdminPagedResult<AdminAccountSummaryDto>(items, totalCount, page, pageSize);

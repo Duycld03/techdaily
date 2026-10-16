@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '~/stores/useAuthStore'
+import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 import authMiddleware from '~/middleware/auth.global'
 
 function createMockJwt(expOffsetSeconds: number): string {
@@ -123,8 +124,17 @@ describe('auth.global route middleware', () => {
 
       expect((globalThis as any).navigateTo).toHaveBeenCalledWith('/library')
     })
-  })
 
+    it('redirects already-authenticated admin user from /admin/login to requested contextual return url preserving safe query/hash (F15)', async () => {
+      const access = useAdminAccessStore()
+      vi.spyOn(access, 'verify').mockResolvedValue(true)
+      vi.spyOn(access, 'canAccessDestination').mockReturnValue(true)
+      const to = { path: '/admin/login', fullPath: '/admin/login?redirect=/admin/catalog%3Fsearch%3Dvue%23section-1', query: { redirect: '/admin/catalog?search=vue#section-1' } } as never
+      await authMiddleware(to)
+
+      expect(navigateTo).toHaveBeenCalledWith('/admin/catalog?search=vue#section-1')
+    })
+  })
   describe('expired token refresh behavior', () => {
     it('attempts transparent refresh when access token is expired on protected route', async () => {
       const expiredToken = createMockJwt(-120)

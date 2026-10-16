@@ -57,6 +57,12 @@ jobs:
       - name: Build Backend (Release)
         run: dotnet build backend/DeepPace.sln --configuration Release --no-restore
 
+      - name: Prepare PostgreSQL Vector Extension
+        run: >-
+          docker exec "${{ job.services.postgres.id }}"
+          psql --username postgres --dbname postgres --set ON_ERROR_STOP=1
+          --command 'CREATE EXTENSION IF NOT EXISTS vector;'
+
       - name: Run Backend Tests (DeepPace.Tests)
         env:
           TEST_POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres_test_password

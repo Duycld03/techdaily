@@ -213,7 +213,19 @@ public class CatalogEndpointsTests : IAsyncLifetime
     [InlineData(true)]
     public async Task AdminRoutes_RevocationImmediateWhenDatabaseRoleOrGrantChanges(bool revokeGrant)
     {
-        // Initially active admin has access
+        var customRoleId = Guid.NewGuid();
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            var customRole = Role.Create("catalog-mgr", "Catalog Manager", "Quan ly danh muc", isProtected: false, id: customRoleId);
+            db.Roles.Add(customRole);
+            db.RolePermissions.Add(RolePermission.Create(customRoleId, PermissionKeys.ManageCatalog));
+
+            var user = await db.Users.FindAsync(_adminUserId);
+            user!.RoleId = customRoleId;
+            await db.SaveChangesAsync();
+        }
+
+        // Initially active user has access
         TestCatalogAuthHandler.IsAuthenticated = true;
         TestCatalogAuthHandler.CurrentUserId = _adminUserId;
 
@@ -226,7 +238,7 @@ public class CatalogEndpointsTests : IAsyncLifetime
             if (revokeGrant)
             {
                 var grant = await db.RolePermissions.SingleAsync(p =>
-                    p.RoleId == RoleDefaults.AdminRoleId && p.PermissionKey == PermissionKeys.ManageCatalog);
+                    p.RoleId == customRoleId && p.PermissionKey == PermissionKeys.ManageCatalog);
                 db.RolePermissions.Remove(grant);
             }
             else
@@ -391,6 +403,320 @@ public class CatalogEndpointsTests : IAsyncLifetime
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
+    }
+
+    [Fact]
+    public async Task AdminPublish_WithFreshSessionVersionGreaterThanOne_EligibleDocument_Returns200OK_AndPublishes()
+    {
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            var admin = await db.Users.FindAsync(_adminUserId);
+            admin!.AuthenticationVersion = 2;
+            await db.SaveChangesAsync();
+        }
+
+        var doc = new CatalogDocument
+        {
+            Id = Guid.NewGuid(),
+            Title = "Clean Architecture in .NET",
+            Description = "Design principles",
+            CategoryId = CategoryDefaults.BackendRuntimeId,
+            AttributionText = "DeepPace Engineering",
+            Visibility = CatalogVisibility.Draft,
+            ProcessingStatus = ProcessingStatus.Ready,
+            ConcurrencyVersion = 1,
+            Revision = 1
+        };
+        doc.Slices.Add(new CatalogSlice
+        {
+            Id = Guid.NewGuid(),
+            CatalogDocumentId = doc.Id,
+            SliceOrder = 1,
+            ChapterTitle = "Chapter 1",
+            OriginalTextMarkdown = "# Chapter 1\nRich domain models.",
+            IsAiFormatted = true
+        });
+
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            await db.CatalogDocuments.AddAsync(doc);
+            await db.SaveChangesAsync();
+        }
+
+        TestCatalogAuthHandler.IsAuthenticated = true;
+        TestCatalogAuthHandler.CurrentUserId = _adminUserId;
+        TestCatalogAuthHandler.ExtraClaims.Clear();
+        TestCatalogAuthHandler.ExtraClaims.Add(new Claim("session_version", "2"));
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/admin/catalog/documents/{doc.Id}/publish",
+            new AdminPublishCatalogApiRequest(ExpectedRevision: 1));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using (var verifyDb = new DeepPaceDbContext(_dbOptions))
+        {
+            var published = await verifyDb.CatalogDocuments.FindAsync(doc.Id);
+            published!.Visibility.Should().Be(CatalogVisibility.Published);
+            published.PublishedByUserId.Should().Be(_adminUserId);
+        }
+    }
+
+    [Fact]
+    public async Task AdminPublish_WithStaleSessionVersion_Returns403Forbidden_AndDoesNotPublish()
+    {
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            var admin = await db.Users.FindAsync(_adminUserId);
+            admin!.AuthenticationVersion = 2;
+            await db.SaveChangesAsync();
+        }
+
+        var doc = new CatalogDocument
+        {
+            Id = Guid.NewGuid(),
+            Title = "Design Patterns in C#",
+            Description = "Patterns guide",
+            CategoryId = CategoryDefaults.BackendRuntimeId,
+            AttributionText = "DeepPace Engineering",
+            Visibility = CatalogVisibility.Draft,
+            ProcessingStatus = ProcessingStatus.Ready,
+            ConcurrencyVersion = 1,
+            Revision = 1
+        };
+        doc.Slices.Add(new CatalogSlice
+        {
+            Id = Guid.NewGuid(),
+            CatalogDocumentId = doc.Id,
+            SliceOrder = 1,
+            ChapterTitle = "Chapter 1",
+            OriginalTextMarkdown = "# Chapter 1\nFactory Pattern.",
+            IsAiFormatted = true
+        });
+
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            await db.CatalogDocuments.AddAsync(doc);
+            await db.SaveChangesAsync();
+        }
+
+        TestCatalogAuthHandler.IsAuthenticated = true;
+        TestCatalogAuthHandler.CurrentUserId = _adminUserId;
+        TestCatalogAuthHandler.ExtraClaims.Clear();
+        TestCatalogAuthHandler.ExtraClaims.Add(new Claim("session_version", "1")); // Stale: DB is 2
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/admin/catalog/documents/{doc.Id}/publish",
+            new AdminPublishCatalogApiRequest(ExpectedRevision: 1));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using (var verifyDb = new DeepPaceDbContext(_dbOptions))
+        {
+            var unmutated = await verifyDb.CatalogDocuments.FindAsync(doc.Id);
+            unmutated!.Visibility.Should().Be(CatalogVisibility.Draft, "Stale session cannot publish document");
+        }
+    }
+
+    [Fact]
+    public async Task AdminHide_WithFreshSessionVersionGreaterThanOne_Returns200OK_AndHides()
+    {
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            var admin = await db.Users.FindAsync(_adminUserId);
+            admin!.AuthenticationVersion = 2;
+            await db.SaveChangesAsync();
+        }
+
+        var doc = new CatalogDocument
+        {
+            Id = Guid.NewGuid(),
+            Title = "Published Document To Hide",
+            Description = "Active doc",
+            CategoryId = CategoryDefaults.BackendRuntimeId,
+            AttributionText = "DeepPace Engineering",
+            Visibility = CatalogVisibility.Published,
+            ProcessingStatus = ProcessingStatus.Ready,
+            ConcurrencyVersion = 1,
+            Revision = 1
+        };
+
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            await db.CatalogDocuments.AddAsync(doc);
+            await db.SaveChangesAsync();
+        }
+
+        TestCatalogAuthHandler.IsAuthenticated = true;
+        TestCatalogAuthHandler.CurrentUserId = _adminUserId;
+        TestCatalogAuthHandler.ExtraClaims.Clear();
+        TestCatalogAuthHandler.ExtraClaims.Add(new Claim("session_version", "2"));
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/admin/catalog/documents/{doc.Id}/hide",
+            new AdminHideCatalogApiRequest(ExpectedConcurrencyVersion: 1));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using (var verifyDb = new DeepPaceDbContext(_dbOptions))
+        {
+            var hidden = await verifyDb.CatalogDocuments.FindAsync(doc.Id);
+            hidden!.Visibility.Should().Be(CatalogVisibility.Hidden);
+        }
+    }
+
+    [Fact]
+    public async Task AdminHide_WithStaleSessionVersion_Returns403Forbidden_AndDoesNotHide()
+    {
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            var admin = await db.Users.FindAsync(_adminUserId);
+            admin!.AuthenticationVersion = 2;
+            await db.SaveChangesAsync();
+        }
+
+        var doc = new CatalogDocument
+        {
+            Id = Guid.NewGuid(),
+            Title = "Published Document Shielded From Stale Hide",
+            Description = "Active doc",
+            CategoryId = CategoryDefaults.BackendRuntimeId,
+            AttributionText = "DeepPace Engineering",
+            Visibility = CatalogVisibility.Published,
+            ProcessingStatus = ProcessingStatus.Ready,
+            ConcurrencyVersion = 1,
+            Revision = 1
+        };
+
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            await db.CatalogDocuments.AddAsync(doc);
+            await db.SaveChangesAsync();
+        }
+
+        TestCatalogAuthHandler.IsAuthenticated = true;
+        TestCatalogAuthHandler.CurrentUserId = _adminUserId;
+        TestCatalogAuthHandler.ExtraClaims.Clear();
+        TestCatalogAuthHandler.ExtraClaims.Add(new Claim("session_version", "1")); // Stale: DB is 2
+
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/admin/catalog/documents/{doc.Id}/hide",
+            new AdminHideCatalogApiRequest(ExpectedConcurrencyVersion: 1));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using (var verifyDb = new DeepPaceDbContext(_dbOptions))
+        {
+            var unmutated = await verifyDb.CatalogDocuments.FindAsync(doc.Id);
+            unmutated!.Visibility.Should().Be(CatalogVisibility.Published, "Stale session cannot hide document");
+        }
+    }
+
+    [Fact]
+    public async Task AdminReview_WithFreshSessionVersionGreaterThanOne_Returns200OK_AndPersistsReview()
+    {
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            var admin = await db.Users.FindAsync(_adminUserId);
+            admin!.AuthenticationVersion = 2;
+            await db.SaveChangesAsync();
+        }
+
+        var doc = new CatalogDocument
+        {
+            Id = Guid.NewGuid(),
+            Title = "Review Candidate Document",
+            Description = "Candidate doc",
+            CategoryId = CategoryDefaults.BackendRuntimeId,
+            AttributionText = "DeepPace Engineering",
+            Visibility = CatalogVisibility.Draft,
+            ProcessingStatus = ProcessingStatus.Ready,
+            ConcurrencyVersion = 1,
+            Revision = 1
+        };
+        doc.Slices.Add(new CatalogSlice
+        {
+            Id = Guid.NewGuid(),
+            CatalogDocumentId = doc.Id,
+            SliceOrder = 1,
+            ChapterTitle = "Chapter 1",
+            OriginalTextMarkdown = "# Slice 1",
+            IsAiFormatted = true
+        });
+
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            await db.CatalogDocuments.AddAsync(doc);
+            await db.SaveChangesAsync();
+        }
+
+        TestCatalogAuthHandler.IsAuthenticated = true;
+        TestCatalogAuthHandler.CurrentUserId = _adminUserId;
+        TestCatalogAuthHandler.ExtraClaims.Clear();
+        TestCatalogAuthHandler.ExtraClaims.Add(new Claim("session_version", "2"));
+
+        var response = await _client.PostAsync($"/api/v1/admin/catalog/documents/{doc.Id}/slices/1/review", null);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using (var verifyDb = new DeepPaceDbContext(_dbOptions))
+        {
+            var reviewed = await verifyDb.CatalogDocuments.FindAsync(doc.Id);
+            reviewed!.ReviewedByUserId.Should().Be(_adminUserId);
+            reviewed.ReviewedAt.Should().NotBeNull();
+        }
+    }
+
+    [Fact]
+    public async Task AdminReview_WithStaleSessionVersion_Returns403Forbidden_AndDoesNotReview()
+    {
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            var admin = await db.Users.FindAsync(_adminUserId);
+            admin!.AuthenticationVersion = 2;
+            await db.SaveChangesAsync();
+        }
+
+        var doc = new CatalogDocument
+        {
+            Id = Guid.NewGuid(),
+            Title = "Unreviewed Document Shielded From Stale Review",
+            Description = "Candidate doc",
+            CategoryId = CategoryDefaults.BackendRuntimeId,
+            AttributionText = "DeepPace Engineering",
+            Visibility = CatalogVisibility.Draft,
+            ProcessingStatus = ProcessingStatus.Ready,
+            ConcurrencyVersion = 1,
+            Revision = 1
+        };
+        doc.Slices.Add(new CatalogSlice
+        {
+            Id = Guid.NewGuid(),
+            CatalogDocumentId = doc.Id,
+            SliceOrder = 1,
+            ChapterTitle = "Chapter 1",
+            OriginalTextMarkdown = "# Slice 1",
+            IsAiFormatted = true
+        });
+
+        using (var db = new DeepPaceDbContext(_dbOptions))
+        {
+            await db.CatalogDocuments.AddAsync(doc);
+            await db.SaveChangesAsync();
+        }
+
+        TestCatalogAuthHandler.IsAuthenticated = true;
+        TestCatalogAuthHandler.CurrentUserId = _adminUserId;
+        TestCatalogAuthHandler.ExtraClaims.Clear();
+        TestCatalogAuthHandler.ExtraClaims.Add(new Claim("session_version", "1")); // Stale: DB is 2
+
+        var response = await _client.PostAsync($"/api/v1/admin/catalog/documents/{doc.Id}/slices/1/review", null);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using (var verifyDb = new DeepPaceDbContext(_dbOptions))
+        {
+            var unmutated = await verifyDb.CatalogDocuments.FindAsync(doc.Id);
+            unmutated!.ReviewedByUserId.Should().BeNull("Stale session cannot confirm review");
+        }
     }
     [Fact]
     public async Task OpenApi_ExposesCatalogContracts_WithoutAdministratorIdentity()

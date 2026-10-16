@@ -47,7 +47,8 @@ public class AdminReactivateUserHandler : IUseCase<AdminReactivateUserRequest, A
             request.ExpectedVersion,
             AdminAuditActions.UserReactivate,
             request.CorrelationId,
-            (actor, target) =>
+            preTargetValidation: null,
+            command: (actor, target, targetRole) =>
             {
                 try
                 {
@@ -96,7 +97,7 @@ public class AdminReactivateUserHandler : IUseCase<AdminReactivateUserRequest, A
                     target.SuspendedByUserId,
                     target.SuspendedAt,
                     target.SuspensionReason,
-                    target.Role.ToDescriptor());
+                    targetRole.ToDescriptor());
 
                 return Task.FromResult(Result<(AdminAccountDetailDto Result, AdminAuditEvent AuditEvent)>.Success((dto, auditEvent)));
             },

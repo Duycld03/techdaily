@@ -1570,7 +1570,9 @@
       "roleConcurrencyError": "Tài khoản đã bị quản trị viên khác chỉnh sửa. Vui lòng tải lại và kiểm tra trước khi thử lại.",
       "roleAssignSuccess": "Cập nhật vai trò thành công. Tất cả các phiên đăng nhập của người dùng đã được thu hồi.",
       "supportedPermissions": "Các quyền được cấp",
-      "reloadAccount": "Tải lại tài khoản"
+      "reloadAccount": "Tải lại tài khoản",
+      "noPermissions": "Không có quyền quản trị cho vai trò này.",
+      "reloadFailed": "Không thể tải lại tài khoản. Vui lòng thử lại."
     },
     "roles": {
       "learner": {

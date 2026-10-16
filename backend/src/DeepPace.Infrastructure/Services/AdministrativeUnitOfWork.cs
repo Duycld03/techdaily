@@ -39,10 +39,13 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
         int expectedVersion,
         string commandName,
         string? correlationId,
-        Func<User, User, Task<Result<(TResult Result, AdminAuditEvent AuditEvent)>>> command,
+        Func<User, Task<Result>>? preTargetValidation,
+        Func<User, User, Role, Task<Result<(TResult Result, AdminAuditEvent AuditEvent)>>> command,
         CancellationToken ct = default)
     {
         var isNpgsql = _dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true;
+        var authorized = false;
+        var auditStaged = false;
 
         if (!isNpgsql)
         {
@@ -50,6 +53,49 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
         }
 
         try
+        {
+            Result<TResult> result;
+            var succeeded = false;
+            try
+            {
+                result = await ExecuteLockedAsync();
+                succeeded = result.IsSuccess;
+            }
+            catch (Exception ex) when (ex is DbUpdateException or DbException or TimeoutException)
+            {
+                _serviceProvider?.GetService<ILogger<AdministrativeUnitOfWork>>()?.LogError(
+                    ex, "Account command {Command} failed for actor {ActorId}, target {TargetUserId}, correlation {CorrelationId}",
+                    commandName, actorUserId, targetUserId, correlationId);
+
+                result = auditStaged
+                    ? Error.Custom("AUDIT_PERSISTENCE_UNAVAILABLE", "The account change could not be committed with its audit history.")
+                    : Error.Custom("Account.Unavailable", "Account administration is temporarily unavailable.");
+            }
+            finally
+            {
+                // ExecuteLockedAsync has rolled back and disposed its transaction before tracking is discarded.
+                if (!succeeded) _dbContext.ChangeTracker.Clear();
+            }
+
+            if (result.IsFailure && authorized &&
+                result.Error.Code is not ("AUTH_FORBIDDEN" or "Account.NotFound" or "AUDIT_PERSISTENCE_UNAVAILABLE" or "Account.Unavailable"))
+            {
+                var recorded = await RecordAccountRejectionAsync(
+                    actorUserId, commandName, targetUserId, result.Error.Code, correlationId, ct);
+                if (recorded.IsFailure) return recorded.Error;
+            }
+
+            return result;
+        }
+        finally
+        {
+            if (!isNpgsql)
+            {
+                NonPostgresLock.Release();
+            }
+        }
+
+        async Task<Result<TResult>> ExecuteLockedAsync()
         {
             await using var tx = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
 
@@ -105,10 +151,14 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
             }
 
             // Verify actor holds all required permissions from authoritative database grants
-            var actorPerms = await _dbContext.RolePermissions.AsNoTracking()
-                .Where(p => p.RoleId == actor.RoleId)
-                .Select(p => p.PermissionKey)
-                .ToListAsync(ct);
+            var actorPerms = isNpgsql
+                ? await _dbContext.RolePermissions
+                    .FromSqlRaw("SELECT * FROM \"RolePermissions\" WHERE \"RoleId\" = {0} FOR SHARE", actor.RoleId)
+                    .AsNoTracking().Select(p => p.PermissionKey).ToListAsync(ct)
+                : await _dbContext.RolePermissions.AsNoTracking()
+                    .Where(p => p.RoleId == actor.RoleId)
+                    .Select(p => p.PermissionKey)
+                    .ToListAsync(ct);
 
             var permSet = new HashSet<string>(actorPerms, StringComparer.Ordinal);
             var hasAllPermissions = requiredPermissions.All(perm => perm switch
@@ -130,6 +180,19 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
                 return Error.Custom("AUTH_FORBIDDEN", "The actor account does not hold the required administrator permissions.");
             }
 
+            authorized = true;
+
+            // Post-actor/pre-target validation callback executed after actor admission and before target checks
+            if (preTargetValidation != null)
+            {
+                var preValidationResult = await preTargetValidation(actor);
+                if (preValidationResult.IsFailure)
+                {
+                    await tx.RollbackAsync(ct);
+                    return preValidationResult.Error;
+                }
+            }
+
             // Recheck authoritative target existence
             if (target == null || target.IsDeleted)
             {
@@ -141,8 +204,6 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
             if (target.AdminControlVersion != expectedVersion)
             {
                 await tx.RollbackAsync(ct);
-                var recRes = await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_CONCURRENCY_CONFLICT", correlationId, ct);
-                if (recRes.IsFailure) return recRes.Error;
                 return Error.Custom("ACCOUNT_CONCURRENCY_CONFLICT", "Account was modified by another administrator. Please reload.");
             }
 
@@ -152,22 +213,31 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
                 if (commandName == AdminAuditActions.UserSuspend)
                 {
                     await tx.RollbackAsync(ct);
-                    var recRes = await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_SELF_SUSPENSION_BLOCKED", correlationId, ct);
-                    if (recRes.IsFailure) return recRes.Error;
                     return Error.Custom("ACCOUNT_SELF_SUSPENSION_BLOCKED", "An administrator cannot suspend their own account.");
                 }
                 if (commandName == AdminAuditActions.UserAssignRole)
                 {
                     await tx.RollbackAsync(ct);
-                    var recRes = await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_SELF_ROLE_CHANGE_BLOCKED", correlationId, ct);
-                    if (recRes.IsFailure) return recRes.Error;
                     return Error.Custom("ACCOUNT_SELF_ROLE_CHANGE_BLOCKED", "An administrator cannot change their own role.");
                 }
             }
 
-            // Last active administrator protection
-            if ((commandName == AdminAuditActions.UserSuspend || commandName == AdminAuditActions.UserAssignRole)
-                && target.RoleId == RoleDefaults.AdminRoleId)
+            // Load target role by persisted RoleId inside account-command admission without joined navigation locking
+            var targetRole = isNpgsql
+                ? (await _dbContext.Roles
+                    .FromSqlRaw("SELECT * FROM \"Roles\" WHERE \"Id\" = {0} AND \"IsDeleted\" = false FOR SHARE", target.RoleId)
+                    .AsNoTracking().ToListAsync(ct)).FirstOrDefault()
+                : await _dbContext.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == target.RoleId && !r.IsDeleted, ct);
+
+            if (targetRole == null)
+            {
+                await tx.RollbackAsync(ct);
+                return Error.Custom("Role.NotFound", "The target user's role was not found.");
+            }
+
+            // Last active administrator protection for suspension
+            if (commandName == AdminAuditActions.UserSuspend
+                && target.RoleId == RoleDefaults.AdminRoleId && target.Status == AccountStatus.Active)
             {
                 var activeAdminCount = await _dbContext.Users
                     .CountAsync(u => u.RoleId == RoleDefaults.AdminRoleId && !u.IsDeleted && u.Status == AccountStatus.Active, ct);
@@ -175,38 +245,27 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
                 if (activeAdminCount <= 1)
                 {
                     await tx.RollbackAsync(ct);
-                    var recRes = await RecordRejectionAsync(actorUserId, commandName, targetUserId, "ACCOUNT_LAST_ADMIN_PROTECTED", correlationId, ct);
-                    if (recRes.IsFailure) return recRes.Error;
                     return Error.Custom("ACCOUNT_LAST_ADMIN_PROTECTED", "Cannot modify the last active administrator.");
                 }
             }
 
             // Execute the command mutation
-            var commandResult = await command(actor, target);
+            var commandResult = await command(actor, target, targetRole);
             if (!commandResult.IsSuccess)
             {
                 await tx.RollbackAsync(ct);
-                _dbContext.ChangeTracker.Clear();
-                var recRes = await RecordRejectionAsync(actorUserId, commandName, targetUserId, commandResult.Error.Code, correlationId, ct);
-                if (recRes.IsFailure) return recRes.Error;
                 return commandResult.Error;
             }
 
             var (resultPayload, auditEvent) = commandResult.Value;
 
             // Stage audit event and commit atomically
+            auditStaged = true;
             await _dbContext.AdminAuditEvents.AddAsync(auditEvent, ct);
             await _dbContext.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
 
             return resultPayload;
-        }
-        finally
-        {
-            if (!isNpgsql)
-            {
-                NonPostgresLock.Release();
-            }
         }
     }
     public async Task<Result<TResult>> ExecuteCategoryCommandAsync<TResult>(
@@ -512,7 +571,7 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
         }
     }
 
-    private async Task<Result<bool>> RecordRejectionAsync(
+    private async Task<Result<bool>> RecordAccountRejectionAsync(
         Guid actorUserId,
         string commandName,
         Guid targetUserId,
@@ -538,23 +597,22 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
                 await cleanDb.AdminAuditEvents.AddAsync(rejectEvent, ct);
                 await cleanDb.SaveChangesAsync(ct);
             }
-            else if (_dbContextOptions != null)
-            {
-                await using var cleanDb = new DeepPaceDbContext(_dbContextOptions);
-                await cleanDb.AdminAuditEvents.AddAsync(rejectEvent, ct);
-                await cleanDb.SaveChangesAsync(ct);
-            }
             else
             {
-                await _dbContext.AdminAuditEvents.AddAsync(rejectEvent, ct);
-                await _dbContext.SaveChangesAsync(ct);
+                var options = _dbContextOptions ?? (DbContextOptions<DeepPaceDbContext>)_dbContext.GetService<IDbContextOptions>();
+                await using var cleanDb = new DeepPaceDbContext(options);
+                await cleanDb.AdminAuditEvents.AddAsync(rejectEvent, ct);
+                await cleanDb.SaveChangesAsync(ct);
             }
 
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            return Error.Custom("AUDIT_PERSISTENCE_UNAVAILABLE", $"Audit history persistence failed: {ex.Message}");
+            _serviceProvider?.GetService<ILogger<AdministrativeUnitOfWork>>()?.LogError(
+                ex, "Account rejection audit failed for {Command}, user {TargetUserId}, correlation {CorrelationId}",
+                commandName, targetUserId, correlationId);
+            return Error.Custom("AUDIT_PERSISTENCE_UNAVAILABLE", "Account rejection history is temporarily unavailable.");
         }
     }
 
@@ -567,16 +625,12 @@ public class AdministrativeUnitOfWork : IAdministrativeUnitOfWork
             await cleanDb.AdminAuditEvents.AddAsync(auditEvent, ct);
             await cleanDb.SaveChangesAsync(ct);
         }
-        else if (_dbContextOptions != null)
-        {
-            await using var cleanDb = new DeepPaceDbContext(_dbContextOptions);
-            await cleanDb.AdminAuditEvents.AddAsync(auditEvent, ct);
-            await cleanDb.SaveChangesAsync(ct);
-        }
         else
         {
-            await _dbContext.AdminAuditEvents.AddAsync(auditEvent, ct);
-            await _dbContext.SaveChangesAsync(ct);
+            var options = _dbContextOptions ?? (DbContextOptions<DeepPaceDbContext>)_dbContext.GetService<IDbContextOptions>();
+            await using var cleanDb = new DeepPaceDbContext(options);
+            await cleanDb.AdminAuditEvents.AddAsync(auditEvent, ct);
+            await cleanDb.SaveChangesAsync(ct);
         }
     }
 }

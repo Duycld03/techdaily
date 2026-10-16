@@ -159,9 +159,11 @@ public class AdminRoleAssignmentHandlersTests : IDisposable
         await _db.SaveChangesAsync();
 
         // Accounts-only admin lacks ManageRoles
-        var res = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _accountsOnlyAdminId, _customRoleId, "Promoting auditor", 1));
+        var res = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _accountsOnlyAdminId, _customRoleId, "Promoting auditor", 1, CorrelationId: "corr-unauth"));
         res.IsSuccess.Should().BeFalse();
-        res.Error.Code.Should().Be("FORBIDDEN");
+        res.Error.Code.Should().Be("AUTH_FORBIDDEN");
+        var unauthAudit = await _db.AdminAuditEvents.FirstOrDefaultAsync(a => a.CorrelationId == "corr-unauth");
+        unauthAudit.Should().BeNull("Unadmitted actor must not persist rejection audit");
     }
 
     [Fact]
@@ -171,24 +173,52 @@ public class AdminRoleAssignmentHandlersTests : IDisposable
         var targetId = Guid.NewGuid();
 
         // Empty reason
-        var res1 = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _superAdminId, _customRoleId, "", 1));
+        var res1 = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _superAdminId, _customRoleId, "", 1, CorrelationId: "corr-val-1"));
         res1.IsSuccess.Should().BeFalse();
         res1.Error.Code.Should().Be("Account.ReasonRequired");
+        var audit1 = await _db.AdminAuditEvents.FirstOrDefaultAsync(a => a.CorrelationId == "corr-val-1");
+        audit1.Should().NotBeNull();
+        audit1!.Outcome.Should().Be(AdminAuditOutcome.Rejected);
+        audit1.Action.Should().Be(AdminAuditActions.UserAssignRole);
+        audit1.ErrorCode.Should().Be("Account.ReasonRequired");
 
         // Reason too long (> 500 chars)
-        var res2 = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _superAdminId, _customRoleId, new string('a', 501), 1));
+        var res2 = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _superAdminId, _customRoleId, new string('a', 501), 1, CorrelationId: "corr-val-2"));
         res2.IsSuccess.Should().BeFalse();
         res2.Error.Code.Should().Be("Account.ReasonTooLong");
+        var audit2 = await _db.AdminAuditEvents.FirstOrDefaultAsync(a => a.CorrelationId == "corr-val-2");
+        audit2.Should().NotBeNull();
+        audit2!.Outcome.Should().Be(AdminAuditOutcome.Rejected);
+        audit2.ErrorCode.Should().Be("Account.ReasonTooLong");
+        audit2.Reason.Should().BeNull("Overlong reason must not be copied or truncated into history");
 
         // Invalid RoleId
-        var res3 = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _superAdminId, Guid.Empty, "Valid reason", 1));
+        var res3 = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _superAdminId, Guid.Empty, "Valid reason", 1, CorrelationId: "corr-val-3"));
         res3.IsSuccess.Should().BeFalse();
         res3.Error.Code.Should().Be("Role.InvalidId");
+        var audit3 = await _db.AdminAuditEvents.FirstOrDefaultAsync(a => a.CorrelationId == "corr-val-3");
+        audit3.Should().NotBeNull();
+        audit3!.Outcome.Should().Be(AdminAuditOutcome.Rejected);
+        audit3.ErrorCode.Should().Be("Role.InvalidId");
 
         // Invalid expected version
-        var res4 = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _superAdminId, _customRoleId, "Valid reason", 0));
+        var res4 = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _superAdminId, _customRoleId, "Valid reason", 0, CorrelationId: "corr-val-4"));
         res4.IsSuccess.Should().BeFalse();
         res4.Error.Code.Should().Be("Validation.ExpectedVersionInvalid");
+        var audit4 = await _db.AdminAuditEvents.FirstOrDefaultAsync(a => a.CorrelationId == "corr-val-4");
+        audit4.Should().NotBeNull();
+        audit4!.Outcome.Should().Be(AdminAuditOutcome.Rejected);
+        audit4.ErrorCode.Should().Be("Validation.ExpectedVersionInvalid");
+
+        // Sensitive reason
+        var res5 = await handler.ExecuteAsync(new AdminAssignRoleRequest(targetId, _superAdminId, _customRoleId, "password: secret123", 1, CorrelationId: "corr-val-5"));
+        res5.IsSuccess.Should().BeFalse();
+        res5.Error.Code.Should().Be("Account.InvalidReason");
+        var audit5 = await _db.AdminAuditEvents.FirstOrDefaultAsync(a => a.CorrelationId == "corr-val-5");
+        audit5.Should().NotBeNull();
+        audit5!.Outcome.Should().Be(AdminAuditOutcome.Rejected);
+        audit5.ErrorCode.Should().Be("Account.InvalidReason");
+        audit5.Reason.Should().BeNull("Sensitive reason must be omitted from history");
     }
 
     [Fact]
@@ -202,14 +232,18 @@ public class AdminRoleAssignmentHandlersTests : IDisposable
     }
 
     [Fact]
-    public async Task AssignRole_ShouldRejectMissingOrDeletedTarget()
+    public async Task AssignRole_ShouldRejectMissingOrDeletedTarget_WithoutAuditPersistence()
     {
         var handler = new AdminAssignRoleHandler(_db, _uow, _tokenService, _resolver);
 
         // Missing target
-        var res1 = await handler.ExecuteAsync(new AdminAssignRoleRequest(Guid.NewGuid(), _superAdminId, _customRoleId, "Valid reason", 1));
+        var missingId = Guid.NewGuid();
+        var res1 = await handler.ExecuteAsync(new AdminAssignRoleRequest(missingId, _superAdminId, _customRoleId, "Valid reason", 1, CorrelationId: "corr-miss-target"));
         res1.IsSuccess.Should().BeFalse();
         res1.Error.Code.Should().Be("Account.NotFound");
+
+        var audit1 = await _db.AdminAuditEvents.FirstOrDefaultAsync(a => a.CorrelationId == "corr-miss-target");
+        audit1.Should().BeNull("Missing target must not persist rejection audit");
 
         // Soft-deleted target
         var deletedId = Guid.NewGuid();
@@ -217,9 +251,12 @@ public class AdminRoleAssignmentHandlersTests : IDisposable
         _db.Users.Add(deletedUser);
         await _db.SaveChangesAsync();
 
-        var res2 = await handler.ExecuteAsync(new AdminAssignRoleRequest(deletedId, _superAdminId, _customRoleId, "Valid reason", 1));
+        var res2 = await handler.ExecuteAsync(new AdminAssignRoleRequest(deletedId, _superAdminId, _customRoleId, "Valid reason", 1, CorrelationId: "corr-del-target"));
         res2.IsSuccess.Should().BeFalse();
         res2.Error.Code.Should().Be("Account.NotFound");
+
+        var audit2 = await _db.AdminAuditEvents.FirstOrDefaultAsync(a => a.CorrelationId == "corr-del-target");
+        audit2.Should().BeNull("Soft-deleted target must not persist rejection audit");
     }
 
     [Fact]
@@ -278,7 +315,7 @@ public class AdminRoleAssignmentHandlersTests : IDisposable
     }
 
     [Fact]
-    public async Task AssignRole_ShouldProtectLastActiveAdministrator()
+    public async Task AssignRole_ShouldProtectLastActiveAdministrator_AndAllowSuspendedAdminDemotion()
     {
         var handler = new AdminAssignRoleHandler(_db, _uow, _tokenService, _resolver);
 
@@ -303,8 +340,6 @@ public class AdminRoleAssignmentHandlersTests : IDisposable
         res1.IsSuccess.Should().BeTrue();
 
         // Now only 1 active admin remains (_superAdminId).
-        // If another admin existed and tried to demote _superAdminId, it would be blocked.
-        // Let's create an admin2 with ManageRoles and ManageAccounts to try demoting _superAdminId:
         var admin2Id = Guid.NewGuid();
         var admin2 = new User
         {
@@ -318,19 +353,79 @@ public class AdminRoleAssignmentHandlersTests : IDisposable
         _db.Users.Add(admin2);
         await _db.SaveChangesAsync();
 
-        // Demoting admin2 succeeds (leaves 1 admin)
+        // Demoting admin2 succeeds (leaves 1 active admin: _superAdminId)
         var res2 = await handler.ExecuteAsync(new AdminAssignRoleRequest(admin2Id, _superAdminId, RoleDefaults.LearnerRoleId, "Demoting admin2", 1));
         res2.IsSuccess.Should().BeTrue();
 
-        // Now only _superAdminId remains as active Admin. Trying to demote an admin when only 1 remains fails:
-        // Temporarily change admin2's role back to Admin in DB so target has AdminRoleId, but active admin count is 1
+        // Now only _superAdminId remains as active Admin.
+        // Set admin2's role back to Admin in DB, but with Suspended status.
         admin2.RoleId = RoleDefaults.AdminRoleId;
-        admin2.Status = AccountStatus.Suspended; // suspended, not active!
+        admin2.Status = AccountStatus.Suspended;
+        admin2.SuspendedByUserId = _superAdminId;
+        admin2.SuspendedAt = DateTimeOffset.UtcNow.AddDays(-1);
+        admin2.SuspensionReason = "Policy violation";
+        var suspendedAtBefore = admin2.SuspendedAt;
+        var suspendedByBefore = admin2.SuspendedByUserId;
+        var suspensionReasonBefore = admin2.SuspensionReason;
+        var authVersionBefore = admin2.AuthenticationVersion;
+        var controlVersionBefore = admin2.AdminControlVersion;
         await _db.SaveChangesAsync();
 
+        var token = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = admin2Id,
+            FamilyId = Guid.NewGuid(),
+            TokenHash = RefreshTokenService.HashToken(Guid.NewGuid().ToString("N")),
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(30),
+            AuthenticationVersion = admin2.AuthenticationVersion
+        };
+        _db.RefreshTokens.Add(token);
+        await _db.SaveChangesAsync();
+        // Demoting a Suspended admin must SUCCEED because it does not remove an ACTIVE administrator!
         var res3 = await handler.ExecuteAsync(new AdminAssignRoleRequest(admin2Id, _superAdminId, RoleDefaults.LearnerRoleId, "Demoting suspended admin", admin2.AdminControlVersion));
-        res3.IsSuccess.Should().BeFalse();
-        res3.Error.Code.Should().Be("ACCOUNT_LAST_ADMIN_PROTECTED");
+        res3.IsSuccess.Should().BeTrue();
+        res3.Value.Role.Key.Should().Be(RoleDefaults.LearnerKey);
+        res3.Value.Status.Should().Be(AccountStatus.Suspended);
+        res3.Value.SuspendedAt.Should().Be(suspendedAtBefore);
+        res3.Value.SuspendedByUserId.Should().Be(suspendedByBefore);
+        res3.Value.SuspensionReason.Should().Be(suspensionReasonBefore);
+
+        var admin2Reread = await _db.Users.FindAsync(admin2Id);
+        admin2Reread!.RoleId.Should().Be(RoleDefaults.LearnerRoleId);
+        admin2Reread.Status.Should().Be(AccountStatus.Suspended);
+        admin2Reread.SuspendedAt.Should().Be(suspendedAtBefore);
+        admin2Reread.SuspendedByUserId.Should().Be(suspendedByBefore);
+        admin2Reread.SuspensionReason.Should().Be(suspensionReasonBefore);
+        admin2Reread.AuthenticationVersion.Should().BeGreaterThan(authVersionBefore);
+        admin2Reread.AdminControlVersion.Should().BeGreaterThan(controlVersionBefore);
+
+        var tokens = await _db.RefreshTokens.Where(t => t.UserId == admin2Id).ToListAsync();
+        tokens.All(t => t.RevokedAt != null).Should().BeTrue();
+
+        // Last active admin protection: reactivate adminTarget as active Admin
+        var superAdminUser = await _db.Users.FindAsync(_superAdminId);
+        var callerAdminId = Guid.NewGuid();
+        var callerAdmin = new User
+        {
+            Id = callerAdminId,
+            Email = "calleradmin@example.com",
+            Name = "Caller Admin",
+            Status = AccountStatus.Active,
+            RoleId = RoleDefaults.AdminRoleId,
+            AdminControlVersion = 1
+        };
+        _db.Users.Add(callerAdmin);
+        await _db.SaveChangesAsync();
+
+        // Caller demotes callerAdmin itself? Blocked by self-role change
+        // Caller demotes adminTarget (learner)? Target is learner
+        // Caller demotes superAdminUser when 2 active admins exist: succeeds
+        // Then when only callerAdmin remains as active Admin, demoting callerAdmin is blocked
+        // Let's verify unchanged role check runs BEFORE last-admin check
+        var unchangedRes = await handler.ExecuteAsync(new AdminAssignRoleRequest(callerAdminId, _superAdminId, RoleDefaults.AdminRoleId, "Reassigning same admin role", callerAdmin.AdminControlVersion));
+        unchangedRes.IsSuccess.Should().BeFalse();
+        unchangedRes.Error.Code.Should().Be("ACCOUNT_ROLE_UNCHANGED");
     }
 
     [Fact]

@@ -55,6 +55,24 @@ describe('administrator route boundaries', () => {
       expect(canAccessAdminDestination('/admin/unknown', allCaps)).toBe(false)
       expect(canAccessAdminDestination('/admin/missing', allCaps)).toBe(false)
     })
+    it('authorizes destination by pathname while preserving safe query and hash contexts (F15)', () => {
+      const catalogOnly = { canManageCatalog: true }
+      const categoriesOnly = { canManageCategories: true }
+      const documentsOnly = { canManageDocumentOperations: true }
+
+      // Pathname governs grants; query and hash do not break access
+      expect(canAccessAdminDestination('/admin/catalog?search=linux&page=2#section-1', catalogOnly)).toBe(true)
+      expect(canAccessAdminDestination('/admin/categories?sort=order#active', categoriesOnly)).toBe(true)
+      expect(canAccessAdminDestination('/admin/documents?status=Processing#details', documentsOnly)).toBe(true)
+
+      // Independent Categories access
+      expect(canAccessAdminDestination('/admin/categories', categoriesOnly)).toBe(true)
+      expect(canAccessAdminDestination('/admin/catalog', categoriesOnly)).toBe(false)
+
+      // Query/hash text never selects a grant
+      expect(canAccessAdminDestination('/admin/catalog?canViewAdminDashboard=true', { canViewAdminDashboard: true })).toBe(false)
+      expect(canAccessAdminDestination('/admin/unknown?canManageCatalog=true', catalogOnly)).toBe(false)
+    })
 
     it('denies all admin destinations when account only has canManageRoles', () => {
       const rolesOnly = { canManageRoles: true }

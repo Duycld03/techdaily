@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text.RegularExpressions;
 using DeepPace.Domain.Common;
 
@@ -10,6 +11,17 @@ public static class RoleDefaults
 
     public const string LearnerKey = "learner";
     public const string AdminKey = "admin";
+
+    public static readonly IReadOnlySet<string> ProtectedAdminGrants = new HashSet<string>(StringComparer.Ordinal)
+    {
+        PermissionKeys.ViewAdminDashboard,
+        PermissionKeys.ManageCatalog,
+        PermissionKeys.ManageAccounts,
+        PermissionKeys.ReadAudit,
+        PermissionKeys.ManageDocumentOperations,
+        PermissionKeys.ManageRoles,
+        PermissionKeys.ManageCategories
+    }.ToFrozenSet(StringComparer.Ordinal);
 }
 
 public class Role : BaseEntity

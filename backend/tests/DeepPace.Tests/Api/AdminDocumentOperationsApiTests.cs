@@ -226,6 +226,194 @@ public class AdminDocumentOperationsApiTests : IAsyncLifetime
         body.State.Should().Be("Queued");
     }
 
+    [Fact]
+    public async Task Retry_WithFreshSessionVersionGreaterThanOne_Returns202Accepted_AndQueuesAttempt()
+    {
+        using (var scope = _app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            var admin = await db.Users.FindAsync(_adminId);
+            admin!.AuthenticationVersion = 3;
+            await db.SaveChangesAsync();
+        }
+
+        using var client = _app.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", _adminId.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-Session-Version", "3");
+
+        using (var scope = _app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            var attempt = await db.IngestionAttempts.FirstAsync();
+            var book = await db.DocumentBooks.FirstAsync();
+
+            var payload = new AdminRetryPayload(
+                AttemptId: attempt.Id,
+                ExpectedVersion: book.IngestionControlVersion,
+                RequestId: "api-retry-req-fresh-v3",
+                Reason: "Retry with fresh session version 3");
+
+            var response = await client.PostAsJsonAsync($"/api/v1/admin/documents/personal/{_bookId}/retry", payload);
+            response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+            var body = await response.Content.ReadFromJsonAsync<AdminRetryDocumentResponseDto>();
+            body.Should().NotBeNull();
+            body!.TargetDocumentId.Should().Be(_bookId);
+            body.State.Should().Be("Queued");
+        }
+
+        using (var verifyScope = _app.Services.CreateScope())
+        {
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            var queuedAttempt = await verifyDb.IngestionAttempts
+                .FirstOrDefaultAsync(a => a.RequestId == "api-retry-req-fresh-v3");
+            queuedAttempt.Should().NotBeNull();
+            queuedAttempt!.State.Should().Be(IngestionAttemptState.Queued);
+        }
+    }
+
+    [Fact]
+    public async Task Retry_WithStaleSessionVersion_Returns403Forbidden_AndDoesNotMutateOrQueueAttempt()
+    {
+        using (var scope = _app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            var admin = await db.Users.FindAsync(_adminId);
+            admin!.AuthenticationVersion = 3;
+            await db.SaveChangesAsync();
+        }
+
+        using var client = _app.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", _adminId.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-Session-Version", "2"); // Stale: DB is 3
+
+        using (var scope = _app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            var attempt = await db.IngestionAttempts.FirstAsync();
+            var book = await db.DocumentBooks.FirstAsync();
+
+            var payload = new AdminRetryPayload(
+                AttemptId: attempt.Id,
+                ExpectedVersion: book.IngestionControlVersion,
+                RequestId: "api-retry-req-stale-v2",
+                Reason: "Retry with stale session version 2");
+
+            var response = await client.PostAsJsonAsync($"/api/v1/admin/documents/personal/{_bookId}/retry", payload);
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        using (var verifyScope = _app.Services.CreateScope())
+        {
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            var queuedAttempt = await verifyDb.IngestionAttempts
+                .FirstOrDefaultAsync(a => a.RequestId == "api-retry-req-stale-v2");
+            queuedAttempt.Should().BeNull("Stale session requests cannot mutate state or queue attempts");
+        }
+    }
+
+    [Fact]
+    public async Task ReplaceCatalogDocumentSource_WithFreshSessionVersionGreaterThanOne_Returns202Accepted_AndPersistsOutcome()
+    {
+        var catalogDocId = Guid.NewGuid();
+        using (var scope = _app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            var admin = await db.Users.FindAsync(_adminId);
+            admin!.AuthenticationVersion = 4;
+
+            var catDoc = new CatalogDocument
+            {
+                Id = catalogDocId,
+                Title = "Rust Concurrency",
+                Description = "Systems programming guide",
+                CategoryId = CategoryDefaults.BackendRuntimeId,
+                ProcessingStatus = ProcessingStatus.Failed,
+                Visibility = CatalogVisibility.Draft,
+                ConcurrencyVersion = 1,
+                AttributionText = "DeepPace Docs"
+            };
+            db.CatalogDocuments.Add(catDoc);
+            await db.SaveChangesAsync();
+        }
+
+        using var client = _app.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", _adminId.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-Session-Version", "4");
+
+        using var form = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34 }); // %PDF-1.4
+        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        form.Add(fileContent, "file", "rust-concurrency.pdf");
+        form.Add(new StringContent("cat-replace-req-fresh-v4"), "requestId");
+        form.Add(new StringContent("1"), "expectedVersion");
+        form.Add(new StringContent("Source replacement under fresh session version 4"), "reason");
+
+        var response = await client.PostAsync($"/api/v1/admin/catalog/documents/{catalogDocId}/source/pdf", form);
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+
+        var result = await response.Content.ReadFromJsonAsync<SourceReplacementResponseDto>();
+        result.Should().NotBeNull();
+        result!.State.Should().Be("Queued");
+
+        using (var verifyScope = _app.Services.CreateScope())
+        {
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            var doc = await verifyDb.CatalogDocuments.FindAsync(catalogDocId);
+            doc!.ProcessingStatus.Should().Be(ProcessingStatus.Pending);
+            doc.CurrentAttemptId.Should().NotBeNull();
+        }
+    }
+
+    [Fact]
+    public async Task ReplaceCatalogDocumentSource_WithStaleSessionVersion_Returns403Forbidden_AndDoesNotMutate()
+    {
+        var catalogDocId = Guid.NewGuid();
+        using (var scope = _app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            var admin = await db.Users.FindAsync(_adminId);
+            admin!.AuthenticationVersion = 4;
+
+            var catDoc = new CatalogDocument
+            {
+                Id = catalogDocId,
+                Title = "Go Concurrency",
+                Description = "Goroutines guide",
+                CategoryId = CategoryDefaults.BackendRuntimeId,
+                ProcessingStatus = ProcessingStatus.Failed,
+                Visibility = CatalogVisibility.Draft,
+                ConcurrencyVersion = 1,
+                AttributionText = "DeepPace Docs"
+            };
+            db.CatalogDocuments.Add(catDoc);
+            await db.SaveChangesAsync();
+        }
+
+        using var client = _app.GetTestClient();
+        client.DefaultRequestHeaders.Add("X-Test-UserId", _adminId.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-Session-Version", "3"); // Stale: DB is 4
+
+        using var form = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34 });
+        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        form.Add(fileContent, "file", "go-concurrency.pdf");
+        form.Add(new StringContent("cat-replace-req-stale-v3"), "requestId");
+        form.Add(new StringContent("1"), "expectedVersion");
+        form.Add(new StringContent("Source replacement under stale session"), "reason");
+
+        var response = await client.PostAsync($"/api/v1/admin/catalog/documents/{catalogDocId}/source/pdf", form);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        using (var verifyScope = _app.Services.CreateScope())
+        {
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<DeepPaceDbContext>();
+            var doc = await verifyDb.CatalogDocuments.FindAsync(catalogDocId);
+            doc!.ProcessingStatus.Should().Be(ProcessingStatus.Failed, "Stale session cannot mutate document status");
+            doc.CurrentAttemptId.Should().BeNull();
+        }
+    }
+
     private class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
         public TestAuthHandler(
@@ -244,11 +432,18 @@ public class AdminDocumentOperationsApiTests : IAsyncLifetime
                 return Task.FromResult(AuthenticateResult.NoResult());
             }
 
+            var sessionVersion = "1";
+            if (Request.Headers.TryGetValue("X-Test-Session-Version", out var svValues) &&
+                !string.IsNullOrWhiteSpace(svValues.FirstOrDefault()))
+            {
+                sessionVersion = svValues.FirstOrDefault()!;
+            }
+
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(ClaimTypes.Name, "Test User"),
-                new Claim("session_version", "1")
+                new Claim("session_version", sessionVersion)
             };
 
             var identity = new ClaimsIdentity(claims, "TestAuth");

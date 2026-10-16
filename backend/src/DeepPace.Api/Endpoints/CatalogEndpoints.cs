@@ -395,7 +395,7 @@ public static class CatalogEndpoints
             CancellationToken ct) =>
         {
             var adminUserId = GetUserIdFromClaims(userClaims) ?? Guid.Empty;
-            var request = new AdminReviewCatalogRequest(id, adminUserId);
+            var request = new AdminReviewCatalogRequest(id, adminUserId, GetSessionVersion(userClaims));
 
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
@@ -425,7 +425,8 @@ public static class CatalogEndpoints
             var request = new AdminPublishCatalogDocumentRequest(
                 id,
                 adminUserId,
-                body.ExpectedRevision);
+                body.ExpectedRevision,
+                GetSessionVersion(userClaims));
 
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
@@ -453,7 +454,7 @@ public static class CatalogEndpoints
         {
             var adminUserId = GetUserIdFromClaims(userClaims) ?? Guid.Empty;
             var expectedVersion = body?.ExpectedConcurrencyVersion ?? 0;
-            var request = new AdminHideCatalogDocumentRequest(id, adminUserId, expectedVersion);
+            var request = new AdminHideCatalogDocumentRequest(id, adminUserId, expectedVersion, GetSessionVersion(userClaims));
 
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(

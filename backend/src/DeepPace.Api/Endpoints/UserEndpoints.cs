@@ -30,7 +30,7 @@ public static class UserEndpoints
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.Id == userId.Value);
 
-            if (user == null)
+            if (user == null || user.Role == null)
             {
                 return Results.Unauthorized();
             }

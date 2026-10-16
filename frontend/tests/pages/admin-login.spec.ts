@@ -38,6 +38,35 @@ describe('administrator sign-in orchestration', () => {
     expect(auth.user?.id).toBe('admin-1')
   })
 
+  it('falls back to first accessible admin route if requested contextual destination is forbidden (F15)', async () => {
+    vi.stubGlobal('useRoute', () => ({ path: '/admin/login', query: { redirect: '/admin/users?page=2' } }))
+    const auth = useAuthStore()
+    const access = useAdminAccessStore()
+    vi.spyOn(auth, 'login').mockImplementation(async () => {
+      auth.setSession(adminTestJwt(), { id: 'admin-1', email: 'admin@example.test', name: 'Admin', preferredLocale: 'en' })
+    })
+    vi.spyOn(access, 'verify').mockImplementation(async () => {
+      access.state = 'authorized'
+      access.capabilities = {
+        canViewAdminDashboard: false,
+        canManageCatalog: true,
+        canManageAccounts: false,
+        canReadAudit: false,
+        canManageDocumentOperations: false,
+        canManageRoles: false,
+        canManageCategories: false
+      }
+      return true
+    })
+
+    const wrapper = render()
+    await wrapper.get('#admin-email').setValue('admin@example.test')
+    await wrapper.get('#admin-password').setValue('password')
+    await wrapper.get('form').trigger('submit'); await flushPromises()
+
+    expect(navigateTo).toHaveBeenCalledWith('/admin/catalog')
+  })
+
   it('keeps a successfully signed-in regular account on the accessible admin login page', async () => {
     const auth = useAuthStore()
     vi.spyOn(auth, 'login').mockImplementation(async () => {

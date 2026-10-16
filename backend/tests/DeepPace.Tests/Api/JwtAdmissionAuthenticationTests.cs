@@ -89,15 +89,8 @@ public class JwtAdmissionAuthenticationTests : IAsyncLifetime
 
                         if (validation.Status == AccountAuthorityStatus.Unavailable)
                         {
-                            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-                            context.Response.ContentType = "application/problem+json";
-                            context.Response.Headers.CacheControl = "no-store";
-                            await context.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
-                            {
-                                Status = StatusCodes.Status503ServiceUnavailable,
-                                Title = "Service Unavailable",
-                                Detail = "Account authority verification is temporarily unavailable."
-                            });
+                            context.Fail("Account authority verification is temporarily unavailable.");
+                            context.HttpContext.Items["SessionAuthorityUnavailable"] = true;
                             return;
                         }
 
@@ -110,6 +103,23 @@ public class JwtAdmissionAuthenticationTests : IAsyncLifetime
 
         _app = builder.Build();
         _app.UseAuthentication();
+        _app.Use(async (context, next) =>
+        {
+            if (context.Items.ContainsKey("SessionAuthorityUnavailable"))
+            {
+                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                context.Response.ContentType = "application/problem+json";
+                context.Response.Headers.CacheControl = "no-store";
+                await context.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+                {
+                    Status = StatusCodes.Status503ServiceUnavailable,
+                    Title = "Service Unavailable",
+                    Detail = "Account authority verification is temporarily unavailable."
+                });
+                return;
+            }
+            await next(context);
+        });
         _app.UseAuthorization();
 
         _app.MapGet("/protected", () => Results.Ok("authorized"))
@@ -172,6 +182,28 @@ public class JwtAdmissionAuthenticationTests : IAsyncLifetime
         await _db.SaveChangesAsync();
 
         var token = GenerateJwt(user.Id, 1);
+        var req = new HttpRequestMessage(HttpMethod.Get, "/protected");
+        req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        var res = await _client.SendAsync(req);
+        res.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task ValidToken_WithFreshSessionVersionGreaterThanOne_ShouldAuthorizeRequest()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "v2@example.com",
+            Name = "V2 User",
+            Status = AccountStatus.Active,
+            AuthenticationVersion = 3
+        };
+        await _db.Users.AddAsync(user);
+        await _db.SaveChangesAsync();
+
+        var token = GenerateJwt(user.Id, 3);
         var req = new HttpRequestMessage(HttpMethod.Get, "/protected");
         req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 

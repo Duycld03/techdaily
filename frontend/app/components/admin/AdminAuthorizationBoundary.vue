@@ -16,9 +16,24 @@ async function retry() {
     return navigateTo(loginRedirectFor(route.value.fullPath))
   }
   const allowed = await access.verify()
-  if (!allowed && access.state === 'denied') await navigateTo(loginRedirectFor(route.value.fullPath))
+  if (!allowed && access.state === 'denied') {
+    await navigateTo(loginRedirectFor(route.value.fullPath))
+    return
+  }
+  if (allowed && !access.canAccessDestination(route.value.fullPath)) {
+    const firstAccessible = access.getFirstAccessibleAdminRoute()
+    if (firstAccessible !== '/login') {
+      await navigateTo(firstAccessible)
+    } else {
+      await navigateTo(loginRedirectFor(route.value.fullPath))
+    }
+  }
 }
-onMounted(() => { if (access.state === 'pending') void retry() })
+onMounted(() => {
+  if (access.state === 'pending' || (access.isAuthorized && !access.canAccessDestination(route.value.fullPath))) {
+    void retry()
+  }
+})
 </script>
 
 <template>

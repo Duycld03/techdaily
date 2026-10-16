@@ -22,13 +22,13 @@ public class AdminAssignRoleHandler : IUseCase<AdminAssignRoleRequest, AdminAcco
     private readonly IDeepPaceDbContext _dbContext;
     private readonly IAdministrativeUnitOfWork _unitOfWork;
     private readonly IRefreshTokenService _refreshTokenService;
-    private readonly IAdminPermissionResolver _permissionResolver;
+    private readonly IAdminPermissionResolver? _permissionResolver;
 
     public AdminAssignRoleHandler(
         IDeepPaceDbContext dbContext,
         IAdministrativeUnitOfWork unitOfWork,
         IRefreshTokenService refreshTokenService,
-        IAdminPermissionResolver permissionResolver)
+        IAdminPermissionResolver? permissionResolver = null)
     {
         _dbContext = dbContext;
         _unitOfWork = unitOfWork;
@@ -40,90 +40,8 @@ public class AdminAssignRoleHandler : IUseCase<AdminAssignRoleRequest, AdminAcco
         AdminAssignRoleRequest request,
         CancellationToken cancellationToken = default)
     {
-        // 1. Conjunction check: Actor must have ManageAccounts AND ManageRoles
-        var capabilitiesResult = await _permissionResolver.GetCapabilitiesAsync(request.ActorUserId, cancellationToken);
-        if (capabilitiesResult.IsFailure)
-        {
-            return capabilitiesResult.Error;
-        }
+        var trimmedReason = request.Reason?.Trim() ?? string.Empty;
 
-        var capabilities = capabilitiesResult.Value;
-        if (!capabilities.CanManageRoles || !capabilities.CanManageAccounts)
-        {
-            return Error.Custom("FORBIDDEN", "Actor lacks required role administration authority.");
-        }
-
-        // 2. Input validation
-        if (request.ExpectedVersion <= 0)
-        {
-            return Error.Custom("Validation.ExpectedVersionInvalid", "Expected version must be positive.");
-        }
-
-        if (request.RoleId == Guid.Empty)
-        {
-            return Error.Custom("Role.InvalidId", "Role ID cannot be empty.");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Reason))
-        {
-            return Error.Custom("Account.ReasonRequired", "A reason is required for role assignment.");
-        }
-
-        var trimmedReason = request.Reason.Trim();
-        if (trimmedReason.Length > 500)
-        {
-            return Error.Custom("Account.ReasonTooLong", "Role assignment reason cannot exceed 500 characters.");
-        }
-
-        // 3. Self-role change protection
-        if (request.ActorUserId == request.TargetUserId)
-        {
-            return Error.Custom("ACCOUNT_SELF_ROLE_CHANGE_BLOCKED", "An administrator cannot change their own role.");
-        }
-
-        // 4. Target account existence
-        var targetUser = await _dbContext.Users.AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == request.TargetUserId && !u.IsDeleted, cancellationToken);
-
-        if (targetUser == null)
-        {
-            return Error.Custom("Account.NotFound", "Target account was not found.");
-        }
-
-        // 5. Concurrency check
-        if (targetUser.AdminControlVersion != request.ExpectedVersion)
-        {
-            return Error.Custom("ACCOUNT_CONCURRENCY_CONFLICT", "Account was modified by another administrator. Please reload.");
-        }
-
-        // 6. Role existence
-        var newRole = await _dbContext.Roles.AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Id == request.RoleId && !r.IsDeleted, cancellationToken);
-
-        if (newRole == null)
-        {
-            return Error.Custom("Role.NotFound", "The specified role was not found.");
-        }
-
-        // 7. Unchanged role check
-        if (targetUser.RoleId == request.RoleId)
-        {
-            return Error.Custom("ACCOUNT_ROLE_UNCHANGED", "Target user already has the specified role.");
-        }
-
-        // 8. Last active administrator protection
-        if (targetUser.RoleId == RoleDefaults.AdminRoleId && request.RoleId != RoleDefaults.AdminRoleId)
-        {
-            var activeAdminCount = await _dbContext.Users
-                .CountAsync(u => u.RoleId == RoleDefaults.AdminRoleId && !u.IsDeleted && u.Status == AccountStatus.Active, cancellationToken);
-
-            if (activeAdminCount <= 1)
-            {
-                return Error.Custom("ACCOUNT_LAST_ADMIN_PROTECTED", "Cannot reassign role: at least one active administrator must remain.");
-            }
-        }
-
-        // 9. Execute transaction via unit of work
         return await _unitOfWork.ExecuteAccountControlCommandAsync<AdminAccountDetailDto>(
             request.ActorUserId,
             request.PresentedSessionVersion,
@@ -132,10 +50,59 @@ public class AdminAssignRoleHandler : IUseCase<AdminAssignRoleRequest, AdminAcco
             request.ExpectedVersion,
             AdminAuditActions.UserAssignRole,
             request.CorrelationId,
-            async (actor, target) =>
+            preTargetValidation: actor =>
             {
-                // Re-verify last active administrator under row lock within unit of work
-                if (target.RoleId == RoleDefaults.AdminRoleId && request.RoleId != RoleDefaults.AdminRoleId)
+                if (request.ExpectedVersion <= 0)
+                {
+                    return Task.FromResult(Result.Failure(
+                        Error.Custom("Validation.ExpectedVersionInvalid", "Expected version must be positive.")));
+                }
+
+                if (request.RoleId == Guid.Empty)
+                {
+                    return Task.FromResult(Result.Failure(
+                        Error.Custom("Role.InvalidId", "Role ID cannot be empty.")));
+                }
+
+                if (string.IsNullOrWhiteSpace(request.Reason))
+                {
+                    return Task.FromResult(Result.Failure(
+                        Error.Custom("Account.ReasonRequired", "A reason is required for role assignment.")));
+                }
+
+                if (trimmedReason.Length > 500)
+                {
+                    return Task.FromResult(Result.Failure(
+                        Error.Custom("Account.ReasonTooLong", "Role assignment reason cannot exceed 500 characters.")));
+                }
+
+                if (AdminAuditEvent.ContainsSensitivePatterns(trimmedReason))
+                {
+                    return Task.FromResult(Result.Failure(
+                        Error.Custom("Account.InvalidReason", "Reason contains sensitive credential or token patterns.")));
+                }
+
+                return Task.FromResult(Result.Success());
+            },
+            command: async (actor, target, targetRole) =>
+            {
+                // Destination role existence
+                var newRole = await _dbContext.Roles
+                    .FirstOrDefaultAsync(r => r.Id == request.RoleId && !r.IsDeleted, cancellationToken);
+
+                if (newRole == null)
+                {
+                    return Error.Custom("Role.NotFound", "The specified role was not found.");
+                }
+
+                // Unchanged role check evaluated before minimum admin check
+                if (target.RoleId == request.RoleId)
+                {
+                    return Error.Custom("ACCOUNT_ROLE_UNCHANGED", "Target user already has the specified role.");
+                }
+
+                // Last active administrator protection: applies ONLY to actual removal of an Active protected Admin
+                if (target.RoleId == RoleDefaults.AdminRoleId && target.Status == AccountStatus.Active && request.RoleId != RoleDefaults.AdminRoleId)
                 {
                     var activeAdminCount = await _dbContext.Users
                         .CountAsync(u => u.RoleId == RoleDefaults.AdminRoleId && !u.IsDeleted && u.Status == AccountStatus.Active, cancellationToken);
@@ -145,6 +112,7 @@ public class AdminAssignRoleHandler : IUseCase<AdminAssignRoleRequest, AdminAcco
                         return Error.Custom("ACCOUNT_LAST_ADMIN_PROTECTED", "Cannot reassign role: at least one active administrator must remain.");
                     }
                 }
+
                 var prevRoleId = target.RoleId;
                 try
                 {

@@ -47,7 +47,7 @@ const runAction = async (loading: Ref<boolean>, fn: () => Promise<void>) => {
 }
 
 onMounted(async () => {
-  if (!access.isAuthorized) return
+  if (!access.isAuthorized || !access.canManageCatalog) return
   void categoryStore.ensureCategories()
   try {
     await catalogStore.fetchAdminDocuments()
@@ -164,7 +164,7 @@ async function handleDraftCreated(id: string) {
 </script>
 
 <template>
-  <div v-if="access.isAuthorized" class="h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-3.75rem)] flex flex-col overflow-hidden bg-slate-50 dark:bg-canvas">
+  <div v-if="access.isAuthorized && access.canManageCatalog" class="h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-3.75rem)] flex flex-col overflow-hidden bg-slate-50 dark:bg-canvas">
     <!-- MasterDetail Workspace for Authorized Administrators -->
     <MasterDetailLayout flush nav-class="md:w-84 lg:w-96" class="flex-1 min-h-0" :nav-label="$t('admin.nav.documents')" :content-label="$t('admin_catalog.title')">
       <!-- Header Slot -->

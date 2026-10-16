@@ -2,16 +2,7 @@ namespace DeepPace.Domain.Entities;
 
 public class RolePermission
 {
-    public static readonly IReadOnlySet<string> SupportedPermissionKeys = new HashSet<string>(StringComparer.Ordinal)
-    {
-        PermissionKeys.ViewAdminDashboard,
-        PermissionKeys.ManageCatalog,
-        PermissionKeys.ManageAccounts,
-        PermissionKeys.ReadAudit,
-        PermissionKeys.ManageDocumentOperations,
-        PermissionKeys.ManageRoles,
-        PermissionKeys.ManageCategories
-    };
+    public static readonly IReadOnlySet<string> SupportedPermissionKeys = RoleDefaults.ProtectedAdminGrants;
 
     public Guid RoleId { get; set; }
     public string PermissionKey { get; set; } = string.Empty;

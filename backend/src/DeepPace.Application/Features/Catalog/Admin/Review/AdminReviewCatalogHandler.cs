@@ -7,20 +7,38 @@ using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 namespace DeepPace.Application.Features.Catalog.Admin.Review;
 
-public record AdminReviewCatalogRequest(Guid CatalogDocumentId, Guid AdminUserId);
+public record AdminReviewCatalogRequest(
+    Guid CatalogDocumentId,
+    Guid AdminUserId,
+    int PresentedSessionVersion);
 
 public class AdminReviewCatalogHandler : IUseCase<AdminReviewCatalogRequest, AdminCatalogDocumentDto>
 {
     private readonly IDeepPaceDbContext _dbContext;
+    private readonly IAdministrativeUnitOfWork _unitOfWork;
 
-    public AdminReviewCatalogHandler(IDeepPaceDbContext dbContext)
+    public AdminReviewCatalogHandler(
+        IDeepPaceDbContext dbContext,
+        IAdministrativeUnitOfWork unitOfWork)
     {
         _dbContext = dbContext;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result<AdminCatalogDocumentDto>> ExecuteAsync(
         AdminReviewCatalogRequest request,
         CancellationToken cancellationToken = default)
+    {
+        return await _unitOfWork.ExecutePrivilegedMutationAsync(
+            request.AdminUserId,
+            request.PresentedSessionVersion,
+            new[] { AdminPermission.ManageCatalog },
+            () => ReviewInternalAsync(request, cancellationToken),
+            cancellationToken);
+    }
+    private async Task<Result<AdminCatalogDocumentDto>> ReviewInternalAsync(
+        AdminReviewCatalogRequest request,
+        CancellationToken cancellationToken)
     {
         var doc = await _dbContext.CatalogDocuments
             .Include(d => d.Slices)
