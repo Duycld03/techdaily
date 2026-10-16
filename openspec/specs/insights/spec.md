@@ -6,136 +6,119 @@ Provides an infinite feed of bite-sized architectural tech insights (anti-patter
 ## Requirements
 
 ### Requirement: Tech Insights Feed Data Model & Query API
-The system SHALL maintain a standalone `TechInsight` catalog and expose paginated/random browsing APIs alongside a dynamic metadata query endpoint `GET /api/v1/insights/meta`, adhering to the **DeepPace Studio** visual theme. Technical insights SHALL retain concrete code blocks (problematic vs idiomatic solution) with syntax highlighting, under-the-hood mechanics, and benchmark telemetry chips, while supporting technical craft, software design, mental models, and deep work habit domains.
+The system SHALL retain the standalone insight catalog, paginated/random browsing and `GET /api/v1/insights/meta`, with the existing Studio presentation, syntax-highlighted problematic/idiomatic code, mechanics and benchmark chips for technical content and appropriate behavioral comparisons for non-code topics. Category identity SHALL use UUIDs and shared bilingual descriptors, not a closed enum or fixed topic dictionary.
 
 #### Scenario: User requests next technical insight card
-- **WHEN** user sends `GET /api/v1/insights/feed` with optional `category` or `tag` query parameters
-- **THEN** the system returns a sequence of concise senior technical insight cards containing problem context, under-the-hood analysis, bad vs good code snippets, and benchmark performance stats.
+- **WHEN** an authenticated user requests `GET /api/v1/insights/feed` with optional `categoryId` UUID or tag filters
+- **THEN** matching insights are returned with their authoritative category descriptors, problem context, analysis and applicable code/benchmark content.
 
 #### Scenario: User navigates insights on frontend card reader
-- **WHEN** user visits `/insights` and clicks "Next Insight ➔" or presses Space/ArrowRight
-- **THEN** the card reader smoothly transitions to the next technical insight with syntax-highlighted code blocks and category badges
-- **AND** the category filter row renders exclusively pure-text category chips (`[ Tất Cả Chủ Đề ]` and dynamic category names) while the dedicated View Mode Switcher independently displays the active view mode.
+- **WHEN** the user clicks Next Insight or presses Space/ArrowRight
+- **THEN** the reader transitions to the next card with code highlighting and a stored localized category name
+- **AND** pure-text All/category filter chips remain separate from the view-mode switcher.
 
 #### Scenario: Structured benchmark telemetry metric chips
-- **WHEN** an insight card renders with benchmark telemetry statistics (`benchmarkStats` containing single or pipe-delimited multiple metrics)
-- **THEN** the frontend parses and renders each metric as an individual, self-contained compact chip with a single Lucide `<Zap>` icon
-- **AND** any leading raw emojis (`⚡`, `🔥`, `🚀`) in the data string are stripped to eliminate duplicate side-by-side icon rendering
-- **AND** each metric chip renders with Dev-Learning Studio brand violet tokens (`bg-brand-50/80 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-500/20 text-brand-700 dark:text-brand-300`).
+- **WHEN** benchmark statistics contain one or multiple pipe-delimited metrics
+- **THEN** each metric renders as a compact brand-violet chip with one Zap icon
+- **AND** leading raw emoji markers are stripped to avoid duplicate icons.
 
 #### Scenario: Responsive card header layout and telemetry placement
-- **WHEN** user views an insight card on any screen width (mobile, tablet, or desktop)
-- **THEN** the top header row cleanly separates topic taxonomy badges on the left from the bookmark interaction button on the right
-- **AND** benchmark telemetry chips wrap gracefully without pushing the bookmark button out of view or compressing the card title.
+- **WHEN** a card renders on mobile, tablet or desktop
+- **THEN** taxonomy badges and bookmark action remain separated
+- **AND** telemetry wraps without displacing the bookmark button or compressing the title.
 
 #### Scenario: Client requests insights metadata and dynamic topic suggestions
-- **WHEN** client sends `GET /api/v1/insights/meta`
-- **THEN** system queries `TechInsights` to compile category metadata including category IDs, keys, localized English and Vietnamese labels, and published card counts
-- **AND** queries the authenticated user's library `DocumentBooks` in PostgreSQL to extract suggested inspiration seeds from book categories and `DocumentChunk` chapter titles, grouped by category
-- **AND** limits suggested topics to a maximum of 8 distinct items per category, filtering out raw chapter index prefixes (e.g. `CHƯƠNG X:`, `Tóm tắt chương`, `(Section Y)`)
-- **AND** when fewer than 2 library topics remain for a category, supplements with domain-specific curated fallback topics
-- **AND** returns HTTP 200 with `{ categories, suggestedTopics }`
-- **AND** client dynamically populates filter chips and the AI generation modal suggestion pool from the user's ingested library documents without relying on hardcoded arrays or the removed `Topics` table.
+- **WHEN** an authenticated client requests insights metadata
+- **THEN** categories are resolved from the shared catalog with UUIDs, slugs, both stored names, order/status, and published insight counts
+- **AND** suggested topics use only the authenticated user's nondeleted books and chapter titles grouped by category UUID
+- **AND** each group contains at most eight distinct cleaned titles without raw chapter prefixes
+- **AND** groups lacking source topics remain empty rather than receiving a fixed curriculum fallback
+- **AND** HTTP 200 returns `{ categories, suggestedTopics }` without hardcoded category arrays or the removed Topics table.
 
 #### Scenario: User toggles between Explore and Saved view modes
-- **GIVEN** an authenticated user on `/insights` with 5 bookmarked insights
-- **WHEN** user clicks `[ 🔖 Đã Lưu (5) ]` on the View Mode Switcher
-- **THEN** client sets `viewMode = 'saved'`, sets `onlyBookmarked = true`, and fetches the user's bookmarked insights
-- **AND** the View Mode Switcher visually highlights the Saved tab with active styling
-- **WHEN** user clicks `[ 🌐 Khám Phá ]`
-- **THEN** client sets `viewMode = 'explore'`, sets `onlyBookmarked = false`, and restores the general insights feed.
+- **WHEN** a user with five bookmarks selects Saved (5)
+- **THEN** Saved is active and only their bookmarks are fetched
+- **WHEN** Explore is selected
+- **THEN** the general feed is restored without losing the selected category UUID.
 
 #### Scenario: User filters saved bookmarks by category
-- **GIVEN** user is in Saved mode (`viewMode = 'saved'`) with bookmarked insights spanning multiple categories
-- **WHEN** user clicks the `.NET & C#` category chip in the category filter bar
-- **THEN** client sends `GET /api/v1/insights/feed?category=1&onlyBookmarked=true&page=1&pageSize=50`
-- **AND** the card reader displays only bookmarked insights belonging to `.NET & C#`
-- **AND** the category chip retains active selection styling.
+- **WHEN** the user selects a category while in Saved mode
+- **THEN** the client requests `GET /api/v1/insights/feed?categoryId=<selected-uuid>&onlyBookmarked=true&page=1&pageSize=50`
+- **AND** only matching bookmarks display and the selected category remains active.
 
 #### Scenario: User views tailored empty state in Saved mode with zero bookmarks
-- **GIVEN** an authenticated user who has not saved any insights (`bookmarkedInsights.length === 0`)
-- **WHEN** user switches to `[ 🔖 Đã Lưu (0) ]` mode
-- **THEN** page renders the tailored Saved empty state with the `BookmarkCheck` icon mounted visibly inside the centered icon wrapper
-- **AND** displays title "Bạn chưa lưu mẫu kiến thức nào"
-- **AND** displays description "Hãy bấm biểu tượng Bookmark trên các thẻ kiến thức khi khám phá để lưu lại xem sau."
-- **AND** displays the CTA button `[ 🌐 Khám Phá Kiến Thức Ngay ]`.
+- **WHEN** a user with no bookmarks enters Saved mode
+- **THEN** the localized empty state displays a visible BookmarkCheck icon, explains how to save cards, and offers the Explore Knowledge action.
 
 #### Scenario: User clicks CTA in Saved empty state to return to Explore mode
-- **GIVEN** user is viewing the tailored Saved empty state on `/insights`
-- **WHEN** user clicks `[ 🌐 Khám Phá Kiến Thức Ngay ]`
-- **THEN** client transitions `viewMode` back to `'explore'`
-- **AND** loads the general insights feed for the active category.
+- **WHEN** the user clicks the Explore Knowledge CTA in the Saved empty state
+- **THEN** Explore activates and loads the feed for the selected category.
 
 #### Scenario: User bookmarks an insight card and views updated bookmark count in switcher
-- **GIVEN** user is browsing in Explore mode and the View Mode Switcher displays `[ 🔖 Đã Lưu (3) ]`
-- **WHEN** user clicks the bookmark button on an unbookmarked insight card
-- **THEN** client calls `POST /api/v1/insights/{id}/bookmark`
-- **AND** card bookmark status toggles to active
-- **AND** the View Mode Switcher counter reactively increments to `[ 🔖 Đã Lưu (4) ]`.
+- **WHEN** a user with three saved cards bookmarks another through `POST /api/v1/insights/{id}/bookmark`
+- **THEN** the bookmark becomes active and the Saved counter immediately changes to four.
 
 #### Scenario: Responsive AI generation modal height containment
-- **WHEN** user clicks "+ Tạo Với AI" on `/insights` with any active category
-- **THEN** the modal dialog container is constrained to a maximum height of `85dvh` with `overflow-y-auto`
-- **AND** the suggested topic chips container maintains a maximum vertical scroll bounds (`max-h-36 overflow-y-auto`)
-- **AND** the modal never expands beyond the top or bottom viewport edges regardless of how many topic chips are returned.
+- **WHEN** the user opens AI generation for an active category
+- **THEN** the modal remains within 85dvh with a scrollable body and bounded suggestion area
+- **AND** topic count cannot push the dialog beyond the viewport.
 
 #### Scenario: Dynamic category-aware modal placeholders and guidance
-- **WHEN** user opens the AI generation modal with `EngineeringCraft` (Mã Sạch & Thiết Kế) active
-- **THEN** the placeholder displays software craft examples (e.g., `Refactoring God Class, Specification Pattern, TDD Invariants`)
-- **WHEN** user opens the modal with `MentalModels` (Mô Hình Tư Duy) active
-- **THEN** the placeholder displays cognitive models (e.g., `First Principles, Inversion (Pre-Mortem), Second-Order Thinking`)
-- **WHEN** user opens the modal with `HabitsProductivity` (Thói Quen & Tập Trung Sâu) active
-- **THEN** the placeholder displays habit systems (e.g., `Deep Work 90m Blocks, Ultradian Rhythms, Dopamine Reset`).
+- **WHEN** the user opens the generation modal for any category, including a new subject
+- **THEN** its stored name and available source-derived suggestions provide context
+- **AND** a generic localized topic prompt works when suggestions are empty, without subject-name switches or invented examples.
 
 #### Scenario: Empty state visual integrity with contextual icons
-- **WHEN** user views an empty category in Explore mode with zero matching insights
-- **THEN** the centered icon container renders a visible Lucide `<Lightbulb>` component
-- **AND** the container does not render an unstyled empty box.
+- **WHEN** Explore contains no insights for the selected category
+- **THEN** the empty state displays a visible Lightbulb icon rather than an unstyled empty box.
 
 #### Scenario: Localized category badge and sanitized tag display
-- **WHEN** user views an active insight card in Vietnamese (`vi`)
-- **THEN** the category pill badge renders the localized category label matching the active locale (e.g., `Hệ Thống Backend & Runtime`, `Mã Sạch & Thiết Kế`, `Mô Hình Tư Duy`) instead of hardcoded English
-- **AND** all hashtag badges render with trimmed text without leading or internal spaces (e.g. `#.NET` rather than `# .NET`).
+- **WHEN** a card is viewed in Vietnamese
+- **THEN** its category badge displays stored `nameVi` rather than an enum name or English fallback
+- **AND** tags remain trimmed without leading/internal spaces.
 
 #### Scenario: Seed data availability across all practice domains
-- **WHEN** the application starts up and runs database seeding via `TechInsightsSeeder`
-- **THEN** initial high-quality seed insights are provisioned for all 7 categories (including `EngineeringCraft`, `MentalModels`, and `HabitsProductivity`)
-- **AND** exploring any category immediately displays at least one ready insight card without requiring upfront on-demand AI synthesis.
+- **WHEN** a fresh database provisions the original example insights
+- **THEN** their category references resolve to the migration's seven stable seed UUIDs
+- **AND** subsequent startup does not rename, reorder, reactivate or duplicate administrator-managed categories
+- **AND** newly created categories are allowed to have zero insights and do not trigger automatic generation.
 
----
+#### Scenario: Restart preserves existing example insight state
+- **GIVEN** a legacy random-ID example insight was reclassified, edited, hidden or soft-deleted, with existing bookmark references
+- **WHEN** first post-migration startup and subsequent restarts provision examples
+- **THEN** its UUID, bookmarks, category, content/source, publication/deletion state and timestamps remain unchanged
+- **AND** provisioning inserts only when no matching seed slug exists across all rows, including soft-deleted matches; fixed category UUIDs do not replace insight identities.
+
+#### Scenario: Inactive category history remains browsable
+- **WHEN** a category with published or bookmarked insights is deactivated
+- **THEN** its existing feed and saved cards remain filterable under the same UUID and current label
+- **AND** it is excluded from new standalone generation choices.
 
 ### Requirement: On-Demand AI Insight Synthesizer
-The system SHALL support generating fresh, high-impact craft insights on-demand via Google Gemini. For technical topics, the synthesizer SHALL generate bad vs good code snippets and runtime performance benchmarks; for mindset and personal craft topics, the synthesizer SHALL analyze behavioral antipatterns vs optimal models and cognitive mechanisms.
-
-The AI topic synthesis dialog on `/insights` SHALL provide an ergonomic, visually cohesive modal input form:
-1. **Flush Focus Ring Geometry & Stability**:
-   - When the custom topic text input is focused (including automatic autofocus upon modal presentation), the input SHALL apply flush, border-radius-conforming focus styling (`focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20`).
-   - The input SHALL NOT render a detached, floating outer outline with an offset gap or double-border glitch.
-2. **Bilingual Action Localization**:
-   - The modal dismiss action button SHALL render localized text using `$t('insights.cancel')` ("Hủy Bỏ" in Vietnamese, "Cancel" in English) rather than hardcoded English text.
+The system SHALL synthesize insights only after an explicit user action with a valid active `categoryId` and topic. Technical topics SHALL use problematic/idiomatic code and performance analysis; behavioral topics SHALL compare antipatterns, useful models and cognitive mechanisms. Source/topic/language SHALL guide this distinction, never a category ordinal, name, or slug switch. The existing modal SHALL preserve flush focus styling and bilingual cancellation.
 
 #### Scenario: User opens AI topic synthesis modal and inspects input focus
-- **GIVEN** an authenticated user clicks "Tạo Với AI" on `/insights`
-- **WHEN** the generator modal renders and the text input receives autofocus
-- **THEN** the input displays flush rounded focus styling adhering strictly to the input's `rounded-2xl` geometry
-- **AND** zero detached or offset purple outline rectangles appear around the input box.
+- **WHEN** an authenticated user opens the modal and the topic input receives autofocus
+- **THEN** its focus ring conforms to rounded input geometry without a detached outline or double border.
 
 #### Scenario: User inspects modal dismiss button localization
-- **GIVEN** user views the AI generator modal in Vietnamese (`vi-VN`)
-- **WHEN** inspecting the dialog action footer
-- **THEN** the dismiss button displays "Hủy Bỏ"
-- **WHEN** user switches interface locale to English (`en-US`)
-- **THEN** the dismiss button displays "Cancel".
+- **WHEN** the modal is viewed in Vietnamese
+- **THEN** its dismiss action reads "Hủy Bỏ"
+- **WHEN** the locale switches to English
+- **THEN** the dismiss action reads "Cancel".
 
 #### Scenario: User triggers AI insight generation
-- **WHEN** user sends `POST /api/v1/insights/generate` with a specified technical topic or category
-- **THEN** the system invokes Gemini to synthesize a concrete breakdown with syntax-highlighted code snippets and benchmark stats, saves the result to `TechInsights` table, and returns the newly created insight card.
+- **WHEN** the user explicitly submits a technical topic and active category UUID
+- **THEN** Gemini generates the applicable code/benchmark insight and persists it under the admitted category UUID.
 
 #### Scenario: User triggers mental model AI insight generation
-- **WHEN** user sends `POST /api/v1/insights/generate` with a mindset or cognitive focus topic
-- **THEN** the system invokes Gemini to synthesize a behavioral comparison analyzing naive friction versus optimal focus design, saves to `TechInsights`, and returns the card.
+- **WHEN** the user explicitly submits a cognitive/behavioral topic and active category UUID
+- **THEN** Gemini generates the behavioral comparison and persists it under that UUID without requiring a predefined mental-model category.
 
----
+#### Scenario: Category changed or deactivated during generation
+- **WHEN** deactivation wins the final assignment-admission check
+- **THEN** generation returns HTTP 409 `Category.Inactive` without persisting an insight under the inactive category
+- **AND** a category filter or topic-chip click alone never invokes AI.
 
 ### Requirement: Insight 1-Click Bookmark & Note Saving
 The system SHALL allow users to save insights directly to their personal notes or spaced repetition review deck.

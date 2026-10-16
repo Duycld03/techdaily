@@ -6,267 +6,212 @@ Provides an interactive associative knowledge graph extracting relational learni
 ## Requirements
 
 ### Requirement: Knowledge Graph Relational Extraction API
-The system SHALL expose a protected HTTP GET endpoint `GET /api/v1/graph` that extracts and returns an associative **personal** knowledge graph for the authenticated user, derived strictly from that user's own learning artifacts in relational PostgreSQL 17 without introducing auxiliary graph databases or continuous server-side vector calculations. The graph SHALL represent only knowledge the user has actually engaged with — books the user imported, the chunks within those books, the user's personal highlights, and the user's spaced-repetition cards — and SHALL NOT project content owned by other users.
+The system SHALL expose protected `GET /api/v1/graph` returning a personal graph derived strictly from the authenticated user's relational learning artifacts, without auxiliary graph databases or continuous server-side vector calculations. It SHALL represent the user's imported books, referenced chunks, personal highlights, and spaced-repetition cards, never another user's content.
 
-The graph projection SHALL support all seven canonical DeepPace domain categories (`FrontendWeb`, `BackendRuntime`, `DatabaseStorage`, `SystemDesign`, `EngineeringCraft`, `MentalModels`, `HabitsProductivity`).
+The projection SHALL support every nondeleted category referenced by surviving user artifacts, including inactive and administrator-created categories, without a fixed pillar count. Authentication SHALL return HTTP 401 with problem details when missing. All node queries SHALL honor soft deletion.
 
-The endpoint SHALL require valid JWT Bearer authentication (`.RequireAuthorization()`) and SHALL return `HTTP 401 Unauthorized` with RFC 7807 problem details when invoked without a valid token.
+The response SHALL contain:
+1. `nodes`:
+   - Card nodes owned by the user: `id`, `label`, `documentChunkId`, retention `status`, `intervalDays`, `easeFactor`, and `repetitionCount`.
+   - Highlight nodes owned by the user: `id`, truncated quote `label`, `documentChunkId`, `bookId`, `note`, `tags`, and `createdAt`.
+   - Book nodes for the user's published, nondeleted imported books only: `id`, `label`, `categoryId`, authoritative category descriptor, `totalChunks`, and `authorOrSourceUrl`.
+   - Chunk nodes belonging to surviving user books: `id`, chapter `label`, `bookId`, `chunkOrder`, and `summary`. A chunk SHALL appear only when referenced by the user's card or highlight, not merely because it exists.
+   - Category pillar hubs: `id` equal to `pillar-{categoryId}`, current bilingual category metadata, and `type: "pillar"`. A hub SHALL appear only when anchoring a surviving user book or classified card. Unknown source provenance SHALL NOT fabricate an assignment or empty hub.
+2. `edges`, whose endpoints SHALL both occur in `nodes`:
+   - `BookToPillar`: book to its own `pillar-{categoryId}`.
+   - `ChunkToBook`: referenced chunk to its parent book.
+   - `CardToChunk`: card to its surviving source chunk.
+   - `CardToHighlight`: highlight-sourced card to its source highlight.
+   - `CardToPillar`: otherwise unlinked card to its authoritative source question's category hub when category provenance exists.
+   - `HighlightToChunk` and `HighlightToBook`: highlight to its surviving chunk and book.
+   - `SharedTag`: highlights sharing normalized tag keywords.
+3. `stats`: `totalNodes`, `totalEdges`, `nodeTypeCounts` for pillar/book/chunk/card/highlight, and `pillarCounts` keyed by category UUID.
 
-All node source queries SHALL honor the global soft-delete query filter (`IsDeleted == false`), so that any book, highlight, or flashcard the user has deleted is absent from the graph without special handling.
-
-The returned response payload (`KnowledgeGraphResponse`) SHALL consist of:
-1. `nodes`: An array of `GraphNodeDto` items representing:
-   - **Card Nodes:** Spaced repetition flashcards from `SpacedRepetitionCards` owned by the authenticated user (`UserId == currentUser.Id`), containing `id`, `label`, `documentChunkId`, `status` (`Learning`, `Reviewing`, `Mastered`), `intervalDays`, `easeFactor`, and `repetitionCount`.
-   - **Highlight Nodes:** Personal reading highlights from `UserHighlights` owned by the authenticated user (`UserId == currentUser.Id`), containing `id`, `label` (truncated quote), `documentChunkId`, `bookId`, `note`, `tags`, and `createdAt`.
-   - **Book Nodes:** Only books the authenticated user imported — from `DocumentBooks` where `CreatedByUserId == currentUser.Id` and the book is published and not deleted — containing `id`, `label`, `category`, `totalChunks`, and `authorOrSourceUrl`. Books created by other accounts SHALL NOT appear (parity with the Library page `GET /api/v1/library/books`).
-   - **Chunk Nodes:** Reading slices from `DocumentChunks` belonging to the user's imported books, containing `id`, `label` (chunk/chapter title), `bookId`, `chunkOrder`, and `summary`. A chunk SHALL be emitted if and only if it belongs to a surviving user book and is referenced by at least one of the user's own cards or highlights, avoiding a blind projection of every slice.
-   - **Pillar Hub Nodes:** Canonical architectural and mental model pillar anchors (id pattern `pillar-{Category}` for the seven pillars Frontend & Web, Backend & Runtime, Database & Storage, Distributed Systems, Engineering Craft, Mental Models & Decisions, Habits & Deep Work), containing `id`, `label`, `category`, and `type: "pillar"`. A pillar hub SHALL be emitted only when it anchors at least one surviving user node — a user book or a user card of that category. Pillars with no user activity SHALL be omitted; the graph therefore contains between zero and seven pillar hubs depending on the breadth of the user's learning.
-
-2. `edges`: An array of `GraphEdgeDto` items connecting only nodes present in `nodes`:
-   - `BookToPillar`: Connecting each user book to the pillar hub for the book's own category (`Book.Id -> pillar-{Category}`).
-   - `ChunkToBook`: Connecting each emitted chunk to its parent book (`Chunk.Id -> Book.Id`).
-   - `CardToChunk`: Connecting a user flashcard to its source `DocumentChunk` (`Card.DocumentChunkId -> Chunk.Id`) when that chunk is present.
-   - `CardToHighlight`: Connecting a highlight-sourced flashcard (`SourceType = Highlight`, `SourceHighlightId != null`) to its source highlight.
-   - `CardToPillar`: Connecting a flashcard with `DocumentChunkId == null` and `SourceHighlightId == null` to `pillar-{card.Category}`.
-   - `HighlightToChunk`: Connecting a user highlight to its source `DocumentChunk` (`Highlight.DocumentChunkId -> Chunk.Id`) when that chunk is present.
-   - `HighlightToBook`: Connecting a user highlight to its source book via `DocumentChunk.DocumentBookId` when that book is present.
-   - `SharedTag`: Connecting user highlights that share one or more normalized tag keywords.
-
-3. `stats`: Metadata containing `totalNodes`, `totalEdges`, `nodeTypeCounts` (including counts for `pillar`, `book`, `chunk`, `card`, `highlight`), and `pillarCounts`.
-
-The query execution SHALL execute in a single consolidated read pass using EF Core `AsNoTracking()`, utilizing indexes on foreign keys (`UserId`, `DocumentChunkId`, `CreatedByUserId`) to keep database query time low on production PostgreSQL 17. Because the projection is scoped to a single user's artifacts, the uncompressed JSON payload SHALL remain well under 100 KB.
+The query SHALL use a consolidated no-tracking read with foreign-key indexes to keep PostgreSQL query time low. The existing personal-graph payload budget of well under 100 KB SHALL remain unchanged. Global category metadata SHALL NOT expose other users' activity or produce unused hubs.
 
 #### Scenario: Unauthenticated request to knowledge graph endpoint
-- **WHEN** an unauthenticated client sends `GET /api/v1/graph` without a JWT Bearer token
-- **THEN** the system returns `HTTP 401 Unauthorized` with RFC 7807 problem details.
+- **WHEN** an unauthenticated client requests the graph
+- **THEN** HTTP 401 problem details are returned.
 
 #### Scenario: Authenticated user requests knowledge graph
-- **WHEN** an authenticated user who has imported books and created highlights and flashcards sends `GET /api/v1/graph` with a valid JWT Bearer token
-- **THEN** the system returns `HTTP 200 OK` with `KnowledgeGraphResponse`
-- **AND** the `nodes` array contains the user's own book nodes, the chunks referenced by the user's cards or highlights, and the user's card and highlight nodes
-- **AND** the `edges` array links cards to chunks, highlights to books and chunks, and highlights sharing common tags
-- **AND** the payload excludes books, cards, and highlights belonging to other users.
+- **WHEN** an authenticated user with books, highlights, and cards requests the graph
+- **THEN** HTTP 200 contains their own books, referenced chunks, cards and highlights, with source and shared-tag edges
+- **AND** other users' artifacts are excluded.
 
 #### Scenario: New user with zero flashcards or highlights requests graph
-- **WHEN** an authenticated user who has not imported any book and has no highlights or flashcards sends `GET /api/v1/graph`
-- **THEN** the system returns `HTTP 200 OK`
-- **AND** the `nodes` array contains no book, chunk, card, or highlight nodes and no pillar hub nodes (all node collections are empty arrays without causing null reference errors)
-- **AND** the client renders the graph empty state rather than a populated canvas.
+- **WHEN** a user with no imported books, cards or highlights requests the graph
+- **THEN** all node/edge collections are empty without null errors
+- **AND** the client renders an empty state, not seeded curriculum hubs.
 
 #### Scenario: Flashcard created from highlight links to highlight node
-- **WHEN** an authenticated user has a flashcard created from a reading highlight (`SourceType = Highlight` and `SourceHighlightId != null`)
-- **THEN** the backend graph projection derives an edge with `relationType: "CardToHighlight"` connecting `card.Id` to `card.SourceHighlightId`
-- **AND** the card node is positioned relative to its source highlight cluster.
+- **WHEN** a user has a highlight-sourced card with a surviving source highlight
+- **THEN** `CardToHighlight` connects them and places the card in its source highlight cluster.
 
 #### Scenario: Flashcard sourced from a document chunk links to chunk node
-- **WHEN** an authenticated user has a flashcard whose `DocumentChunkId` references a surviving chunk of an imported book
-- **THEN** the backend graph projection derives an edge with `relationType: "CardToChunk"` connecting `card.Id` to `chunk.Id`
-- **AND** the chunk node is emitted and connected to its parent book via a `ChunkToBook` edge.
+- **WHEN** a user's card references a surviving chunk of their imported book
+- **THEN** `CardToChunk` connects card to chunk and `ChunkToBook` connects chunk to parent book.
 
 #### Scenario: Flashcard with no linked topic or highlight links to pillar hub
-- **WHEN** an authenticated user has a flashcard with `DocumentChunkId == null` and `SourceHighlightId == null` (e.g. quiz mistake card)
-- **THEN** the backend graph projection derives an edge with `relationType: "CardToPillar"` connecting `card.Id` to `pillar-{card.Category}`
-- **AND** the pillar hub for that category is emitted so the card node does not become an isolated degree-0 node.
+- **WHEN** a user's card has no linked chunk/highlight but has an authoritative source question category UUID
+- **THEN** `CardToPillar` targets that category's emitted hub rather than a default category.
 
 #### Scenario: Shared tag associative edge generation
-- **WHEN** an authenticated user has two highlights that both contain the tag `"mvcc"`
-- **THEN** the backend graph projection derives a bidirectional or directed edge between the two highlight nodes with `relationType: "SharedTag"` and `label: "mvcc"`.
+- **WHEN** two user highlights share normalized tag `mvcc`
+- **THEN** a directed or bidirectional `SharedTag` edge connects them with that label.
 
 #### Scenario: Authenticated user receives pillar hub nodes and guaranteed connected topics
-- **WHEN** an authenticated user whose artifacts span only some technical domains sends `GET /api/v1/graph` with a valid JWT Bearer token
-- **THEN** the system returns `HTTP 200 OK` with `KnowledgeGraphResponse`
-- **AND** the `nodes` array contains a `type: "pillar"` hub only for each category that has at least one user book or card (between 0 and 7 hubs), and omits pillars with no user activity
-- **AND** the `edges` array contains a `BookToPillar` edge for every emitted book, connecting it to its respective pillar hub
-- **AND** no emitted book or chunk node has an edge degree of 0.
+- **WHEN** a user's artifacts cover only a subset of categories
+- **THEN** HTTP 200 contains hubs only for categories represented by surviving user books or classified cards
+- **AND** every book has its `BookToPillar` edge and emitted book/chunk nodes are connected.
 
 #### Scenario: Universal multi-disciplinary book connections
-- **WHEN** a user-imported book spans multiple technical domains
-- **THEN** the backend graph projection generates a `BookToPillar` edge only to the pillar hub of the book's own category, plus `ChunkToBook` edges from the book's referenced chunks
-- **AND** no automatic fan-out to all four core technical pillars is generated for that book.
+- **WHEN** a book covers multiple subjects
+- **THEN** it connects only to its assigned category hub and its referenced chunks
+- **AND** no automatic fan-out to other category hubs occurs.
 
 #### Scenario: Specific book-to-topic linking without Cartesian blowout
-- **WHEN** a user-imported book belongs to `Category.BackendRuntime` and covers GC and memory allocation across several chunks
-- **THEN** direct `ChunkToBook` edges are generated only for that book's own emitted chunks referenced by the user's cards or highlights
-- **AND** no automatic Cartesian product edges are created to unrelated books or chunks solely because they share `Category.BackendRuntime`.
+- **WHEN** a Backend book covers GC and allocation in several chunks
+- **THEN** only its own referenced chunks receive `ChunkToBook` edges
+- **AND** sharing a category UUID does not create Cartesian edges to unrelated books or chunks.
 
 #### Scenario: Only user-imported books appear as book nodes
-- **WHEN** an authenticated user has imported exactly one book while a different account has published a separate book
-- **THEN** the graph's book nodes contain only the user's imported book
-- **AND** the other account's published book is absent from the response.
+- **WHEN** a user has one imported book and another account has a separate published book
+- **THEN** only the user's book appears.
 
 #### Scenario: Only touched curriculum topics appear
-- **WHEN** an authenticated user has a flashcard linked to Chunk A but has no card or highlight referencing Chunk B
-- **THEN** Chunk A is emitted as a chunk node with a `ChunkToBook` edge to its parent book
-- **AND** Chunk B is absent from the graph.
+- **WHEN** the user references Chunk A but has no card/highlight referencing Chunk B
+- **THEN** A appears with its parent-book edge and B is absent.
 
 #### Scenario: Deleted highlight or flashcard is excluded from the graph
-- **WHEN** an authenticated user soft-deletes a highlight or flashcard and then requests `GET /api/v1/graph`
-- **THEN** the deleted node and all of its edges are absent from the response
-- **AND** any chunk or pillar hub that no longer anchors a surviving user node is also omitted.
+- **WHEN** the user soft-deletes a highlight or card and reloads
+- **THEN** the deleted node, its edges, and hubs/chunks with no surviving anchors are omitted.
 
 #### Scenario: Authenticated user receives DeepPace pillar hub nodes and guaranteed connected topics
-- **WHEN** an authenticated user whose artifacts include books or cards in `Category.MentalModels` or `Category.HabitsProductivity` sends `GET /api/v1/graph` with a valid JWT Bearer token
-- **THEN** the system returns `HTTP 200 OK` with `KnowledgeGraphResponse`
-- **AND** the `nodes` array contains a `type: "pillar"` hub for each active category (between 0 and 7 hubs)
-- **AND** `pillar-MentalModels` is emitted with label "Mô Hình Tư Duy & Quyết Định" ("Mental Models & Decisions") when user has mental models artifacts
-- **AND** `pillar-HabitsProductivity` is emitted with label "Thói Quen & Tập Trung Sâu" ("Habits & Deep Work") when user has habits or productivity artifacts
-- **AND** all `BookToPillar` and `CardToPillar` edges for categories 5 and 6 connect to their respective pillar hub nodes without any dangling edges.
+- **WHEN** the user's artifacts include Mental Models, Habits, or an administrator-created category
+- **THEN** each represented category has a hub identified by its UUID and labeled from current metadata
+- **AND** all book/card-to-hub edges have existing endpoints without a seven-category ceiling.
 
 #### Scenario: No dangling edges for non-technical learning artifacts
-- **WHEN** an authenticated user has imported books or created review cards in `Category.MentalModels` or `Category.HabitsProductivity`
-- **THEN** every edge in the `edges` array has both its `source` and `target` IDs present in the `nodes` array
-- **AND** zero edges reference un-emitted pillar identifiers.
+- **WHEN** the user's books/cards cover non-technical subjects or inactive categories
+- **THEN** every edge endpoint exists and no edge references an un-emitted pillar.
 
----
+#### Scenario: Rename and deactivation preserve graph identity
+- **WHEN** an administrator renames or deactivates a referenced category
+- **THEN** refreshed labels/status change but `pillar-{categoryId}`, artifact IDs and edge endpoints remain stable.
 
 ### Requirement: Client-Side Canvas 2D Force Layout Visualization
-The client application SHALL provide an interactive graph visualization at `/graph` using Canvas 2D rendering powered by Cytoscape.js, executing physics layout calculations entirely inside the user's browser without placing computational load on the VPS.
+The client SHALL provide `/graph` Canvas 2D visualization with client-side asynchronous force layout, not server-side physics. Existing random initialization, component spacing 120, node repulsion 500000, ideal edge length 120, cooling factor 0.95 and 300-iteration bounds SHALL preserve separation and settle within 1.5 seconds, then stop idle simulation.
 
-The visualization SHALL execute an asynchronous force-directed layout (such as CoSE or Web Worker-driven simulation) upon mounting, configured with:
-- `randomize: true` to avoid initial deterministic node stacking.
-- `componentSpacing: 120` to guarantee visible separation between disparate pillar constellations.
-- `nodeRepulsion: () => 500000` to prevent adjacent nodes from overlapping.
-- `idealEdgeLength: () => 120` to balance visual density and readability.
-- A physics cooling parameter (`coolingFactor: 0.95`, `numIter: 300`) that settles and halts all movement within 1.5 seconds. Once settled, the canvas SHALL transition to static interactive mode, consuming 0% ongoing CPU or GPU cycles when idle.
+Node geometry SHALL remain: prominent 54x54px pillar circles with 3.5px neon halo, 18px blur, bold 13px labels and highest stacking rank; 30x30px chunk circles; indigo 34x26px rounded book rectangles with 6px corners/bookmark/source emblems; 26x26px card diamonds; cyan 22x22px highlight diamonds. Card retention colors SHALL remain Learning amber, Reviewing blue, and Mastered brand violet.
 
-The canvas SHALL visually differentiate node types and retention status:
-- **Pillar Hub Nodes:** Prominent circular nodes ($54\times 54\text{px}$) with a $3.5\text{px}$ neon halo ring (blur $18\text{px}$), bold typography ($13\text{px}$ font weight 700), the highest stacking rank (z 50), and color-coded backgrounds matching their respective domain palette:
-  - Backend Runtime: Sky (`#0284c7`, border `#38bdf8`)
-  - Database Storage: Cyan (`#0891b2`, border `#22d3ee`)
-  - Distributed Systems: Violet (`#7c3aed`, border `#a78bfa`)
-  - Frontend Web: Amber (`#f59e0b`, border `#fbbf24`)
-  - Engineering Craft: Pink (`#ec4899`, border `#fb7185`)
-  - Mental Models: Deep Iris / Indigo (`#6366f1`, border `#818cf8`)
-  - Habits & Deep Work: Vibrant Emerald / Teal (`#10b981`, border `#34d399`)
-- **Chunk Nodes:** Small circular nodes ($30\times 30\text{px}$) color-coded by their parent book's pillar category.
-- **Book Nodes:** Rounded-rectangle nodes ($34\times 26\text{px}$, corner radius $6\text{px}$) in an indigo tone (`#6366f1`) with an internal bookmark stroke, displaying book source emblems.
-- **Card Nodes:** Diamond-shaped nodes ($26\times 26\text{px}$) color-coded by SM-2 retention status:
-  - Learning: Amber (`#f59e0b`)
-  - Reviewing: Blue (`#3b82f6`)
-  - Mastered: Primary Brand Violet (`#7c3aed` fill with `#c4b5fd` border)
-- **Highlight Nodes:** Diamond-cut nodes ($22\times 22\text{px}$) in cyan (`#06b6d4`) representing personal notes.
+Pillar and chunk accents SHALL come from one deterministic palette keyed by stable category UUID, shared by 2D, 3D, detail badges, and legend. No subject-name selector or Backend fallback SHALL be needed for new categories. Rename and reorder SHALL NOT change a category's palette assignment.
 
-The canvas viewport wrapper SHALL render on neutral dark obsidian `#09090b` (`dark:bg-canvas`), completely eliminating legacy `dark:bg-slate-950`. In dark mode, node borders and connecting edges SHALL employ translucent hairline styling `#27272a`. The canvas stylesheet SHALL dynamically synchronize with `@nuxtjs/color-mode`, updating node fills, borders, labels, and edge opacities when the user switches between dark and light themes without requiring a page reload.
-
-The canvas SHALL support smooth mouse and touch pan, zoom (bounded between 0.2x and 3.0x), box selection, drag repositioning, and double-click / button-triggered viewport fitting.
+The viewport SHALL retain dark obsidian `#09090b`, dark hairline `#27272a` borders/edges, and live dark/light synchronization without refetching or resetting coordinates. Mouse/touch pan, 0.2x–3.0x zoom, box selection, dragging, and double-click/button fit SHALL remain available.
 
 #### Scenario: Graph initialization and physics auto-settle
-- **WHEN** a user navigates to `/graph`
-- **THEN** the canvas initializes Cytoscape.js with the user's nodes and edges
-- **AND** the force layout animates node positions into natural clusters
-- **AND** the physics simulation settles and completely stops within 1.5 seconds.
+- **WHEN** a user opens `/graph`
+- **THEN** the personal nodes/edges initialize, animate into clusters, and stop physics within 1.5 seconds.
 
 #### Scenario: Level-of-Detail label decluttering at overview zoom
-- **WHEN** the user views the graph canvas at default overview zoom ($zoom < 1.1\times$)
-- **THEN** text labels for Card (diamond) and Highlight (diamond-cut) nodes are hidden to avoid label collision
-- **AND** text labels for Pillar hubs, Books, and Chunks remain legible.
+- **WHEN** zoom is below 1.1x
+- **THEN** card/highlight labels are hidden while hub/book/chunk labels remain legible.
 
 #### Scenario: Card label reveals on hover or selection
-- **WHEN** the user hovers over or taps a Card node whose label is hidden
-- **THEN** the canvas immediately reveals the Card node's label and highlights its connecting edge
-- **AND** closing or unselecting restores the clean overview state.
+- **WHEN** a card is hovered or tapped
+- **THEN** its hidden label and connecting edge are revealed
+- **AND** unselecting restores overview decluttering.
 
 #### Scenario: Viewport pan and zoom controls
-- **WHEN** a user scrolls the mouse wheel or pinches the touch screen on the canvas
-- **THEN** the canvas smoothly zooms within bounds ($0.2\times$ to $3.0\times$) centered on the cursor position
-- **WHEN** the user clicks the "Fit to Screen" button
-- **THEN** the canvas animates viewport bounds to display all visible nodes with comfortable padding.
+- **WHEN** the user wheels or pinches
+- **THEN** zoom stays within 0.2x–3.0x around the pointer
+- **WHEN** Fit to Screen is clicked
+- **THEN** all visible nodes fit with comfortable padding.
 
 #### Scenario: Dark/light mode theme synchronization
-- **WHEN** the user switches application theme from dark to light mode via `ThemeToggle.vue`
-- **THEN** the graph canvas immediately updates node labels, background grid contrast, and edge line colors to match the light mode palette without re-fetching graph data or resetting node coordinates.
+- **WHEN** theme changes
+- **THEN** labels, grid contrast, and edges update without refetching data or resetting coordinates.
 
 #### Scenario: Pillar node rendering and visual prominence
-- **WHEN** the graph canvas renders in the browser
-- **THEN** each pillar hub node is rendered at $54\times 54\text{px}$, larger than book ($34\times 26\text{px}$), chunk ($30\times 30\text{px}$), card ($26\times 26\text{px}$), and highlight ($22\times 22\text{px}$) nodes
-- **AND** the pillar hub node displays a bold label and distinct accent halo
-- **AND** connected books form a surrounding orbital constellation around their parent pillar hub.
+- **WHEN** the canvas renders
+- **THEN** hubs retain their larger geometry, bold label, halo, and surrounding book constellation.
 
 #### Scenario: Highlight and Book node colors unified across renderers
-- **WHEN** the 2D canvas renders Highlight and Book nodes
-- **THEN** Highlight nodes render cyan `#06b6d4` and Book nodes render indigo `#6366f1`, matching the legend swatches and the 3D renderer
-- **AND** no Highlight node renders the legacy violet fill and no Book node renders the legacy slate fill.
+- **WHEN** highlights and books render in 2D
+- **THEN** highlights use cyan `#06b6d4` and books indigo `#6366f1`, matching 3D/legend rather than legacy violet/slate.
 
 #### Scenario: Stable CoSE layout without collapsed horizontal stacking
-- **WHEN** a user navigates to `/graph` with a book that has chunks but zero user highlights
-- **THEN** the chunks belonging to that book remain anchored to it via `ChunkToBook` edges and to their pillar via the book's `BookToPillar` edge
-- **AND** the CoSE simulation settles without stacking unconnected nodes into a horizontal line at the viewport perimeter.
+- **WHEN** a book has referenced chunks but no user highlights
+- **THEN** source edges anchor chunks to the book and book to hub without collapsed perimeter stacking.
 
 #### Scenario: Obsidian 2D canvas background and hairline border styling
-- **WHEN** the 2D canvas renders in dark mode
-- **THEN** the canvas container background renders with neutral obsidian `#09090b` (`dark:bg-canvas`)
-- **AND** node borders and edges in dark mode utilize `#27272a` hairline styling rather than legacy opaque slate colors.
+- **WHEN** dark mode renders
+- **THEN** the viewport uses obsidian `#09090b` with `#27272a` hairline node borders and edges.
 
 #### Scenario: DeepPace pillar and chunk node rendering on 2D canvas
-- **WHEN** the 2D canvas renders nodes for `MentalModels` and `HabitsProductivity`
-- **THEN** `pillar-MentalModels` hub node renders at $54\times 54\text{px}$ with Indigo fill (`#6366f1`) and accent halo
-- **AND** `pillar-HabitsProductivity` hub node renders at $54\times 54\text{px}$ with Emerald fill (`#10b981`) and accent halo
-- **AND** chunk nodes for mental models and habits render with their respective category border tones
-- **AND** neither category is rendered with the legacy .NET sky-blue fallback.
-
----
+- **WHEN** Mental Models, Habits, and a newly created subject render
+- **THEN** all use the same UUID-keyed palette algorithm and normal hub geometry/halo
+- **AND** chunks inherit their category accent with no .NET/Backend fallback or special-case dictionary.
 
 ### Requirement: Multi-Dimensional Graph Filtering & Live Search
-The knowledge graph view SHALL include a floating glassmorphic control bar (`GraphControlBar.vue`) positioned above the canvas, providing real-time client-side filtering across multiple dimensions and engine modes without triggering backend network requests:
-1. **Engine Mode Switcher (2D / 3D):** A prominent dual-button toggle allowing the user to seamlessly switch between the **2D Planar Canvas** (Cytoscape.js) and the **3D WebGL Cosmos** (`3d-force-graph` / Three.js). The active mode SHALL persist in `localStorage` under key `deeppace_graph_view_mode`.
-2. **Pillar Category Filter:** Filter chips allowing the user to view all nodes or isolate a specific pillar (`All`, `Mental Models & Decisions`, `Habits & Deep Work`, `Backend Runtime`, `Database & Storage`, `Distributed Systems`, `Frontend & Web`, `Engineering Craft`). The filter container SHALL employ a responsive wrapping layout (`flex-wrap gap-1.5`) without hidden scrollbars or box-model clipping across both English and Vietnamese locales, ensuring that all 8 pill options remain 100% visible and discoverable. All category pills SHALL resolve explicit localization keys without falling back to raw untranslated strings.
-3. **Node Type Toggles:** Toggle buttons to show or hide specific node types (`Books`, `Chunks`, `Flashcards`, `Highlights`).
-4. **Mastery Status Filter:** Dropdown or pill selector to filter flashcard nodes by SM-2 status (`All`, `Learning`, `Reviewing`, `Mastered`). When `Mastered` is selected, the active indicator SHALL display primary brand violet styling (`bg-brand-600 text-white`) instead of emerald green.
-5. **Live Search Input:** Text input that dynamically matches node titles, tags, and summary keywords. Matching nodes SHALL remain fully opaque and highlighted, while non-matching nodes SHALL fade to 15% opacity with edges dimmed in both 2D and 3D modes.
-6. **Reset Filters CTA:** A button to immediately reset all filters, search inputs, and node opacities back to the default global view.
-7. **Action Controls Visual Alignment (Fit to Screen & Reset Filters):** Dedicated action buttons ("Fit to Screen", "Reset Filters") providing 1-click viewport centering and filter clearance SHALL share a unified compact rendered height (`h-8`, 32px), typography scale (`text-xs font-bold`), icon dimensions (`w-3.5 h-3.5`), and padding (`px-2.5 py-1.5`) matching the exact visual footprint and vertical baseline of the adjacent 2D/3D view mode switcher container.
+The graph SHALL provide a floating glassmorphic control bar with client-side filtering that does not fetch data on each interaction:
+1. 2D/3D engine switching SHALL preserve filters and persist `deeppace_graph_view_mode`.
+2. Category filtering SHALL expose All and every category represented in the personal graph, including inactive categories. Labels SHALL use stored bilingual metadata and selection SHALL use UUIDs. Responsive wrapping or an accessible bounded overflow control SHALL keep all categories reachable without a fixed eight-pill requirement.
+3. Type toggles SHALL control Books, Chunks, Flashcards and Highlights.
+4. Mastery filtering SHALL retain All/Learning/Reviewing/Mastered, with brand-violet Mastered styling.
+5. Live search SHALL match titles, tags, and summaries, highlighting matches and fading others/edges to 15% in both engines.
+6. Reset SHALL restore all filters, search, and opacity.
+7. Fit/Reset actions SHALL retain the compact 32px height, text/icon scale, padding and baseline of the engine switcher.
 
-All control bar action buttons, mode switches, and filter chips SHALL utilize `.glass-panel`, `dark:bg-canvas-subtle`, `dark:bg-canvas-elevated`, and `dark:border-white/[0.08]`, completely eliminating legacy `dark:bg-slate-800`, `dark:bg-slate-900`, and `dark:border-slate-700`.
+Controls SHALL retain existing glass/obsidian surface and hairline design tokens rather than legacy slate surfaces. Category selection and inactive status SHALL be programmatically available. Existing DOM controls and the detail drawer SHALL expose represented categories and counts with keyboard filtering/detail access in either engine; canvas labels and category colors alone SHALL NOT be the only equivalent identification.
 
 #### Scenario: Switching between 2D and 3D view modes
-- **WHEN** the user clicks the "3D Cosmos" mode button in `GraphControlBar.vue`
-- **THEN** the 2D canvas is smoothly unmounted or hidden
-- **AND** the 3D WebGL Galaxy canvas mounts, preserving active category and type filters
-- **AND** the choice is stored in `localStorage` so subsequent visits default to the chosen engine.
+- **WHEN** the user selects 3D Cosmos
+- **THEN** 2D is hidden/unmounted and 3D mounts with current category/type filters
+- **AND** the engine choice persists for subsequent visits.
 
 #### Scenario: Filtering by pillar category
-- **WHEN** the user clicks the "Data Storage & Persistence" pillar filter chip
-- **THEN** all book, chunk, card, and highlight nodes associated with other categories are hidden from the canvas
-- **AND** the viewport smoothly animates to focus on the Data Storage cluster.
+- **WHEN** a category chip is selected
+- **THEN** nodes from other categories are hidden and the viewport focuses on the selected UUID's cluster.
 
 #### Scenario: Toggling node types via type filters
-- **WHEN** the user disables the `Books`, `Chunks`, `Flashcards`, or `Highlights` toggle
-- **THEN** nodes of that type and their connecting edges are hidden from the canvas
-- **AND** no legacy `Topics` toggle is present in the control bar.
+- **WHEN** a Books, Chunks, Flashcards or Highlights toggle is disabled
+- **THEN** that type and connecting edges disappear and no obsolete Topics toggle appears.
 
 #### Scenario: Filtering by flashcard mastery level
-- **WHEN** the user selects "Mastered" in the mastery status filter
-- **THEN** card nodes with status `Learning` or `Reviewing` are hidden from the canvas
-- **AND** only cards with SM-2 interval $\ge 21$ days (`Mastered`) remain visible alongside their connected chunk nodes.
+- **WHEN** Mastered is selected
+- **THEN** Learning/Reviewing cards are hidden and cards with interval at least 21 days remain with their connected chunks.
 
 #### Scenario: Live search node focus
-- **WHEN** the user types `"MVCC"` into the search input
-- **THEN** nodes containing `"MVCC"` in their title, summary, or tags remain fully highlighted with a glowing border
-- **AND** all unrelated nodes fade to 15% opacity
-- **AND** pressing Enter or clicking a match centers the viewport onto that node at 1.5x zoom.
+- **WHEN** the user searches MVCC
+- **THEN** matches remain highlighted and unrelated nodes/edges fade to 15%
+- **AND** Enter or selecting a match focuses it at 1.5x zoom.
 
 #### Scenario: Resetting filters
-- **WHEN** the user clicks the "Reset" button after applying multiple filters
-- **THEN** all node type toggles, category chips, mastery filters, and search queries return to default
-- **AND** all nodes and edges return to 100% visibility.
+- **WHEN** Reset is clicked
+- **THEN** all type/category/mastery/search controls return to default and nodes/edges return to full visibility.
 
 #### Scenario: Bilingual responsive category pills wrapping and complete localization
-- **GIVEN** a user views `/graph` in Vietnamese locale (`vi-VN`)
-- **WHEN** inspecting the Category Pillars filter row in `GraphControlBar.vue`
-- **THEN** all 8 category pills ("Tất Cả", "Mô Hình Tư Duy & Quyết Định", "Thói Quen & Tập Trung Sâu", "Backend & Runtime", "Database & Storage", "Distributed Systems", "Frontend & Web", "Engineering Craft") are fully visible without horizontal clipping or truncation
-- **AND** each pill resolves its translated label rather than falling back to raw untranslated English strings
-- **AND** on viewports narrower than the combined pill width, the container wraps naturally into multiple clean rows.
+- **WHEN** the category controls render in English or Vietnamese
+- **THEN** current stored names render without raw enum names or clipped actions
+- **AND** all represented categories remain reachable on narrow viewports, regardless of category count.
 
 #### Scenario: Action buttons match 2D/3D toggle height and typography
-- **WHEN** a user views the knowledge graph control bar on `/graph`
-- **THEN** the "Fit to Screen" and "Reset Filters" buttons have an identical height (`h-8`, 32px), typography scale (`text-xs font-bold`), and icon size (`w-3.5 h-3.5`) aligning horizontally with the 2D/3D mode switcher.
+- **WHEN** the control bar renders
+- **THEN** Fit and Reset match the engine toggle's compact height, typography, icons and horizontal baseline.
 
 #### Scenario: DeepPace category filtering in control bar
-- **WHEN** the user selects the "Mô Hình Tư Duy" or "Thói Quen & Tập Trung" category chip in `GraphControlBar.vue`
-- **THEN** all nodes belonging to other categories are filtered out from the canvas
-- **AND** the viewport smoothly animates to focus on the selected DeepPace constellation
-- **AND** all 8 filter chips wrap responsively without visual clipping or overflow.
----
+- **WHEN** the user chooses Mental Models, Habits, or an administrator-created category
+- **THEN** other categories are filtered out and the selected constellation is focused without clipped or overflowing category controls.
+
+#### Scenario: Category details are available without canvas interaction
+- **WHEN** a keyboard or assistive-technology user selects a represented category through the DOM controls in either engine
+- **THEN** the selected UUID, current name/slug, inactive status and available category counts are exposed through controls/detail content
+- **AND** duplicate names or palette collisions remain distinguishable without hover-only disclosure.
+
+#### Scenario: Long category controls reflow without losing choices
+- **WHEN** 100-character or duplicate English/Vietnamese names appear on mobile or at effective 320 CSS-pixel width
+- **THEN** every represented category remains reachable, its selection is announced, and immutable slugs disambiguate names
+- **AND** full labels are obtainable with keyboard/click while compact badges/actions keep no-wrap behavior and do not collide.
 
 ### Requirement: Node Detail Slide-Over Drawer & 1-Click Action Bridges
 Selecting any node on the graph canvas SHALL open a responsive slide-over drawer (`GraphDetailDrawer.vue`) on desktop ($\ge 768\text{px}$) or bottom sheet on mobile ($< 768\text{px}$) displaying contextual details and 1-click action bridges into the corresponding platform feature.
@@ -354,147 +299,93 @@ On mobile viewports ($< 768\text{px}$):
 - **AND** visual snapshots confirm zero label collisions, proper HUD elevation, and unclipped legend cards.
 
 ### Requirement: Client-Side WebGL 3D Force-Directed Galaxy Visualization
-The client application SHALL provide an alternative 3D interactive knowledge graph visualization at `/graph` rendered with WebGL (via Three.js / `3d-force-graph`), executing calculations entirely on the client-side GPU without placing computational or memory load on the backend server.
+The client SHALL provide lazy-loaded `/graph` WebGL 3D visualization with client-side calculations and no backend physics/memory workload. Dark backgrounds SHALL remain obsidian `#09090b`; billboard backgrounds SHALL use elevated `rgba(18,18,21,0.85)`, not legacy slate.
 
-The 3D WebGL cosmos canvas background SHALL strictly render with neutral dark obsidian `#09090b` in dark mode, completely eliminating bluish slate backgrounds (`#020617`). 3D sprite billboard label backgrounds in dark mode SHALL utilize elevated obsidian `rgba(18, 18, 21, 0.85)` (`dark:bg-canvas-elevated`), eliminating legacy slate boxes (`rgba(15, 23, 42, 0.85)`).
+The cosmos SHALL preserve luminous category hubs, category-colored chunk planets, emblem-accented books, retention-colored compact cards, highlight satellites, and relational 3D edges. Category accents SHALL use the same UUID-keyed palette as 2D.
 
-The 3D visualization SHALL represent architectural entities in an interactive spherical cosmos:
-1. **Pillar Hub Nodes:** Rendered as glowing primary celestial bodies with large radii and pillar-specific emissive glow colors.
-2. **Chunk Nodes:** Rendered as medium planetary spheres color-coded by their parent book's engineering pillar category, orbiting their parent book.
-3. **Book Nodes:** Rendered as textured or emblem-accented spherical bodies orbiting their parent pillar hubs.
-4. **Card Nodes:** Rendered as compact glowing spheres color-coded by SM-2 retention status (Learning: amber `#f59e0b`, Reviewing: blue `#3b82f6`, Mastered: primary brand violet `#7c3aed`).
-5. **Highlight Nodes:** Rendered as crystalline or accent-colored satellites orbiting source books and chunks.
-6. **Relational Edges:** Rendered as glowing 3D vector splines or translucent beams linking interconnected nodes across $(x, y, z)$ space.
-
-The 3D visualization SHALL provide 360-degree OrbitControls supporting rotation around arbitrary axes, smooth pan, pinch-zoom, and a camera reset button. The 3D visualization SHALL provide a functional 360-degree Auto-Rotate mode driven by an active orbital camera trajectory, rotating the camera smoothly around the constellation center at the current altitude and distance, and pausing automatically upon user drag interaction. The 3D engine SHALL implement strict distance-based Level-of-Detail (LOD) label culling:
-- At default galaxy overview camera distances, text labels SHALL be strictly restricted to the 5 primary Pillar Hubs, preventing overlapping text clusters from obscuring the constellation.
-- Book, Chunk, Card, and Highlight labels SHALL be culled at overview distance, and SHALL dynamically reveal when the camera zooms within close range ($d < 250$), when the user hovers over or taps the node, or when the user toggles the HUD label switch.
-- The floating HUD SHALL provide a 1-click label visibility toggle button allowing users to switch between Clean Cosmos mode (Hubs only) and Full Inspection mode (All labels).
-To conserve user device battery and eliminate main-thread lag:
-- The 3D force simulation SHALL settle node positions within a bounded warmup tick threshold (max 120 ticks) and halt physics calculations.
-- The rendering loop SHALL throttle or pause when the camera is static and no animations are active (render-on-demand).
-- Clicking any 3D node SHALL smoothly interpolate the camera toward the selected node and open `GraphDetailDrawer.vue`.
+Orbit controls SHALL support full rotation, pan, pinch zoom and camera reset. Auto-Rotate SHALL orbit at the current altitude/distance, pause on dragging, and stop on toggle. Overview labels SHALL be limited to represented category hubs, not five fixed pillars; book/chunk/card/highlight labels SHALL reveal at close range below distance 250, on hover/tap, or with the HUD label toggle. The simulation SHALL stop within 120 warmup ticks and render on demand when idle. Selecting a node SHALL animate focus and open the detail drawer.
 
 #### Scenario: 3D Galaxy visualization initialization
-- **WHEN** the user activates 3D Cosmos mode on `/graph`
-- **THEN** the application lazily loads the 3D WebGL engine without blocking the initial route transition
-- **AND** initializes a 3D force-directed cosmos displaying nodes as glowing spheres in $(x, y, z)$ coordinates
-- **AND** the physics simulation settles within 120 ticks without freezing the UI thread.
+- **WHEN** 3D Cosmos is activated
+- **THEN** the engine loads lazily without blocking route transition and initializes spherical nodes in 3D
+- **AND** physics settles within 120 ticks without freezing the UI.
 
 #### Scenario: 360-degree camera orbital navigation
-- **WHEN** the user clicks and drags on the 3D canvas
-- **THEN** the camera rotates smoothly around the orbital focus center at 60 FPS
-- **AND** zooming with the mouse wheel smoothly scales the camera distance along the line of sight.
+- **WHEN** the user drags the canvas
+- **THEN** the camera rotates smoothly around the focus at 60 FPS and wheel zoom scales distance along the line of sight.
 
 #### Scenario: 360-degree camera auto-orbit rotation
-- **GIVEN** a user is on `/graph` in `3D Cosmos` mode
-- **WHEN** the user clicks the "Auto Rotate" button in the floating HUD
-- **THEN** the active indicator lights up with an accent highlight
-- **AND** the camera begins continuous circular rotation around the constellation center $(0,0,0)$ along the $(x, z)$ orbital plane at consistent velocity
-- **WHEN** the user clicks the button again
-- **THEN** camera auto-rotation ceases immediately, leaving the camera positioned at its current vantage angle.
+- **WHEN** Auto Rotate is enabled
+- **THEN** its indicator activates and the camera orbits the constellation center consistently
+- **WHEN** it is disabled
+- **THEN** motion stops at the current vantage point.
 
 #### Scenario: Distance-based Level-of-Detail label culling
-- **WHEN** the camera is positioned at a wide galaxy overview distance
-- **THEN** text labels for Topic, Book, Card, and Highlight nodes are culled to prevent visual clutter
-- **AND** only the 5 primary Pillar Hub text billboard labels remain visible
-- **WHEN** the user zooms in close to a specific cluster or hovers over a node
-- **THEN** high-contrast billboard labels for the targeted nodes dynamically appear facing the camera.
+- **WHEN** the camera shows the galaxy overview
+- **THEN** non-hub labels are culled and represented category hub labels are eligible without a fixed count
+- **WHEN** the user zooms close or hovers a node
+- **THEN** its high-contrast label faces the camera and becomes visible.
 
 #### Scenario: Toggling all labels visibility via HUD control
-- **WHEN** the user clicks the label toggle button in the floating HUD
-- **THEN** the canvas toggles between Clean Cosmos mode (Pillar Hubs only) and Full Inspection mode (All visible nodes display labels).
+- **WHEN** the HUD label toggle is clicked
+- **THEN** it switches between Hubs Only and All Visible Nodes labels.
 
 #### Scenario: 3D node selection and detail drawer sync
-- **WHEN** the user clicks on a 3D node sphere
-- **THEN** the camera smoothly animates to center on the selected node
-- **AND** `GraphDetailDrawer.vue` opens with complete node details and 1-click action bridges matching the 2D view.
+- **WHEN** a 3D node is selected
+- **THEN** the camera focuses it and the same details/action bridges as 2D appear.
 
 #### Scenario: Render-on-demand battery preservation
-- **WHEN** the 3D layout has settled and the user is not actively rotating or zooming the camera
-- **THEN** the WebGL frame loop halts active re-renders until interaction resumes, consuming negligible CPU and GPU cycles when idle.
+- **WHEN** layout has settled and no camera/animation activity remains
+- **THEN** active frame rendering stops until interaction resumes, retaining negligible idle CPU/GPU work.
 
 #### Scenario: Obsidian 3D galaxy canvas background and elevated billboard styling
-- **WHEN** the 3D canvas renders in dark mode
-- **THEN** the WebGL renderer background renders with `#09090b` matching the studio obsidian shell
-- **AND** sprite text billboard labels utilize elevated background `rgba(18, 18, 21, 0.85)` with hairline borders.
-
----
+- **WHEN** dark mode renders
+- **THEN** the background remains obsidian and labels use elevated translucent backgrounds with hairline borders.
 
 ### Requirement: Interactive Visual Graph Legend & Entity Guide
-The knowledge graph view SHALL feature a floating, collapsible visual legend panel (`GraphLegend.vue`) positioned in the bottom-left viewport corner (`bottom-5 left-5`), providing an intuitive visual key for all node geometries, relative scales, category colors, and SM-2 retention metrics across both 2D and 3D view modes.
-
-The legend panel SHALL present:
-1. **Header:** A title labeled "Visual Legend" (`en-US`) / "Bảng Chú Thích" (`vi-VN`) with a layers glyph, and a collapse control.
-2. **Entity Hierarchy Section:**
-   - Single-column vertical stack formatting (`flex flex-col gap-1`), rendering unclipped unabridged text labels for every entity type without using text truncation or ellipsis characters across both English and Vietnamese locales.
-   - Each entity row SHALL display the count for that node type sourced from the graph payload `stats.nodeTypeCounts`. When a count is unavailable the row SHALL omit the number rather than render `undefined` or `NaN`.
-   - Each entity row's swatch SHALL mirror the on-canvas node geometry for that type:
-     - **Pillar Hubs:** Ringed filled circle (2D) / Luminous cosmic hubs (3D) color-coded by the 5 canonical engineering pillars.
-     - **Topics:** Smaller filled circle (2D) / Planetary spheres (3D) color-coded by parent pillar ("Curriculum Topic" / "Chủ đề giáo trình").
-     - **Books:** Rounded-rectangle swatch (2D) / Indigo spheres (3D) representing ingested documentation ("Tech Book" / "Sách kỹ thuật").
-     - **Highlights:** Diamond (rotated-square) swatch (2D) / Cyan satellites (3D) representing personal quotes and notes ("Personal Note / Highlight" / "Ghi chú & Trích đoạn").
-3. **Flashcard Retention Status Section (SM-2):**
-   - Single-column vertical stack formatting (`flex flex-col gap-1`), rendering complete status labels and duration intervals without text wrapping or clipping.
-   - **Learning ($< 6$ days):** Amber indicator (`#f59e0b`).
-   - **Reviewing ($6–20$ days):** Blue indicator (`#3b82f6`).
-   - **Mastered ($\ge 21$ days):** Brand violet indicator (`#7c3aed`), matching the mastered-flashcard fill rendered on the canvas (the legacy emerald `#10b981` swatch is retired).
-4. **Interactive Hover Dimming:**
-   - Hovering over any entity or retention row in the legend SHALL keep matching nodes fully opaque and dim non-matching nodes and their edges to 15% opacity (`0.15`) in both the 2D and 3D renderers.
-   - Leaving the hover area SHALL immediately restore full standard node and edge opacities.
-5. **Footer:** The legend footer SHALL display an isolate hint ("Hover item to isolate" / "Di chuột để tách biệt") and an `L` keyboard-shortcut chip.
-6. **Collapsible Header, Safe Clearance & Persistence:**
-   - The expanded card container width SHALL be standardized to 224 pixels (`w-56`), guaranteeing at least 80 pixels of horizontal clearance between the legend card and the 2D Minimap on 768px tablet viewports with the navigation sidebar open.
-   - On viewports narrower than 1024 pixels (tablet and mobile devices), the legend panel SHALL default to a collapsed pill trigger button (`[ ? Visual Legend ^ ]` / `[ ? Bảng Chú Thích ^ ]`) on initial page load when no user preference is stored in `localStorage`.
-   - The collapsed state SHALL persist in `localStorage` under `deeppace_graph_legend_collapsed`.
+The graph SHALL retain a floating, collapsible bottom-left legend describing node geometries/scales, dynamic category accents, and SM-2 retention in 2D/3D. It SHALL show:
+1. Localized Visual Legend title, layers glyph and collapse control.
+2. Unabridged single-column entity rows with live `stats.nodeTypeCounts`, omitting missing counts rather than showing undefined/NaN. Swatches SHALL match ringed/luminous category hubs, circular/planetary topics, rounded/indigo books, and diamond/cyan highlights. Category hues SHALL match the shared UUID palette, not five canonical pillars.
+3. Complete retention labels/intervals: Learning below 6 days amber, Reviewing 6–20 days blue, Mastered at least 21 days brand violet `#7c3aed`, not legacy emerald.
+4. Hover isolation: matching nodes stay opaque, others/edges fade to 15% in both engines; leaving restores normal opacity.
+5. Localized hover-to-isolate hint and L shortcut chip.
+6. A 224px expanded card with at least 80px clearance from the minimap at 768px with sidebar open. Below 1024px it SHALL default collapsed when no preference exists; `deeppace_graph_legend_collapsed` SHALL persist the choice.
 
 #### Scenario: Legend displays entity hierarchy and SM-2 status color keys
-- **GIVEN** a user is on `/graph` in either 2D or 3D view mode
-- **WHEN** the user views the bottom-left corner of the screen
-- **THEN** `GraphLegend.vue` displays geometry-matched swatches and descriptions for Pillar Hubs, Topics, Books, Highlights, and SM-2 Flashcard retention states (Learning, Reviewing, Mastered)
-- **AND** each entity row shows its live node-type count sourced from `stats.nodeTypeCounts`.
+- **WHEN** the bottom-left legend is viewed in either engine
+- **THEN** geometry-matched entity and retention swatches/descriptions display with live node-type counts.
 
 #### Scenario: Entity rows show node-type counts from the graph payload
-- **GIVEN** the loaded graph payload reports `stats.nodeTypeCounts` of `{ pillar: 5, topic: 48, book: 19, highlight: 184 }`
-- **THEN** the Pillar, Topic, Book, and Highlight entity rows display `5`, `48`, `19`, and `184` respectively
-- **AND** a node type whose count is missing renders no number rather than `undefined` or `NaN`.
+- **WHEN** the graph reports pillar/topic/book/highlight counts of 5/48/19/184
+- **THEN** those numbers display in the corresponding rows and unavailable counts are omitted.
 
 #### Scenario: Mastered retention swatch matches canvas violet fill
-- **GIVEN** a user views the expanded legend
-- **WHEN** inspecting the SM-2 retention section
-- **THEN** the "Mastered (≥ 21 days)" indicator renders brand violet `#7c3aed`, identical to the mastered-flashcard fill on the canvas
-- **AND** no emerald `#10b981` mastered swatch is present.
+- **WHEN** the expanded retention legend is inspected
+- **THEN** Mastered uses the same brand violet as the canvas and no emerald mastered swatch appears.
 
 #### Scenario: Complete unclipped legend text in English and Vietnamese
-- **GIVEN** a user views `/graph` with the visual legend expanded
-- **WHEN** inspecting the entity hierarchy items and retention status items
-- **THEN** all item labels (including "Curriculum Topic", "Personal Note / Highlight", "Chủ đề giáo trình", and "Ghi chú & Trích đoạn") are rendered in their entirety without text truncation or ellipsis characters (`...`).
+- **WHEN** the expanded legend is inspected in either locale
+- **THEN** entity and retention labels display completely, including Curriculum Topic and Personal Note/Highlight translations, without ellipsis.
 
 #### Scenario: Tablet clearance between Visual Legend and Minimap
-- **GIVEN** a user views `/graph` on a 768px tablet viewport in 2D mode with the sidebar open
-- **WHEN** the user expands the Visual Legend panel
-- **THEN** the horizontal clearance gap between the right edge of the Visual Legend and the left edge of the Minimap is at least 80 pixels
-- **AND** neither component overlaps or occludes the other.
+- **WHEN** the legend is expanded at 768px with sidebar open
+- **THEN** legend/minimap clearance is at least 80px and neither occludes the other.
 
 #### Scenario: Interactive legend hover dims non-matching graph nodes
-- **GIVEN** the legend panel is expanded
-- **WHEN** the user hovers over the "Highlights" or "Mastered" entry in the legend
-- **THEN** all non-matching nodes and edges on the active graph canvas dim to 15% opacity (`0.15`)
-- **AND** matching nodes remain fully opaque with prominent glowing accents
-- **WHEN** the cursor leaves the legend item
-- **THEN** all nodes and edges return to their standard opacity.
+- **WHEN** Highlights or Mastered is hovered
+- **THEN** nonmatching nodes/edges fade to 15% and matches keep their glowing accents
+- **WHEN** hover ends
+- **THEN** normal opacity is restored.
 
 #### Scenario: Collapsing and expanding the legend panel with state persistence
-- **WHEN** the user clicks the collapse button on the legend header
-- **THEN** the legend smoothly transitions into a minimal floating pill button labeled "Visual Legend" (or "Bảng Chú Thích")
-- **AND** the preference is saved in `localStorage`
-- **WHEN** the user reloads the page or navigates back to `/graph`
-- **THEN** the collapsed state is automatically preserved.
+- **WHEN** the legend is collapsed
+- **THEN** it becomes a localized Visual Legend pill and saves the preference
+- **WHEN** the page is revisited
+- **THEN** the collapsed state is restored.
 
 #### Scenario: Default collapsed state on tablet and mobile viewports
-- **GIVEN** a user on a tablet ($768\text{px}$) or mobile device ($< 1024\text{px}$) with no prior `deeppace_graph_legend_collapsed` preference in `localStorage`
-- **WHEN** the user navigates to `/graph`
-- **THEN** the visual legend initializes in the collapsed state as a floating pill button (`[ ? Visual Legend ^ ]` / `[ ? Bảng Chú Thích ^ ]`).
+- **WHEN** a user below 1024px has no stored legend preference
+- **THEN** the legend starts as a collapsed localized pill.
 
 ### Requirement: Cyber Neon Telemetry HUD & Animated Knowledge Radar
 The knowledge graph visualization surfaces SHALL provide an animated knowledge radar telemetry display on the dashboard overview (`/today`). In the dedicated graph studio (`/graph`), the interface SHALL maintain a clean, uncluttered canvas where essential controls (mode switch, search, filters) reside exclusively in `GraphControlBar.vue`, omitting redundant floating telemetry ribbons or duplicate status counters from the viewport.

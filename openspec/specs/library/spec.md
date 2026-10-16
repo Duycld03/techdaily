@@ -88,25 +88,15 @@ When an embedded or direct PDF is detected:
 ### Requirement: 3-Tab Import Modal Interface
 The Import Modal on `/library` SHALL provide 3 selectable tabs: Markdown Series, PDF Upload with drag-and-drop zone and upload progress, and Web Article URL Ingestion with content preview before ingestion confirmation.
 
-Under the Category selector in all 3 modal tabs (Markdown Series, PDF Upload, and Web URL Ingestion), the modal SHALL render the full 7-category DeepPace taxonomy:
-1. `FrontendWeb (0)`: "Frontend & Web" ("Frontend & Trình Duyệt")
-2. `BackendRuntime (1)`: "Backend & Runtime" ("Backend & Phân Tán / Runtime")
-3. `DatabaseStorage (2)`: "Database & Storage" ("Cơ Sở Dữ Liệu & Lưu Trữ")
-4. `SystemDesign (3)`: "Distributed Systems" ("Thiết Kế Hệ Thống")
-5. `EngineeringCraft (4)`: "Clean Code & Software Design" ("Mã Sạch & Thiết Kế Phần Mềm")
-6. `MentalModels (5)`: "Mental Models & Decisions" ("Mô Hình Tư Duy & Quyết Định")
-7. `HabitsProductivity (6)`: "Habits & Deep Work" ("Thói Quen & Tập Trung Sâu")
+All three tabs SHALL load active category descriptors from the shared category endpoint, ordered by display order and slug, and require an explicit `categoryId` UUID selection. No category SHALL be preselected or inferred from source keywords. The accessible selector SHALL show stored English or Vietnamese names for the active UI locale. Empty or unavailable metadata SHALL block submission with a localized, retryable explanation.
 
-Under the Category selector in all 3 modal tabs, the modal SHALL render a dedicated in-context verbatim category helper callout banner:
-1. **Notice Content & Guidance:**
-   - Explains that selecting categories with verbatim text requirements (Category 4 "Clean Code & Software Design", Category 5 "Mental Models & Decisions", or Category 6 "Habits & Deep Work") preserves 100% of the book's or article's original text while AI automatically restores run-in headings and paragraph boundaries.
-   - **Vietnamese (`vi`):** `"Mẹo: Chọn chuyên mục Thiết Kế Mã, Mô Hình Tư Duy hoặc Thói Quen để giữ nguyên văn 100% nội dung gốc (AI khôi phục tiêu đề & đoạn văn)."`
-   - **English (`en`):** `"Tip: Select Software Design, Mental Models, or Habits to preserve 100% verbatim text (AI restores headings & paragraphs)."`
-2. **De-Jargonized Web Article Ingestion (Tab 3):**
+A category-independent helper SHALL explain that source prose is preserved while structural headings and paragraph boundaries can be restored during curation. Changing a category SHALL NOT change this preservation policy.
+
+1. **De-Jargonized Web Article Ingestion (Tab 3):**
    - Title SHALL read "Extract Article from Web" / "Trích Xuất Bài Viết Từ Web" (replacing legacy "Cào & Chuyển Đổi").
    - Action button SHALL read "Fetch Content" / "Lấy Nội Dung" (replacing legacy "Cào Dữ Liệu").
    - URL input placeholder SHALL provide broad lifelong learning and deliberate practice examples: `"https://... (Substack, Medium, Farnam Street, blog cá nhân hoặc tài liệu)"` / `"https://... (Substack, Medium, Farnam Street, blogs, or documentation)"`.
-3. **Universal Markdown & Notes Placeholder (Tab 1):**
+2. **Universal Markdown & Notes Placeholder (Tab 1):**
    - Title placeholder SHALL provide diverse examples encompassing both technical and deliberate practice books: `"Ví dụ: Atomic Habits — Chương 1 hoặc Designing Data-Intensive Applications — Chương 5"`.
    - Content placeholder SHALL invite pasting notes, excerpts, or markdown text naturally.
 
@@ -118,8 +108,8 @@ When the URL Crawler detects an embedded PDF (`IsPdfDetected == true`), the moda
 #### Scenario: User selects DeepPace category in any import tab
 - **GIVEN** an authenticated user opens the document import modal on `/library`
 - **WHEN** user opens the Category dropdown on the Markdown, PDF, or Web URL tab
-- **THEN** the dropdown contains all 7 DeepPace categories including "Mô Hình Tư Duy & Quyết Định" and "Thói Quen & Tập Trung Sâu"
-- **AND** selecting either category sets the corresponding form payload value to `5` or `6`.
+- **THEN** the dropdown contains all active categories, including administrator-created subjects, in the current locale
+- **AND** selecting a category sends its UUID as `categoryId`, never an ordinal or enum name.
 
 #### Scenario: User inputs article URL with universal web placeholder
 - **GIVEN** user views the Web URL ingestion tab in the import modal
@@ -130,13 +120,12 @@ When the URL Crawler detects an embedded PDF (`IsPdfDetected == true`), the moda
 #### Scenario: Verbatim hint dynamically guides mindset and habits curation
 - **GIVEN** user views the Category selector in any of the 3 import tabs
 - **WHEN** viewing the callout banner
-- **THEN** the callout guides users that selecting Software Design, Mental Models, or Habits preserves 100% verbatim text.
+- **THEN** the callout explains preservation of author prose and faithful structural restoration for every category, without recommending a category to change formatting behavior.
 
 #### Scenario: URL crawler preview reveals detected embedded PDF reader
 - **WHEN** user crawls a URL and the backend responds with `IsPdfDetected = true` and a valid `DetectedPdfUrl`
 - **THEN** the modal displays an embedded PDF alert card with the resolved PDF URL and a prominent "Import & Slice PDF Directly" button
 - **AND** clicking the button invokes `POST /api/v1/library/import-remote-pdf` with the detected URL, closes the modal, and initiates ingestion progress polling on the library view.
----
 
 ### Requirement: Internationalization (i18n)
 All new modal tabs, dropzones, upload limits, crawl buttons, loading states, error alerts, input placeholders, technical service notes, and book card badges SHALL have full `en` and `vi` translations in locale files.
@@ -200,6 +189,7 @@ The library system SHALL provide an owner-authorized lightweight endpoint `GET /
 - **WHEN** a caller requests another account's book status through the learner API
 - **THEN** the response is 404 regardless of administrator designation
 - **AND** authorized admin metadata inspection uses the separate operations API.
+
 ### Requirement: In-Flight Slice Curation Deduplication
 
 The library store SHALL maintain an active in-flight request map for slice curation calls indexed by `${bookId}:${chunkOrder}`. When `curateSlice(bookId, order)` is invoked while an identical request is already pending, the store SHALL return the existing active `Promise<ChunkSummary | null>` rather than dispatching a duplicate HTTP request to the backend.
@@ -340,7 +330,7 @@ All of the above endpoints SHALL enforce `.RequireAuthorization()` and reject un
 - **THEN** server returns HTTP 401 Unauthorized.
 
 ### Requirement: Paginated Book Catalog Browsing and State Synchronization
-The library system SHALL expose an authenticated endpoint `GET /api/v1/library/books` accepting optional query parameters: `category` (enum/integer), `search` (string), `page` (integer, default 1, minimum 1), and `pageSize` (integer, default 12, minimum 1, maximum 100). The endpoint SHALL enforce `.RequireAuthorization()` and reject unauthenticated requests with `HTTP 401 Unauthorized`.
+The library system SHALL expose an authenticated endpoint `GET /api/v1/library/books` accepting optional query parameters: `categoryId` (UUID), `search` (string), `page` (integer, default 1, minimum 1), and `pageSize` (integer, default 12, minimum 1, maximum 100). The endpoint SHALL enforce `.RequireAuthorization()` and reject unauthenticated requests with `HTTP 401 Unauthorized`.
 
 When authorized, the endpoint SHALL return a structured envelope containing:
 1. `books`: A list of `BookDto` items matching filter criteria, ordered by `CreatedAt` descending.
@@ -356,7 +346,7 @@ The `/library` page SHALL render numbered pagination controls (`< 1 2 3 ... 8 >`
 2. **Ellipsis Compaction**: Pages beyond the visible window SHALL be truncated with non-clickable ellipsis (`...`) indicators.
 3. **Previous / Next Controls**: Navigational buttons to decrement or increment the active page, automatically disabled on boundary pages (`page === 1` and `page === totalPages`).
 4. **Filter Reset**: Applying a new category filter or entering a search query SHALL automatically reset the active page to 1.
-5. **Two-Way URL Query Synchronization**: The active `page`, `category`, and `search` query SHALL synchronize bidirectionally with browser URL query parameters (`?page=N&category=C&search=S`). Reloading the page or sharing the URL SHALL restore the exact catalog page and filter state.
+5. **Two-Way URL Query Synchronization**: The active `page`, `categoryId`, and `search` query SHALL synchronize bidirectionally with browser URL query parameters (`?page=N&categoryId=UUID&search=S`). Reloading the page or sharing the URL SHALL restore the exact catalog page and filter state.
 
 #### Scenario: User browses the first page of the technical library
 - **WHEN** an authenticated user navigates to `/library`
@@ -376,15 +366,15 @@ The `/library` page SHALL render numbered pagination controls (`< 1 2 3 ... 8 >`
 
 #### Scenario: User filters catalog by category or search term
 - **GIVEN** the user is currently viewing page 3 of the catalog (`?page=3`)
-- **WHEN** the user selects category "Backend .NET" or enters search term "architecture"
+- **WHEN** the user selects the administrator-defined Backend category or enters search term "architecture"
 - **THEN** client resets the active page to 1
-- **AND** updates URL query string to `?category=1&search=architecture&page=1`
+- **AND** updates URL query string to `?categoryId=<backend-category-id>&search=architecture&page=1`
 - **AND** requests page 1 of the filtered result set from the backend.
 
 #### Scenario: User enters direct URL with pagination and filter parameters
-- **WHEN** a user navigates directly to `/library?category=2&search=postgres&page=2` via bookmark or shared link
-- **THEN** client parses `category = 2`, `search = 'postgres'`, and `page = 2` from the route query
-- **AND** dispatches `GET /api/v1/library/books?category=2&search=postgres&page=2&pageSize=12`
+- **WHEN** a user navigates directly to `/library?categoryId=<database-category-id>&search=postgres&page=2` via bookmark or shared link
+- **THEN** client parses `categoryId = the selected category UUID`, `search = 'postgres'`, and `page = 2` from the route query
+- **AND** dispatches `GET /api/v1/library/books?categoryId=<database-category-id>&search=postgres&page=2&pageSize=12`
 - **AND** renders the second page of matching database books with active filter states displayed.
 
 #### Scenario: User navigates using browser back and forward history
@@ -402,6 +392,11 @@ The `/library` page SHALL render numbered pagination controls (`< 1 2 3 ... 8 >`
 - **GIVEN** the user accesses `/library` on a narrow mobile viewport ($< 640\text{px}$)
 - **WHEN** the catalog contains multiple pages
 - **THEN** pagination controls condense the numbered buttons to the current page and immediate neighbors while maintaining minimum touch target dimensions ($\ge 40\text{px} \times 40\text{px}$) and touch accessibility.
+
+#### Scenario: Retained inactive category filter
+- **WHEN** a user opens a valid `categoryId` filter for an inactive category
+- **THEN** the owned documents remain filterable and the category label is resolved from shared metadata
+- **AND** an unknown or malformed category reference is rejected without falling back to another category.
 
 ### Requirement: Consistent Book Card Status Badge Baseline Alignment
 The library catalog on `/library` SHALL align the bookmark resume badge, ready badge, and in-progress ingestion status indicator to a consistent bottom baseline across all book cards.
@@ -438,16 +433,10 @@ Alignment SHALL remain consistent within each row of the library grid, regardles
 The library catalog on `/library` SHALL display localized category badges and localized background ingestion progress indicators on each document card.
 
 1. **Category Badge Resolution:**
-   - The UI SHALL implement a category label resolver (`getCategoryLabel`) that normalizes both backend string enum identifiers (`"EngineeringCraft"`, `"BackendDotNet"`, `"DatabaseStorage"`, `"FrontendWeb"`, `"SystemDesign"`, `"MentalModels"`, `"HabitsProductivity"`) and numeric identifiers (`0..6`).
-   - The resolver SHALL map each normalized category to its corresponding translation key under `library.categories`:
-     - `FrontendWeb` / `0` $\to$ `$t('library.categories.frontend')` ("Frontend & Web")
-     - `BackendDotNet` / `1` $\to$ `$t('library.categories.backend')` ("Backend & Phân Tán" / "Backend & Distributed")
-     - `DatabaseStorage` / `2` $\to$ `$t('library.categories.database')` ("Cơ Sở Dữ Liệu" / "Database & Storage")
-     - `SystemDesign` / `3` $\to$ `$t('library.categories.system_design')` ("Thiết Kế Hệ Thống" / "System Design")
-     - `EngineeringCraft` / `4` $\to$ `$t('library.categories.craft')` ("Mã Sạch & Thiết Kế Phần Mềm" / "Clean Code & Software Design")
-     - `MentalModels` / `5` $\to$ `$t('library.categories.mental_models')` ("Mô Hình Tư Duy & Quyết Định" / "Mental Models & Decisions")
-     - `HabitsProductivity` / `6` $\to$ `$t('library.categories.habits')` ("Thói Quen & Tập Trung Sâu" / "Habits & Deep Work")
-   - The UI SHALL NOT default to the hardcoded English string `'Engineering'`.
+   - Each book SHALL expose `categoryId` and its authoritative category descriptor.
+   - The badge SHALL use `nameEn` or `nameVi` for the current locale, including inactive categories, without numeric/string enum normalization or a fixed translation map.
+   - Renamed categories SHALL display current metadata after refresh without changing book identity, content, or progress.
+   - A missing descriptor SHALL produce an explicit unavailable state rather than a fabricated Engineering category.
 2. **Dynamic Ingestion Status Translation:**
    - When a book's processing status is `Processing` (or numeric `1`), the book card SHALL render a localized status indicator via a status message translator (`getStatusMessage`).
    - The translator SHALL detect backend progress patterns and map them to localized strings:
@@ -465,18 +454,18 @@ The library catalog on `/library` SHALL display localized category badges and lo
    - For unrecognized status strings, the translator SHALL fall back to the existing message or `$t('library.processing_pdf')`.
 
 #### Scenario: Book card displays localized category for string enum in Vietnamese
-- **GIVEN** a book entity returned from the API has `category = "EngineeringCraft"` and the user's active locale is Vietnamese (`vi`)
+- **GIVEN** an EngineeringCraft string reference has been migrated to a UUID descriptor with `nameVi = "Tư Duy Kỹ Sư & Năng Suất"` and the locale is Vietnamese
 - **WHEN** the user views the book card in the `/library` grid
 - **THEN** the category badge renders `"Tư Duy Kỹ Sư & Năng Suất"`
 - **AND** the badge does NOT render `'Engineering'`.
 
 #### Scenario: Book card displays localized category for string enum in English
-- **GIVEN** a book entity returned from the API has `category = "BackendDotNet"` and the user's active locale is English (`en`)
+- **GIVEN** a legacy BackendDotNet reference has been migrated to a UUID descriptor with `nameEn = "Backend & Distributed"` and the locale is English
 - **WHEN** the user views the book card in the `/library` grid
 - **THEN** the category badge renders `"Backend & Distributed"`.
 
 #### Scenario: Book card displays localized category for numeric ID
-- **GIVEN** a book entity in the store has numeric `category = 2` and the user's active locale is Vietnamese (`vi`)
+- **GIVEN** a former ordinal category reference has been migrated to a UUID descriptor with `nameVi = "Cơ Sở Dữ Liệu"` and the locale is Vietnamese
 - **WHEN** the user views the book card in the `/library` grid
 - **THEN** the category badge renders `"Cơ Sở Dữ Liệu"`.
 
@@ -489,8 +478,6 @@ The library catalog on `/library` SHALL display localized category badges and lo
 - **GIVEN** a book is in status `Processing` with `statusMessage = "AI is curating initial slice 3/12..."` and locale is Vietnamese (`vi`)
 - **WHEN** the user views the book card in the `/library` grid
 - **THEN** the ingestion indicator displays the interpolated string `"AI đang tối ưu hóa lát cắt mở đầu 3/12..."`.
-
----
 
 ### Requirement: Book Card Action Row Presentation
 The book card footer SHALL present primary management and navigation actions without redundant branding or truncated labels.
@@ -558,34 +545,14 @@ The slicing algorithm SHALL execute two passes:
 
 ---
 
-### Requirement: Engineering Mindset & Productivity Category Support
-The system SHALL support Category 4: `EngineeringCraft` ("Tư Duy Kỹ Sư & Năng Suất" / "Engineering Craft & Mindset") across the `Category` enum, document ingestion, library catalog filtering, and AI slice curation.
-
-The AI slice formatter (`GeminiAiService.FormatSliceAsync` and `IAiMarkdownFormatter`) SHALL adapt formatting rules when `category == Category.EngineeringCraft`:
-1. **System Prompt Adaptation:** Evaluates core principles, cognitive habits, mental models, time-blocking workflows, leadership trade-offs, and deliberate practice frameworks from books such as *Atomic Habits*, *Deep Work*, *The Staff Engineer's Path*, and *The Pragmatic Programmer*.
-2. **Relaxed Code Block Constraint:** Syntax-tagged code blocks SHALL be optional and included only when the source material explicitly contains code or pseudocode, rather than forcing artificial code examples into mindset literature.
-3. **Scenario Drill Focus:** The generated Senior Scenario Challenge SHALL evaluate high-impact engineering leadership, focus preservation under on-call pressure, habit loops for code quality, or navigating staff-level technical ambiguity.
-
-#### Scenario: User imports document under Engineering Craft category
-- **WHEN** user uploads a PDF or imports markdown selecting category `EngineeringCraft` (value `4`)
-- **THEN** `DocumentBook.Category` is persisted as `Category.EngineeringCraft`
-- **AND** the library catalog filter for "Engineering Craft & Mindset" correctly displays the book.
-
-#### Scenario: AI formats slice for Engineering Craft book with adapted mindset prompts
-- **WHEN** background ingestion worker curates a slice for a book with `Category == Category.EngineeringCraft`
-- **THEN** `GeminiAiService.FormatSliceAsync` applies the mindset-adapted prompt
-- **AND** generates a structured article with context callout, core principles, key takeaways, and a scenario drill evaluating engineering habits and productivity trade-offs without requiring synthetic code blocks.
-
----
-
 ### Requirement: Verbatim Book Text Preservation & Curation Safety
-The system SHALL guarantee 100% verbatim text preservation for all imported books and literature under `Category.EngineeringCraft` (such as *Thói quen nguyên tử* / *Atomic Habits*, *Deep Work*, *The Pragmatic Programmer*).
+The system SHALL guarantee 100% verbatim text preservation for imported documents in every category, including administrator-created subjects.
 
-The background ingestion worker (`PdfIngestionWorker`) and the slice curation handler (`CurateSliceHandler`) SHALL NEVER overwrite `DocumentChunk.OriginalTextMarkdown` with AI-condensed markdown (`aiResult.Value.FormattedMarkdown`).
+The source reading body SHALL NEVER be replaced with an AI summary, condensed prose, or synthetic content. A successful `FormattedMarkdown` result may replace the stored body only as faithful structural restoration under the preservation invariants below.
 
 The system SHALL enforce the following invariants during book ingestion and slice curation:
-1. **Verbatim Content Invariance:** `DocumentChunk.OriginalTextMarkdown` SHALL retain the exact raw markdown and prose extracted from `PdfPigExtractor` or the web crawler without omission, abbreviation, or AI rewording.
-2. **AI Enrichment Scope:** The AI slice formatter (`GeminiAiService.FormatSliceAsync`) SHALL strictly populate auxiliary fields:
+1. **Verbatim Content Invariance:** The source reading body SHALL retain the author's words, examples, and language without omission, abbreviation, condensation, or AI rewording. During an existing ingestion or explicit curation action, faithful structural restoration MAY adjust Markdown headings, paragraph boundaries, and non-content extraction artifacts as specified by `ai-curation`; raw extraction bytes need not remain identical. Category changes SHALL never trigger this operation.
+2. **AI Enrichment Scope:** The AI slice formatter (`GeminiAiService.FormatSliceAsync`) SHALL populate auxiliary fields separately from the faithful source reading body:
    - `DocumentChunk.SummaryMarkdown`: Structured executive summary and core conceptual takeaways.
    - `DocumentChunk.KeyTakeaways`: Exactly 3 high-impact engineering habits or principles.
    - `DocumentChunk.EstimatedReadMinutes`: Calculated reading time.
@@ -593,26 +560,30 @@ The system SHALL enforce the following invariants during book ingestion and slic
 3. **Reader Surface Fidelity:** The client reader interface (`/read/[bookId]`) SHALL render the author's authentic prose directly from `OriginalTextMarkdown`, ensuring readers engage with the author's true words, narratives, and tone.
 
 #### Scenario: Background PDF ingestion curates slice for Engineering Craft book
-- **WHEN** `PdfIngestionWorker` curates an extracted chapter slice for a book with `Category == Category.EngineeringCraft`
-- **THEN** the worker invokes `aiFormatter.FormatSliceAsync` to generate summaries, takeaways, and scenario drills
-- **AND** `chunk.OriginalTextMarkdown` is NOT overwritten by `aiResult.Value.FormattedMarkdown`
-- **AND** `chunk.OriginalTextMarkdown` remains 100% identical to the verbatim text extracted by `PdfPigExtractor`
+- **WHEN** `PdfIngestionWorker` curates an extracted chapter slice for a book in any retained category
+- **THEN** the worker invokes the common source-faithful curation flow to restore structure and generate separate summaries, takeaways, and scenario drills
+- **AND** the source reading body is never replaced by condensed or synthetic AI content
+- **AND** the source reading body preserves the complete extracted author prose while permitting faithful structural Markdown restoration
 - **AND** `chunk.SummaryMarkdown`, `chunk.KeyTakeaways`, and `InterviewQuestions` are populated successfully.
 
 #### Scenario: On-demand slice curation preserves original book prose
 - **WHEN** an authenticated user or worker triggers `CurateSliceHandler` for a slice in an imported book
-- **THEN** the handler preserves `chunk.OriginalTextMarkdown` verbatim
-- **AND** updates only `chunk.SummaryMarkdown`, `chunk.KeyTakeaways`, `chunk.EstimatedReadMinutes`, and `InterviewQuestions` without truncating or rewriting the author's narrative prose.
+- **THEN** the handler preserves the author's prose and source language while persisting faithful structural restoration
+- **AND** updates structural Markdown and the separate summary, takeaways, reading-time, and question fields without truncating or rewriting the author's narrative prose.
 
 #### Scenario: Reader interface renders author's true words for imported book
-- **WHEN** an authenticated user opens `/read/[bookId]` for an Engineering Craft book (e.g. *Thói quen nguyên tử*)
+- **WHEN** an authenticated user opens `/read/[bookId]` for an imported book in any category
 - **THEN** the reader renders `chunk.OriginalTextMarkdown` containing the author's complete, uncompressed narrative prose
 - **AND** the reader does NOT render an AI-condensed summary in place of the author's words.
 
 #### Scenario: End-to-end local validation with Vietnamese Atomic Habits PDF fixture
-- **WHEN** the 112-page Vietnamese *Atomic Habits* PDF fixture (`/home/duycld03/Downloads/827-thoi-quen-nguyen-tu-thuviensach.vn.pdf`) is processed through the local ingestion pipeline
-- **THEN** `PdfPigExtractor` segments the book into chapter chunks (including introduction, personal story, and habit laws)
-- **AND** every generated `DocumentChunk.OriginalTextMarkdown` retains 100% verbatim author text across all chapters without AI compression.
+- **WHEN** a Vietnamese narrative PDF fixture with chapter boundaries, dialogue, and examples is processed through the local ingestion pipeline
+- **THEN** `PdfPigExtractor` segments the book into chunks aligned with the source chapter boundaries
+- **AND** every generated `DocumentChunk.OriginalTextMarkdown` retains the complete author prose across all chapters without AI compression, allowing only faithful structural restoration.
+
+#### Scenario: Category metadata changes do not curate historical prose
+- **WHEN** an administrator renames, reorders, or deactivates a category or an owner reclassifies an existing book
+- **THEN** source prose, summaries, audio, and learning progress remain unchanged and no AI formatting is scheduled.
 
 ### Requirement: Authenticated AI curation and generation endpoints
 The AI-powered endpoints that invoke external generation services SHALL require JWT authentication and per-user rate limiting. Specifically, the slice curation endpoint (`/api/v1/library/books/{id}/slices/{order}/curate`), the term explanation endpoint, and the chunk challenge endpoint SHALL reject unauthenticated requests with `HTTP 401 Unauthorized`. These endpoints SHALL also enforce per-user rate limits to protect external AI provider quota from abuse by individual authenticated users.
@@ -806,26 +777,21 @@ The `/library` catalog page SHALL provide a unified, responsive search and filte
 
 On both "My Library" and "Discover" tabs, the primary toolbar SHALL present:
 1. A search input (`sm:w-72 sm:flex-initial`) with dedicated clear trigger (`X`) and search execution on Enter or clear.
-2. Quick category pills for top technical domains:
-   - `All`: "Tất Cả" / "All"
-   - `FrontendWeb (0)`: "Frontend & Web"
-   - `BackendRuntime (1)`: "Backend & Runtime"
-   - `DatabaseStorage (2)`: "Cơ Sở Dữ Liệu" / "Database & Storage"
-   - `SystemDesign (3)`: "Hệ Thống Phân Tán" / "Distributed Systems"
+2. An All pill and a bounded quick subset selected by configured category order, not hardcoded subject names. Every category SHALL remain reachable through the advanced filter even when omitted from the quick subset.
 3. An Advanced Filter trigger button (`[ 🎛️ Bộ Lọc ]` / "Filter") displaying an active filter badge counter when any non-default filter is applied.
 
-Clicking the Advanced Filter trigger button SHALL open an accessible filter dialog modal permitting users to filter documents by all 7 DeepPace categories (`FrontendWeb`, `BackendRuntime`, `DatabaseStorage`, `SystemDesign`, `EngineeringCraft`, `MentalModels`, `HabitsProductivity`), content language, and document format, with dedicated reset and apply actions.
+Clicking the Advanced Filter trigger button SHALL open an accessible filter dialog modal permitting users to filter documents by all nondeleted categories from shared metadata, including inactive categories for historical filtering, content language, and document format, with dedicated reset and apply actions.
 
 Filter pills SHALL maintain `font-semibold` across active and inactive states with `transition-colors duration-150` to guarantee zero layout shift when switching categories.
 
 #### Scenario: User filters library by Mental Models category
-- **WHEN** user clicks the "Mô Hình Tư Duy" filter button on `/library`
-- **THEN** the book catalog updates to display only books and articles categorized under `MentalModels (5)`
+- **WHEN** the user selects the stored Mental Models category from the available category controls, opening the advanced filter when it is outside the quick subset
+- **THEN** the book catalog updates to display only books and articles categorized under the selected Mental Models category UUID
 - **AND** the filter button transitions active styling with zero horizontal layout shift or width jumping.
 
 #### Scenario: User filters library by Habits & Deep Work category
-- **WHEN** user clicks the "Thói Quen & Tập Trung" filter button on `/library`
-- **THEN** the book catalog updates to display only books and articles categorized under `HabitsProductivity (6)`.
+- **WHEN** the user selects the stored Habits category from the available category controls, opening the advanced filter when it is outside the quick subset
+- **THEN** the book catalog updates to display only books and articles categorized under the selected Habits category UUID.
 
 #### Scenario: User switches category filter tab in library
 - **WHEN** user clicks a category tab (e.g., "Tất Cả", "Frontend & Web", "Backend & Phân Tán", "Thiết Kế Mã", "Mô Hình Tư Duy")
@@ -839,42 +805,25 @@ Filter pills SHALL maintain `font-semibold` across active and inactive states wi
 
 #### Scenario: User filters My Library with quick category chips
 - **WHEN** user clicks "Backend & Runtime" in My Library
-- **THEN** the book list updates to show only personal books under `BackendRuntime (1)`
+- **THEN** the book list updates to show only personal books under the selected Backend category UUID
 - **AND** the button styling transitions with zero layout shift or width jumping.
 
 #### Scenario: User opens advanced filter modal in My Library
 - **WHEN** user clicks the "Bộ Lọc" button in My Library
-- **THEN** the advanced filter modal opens, displaying all 7 domain categories, language options, and source formats
+- **THEN** the advanced filter modal opens, displaying all nondeleted categories, language options, and source formats
 - **AND** the trigger button displays the active filter count badge when filters are applied.
 
 #### Scenario: User applies deep category filter from modal in My Library
-- **WHEN** user selects `EngineeringCraft (4)` or `MentalModels (5)` in the advanced filter modal and clicks Apply
+- **WHEN** the user selects the Engineering Craft or Mental Models category UUID from the advanced filter and clicks Apply
 - **THEN** the modal closes, the catalog updates to display the matching personal books, and the filter counter badge increments.
 
 #### Scenario: User clears or resets filters in My Library
 - **WHEN** user clicks Reset in the filter modal or clicks the "Tất Cả" quick pill
 - **THEN** all category and search filters are cleared, and the book list reloads all documents.
----
 
-### Requirement: DeepPace Category Keyword Inference
-The system SHALL infer the most appropriate DeepPace category when crawling web documentation or importing unstructured documents based on title, URL, and excerpt content:
-1. `MentalModels (5)`: Keywords matching `mental model`, `first principles`, `cognitive bias`, `decision making`, `psychology`, `stoic`, `charlie munger`, `farnam street`, `tư duy`, `mô hình tư duy`, `tâm lý học`, `ra quyết định`.
-2. `HabitsProductivity (6)`: Keywords matching `atomic habits`, `deep work`, `productivity`, `focus`, `flow state`, `habit`, `procrastination`, `cal newport`, `james clear`, `thói quen`, `tập trung`, `năng suất`, `trì hoãn`.
-3. `EngineeringCraft (4)`: Keywords matching `clean code`, `refactor`, `design pattern`, `craftsmanship`, `solid`, `unit test`, `architecture`.
-4. `SystemDesign (3)`: Keywords matching `distributed`, `system design`, `microservice`, `scalability`, `kafka`, `event-driven`, `consensus`, `raft`.
-5. `DatabaseStorage (2)`: Keywords matching `database`, `postgres`, `sql`, `indexing`, `query optimization`, `redis`, `storage engine`.
-6. `BackendRuntime (1)`: Keywords matching `aspnet`, `dotnet`, `csharp`, `golang`, `rust`, `java`, `runtime`, `concurrency`, `backend`.
-7. `FrontendWeb (0)`: Keywords matching `vue`, `react`, `frontend`, `css`, `html`, `browser`, `javascript`, `typescript`.
-
-#### Scenario: Crawler ingests article from Farnam Street or psychology source
-- **WHEN** a web article title contains "Mental Models: The Best Way to Make Intelligent Decisions"
-- **THEN** `InferCategoryFromContext` returns `Category.MentalModels (5)`.
-
-#### Scenario: Crawler ingests article on focus and habits
-- **WHEN** a web article title contains "Deep Work: Rules for Focused Success" or URL contains "atomic-habits"
-- **THEN** `InferCategoryFromContext` returns `Category.HabitsProductivity (6)`.
-
----
+#### Scenario: New category outside the quick subset
+- **WHEN** an administrator creates a category that is outside the toolbar's bounded quick subset
+- **THEN** it appears in the advanced filter with its localized stored name and filtering sends its `categoryId` UUID.
 
 ### Requirement: Book Metadata and Category Update API
 The system SHALL expose an authenticated HTTP PATCH endpoint `PATCH /api/v1/library/books/{id}` allowing users to update the metadata and domain category of books they have imported into their library.
@@ -885,19 +834,19 @@ The system SHALL expose an authenticated HTTP PATCH endpoint `PATCH /api/v1/libr
 2. **Resource Existence & Soft Delete**:
    - If the book ID does not exist or has `IsDeleted == true`, the endpoint SHALL return `HTTP 404 Not Found`.
 3. **Payload Validation**:
-   - The payload SHALL accept `Title` (string, required, length 1–255), `AuthorOrSourceUrl` (string, optional, max length 500), `Category` (integer enum, required, range 0–6), and `Language` (string, optional, allowed values: `"en"`, `"vi"`).
-   - If `Title` is whitespace or exceeds 255 characters, `Category` is outside the defined enum range ($0..6$), or `Language` is specified with an unsupported locale, the system SHALL return `HTTP 400 Bad Request` with validation error details.
+   - The payload SHALL accept `Title` (string, required, length 1–255), `AuthorOrSourceUrl` (string, optional, max length 500), `CategoryId` (required UUID referencing a nondeleted category), and `Language` (string, optional, allowed values: `"en"`, `"vi"`).
+   - If `Title` is whitespace or exceeds 255 characters, `CategoryId` is malformed or does not identify a nondeleted category, or `Language` is specified with an unsupported locale, the system SHALL return `HTTP 400 Bad Request` with validation error details.
 4. **Cascade Taxonomy and Language Alignment**:
-   - Updating `Category` SHALL persist the new `Category` on `DocumentBook` and synchronize the book's slug and associated learning artifacts.
-   - Subsequent calls to `GET /api/v1/graph` for the user SHALL immediately reflect the new pillar connection (`pillar-{Category}`), moving the book and its chunks to the updated DeepPace constellation without dangling edges.
+   - Changing `CategoryId` SHALL require an active category, persist the new reference, and realign linked learning artifacts without changing the book identifier, slug, prose, progress, or source-ingestion state. Retaining the current inactive category during unrelated edits SHALL remain permitted.
+   - Subsequent calls to `GET /api/v1/graph` for the user SHALL immediately reflect the new pillar connection (`pillar-{categoryId}`), moving the book and its chunks to the updated DeepPace constellation without dangling edges.
    - Updating `Language` SHALL cascade and persist `chunk.Language = request.Language` on all surviving `DocumentChunk` records belonging to the book, ensuring subsequent AI curation (`CurateSliceHandler`) and TTS narration (`GetOrSynthesizeChunkAudioHandler`) operate under the updated language code.
 5. **Response Contract**:
    - Upon successful update, the endpoint SHALL return `HTTP 200 OK` with the updated `BookDto`.
 
 #### Scenario: Owner updates book title, author, and category
-- **WHEN** an authenticated user who owns book `123` submits `PATCH /api/v1/library/books/123` with `Title = "Atomic Habits (Bản Đầy Đủ)"`, `AuthorOrSourceUrl = "James Clear"`, and `Category = 6` (`HabitsProductivity`)
+- **WHEN** an authenticated user who owns book `123` submits `PATCH /api/v1/library/books/123` with `Title = "Atomic Habits (Bản Đầy Đủ)"`, `AuthorOrSourceUrl = "James Clear"`, and `CategoryId` set to the active Habits category UUID
 - **THEN** the system returns `HTTP 200 OK` with updated `BookDto`
-- **AND** `DocumentBook.Category` is updated to `Category.HabitsProductivity`
+- **AND** the book's category UUID is updated to the selected category
 - **AND** the book's `Title` is updated in the database.
 
 #### Scenario: Non-owner attempts to update book
@@ -906,7 +855,7 @@ The system SHALL expose an authenticated HTTP PATCH endpoint `PATCH /api/v1/libr
 - **AND** no book data is modified.
 
 #### Scenario: Update with invalid title or category
-- **WHEN** user submits `PATCH /api/v1/library/books/{id}` with an empty title or invalid category integer `99`
+- **WHEN** user submits `PATCH /api/v1/library/books/{id}` with an empty title or an unknown or malformed category UUID
 - **THEN** the system returns `HTTP 400 Bad Request` with descriptive validation errors.
 
 #### Scenario: Owner updates book language and cascades to document chunks
@@ -915,7 +864,10 @@ The system SHALL expose an authenticated HTTP PATCH endpoint `PATCH /api/v1/libr
 - **AND** all existing `DocumentChunk` records belonging to book `123` have their `Language` updated to `"vi"`
 - **AND** subsequent TTS audio generation requests for chunks in this book select the Vietnamese neural voice.
 
----
+#### Scenario: Reclassification races with deactivation
+- **WHEN** the requested category is deactivated before reclassification admission commits
+- **THEN** the endpoint returns HTTP 409 `Category.Inactive` and leaves the original assignment and linked learning state unchanged
+- **AND** existing queued/running source-operation concurrency protections remain enforced.
 
 ### Requirement: Book Management and Edit Interface in Library
 The Document Library interface (`pages/library.vue`) SHALL provide an accessible, responsive book editing modal dialog complying with the **Dev-Learning Studio** UI design system and Pillar 2 component governance.
@@ -925,7 +877,7 @@ The Document Library interface (`pages/library.vue`) SHALL provide an accessible
    - The button SHALL have responsive padding and an accessible label/tooltip.
 2. **Accessible Edit Modal (`EditBookModal`)**:
    - Clicking Edit SHALL open a teleported dialog adhering to `AppModal.vue` conventions (strictly prohibiting native browser `prompt` or `confirm` dialogs).
-   - **Category & Language Dropdowns**: The modal MUST use custom accessible `AppSelect.vue` to render all 7 DeepPace categories and document language choices (`en` / `vi`), strictly prohibiting raw HTML `<select><option>` elements.
+   - **Category & Language Dropdowns**: The modal MUST use custom accessible `AppSelect.vue` to render active category descriptors plus the book's current inactive category when applicable, and document language choices (`en` / `vi`), strictly prohibiting raw HTML `<select><option>` elements.
    - **Form Fields**: Accessible text inputs for Book Title and Author / Source URL.
    - **Taxonomy Callout**: A responsive informational banner explaining: *"Thay đổi chuyên mục sẽ cập nhật lại Cột trụ Đồ thị Tri thức và phân loại thẻ nhớ tương ứng"* (Vietnamese) / *"Updating the category re-aligns Knowledge Graph constellations and spaced repetition cards"* (English).
    - **Action Buttons**: "Hủy" (`library.cancel`) and "Lưu Thay Đổi" (`library.save_changes`) with `whitespace-nowrap shrink-0` and responsive gap, displaying a loading spinner during submission (`isSaving`).
@@ -935,13 +887,18 @@ The Document Library interface (`pages/library.vue`) SHALL provide an accessible
 #### Scenario: User opens edit modal and updates category
 - **WHEN** user clicks the Edit button on a book card in `/library`
 - **THEN** the modal opens with current book Title, Author, and Category pre-populated in `AppSelect`
-- **WHEN** user selects "Thói Quen & Tập Trung Sâu" (`Category.HabitsProductivity`) and clicks "Lưu Thay Đổi"
+- **WHEN** user selects the active category whose stored Vietnamese name is "Thói Quen & Tập Trung Sâu" and clicks "Lưu Thay Đổi"
 - **THEN** the modal shows a loading spinner
 - **AND** upon API success, the modal closes, a success toast is displayed, and the book card badge updates to "Thói Quen & Tập Trung Sâu".
 
 #### Scenario: Responsive and bilingual button layout
 - **WHEN** the edit modal renders in both English and Vietnamese locales across Mobile ($390\text{px}$) and Desktop ($1440\text{px}$) viewports
 - **THEN** all action buttons maintain `whitespace-nowrap shrink-0` with zero text truncation or button collision.
+
+#### Scenario: Editing a book with an inactive category
+- **WHEN** the owner opens the edit dialog for a book assigned to an inactive category
+- **THEN** its current category remains visible and retaining it is permitted
+- **AND** inactive categories are not offered as new assignments to other books.
 
 ### Requirement: Document Chunk Composite Slice Indexing
 The system persistence configuration for `DocumentChunk` SHALL define a composite unique index on `(DocumentBookId, ChunkOrder)` filtered by `WHERE "IsDeleted" = false` (`IX_DocumentChunks_DocumentBookId_ChunkOrder`) to optimize sequential reading slice retrieval (`GET /api/v1/library/books/{id}/slices/{chunkOrder}`) to an $O(1)$ index seek.

@@ -352,34 +352,41 @@ The `/review` route and interactive flashcard deck player (`FlashcardDeck.vue`) 
 - **THEN** the card content scales gracefully without expanding beyond the screen fold or clipping action controls.
 
 ### Requirement: Flashcards Practice Studio Layout Integration
-The `/review` page active review session (`activeTab === 'session'` with `currentCard !== null`) SHALL implement a focused, unboxed direct-canvas practice layout without redundant sub-headers:
-1. **Direct-Canvas Action Stage (Left Column)**:
-   - The interactive flashcard player (`FlashcardDeck.vue`) SHALL sit directly on the canvas as the single focal hero element in the left 68% column, without an enclosing outer sub-header row.
-   - The application SHALL NOT render outer truncated title snippets (e.g. slicing the prompt markdown) or repeated icon badges above the flashcard container.
-2. **Telemetry Dock (Right Column)**:
-   - The right column companion dock SHALL house the session progress tracker, SM-2 algorithm telemetry, and keyboard shortcut legends.
-   - Session remaining cards count SHALL be surfaced exclusively in the page navigation tab (`$t('review.tab_session')`) and the companion progress dock (`sessionProgress`), eliminating duplicate floating badges.
-3. **Accurate Domain Category & Difficulty Metadata**:
-   - The review deck endpoint (`GET /api/v1/review/deck`) and deck query endpoint (`GET /api/v1/review/cards`) SHALL accurately project `Category`, `Difficulty`, and `TopicTitle` from the card's underlying origin (such as `SourceQuizQuestion` or `SourceDocumentChunk`), prohibiting hardcoded fallback values (`FrontendWeb`, `Senior`).
+The active `/review` session SHALL retain a focused direct-canvas layout without redundant subheaders:
+1. The flashcard player SHALL be the single hero in the left 68% desktop column, without outer truncated question snippets or repeated icon badges.
+2. The right telemetry dock SHALL contain progress, SM-2 telemetry and hotkeys. Remaining-card counts SHALL appear only in the session tab and progress dock, not duplicate floating badges.
+3. Deck/list and card mutation responses SHALL project authoritative category UUID/descriptor, difficulty and topic title from the source question, source chunk's book, or source highlight's book. No fixed Frontend or Senior fallback SHALL be used. Inactive assignments SHALL remain resolvable. A genuinely missing category provenance SHALL return nullable category metadata and a localized Unclassified state, never invent a replacement.
+4. Category labels SHALL use current stored English/Vietnamese names after loading, grading, editing and resetting a card. Category metadata changes SHALL not alter SM-2 scheduling, repetition, ease, mastery or ownership.
 
 #### Scenario: Active review session renders single hero card without outer sub-header
-- **WHEN** the user navigates to `/review` with due review cards present in `activeTab === 'session'`
-- **THEN** the active card is displayed directly under the page tab navigation without a secondary title/icon sub-header
-- **AND** the question text appears solely within the flashcard hero container without prior truncation
+- **WHEN** the user opens the active session with due cards
+- **THEN** the card appears directly below page tab navigation without a secondary title/icon header
+- **AND** the complete question appears only inside the hero card, without prior truncation.
 
 #### Scenario: Review deck accurately reflects question domain category and seniority
-- **WHEN** a user reviews a card created from an ASP.NET Core or Database quiz mistake
-- **THEN** the card's category badge displays the authentic category (e.g., `BackendRuntime`, `DatabaseStorage`)
-- **AND** the seniority level reflects the original question level rather than a static default
+- **WHEN** the user reviews a card created from a question in any category, including an administrator-created subject
+- **THEN** its category badge displays the authoritative descriptor in the current locale
+- **AND** difficulty reflects the original question rather than a static default.
 
 #### Scenario: Active Flashcard Practice on Desktop
-- **WHEN** an engineer begins reviewing due flashcards on a desktop browser
-- **THEN** the active flip-card renders in the main action stage on the left, while the session progress, SM-2 metrics, and hotkeys card render in the telemetry dock on the right.
-- **AND** the entire viewport is balanced with zero wasted side margins and no vertical window scrolling required to access grading buttons.
+- **WHEN** due cards are reviewed on desktop
+- **THEN** the card occupies the main left action stage and progress, SM-2 metrics and hotkeys occupy the right dock
+- **AND** the balanced viewport has no wasted side voids or required window scrolling to reach grading actions.
 
 #### Scenario: Reviewing on Mobile Devices
-- **WHEN** an engineer reviews due flashcards on a mobile device ($< 1024\text{px}$)
-- **THEN** the active flip-card occupies full viewport width, and dock telemetry widgets collapse cleanly below the card without obscuring flip or grading controls.
+- **WHEN** cards are reviewed below 1024px
+- **THEN** the card uses full available width and telemetry stacks below without obscuring flip/grading controls.
+
+#### Scenario: Card mutation retains authentic category
+- **WHEN** an existing card is graded, edited or reset and the response replaces its client-side state
+- **THEN** category UUID/descriptor still resolves from the same authoritative source rather than a hardcoded fallback
+- **AND** reset changes only its documented scheduling state, not its category provenance.
+
+#### Scenario: Inactive source category and orphaned source
+- **WHEN** a card's source category is inactive
+- **THEN** its authentic localized category remains visible and review remains available
+- **WHEN** no surviving source can establish its category
+- **THEN** the API returns nullable category fields and the UI shows localized Unclassified without assigning it to another subject.
 
 ### Requirement: Advanced Filter Modal Layout & Sort Options Density
 The Advanced Filter Modal SHALL render all filter and sorting option groups ("Knowledge Source" / "Nguồn kiến thức", "Mastery Stage" / "Giai đoạn thành thạo", "Urgency Priority" / "Mức độ ưu tiên", and "Sort By" / "Sắp xếp theo") using unified, compact pill chips with natural content-sized boundaries and responsive auto-wrapping (`flex flex-wrap items-center gap-2`).
@@ -415,6 +422,7 @@ The interactive flashcard player (`FlashcardDeck.vue`) SHALL eliminate excessive
 #### Scenario: Card originating from quiz mistake displays quiz challenge provenance badge
 - **WHEN** a flashcard originating from a quiz mistake is displayed on the front face
 - **THEN** a provenance badge indicating its quiz challenge source is visible alongside the category badge
+
 ### Requirement: Flashcard Telemetry Dock Completeness & SM-2 Controls
 The Tab 1 companion dock and grading controls SHALL provide complete localized session feedback:
 1. **Session Progress Telemetry**: Localized header `$t('review.session_progress')` ("Session Progress" / "Tiến Độ Phiên Ôn Tập"), dynamic completion percentage, remaining review count, and visual progress bar.
@@ -537,6 +545,7 @@ The `/review` page SHALL keep the user on the active tab across navigation and p
 - **WHEN** the user loads or reloads that URL
 - **THEN** the page opens directly on the Analytics tab with the 6 bento analytics cards rendered.
 ---
+
 ### Requirement: Deck Management Pagination Page-Size Isolation
 The Deck Management card list SHALL always paginate at its own standard configured page size. A lightweight count or preview fetch performed elsewhere in the application (for example, a dashboard requesting a single card only to read the total count) SHALL NOT alter the page size used by the Deck Management list. When the user opens the Deck Management tab, the list SHALL request its standard page size regardless of any prior fetch.
 

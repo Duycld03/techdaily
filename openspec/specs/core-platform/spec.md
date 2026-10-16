@@ -43,152 +43,100 @@ The system SHALL support signing in with Google via Google Identity Services (GI
 ---
 
 ### Requirement: User Profile Management, Route Guards & Security
-The user profile management subsystem (`GET /api/v1/user/profile`, `PUT /api/v1/user/profile`, `PUT /api/v1/user/change-password`, `pages/settings.vue`) SHALL support managing user identity, multi-disciplinary mastery tracks (`TargetRole`), daily study pace (`DailyGoalMinutes`), study schedules, and notification alert preferences, protected with strict JWT Bearer authentication, reject unauthenticated requests with `HTTP 401 Unauthorized`, and enforce route middleware guards on protected frontend pages.
+The user profile subsystem SHALL retain authenticated identity/profile/password management, technology-agnostic mastery tracks, daily pace, schedules and alert preferences. Missing JWT authentication SHALL return HTTP 401 and protected frontend routes SHALL remain guarded.
 
-1. **Mastery Tracks in Settings**:
-   - The user profile settings in `/settings` SHALL present the field as **Mastery Track** (`settings.mastery_track`, "Lộ trình rèn luyện chuyên sâu"), replacing legacy single-track interview difficulty labels.
-   - The available options SHALL offer diverse, technology-agnostic deliberate practice tracks:
-     - `Deep Work & Focus Practitioner` ("Thực Hành Tập Trung Sâu & Nhịp Sống Bền Vững")
-     - `System Architect & Decision Maker` ("Kiến Trúc Sư Hệ Thống & Ra Quyết Định")
-     - `Lifelong Polymath & Cognitive Explorer` ("Học Giả Đa Ngành & Khám Phá Nhận Thức")
-     - `Clean Code & Software Craftsperson` ("Chuyên Gia Kỹ Thuật & Mã Sạch")
-     - `Technical Leader & Engineering Mentor` ("Lãnh Đạo Kỹ Thuật & Cố Vấn")
-   - For backwards compatibility, legacy roles (`Senior Engineer`, `Staff Engineer`, `Principal Architect`, `Tech Lead`, `Mid-Level Engineer`, `Junior Engineer`) SHALL be preserved in option matching so existing accounts display localized labels without empty fallback values.
-2. **Default New Account Track**:
-   - Newly provisioned user accounts (`AuthEndpoints.cs`, `User.cs`) SHALL default `TargetRole` to `"Deep Work & Focus Practitioner"`.
+Mastery Track settings SHALL retain Deep Work & Focus Practitioner, System Architect & Decision Maker, Lifelong Polymath & Cognitive Explorer, Clean Code & Software Craftsperson, and Technical Leader & Engineering Mentor. Existing Senior Engineer, Staff Engineer, Principal Architect, Tech Lead, Mid-Level Engineer and Junior Engineer values SHALL continue to display their localized matching options. New accounts SHALL retain Deep Work & Focus Practitioner as their default track.
 
-The User Profile interface (`frontend/pages/profile.vue`) and update action SHALL be strictly dedicated to personal identity (`name`), career role targets (`targetRole`), daily study pace (`dailyGoalMinutes`), and account credentials/password security.
+Existing profile update semantics SHALL remain unchanged: identity-only updates send `name`, `targetRole` and `dailyGoalMinutes`; schedule/timezone fields that are null or omitted SHALL retain their existing values, and only non-null supplied properties SHALL be updated. Schedule updates retain documented validation. Current unified Settings navigation and `/profile` redirection SHALL remain governed by existing Settings/redirect requirements. This taxonomy change SHALL NOT recreate a removed dashboard, mastery widget or statistics endpoint.
 
-The User Profile interface SHALL NOT display notification scheduling controls (`preferredStudyTime`, `streakAlertTime`) or timezone displays. The User Profile interface SHALL NOT include redirection links or navigational bridges to the system settings page, keeping the user experience clean and decluttered.
+Where a profile dashboard is rendered, its existing identity passport, four milestone metrics (drill count/score, quiz accuracy/mastered ratio, active memory-card count and saved highlights), account/security controls, responsive arrangement and bilingual text SHALL remain intact. Category identity SHALL NOT change account target-role options, daily pace choices or notification schedules.
 
-When submitting profile updates from the profile page, the client application SHALL dispatch only personal identity and pace fields (`name`, `targetRole`, `dailyGoalMinutes`) to `PUT /api/v1/user/profile`. The backend API SHALL support partial updates, preserving existing notification schedule and timezone database records when those fields are omitted.
-The User Profile interface (`frontend/pages/profile.vue`) SHALL present an executive **3-Tier Bento Dashboard** adhering to the **Dev-Learning Studio** visual standard:
-1. **Root Container**: Renders on deep dark canvas (`dark:bg-canvas`, `dark:bg-canvas-subtle`) with `scrollbar-gutter: stable` and responsive spacing, utilizing a dedicated, non-duplicated page subtitle (`profile.subtitle`).
-2. **Tier 1 (Top Full-Width Engineer Identity Passport)**: A prominent `.glass-card` banner spanning full width across the top featuring:
-   - Large avatar with status indicator badge.
-   - Engineer display name, email address, and membership tenure (`Member since: <date>`).
-   - Badges for Target Role (e.g. `Senior Engineer`), Account Connection (Google Linked / Standard Email), and Personal Best Record (`Longest Streak: <days>` trophy badge).
-3. **Tier 2 (Full-Width Milestones Telemetry Strip)**: A prominent horizontal 4-column bento telemetry strip (`grid-cols-2 lg:grid-cols-4 gap-4`) sitting immediately beneath the identity passport:
-   - *Cell 1 - Architecture Drills*: Total senior scenario drills completed and average score (`{totalDrillsCompleted}` completed, `{averageScore}/10`).
-   - *Cell 2 - Interview Quiz Accuracy*: Accuracy percentage (`{accuracyRate}%`) and mastered concepts ratio (`{masteredCount}/{totalAnswered}`), utilizing concise, non-truncated copy across all locales (e.g. "Độ chính xác Quiz" in Vietnamese).
-   - *Cell 3 - Memory Vault (Spaced Repetition)*: Total technical concepts active in the SM-2 review deck (`{totalCardsInDeck}`).
-   - *Cell 4 - Architecture Source Highlights*: Total highlighted code and architectural quotes saved (`{totalHighlightsSaved}`).
-4. **Tier 3 (Balanced 2-Column Split)**: A balanced 50/50 grid on desktop (`lg:grid-cols-2 gap-6 items-start`):
-   - *Left Column (Account & Security Hub)*: Houses the settings and credentials forms inside a dedicated `.glass-card` (~360px height) with clean tab switching:
-     - *Personal Info Tab*: Full Name input, Target Role selector, interactive Daily Goal Pace chips (`5m`, `10m`, `15m`, `30m`).
-     - *Security Tab*: Current password verification, new password with dynamic strength bar, confirm password matching, and Google account hint banner.
-   - *Right Column (Domain Mastery Goal Tracker)*: Houses `DomainGoalTracker.vue` (~380px height), presenting the user's library reading and recall coverage across four universal, framework-agnostic core engineering pillars with compact padding and high-contrast gradient tracks:
-     - **Pillar 1: Backend Runtime & Concurrency** (`profile.domain_backend_runtime`: "Nền Tảng Backend & Runtime" / "Backend Runtime & Concurrency").
-     - **Pillar 2: Data Storage & Persistence** (`profile.domain_data_storage`: "Hệ Lưu Trữ & Cơ Sở Dữ Liệu" / "Data Storage & Persistence").
-     - **Pillar 3: Distributed Systems & Architecture** (`profile.domain_system_design`: "Hệ Thống Phân Tán & Thiết Kế" / "Distributed Systems & Architecture").
-     - **Pillar 4: Frontend & Browser Engineering** (`profile.domain_frontend`: "Hiệu Năng Frontend & Trình Duyệt" / "Frontend & Browser Engineering").
-
-The Domain Mastery Goal Tracker component SHALL evaluate and aggregate mastery dynamically from the user's library reading and recall activity — the categories of the `DocumentBook`s the user reads, drills, and reviews — via `matchCategory(category: string)`, ensuring book chapters, drills, and quiz attempts in any modern stack map seamlessly into the appropriate universal pillar.
-
-The Engineer Portfolio Dashboard SHALL adapt responsively across Desktop (≥ 1024px, 3-tier layout with balanced 50/50 lower columns) and Mobile (< 1024px, vertically stacked layout with Identity Passport -> 2x2 Milestones Strip -> Domain Mastery -> Account Settings) without horizontal scrolling or layout overlap.
-
-The Identity passport, milestone statistics, and domain goal tracker SHALL support bilingual rendering in both English and Vietnamese, ensuring that milestone metric titles, domain pillar names, and subtitles render cleanly without text truncation, badge clipping, or broken progress bar labels.
+Any existing domain-mastery presentation SHALL group actual owned reading/recall activity by stable category UUID and display current stored names, including inactive categories with history. It SHALL NOT infer four universal pillars from keywords or create metrics for categories without activity. This conditional rule does not require adding a currently absent presentation.
 
 #### Scenario: Unauthenticated request to user profile
-- **WHEN** unauthenticated client calls `GET /api/v1/user/profile`
-- **THEN** system returns `401 Unauthorized`.
+- **WHEN** a client requests the profile without authentication
+- **THEN** HTTP 401 is returned.
 
 #### Scenario: User updates profile settings
-- **WHEN** authenticated user sends `PUT /api/v1/user/profile` with target level and learning goals
-- **THEN** system updates user profile and returns updated profile DTO.
+- **WHEN** an authenticated user submits target-track and learning-goal changes
+- **THEN** the profile is updated and the updated DTO is returned.
 
 #### Scenario: User configures personal study schedule and timezone
-- **WHEN** an authenticated user submits `PUT /api/v1/user/profile` with `preferredStudyTime: "07:30"`, `streakAlertTime: "21:00"`, `timeZone: "Asia/Ho_Chi_Minh"`, and `isPushEnabled: true`
-- **THEN** the system validates the IANA timezone string, persists the preferences on the `User` entity, and returns the updated profile DTO.
+- **WHEN** an authenticated user submits preferred study time 07:30, streak alert 21:00, timezone Asia/Ho_Chi_Minh, and push enabled
+- **THEN** the timezone is validated and preferences are persisted and returned.
 
 #### Scenario: Validation of invalid timezone identifier
-- **WHEN** a client submits an invalid or unrecognized timezone string (e.g., `"Invalid/Zone"`)
-- **THEN** the system falls back safely to `"UTC"` or responds with `HTTP 400 Bad Request` with code `VALIDATION_FAILED`.
+- **WHEN** the timezone is invalid or unrecognized
+- **THEN** the existing safe UTC fallback or HTTP 400 `VALIDATION_FAILED` behavior remains available.
 
 #### Scenario: User updates personal profile information from `/profile`
-- **WHEN** an authenticated user modifies their name, target role, or daily goal minutes in `/profile` and submits the form
-- **THEN** the client sends a `PUT /api/v1/user/profile` request containing only `{ name, targetRole, dailyGoalMinutes }`
-- **AND** the payload does NOT contain `preferredStudyTime`, `streakAlertTime`, or `timeZone`
-- **AND** the backend updates the user's name, target role, and daily goal minutes in PostgreSQL while preserving existing notification schedule and timezone values
-- **AND** the user receives a localized success toast notification.
+- **WHEN** an identity-only profile action updates name, target role or daily goal
+- **THEN** only those fields are submitted to the profile update endpoint
+- **AND** omitted schedule/timezone preferences remain unchanged and a localized success toast appears.
 
 #### Scenario: User selects Deep Work & Focus Practitioner mastery track
-- **WHEN** an authenticated user opens `/settings` in the Profile tab
-- **THEN** the track selector displays "Mastery Track" / "Lộ trình rèn luyện"
-- **WHEN** user selects "Deep Work & Focus Practitioner" and saves their profile
-- **THEN** the client sends `PUT /api/v1/user/profile` with `targetRole: "Deep Work & Focus Practitioner"`
-- **AND** the server persists the updated track and returns `200 OK`.
+- **WHEN** the user selects Deep Work & Focus Practitioner in Settings and saves
+- **THEN** the profile request retains that target-role value and returns HTTP 200 after persistence.
 
 #### Scenario: Existing user with legacy Senior Engineer role views settings
-- **WHEN** an existing user whose database `TargetRole` is `"Senior Engineer"` opens `/settings`
-- **THEN** the track dropdown cleanly displays the localized label ("Lộ trình Senior" / "Senior Track") without blank selection or console errors.
+- **WHEN** an existing Senior Engineer account opens Settings
+- **THEN** its localized legacy track label appears without a blank option or console error.
 
----
+#### Scenario: Taxonomy administration does not reintroduce obsolete profile pillars
+- **WHEN** categories are introduced or renamed
+- **THEN** `/profile` continues to redirect to unified Settings and no absent four-pillar widget is recreated
+- **AND** category-free profile statistics and identity/security forms retain their existing contracts.
 
 ### Requirement: Universal DeepPace Production Micro-Branding & Media Session Identity
-All user-facing media sessions, service worker notification handlers, and API diagnostic test payloads SHALL standardize on the **DeepPace** brand name, eliminating legacy application names.
+All user-facing media sessions, service-worker notification handlers and diagnostic payloads SHALL retain the DeepPace brand:
+1. Audio MediaSession defaults SHALL use artist DeepPace and album DeepPace Reader unless book attribution overrides them.
+2. Push notifications with no custom title SHALL use DeepPace.
+3. The authenticated test-push endpoint SHALL use title `DeepPace Test Push 🚀` and tag `deeppace-test`.
+4. Page titles SHALL use DeepPace and authentication diagnostics the `[DeepPace Auth]` prefix.
 
-1. **Audio Player MediaSession Metadata**:
-   - The audio player composable (`useSliceAudio.ts`) SHALL populate Navigator MediaSession metadata with default `artist: 'DeepPace'` and `album: 'DeepPace Reader'` (eliminating legacy 'TechDaily' fallbacks).
-2. **Service Worker Push Notifications**:
-   - The background service worker (`sw.js`) SHALL use `'DeepPace'` as the default notification fallback title when the push payload omits a custom title.
-3. **Push Notification Test Diagnostic Endpoint**:
-   - The push notification verification endpoint (`POST /api/v1/notifications/push/test`) SHALL send notification title `"DeepPace Test Push 🚀"` and tag `"deeppace-test"`.
-4. **Application Page Titles & Diagnostics**:
-   - Document head meta titles (such as `/showcase`) SHALL display `DeepPace`.
-   - Client authentication warning diagnostics in `/login` SHALL log with prefix `[DeepPace Auth]`.
+Existing identity/profile milestone rendering and partial-update behavior SHALL remain unchanged where those surfaces exist; current Settings/redirect requirements govern actual route placement. Category-related displays SHALL use stable IDs/current bilingual descriptors rather than four fixed keyword-matched pillars. No new profile widget is required by this change.
 
 #### Scenario: Background audio player registers MediaSession
-- **WHEN** user plays an audio narration slice for an imported book or article
-- **THEN** the operating system lockscreen and media notification bar displays artist as "DeepPace" and album as "DeepPace Reader" unless overridden by book author metadata.
+- **WHEN** a user plays narration
+- **THEN** OS media metadata displays DeepPace and DeepPace Reader unless overridden by book author metadata.
 
 #### Scenario: Service worker receives push event with empty title
-- **WHEN** a web push notification arrives with no title in the payload
-- **THEN** `sw.js` displays a notification with title `"DeepPace"`.
+- **WHEN** a push arrives without a title
+- **THEN** its title is DeepPace.
 
 #### Scenario: Developer triggers test push notification
-- **WHEN** an authenticated user clicks "Send Test Push" in `/settings`
-- **THEN** the test notification payload arrives with title `"DeepPace Test Push 🚀"` and tag `"deeppace-test"`.
+- **WHEN** an authenticated user selects Send Test Push in Settings
+- **THEN** the payload contains `DeepPace Test Push 🚀` and `deeppace-test`.
 
 #### Scenario: User inspects `/profile` interface for decluttering
-- **WHEN** a user navigates to the `/profile` page
-- **THEN** the "Study Schedule & Timezone" card is completely absent from the DOM
-- **AND** no time input controls or timezone badges are rendered on the page
-- **AND** no navigation links or buttons pointing to `/settings` are rendered in the profile view.
+- **WHEN** an existing identity-only profile presentation is displayed
+- **THEN** it contains no notification schedule/timezone controls or navigation bridges duplicating Settings
+- **AND** the current profile redirect remains unchanged.
 
 #### Scenario: Server processes partial profile update from `/profile`
-- **WHEN** the backend `PUT /api/v1/user/profile` endpoint receives a request with `Name`, `TargetRole`, and `DailyGoalMinutes` populated, but with `PreferredStudyTime`, `StreakAlertTime`, and `TimeZone` null/omitted
-- **THEN** the server updates only the non-null properties, updates `UpdatedAt = DateTime.UtcNow`, and returns `200 OK` with the updated `UserProfileDto`.
+- **WHEN** name, target role and daily goal are supplied while schedule/timezone fields are null or omitted
+- **THEN** only non-null supplied properties and the update timestamp change, null/omitted preferences retain their values, and HTTP 200 returns the profile DTO.
 
 #### Scenario: Desktop 2-column vs mobile single-column stacked responsive layout
-- **WHEN** authenticated user accesses `/profile` on a desktop viewport ($\ge 1024\text{px}$)
-- **THEN** the layout renders a 3-tier executive structure: Tier 1 full-width Identity Passport, Tier 2 full-width 4-column Milestones Telemetry Strip, and Tier 3 balanced 50/50 2-column grid with Account & Security Hub on the left (~360px) and Domain Mastery Goal Tracker on the right (~380px), eliminating empty vertical void space
-- **WHEN** user accesses `/profile` on a mobile viewport ($< 1024\text{px}$)
-- **THEN** the layout stacks into a single vertical stream with the Identity Passport at the top, followed by the 2x2 Milestones Strip, Domain Mastery tracker, and Account settings form, maintaining touch-friendly targets and zero horizontal overflow.
+- **WHEN** an existing profile dashboard is displayed on desktop
+- **THEN** identity, milestone telemetry and balanced account/mastery panels retain their established responsive arrangement
+- **WHEN** it is displayed on mobile
+- **THEN** the content stacks with touch-friendly actions and no horizontal overflow
+- **AND** this change does not add a removed dashboard to the current Settings flow.
 
 #### Scenario: User inspects identity and learning milestones widget
-- **WHEN** user views the profile page
-- **THEN** UI renders the full-width 4-column milestones telemetry strip displaying:
-  - Architecture Drills completed with average score
-  - Interview Quiz accuracy percentage and mastered concepts ratio (`{masteredCount}/{totalAnswered}`), utilizing concise, non-truncated copy across all locales (e.g. "Độ chính xác Quiz" in Vietnamese).
-  - Spaced Repetition Memory Vault active card count
-  - Architecture Highlights saved count
-- **AND** all 4 cells render in individual `.glass-card` surfaces with hairline borders and distinct semantic accent badges.
+- **WHEN** an existing profile milestones presentation is rendered
+- **THEN** drills/score, quiz accuracy/mastered ratio, active SM-2 cards and saved highlights retain their authentic counts and localized compact labels, with separate hairline-bordered surfaces.
 
 #### Scenario: User monitors curriculum domain mastery goal progress
-- **WHEN** user views the Domain Mastery Goal Tracker section on `/profile`
-- **THEN** UI displays categorized visual progress bars for each of the 4 universal engineering pillars with compact vertical padding:
-  - Backend Runtime & Concurrency (aggregating .NET, Node.js, Go, Java, Python runtime topics)
-  - Data Storage & Persistence (aggregating PostgreSQL, MongoDB, Redis, MySQL, ACID, indexing topics)
-  - Distributed Systems & Architecture (aggregating microservices, Kafka, outbox, system design topics)
-  - Frontend & Browser Engineering (aggregating browser performance, Vue, React, TypeScript topics)
-- **AND** reading and recall stats from the user's library `DocumentBook` categories accurately increment completed and total counts in the corresponding universal pillar.
+- **WHEN** an existing domain-mastery presentation displays reading/recall activity
+- **THEN** it groups by authoritative category UUID and stored names, including administrator-created subjects
+- **AND** no four-pillar keyword mapping or invented category totals are used.
 
 #### Scenario: Bilingual visual verification for identity widget, milestone stats, and domain goal tracker
-- **WHEN** user toggles between English (`en`) and Vietnamese (`vi`) on the `/profile` page
-- **THEN** all copy across the Identity passport, milestones telemetry strip (drills completed, quiz accuracy, memory vault, highlights saved), and domain goal tracker updates dynamically
-- **AND** the quiz accuracy card label in Vietnamese renders as "Độ chính xác Quiz" without ellipsis truncation or badge clipping
-- **AND** the page header subtitle renders "Quản lý hồ sơ kỹ sư, năng lực chuyên môn và bảo mật tài khoản" in Vietnamese and "Manage your senior engineer profile, career telemetry, and security credentials" in English, without duplicating the domain mastery subtitle.
+- **WHEN** an existing identity/telemetry presentation changes locale
+- **THEN** titles, milestone labels and any category names update without diacritic clipping or badge collisions
+- **AND** concise quiz-accuracy labels and a single nonduplicated page subtitle remain intact.
 
 ### Requirement: Daily Doc Reading Slice
 The system SHALL serve one curated 3–5 minute reading slice per active document series per day (`GET /api/v1/daily/today`) preserving source documentation excerpt language, structured summary, key takeaways, and quick-check questions.
@@ -484,17 +432,24 @@ Application database tables (`TermExplanationCaches`, `TechInsights`, `QuizQuest
 ---
 
 ### Requirement: AI Term Explanation & Cache Protocol
-`ITermExplanationService.ExplainTermAsync` SHALL check exact database cache and semantic HNSW vector cache before invoking Gemini text generation (`gemini-3.6-flash`). If the term is not cached and the Gemini API call fails, the service SHALL return `Result<TermExplanationResult>.Failure` with code `AiService.Unavailable`. The service SHALL NOT return generic boilerplate sentences wrapped in `HTTP 200 OK`.
+Term explanation SHALL check exact and semantic caches before invoking the configured Gemini generation service. An uncached explanation failure SHALL return `AiService.Unavailable` with a non-200 error, never generic boilerplate as success. Free-text explanation context SHALL be named `contextLabel`, not treated as a document category UUID or a fixed curriculum selection.
 
-The endpoint `POST /api/v1/daily/explain-term` SHALL return an error HTTP status (such as `400 Bad Request` or `503 Service Unavailable`) when term explanation fails, enabling the frontend reader modal to display a clear error state and retry prompt.
+The term-explanation endpoint SHALL preserve its term, surrounding context and locale semantics. Valid historical free-text cache labels/explanations/vectors SHALL survive the rename and startup unchanged; existing documented hygiene removal of poisoned boilerplate records remains in force. Category renaming SHALL NOT rewrite caches or regenerate embeddings, and missing context labels SHALL not force Software Architecture or another category assignment.
 
 #### Scenario: Term explanation fails during cache miss
-- **WHEN** client sends `POST /api/v1/daily/explain-term` for an uncached term and Gemini text generation fails
-- **THEN** the service returns `Result.Failure(Error.Custom("AiService.Unavailable", ...))`
-- **AND** the API responds with a non-200 HTTP status code and error payload
-- **AND** does NOT cache or return generic boilerplate text.
+- **WHEN** an uncached term request fails at the AI service
+- **THEN** the API returns a failure status and `AiService.Unavailable`
+- **AND** it neither caches nor returns generic boilerplate text.
 
----
+#### Scenario: Historical context label is not a taxonomy reference
+- **WHEN** a retained cache entry contains a free-text label such as Postgres or Software Architecture
+- **THEN** its label remains available as `contextLabel` without creating or assigning a category
+- **AND** its explanation/vector remains unchanged and does not block migration as an unknown enum value.
+
+#### Scenario: Category rename preserves term cache contents
+- **WHEN** a category used by an open reader is renamed
+- **THEN** the reader displays the updated category descriptor separately from its term-explanation context
+- **AND** no historical cache/vector rewrite or AI generation occurs as a side effect.
 
 ### Requirement: Frontend Client Error Resolution & Problem Details
 The client error resolution composable `frontend/composables/useApiError.ts` SHALL prioritize RFC 7807 problem details (`detail`) and backend custom error messages (`error`) for client-actionable 4xx errors, while mapping HTTP 500 Internal Server Error responses to localized platform error translations (`api_errors.SERVER_ERROR` or caller-provided `fallbackKey`) to prevent leaking unlocalized English server fault strings.
@@ -1085,85 +1040,49 @@ The global error boundary page (`frontend/error.vue`) and authentication views (
 ---
 
 ### Requirement: Interactive API Documentation & OpenAPI Explorer
-The backend system SHALL generate OpenAPI 3.1 specification metadata and serve an interactive developer API reference via `Scalar.AspNetCore` at route `/scalar/v1` during development environment runs. The API documentation SHALL support JWT Bearer authorization input, provide clean navigation, enforce concise operation summaries, expose complete and accurate per-operation response contracts (typed bodies and every producible status code), and support automated TypeScript client generation:
+The backend SHALL generate OpenAPI 3.1 metadata and serve Scalar at `/scalar/v1` during development, with JWT Bearer input, concise navigation, complete response schemas/status codes and automated TypeScript generation.
 
-1. **OpenAPI Security Requirement & Interactive Authorization**:
-   - The OpenAPI document at `/openapi/v1.json` SHALL declare the HTTP Bearer JWT security scheme in `components.securitySchemes.Bearer`.
-   - The OpenAPI document SHALL declare a document-level `security` requirement (`[{ "Bearer": [] }]`), enabling Scalar's interactive authorization client, auth state indicator, and automatic token header injection (`Authorization: Bearer <token>`).
-
-2. **Concise Operation Summaries & Granular Descriptions Standard**:
-   - All Minimal API endpoints across all route groups SHALL strictly define `.WithSummary(...)` using concise, human-readable 2–5 word titles (e.g. `Get Today Focus`, `Upload PDF Book`, `Generate AI Insight`).
-   - Deep architectural breakdowns, invariants, fallback behaviors, and rate-limiting policies SHALL be defined in `.WithDescription(...)`, ensuring Scalar's navigation sidebar displays clean endpoint titles without unreadable multi-sentence paragraphs.
-
-3. **100% Minimal API Endpoint Tagging & Metadata Coverage**:
-   - Every Minimal API endpoint (including all Library, Notes, and HealthCheck routes) SHALL explicitly define `.WithTags(...)`, `.WithSummary(...)`, and `.WithDescription(...)`.
-   - The `/health` probe SHALL be categorized under `System Diagnostics & Health` with summary `System Health & Database Liveness`.
-
-4. **Clean Legacy Swagger Redirection**:
-   - Requests to `/swagger` and `/swagger/index.html` SHALL redirect to `/scalar/v1` (HTTP 302) and SHALL be excluded from the OpenAPI specification description (`.ExcludeFromDescription()`).
-   - Project documentation (`AGENTS.md`, `README.md`) SHALL reference the Scalar API explorer at `/scalar/v1` and OpenAPI spec at `/openapi/v1.json`.
-
-5. **Automated Frontend Client Contract Generation**:
-   - The project SHALL provide an automated command (`npm run gen:api` in `frontend/package.json`) utilizing `openapi-typescript` that queries `/openapi/v1.json` and outputs strongly typed TypeScript interfaces to `frontend/types/api.generated.ts`.
-
-6. **Typed Success Response Body Schemas**:
-   - Every Minimal API endpoint that returns a payload SHALL declare its success response body schema in the OpenAPI document, so `/openapi/v1.json` and Scalar render the concrete response shape instead of an empty "No Body".
-   - Each endpoint's declared success schema SHALL reference a concrete named response type (a DTO), not an untyped/anonymous object. Endpoints that currently return inline anonymous objects (authentication, notifications, user profile, system AI health, and `/health`) SHALL expose named response DTOs.
-   - Endpoints producing a non-JSON payload (e.g. `text/markdown` file export) SHALL declare the produced content type and status rather than an inferred empty `200`.
-
-7. **Complete Producible Status-Code Documentation with RFC 7807 Errors**:
-   - Every endpoint SHALL document all status codes it can produce, not solely `200`. Success codes SHALL be documented with their body schema; error codes (`400`, `401`, `404`, `409` as applicable) SHALL be documented with the RFC 7807 `application/problem+json` problem-details schema.
-   - Authenticated endpoints (`.RequireAuthorization()`) SHALL document `401 Unauthorized`. Endpoints performing input validation SHALL document `400 Bad Request` (validation problem). Endpoints resolving a resource by identifier SHALL document `404 Not Found`.
-   - Domain and validation error responses returned by endpoints SHALL be emitted as RFC 7807 problem details (carrying the domain error `code`), replacing ad-hoc anonymous `{ code, error }` JSON bodies, so the documented error schema matches the body actually returned.
-
-8. **REST-Correct Runtime Status Codes & Documentation Parity**:
-   - Endpoints that persist a new domain resource and return its representation SHALL respond with `201 Created` (including a `Location` header where a canonical resource URL exists); mutations with no response body SHALL respond with `204 No Content`; reads and commands that return a payload SHALL respond with `200 OK`.
-   - Authentication/session endpoints (register, login, Google sign-in, token refresh) that return a session token payload SHALL respond with `200 OK` and are not treated as REST resource creation.
-   - The set of status codes documented for an operation SHALL equal the set of status codes the handler can actually emit; documented codes and runtime codes SHALL NOT diverge.
-
-9. **Technology-Agnostic Operation Copy**:
-   - Operation summaries and descriptions SHALL use current technology-agnostic domain language and SHALL NOT reference the retired fixed "30-day" curriculum program or a curriculum roadmap operation. The documented surface SHALL NOT include a `GET /api/v1/curriculum/roadmap` operation; roadmap data derives from the user's active `DocumentBook` and its ordered `DocumentChunk` slices.
+1. **Security and authorization:** `/openapi/v1.json` SHALL define `components.securitySchemes.Bearer` and document-level `security: [{ "Bearer": [] }]` so Scalar injects the supplied token.
+2. **Operation copy:** Minimal API summaries SHALL be concise human-readable 2–5 word titles. Detailed behavior, invariants and limits SHALL remain in descriptions. Every endpoint, including Library, Notes and health, SHALL declare tags, summary and description. `/health` SHALL be categorized as System Diagnostics & Health with summary System Health & Database Liveness.
+3. **Legacy documentation URLs:** `/swagger` and `/swagger/index.html` SHALL return HTTP 302 to `/scalar/v1` and remain excluded from OpenAPI. Existing project documentation SHALL reference Scalar and `/openapi/v1.json`.
+4. **Canonical frontend generation:** `npm run gen:api` SHALL use openapi-typescript to query the running backend and output `frontend/app/types/api.generated.ts`, not a second `frontend/types/api.generated.ts`. Generated category contracts SHALL use UUIDs and descriptors.
+5. **Typed bodies:** Every payload-producing endpoint SHALL declare a named concrete success DTO, including authentication, notifications, profile, AI health and health probes. Non-JSON responses such as Markdown export SHALL declare their actual content type/status.
+6. **Error contracts:** All producible statuses SHALL be documented. Authenticated operations include 401, input validation includes 400 and identifier lookup includes 404. Domain/validation failures SHALL use RFC 7807 application/problem+json with a stable code, not anonymous code/error JSON.
+7. **Runtime/documentation parity:** Resource creation returning its representation SHALL use 201 and Location where a canonical URL exists; bodyless mutations 204; payload reads/commands 200. Session endpoints retain 200. Documented and runtime status sets SHALL match.
+8. **Technology-agnostic API:** No operation copy SHALL reference the retired fixed 30-day curriculum; no GET curriculum/roadmap endpoint SHALL appear. Roadmap data continues to derive from owned books and ordered chunks.
 
 #### Scenario: Developer accesses interactive API documentation in development
-- **WHEN** a developer navigates to `/scalar/v1` in the development environment
-- **THEN** the system serves the Scalar API explorer rendered with dark theme (`ScalarTheme.Moon`)
-- **THEN** the sidebar renders clean, concise endpoint titles for all Minimal API endpoints without multi-sentence text wrapping.
+- **WHEN** a developer opens `/scalar/v1` in development
+- **THEN** Scalar uses the Moon dark theme and concise sidebar operation titles without multi-sentence wrapping.
 
 #### Scenario: Developer authorizes API requests via JWT Bearer in Scalar
-- **WHEN** a developer provides a valid JWT token in Scalar's security definition dialog
-- **THEN** subsequent test requests executed from the Scalar UI include the `Authorization: Bearer <token>` header.
+- **WHEN** a valid token is entered in Scalar
+- **THEN** subsequent requests include the Authorization Bearer header.
 
 #### Scenario: Legacy Swagger URL is requested
-- **WHEN** a user or client requests `/swagger` or `/swagger/index.html`
-- **THEN** the server responds with a redirect to `/scalar/v1`
-- **AND** the redirect routes do not appear in the Scalar documentation index.
+- **WHEN** `/swagger` or `/swagger/index.html` is requested
+- **THEN** HTTP 302 redirects to Scalar and the redirect routes are absent from its index.
 
 #### Scenario: Frontend developer generates OpenAPI TypeScript types
-- **WHEN** a developer runs `npm run gen:api` in the `frontend` directory with the backend running
-- **THEN** the CLI queries `http://localhost:5000/openapi/v1.json`
-- **AND** generates a clean TypeScript type definition file at `frontend/types/api.generated.ts` containing all endpoint paths, request bodies, and response schemas.
+- **WHEN** a developer runs `npm run gen:api` from frontend with the backend running
+- **THEN** it queries `http://localhost:5000/openapi/v1.json`
+- **AND** writes all endpoint paths/request/response schemas to `frontend/app/types/api.generated.ts` without a competing generated file.
 
 #### Scenario: Developer inspects an authenticated read operation in Scalar
-- **WHEN** a developer opens an authenticated read operation (e.g. `GET /api/v1/daily/today`) in Scalar
-- **THEN** the operation documents a `200 OK` response whose body schema is the concrete response DTO with its fields
-- **AND** the operation also documents a `401 Unauthorized` response using the RFC 7807 problem-details schema
-- **AND** the response panel is no longer an empty "No Body".
+- **WHEN** an authenticated read is inspected
+- **THEN** its 200 response displays the concrete DTO fields and its 401 response uses problem details rather than an empty No Body panel.
 
 #### Scenario: Developer inspects and calls a resource-creation operation
-- **WHEN** a developer inspects a resource-creation operation that persists a new entity (e.g. `POST /api/v1/insights/generate`, `POST /api/v1/review/cards/from-highlight`, `POST /api/v1/review/cards/from-quiz-mistake`)
-- **THEN** the operation documents a `201 Created` response with the created resource's body schema
-- **AND** invoking the operation at runtime returns HTTP `201`, matching the documented code.
+- **WHEN** a resource-creation operation is inspected and invoked
+- **THEN** documented and runtime responses both use 201 with the concrete created-resource body.
 
 #### Scenario: Endpoint returns a domain error
-- **WHEN** an endpoint returns a domain or validation failure
-- **THEN** the response body is an RFC 7807 `application/problem+json` payload that includes the domain error `code`
-- **AND** the returned status code is one of the codes documented for that operation.
+- **WHEN** a domain or validation error occurs
+- **THEN** its problem+json body contains the domain code and its status is documented for the operation.
 
 #### Scenario: Curriculum roadmap operation copy is technology-agnostic
-- **WHEN** a developer inspects the Scalar explorer and the `/openapi/v1.json` document
-- **THEN** no `GET /api/v1/curriculum/roadmap` operation is present in the API surface
-- **AND** no operation summary or description references a fixed "30-day" curriculum program.
----
+- **WHEN** Scalar and the OpenAPI document are inspected
+- **THEN** no GET curriculum/roadmap operation or fixed 30-day curriculum copy appears.
 
 ### Requirement: Frontend Composable Utilities & DOM Lifecycle Hygiene
 The web frontend SHALL integrate `@vueuse/nuxt` to standardize declarative DOM event listeners, outside-click detection, debounce utilities, asynchronous interval timers, delayed prefetch lookahead timers, and clipboard interactions across Vue components. Components requiring document-level event listeners, outside-click triggers, window resize tracking, global keyboard shortcuts, repeating interval timers, debounced search queries, or delayed lookahead prefetching MUST use VueUse composables (`onClickOutside`, `useEventListener`, `useDebounceFn`, `useIntervalFn`, `useTimeoutFn`, `useClipboard`) rather than manual `document.addEventListener`, `window.addEventListener`, `setInterval`, or `setTimeout` bindings to eliminate memory leaks, timer pollution, and ensure SSR hydration safety. Furthermore, heavy third-party canvas or rendering instances (such as Cytoscape `Core` or Three.js objects) SHALL be wrapped in `shallowRef` rather than deep `ref` to prevent recursive reactive proxying.
@@ -1964,3 +1883,21 @@ The continuous integration workflow for backend services (`.github/workflows/ci.
 #### Scenario: Test Suite Resilience Outside CI Environment
 - **WHEN** backend tests are executed locally without an active PostgreSQL test instance or without `TEST_POSTGRES_CONNECTION`
 - **THEN** tests requiring a live PostgreSQL instance report skipped status gracefully without throwing unhandled `TypeInitializationException` or aborting the test runner process.
+
+### Requirement: Frontend Automated Static Linting & Quality Gates
+The frontend codebase SHALL provide automated linting scripts (`npm run lint` and `npm run lint:fix`) integrated with `@nuxt/eslint` and flat configuration (`eslint.config.mjs`) targeting Nuxt 4, Vue 3.5 Composition API, and TypeScript. The linting rules SHALL enforce Vue template safety rules (`vue/no-v-html`, `vue/no-template-target-blank`), verify component and prop typing, and prevent unused variables while preserving Nuxt auto-imports without false-positive `no-undef` violations.
+
+#### Scenario: Running frontend lint command
+- **WHEN** developer or CI executes `npm run lint` in the `frontend/` directory
+- **THEN** ESLint executes across all `.vue` and `.ts` files and reports any rule violations or passes with exit code 0 when clean.
+
+#### Scenario: Running frontend lint auto-fix command
+- **WHEN** developer executes `npm run lint:fix` in the `frontend/` directory
+- **THEN** ESLint automatically corrects fixable style and formatting violations across `.vue` and `.ts` files.
+
+### Requirement: Stable Pagination DOM Keying Contract
+Shared pagination navigation components (`BasePagination.vue`) rendering mixed sequences of numerical page triggers and ellipsis indicators SHALL assign distinct, stable DOM keys to each rendered item. Keying MUST NOT use raw array indices alone, preventing element state and focus desynchronization across pagination page updates.
+
+#### Scenario: Navigating between page ranges with shifting ellipses
+- **WHEN** user transitions from an initial page range (e.g. `[1, 2, 3, 4, '...', 10]`) to an intermediate page range (e.g. `[1, '...', 5, 6, 7, '...', 10]`)
+- **THEN** numerical page buttons retain keys derived from their page numbers (`page-1`, `page-5`), and ellipsis indicators receive contextual keys distinguishing leading from trailing ellipsis (`ellipsis-start`, `ellipsis-end`), ensuring DOM nodes are cleanly replaced rather than mismatched across re-renders.

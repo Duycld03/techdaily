@@ -6,7 +6,7 @@ Enable administrators to prepare and publish selected documents that authenticat
 ## Requirements
 
 ### Requirement: Administrator draft ingestion
-Administrators SHALL create catalog drafts from uploaded PDFs or web URLs with title, description, category, source language, and optional source attribution. The system SHALL NOT mandate bureaucratic compliance records such as permission basis, permission evidence, or explicit distribution rights checkboxes. The category selection SHALL expose all 7 official DeepPace categories including `MentalModels` and `HabitsProductivity`. Draft processing SHALL preserve source language and use existing upload, extraction, URL validation and sanitization boundaries.
+Administrators SHALL create catalog drafts from uploaded PDFs or web URLs with title, description, an explicitly selected active `categoryId` UUID, source language, and optional source attribution. Category choices SHALL come from shared metadata and include newly created subjects without deployments. The system SHALL NOT mandate permission basis, permission evidence, or distribution-rights checkboxes. Draft processing SHALL preserve source language and existing upload, extraction, URL validation, and sanitization boundaries.
 
 #### Scenario: Administrator uploads a PDF
 - **WHEN** an administrator submits a valid PDF and metadata
@@ -18,28 +18,32 @@ Administrators SHALL create catalog drafts from uploaded PDFs or web URLs with t
 - **THEN** the system extracts and slices the selected article or detected PDF into a catalog draft
 - **AND** redirects and detected PDF targets receive the same SSRF checks as personal imports.
 
-
 #### Scenario: Web draft creation serializes contract payload
 - **WHEN** an administrator submits a web source draft in the catalog administration form
-- **THEN** the client serializes `url` conforming to the backend `AdminImportCatalogUrlApiRequest` schema with `authorOrSourceUrl` mapped to optional attribution
+- **THEN** the client serializes `url`, `categoryId`, and the remaining documented metadata with `authorOrSourceUrl` mapped to optional attribution
 - **AND** the backend accepts the request with HTTP 202 without validation errors.
 
 #### Scenario: Web draft creation without explicit prior extraction preview
 - **WHEN** an administrator enters a URL in the web URL input field and clicks create draft without executing preview extraction first
 - **THEN** the form resolves the target URL from the primary input field and submits successfully without false source URL required errors.
+
 #### Scenario: Invalid input
-- **WHEN** a PDF exceeds existing limits, is invalid, or a URL targets a prohibited address
+- **WHEN** a PDF exceeds existing limits, is invalid, a URL targets a prohibited address, or the category reference is missing or invalid
 - **THEN** processing is rejected with a structured error and no publishable entry is created.
 
 #### Scenario: Admin creates catalog draft with essential metadata only
-- **WHEN** an administrator uploads a PDF or provides a web URL with title, category, and language without filling permission basis or evidence fields
-- **THEN** the system accepts and creates the catalog draft in PostgreSQL without validation errors, defaulting internal compliance tracking cleanly.
+- **WHEN** an administrator uploads a PDF or provides a web URL with title, an active category UUID, and language without filling permission basis or evidence fields
+- **THEN** the system accepts and creates the catalog draft without validation errors, defaulting internal compliance tracking cleanly.
 
 #### Scenario: Admin selects habits or mental models category
-- **WHEN** an administrator selects `HabitsProductivity` (e.g. for *Atomic Habits*) or `MentalModels`
-- **THEN** the catalog draft records category 5 or 6 accurately, aligning with domain enums.
+- **WHEN** an administrator selects the migrated Habits or Mental Models category from current metadata
+- **THEN** the draft records that category's UUID rather than its former ordinal
+- **AND** an administrator-created subject follows the same path.
 
----
+#### Scenario: Existing draft retains an inactive category
+- **WHEN** an administrator edits unrelated metadata on a draft whose category is inactive
+- **THEN** the selector displays and retains the current assignment
+- **AND** changing the assignment requires an active category and deactivation races return `Category.Inactive` without admitting a new assignment.
 
 ### Requirement: Explicit preparation and recovery
 Administrators SHALL see processing progress and errors and explicitly initiate preparation or retry. Publication SHALL require all extracted slices to be readable and the first min(3, slice count) slices successfully formatted. Remaining slices SHALL retain readable source content for existing on-demand curation.
@@ -82,14 +86,15 @@ Administrators SHALL see processing progress and errors and explicitly initiate 
 Catalog entries SHALL support Draft, Published and Hidden visibility. Publication SHALL require prepared readable slices and basic attribution. Publication SHALL NOT require a separate prerequisite administrator review record (`ReviewedByUserId`) or permission compliance proofs; an administrator's direct publish action SHALL constitute explicit review and authorization. Missing requirements SHALL block publication with actionable errors.
 1. **Published Document Immutability & UI Controls**:
 - Documents in `Published` visibility SHALL be treated as immutable in the administration interface.
-- When `visibility === 'Published'`, the document metadata fields (title, category, language, attribution, source URL) and the "Save Changes" action SHALL be disabled / read-only, accompanied by an explanatory notice indicating that the document must be hidden before editing metadata.
-- When `visibility === 'Published'`, the action bar SHALL present the "Hide from Discover" button and SHALL NOT display an active "Publish to Discover" button.
-- When `visibility === 'Draft'` or `visibility === 'Hidden'`, the action bar SHALL display the "Publish to Discover" button (enabled only when publication requirements are satisfied).
+- When `visibility === 'Published'`, the document metadata fields (title, category assignment, language, attribution, source URL) and the Save Changes action SHALL be disabled/read-only, with an explanation that the document must be hidden before editing metadata.
+- When `visibility === 'Published'`, the action bar SHALL present Hide from Discover and SHALL NOT display an active Publish to Discover button.
+- When `visibility === 'Draft'` or `visibility === 'Hidden'`, the action bar SHALL display Publish to Discover, enabled only when publication requirements are satisfied.
+- A shared category rename/order/status change SHALL NOT constitute an edit to a published document, alter its revision, or hide it. Existing admitted drafts SHALL retain preparation/publication eligibility when their category is deactivated; new adoption remains governed separately.
 
 #### Scenario: Viewing a published document in catalog administration
 - **WHEN** an administrator inspects a document with `visibility === 'Published'`
-- **THEN** metadata input fields and the "Save Changes" button are disabled
-- **AND** the action bar displays only the "Hide from Discover" button without showing a duplicate "Publish to Discover" button.
+- **THEN** metadata input fields and Save Changes are disabled
+- **AND** the action bar displays only Hide from Discover without a duplicate Publish to Discover button.
 
 #### Scenario: Publish a prepared draft
 - **WHEN** an administrator confirms review and publishes a ready draft with complete metadata
@@ -103,16 +108,20 @@ Catalog entries SHALL support Draft, Published and Hidden visibility. Publicatio
 - **WHEN** an administrator hides a published entry
 - **THEN** it disappears from learner listing, preview and new adoption
 - **AND** existing personal copies remain usable.
-- **WHEN** the administrator needs to change its source, content or metadata
+- **WHEN** the administrator needs to change its source, content or assigned category
 - **THEN** the entry must be hidden first and reviewed again before republication.
 
 #### Scenario: Admin publishes document directly after slices are prepared
 - **WHEN** a catalog document has its initial slices formatted and the administrator clicks Publish
-- **THEN** the system immediately transitions the document to `Published` visibility without requiring a prior manual review sign-off step.
----
+- **THEN** the system immediately transitions it to Published without requiring a prior manual review sign-off step.
+
+#### Scenario: Global category metadata changes after publication
+- **WHEN** a published document's category is renamed or deactivated
+- **THEN** its published content, attribution, revision, and visibility remain unchanged
+- **AND** the current category name/status is shown without invoking AI or requiring republication.
 
 ### Requirement: Authenticated discovery and bounded preview
-Authenticated learners SHALL browse only published entries using paginated search and category, language and source-type filters. Details SHALL include attribution, description, slice count, reading-time estimate, table of contents and the first slice as a preview. Internal processing errors and permission evidence SHALL remain administrator-only.
+Authenticated learners SHALL browse only published entries using paginated search and category-ID, language and source-type filters. Inactive categories SHALL remain filterable for existing published entries. Details SHALL include current category metadata, attribution, description, slice count, reading-time estimate, table of contents and the first slice as a preview. Internal processing errors and permission evidence SHALL remain administrator-only.
 
 #### Scenario: Filter and browse
 - **WHEN** a learner searches by title or description and selects filters
@@ -128,34 +137,41 @@ Authenticated learners SHALL browse only published entries using paginated searc
 - **THEN** the first slice and table of contents are visible without adding a personal book, changing progress or invoking AI
 - **AND** other full slices are not exposed by the learner catalog API.
 
----
+#### Scenario: Published entry has an inactive category
+- **WHEN** a learner views or filters a published entry whose category was deactivated
+- **THEN** the entry and its bounded preview remain visible with the authentic category label
+- **AND** the interface explains that a new adoption is unavailable until the category is activated, without blocking access to an existing personal copy.
 
 ### Requirement: Atomic and idempotent catalog adoption
-A learner SHALL explicitly add a published document to their library as a prepared personal copy. Adoption SHALL return the owned book identifier, perform no external fetch or AI call, and create at most one active copy per learner and catalog entry. Failures SHALL leave no partial book or slices.
+A learner SHALL explicitly add a published document to their library as a prepared personal copy. New adoption SHALL require the entry's category to be active at admission. Adoption SHALL return the owned book identifier, perform no external fetch or AI call, and create at most one active copy per learner and catalog entry. Failures SHALL leave no partial book or slices.
 
 #### Scenario: First adoption
-- **WHEN** a learner adds a published entry
-- **THEN** a ready personal book and its readable slices are created with new identifiers and source attribution
+- **WHEN** a learner adds a published entry whose category is active
+- **THEN** a ready personal book and readable slices are created with new identifiers, the same category UUID, and source attribution
 - **AND** the response permits immediate reader navigation without extraction waiting.
 
 #### Scenario: Duplicate or concurrent request
 - **WHEN** the learner retries after a lost response or sends concurrent adoption requests
 - **THEN** every successful response identifies the same active personal book
-- **AND** existing progress is unchanged.
+- **AND** existing progress is unchanged
+- **AND** returning an already-owned copy remains idempotent even if its category was subsequently deactivated.
 
 #### Scenario: Hidden during adoption
 - **WHEN** hiding an entry commits before an adoption obtains its publication check
 - **THEN** new adoption is rejected without creating a personal copy.
 
 #### Scenario: Re-add after personal deletion
-- **WHEN** a learner deletes their copy and later adds the still-published entry again
+- **WHEN** a learner deletes their copy and later adds the still-published entry again while its category is active
 - **THEN** a new personal book is created with fresh progress
 - **AND** deleted notes and previous progress are not restored.
 
----
+#### Scenario: Category deactivated before new adoption
+- **WHEN** category deactivation commits before a new adoption is admitted
+- **THEN** adoption returns HTTP 409 `Category.Inactive` with no partial personal copy
+- **AND** an adoption committed before deactivation remains valid.
 
 ### Requirement: Personal snapshot independence
-Adopted content SHALL remain independent of administrator and other learner activity. Adoption SHALL copy document content and prepared learning content only, preserve attribution and source language, and never copy anyone's highlights, notes, drills, review cards, quiz progress, pacers or audio usage records.
+Adopted content SHALL remain independent of administrator and other learner activity. Adoption SHALL copy document and prepared learning content only, preserve attribution/source language and category UUID, and never copy anyone's highlights, notes, drills, cards, quiz progress, pacers or audio usage records. Category display names/status SHALL remain shared metadata rather than frozen content snapshots.
 
 #### Scenario: Two learners adopt one entry
 - **WHEN** one learner edits or deletes their book or creates notes and flashcards
@@ -163,10 +179,13 @@ Adopted content SHALL remain independent of administrator and other learner acti
 
 #### Scenario: Administrator republishes a changed document
 - **WHEN** an administrator updates a hidden entry and republishes it
-- **THEN** existing personal copies are unchanged
+- **THEN** existing personal content and assignments are unchanged
 - **AND** subsequent first-time adoptions receive the currently published content.
 
----
+#### Scenario: Category label changes across independent copies
+- **WHEN** an administrator renames a category shared by a catalog entry and adopted copies
+- **THEN** refreshed views display the new category name everywhere
+- **AND** no personal source text, progress, notes, or assigned category UUID changes.
 
 ### Requirement: Catalog interface states and accessibility
 Discovery and administration SHALL provide English and Vietnamese UI, accessible controls and responsive layouts. Empty, loading, failed, prepared and already-added states SHALL have explicit actions; failures SHALL preserve entered metadata and allow appropriate retry.
@@ -187,23 +206,26 @@ Discovery and administration SHALL provide English and Vietnamese UI, accessible
 ---
 
 ### Requirement: Discover tab advanced filtering and quick categories
-The system SHALL allow learners to discover published catalog documents through search and filtering. The discovery interface SHALL provide quick category pills alongside an Advanced Filter modal supporting category, source type, and language criteria with active filter counters and clear/reset actions.
+Discovery SHALL provide search, an All pill, and a bounded quick subset chosen from shared category ordering, not named subject constants. The accessible Advanced Filter modal SHALL expose all nondeleted categories, including inactive categories, plus source type and language criteria, active filter counts, and clear/reset actions. All category queries SHALL send `categoryId` UUIDs.
 
 #### Scenario: Quick category filtering
 - **WHEN** a learner clicks a quick category pill on the discovery tab
-- **THEN** the catalog list updates immediately with documents matching that category
-- **AND** the active pill is visually highlighted with zero layout shifting.
+- **THEN** the catalog list updates immediately with documents matching that category UUID
+- **AND** the active pill is highlighted with zero layout shifting.
 
 #### Scenario: Opening advanced filter modal
 - **WHEN** a learner clicks the advanced filter button
-- **THEN** a dedicated modal opens displaying all available categories, source types (Web Docs, PDF Books, Markdown), and languages (English, Vietnamese)
-- **AND** the learner can select multiple criteria, reset filters to default, or apply the selection.
+- **THEN** a dedicated modal displays all available categories, source types (Web Docs, PDF Books, Markdown), and languages (English, Vietnamese)
+- **AND** the learner can select multiple criteria, reset filters, or apply the selection.
 
 #### Scenario: Active filter badge count
-- **WHEN** one or more non-default filters are active in the discovery view
-- **THEN** the advanced filter button displays a badge showing the count of active criteria.
+- **WHEN** one or more non-default filters are active in discovery
+- **THEN** the advanced filter button displays the count of active criteria.
 
----
+#### Scenario: New category outside quick filters
+- **WHEN** an administrator creates a subject outside the bounded quick subset
+- **THEN** it is reachable from the advanced filter without a frontend deployment
+- **AND** renamed or inactive category filters retain their UUID identity.
 
 ### Requirement: Document preview and direct reader navigation
 The system SHALL provide a bounded reading preview for published catalog documents without double scrollbars. For documents already present in the learner's personal library, the action SHALL navigate directly to the reader view for that document.
@@ -249,27 +271,26 @@ The catalog administration surface SHALL be partitioned into modular components 
 ---
 
 ### Requirement: Complete bilingual localization of catalog administration
-All user-visible text within the catalog administration interface SHALL use internationalization tokens (`$t` and `t`) resolved against English and Vietnamese locale dictionaries. This includes form labels, placeholders, dropdown filter options, slice review summaries, modal content, and all system toast notifications.
+All user-visible catalog administration text SHALL use English/Vietnamese localization, including form labels, placeholders, dropdowns, review summaries, modals, and toasts.
 1. **Catalog API Error Localization**:
-- All RFC 7807 problem details and domain error codes returned by the Catalog API—including `Catalog.MissingPdfFile`, `Catalog.PublishedImmutable`, `Catalog.NotFound`, `Catalog.Busy`, `Catalog.ConcurrencyConflict`, `Catalog.PublicationIneligible`, `Catalog.PublicationFailed`, and `Catalog.InvalidOperation`—SHALL be translated into natural language through `api_errors` mappings in both `vi.json` and `en.json`.
-- The client error formatter (`useApiError.ts`) SHALL parse dotted error codes to resolve corresponding locale translations, preventing raw HTTP status phrases (e.g. `Bad Request: ...`) from leaking into user toasts.
-2. **Category Enum Normalization**:
-- Category values returned as string enum names (`"SystemDesign"`, `"DatabaseStorage"`, etc.) SHALL be normalized to corresponding category options in `AppSelect`, ensuring the localized category label is displayed rather than falling back to an untranslated placeholder (`"Select option..."`).
+- RFC 7807 codes including `Catalog.MissingPdfFile`, `Catalog.PublishedImmutable`, `Catalog.NotFound`, `Catalog.Busy`, `Catalog.ConcurrencyConflict`, `Catalog.PublicationIneligible`, `Catalog.PublicationFailed`, `Catalog.InvalidOperation`, and category validation/lifecycle errors SHALL have natural-language mappings in both locales.
+- Dotted error codes SHALL resolve to translations rather than raw HTTP status phrases in toasts.
+2. **Category Descriptor Resolution**:
+- Selectors and badges SHALL resolve UUID references using stored `nameEn`/`nameVi`, including the current inactive assignment on existing documents, without enum normalization or bundled category translations.
 3. **AppSelect Default Placeholder Localization**:
-- The default fallback placeholder for `AppSelect.vue` SHALL resolve to localized text (`"Chọn một mục..."` in Vietnamese, `"Select an option..."` in English).
+- The default placeholder SHALL be localized as "Chọn một mục..." in Vietnamese and "Select an option..." in English.
 
 #### Scenario: Administrator views catalog in Vietnamese
-- **WHEN** an administrator switches language to Vietnamese (`vi`)
-- **THEN** all form labels, placeholders, filter options, badges, and feedback toasts render in Vietnamese without English fallbacks or untranslated tokens.
+- **WHEN** an administrator switches to Vietnamese
+- **THEN** labels, placeholders, options, badges, and toasts render in Vietnamese without untranslated tokens.
 
 #### Scenario: Administrator triggers validation or async action
-- **WHEN** an action triggers a toast notification (such as missing title, upload error, metadata save, or publication success)
-- **THEN** the toast message renders in the user's selected language.
+- **WHEN** an action triggers a toast such as missing title, upload error, metadata save, or publication success
+- **THEN** the message renders in the selected language.
 
 #### Scenario: Backend returns Catalog.MissingPdfFile error
-- **WHEN** a catalog operation fails due to missing temporary PDF file
-- **THEN** the resulting toast displays the localized message in Vietnamese (`"Tệp tải lên tạm thời không còn khả dụng. Vui lòng tải lại tệp PDF để chuẩn bị."`) instead of a raw English Bad Request string.
----
+- **WHEN** a catalog operation fails because the temporary PDF is missing
+- **THEN** the toast displays the localized replacement-upload instruction rather than a raw English Bad Request string.
 
 ### Requirement: Responsive typography and layout collision prevention
 Catalog administration views SHALL adhere to DeepPace typography standards. Body text, form input values, and descriptive summaries SHALL be at least `text-sm` (14px) on mobile and `text-base` (16px) on desktop/tablet viewports. Micro-text (`text-xs` / 12px) SHALL be restricted strictly to compact status pills and timestamps. All buttons, badges, and action bars SHALL enforce `whitespace-nowrap shrink-0` and responsive gap spacing.
