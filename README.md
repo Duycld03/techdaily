@@ -139,7 +139,17 @@ DeepPace (Clean Architecture)
 ### Prerequisites
 - [Docker & Docker Compose](https://www.docker.com/) (PostgreSQL 17 + `pgvector`)
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Node.js 22+ & npm](https://nodejs.org/)
+- [Node.js](https://nodejs.org/) matching `.node-version`, with npm declared in `frontend/package.json`
+
+### Frontend Toolchain
+
+Local development, CI, and frontend container builds use the npm version declared in `frontend/package.json`. Select the Node version in `.node-version` first (with fnm: `fnm use --install-if-missing`), then run from the repository root:
+
+```bash
+npm install --global "$(node -p 'require("./frontend/package.json").packageManager')"
+```
+
+`package-lock.json` is npm-generated. Use `npm --prefix frontend install` when updating dependencies and commit the regenerated lockfile; use `npm --prefix frontend ci` for reproducible installs. Do not maintain lockfile metadata by hand.
 
 ### Configure Secrets
 All secrets load from a single gitignored `.env` at the repo root using native .NET `Section__Key` names (double underscore → `Section:Key`). Copy the template and fill in your values before starting:
@@ -165,17 +175,44 @@ Run the fullstack development environment with all services wired:
 
 ## 🧪 Testing & Verification
 
-Run the entire automated test suite:
+### Verification Commands
+
+Run backend tests, frontend tests, linting, auto-fixing, and static type checking:
 
 ```bash
 # Run Backend Unit & Integration Tests
 dotnet test backend/DeepPace.sln
 
-# Run Frontend Component & Store Tests (664 Tests)
+# Run Frontend Behavioral Component & Store Tests
 npm --prefix frontend test
 
-# Total: 1,015 Automated Tests (100% Passing)
+# Run Frontend Static Linting (ESLint 10 + @nuxt/eslint)
+npm --prefix frontend run lint
+
+# Run Frontend Lint Auto-Fix
+npm --prefix frontend run lint:fix
+
+# Run Frontend Nuxt Static Type Checking (vue-tsc against prepared solution references)
+npm --prefix frontend run typecheck
 ```
+
+### Targeted Iteration & CI Policy
+
+- **Targeted Iteration:** To lint specific files without scanning the whole repository, run ESLint directly:
+  ```bash
+  (cd frontend && npm exec --no -- eslint app/pages/library.vue app/stores/useCatalogStore.ts)
+  ```
+  *(Note: Because `frontend/package.json` defines `"lint": "eslint ."`, passing file arguments via `npm run lint -- <files>` retains the root `.` target. Use direct `eslint` invocation during targeted iteration).*
+- **CI Quality Policy:** CI runs direct native `npm run lint` followed by `npm test` and `npm run build`. Lint errors or fatal configuration issues fail CI immediately. CI enforces direct native linting without custom diagnostic-debt wrappers or warning budgets.
+- **Known Typecheck Limitation:** `npm run typecheck` runs `nuxt typecheck --checker vue-tsc` as a standalone verification tool across the prepared Nuxt project references (`app`, `server`, `shared`, `node`). Because existing application-level semantic type debt remains documented and unratcheted, typechecking is maintained as a standalone command and is not currently enforced as a blocking CI gate.
+- **Bilingual UI Dual-Gate Invariant:** For changes touching rendered UI (`.vue` components, layouts, pages, styles), behavioral tests (`npm --prefix frontend test`) must pass, and layout integrity across desktop (1440x900 / 1920x1080) and mobile (390x844) viewports in both English (`en-US`) and Vietnamese (`vi-VN`) must be visually verified. Canonical OpenSpec requirements (`openspec/specs/`) and authentic agent rules (`AGENTS.md`) remain the authoritative standard.
+
+### Unresolved Security & Dependency Handoff
+
+Static analysis and quality gate tooling changes do not remediate operational security findings or patch upstream dependencies:
+- **No Remediation Claim:** Tooling cutovers and lint/typecheck passes do not remediate exposed credentials, rotate production secrets, or patch upstream transitive package advisories.
+- **Operational Boundaries:** Production secret rotation, credential containment, automated dependency vulnerability scanning, and repository branch protection policies require separate authorization and ownership.
+- **No Security or Production Certification:** Passing native lint, tests, or typecheck confirms only static code quality and behavioral assertions; it does not constitute a security certification, compliance audit sign-off, or production deployment approval.
 
 ---
 
@@ -187,7 +224,6 @@ npm --prefix frontend test
 | [**`openspec/changes/`**](openspec/changes/) | Active lifecycle change proposals, delta specs, technical designs, and task checklists. |
 | [**`DeepPace.Api/Endpoints/`**](backend/src/DeepPace.Api/Endpoints/) | Executable Minimal API endpoint contracts with interactive Scalar API Reference at `/scalar/v1`. |
 | [**`DeepPace.Domain/Entities/`**](backend/src/DeepPace.Domain/Entities/) | Executable domain models, EF Core migrations, and pgvector schema definitions. |
-
 ---
 
 ## 🚢 VPS Production Deployment & Database Migration

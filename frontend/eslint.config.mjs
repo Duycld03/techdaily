@@ -1,15 +1,17 @@
 // @env node
+import globals from 'globals'
 import withNuxt from './.nuxt/eslint.config.mjs'
 
-export default withNuxt(
+const config = withNuxt(
   {
     ignores: [
-      'e2e/**',
-      'public/**',
       '.nuxt/**',
       '.output/**',
       'dist/**',
-      '**/*.d.ts'
+      '**/*.d.ts',
+      'app/types/api.generated.ts',
+      'e2e/screenshots/**',
+      '**/screenshots/**'
     ]
   },
   {
@@ -48,5 +50,35 @@ export default withNuxt(
       '@typescript-eslint/no-this-alias': 'off',
       'no-console': 'off'
     }
+  },
+  {
+    files: ['e2e/**/*', 'scripts/**/*'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.browser
+      }
+    },
+    rules: {
+      'no-console': 'off'
+    }
+  },
+  {
+    files: ['public/sw.js'],
+    languageOptions: {
+      globals: {
+        ...globals.serviceworker
+      }
+    }
   }
 )
+
+config.onResolved((configs) => {
+  for (const c of configs) {
+    if (c.ignores && c.ignores.includes('**/public')) {
+      c.ignores = c.ignores.filter(i => i !== '**/public')
+    }
+  }
+})
+
+export default config

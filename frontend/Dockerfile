@@ -1,11 +1,9 @@
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 ENV ONNXRUNTIME_NODE_INSTALL=skip
-RUN npm install -g npm@11
-
-
 COPY package*.json ./
-RUN npm ci --ignore-scripts
+RUN npm install --global "$(node -p 'require("./package.json").packageManager')" \
+    && npm ci --ignore-scripts
 
 COPY . .
 RUN npm run build

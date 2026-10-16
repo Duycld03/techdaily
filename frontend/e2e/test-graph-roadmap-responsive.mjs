@@ -23,8 +23,8 @@ async function runResponsiveSmokeSuite() {
   console.log(`🎯 Target URL: ${targetBaseUrl}`)
   console.log(`📸 Screenshot Export: ${shouldTakeScreenshots ? 'ENABLED (' + screenshotsDir + ')' : 'DISABLED'}\n`)
   const isNoAuth = process.env.NO_AUTH === 'true'
-  let authToken = isNoAuth ? null : (process.env.AUTH_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiJmYzg0NmIwZC1iMzFjLTQxZjMtYTNjYi00NzI4NDc3NDkxNzgiLCJlbWFpbCI6InRydW9uZ2R1eTIwMDNAZ21haWwuY29tIiwidW5pcXVlX25hbWUiOiJEdXkgbmd1eeG7hW4iLCJuYmYiOjE3ODk3MzQ1ODAsImV4cCI6MTc5MjMyNjU4MCwiaWF0IjoxNzg5NzM0NTgwLCJpc3MiOiJUZWNoRGFpbHkiLCJhdWQiOiJUZWNoRGFpbHlVc2VycyJ9.o7upTrPV62CKhXS7of1oD443T41Nc_pRqRsFKn5bkH4')
-  let authUser = isNoAuth ? null : (process.env.AUTH_USER || JSON.stringify({
+  const authToken = isNoAuth ? null : (process.env.AUTH_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiJmYzg0NmIwZC1iMzFjLTQxZjMtYTNjYi00NzI4NDc3NDkxNzgiLCJlbWFpbCI6InRydW9uZ2R1eTIwMDNAZ21haWwuY29tIiwidW5pcXVlX25hbWUiOiJEdXkgbmd1eeG7hW4iLCJuYmYiOjE3ODk3MzQ1ODAsImV4cCI6MTc5MjMyNjU4MCwiaWF0IjoxNzg5NzM0NTgwLCJpc3MiOiJUZWNoRGFpbHkiLCJhdWQiOiJUZWNoRGFpbHlVc2VycyJ9.o7upTrPV62CKhXS7of1oD443T41Nc_pRqRsFKn5bkH4')
+  const authUser = isNoAuth ? null : (process.env.AUTH_USER || JSON.stringify({
     id: 'fc846b0d-b31c-41f3-a3cb-472847749178',
     email: 'truongduy2003@gmail.com',
     name: 'Duy nguyễn',
@@ -92,7 +92,9 @@ async function runResponsiveSmokeSuite() {
         try {
           localStorage.setItem('deeppace_token', token)
           localStorage.setItem('deeppace_user', user)
-        } catch {}
+        } catch {
+          // ignore storage errors in initial test script
+        }
       }, { token: authToken, user: authUser })
       const page = await context.newPage()
 
@@ -129,20 +131,20 @@ async function runResponsiveSmokeSuite() {
       }
 
       // Check Visual Legend exists
-      const legend = page.locator('[data-testid=\"legend-card\"], [data-testid=\"legend-expand-btn\"]')
+      const legend = page.locator('[data-testid="legend-card"], [data-testid="legend-expand-btn"]')
       assert(await legend.first().isVisible(), 'Visual Legend widget is visible at bottom-left')
 
       // Expand legend if collapsed so screenshots capture the expanded card
-      const expandBtn = page.locator('[data-testid=\"legend-expand-btn\"]')
+      const expandBtn = page.locator('[data-testid="legend-expand-btn"]')
       if (await expandBtn.isVisible()) {
         await expandBtn.click()
         await page.waitForTimeout(300)
       }
 
-      const legendCard = page.locator('[data-testid=\"legend-card\"]')
+      const legendCard = page.locator('[data-testid="legend-card"]')
       if (await legendCard.isVisible()) {
         const legendBox = await legendCard.boundingBox()
-        const minimap = page.locator('div:has(> canvas[title*=\"pan viewport\"])')
+        const minimap = page.locator('div:has(> canvas[title*="pan viewport"])')
         if (await minimap.isVisible() && legendBox) {
           const minimapBox = await minimap.boundingBox()
           if (minimapBox) {
