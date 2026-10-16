@@ -57,7 +57,7 @@ const parsedBenchmarkStats = computed<string[]>(() => {
   if (!raw) return []
   return raw
     .split('|')
-    .map(item => item.trim().replace(/^[\s⚡🔥🚀]+/, '').trim())
+    .map(item => item.replace(/^[\p{Extended_Pictographic}\p{Emoji}\s]+/u, '').trim())
     .filter(item => item.length > 0)
 })
 

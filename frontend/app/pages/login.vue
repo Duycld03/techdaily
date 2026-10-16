@@ -187,7 +187,9 @@ function initGoogleAuth() {
         auto_select: false,
         cancel_on_tap_outside: true
       })
-    } catch {}
+    } catch (err) {
+      console.warn('Google Identity initialization failed:', err)
+    }
   }
 }
 
@@ -221,7 +223,9 @@ function triggerGoogleSignIn() {
     try {
       google.accounts.id.prompt()
       return
-    } catch {}
+    } catch (err) {
+      console.warn('Google One Tap prompt failed to display:', err)
+    }
   }
 
   toast.info(t('auth.toast_google_failed'))

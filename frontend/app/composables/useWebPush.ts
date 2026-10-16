@@ -91,7 +91,7 @@ export function useWebPush() {
           isBrave
         ) {
           error.value = 'settings.brave_push_service_blocked'
-          throw new Error('settings.brave_push_service_blocked')
+          throw new Error('settings.brave_push_service_blocked', { cause: err })
         }
         throw err
       }

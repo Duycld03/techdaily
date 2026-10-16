@@ -124,11 +124,18 @@ function goToPage(page: number | string) {
   emit('update:currentPage', page)
   emit('change', page)
 }
+function getPageKey(page: number | string, idx: number): string {
+  if (typeof page === 'number') {
+    return `page-${page}`
+  }
+  return idx === 1 ? 'ellipsis-start' : 'ellipsis-end'
+}
 
 defineExpose({
   visiblePages,
   summaryText,
-  goToPage
+  goToPage,
+  getPageKey
 })
 </script>
 
@@ -166,7 +173,7 @@ defineExpose({
       </button>
 
       <!-- Page Numbers & Ellipses -->
-      <template v-for="(page, idx) in visiblePages" :key="idx">
+      <template v-for="(page, idx) in visiblePages" :key="getPageKey(page, idx)">
         <button
           v-if="typeof page === 'number'"
           type="button"

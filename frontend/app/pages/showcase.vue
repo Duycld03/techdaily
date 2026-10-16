@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Component, Inbox, WifiOff } from 'lucide-vue-next'
+import { Component as ComponentIcon, Inbox, WifiOff } from 'lucide-vue-next'
 import ShowcaseSection from '~/components/showcase/ShowcaseSection.vue'
 import PrimitivesShowcase from '~/components/showcase/PrimitivesShowcase.vue'
 import PaginationShowcase from '~/components/showcase/PaginationShowcase.vue'
@@ -79,7 +79,7 @@ function onToolbarAction(action: string) {
       <div class="flex items-center gap-3">
         <!-- 40x40 Icon Badge -->
         <div class="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 flex items-center justify-center shrink-0 shadow-sm">
-          <Component class="w-5 h-5 sm:w-6 sm:h-6" :stroke-width="1.5" />
+          <ComponentIcon class="w-5 h-5 sm:w-6 sm:h-6" :stroke-width="1.5" />
         </div>
         <div class="space-y-0.5">
           <div class="flex items-center gap-2">

@@ -223,4 +223,33 @@ describe('BasePagination.vue', () => {
 
     expect(wrapper.text()).toContain('Showing 13–24 of 42')
   })
+
+  it('generates stable and unique keys for pages and ellipses via getPageKey', () => {
+    const wrapper = mount(BasePagination, {
+      props: {
+        currentPage: 5,
+        totalPages: 10
+      }
+    })
+
+    const vm = wrapper.vm as unknown as {
+      visiblePages: (number | string)[]
+      getPageKey: (page: number | string, idx: number) => string
+    }
+
+    const keys = vm.visiblePages.map((p, idx) => vm.getPageKey(p, idx))
+    expect(keys).toEqual([
+      'page-1',
+      'ellipsis-start',
+      'page-4',
+      'page-5',
+      'page-6',
+      'ellipsis-end',
+      'page-10'
+    ])
+
+    // Verify all keys are strictly unique
+    const uniqueKeys = new Set(keys)
+    expect(uniqueKeys.size).toBe(keys.length)
+  })
 })

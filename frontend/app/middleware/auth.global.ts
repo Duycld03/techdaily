@@ -42,7 +42,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // Always initialize store state from cookies and local storage
   authStore.init()
   const normalizedPath = normalizeRoutePath(to.path)
-  const isServer = Boolean(import.meta.server || (typeof process !== 'undefined' && 'server' in process && process.server))
+  const proc: unknown = typeof process !== 'undefined' ? process : undefined
+  const isServer = Boolean(
+    import.meta.server ||
+    (proc && typeof proc === 'object' && 'server' in proc && Boolean(proc.server))
+  )
 
   if (isAdminRoute(normalizedPath)) {
     const access = useAdminAccessStore()

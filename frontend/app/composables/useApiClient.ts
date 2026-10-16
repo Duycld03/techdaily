@@ -67,7 +67,11 @@ function parseJwtExp(jwt: string): number | null {
 export function useApiClient() {
   const config = useRuntimeConfig()
   const auth = useAuthStore()
-  const isServer = Boolean(import.meta.server || (typeof process !== 'undefined' && 'server' in process && process.server))
+  const proc: unknown = typeof process !== 'undefined' ? process : undefined
+  const isServer = Boolean(
+    import.meta.server ||
+    (proc && typeof proc === 'object' && 'server' in proc && Boolean(proc.server))
+  )
   const baseUrl = (isServer ? process.env.API_INTERNAL_URL : '') || (config?.public?.apiBaseUrl as string | undefined)?.trim() || ''
   let translate: ((key: string) => string) | null = null
   try { translate = useNuxtApp().$i18n.t } catch {

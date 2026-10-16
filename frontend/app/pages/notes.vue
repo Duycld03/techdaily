@@ -575,7 +575,6 @@ async function confirmDeleteHighlight() {
         </template>
       </BoardLayout>
     </div>
-  </div>
     <!-- Dual-Mode Detail & Edit Note Modal -->
     <AppModal
       :open="isModalOpen"
@@ -832,4 +831,5 @@ async function confirmDeleteHighlight() {
         </div>
       </div>
     </Teleport>
+  </div>
 </template>
