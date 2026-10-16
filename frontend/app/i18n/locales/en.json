@@ -1,4 +1,11 @@
 {
+  "categories": {
+    "selectCategory": "Select a category",
+    "inactive": "Inactive",
+    "metadataUnavailable": "Categories could not be loaded. Your entries are preserved. Please try again.",
+    "noActiveCategories": "No active categories are available. An administrator must create or activate a category before you can continue.",
+    "retry": "Retry"
+  },
   "nav": {
     "group_practice": "Practice",
     "group_knowledge": "Knowledge",
@@ -225,6 +232,7 @@
     "error_switch_failed": "Failed to switch active document."
   },
   "review": {
+    "unclassified": "Unclassified",
     "atrisk_title": "At-Risk Cards",
     "atrisk_desc": "Slipping from memory",
     "atrisk_overdue": "Overdue",
@@ -1238,6 +1246,7 @@
     "google_sign_in_with": "Sign in with Google"
   },
   "quiz": {
+    "all_levels": "All levels",
     "title": "Reflex Practice",
     "subtitle": "AI scenario drill & spaced mastery",
     "tab_generate": "Create",
@@ -1295,6 +1304,9 @@
     "grounded_desc": "Generate scenario questions strictly using the active book's concepts",
     "select_book": "Select Book:",
     "any_book_in_library": "Any Book in Library (Auto-match)",
+    "source_loading": "Loading the selected source document...",
+    "source_unavailable": "The selected source document could not be loaded.",
+    "retry_source": "Retry source document",
     "rate_limit_error": "Rate limit reached. Please wait before generating another quiz.",
     "btn_push_sm2": "Push to SM-2 Deck",
     "btn_pushed_sm2": "Added to SM-2",
@@ -1364,6 +1376,12 @@
     "Crawler": {
       "Failed": "Failed to extract content from this web URL.",
       "NoContent": "No readable technical content could be extracted from this URL."
+    },
+    "Category": {
+      "SlugConflict": "A category with this slug already exists.",
+      "InUse": "Cannot delete category in use by documents or learning content.",
+      "Inactive": "Category is inactive and cannot be assigned to new content.",
+      "ConcurrencyConflict": "Category was modified by another administrator. Please reload and verify before retrying."
     }
   },
   "common": {
@@ -1432,6 +1450,8 @@
       "admin": "Admin",
       "title": "Administrator navigation",
       "dashboard": "Dashboard",
+      "catalog": "Catalog",
+      "categories": "Categories",
       "documents": "Documents",
       "operations": "Operations",
       "users": "Accounts",
@@ -1567,7 +1587,88 @@
       "ManageAccounts": "Manage Accounts",
       "ReadAudit": "Read Audit Log",
       "ManageDocumentOperations": "Manage Documents",
-      "ManageRoles": "Manage Roles"
+      "ManageRoles": "Manage Roles",
+      "ManageCategories": "Manage Categories"
+    },
+    "audit": {
+      "actions": {
+        "Category.Create": "Create Category",
+        "Category.UpdateMetadata": "Update Category Metadata",
+        "Category.Reorder": "Reorder Category",
+        "Category.Activate": "Activate Category",
+        "Category.Deactivate": "Deactivate Category",
+        "Category.Delete": "Delete Category"
+      }
+    },
+    "categories": {
+      "title": "Categories",
+      "description": "Manage shared learning document categories across the platform.",
+      "manage": "Manage Categories",
+      "newCategory": "New Category",
+      "create": "Create Category",
+      "edit": "Edit Category",
+      "save": "Save Changes",
+      "cancel": "Cancel",
+      "refresh": "Refresh",
+      "loading": "Loading categories...",
+      "empty": "No categories found.",
+      "conflict": {
+        "currentVersion": "Current server values (version {version})",
+        "confirmDraft": "I have reviewed the current values. Save my draft using this version.",
+        "reloadFailed": "Could not refresh the category. Your draft is preserved; try again."
+      },
+      "columns": {
+        "sortOrder": "Sort Order",
+        "slug": "Slug",
+        "nameEn": "English Name",
+        "nameVi": "Vietnamese Name",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "fields": {
+        "slug": "Slug",
+        "slugPlaceholder": "e.g. distributed-systems",
+        "slugHelp": "Unique URL-safe identifier (lowercase letters, digits, single hyphens). Immutable once created.",
+        "nameEn": "English Name",
+        "nameEnPlaceholder": "Category name in English",
+        "nameVi": "Vietnamese Name",
+        "nameViPlaceholder": "Category name in Vietnamese",
+        "sortOrder": "Sort Order",
+        "sortOrderHelp": "Display order integer between 0 and 10000.",
+        "status": "Status"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "actions": {
+        "create": "Create Category",
+        "edit": "Edit",
+        "activate": "Activate",
+        "deactivate": "Deactivate",
+        "delete": "Delete"
+      },
+      "modals": {
+        "deactivateTitle": "Deactivate Category",
+        "deactivateConfirm": "Are you sure you want to deactivate \"{name}\"? Existing documents will retain this category, but it cannot be assigned to new documents or learning content.",
+        "deleteTitle": "Delete Category",
+        "deleteConfirm": "Are you sure you want to permanently delete \"{name}\"? This action cannot be undone.",
+        "deleteWarning": "Warning: Cannot delete a category that is currently in use by documents or learning content."
+      },
+      "errors": {
+        "Category.SlugConflict": "A category with this slug already exists.",
+        "Category.InUse": "Cannot delete category in use by documents or learning content.",
+        "Category.Inactive": "Category is inactive and cannot be assigned to new content.",
+        "Category.ConcurrencyConflict": "Category was modified by another administrator. Please reload and verify before retrying.",
+        "slugConflict": "A category with this slug already exists.",
+        "inUse": "Cannot delete category in use by documents or learning content.",
+        "inactive": "Category is inactive and cannot be assigned to new content.",
+        "concurrencyConflict": "Category was modified by another administrator. Please reload and verify before retrying."
+      },
+      "Category.SlugConflict": "A category with this slug already exists.",
+      "Category.InUse": "Cannot delete category in use by documents or learning content.",
+      "Category.Inactive": "Category is inactive and cannot be assigned to new content.",
+      "Category.ConcurrencyConflict": "Category was modified by another administrator. Please reload and verify before retrying."
     }
   }
 ,
@@ -1623,6 +1724,14 @@
   },
   "admin_audit": {
     "title": "Administration log",
+    "actions": {
+      "Category.Create": "Create Category",
+      "Category.UpdateMetadata": "Update Category Metadata",
+      "Category.Reorder": "Reorder Category",
+      "Category.Activate": "Activate Category",
+      "Category.Deactivate": "Deactivate Category",
+      "Category.Delete": "Delete Category"
+    },
     "refresh": "Refresh",
     "filter_action": "Filter action...",
     "filter_outcome_all": "All outcomes",

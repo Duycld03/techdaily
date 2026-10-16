@@ -32,21 +32,6 @@ internal static class ConfigurationHelpers
         }
     }
 
-    public static Category ParseCategory(string? v)
-    {
-        if (string.Equals(v, "BackendDotNet", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(v, "DotNet", StringComparison.OrdinalIgnoreCase))
-        {
-            return Category.BackendRuntime;
-        }
-
-        return Enum.TryParse<Category>(v, true, out var cat) ? cat : Category.BackendRuntime;
-    }
-
-    public static readonly ValueConverter<Category, string> CategoryStringConverter = new(
-        v => v.ToString(),
-        v => ParseCategory(v)
-    );
 }
 
 public class UserConfiguration : IEntityTypeConfiguration<User>
@@ -142,7 +127,10 @@ public class DocumentBookConfiguration : IEntityTypeConfiguration<DocumentBook>
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");
         builder.Property(b => b.SourceType).HasConversion<string>().HasMaxLength(50).IsRequired();
-        builder.Property(b => b.Category).HasConversion(ConfigurationHelpers.CategoryStringConverter).HasMaxLength(50).IsRequired();
+        builder.Property(b => b.CategoryId).IsRequired();
+        builder.HasOne(b => b.Category).WithMany().HasForeignKey(b => b.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(b => b.Category).AutoInclude();
+        builder.HasIndex(b => b.CategoryId);
 
         builder.Property(b => b.IsFeatured).HasDefaultValue(false);
         builder.HasIndex(b => b.IsFeatured);
@@ -346,7 +334,7 @@ public class TermExplanationCacheConfiguration : IEntityTypeConfiguration<TermEx
     {
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Term).HasMaxLength(200).IsRequired();
-        builder.Property(t => t.Category).HasMaxLength(255).IsRequired();
+        builder.Property(t => t.ContextLabel).HasMaxLength(255).IsRequired();
         builder.Property(t => t.Locale).HasMaxLength(10).HasDefaultValue("en");
         builder.Property(t => t.ExplanationText).IsRequired();
         builder.Property(t => t.HitCount).HasDefaultValue(1);
@@ -365,7 +353,9 @@ public class TechInsightConfiguration : IEntityTypeConfiguration<TechInsight>
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");
         builder.Property(t => t.Title).HasMaxLength(255).IsRequired();
-        builder.Property(t => t.Category).IsRequired();
+        builder.Property(t => t.CategoryId).IsRequired();
+        builder.HasOne(t => t.Category).WithMany().HasForeignKey(t => t.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(t => t.Category).AutoInclude();
         builder.Property(t => t.SummaryMarkdown).IsRequired();
         builder.Property(t => t.ProblemSnippet).IsRequired();
         builder.Property(t => t.SolutionSnippet).IsRequired();
@@ -381,7 +371,7 @@ public class TechInsightConfiguration : IEntityTypeConfiguration<TechInsight>
                 v => ConfigurationHelpers.DeserializeStringList(v))
             .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
 
-        builder.HasIndex(t => new { t.Category, t.IsPublished });
+        builder.HasIndex(t => new { t.CategoryId, t.IsPublished });
     }
 }
 
@@ -414,7 +404,9 @@ public class QuizQuestionConfiguration : IEntityTypeConfiguration<QuizQuestion>
         builder.ToTable("QuizQuestions");
         builder.HasKey(q => q.Id);
         builder.Property(q => q.Topic).HasMaxLength(255).IsRequired();
-        builder.Property(q => q.Category).IsRequired();
+        builder.Property(q => q.CategoryId).IsRequired();
+        builder.HasOne(q => q.Category).WithMany().HasForeignKey(q => q.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(q => q.Category).AutoInclude();
         builder.Property(q => q.Level).IsRequired();
         builder.Property(q => q.QuestionText).IsRequired();
         builder.Property(q => q.CorrectOptionIndex).HasDefaultValue(0);
@@ -433,7 +425,7 @@ public class QuizQuestionConfiguration : IEntityTypeConfiguration<QuizQuestion>
             .Metadata.SetValueComparer(ConfigurationHelpers.StringListComparer);
 
         builder.HasIndex(q => new { q.Topic, q.Level });
-        builder.HasIndex(q => new { q.Category, q.Level });
+        builder.HasIndex(q => new { q.CategoryId, q.Level });
 
         builder.HasOne(q => q.CreatedByUser)
             .WithMany()
@@ -570,7 +562,10 @@ public class CatalogDocumentConfiguration : IEntityTypeConfiguration<CatalogDocu
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Title).HasMaxLength(255).IsRequired();
         builder.Property(c => c.Description).IsRequired();
-        builder.Property(c => c.Category).HasConversion(ConfigurationHelpers.CategoryStringConverter).HasMaxLength(50).IsRequired();
+        builder.Property(c => c.CategoryId).IsRequired();
+        builder.HasOne(c => c.Category).WithMany().HasForeignKey(c => c.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        builder.Navigation(c => c.Category).AutoInclude();
+        builder.HasIndex(c => c.CategoryId);
         builder.Property(c => c.Language).HasMaxLength(10).HasDefaultValue("en").IsRequired();
         builder.Property(c => c.SourceType).HasConversion<string>().HasMaxLength(50).IsRequired();
         builder.Property(c => c.AuthorOrSourceUrl).HasMaxLength(1000);
@@ -786,7 +781,8 @@ public class RolePermissionConfiguration : IEntityTypeConfiguration<RolePermissi
             new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ManageAccounts },
             new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ReadAudit },
             new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ManageDocumentOperations },
-            new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ManageRoles }
+            new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ManageRoles },
+            new { RoleId = RoleDefaults.AdminRoleId, PermissionKey = PermissionKeys.ManageCategories }
         );
     }
 }
@@ -806,5 +802,119 @@ public class AuthorizationInitializationConfiguration : IEntityTypeConfiguration
                     : JsonSerializer.Deserialize<List<Guid>>(v, (JsonSerializerOptions)null!) ?? new List<Guid>())
             .HasColumnType("text")
             .IsRequired();
+    }
+}
+
+public class DocumentCategoryConfiguration : IEntityTypeConfiguration<DocumentCategory>
+{
+    public void Configure(EntityTypeBuilder<DocumentCategory> builder)
+    {
+        builder.ToTable("DocumentCategories", t =>
+        {
+            t.HasCheckConstraint("CK_DocumentCategories_SortOrder", "\"SortOrder\" >= 0 AND \"SortOrder\" <= 10000");
+            t.HasCheckConstraint("CK_DocumentCategories_ConcurrencyVersion", "\"ConcurrencyVersion\" > 0");
+        });
+
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Slug).HasMaxLength(100).IsRequired();
+        builder.HasIndex(c => c.Slug)
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
+
+        builder.Property(c => c.NameEn).HasMaxLength(100).IsRequired();
+        builder.Property(c => c.NameVi).HasMaxLength(100).IsRequired();
+        builder.Property(c => c.SortOrder).HasDefaultValue(0).IsRequired();
+        builder.Property(c => c.IsActive).HasDefaultValue(true).IsRequired();
+        builder.Property(c => c.ConcurrencyVersion).HasDefaultValue(1).IsConcurrencyToken().IsRequired();
+
+        builder.HasIndex(c => new { c.IsActive, c.SortOrder, c.Slug });
+
+        var seedCreatedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        builder.HasData(
+            new
+            {
+                Id = CategoryDefaults.FrontendWebId,
+                Slug = CategoryDefaults.FrontendWebSlug,
+                NameEn = "Frontend & Web",
+                NameVi = "Frontend & Web",
+                SortOrder = 0,
+                IsActive = true,
+                ConcurrencyVersion = 1,
+                CreatedAt = seedCreatedAt,
+                IsDeleted = false
+            },
+            new
+            {
+                Id = CategoryDefaults.BackendRuntimeId,
+                Slug = CategoryDefaults.BackendRuntimeSlug,
+                NameEn = "Backend & Runtime",
+                NameVi = "Backend & Runtime",
+                SortOrder = 1,
+                IsActive = true,
+                ConcurrencyVersion = 1,
+                CreatedAt = seedCreatedAt,
+                IsDeleted = false
+            },
+            new
+            {
+                Id = CategoryDefaults.DatabaseStorageId,
+                Slug = CategoryDefaults.DatabaseStorageSlug,
+                NameEn = "Database & Storage",
+                NameVi = "Cơ Sở Dữ Liệu & Lưu Trữ",
+                SortOrder = 2,
+                IsActive = true,
+                ConcurrencyVersion = 1,
+                CreatedAt = seedCreatedAt,
+                IsDeleted = false
+            },
+            new
+            {
+                Id = CategoryDefaults.SystemDesignId,
+                Slug = CategoryDefaults.SystemDesignSlug,
+                NameEn = "Distributed Systems",
+                NameVi = "Hệ Thống Phân Tán",
+                SortOrder = 3,
+                IsActive = true,
+                ConcurrencyVersion = 1,
+                CreatedAt = seedCreatedAt,
+                IsDeleted = false
+            },
+            new
+            {
+                Id = CategoryDefaults.EngineeringCraftId,
+                Slug = CategoryDefaults.EngineeringCraftSlug,
+                NameEn = "Clean Code & Software Design",
+                NameVi = "Mã Sạch & Thiết Kế Phần Mềm",
+                SortOrder = 4,
+                IsActive = true,
+                ConcurrencyVersion = 1,
+                CreatedAt = seedCreatedAt,
+                IsDeleted = false
+            },
+            new
+            {
+                Id = CategoryDefaults.MentalModelsId,
+                Slug = CategoryDefaults.MentalModelsSlug,
+                NameEn = "Mental Models & Decisions",
+                NameVi = "Mô Hình Tư Duy & Quyết Định",
+                SortOrder = 5,
+                IsActive = true,
+                ConcurrencyVersion = 1,
+                CreatedAt = seedCreatedAt,
+                IsDeleted = false
+            },
+            new
+            {
+                Id = CategoryDefaults.HabitsProductivityId,
+                Slug = CategoryDefaults.HabitsProductivitySlug,
+                NameEn = "Habits & Deep Work",
+                NameVi = "Thói Quen & Tập Trung Sâu",
+                SortOrder = 6,
+                IsActive = true,
+                ConcurrencyVersion = 1,
+                CreatedAt = seedCreatedAt,
+                IsDeleted = false
+            }
+        );
     }
 }

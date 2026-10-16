@@ -13,10 +13,12 @@ import GraphCanvas from '~/components/graph/GraphCanvas.vue'
 import GraphControlBar from '~/components/graph/GraphControlBar.vue'
 import GraphMinimap from '~/components/graph/GraphMinimap.vue'
 import GraphDetailDrawer from '~/components/graph/GraphDetailDrawer.vue'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 
 const GraphCanvas3D = defineAsyncComponent(() => import('~/components/graph/GraphCanvas3D.vue'))
 
 const store = useKnowledgeGraphStore()
+const categoryStore = useCategoryStore()
 const canvasRef = ref<InstanceType<typeof GraphCanvas> | null>(null)
 const canvas3DRef = ref<{ fitScreen: () => void } | null>(null)
 const cyInstance = shallowRef<Core | null>(null)
@@ -34,6 +36,7 @@ function handleFitScreen() {
 }
 
 onMounted(() => {
+  categoryStore.ensureCategories()
   store.fetchGraph()
 })
 </script>

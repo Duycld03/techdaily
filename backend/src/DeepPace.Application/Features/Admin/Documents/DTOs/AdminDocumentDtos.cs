@@ -1,3 +1,5 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
+
 namespace DeepPace.Application.Features.Admin.Documents.DTOs;
 
 public record AdminDocumentInventoryItemDto(
@@ -8,7 +10,8 @@ public record AdminDocumentInventoryItemDto(
     string? OwnerName,
     string? OwnerEmail,
     string SourceType,
-    string Category,
+    Guid CategoryId,
+    CategoryDescriptorDto Category,
     string Language,
     string Status,
     string SourceAvailability,
@@ -23,7 +26,8 @@ public record AdminDocumentDetailDto(
     string? OwnerName,
     string? OwnerEmail,
     string SourceType,
-    string Category,
+    Guid CategoryId,
+    CategoryDescriptorDto Category,
     string Language,
     string Status,
     string SourceAvailability,
@@ -57,7 +61,7 @@ public record AdminDocumentInventoryQuery(
     string? Scope = null,
     Guid? OwnerId = null,
     string? SourceType = null,
-    string? Category = null,
+    Guid? CategoryId = null,
     string? Language = null,
     string? Status = null,
     int Page = 1,

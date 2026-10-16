@@ -114,12 +114,13 @@ async function runResponsiveSmokeSuite() {
       }
 
       // Check category filter pills are present
-      const categoryPills = page.locator('div.flex.flex-wrap button.whitespace-nowrap.shrink-0')
+      const categoryPills = page.locator('[data-testid^="graph-category-"]')
       const pillCount = await categoryPills.count()
-      assert(pillCount >= 6, `Found ${pillCount} category filter pills (>=6)`)
+      assert(await page.locator('[data-testid="graph-category-all"]').isVisible(), 'All-categories filter is available')
+      assert(pillCount >= 1, `Found ${pillCount} dynamic category filter pills`)
 
       // Verify no horizontal overflow beyond viewport on pills
-      for (let i = 0; i < Math.min(pillCount, 6); i++) {
+      for (let i = 0; i < pillCount; i++) {
         const box = await categoryPills.nth(i).boundingBox()
         if (box) {
           const isWithinViewport = box.x + box.width <= vp.width + 10 // small tolerance

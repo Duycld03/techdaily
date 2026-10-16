@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using DeepPace.Api.Http;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Insights.DTOs;
-using DeepPace.Domain.Enums;
 
 namespace DeepPace.Api.Endpoints;
 
@@ -16,9 +15,12 @@ public static class InsightsEndpoints
         // Dynamic Insights Metadata & Topic Inspirations
         group.MapGet("/meta", async (
             IUseCase<GetInsightsMetaRequest, GetInsightsMetaResponse> handler,
+            ClaimsPrincipal userClaims,
             CancellationToken ct) =>
         {
-            var result = await handler.ExecuteAsync(new GetInsightsMetaRequest(), ct);
+            var userId = GetUserIdFromClaims(userClaims);
+            if (!userId.HasValue) return Results.Unauthorized();
+            var result = await handler.ExecuteAsync(new GetInsightsMetaRequest(userId.Value), ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
                 : result.Error.ToProblem(StatusCodes.Status400BadRequest);
@@ -32,7 +34,7 @@ public static class InsightsEndpoints
 
         // Authenticated Infinite Feed
         group.MapGet("/feed", async (
-            [FromQuery] int? category,
+            [FromQuery] Guid? categoryId,
             [FromQuery] string? tag,
             [FromQuery] int? page,
             [FromQuery] int? pageSize,
@@ -48,10 +50,8 @@ public static class InsightsEndpoints
                 return Results.Unauthorized();
             }
 
-            Category? catEnum = category.HasValue ? (Category)category.Value : null;
-
             var request = new GetInsightsFeedRequest(
-                catEnum,
+                categoryId,
                 tag,
                 page ?? 1,
                 pageSize ?? 10,
@@ -63,7 +63,7 @@ public static class InsightsEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
+                : result.Error.ToProblem();
         })
         .WithName("GetInsightsFeed")
         .WithSummary("Get Insights Feed")
@@ -88,13 +88,15 @@ public static class InsightsEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Created($"/api/v1/insights/{result.Value.Id}", result.Value)
-                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
+                : result.Error.ToProblem();
         })
         .WithName("GenerateInsight")
         .WithSummary("Generate Insight")
         .WithDescription("Generates an on-demand senior technical insight using Google Gemini Flash Lite.")
         .Produces<TechInsightDto>(StatusCodes.Status201Created)
         .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // Bookmark Insight (Toggle Save)
@@ -115,7 +117,7 @@ public static class InsightsEndpoints
 
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
+                : result.Error.ToProblem();
         })
         .WithName("BookmarkInsight")
         .WithSummary("Bookmark Insight")

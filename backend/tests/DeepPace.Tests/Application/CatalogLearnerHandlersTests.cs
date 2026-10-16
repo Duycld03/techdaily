@@ -44,7 +44,7 @@ public class CatalogLearnerHandlersTests : IDisposable
             Id = Guid.NewGuid(),
             Title = title,
             Description = $"Description for {title}",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Language = "en",
             SourceType = SourceType.PdfBook,
             AttributionText = "Attribution text",
@@ -99,6 +99,7 @@ public class CatalogLearnerHandlersTests : IDisposable
         var publishedDoc = CreateDoc("Published Book", CatalogVisibility.Published);
         var personalBook = new DocumentBook
         {
+            CategoryId = publishedDoc.CategoryId,
             Id = Guid.NewGuid(),
             Title = "Published Book",
             Slug = "published-book-copy",

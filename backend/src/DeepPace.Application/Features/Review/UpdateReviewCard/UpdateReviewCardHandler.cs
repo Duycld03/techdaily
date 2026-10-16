@@ -63,6 +63,7 @@ public class UpdateReviewCardHandler : IUseCase<UpdateReviewCardRequest, UpdateR
         }
 
         var card = await _dbContext.SpacedRepetitionCards
+            .WithReviewSources()
             .FirstOrDefaultAsync(
                 c => c.Id == request.CardId && c.UserId == request.UserId && !c.IsDeleted,
                 cancellationToken);

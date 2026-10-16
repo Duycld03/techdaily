@@ -186,12 +186,7 @@ public class CatalogDocumentDestination : IIngestionDestination
             Result<AiFormattedSliceResult> aiResult;
             try
             {
-                aiResult = await aiFormatter.FormatSliceAsync(
-                    slice.OriginalTextMarkdown,
-                    slice.ChapterTitle,
-                    slice.Language,
-                    doc.Category,
-                    cancellationToken);
+                aiResult = await aiFormatter.FormatSliceAsync(slice.OriginalTextMarkdown, slice.ChapterTitle, slice.Language, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -213,11 +208,6 @@ public class CatalogDocumentDestination : IIngestionDestination
             }
 
             var val = aiResult.Value!;
-            if (doc.Category != Category.EngineeringCraft)
-            {
-                slice.OriginalTextMarkdown = val.FormattedMarkdown;
-            }
-
             slice.SummaryMarkdown = !string.IsNullOrWhiteSpace(val.SummaryMarkdown)
                 ? val.SummaryMarkdown
                 : val.FormattedMarkdown;

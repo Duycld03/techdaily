@@ -51,7 +51,7 @@ public class SwitchBookHandlerTests : IDisposable
         {
             Title = "Designing Data-Intensive Applications",
             Slug = "ddia",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             Status = ProcessingStatus.Ready,
             TotalChunks = 10
         };
@@ -60,7 +60,7 @@ public class SwitchBookHandlerTests : IDisposable
         {
             Title = "PostgreSQL 17 Internals",
             Slug = "pg17",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Status = ProcessingStatus.Ready,
             TotalChunks = 15
         };
@@ -119,7 +119,7 @@ public class SwitchBookHandlerTests : IDisposable
         {
             Title = "Processing Book",
             Slug = "processing-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Status = ProcessingStatus.Processing
         };
         await _db.DocumentBooks.AddAsync(book);

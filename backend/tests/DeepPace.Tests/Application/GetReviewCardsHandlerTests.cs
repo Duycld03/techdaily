@@ -254,11 +254,13 @@ public class GetReviewCardsHandlerTests : IDisposable
     {
         // Arrange
         var userId = await SeedUserAsync();
+        var category = DocumentCategory.Create("novel-review-subject", "Novel review subject", "Chủ đề ôn tập", 31);
+        _db.DocumentCategories.Add(category);
         var quizQuestion = new QuizQuestion
         {
             Id = Guid.NewGuid(),
             Topic = "MemoryPool Zero-Allocation",
-            Category = Category.BackendRuntime,
+            CategoryId = category.Id,
             Level = QuizLevel.Mastery,
             QuestionText = "How do we rent buffers zero-alloc?",
             ExplanationMarkdown = "Via ArrayPool<T>.Shared or MemoryPool<T>.",
@@ -285,7 +287,9 @@ public class GetReviewCardsHandlerTests : IDisposable
         result.Value.Cards.Should().HaveCount(1);
         var dto = result.Value.Cards.First();
         dto.TopicTitle.Should().Be("MemoryPool Zero-Allocation");
-        dto.Category.Should().Be(Category.BackendRuntime);
+        dto.CategoryId.Should().Be(category.Id);
+        dto.Category!.Id.Should().Be(category.Id);
+        dto.Category.NameVi.Should().Be("Chủ đề ôn tập");
         dto.Difficulty.Should().Be(Difficulty.Lead);
     }
 }

@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
+import type { CategoryDescriptor } from '~/stores/useCategoryStore'
 
 export interface ReviewCard {
   id: string
-  sourceType?: number | string
+  sourceType?: number | string | null
   frontMarkdown?: string
   backMarkdown?: string
   sourceHighlightId?: string
@@ -12,7 +13,8 @@ export interface ReviewCard {
   sourceDocumentChunkId?: string
   title?: string
   topicTitle?: string
-  category: number
+  categoryId: string | null
+  category: CategoryDescriptor | null
   difficulty: number
   repetitionCount: number
   easeFactor: number
@@ -59,8 +61,8 @@ export interface ReviewFilterState {
   sourceType: number | null
   urgency: string | null
   sortBy: string | null
+  categoryId?: string | null
 }
-
 export interface ForecastDayBin {
   date: string
   dayLabel: string
@@ -92,15 +94,23 @@ export const useReviewStore = defineStore('review', () => {
   const analytics = ref<ReviewAnalytics | null>(null)
   const isAnalyticsLoading = ref(false)
 
-  async function fetchReviewDeck(date?: string) {
+  async function fetchReviewDeck(date?: string, categoryId?: string) {
     isLoading.value = true
     error.value = null
     try {
       const api = useApiClient()
-      const query = date ? `?date=${date}` : ''
-      const res = await api.get<{ dueCards: ReviewCard[]; totalCardsDue: number }>(`/api/v1/review/deck${query}`)
-      cards.value = res.dueCards
-      totalCardsDue.value = res.totalCardsDue
+      const queryParts: string[] = []
+      if (date) queryParts.push(`date=${encodeURIComponent(date)}`)
+      if (categoryId) queryParts.push(`categoryId=${encodeURIComponent(categoryId)}`)
+      const query = queryParts.length ? `?${queryParts.join('&')}` : ''
+      const res = await api.get<any>(`/api/v1/review/deck${query}`)
+      if (Array.isArray(res)) {
+        cards.value = res
+        totalCardsDue.value = res.length
+      } else {
+        cards.value = res?.dueCards || res?.cards || []
+        totalCardsDue.value = res?.totalCardsDue ?? cards.value.length
+      }
       currentCardIndex.value = 0
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch review cards.'
@@ -149,10 +159,7 @@ export const useReviewStore = defineStore('review', () => {
     sourceType?: number
     page?: number
     pageSize?: number
-    // When true, only refresh aggregate counts (totalCount + statistics)
-    // without touching the deck list paging state (deckCards/deckPageSize/
-    // deckCurrentPage/deckTotalPages). Lets lightweight count probes on other
-    // pages avoid polluting the Deck Management list's page size.
+    categoryId?: string | null
     countOnly?: boolean
   }) {
     if (!params?.countOnly) isDeckLoading.value = true
@@ -164,6 +171,7 @@ export const useReviewStore = defineStore('review', () => {
       if (params?.search) queryParts.push(`search=${encodeURIComponent(params.search)}`)
       if (params?.status !== undefined && params?.status !== null) queryParts.push(`status=${params.status}`)
       if (params?.sourceType !== undefined && params?.sourceType !== null) queryParts.push(`sourceType=${params.sourceType}`)
+      if (params?.categoryId) queryParts.push(`categoryId=${encodeURIComponent(params.categoryId)}`)
       const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : ''
 
       const res = await api.get<{

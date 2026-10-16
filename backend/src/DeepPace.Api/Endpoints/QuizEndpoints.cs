@@ -26,14 +26,13 @@ public static class QuizEndpoints
                 return Results.Unauthorized();
             }
 
-            Category? catEnum = apiRequest.Category.HasValue ? (Category)apiRequest.Category.Value : null;
             var levelEnum = (QuizLevel)Math.Clamp(apiRequest.Level, 0, 3);
             var count = Math.Clamp(apiRequest.Count, 1, 10);
 
             var request = new GenerateQuizRequest(
                 userId.Value,
                 apiRequest.Topic,
-                catEnum,
+                apiRequest.CategoryId,
                 levelEnum,
                 count,
                 apiRequest.Locale ?? "en",
@@ -44,7 +43,7 @@ public static class QuizEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
+                : result.Error.ToProblem();
         })
         .RequireRateLimiting("AiEndpointsPolicy")
         .WithName("GenerateQuiz")
@@ -52,6 +51,10 @@ public static class QuizEndpoints
         .WithDescription("Generates an interactive interview quiz batch tailored to seniority level using Google Gemini Flash Lite and unmastered DB questions.")
         .Produces<GenerateQuizResponse>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status403Forbidden)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesProblem(StatusCodes.Status503ServiceUnavailable)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // 2. Submit Question Answer
@@ -76,18 +79,19 @@ public static class QuizEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
+                : result.Error.ToProblem();
         })
         .WithName("SubmitQuizAnswer")
         .WithSummary("Submit Quiz Answer")
         .WithDescription("Submits an option choice, returns correctness and deep explanation, and updates user mastery status.")
         .Produces<SubmitQuizAnswerResponse>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
+        .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status401Unauthorized);
 
         // 3. Get Mistake Review Queue
         group.MapGet("/review-queue", async (
-            [FromQuery] int? category,
+            [FromQuery] Guid? categoryId,
             [FromQuery] int? level,
             [FromQuery] string? topic,
             [FromQuery] int? page,
@@ -102,12 +106,11 @@ public static class QuizEndpoints
                 return Results.Unauthorized();
             }
 
-            Category? catEnum = category.HasValue ? (Category)category.Value : null;
             QuizLevel? levelEnum = level.HasValue ? (QuizLevel)level.Value : null;
 
             var request = new GetQuizReviewQueueRequest(
                 userId.Value,
-                catEnum,
+                categoryId,
                 levelEnum,
                 topic,
                 page ?? 1,
@@ -117,7 +120,7 @@ public static class QuizEndpoints
             var result = await handler.ExecuteAsync(request, ct);
             return result.IsSuccess
                 ? Results.Ok(result.Value)
-                : result.Error.ToProblem(StatusCodes.Status400BadRequest);
+                : result.Error.ToProblem();
         })
         .WithName("GetQuizReviewQueue")
         .WithSummary("Get Quiz Review Queue")
@@ -168,8 +171,8 @@ public static class QuizEndpoints
 
 public record GenerateQuizApiRequest(
     string Topic,
-    int? Category,
-    int Level,
+    Guid? CategoryId = null,
+    int Level = 1,
     int Count = 5,
     string? Locale = "en",
     Guid? BookId = null,

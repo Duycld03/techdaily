@@ -32,7 +32,8 @@ public class SubmitQuizAnswerHandler : IUseCase<SubmitQuizAnswerRequest, SubmitQ
         }
 
         var question = await _dbContext.QuizQuestions
-            .FirstOrDefaultAsync(q => q.Id == request.QuestionId && !q.IsDeleted, cancellationToken);
+            .FirstOrDefaultAsync(q => q.Id == request.QuestionId && !q.IsDeleted &&
+                (q.CreatedByUserId == null || q.CreatedByUserId == request.UserId), cancellationToken);
 
         if (question == null)
         {

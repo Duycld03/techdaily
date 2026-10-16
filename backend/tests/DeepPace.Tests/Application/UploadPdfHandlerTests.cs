@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Features.Library.UploadPdf;
 using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Enums;
+using DeepPace.Domain.Entities;
 using DeepPace.Infrastructure.Persistence;
 using Xunit;
 
@@ -39,7 +40,7 @@ public class UploadPdfHandlerTests : IDisposable
         // Arrange
         var mockQueue = new MockPdfIngestionQueue();
         var validator = new UploadPdfValidator();
-        var handler = new UploadPdfHandler(_db, mockQueue, validator);
+        var handler = new UploadPdfHandler(_db, mockQueue, validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db));
 
         using var memoryStream = new MemoryStream(System.Text.Encoding.ASCII.GetBytes("%PDF-1.4 sample content for testing"));
         var request = new UploadPdfRequest(
@@ -47,7 +48,7 @@ public class UploadPdfHandlerTests : IDisposable
             FileName: "architecture-book.pdf",
             FileLength: 1024,
             Title: "Custom Architecture Title",
-            Category: Category.SystemDesign,
+            CategoryId : CategoryDefaults.SystemDesignId,
             Language: "en"
         );
 
@@ -73,7 +74,7 @@ public class UploadPdfHandlerTests : IDisposable
         // Arrange
         var mockQueue = new MockPdfIngestionQueue();
         var validator = new UploadPdfValidator();
-        var handler = new UploadPdfHandler(_db, mockQueue, validator);
+        var handler = new UploadPdfHandler(_db, mockQueue, validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db));
 
         using var memoryStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
         var request = new UploadPdfRequest(
@@ -81,7 +82,7 @@ public class UploadPdfHandlerTests : IDisposable
             FileName: "fake.pdf",
             FileLength: 5,
             Title: "Fake PDF",
-            Category: Category.SystemDesign,
+            CategoryId : CategoryDefaults.SystemDesignId,
             Language: "en"
         );
 
@@ -99,7 +100,7 @@ public class UploadPdfHandlerTests : IDisposable
         // Arrange
         var mockQueue = new MockPdfIngestionQueue();
         var validator = new UploadPdfValidator();
-        var handler = new UploadPdfHandler(_db, mockQueue, validator);
+        var handler = new UploadPdfHandler(_db, mockQueue, validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db));
 
         using var memoryStream = new MemoryStream(new byte[] { 1, 2, 3 });
         var request = new UploadPdfRequest(
@@ -107,7 +108,7 @@ public class UploadPdfHandlerTests : IDisposable
             FileName: "document.docx",
             FileLength: 1024,
             Title: "Test",
-            Category: Category.SystemDesign,
+            CategoryId : CategoryDefaults.SystemDesignId,
             Language: "en"
         );
 

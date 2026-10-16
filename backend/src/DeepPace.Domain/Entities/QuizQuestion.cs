@@ -6,7 +6,8 @@ namespace DeepPace.Domain.Entities;
 public class QuizQuestion : BaseEntity
 {
     public string Topic { get; set; } = string.Empty;
-    public Category Category { get; set; }
+    public Guid CategoryId { get; set; }
+    public DocumentCategory? Category { get; set; }
     public QuizLevel Level { get; set; }
     public string QuestionText { get; set; } = string.Empty;
     public List<string> Options { get; set; } = new();

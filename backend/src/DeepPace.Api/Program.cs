@@ -133,6 +133,7 @@ builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHand
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.AccountAdminAuthorizationHandler>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.AuditReadAuthorizationHandler>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.DocumentOperationsAdminAuthorizationHandler>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DeepPace.Api.Authorization.CategoryAdminAuthorizationHandler>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("CatalogAdmin", policy =>
@@ -164,6 +165,11 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireAuthenticatedUser();
         policy.Requirements.Add(new DeepPace.Api.Authorization.RoleAdminRequirement());
+    });
+    options.AddPolicy("CategoryAdmin", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.Requirements.Add(new DeepPace.Api.Authorization.CategoryAdminRequirement());
     });
 });
 
@@ -254,6 +260,38 @@ builder.Services.AddRateLimiter(options =>
     });
 
     options.AddPolicy("AdminRolesWritePolicy", httpContext =>
+    {
+        var partitionKey = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? httpContext.Connection.RemoteIpAddress?.ToString()
+            ?? "anonymous";
+
+        return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 6,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy("CategoryAdminReads", httpContext =>
+    {
+        var partitionKey = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? httpContext.Connection.RemoteIpAddress?.ToString()
+            ?? "anonymous";
+
+        return RateLimitPartition.GetSlidingWindowLimiter(partitionKey, _ => new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit = 120,
+            Window = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow = 6,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+
+    options.AddPolicy("CategoryAdminWrites", httpContext =>
     {
         var partitionKey = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             ?? httpContext.Connection.RemoteIpAddress?.ToString()
@@ -407,6 +445,7 @@ app.MapCatalogEndpoints();
 app.MapAdminDashboardEndpoints();
 app.MapAdminAccountsAndAuditEndpoints();
 app.MapAdminDocumentOperationsEndpoints();
+app.MapAdminCategoriesEndpoints();
 
 app.Use(async (context, next) =>
 {

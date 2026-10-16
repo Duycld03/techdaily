@@ -2,12 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
 import { useAuthStore } from '~/stores/useAuthStore'
+import { useCategoryStore, type CategoryDescriptor } from '~/stores/useCategoryStore'
 
 export interface TechInsight {
   id: string
   slug: string
   title: string
-  category: number // 0=Frontend, 1=BackendDotNet, 2=DatabaseStorage, 3=SystemDesign
+  categoryId: string
+  category: CategoryDescriptor
   tags: string[]
   summaryMarkdown: string
   problemSnippet: string
@@ -29,27 +31,26 @@ export interface InsightsFeedResponse {
 }
 
 export interface CategoryMeta {
-  id: number
-  key: string
-  labelEn: string
-  labelVi: string
+  categoryId: string
+  category: CategoryDescriptor
   count: number
 }
 
 export interface InsightsMetaResponse {
   categories: CategoryMeta[]
-  suggestedTopics: Record<number, string[]>
+  suggestedTopics: Record<string, string[]>
 }
 
 export const useInsightsStore = defineStore('insights', () => {
+  const categoryStore = useCategoryStore()
   const insights = ref<TechInsight[]>([])
   const bookmarkedInsights = ref<TechInsight[]>([])
   const currentIndex = ref(0)
-  const selectedCategory = ref<number | null>(null)
+  const selectedCategoryId = ref<string | null>(null)
   const selectedTag = ref<string | null>(null)
   const onlyBookmarked = ref(false)
   const categoryMetadata = ref<CategoryMeta[]>([])
-  const suggestedTopics = ref<Record<number, string[]>>({})
+  const suggestedTopics = ref<Record<string, string[]>>({})
   const isLoading = ref(false)
   const isGenerating = ref(false)
   const isLoadingBookmarks = ref(false)
@@ -64,8 +65,8 @@ export const useInsightsStore = defineStore('insights', () => {
   const hasNext = computed(() => currentIndex.value < insights.value.length - 1)
   const hasPrev = computed(() => currentIndex.value > 0)
 
-  async function fetchFeed(category?: number | null, tag?: string | null, bookmarked?: boolean) {
-    if (category !== undefined) selectedCategory.value = category
+  async function fetchFeed(categoryId?: string | null, tag?: string | null, bookmarked?: boolean) {
+    if (categoryId !== undefined) selectedCategoryId.value = categoryId
     if (tag !== undefined) selectedTag.value = tag
     if (bookmarked !== undefined) onlyBookmarked.value = bookmarked
 
@@ -75,8 +76,8 @@ export const useInsightsStore = defineStore('insights', () => {
     try {
       const api = useApiClient()
       const params = new URLSearchParams()
-      if (selectedCategory.value !== null) {
-        params.append('category', selectedCategory.value.toString())
+      if (selectedCategoryId.value) {
+        params.append('categoryId', selectedCategoryId.value)
       }
       if (selectedTag.value) {
         params.append('tag', selectedTag.value)
@@ -144,26 +145,31 @@ export const useInsightsStore = defineStore('insights', () => {
     currentIndex.value = 0
   }
 
-  async function generateWithAi(preferredTopic?: string, locale: string = 'en') {
+  async function generateWithAi(categoryId: string | null, preferredTopic?: string, locale: string = 'en') {
+    await categoryStore.ensureCategories()
+    if (!categoryId || !categoryStore.getCategoryById(categoryId)?.isActive || categoryStore.error) {
+      throw new Error('categories.selectCategory')
+    }
     isGenerating.value = true
     error.value = null
 
     try {
       const api = useApiClient()
       const response = await api.post<TechInsight>('/api/v1/insights/generate', {
-        preferredCategory: selectedCategory.value,
+        categoryId,
         preferredTopic: preferredTopic || null,
         locale
       })
 
       if (response && response.id) {
-        insights.value.unshift(response)
+        insights.value = [response, ...insights.value]
         currentIndex.value = 0
         totalCount.value++
         return response
       }
     } catch (err: any) {
       error.value = err?.message || 'Failed to generate insight with AI'
+      await categoryStore.fetchCategories(true)
       throw err
     } finally {
       isGenerating.value = false
@@ -227,7 +233,7 @@ export const useInsightsStore = defineStore('insights', () => {
     bookmarkedInsights,
     currentIndex,
     currentInsight,
-    selectedCategory,
+    selectedCategoryId,
     selectedTag,
     onlyBookmarked,
     isLoading,

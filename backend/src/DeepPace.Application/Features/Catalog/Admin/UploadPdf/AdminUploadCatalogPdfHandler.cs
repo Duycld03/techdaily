@@ -10,12 +10,13 @@ namespace DeepPace.Application.Features.Catalog.Admin.UploadPdf;
 public record AdminUploadCatalogPdfRequest(
     string Title,
     string Description,
-    Category Category,
+    Guid CategoryId,
     string Language,
     string? AuthorOrSourceUrl,
     string? AttributionText,
     string TempFilePath,
-    Guid? AdminUserId);
+    Guid? AdminUserId,
+    int PresentedSessionVersion = 1);
 
 public class AdminUploadCatalogPdfValidator : AbstractValidator<AdminUploadCatalogPdfRequest>
 {
@@ -25,6 +26,7 @@ public class AdminUploadCatalogPdfValidator : AbstractValidator<AdminUploadCatal
         RuleFor(x => x.Description).NotEmpty();
         RuleFor(x => x.Language).NotEmpty().MaximumLength(10);
         RuleFor(x => x.AttributionText).MaximumLength(2000);
+        RuleFor(x => x.CategoryId).NotEmpty();
         RuleFor(x => x.TempFilePath).NotEmpty()
             .Must(File.Exists).WithMessage("Uploaded PDF temporary file does not exist on disk.");
     }
@@ -35,15 +37,21 @@ public class AdminUploadCatalogPdfHandler : IUseCase<AdminUploadCatalogPdfReques
     private readonly IDeepPaceDbContext _dbContext;
     private readonly IPdfIngestionQueue _queue;
     private readonly IValidator<AdminUploadCatalogPdfRequest> _validator;
+    private readonly ICategoryAssignmentGuard _categoryGuard;
+    private readonly IAdministrativeUnitOfWork _unitOfWork;
 
     public AdminUploadCatalogPdfHandler(
         IDeepPaceDbContext dbContext,
         IPdfIngestionQueue queue,
-        IValidator<AdminUploadCatalogPdfRequest> validator)
+        IValidator<AdminUploadCatalogPdfRequest> validator,
+        ICategoryAssignmentGuard categoryGuard,
+        IAdministrativeUnitOfWork unitOfWork)
     {
         _dbContext = dbContext;
         _queue = queue;
         _validator = validator;
+        _categoryGuard = categoryGuard;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<Result<AdminCatalogDocumentDto>> ExecuteAsync(
@@ -61,7 +69,7 @@ public class AdminUploadCatalogPdfHandler : IUseCase<AdminUploadCatalogPdfReques
             Id = Guid.NewGuid(),
             Title = request.Title,
             Description = request.Description,
-            Category = request.Category,
+            CategoryId = request.CategoryId,
             Language = request.Language,
             SourceType = SourceType.PdfBook,
             AuthorOrSourceUrl = request.AuthorOrSourceUrl,
@@ -73,23 +81,23 @@ public class AdminUploadCatalogPdfHandler : IUseCase<AdminUploadCatalogPdfReques
             CreatedByUserId = request.AdminUserId
         };
 
-        await _dbContext.CatalogDocuments.AddAsync(doc, cancellationToken);
-
-        if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+        var admitted = await _unitOfWork.ExecutePrivilegedMutationAsync(request.AdminUserId ?? Guid.Empty, request.PresentedSessionVersion,
+            new[] { AdminPermission.ManageCatalog },
+            () => _categoryGuard.ExecuteAsync<AdminCatalogDocumentDto>(request.CategoryId, async category =>
+            {
+                doc.Category = category;
+                await _dbContext.CatalogDocuments.AddAsync(doc, cancellationToken);
+                await _dbContext.AdminAuditEvents.AddAsync(AdminAuditEvent.Create(request.AdminUserId!.Value,
+                    AdminAuditActions.CatalogUploadPdf, "CatalogDocument", doc.Id.ToString(), AdminAuditOutcome.Accepted,
+                    correlationId: doc.Id.ToString(), changedFields: new[] { "Visibility", "ProcessingStatus", "ProcessingGeneration", "CategoryId" },
+                    statePayload: JsonSerializer.Serialize(new { doc.Visibility, doc.ProcessingGeneration })), cancellationToken);
+                return doc.ToAdminDto();
+            }, cancellationToken), cancellationToken);
+        if (!admitted.IsSuccess)
         {
-            var audit = AdminAuditEvent.Create(
-                actorUserId: request.AdminUserId.Value,
-                action: AdminAuditActions.CatalogUploadPdf,
-                targetType: "CatalogDocument",
-                targetId: doc.Id.ToString(),
-                outcome: AdminAuditOutcome.Accepted,
-                correlationId: doc.Id.ToString(),
-                changedFields: new[] { "Visibility", "ProcessingStatus", "ProcessingGeneration" },
-                statePayload: JsonSerializer.Serialize(new { Visibility = doc.Visibility.ToString(), ProcessingGeneration = doc.ProcessingGeneration }));
-            await _dbContext.AdminAuditEvents.AddAsync(audit, cancellationToken);
+            File.Delete(request.TempFilePath);
+            return admitted.Error;
         }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
 
         try
         {
@@ -97,7 +105,7 @@ public class AdminUploadCatalogPdfHandler : IUseCase<AdminUploadCatalogPdfReques
                 TargetId: doc.Id,
                 TempFilePath: request.TempFilePath,
                 DocumentTitle: doc.Title,
-                Category: doc.Category,
+                CategoryId: request.CategoryId,
                 Language: doc.Language,
                 DestinationType: IngestionDestinationType.CatalogDocument,
                 Generation: doc.ProcessingGeneration), cancellationToken);

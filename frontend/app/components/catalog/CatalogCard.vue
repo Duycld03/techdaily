@@ -1,64 +1,30 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { BookOpen, Plus, Eye, ExternalLink, Clock, Layers, CheckCircle2, Loader2, FileText, Globe } from 'lucide-vue-next'
-import type { LearnerCatalogDocumentDto } from '~/stores/useCatalogStore'
-
+import type { LearnerCatalogDocument } from '~/stores/useCatalogStore'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 const props = defineProps<{
-  document: LearnerCatalogDocumentDto
+  document: LearnerCatalogDocument
   isAdopting?: boolean
 }>()
 
 const emit = defineEmits<{
-  (e: 'preview', document: LearnerCatalogDocumentDto): void
-  (e: 'adopt', document: LearnerCatalogDocumentDto): void
+  (e: 'preview', document: LearnerCatalogDocument): void
+  (e: 'adopt', document: LearnerCatalogDocument): void
 }>()
 
-const { t } = useI18n()
-
-function parseCategory(val: unknown): number | undefined {
-  if (typeof val === 'number' && !isNaN(val)) return val
-  if (typeof val === 'string') {
-    const parsed = parseInt(val, 10)
-    if (!isNaN(parsed)) return parsed
-    const nameMap: Record<string, number> = {
-      frontendweb: 0,
-      frontend: 0,
-      backendruntime: 1,
-      backend: 1,
-      databasestorage: 2,
-      database: 2,
-      systemdesign: 3,
-      engineeringcraft: 4,
-      craft: 4,
-      mentalmodels: 5,
-      habitsproductivity: 6,
-      habits: 6
-    }
-    const lower = val.toLowerCase().replace(/[^a-z0-9]/g, '')
-    if (lower in nameMap) return nameMap[lower]
-  }
-  return undefined
-}
-
-const categoryLabel = computed(() => {
-  const cat = parseCategory(props.document.category)
-  switch (cat) {
-    case 0: return t('library.categories.frontend')
-    case 1: return t('library.categories.backend')
-    case 2: return t('library.categories.database')
-    case 3: return t('library.categories.system_design')
-    case 4: return t('library.categories.craft')
-    case 5: return t('library.categories.mental_models')
-    case 6: return t('library.categories.habits')
-    default: return t('library.categories.all')
-  }
-})
+const { t, locale } = useI18n()
+const categoryStore = useCategoryStore()
+const categoryIsInactive = computed(() => !(categoryStore.getCategoryById(props.document.categoryId) || props.document.category).isActive)
+const categoryLabel = computed(() => categoryStore.getCategoryName(
+  categoryStore.getCategoryById(props.document.categoryId) || props.document.category, locale.value
+))
 
 const sourceTypeBadge = computed(() => {
   const st = props.document.sourceType
-  const isWeb = st === 1 || String(st).toLowerCase() === 'webdocurl' || String(st).toLowerCase() === 'web'
-  const isPdf = st === 2 || String(st).toLowerCase() === 'pdfbook' || String(st).toLowerCase() === 'pdf'
-  const isMarkdown = st === 3 || String(st).toLowerCase() === 'markdownseries' || String(st).toLowerCase() === 'markdown'
+  const isWeb = st === 'WebDocUrl'
+  const isPdf = st === 'PdfBook'
+  const isMarkdown = st === 'MarkdownSeries'
 
   if (isWeb) {
     return { label: t('library.discover.source_web'), icon: Globe, class: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' }
@@ -146,9 +112,9 @@ const languageBadge = computed(() => {
 
       <!-- Adopt or Open Book -->
       <NuxtLink
-        v-if="document.alreadyAdded || document.existingBookId"
+        v-if="document.existingBookId"
         data-testid="catalog-card-open-book-btn"
-        :to="document.existingBookId ? { path: `/read/${document.existingBookId}`, query: { from: '/library' } } : '/library'"
+        :to="{ path: `/read/${document.existingBookId}`, query: { from: '/library' } }"
         class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 transition-all active:scale-95 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
       >
         <CheckCircle2 class="w-4 h-4 shrink-0" />
@@ -158,14 +124,15 @@ const languageBadge = computed(() => {
       <button
         v-else
         type="button"
-        :disabled="isAdopting"
-        @click="$emit('adopt', document)"
+        :disabled="isAdopting || categoryIsInactive"
+        @click="!categoryIsInactive && $emit('adopt', document)"
         class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white shadow-sm transition-all active:scale-95 whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
       >
         <Loader2 v-if="isAdopting" class="w-4 h-4 animate-spin shrink-0" />
         <Plus v-else class="w-4 h-4 shrink-0" />
-        <span class="whitespace-nowrap shrink-0">{{ isAdopting ? $t('library.discover.adding') : $t('library.discover.add_to_library') }}</span>
+        <span class="whitespace-nowrap shrink-0">{{ categoryIsInactive ? $t('categories.inactive') : isAdopting ? $t('library.discover.adding') : $t('library.discover.add_to_library') }}</span>
       </button>
     </div>
+    <p v-if="categoryIsInactive && !document.existingBookId" class="mt-2 text-xs text-slate-500">{{ $t('api_errors.Category.Inactive') }}</p>
   </div>
 </template>

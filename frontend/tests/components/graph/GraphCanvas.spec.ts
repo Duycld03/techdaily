@@ -3,6 +3,8 @@ import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import GraphCanvas from '~/components/graph/GraphCanvas.vue'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
+import { graphCategory, otherGraphCategory } from '../../fixtures/graphCategories'
+import { getCategoryPalette } from '~/utils/graphVisualTokens'
 
 describe('GraphCanvas.vue', () => {
   beforeEach(() => {
@@ -53,8 +55,8 @@ describe('GraphCanvas.vue', () => {
     const store = useKnowledgeGraphStore()
     store.rawData = {
       nodes: [
-        { id: 'topic_1', label: 'MVCC', type: 'topic', category: 'DatabaseStorage' },
-        { id: 'card_1', label: 'Postgres Bloat', type: 'card', category: 'DatabaseStorage', status: 'Mastered' }
+        { id: 'topic_1', label: 'MVCC', type: 'topic', categoryId: otherGraphCategory.id, category: otherGraphCategory },
+        { id: 'card_1', label: 'Postgres Bloat', type: 'card', categoryId: otherGraphCategory.id, category: otherGraphCategory, status: 'Mastered' }
       ],
       edges: [
         { id: 'edge_1', source: 'card_1', target: 'topic_1', relationType: 'CardToTopic' }
@@ -102,13 +104,13 @@ describe('GraphCanvas.vue', () => {
     const store = useKnowledgeGraphStore()
     store.rawData = {
       nodes: [
-        { id: 'pillar-BackendDotNet', label: 'Backend (.NET)', type: 'pillar', category: 'BackendDotNet' },
-        { id: 'topic_1', label: 'CLR GC', type: 'topic', category: 'BackendDotNet' },
-        { id: 'book_1', label: 'CLR via C#', type: 'book', category: 'BackendDotNet' }
+        { id: 'pillar-cloud', label: 'Cloud Platforms', type: 'pillar', categoryId: graphCategory.id, category: graphCategory },
+        { id: 'topic_1', label: 'CLR GC', type: 'topic', categoryId: graphCategory.id, category: graphCategory },
+        { id: 'book_1', label: 'CLR via C#', type: 'book', categoryId: graphCategory.id, category: graphCategory }
       ],
       edges: [
-        { id: 'edge_1', source: 'topic_1', target: 'pillar-BackendDotNet', relationType: 'TopicToPillar' },
-        { id: 'edge_2', source: 'book_1', target: 'pillar-BackendDotNet', relationType: 'BookToPillar' }
+        { id: 'edge_1', source: 'topic_1', target: 'pillar-cloud', relationType: 'TopicToPillar' },
+        { id: 'edge_2', source: 'book_1', target: 'pillar-cloud', relationType: 'BookToPillar' }
       ],
       stats: {
         totalNodes: 3,
@@ -123,10 +125,13 @@ describe('GraphCanvas.vue', () => {
     const cy = wrapper.vm.cy()
     expect(cy).toBeDefined()
 
-    const pillarNode = cy.getElementById('pillar-BackendDotNet')
+    const pillarNode = cy.getElementById('pillar-cloud')
     expect(pillarNode.length).toBe(1)
     expect(pillarNode.data('type')).toBe('pillar')
-    expect(pillarNode.data('category')).toBe('BackendDotNet')
+    expect(pillarNode.data('categoryId')).toBe(graphCategory.id)
+    expect(pillarNode.data('fillColor')).toBe(getCategoryPalette(graphCategory.id).fill)
+    expect(pillarNode.data('borderColor')).toBe(getCategoryPalette(graphCategory.id).border)
+    expect(pillarNode.data('label')).toBe('Cloud Platforms')
 
     const topicToPillarEdge = cy.getElementById('edge_1')
     expect(topicToPillarEdge.length).toBe(1)

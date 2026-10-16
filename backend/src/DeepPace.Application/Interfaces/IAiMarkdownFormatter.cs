@@ -1,5 +1,4 @@
 using DeepPace.Application.Common;
-using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Interfaces;
 
@@ -23,6 +22,5 @@ public interface IAiMarkdownFormatter
         string rawText,
         string chapterTitle,
         string language = "en",
-        Category? category = null,
         CancellationToken cancellationToken = default);
 }

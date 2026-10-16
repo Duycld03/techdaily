@@ -329,8 +329,8 @@ Leave the browser open with the Counter page loaded.
         // Verify that prose is NOT trapped inside code blocks in AI formatted result
         aiResult.Value.FormattedMarkdown.Should().Contain("# ");
         aiResult.Value.FormattedMarkdown.Should().Contain("> [!NOTE");
-        // Save to real database so we can test UI live in browser!
-        var connStr = "Host=localhost;Port=5432;Database=techdaily_db;Username=techdaily_user;Password=techdaily_password_secret";
+        var connStr = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION")
+            ?? throw new InvalidOperationException("TEST_POSTGRES_CONNECTION must identify an isolated PostgreSQL test database.");
         var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<DeepPace.Infrastructure.Persistence.DeepPaceDbContext>()
             .UseNpgsql(connStr, o => o.UseVector())
             .Options;
@@ -375,7 +375,7 @@ Leave the browser open with the Counter page loaded.
             Title = "ASP.NET Core 10 Architecture Guide",
             Slug = "aspnet-core-10-architecture-guide",
             SourceType = DeepPace.Domain.Enums.SourceType.PdfBook,
-            Category = DeepPace.Domain.Enums.Category.BackendRuntime,
+            CategoryId = DeepPace.Domain.Entities.CategoryDefaults.BackendRuntimeId,
             AuthorOrSourceUrl = "Microsoft Learn ASP.NET Core 10",
             TotalChunks = result.Slices.Count,
             IsPublished = true,

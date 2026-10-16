@@ -20,7 +20,7 @@ export function formatSeniorityLevel(level: string | number) {
 </script>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
+import { ref, shallowRef, onMounted, computed, watch, onUnmounted } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import {
   HelpCircle,
@@ -50,12 +50,14 @@ import { useReviewStore } from '~/stores/useReviewStore'
 import { useInterviewQuizStore, type QuizQuestion } from '~/stores/useInterviewQuizStore'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useProfileStore } from '~/stores/useProfileStore'
-import { useLibraryStore } from '~/stores/useLibraryStore'
+import { useLibraryStore, type BookDetail } from '~/stores/useLibraryStore'
 import BasePagination from '~/components/common/BasePagination.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
 import OptionCard from '~/components/ui/OptionCard.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 import StudioLayout from '~/components/layout/StudioLayout.vue'
+import { useCategoryStore, type CategoryDescriptor } from '~/stores/useCategoryStore'
+import { useApiClient } from '~/composables/useApiClient'
 
 const route = useRoute()
 const router = useRouter()
@@ -65,7 +67,9 @@ const profileStore = useProfileStore()
 const quizStore = useInterviewQuizStore()
 const libraryStore = useLibraryStore()
 const reviewStore = useReviewStore()
+const categoryStore = useCategoryStore()
 const toast = useToast()
+const apiClient = useApiClient()
 
 const sessionMistakes = computed(() => {
   return quizStore.questions.filter(q => {
@@ -104,50 +108,117 @@ const selectedLevel = ref(3) // 3 = Senior
 const selectedCount = ref(5)
 const isGrounded = ref(false)
 const selectedBookId = ref<string | null>(null)
-const groundedBookOptions = computed(() => [
-  { value: '', label: t('quiz.any_book_in_library') },
-  ...(libraryStore.books || []).map(b => ({ value: b.id, label: b.title }))
-])
-const computedQuickTopics = computed(() => {
-  const list: string[] = []
+const selectedCategoryId = ref('')
+const sourceBook = shallowRef<BookDetail | null>(null)
+const isSourceBookLoading = ref(false)
+const sourceBookError = ref<string | null>(null)
+let sourceRequest = 0
 
-  // 1. Prioritize active technical books from user's library
-  if (libraryStore.books && libraryStore.books.length > 0) {
-    libraryStore.books.slice(0, 3).forEach((b) => {
-      if (b.title && !list.includes(b.title)) {
-        list.push(b.title)
-      }
-    })
-  }
-
-  // 2. Fallback to foundational technology-agnostic senior engineering pillars
-  const fallbacks = [
-    'System Design & High Availability',
-    'Database Indexing & Query Optimization',
-    'Distributed Systems & Consensus',
-    'Caching Strategies & Invalidation',
-    'API Design & Microservices Patterns',
-    'Concurrency & Multithreading Models',
-    'Containers & Cloud Infrastructure'
-  ]
-  for (const item of fallbacks) {
-    if (list.length >= 7) break
-    if (!list.includes(item)) {
-      list.push(item)
+async function loadSourceBook() {
+  const request = ++sourceRequest
+  const bookId = authStore.isLoggedIn && isGrounded.value ? selectedBookId.value : null
+  sourceBook.value = null
+  sourceBookError.value = null
+  isSourceBookLoading.value = !!bookId
+  if (!bookId) return
+  try {
+    const result = await apiClient.get<{ book: BookDetail }>(`/api/v1/library/books/${encodeURIComponent(bookId)}`)
+    if (request === sourceRequest) sourceBook.value = result.book
+  } catch (error: unknown) {
+    if (request === sourceRequest) {
+      sourceBookError.value = error instanceof Error ? error.message : t('quiz.source_unavailable')
     }
+  } finally {
+    if (request === sourceRequest) isSourceBookLoading.value = false
   }
+}
 
-  return list.slice(0, 7)
+watch([isGrounded, selectedBookId, () => authStore.sessionGeneration], loadSourceBook, { flush: 'sync' })
+const canGenerate = computed(() => !quizStore.isGenerating && !!customTopicInput.value.trim() && (
+  isGrounded.value && selectedBookId.value
+    ? !!sourceBook.value
+    : !categoryStore.error && !!categoryStore.getCategoryById(selectedCategoryId.value)?.isActive
+))
+const categoryMessage = computed(() => categoryStore.error || !categoryStore.hasLoaded
+  ? t('categories.metadataUnavailable')
+  : !categoryStore.activeCategories.length ? t('categories.noActiveCategories') : t('categories.selectCategory'))
+
+function categoryLabel(category: CategoryDescriptor) {
+  const current = categoryStore.getCategoryById(category.id) ?? category
+  return `${categoryStore.getCategoryName(current, locale.value)} · ${current.slug}${current.isActive ? '' : ` · ${t('categories.inactive')}`}`
+}
+const generationCategoryOptions = computed(() => categoryStore.activeCategories
+  .map(category => ({ value: category.id, label: categoryLabel(category) })))
+const reviewCategoryOptions = computed(() => [
+  { value: '', label: t('insights.all_categories') },
+  ...categoryStore.allCategories.map(category => ({ value: category.id, label: categoryLabel(category) }))
+])
+const reviewLevelOptions = computed(() => [
+  { value: -1, label: t('quiz.all_levels') },
+  ...seniorityLevels.map(level => ({ value: level.id, label: t(`quiz.${level.key}`) }))
+])
+const groundedBookOptions = computed(() => {
+  const books = sourceBook.value && !libraryStore.books.some(book => book.id === sourceBook.value?.id)
+    ? [...libraryStore.books, sourceBook.value]
+    : libraryStore.books
+  return [
+    { value: '', label: t('quiz.any_book_in_library') },
+    ...books.map(book => ({ value: book.id, label: book.title }))
+  ]
+})
+const computedQuickTopics = computed(() => [...new Set(
+  (libraryStore.books || [])
+    .filter(book => !selectedCategoryId.value || book.categoryId === selectedCategoryId.value)
+    .map(book => book.title.trim())
+    .filter(Boolean)
+)].slice(0, 7))
+
+function syncReviewUrl(page: number) {
+  router.replace({ query: {
+    ...route.query,
+    category: undefined,
+    tab: 'review',
+    page: page > 1 ? String(page) : undefined,
+    categoryId: quizStore.reviewCategoryId || undefined,
+    level: quizStore.reviewLevel === null ? undefined : String(quizStore.reviewLevel),
+    topic: quizStore.reviewTopic || undefined
+  } })
+}
+
+function handleReviewFilterChange() {
+  syncReviewUrl(1)
+  quizStore.fetchReviewQueue({ page: 1 })
+}
+
+function changeReviewCategory(value: string | number) {
+  quizStore.reviewCategoryId = value === '' ? null : String(value)
+  handleReviewFilterChange()
+}
+
+function changeReviewLevel(value: string | number) {
+  quizStore.reviewLevel = Number(value) < 0 ? null : Number(value)
+  handleReviewFilterChange()
+}
+
+async function loadReviewRoute() {
+  const categoryId = typeof route.query.categoryId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(route.query.categoryId)
+    ? route.query.categoryId : null
+  const level = typeof route.query.level === 'string' && /^[0-3]$/.test(route.query.level) ? Number(route.query.level) : null
+  const topic = typeof route.query.topic === 'string' ? route.query.topic : null
+  const page = Math.max(1, Number.parseInt(String(route.query.page || 1), 10) || 1)
+  await quizStore.fetchReviewQueue({ categoryId, level, topic, page })
+  if (route.query.category !== undefined || (route.query.categoryId && !categoryId)) syncReviewUrl(page)
+}
+
+watch(() => route.query, () => {
+  if (route.query.tab === 'review') {
+    quizStore.activeTab = 'review'
+    loadReviewRoute()
+  }
 })
 
 function onReviewPageChange(newPage: number) {
-  router.replace({
-    query: {
-      ...route.query,
-      tab: 'review',
-      page: newPage > 1 ? newPage.toString() : undefined
-    }
-  })
+  syncReviewUrl(newPage)
   quizStore.fetchReviewQueue({ page: newPage, pageSize: quizStore.reviewPageSize })
   if (typeof window !== 'undefined') {
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -161,13 +232,20 @@ function handlePracticeCurrentBatch() {
 async function handlePracticeAllMistakes() {
   try {
     const res = await quizStore.fetchReviewQueue({ page: 1, pageSize: 100 })
-    if (res && res.questions && res.questions.length > 0) {
-      quizStore.startReviewSession(res.questions)
+    if (!res) return
+    let allQuestions = [...res.questions]
+    for (let page = 2; page <= quizStore.reviewTotalPages; page++) {
+      const batch = await quizStore.fetchReviewQueue({ page, pageSize: 100 })
+      if (!batch) return
+      allQuestions = [...allQuestions, ...batch.questions]
+    }
+    if (allQuestions.length > 0) {
+      quizStore.startReviewSession(allQuestions)
     } else {
-      quizStore.startReviewSession()
+      quizStore.startReviewSession([])
     }
   } catch {
-    quizStore.startReviewSession()
+    toast.error(t('quiz.review_queue_failed'))
   }
 }
 onMounted(async () => {
@@ -178,6 +256,7 @@ onMounted(async () => {
     })
   }
 
+  await categoryStore.ensureCategories()
   // Pre-fill topic from query param (e.g. from Reader)
   if (route.query.topic) {
     customTopicInput.value = (route.query.topic as string).trim()
@@ -191,12 +270,7 @@ onMounted(async () => {
     isGrounded.value = true
   }
 
-  if (route.query.tab === 'review') {
-    quizStore.activeTab = 'review'
-    const queryPage = route.query.page ? parseInt(route.query.page as string, 10) : 1
-    const initialPage = isNaN(queryPage) || queryPage < 1 ? 1 : queryPage
-    quizStore.fetchReviewQueue({ page: initialPage, pageSize: quizStore.reviewPageSize })
-  }
+  if (route.query.tab === 'review') quizStore.activeTab = 'review'
   libraryStore.fetchBooks().catch((err) => {
     console.warn('Failed to load books for quiz dropdown:', err)
   })
@@ -214,7 +288,8 @@ onMounted(async () => {
     }
   }
 
-  await quizStore.fetchReviewQueue()
+  if (route.query.tab === 'review') await loadReviewRoute()
+  else await quizStore.fetchReviewQueue()
   await quizStore.fetchStats()
 })
 
@@ -254,6 +329,7 @@ watch(
 )
 
 onUnmounted(() => {
+  sourceRequest++
   if (sessionTimer) {
     clearInterval(sessionTimer)
     sessionTimer = null
@@ -266,23 +342,25 @@ function handleSelectOption(index: number) {
 
 async function handleGenerateQuiz(topic?: string) {
   if (quizStore.isGenerating) return
-  const fallbackTopic = (computedQuickTopics.value && computedQuickTopics.value[0]) || 'Technical Architecture'
-  const chosenTopic = topic || customTopicInput.value || fallbackTopic
-  if (!chosenTopic.trim()) return
-
-  if (!customTopicInput.value) {
-    customTopicInput.value = chosenTopic.trim()
-  }
+  const chosenTopic = topic || customTopicInput.value
+  if (!chosenTopic.trim() || (isGrounded.value && selectedBookId.value
+    ? !sourceBook.value
+    : !categoryStore.getCategoryById(selectedCategoryId.value)?.isActive || categoryStore.error)) return
+  customTopicInput.value = chosenTopic.trim()
   selectedOptionIndex.value = null
-  await quizStore.generateQuiz(
-    chosenTopic.trim(),
-    selectedLevel.value,
-    selectedCount.value,
-    null,
-    locale.value,
-    isGrounded.value ? (selectedBookId.value || null) : null,
-    isGrounded.value
-  )
+  try {
+    await quizStore.generateQuiz(
+      chosenTopic.trim(),
+      selectedLevel.value,
+      selectedCount.value,
+      sourceBook.value ? null : selectedCategoryId.value,
+      locale.value,
+      sourceBook.value?.id ?? null,
+      isGrounded.value
+    )
+  } catch {
+    // The store reports the failure and refreshes assignment choices; preserve this draft.
+  }
 }
 
 async function handleSubmitAnswer() {
@@ -581,6 +659,32 @@ defineExpose({
       <!-- LEFT BENTO: Topic & Context Hub -->
       <div class="glass-card p-5 sm:p-7 space-y-6 flex flex-col justify-between">
         <div class="space-y-6">
+          <div v-if="!isGrounded || !selectedBookId" class="space-y-2">
+            <label for="quiz-generation-category-button" class="block text-sm sm:text-base font-bold">{{ $t('categories.selectCategory') }}</label>
+            <AppSelect
+              id="quiz-generation-category"
+              :model-value="selectedCategoryId"
+              :options="generationCategoryOptions"
+              :placeholder="$t('categories.selectCategory')"
+              :aria-label="$t('categories.selectCategory')"
+              required
+              :invalid="!!selectedCategoryId && !categoryStore.getCategoryById(selectedCategoryId)?.isActive"
+              :describedby="!canGenerate ? 'quiz-category-help' : undefined"
+              :disabled="categoryStore.isLoading || !!categoryStore.error"
+              data-testid="quiz-category-select"
+              @update:model-value="selectedCategoryId = String($event)"
+            />
+            <p v-if="!canGenerate" id="quiz-category-help" role="status" class="text-sm">{{ categoryMessage }}</p>
+            <button v-if="categoryStore.error || !categoryStore.activeCategories.length" type="button" class="text-sm underline" @click="categoryStore.fetchCategories(true)">{{ $t('categories.retry') }}</button>
+          </div>
+          <div v-else class="space-y-2 text-sm sm:text-base">
+            <p v-if="isSourceBookLoading" role="status">{{ $t('quiz.source_loading') }}</p>
+            <template v-else-if="sourceBookError">
+              <p role="alert">{{ sourceBookError }}</p>
+              <button type="button" class="underline whitespace-nowrap shrink-0" @click="loadSourceBook">{{ $t('quiz.retry_source') }}</button>
+            </template>
+            <p v-else-if="sourceBook">{{ categoryLabel(sourceBook.category) }}</p>
+          </div>
           <!-- Topic Selection -->
           <div class="space-y-2.5">
             <label class="block text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
@@ -754,7 +858,7 @@ defineExpose({
           <button
             data-testid="generate-quiz-btn"
             @click="handleGenerateQuiz()"
-            :disabled="quizStore.isGenerating"
+            :disabled="!canGenerate"
             class="w-full px-6 py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-md shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5 transition-all cursor-pointer whitespace-nowrap shrink-0"
           >
             <Loader2 v-if="quizStore.isGenerating" class="w-5 h-5 animate-spin shrink-0" :stroke-width="1.5" />
@@ -776,6 +880,7 @@ defineExpose({
             </span>
             <h2 class="font-bold text-slate-900 dark:text-white text-sm sm:text-base truncate">
               {{ currentQ.topic }}
+              <span class="block text-sm font-normal whitespace-normal">{{ categoryLabel(currentQ.category) }}</span>
             </h2>
           </div>
 
@@ -1022,7 +1127,7 @@ defineExpose({
         <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
           <button
             @click="handleGenerateQuiz(quizStore.currentTopic)"
-            :disabled="quizStore.isGenerating"
+            :disabled="quizStore.isGenerating || (!sourceBook && !categoryStore.getCategoryById(selectedCategoryId)?.isActive)"
             class="px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Loader2 v-if="quizStore.isGenerating" class="w-4 h-4 animate-spin" :stroke-width="1.5" />
@@ -1090,6 +1195,33 @@ defineExpose({
 
     <!-- TAB 4: MISTAKE REVIEW QUEUE -->
     <div v-if="quizStore.activeTab === 'review'" class="space-y-6">
+      <div class="grid gap-3 sm:grid-cols-3">
+        <div class="space-y-2">
+          <label for="quiz-review-category-button" class="text-sm font-semibold">{{ $t('categories.selectCategory') }}</label>
+          <AppSelect
+            id="quiz-review-category"
+            :model-value="quizStore.reviewCategoryId ?? ''"
+            :options="reviewCategoryOptions"
+            :aria-label="$t('categories.selectCategory')"
+            data-testid="quiz-review-category-select"
+            @update:model-value="changeReviewCategory"
+          />
+        </div>
+        <div class="space-y-2">
+          <label for="quiz-review-level-button" class="text-sm font-semibold">{{ $t('quiz.level_label') }}</label>
+          <AppSelect
+            id="quiz-review-level"
+            :model-value="quizStore.reviewLevel ?? -1"
+            :options="reviewLevelOptions"
+            :aria-label="$t('quiz.level_label')"
+            @update:model-value="changeReviewLevel"
+          />
+        </div>
+        <label class="text-sm font-semibold">
+          {{ $t('quiz.topic_label') }}
+          <input v-model="quizStore.reviewTopic" class="block w-full rounded-xl border p-3 bg-white dark:bg-canvas-subtle" @change="handleReviewFilterChange">
+        </label>
+      </div>
       <div v-if="quizStore.reviewQueue.length === 0" class="glass-card p-8 text-center space-y-4">
         <div class="inline-flex p-4 rounded-full bg-brand-500/10 text-brand-500 border border-brand-500/20">
           <CheckCircle2 class="w-10 h-10" />
@@ -1137,6 +1269,7 @@ defineExpose({
               <span class="font-bold text-brand-600 dark:text-brand-400">{{ q.topic }}</span>
               <span class="text-rose-500 font-semibold">{{ $t('quiz.incorrect_attempts', { count: q.incorrectCount }) }}</span>
             </div>
+            <p class="text-sm text-slate-600 dark:text-slate-300">{{ categoryLabel(q.category) }}</p>
             <p class="text-sm sm:text-base font-bold text-slate-900 dark:text-white line-clamp-2">
               {{ q.questionText }}
             </p>
@@ -1395,6 +1528,13 @@ defineExpose({
 
           <div v-else class="text-center py-8 text-slate-400 dark:text-slate-500 text-xs">
             {{ $t('insights.empty_title') }}
+          </div>
+        </div>
+        <div v-if="quizStore.stats.categoryBreakdown?.length" class="glass-card p-5 space-y-3 lg:col-span-2">
+          <h3 class="text-sm font-bold">{{ $t('insights.all_categories') }}</h3>
+          <div v-for="entry in quizStore.stats.categoryBreakdown" :key="entry.categoryId" class="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <span>{{ categoryLabel(entry.category) }}</span>
+            <span class="shrink-0">{{ entry.masteredCount }} / {{ entry.answeredCount }} · {{ entry.accuracyRate }}%</span>
           </div>
         </div>
       </div>

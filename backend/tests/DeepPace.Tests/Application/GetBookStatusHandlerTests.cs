@@ -41,7 +41,7 @@ public class GetBookStatusHandlerTests : IDisposable
         {
             Title = "High-Performance PostgreSQL 17",
             Slug = "high-performance-postgresql-17",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Status = ProcessingStatus.Processing,
             ProgressPercentage = 45,
             StatusMessage = "Processing page 45 of 100",

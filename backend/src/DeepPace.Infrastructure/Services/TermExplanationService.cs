@@ -36,14 +36,14 @@ public class TermExplanationService : ITermExplanationService
 
     public async Task<Result<TermExplanationResult>> ExplainTermAsync(
         string term,
-        string category,
+        string contextLabel,
         string context,
         string locale = "en",
         CancellationToken cancellationToken = default)
     {
         var trimmed = term.Trim();
         var safeTerm = (trimmed.Length > 200 ? trimmed[..200] : trimmed).ToLowerInvariant();
-        var safeCategory = category.Length > 200 ? category[..200] : category;
+        var safeContextLabel = contextLabel == null ? string.Empty : (contextLabel.Length > 255 ? contextLabel[..255] : contextLabel).Trim();
 
         // 1. Tier 1: Check Exact DB Cache via B-Tree Index (<5ms)
         var cached = await _dbContext.TermExplanationCaches
@@ -59,7 +59,7 @@ public class TermExplanationService : ITermExplanationService
 
         // 2. Tier 2: Check Semantic Vector Cache via pgvector HNSW Index (<150ms)
         Pgvector.Vector? termVector = null;
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync($"[{safeCategory}] {safeTerm}", cancellationToken);
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync($"[{safeContextLabel}] {safeTerm}", cancellationToken);
         if (embeddingResult.IsSuccess)
         {
             try
@@ -86,7 +86,7 @@ public class TermExplanationService : ITermExplanationService
                     return new TermExplanationResult(semanticMatch.Entity.ExplanationText, true);
                 }
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Fallback for providers that don't support pgvector (e.g. SQLite unit test provider)
             }
@@ -101,7 +101,7 @@ public class TermExplanationService : ITermExplanationService
             try
             {
                 var prompt = $@"
-Explain the technical term '{term}' in the context of '{category}'.
+Explain the technical term '{term}' in the context of '{safeContextLabel}'.
 Surrounding text context: ""{context}""
 Target language: {locale}
 Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior Engineer popup tooltip.
@@ -169,7 +169,7 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
         {
             if (termVector == null)
             {
-                var embRes = await _embeddingService.GenerateEmbeddingAsync($"[{safeCategory}] {safeTerm}", cancellationToken);
+                var embRes = await _embeddingService.GenerateEmbeddingAsync($"[{safeContextLabel}] {safeTerm}", cancellationToken);
                 if (embRes.IsSuccess)
                 {
                     termVector = embRes.Value;
@@ -179,7 +179,7 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
             var newCache = new TermExplanationCache
             {
                 Term = safeTerm,
-                Category = safeCategory,
+                ContextLabel = safeContextLabel,
                 Locale = locale,
                 ExplanationText = explanation,
                 Embedding = termVector,
@@ -189,7 +189,7 @@ Provide a concise, crystal-clear 2-sentence explanation suitable for a Senior En
             await _dbContext.TermExplanationCaches.AddAsync(newCache, cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogWarning(ex, "Failed to cache term explanation for '{Term}'. Returning generated result to client.", safeTerm);
         }

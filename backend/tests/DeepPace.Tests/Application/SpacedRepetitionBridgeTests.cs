@@ -72,7 +72,7 @@ public class SpacedRepetitionBridgeTests : IDisposable
         var user = new User { Id = userId, Email = "user@test.com", Name = "Test User" };
         await _db.Users.AddAsync(user);
 
-        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Designing Data-Intensive Applications", Slug = "ddia" };
+        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Designing Data-Intensive Applications", Slug = "ddia", CategoryId = CategoryDefaults.DatabaseStorageId };
         var chunk = new DocumentChunk
         {
             Id = Guid.NewGuid(),
@@ -119,7 +119,7 @@ public class SpacedRepetitionBridgeTests : IDisposable
         var user = new User { Id = userId, Email = "failuser@test.com", Name = "Fail User" };
         await _db.Users.AddAsync(user);
 
-        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Failure Testing Book", Slug = "fail-book" };
+        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Failure Testing Book", Slug = "fail-book", CategoryId = CategoryDefaults.DatabaseStorageId };
         var chunk = new DocumentChunk
         {
             Id = Guid.NewGuid(),
@@ -166,7 +166,7 @@ public class SpacedRepetitionBridgeTests : IDisposable
         var user = new User { Id = userId, Email = "user2@test.com", Name = "Test User 2" };
         await _db.Users.AddAsync(user);
 
-        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Book", Slug = "book" };
+        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Book", Slug = "book", CategoryId = CategoryDefaults.DatabaseStorageId };
         var chunk = new DocumentChunk { Id = Guid.NewGuid(), DocumentBookId = book.Id, ChunkOrder = 1, ChapterTitle = "Ch 1", OriginalTextMarkdown = "Text" };
         await _db.DocumentBooks.AddAsync(book);
         await _db.DocumentChunks.AddAsync(chunk);
@@ -198,6 +198,47 @@ public class SpacedRepetitionBridgeTests : IDisposable
         _fakeGemini.CallCount.Should().Be(0); // Did not invoke Gemini again
     }
 
+    [Theory]
+    [InlineData("private", false)]
+    [InlineData("private-existing-card", false)]
+    [InlineData("deleted", false)]
+    [InlineData("shared", true)]
+    [InlineData("owned", true)]
+    public async Task CreateCardFromQuizMistake_RequiresSurvivingSharedOrOwnedQuestion(string access, bool allowed)
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "quiz-card-owner@test.local", Name = "Owner" };
+        var other = new User { Id = Guid.NewGuid(), Email = "quiz-card-other@test.local", Name = "Other" };
+        _db.Users.AddRange(user, other);
+        var question = new QuizQuestion
+        {
+            Id = Guid.NewGuid(), CategoryId = CategoryDefaults.DatabaseStorageId,
+            Topic = "Protected topic", QuestionText = "Protected question", ExplanationMarkdown = "Protected answer",
+            CreatedByUserId = access == "shared" ? null : access.StartsWith("private") ? other.Id : user.Id
+        };
+        _db.QuizQuestions.Add(question);
+        if (access == "deleted") question.SoftDelete();
+        if (access == "private-existing-card")
+            _db.SpacedRepetitionCards.Add(SpacedRepetitionCard.CreateFromQuizMistake(user.Id, question.Id, "Stored front", "Stored back"));
+        await _db.SaveChangesAsync();
+
+        var result = await new CreateCardFromQuizMistakeHandler(_db).ExecuteAsync(new(question.Id, user.Id));
+
+        result.IsSuccess.Should().Be(allowed);
+        if (allowed)
+        {
+            var card = await _db.SpacedRepetitionCards.SingleAsync(c => c.Id == result.Value.CardId);
+            card.UserId.Should().Be(user.Id);
+            card.SourceQuizQuestionId.Should().Be(question.Id);
+            card.FrontMarkdown.Should().Contain("Protected question");
+        }
+        else
+        {
+            result.Error.Should().Be(Error.NotFound);
+            var expectedCount = access == "private-existing-card" ? 1 : 0;
+            (await _db.SpacedRepetitionCards.CountAsync(c => c.UserId == user.Id)).Should().Be(expectedCount);
+        }
+    }
+
     [Fact]
     public async Task CreateCardFromQuizMistake_ShouldCreateCardWithFormattedQuestionAndAnswer_WhenQuestionExists()
     {
@@ -210,7 +251,7 @@ public class SpacedRepetitionBridgeTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "PostgreSQL MVCC",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Level = QuizLevel.Senior,
             QuestionText = "How does PostgreSQL handle dead tuples created by updates?",
             Options = new List<string>
@@ -256,6 +297,7 @@ public class SpacedRepetitionBridgeTests : IDisposable
         var question = new QuizQuestion
         {
             Id = Guid.NewGuid(),
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Topic = "Topic",
             QuestionText = "Question?",
             Options = new List<string> { "A", "B" },
@@ -288,6 +330,7 @@ public class SpacedRepetitionBridgeTests : IDisposable
         var question = new QuizQuestion
         {
             Id = Guid.NewGuid(),
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Topic = "Kestrel",
             QuestionText = "Question?",
             Options = new List<string> { "Opt A" },
@@ -332,7 +375,7 @@ public class SpacedRepetitionBridgeTests : IDisposable
         var userId = Guid.NewGuid();
         var user = new User { Id = userId, Email = "user6@test.com", Name = "Test User 6" };
         await _db.Users.AddAsync(user);
-        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Book", Slug = "book" };
+        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Book", Slug = "book", CategoryId = CategoryDefaults.DatabaseStorageId };
         var chunk = new DocumentChunk { Id = Guid.NewGuid(), DocumentBookId = book.Id, ChunkOrder = 1, ChapterTitle = "Ch 1", OriginalTextMarkdown = "Text" };
         var highlight = new UserHighlight { Id = Guid.NewGuid(), UserId = userId, DocumentChunkId = chunk.Id, SelectedText = "Text" };
         await _db.DocumentBooks.AddAsync(book);

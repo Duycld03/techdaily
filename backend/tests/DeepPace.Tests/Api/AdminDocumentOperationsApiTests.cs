@@ -51,6 +51,7 @@ public class AdminDocumentOperationsApiTests : IAsyncLifetime
             var learner = new User { Id = _learnerId, Email = "learner@example.com", Name = "Learner", Status = AccountStatus.Active };
             var book = new DocumentBook
             {
+                CategoryId = CategoryDefaults.SystemDesignId,
                 Id = _bookId,
                 Title = "Kafka Architecture",
                 CreatedByUserId = _learnerId,
@@ -82,7 +83,7 @@ public class AdminDocumentOperationsApiTests : IAsyncLifetime
         builder.Services.AddScoped<ICatalogAdminService, CatalogAdminService>();
         builder.Services.AddScoped<IAdminPermissionResolver, AdminPermissionResolver>();
         builder.Services.AddScoped<IAdministrativeUnitOfWork, AdministrativeUnitOfWork>();
-        builder.Services.AddSingleton<IDocumentMutationGuard, DocumentMutationGuard>();
+        builder.Services.AddScoped<IDocumentMutationGuard, DocumentMutationGuard>();
         builder.Services.AddSingleton<IIngestionSourceStorage, LocalFileIngestionSourceStorage>();
         builder.Services.AddScoped<IIngestionQuotaService, IngestionQuotaService>();
         builder.Services.AddScoped<IIngestionClaimService, IngestionClaimService>();

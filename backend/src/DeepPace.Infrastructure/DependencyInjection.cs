@@ -70,6 +70,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionIssuer, Services.SessionIssuer>();
         services.AddScoped<IAdministrativeUnitOfWork, Services.AdministrativeUnitOfWork>();
         services.AddScoped<IDocumentMutationGuard, Services.DocumentMutationGuard>();
+        services.AddScoped<ICategoryAssignmentGuard, Services.CategoryAssignmentGuard>();
         services.AddScoped<IAuthorizationInitializationService, Services.AuthorizationInitializationService>();
         services.AddScoped<IAuthorizationReadinessService, Services.AuthorizationReadinessService>();
         services.AddSingleton<IIngestionSourceStorage, Services.LocalFileIngestionSourceStorage>();

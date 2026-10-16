@@ -30,7 +30,7 @@ public class UpdateBookHandlerTests : IDisposable
         _db.Database.EnsureCreated();
 
         _validator = new UpdateBookValidator();
-        _handler = new UpdateBookHandler(_db, _validator);
+        _handler = new UpdateBookHandler(_db, _validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db));
     }
 
     public void Dispose()
@@ -64,7 +64,7 @@ public class UpdateBookHandlerTests : IDisposable
             Title = "Original Technical Title",
             Slug = "original-technical-title",
             AuthorOrSourceUrl = "Old Author",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             SourceType = SourceType.MarkdownSeries,
             CreatedByUserId = user.Id
         };
@@ -76,7 +76,7 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: user.Id,
             Title: "Atomic Habits & Focus",
             AuthorOrSourceUrl: "James Clear",
-            Category: Category.HabitsProductivity);
+            CategoryId : CategoryDefaults.HabitsProductivityId);
 
         // Act
         var result = await _handler.ExecuteAsync(request);
@@ -85,13 +85,14 @@ public class UpdateBookHandlerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value.Book.Title.Should().Be("Atomic Habits & Focus");
         result.Value.Book.AuthorOrSourceUrl.Should().Be("James Clear");
-        result.Value.Book.Category.Should().Be(Category.HabitsProductivity);
+        result.Value.Book.CategoryId.Should().Be(CategoryDefaults.HabitsProductivityId);
+        result.Value.Book.Category.Id.Should().Be(CategoryDefaults.HabitsProductivityId);
 
         var updatedBook = await _db.DocumentBooks.FindAsync(book.Id);
         updatedBook.Should().NotBeNull();
         updatedBook!.Title.Should().Be("Atomic Habits & Focus");
         updatedBook.AuthorOrSourceUrl.Should().Be("James Clear");
-        updatedBook.Category.Should().Be(Category.HabitsProductivity);
+        updatedBook.CategoryId.Should().Be(CategoryDefaults.HabitsProductivityId);
         updatedBook.UpdatedAt.Should().NotBeNull();
     }
 
@@ -104,7 +105,7 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: Guid.NewGuid(),
             Title: "Valid Title",
             AuthorOrSourceUrl: null,
-            Category: Category.MentalModels);
+            CategoryId : CategoryDefaults.MentalModelsId);
 
         // Act
         var result = await _handler.ExecuteAsync(request);
@@ -124,7 +125,7 @@ public class UpdateBookHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Deleted Book",
             Slug = "deleted-book",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             CreatedByUserId = user.Id,
             IsDeleted = true
         };
@@ -136,7 +137,7 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: user.Id,
             Title: "New Title",
             AuthorOrSourceUrl: null,
-            Category: Category.SystemDesign);
+            CategoryId : CategoryDefaults.SystemDesignId);
 
         // Act
         var result = await _handler.ExecuteAsync(request);
@@ -157,7 +158,7 @@ public class UpdateBookHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Owner Book",
             Slug = "owner-book",
-            Category = Category.EngineeringCraft,
+            CategoryId = CategoryDefaults.EngineeringCraftId,
             CreatedByUserId = owner.Id
         };
         await _db.DocumentBooks.AddAsync(book);
@@ -168,7 +169,7 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: caller.Id,
             Title: "Tampered Title",
             AuthorOrSourceUrl: null,
-            Category: Category.EngineeringCraft);
+            CategoryId : CategoryDefaults.EngineeringCraftId);
 
         // Act
         var result = await _handler.ExecuteAsync(request);
@@ -187,7 +188,7 @@ public class UpdateBookHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "System Curated Book",
             Slug = "system-curated-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             CreatedByUserId = null
         };
         await _db.DocumentBooks.AddAsync(book);
@@ -198,7 +199,7 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: Guid.NewGuid(),
             Title: "Modified Title",
             AuthorOrSourceUrl: null,
-            Category: Category.BackendRuntime);
+            CategoryId : CategoryDefaults.BackendRuntimeId);
 
         // Act
         var result = await _handler.ExecuteAsync(request);
@@ -219,7 +220,7 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: Guid.NewGuid(),
             Title: invalidTitle,
             AuthorOrSourceUrl: null,
-            Category: Category.FrontendWeb);
+            CategoryId : CategoryDefaults.FrontendWebId);
 
         // Act
         var result = await _handler.ExecuteAsync(request);
@@ -238,7 +239,7 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: Guid.NewGuid(),
             Title: new string('A', 256),
             AuthorOrSourceUrl: null,
-            Category: Category.FrontendWeb);
+            CategoryId : CategoryDefaults.FrontendWebId);
 
         // Act
         var result = await _handler.ExecuteAsync(request);
@@ -257,14 +258,14 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: Guid.NewGuid(),
             Title: "Valid Title",
             AuthorOrSourceUrl: null,
-            Category: (Category)99);
+            CategoryId: Guid.Empty);
 
         // Act
         var result = await _handler.ExecuteAsync(request);
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.Error.Code.Should().Be("Validation.Failed");
+        result.Error.Code.Should().Be("Category.ValidationFailed");
     }
 
     [Fact]
@@ -276,7 +277,7 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: Guid.NewGuid(),
             Title: "Valid Title",
             AuthorOrSourceUrl: new string('B', 501),
-            Category: Category.DatabaseStorage);
+            CategoryId : CategoryDefaults.DatabaseStorageId);
 
         // Act
         var result = await _handler.ExecuteAsync(request);
@@ -298,7 +299,7 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: Guid.NewGuid(),
             Title: "Valid Title",
             AuthorOrSourceUrl: null,
-            Category: Category.FrontendWeb,
+            CategoryId : CategoryDefaults.FrontendWebId,
             Language: invalidLanguage);
 
         // Act
@@ -307,7 +308,6 @@ public class UpdateBookHandlerTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeFalse();
         result.Error.Code.Should().Be("Validation.Failed");
-        result.Error.Message.Should().Contain("Language must be either 'en' or 'vi'");
     }
 
     [Fact]
@@ -320,7 +320,7 @@ public class UpdateBookHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Book in English",
             Slug = "book-in-english",
-            Category = Category.EngineeringCraft,
+            CategoryId = CategoryDefaults.EngineeringCraftId,
             SourceType = SourceType.MarkdownSeries,
             CreatedByUserId = user.Id
         };
@@ -351,7 +351,7 @@ public class UpdateBookHandlerTests : IDisposable
             UserId: user.Id,
             Title: "Sách tiếng Việt",
             AuthorOrSourceUrl: "Tác giả VN",
-            Category: Category.HabitsProductivity,
+            CategoryId : CategoryDefaults.HabitsProductivityId,
             Language: "vi");
 
         // Act

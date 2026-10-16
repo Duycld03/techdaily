@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { FileText, Globe, UploadCloud, Eye, Loader2, Plus } from 'lucide-vue-next'
 import AppSelect, { type SelectOption } from '~/components/common/AppSelect.vue'
-import { useCatalogStore } from '~/stores/useCatalogStore'
+import { useCatalogStore, type AdminPreviewUrlResult } from '~/stores/useCatalogStore'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 import { useApiError } from '~/composables/useApiError'
 
 const emit = defineEmits<{
@@ -12,13 +13,15 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n()
 const catalogStore = useCatalogStore()
+const categoryStore = useCategoryStore()
 const toast = useToast()
 const { formatError } = useApiError()
 
 // Form State
 const draftSourceMode = ref<'pdf' | 'url'>('pdf')
 const title = ref('')
-const category = ref<number>(0)
+const categoryId = ref('')
+onMounted(() => { void categoryStore.ensureCategories() })
 const language = ref<string>(locale.value || 'en')
 const sourceUrl = ref('')
 const attribution = ref('')
@@ -30,27 +33,15 @@ const pdfInputRef = ref<HTMLInputElement | null>(null)
 // URL Preview State
 const previewUrlInput = ref('')
 const isPreviewingUrl = ref(false)
-const urlPreviewResult = ref<{
-  title: string
-  sourceUrl: string
-  extractedTextPreview: string
-  estimatedMinutes?: number
-  isPdfDetected?: boolean
-  detectedPdfUrl?: string | null
-} | null>(null)
+const urlPreviewResult = ref<AdminPreviewUrlResult | null>(null)
 
 const isSubmitting = ref(false)
 
-const categoryOptions = computed<SelectOption[]>(() => [
-  { value: 0, label: t('library.categories.frontend') },
-  { value: 1, label: t('library.categories.backend') },
-  { value: 2, label: t('library.categories.database') },
-  { value: 3, label: t('library.categories.system_design') },
-  { value: 4, label: t('library.categories.craft') },
-  { value: 5, label: t('library.categories.mental_models') },
-  { value: 6, label: t('library.categories.habits') }
-])
-
+const categoryOptions = computed<SelectOption[]>(() => categoryStore.activeCategories.map(c => ({
+  value: c.id,
+  label: categoryStore.getCategoryName(c, locale.value)
+})))
+const hasValidCategory = computed(() => !categoryStore.error && !categoryStore.isLoading && categoryStore.activeCategories.some(c => c.id === categoryId.value))
 const languageOptions = computed<SelectOption[]>(() => [
   { value: 'en', label: t('library.language_english') },
   { value: 'vi', label: t('library.language_vietnamese') }
@@ -108,8 +99,10 @@ async function handleSubmit() {
     return
   }
 
-
-
+  if (!hasValidCategory.value) {
+    toast.error(t('categories.selectCategory'))
+    return
+  }
   isSubmitting.value = true
   try {
     if (draftSourceMode.value === 'pdf') {
@@ -119,14 +112,15 @@ async function handleSubmit() {
         return
       }
 
-      const res = await catalogStore.uploadPdf({
+      const uploadPayload = {
         file: pdfFile.value,
         title: title.value.trim(),
-        category: category.value,
+        categoryId: categoryId.value,
         language: language.value,
         authorOrSourceUrl: sourceUrl.value.trim() || undefined,
         attributionText: attribution.value.trim() || undefined
-      })
+      }
+      const res = await catalogStore.uploadPdf(uploadPayload)
 
       toast.success(t('admin_catalog.toasts.pdf_draft_created'))
       emit('created', res.id)
@@ -138,20 +132,24 @@ async function handleSubmit() {
         return
       }
 
-      const res = await catalogStore.importUrl({
+      const importPayload = {
         url: targetUrl,
         title: title.value.trim(),
         description: title.value.trim(),
-        category: category.value,
+        categoryId: categoryId.value,
         language: language.value,
         authorOrSourceUrl: sourceUrl.value.trim() || undefined,
         attributionText: attribution.value.trim() || undefined
-      })
+      }
+      const res = await catalogStore.importUrl(importPayload)
 
       toast.success(t('admin_catalog.toasts.web_draft_created'))
       emit('created', res.id)
     }
   } catch (err: unknown) {
+    if (err && typeof err === 'object' && 'code' in err && typeof err.code === 'string' && err.code.startsWith('Category.')) {
+      await categoryStore.fetchCategories(true)
+    }
     toast.error(formatError(err))
   } finally {
     isSubmitting.value = false
@@ -238,7 +236,7 @@ async function handleSubmit() {
           </span>
         </div>
         <p class="text-slate-600 dark:text-slate-400 line-clamp-3 italic">
-          {{ urlPreviewResult.extractedTextPreview }}
+          {{ urlPreviewResult.markdownContent }}
         </p>
       </div>
     </div>
@@ -305,10 +303,17 @@ async function handleSubmit() {
             {{ $t('admin_catalog.form.category_required') }}
           </label>
           <AppSelect
-            v-model="category"
+            v-model="categoryId"
             :options="categoryOptions"
+            :placeholder="$t('categories.selectCategory')"
+            :disabled="categoryStore.isLoading || !!categoryStore.error"
             size="md"
           />
+          <div v-if="categoryStore.error" role="alert">
+            {{ $t('categories.metadataUnavailable') }}
+            <button type="button" @click="categoryStore.ensureCategories()">{{ $t('categories.retry') }}</button>
+          </div>
+          <p v-else-if="categoryStore.hasLoaded && !categoryStore.activeCategories.length">{{ $t('categories.noActiveCategories') }}</p>
         </div>
 
         <div class="space-y-1.5">
@@ -361,7 +366,7 @@ async function handleSubmit() {
 
       <button
         type="button"
-        :disabled="isSubmitting"
+        :disabled="isSubmitting || !hasValidCategory"
         @click="handleSubmit"
         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-semibold text-xs sm:text-sm shadow-md shadow-brand-500/20 transition-all active:scale-95 whitespace-nowrap shrink-0 cursor-pointer"
       >

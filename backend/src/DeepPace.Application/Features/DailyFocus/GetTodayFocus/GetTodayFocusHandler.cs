@@ -1,3 +1,5 @@
+using DeepPace.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.DailyFocus.DTOs;
@@ -237,15 +239,10 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                     documentChunk.OriginalTextMarkdown,
                     documentChunk.ChapterTitle,
                     documentChunk.Language,
-                    targetBook.Category,
                     cancellationToken);
 
                 if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
                 {
-                    if (targetBook.Category != Category.EngineeringCraft)
-                    {
-                        documentChunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
-                    }
                     documentChunk.SummaryMarkdown = !string.IsNullOrWhiteSpace(aiResult.Value.SummaryMarkdown)
                         ? aiResult.Value.SummaryMarkdown
                         : aiResult.Value.FormattedMarkdown;
@@ -290,7 +287,7 @@ public class GetTodayFocusHandler : IUseCase<GetTodayFocusRequest, GetTodayFocus
                     await _dbContext.SaveChangesAsync(cancellationToken);
                 }
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Non-blocking fallback to existing text
             }

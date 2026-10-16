@@ -37,6 +37,60 @@ public class DailyFocusHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetTodayFocus_PreservesVerbatimSource_WhenFormatterRestoresMarkdown()
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "format@test.dev", Name = "Reader" };
+        var category = DocumentCategory.Create("novel-daily-focus", "Novel reading", "Bài đọc mới");
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(), Title = "Source", Slug = "source",
+            CategoryId = category.Id, Status = ProcessingStatus.Ready,
+            CreatedByUserId = user.Id, TotalChunks = 1
+        };
+        var chunk = new DocumentChunk
+        {
+            Id = Guid.NewGuid(), DocumentBookId = book.Id, ChunkOrder = 1,
+            ChapterTitle = "Chapter", OriginalTextMarkdown = "Original source words."
+        };
+        var question = new InterviewQuestion
+        {
+            DocumentChunkId = chunk.Id,
+            QuestionText = "What does this chapter explain?",
+            ModelAnswerMarkdown = "The source establishes the chapter's principles.",
+            Difficulty = Difficulty.Senior
+        };
+        _db.Users.Add(user);
+        _db.DocumentCategories.Add(category);
+        _db.DocumentBooks.Add(book);
+        _db.DocumentChunks.Add(chunk);
+        _db.InterviewQuestions.Add(question);
+        await _db.SaveChangesAsync();
+        var handler = new GetTodayFocusHandler(_db, aiFormatter: new RestoringFormatter());
+
+        var result = await handler.ExecuteAsync(new GetTodayFocusRequest(user.Id, book.Id));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.DocumentChunk!.Id.Should().Be(chunk.Id);
+        result.Value.DocumentChunk.OriginalTextMarkdown.Should().Be("Original source words.");
+        result.Value.DocumentChunk.SummaryMarkdown.Should().Be("Summary");
+        result.Value.Pacer!.BookId.Should().Be(book.Id);
+        _db.ChangeTracker.Clear();
+        var persisted = await _db.DocumentChunks.SingleAsync(c => c.Id == chunk.Id);
+        persisted.OriginalTextMarkdown.Should().Be("Original source words.");
+        persisted.SummaryMarkdown.Should().Be("Summary");
+        (await _db.DocumentBooks.SingleAsync(b => b.Id == book.Id)).CategoryId.Should().Be(category.Id);
+        persisted.IsAiFormatted.Should().BeTrue();
+    }
+
+    private sealed class RestoringFormatter : IAiMarkdownFormatter
+    {
+        public Task<Result<AiFormattedSliceResult>> FormatSliceAsync(string rawText, string chapterTitle,
+            string language = "en", CancellationToken cancellationToken = default) =>
+            Task.FromResult<Result<AiFormattedSliceResult>>(new AiFormattedSliceResult(
+                "# Chapter\n\nOriginal source words.", "Summary", [], 1));
+    }
+
+    [Fact]
     public async Task GetTodayFocus_ShouldReturnEmptyState_WhenUserHasNoReadyBooks()
     {
         // Arrange
@@ -70,7 +124,7 @@ public class DailyFocusHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Designing Data-Intensive Applications",
             Slug = "ddia",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Status = ProcessingStatus.Ready,
             CreatedByUserId = userId,
             TotalChunks = 1
@@ -130,7 +184,7 @@ public class DailyFocusHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Designing Data-Intensive Applications",
             Slug = "ddia",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Status = ProcessingStatus.Ready,
             CreatedByUserId = userId,
             TotalChunks = 2
@@ -190,7 +244,7 @@ public class DailyFocusHandlerTests : IDisposable
             Title = "GC Book",
             Slug = "gc-book",
             SourceType = SourceType.MarkdownSeries,
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             TotalChunks = 1,
             Status = ProcessingStatus.Ready
         };
@@ -258,7 +312,7 @@ public class DailyFocusHandlerTests : IDisposable
             Title = "GC Book",
             Slug = "gc-book-2",
             SourceType = SourceType.MarkdownSeries,
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             TotalChunks = 1,
             Status = ProcessingStatus.Ready
         };
@@ -326,7 +380,7 @@ public class DailyFocusHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Designing Data-Intensive Applications",
             Slug = "ddia",
-            Category = Category.DatabaseStorage
+            CategoryId = CategoryDefaults.DatabaseStorageId
         };
         var chunk = new DocumentChunk
         {
@@ -395,7 +449,7 @@ public class DailyFocusHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "GC Book",
             Slug = "gc-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Status = ProcessingStatus.Ready,
             CreatedByUserId = userId,
             TotalChunks = 1
@@ -448,7 +502,7 @@ public class DailyFocusHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Concurrency Patterns",
             Slug = "concurrency-patterns",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Status = ProcessingStatus.Ready,
             CreatedByUserId = userId,
             TotalChunks = 3
@@ -551,7 +605,7 @@ public class DailyFocusHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Networking Patterns",
             Slug = "networking-patterns",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             Status = ProcessingStatus.Ready,
             CreatedByUserId = userId,
             TotalChunks = 2
@@ -628,7 +682,7 @@ public class DailyFocusHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Security Hardening",
             Slug = "security-hardening",
-            Category = Category.EngineeringCraft,
+            CategoryId = CategoryDefaults.EngineeringCraftId,
             Status = ProcessingStatus.Ready,
             CreatedByUserId = userId,
             TotalChunks = 2
@@ -727,7 +781,7 @@ public class DailyFocusHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Atomic Habits",
             Slug = "atomic-habits",
-            Category = Category.EngineeringCraft,
+            CategoryId = CategoryDefaults.EngineeringCraftId,
             Status = ProcessingStatus.Ready,
             CreatedByUserId = userId,
             TotalChunks = 75

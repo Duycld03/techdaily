@@ -41,7 +41,7 @@ const mockRuntimeConfig = {
 })
 
 ;(globalThis as any).useI18n = () => ({
-  locale: { value: 'en' },
+  locale: ref('en'),
   t: (key: string, params?: Record<string, any>) => {
     if (params) {
       let result = key

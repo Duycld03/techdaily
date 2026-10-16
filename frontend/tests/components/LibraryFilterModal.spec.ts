@@ -1,123 +1,64 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
-import LibraryFilterModal from '~/components/library/LibraryFilterModal.vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import FilterModal from '~/components/library/LibraryFilterModal.vue'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 
-describe('LibraryFilterModal.vue', () => {
-  it('renders modal with category and language options when isOpen is true', () => {
-    const wrapper = mount(LibraryFilterModal, {
-      props: {
-        isOpen: true,
-        currentFilters: {
-          category: undefined,
-          language: undefined
-        }
-      },
-      global: {
-        stubs: {
-          Teleport: true
-        }
-      }
-    })
+const category = { id: '92345678-1234-4234-8234-123456789012', slug: 'custom', nameEn: 'Custom topic', nameVi: 'Chu de', sortOrder: 1, isActive: false, version: 1 }
+const prefix = 'library'
+function render(currentFilters = {}) {
+  return mount(FilterModal, { props: { isOpen: true, currentFilters }, global: { stubs: { Teleport: true }, mocks: { $t: (key: string) => key } } })
+}
 
-    expect(wrapper.find('[role="dialog"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="library-filter-modal-close-btn"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="library-filter-modal-reset-btn"]').exists()).toBe(true)
-    expect(wrapper.find('[data-testid="library-filter-modal-apply-btn"]').exists()).toBe(true)
+describe('LibraryFilterModal UUID filters', () => {
+  beforeEach(() => { setActivePinia(createPinia()) })
 
-    // Check all categories are rendered (All + 7 categories = 8 buttons in section 1)
-    const categoryButtons = wrapper.findAll('.space-y-6 > div:nth-child(2) button')
-    expect(categoryButtons.length).toBe(8)
-  })
-
-  it('does not render modal content when isOpen is false', () => {
-    const wrapper = mount(LibraryFilterModal, {
-      props: {
-        isOpen: false,
-        currentFilters: {}
-      },
-      global: {
-        stubs: {
-          Teleport: true
-        }
-      }
-    })
-
-    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
-  })
-
-  it('emits apply event with selected category and language', async () => {
-    const wrapper = mount(LibraryFilterModal, {
-      props: {
-        isOpen: true,
-        currentFilters: {
-          category: undefined,
-          language: undefined
-        }
-      },
-      global: {
-        stubs: {
-          Teleport: true
-        }
-      }
-    })
-
-    // Click Category 1 (Backend)
-    const categoryButtons = wrapper.findAll('.space-y-6 > div:nth-child(2) button')
-    await categoryButtons[2].trigger('click') // index 2 is Backend (0 is All, 1 is Frontend, 2 is Backend)
-
-    // Click Language 'vi'
-    const languageButtons = wrapper.findAll('.space-y-6 > div:nth-child(3) button')
-    await languageButtons[2].trigger('click') // index 2 is 'vi'
-
-    // Click Apply
-    await wrapper.find('[data-testid="library-filter-modal-apply-btn"]').trigger('click')
-
-    expect(wrapper.emitted('apply')).toBeTruthy()
-    expect(wrapper.emitted('apply')![0][0]).toEqual({
-      category: 1,
-      language: 'vi'
-    })
-    expect(wrapper.emitted('close')).toBeTruthy()
-  })
-
-  it('emits reset event when reset button is clicked', async () => {
-    const wrapper = mount(LibraryFilterModal, {
-      props: {
-        isOpen: true,
-        currentFilters: {
-          category: 2,
-          language: 'en'
-        }
-      },
-      global: {
-        stubs: {
-          Teleport: true
-        }
-      }
-    })
-
-    await wrapper.find('[data-testid="library-filter-modal-reset-btn"]').trigger('click')
-
-    expect(wrapper.emitted('reset')).toBeTruthy()
-  })
-
-  it('emits close event when close or cancel button is clicked', async () => {
-    const wrapper = mount(LibraryFilterModal, {
-      props: {
-        isOpen: true,
-        currentFilters: {}
-      },
-      global: {
-        stubs: {
-          Teleport: true
-        }
-      }
-    })
-
-    await wrapper.find('[data-testid="library-filter-modal-close-btn"]').trigger('click')
+  it('loads metadata on mount and allows filtering inactive content by UUID only', async () => {
+    const store = useCategoryStore()
+    const ensure = vi.spyOn(store, 'ensureCategories').mockImplementation(async () => { store.categories = [category]; return [category] })
+    const wrapper = render()
+    await flushPromises()
+    expect(ensure).toHaveBeenCalledOnce()
+    const option = wrapper.findAll('button').find(button => button.text().includes('Custom topic'))!
+    expect(option.text()).toContain('categories.inactive')
+    await option.trigger('click')
+    await wrapper.get('[data-testid="' + prefix + '-filter-modal-apply-btn"]').trigger('click')
+    expect(wrapper.emitted('apply')![0][0]).toEqual({ categoryId: category.id, language: undefined })
     expect(wrapper.emitted('close')).toHaveLength(1)
+  })
 
-    await wrapper.find('[data-testid="library-filter-modal-cancel-btn"]').trigger('click')
-    expect(wrapper.emitted('close')).toHaveLength(2)
+  it('preserves the current UUID and clears only filters on reset', async () => {
+    const store = useCategoryStore()
+    vi.spyOn(store, 'ensureCategories').mockResolvedValue([category])
+    store.categories = [category]
+    const wrapper = render({ categoryId: category.id, language: 'vi' })
+    await wrapper.get('[data-testid="' + prefix + '-filter-modal-apply-btn"]').trigger('click')
+    expect(wrapper.emitted('apply')![0][0]).toEqual({ categoryId: category.id, language: 'vi' })
+    await wrapper.get('[data-testid="' + prefix + '-filter-modal-reset-btn"]').trigger('click')
+    await wrapper.get('[data-testid="' + prefix + '-filter-modal-apply-btn"]').trigger('click')
+    expect(wrapper.emitted('reset')).toHaveLength(1)
+    expect(wrapper.emitted('apply')![1][0]).toEqual({ categoryId: undefined, language: undefined })
+  })
+
+  it('shows a localized metadata failure and retries without seed fallback options', async () => {
+    const store = useCategoryStore()
+    store.error = 'network unavailable'
+    const ensure = vi.spyOn(store, 'ensureCategories').mockResolvedValue([])
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.get('[role="alert"]').text()).toContain('categories.metadataUnavailable')
+    expect(wrapper.text()).not.toContain('library.categories.frontend')
+    const retry = wrapper.findAll('button').find(button => button.text().includes('categories.retry'))!
+    await retry.trigger('click')
+    expect(ensure).toHaveBeenCalledTimes(2)
+  })
+
+  it('hides the dialog when closed and emits close for cancel', async () => {
+    vi.spyOn(useCategoryStore(), 'ensureCategories').mockResolvedValue([])
+    const wrapper = render()
+    await wrapper.get('[data-testid="' + prefix + '-filter-modal-cancel-btn"]').trigger('click')
+    expect(wrapper.emitted('close')).toHaveLength(1)
+    await wrapper.setProps({ isOpen: false })
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
   })
 })

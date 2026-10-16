@@ -1,13 +1,16 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
 import { browserStorage, readStored } from '~/utils/clientStorage'
+import { useCategoryStore, type CategoryDescriptor } from '~/stores/useCategoryStore'
+import { useAuthStore } from '~/stores/useAuthStore'
 
 export interface GraphNode {
   id: string
   label: string
   type: string
-  category: string
+  categoryId: string | null
+  category: CategoryDescriptor | null
   subtitle?: string | null
   summary?: string | null
   difficulty?: string | null
@@ -47,6 +50,9 @@ export interface KnowledgeGraphResponse {
 }
 
 export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
+  const categoryStore = useCategoryStore()
+  const auth = useAuthStore()
+  let generation = 0
   const rawData = ref<KnowledgeGraphResponse | null>(null)
   const isLoading = ref<boolean>(false)
   const error = ref<string | null>(null)
@@ -57,72 +63,47 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     : '2d'
   const viewMode = ref<'2d' | '3d'>(initialViewMode === '3d' ? '3d' : '2d')
   const searchQuery = ref<string>('')
-  const selectedCategory = ref<string>('all')
+  const selectedCategoryId = ref<string>('all')
   const selectedNodeType = ref<string>('all')
   const selectedMastery = ref<string>('all')
   const hoveredLegendType = ref<string | null>(null)
 
+  watch(
+    [() => auth.user?.id, () => auth.sessionGeneration, () => auth.adminGeneration],
+    () => {
+      generation++
+      rawData.value = null
+      isLoading.value = false
+      error.value = null
+      resetFilters()
+      hoveredLegendType.value = null
+    },
+    { flush: 'sync' }
+  )
+
   const filteredNodes = computed<GraphNode[]>(() => {
-    if (!rawData.value?.nodes) return []
-
-    return rawData.value.nodes.filter((node) => {
-      const nodeType = node.type?.toLowerCase()
-
-      // Category pillar filter
-      if (selectedCategory.value && selectedCategory.value.toLowerCase() !== 'all') {
-        const selCat = selectedCategory.value.toLowerCase()
-        const isBackend = selCat === 'backendruntime' || selCat === 'backenddotnet' || selCat === 'dotnet'
-        const nodeCat = node.category?.toLowerCase() || ''
-        const isNodeBackend = nodeCat === 'backendruntime' || nodeCat === 'backenddotnet' || nodeCat === 'dotnet'
-
-        const isMatchingPillar =
-          nodeType === 'pillar' &&
-          (nodeCat === selCat ||
-           node.id?.toLowerCase() === `pillar-${selCat}` ||
-           (isBackend && (node.id?.toLowerCase() === 'pillar-backendruntime' || node.id?.toLowerCase() === 'pillar-backenddotnet')))
-
-        if (isBackend) {
-          if (!isMatchingPillar && !isNodeBackend) {
-            return false
-          }
-        } else {
-          if (!isMatchingPillar && nodeCat !== selCat) {
-            return false
-          }
-        }
-      }
-      // Node type filter: include 'pillar' nodes as the hubs
-      if (selectedNodeType.value && selectedNodeType.value.toLowerCase() !== 'all') {
-        const selType = selectedNodeType.value.toLowerCase()
-        if (nodeType !== selType && nodeType !== 'pillar') {
-          return false
-        }
-      }
-
-      // Mastery filter (applies to card nodes)
-      if (selectedMastery.value && selectedMastery.value.toLowerCase() !== 'all') {
-        if (node.type?.toLowerCase() === 'card') {
-          if (node.status?.toLowerCase() !== selectedMastery.value.toLowerCase()) {
-            return false
-          }
-        }
-      }
-
-      // Search query filter (matches label, summary, tags, or subtitle)
-      if (searchQuery.value && searchQuery.value.trim() !== '') {
-        const query = searchQuery.value.trim().toLowerCase()
-        const matchesLabel = node.label?.toLowerCase().includes(query) ?? false
-        const matchesSummary = node.summary?.toLowerCase().includes(query) ?? false
-        const matchesSubtitle = node.subtitle?.toLowerCase().includes(query) ?? false
-        const matchesTags = node.tags?.some((tag) => tag.toLowerCase().includes(query)) ?? false
-
-        if (!matchesLabel && !matchesSummary && !matchesSubtitle && !matchesTags) {
-          return false
-        }
-      }
-
-      return true
+    const nodes = rawData.value?.nodes ?? []
+    const query = searchQuery.value.trim().toLowerCase()
+    const content = nodes.filter((node) => {
+      const type = node.type.toLowerCase()
+      if (type === 'pillar') return false
+      if (selectedCategoryId.value !== 'all' && node.categoryId !== selectedCategoryId.value) return false
+      if (selectedNodeType.value !== 'all' && type !== selectedNodeType.value.toLowerCase()) return false
+      if (selectedMastery.value !== 'all' && type === 'card' && node.status?.toLowerCase() !== selectedMastery.value.toLowerCase()) return false
+      if (!query) return true
+      return [node.label, node.summary, node.subtitle, ...(node.tags ?? [])]
+        .some(value => value?.toLowerCase().includes(query))
     })
+    const contentIds = new Set(content.map(node => node.id))
+    const representedIds = new Set(content.map(node => node.categoryId).filter(Boolean))
+    const connectedHubIds = new Set<string>()
+    for (const edge of rawData.value?.edges ?? []) {
+      if (contentIds.has(edge.source)) connectedHubIds.add(edge.target)
+      if (contentIds.has(edge.target)) connectedHubIds.add(edge.source)
+    }
+    return nodes.filter(node => contentIds.has(node.id) ||
+      (node.type.toLowerCase() === 'pillar' && connectedHubIds.has(node.id) && !!node.categoryId && representedIds.has(node.categoryId) &&
+        (selectedCategoryId.value === 'all' || node.categoryId === selectedCategoryId.value)))
   })
 
   const filteredEdges = computed<GraphEdge[]>(() => {
@@ -136,7 +117,7 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
 
   // True when the API returned at least one raw node (before client-side filters).
   // Distinguishes "user has learned nothing yet" from "filters hid every node".
-  const hasAnyNodes = computed<boolean>(() => (rawData.value?.nodes?.length ?? 0) > 0)
+  const hasAnyNodes = computed<boolean>(() => rawData.value?.nodes.some(node => node.type.toLowerCase() !== 'pillar') ?? false)
 
   const selectedNode = computed<GraphNode | null>(() => {
     if (!rawData.value?.nodes || !selectedNodeId.value) return null
@@ -149,32 +130,42 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
 
   const nodeStats = computed(() => stats.value)
 
-  const activePillars = computed<string[]>(() => {
-    if (!rawData.value?.nodes) return []
-    const pillars = new Set<string>()
-    for (const node of rawData.value.nodes) {
-      if (node.category) {
-        pillars.add(node.category)
+  const activePillars = computed<CategoryDescriptor[]>(() => {
+    const categories = new Map<string, CategoryDescriptor>()
+    for (const node of rawData.value?.nodes ?? []) {
+      if (node.type.toLowerCase() !== 'pillar' && node.categoryId && node.category) {
+        categories.set(node.categoryId, categoryStore.getCategoryById(node.categoryId) ?? node.category)
       }
     }
-    return Array.from(pillars)
+    return [...categories.values()].sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id))
   })
 
   const filters = computed(() => ({
-    category: selectedCategory.value,
+    categoryId: selectedCategoryId.value,
     nodeType: selectedNodeType.value,
     mastery: selectedMastery.value,
     searchQuery: searchQuery.value
   }))
 
+  function getNodeLabel(node: GraphNode, locale?: string): string {
+    if (node.type.toLowerCase() !== 'pillar') return node.label
+    const category = categoryStore.getCategoryById(node.categoryId) ?? node.category
+    return categoryStore.getCategoryName(category, locale)
+  }
+
   async function fetchGraph(force = false) {
+    auth.init()
     if (rawData.value && !force) return
+    const currentGeneration = generation
     isLoading.value = true
     error.value = null
     try {
       const api = useApiClient()
-      rawData.value = await api.get<KnowledgeGraphResponse>('/api/v1/graph')
+      const response = await api.get<KnowledgeGraphResponse>('/api/v1/graph')
+      if (currentGeneration !== generation) return
+      rawData.value = response
     } catch (err: unknown) {
+      if (currentGeneration !== generation) return
       if (err && typeof err === 'object' && 'data' in err) {
         const apiErr = err as { data?: { detail?: string } }
         error.value = apiErr.data?.detail || 'Failed to load knowledge graph.'
@@ -184,7 +175,7 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
         error.value = 'Failed to load knowledge graph.'
       }
     } finally {
-      isLoading.value = false
+      if (currentGeneration === generation) isLoading.value = false
     }
   }
 
@@ -192,8 +183,8 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     selectedNodeId.value = nodeId
   }
 
-  function setCategory(category: string) {
-    selectedCategory.value = category
+  function setCategoryId(categoryId: string) {
+    selectedCategoryId.value = categoryId
   }
 
   function setNodeType(type: string) {
@@ -219,7 +210,7 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
   }
 
   function resetFilters() {
-    selectedCategory.value = 'all'
+    selectedCategoryId.value = 'all'
     selectedNodeType.value = 'all'
     selectedMastery.value = 'all'
     searchQuery.value = ''
@@ -236,7 +227,7 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     error,
     selectedNodeId,
     searchQuery,
-    selectedCategory,
+    selectedCategoryId,
     selectedNodeType,
     selectedMastery,
     viewMode,
@@ -249,8 +240,9 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', () => {
     activePillars,
     filters,
     fetchGraph,
+    getNodeLabel,
     selectNode,
-    setCategory,
+    setCategoryId,
     setNodeType,
     setMastery,
     setSearchQuery,

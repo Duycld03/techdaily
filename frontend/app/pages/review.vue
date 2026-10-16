@@ -42,6 +42,7 @@ import FlashcardBentoCard from '~/components/review/FlashcardBentoCard.vue'
 import FlashcardDeck from '~/components/review/FlashcardDeck.vue'
 import BasePagination from '~/components/common/BasePagination.vue'
 import { useReviewStore, type ReviewCard, type ReviewFilterState } from '~/stores/useReviewStore'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 import MarkdownIt from 'markdown-it'
 
 const { t } = useI18n()
@@ -49,6 +50,7 @@ const route = useRoute()
 const router = useRouter()
 const { formatError } = useApiError()
 const reviewStore = useReviewStore()
+const categoryStore = useCategoryStore()
 const toast = useToast()
 const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
 
@@ -414,6 +416,7 @@ async function confirmDeleteCard() {
 }
 
 onMounted(() => {
+  categoryStore.ensureCategories()
 
   reviewStore.fetchReviewDeck()
 

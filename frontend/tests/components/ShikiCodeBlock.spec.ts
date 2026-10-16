@@ -24,7 +24,6 @@ public class GetUsersHandler : IRequestHandler<GetUsersQuery, List<UserDto>>
     const wrapper = mount(ShikiCodeBlock, {
       props: {
         code: csharpCode,
-        category: 1
       }
     })
 
@@ -62,7 +61,6 @@ SELECT n_tup_upd, n_tup_hot_upd FROM pg_stat_user_tables WHERE relname = 'user_s
     const wrapper = mount(ShikiCodeBlock, {
       props: {
         code: sqlCode,
-        category: 2,
         tags: ['postgres17', 'mvcc', 'hot-updates']
       }
     })
@@ -80,7 +78,6 @@ socket.on('telemetry', (batch) => {
     const wrapper = mount(ShikiCodeBlock, {
       props: {
         code: vueCode,
-        category: 0
       }
     })
 

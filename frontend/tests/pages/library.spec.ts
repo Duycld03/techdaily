@@ -6,13 +6,18 @@ import LibraryPage from '~/pages/library.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
 import { useLibraryStore, type Book } from '~/stores/useLibraryStore'
 
+const category = { id: '92345678-1234-4234-8234-123456789012', slug: 'custom-topic', nameEn: 'Custom Topic', nameVi: 'Chu de', sortOrder: 1, isActive: true, version: 1 }
+const inactiveCategory = { ...category, id: '82345678-1234-4234-8234-123456789012', slug: 'retired', nameEn: 'Retired Topic', isActive: false }
+let booksResponse: unknown[] | undefined
+
 const mockBooks = [
   {
     id: 'book-1',
     title: 'Designing Data-Intensive Applications',
     slug: 'ddia',
     sourceType: 0,
-    category: 2,
+    categoryId: category.id,
+    category,
     totalChunks: 12,
     isPublished: true,
     createdAt: '2026-08-31T00:00:00Z'
@@ -22,7 +27,8 @@ const mockBooks = [
     title: 'Atomic Habits',
     slug: 'atomic-habits',
     sourceType: 0,
-    category: 4,
+    categoryId: inactiveCategory.id,
+    category: inactiveCategory,
     totalChunks: 8,
     isPublished: true,
     createdAt: '2026-09-01T00:00:00Z'
@@ -30,8 +36,9 @@ const mockBooks = [
 ]
 
 const mockGet = vi.fn(async (url: string): Promise<any> => {
+  if (url === '/api/v1/categories') return [category, inactiveCategory]
   if (url.includes('/api/v1/library/books')) {
-    return { books: [...mockBooks] }
+    return { books: booksResponse ?? [...mockBooks] }
   }
   return {}
 })
@@ -70,7 +77,8 @@ const mockPost = vi.fn(async (url: string, body: Record<string, unknown>) => {
       book: {
         id: 'book-imported-1',
         title: body.title,
-        category: body.category,
+        categoryId: body.categoryId,
+        category,
         totalChunks: 1,
         isPublished: true,
         createdAt: '2026-09-01T00:00:00Z'
@@ -84,7 +92,8 @@ const mockPostRaw = vi.fn(async (_url: string, _body: FormData) => {
     book: {
       id: 'uploaded-pdf-1',
       title: 'Sample PDF',
-      category: 4,
+      categoryId: category.id,
+      category,
       totalChunks: 0,
       status: 'Processing'
     }
@@ -94,7 +103,8 @@ const mockPatch = vi.fn(async (_url: string, body: Record<string, unknown>) => {
   return {
     id: 'book-1',
     title: body.title,
-    category: body.category,
+    categoryId: body.categoryId,
+    category,
     authorOrSourceUrl: body.authorOrSourceUrl,
     language: (body.language as string) ?? 'en'
   }
@@ -116,9 +126,40 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    booksResponse = undefined
+    vi.stubGlobal('useRoute', () => ({ path: '/library', query: {}, fullPath: '/library' }))
+    vi.stubGlobal('useRouter', () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }))
   })
 
-  it('renders quick category filter chips matching Discover and provides access to all 7 categories via advanced filter modal', async () => {
+  it('refreshes rejected inactive metadata while preserving the import draft and selected UUID', async () => {
+    const wrapper = mount(LibraryPage, { global: { stubs: { NuxtLink: true, Teleport: true } } })
+    await flushPromises()
+    await wrapper.find('button.bg-brand-600').trigger('click')
+    await flushPromises()
+    const title = wrapper.get('input[placeholder="library.markdown_title_placeholder"]')
+    const content = wrapper.get('textarea')
+    const source = wrapper.get('input[type="url"]')
+    await title.setValue('My draft')
+    await content.setValue('# Keep this markdown')
+    await source.setValue('https://example.com/source')
+    const select = wrapper.findAllComponents(AppSelect).find(select => select.props('ariaLabel') === 'library.category_label')!
+    select.vm.$emit('update:modelValue', category.id)
+    await flushPromises()
+    mockPost.mockRejectedValueOnce({ code: 'Category.Inactive', message: 'Inactive category' })
+    mockGet.mockImplementationOnce(async () => [{ ...category, isActive: false }, inactiveCategory])
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect((title.element as HTMLInputElement).value).toBe('My draft')
+    expect((content.element as HTMLTextAreaElement).value).toBe('# Keep this markdown')
+    expect((source.element as HTMLInputElement).value).toBe('https://example.com/source')
+    expect(select.props('modelValue')).toBe(category.id)
+    expect(select.props('options').some((option: { value: string }) => option.value === category.id)).toBe(false)
+    const submit = wrapper.findAll('button').find(button => button.text() === 'library.import_action')!
+    expect(submit.attributes('disabled')).toBeDefined()
+    expect(mockGet).toHaveBeenLastCalledWith('/api/v1/categories', { cache: 'no-store' })
+  })
+
+  it('renders dynamically fetched category filter chips and advanced filtering', async () => {
     const wrapper = mount(LibraryPage, {
       global: {
         stubs: {
@@ -129,10 +170,9 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     })
     await flushPromises()
 
-    expect(wrapper.text()).toContain('library.categories.backend')
-    expect(wrapper.text()).toContain('library.categories.frontend')
-    expect(wrapper.text()).toContain('library.categories.database')
-    expect(wrapper.text()).toContain('library.categories.system_design')
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/categories', { cache: 'no-store' })
+    expect(wrapper.text()).toContain('Custom Topic')
+    expect(wrapper.text()).toContain('Retired Topic')
 
     const advancedBtn = wrapper.find('[data-testid="library-advanced-filter-btn"]')
     expect(advancedBtn.exists()).toBe(true)
@@ -175,6 +215,8 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(wrapper.text()).toContain('https://example.com/files/book.pdf')
     expect(wrapper.text()).toContain('library.import_detected_pdf')
 
+    wrapper.findAllComponents(AppSelect).find(select => select.props('options')?.some((option: { value: string }) => option.value === category.id))!.vm.$emit('update:modelValue', category.id)
+    await flushPromises()
     // Click "Import & Slice PDF Directly" button
     const importPdfBtn = wrapper.findAll('button').find(b => b.text().includes('library.import_detected_pdf'))
     expect(importPdfBtn).toBeDefined()
@@ -186,7 +228,8 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       '/api/v1/library/import-remote-pdf',
       expect.objectContaining({
         pdfUrl: 'https://example.com/files/book.pdf',
-        title: 'Embedded Architecture Book'
+        title: 'Embedded Architecture Book',
+        categoryId: category.id
       })
     )
   })
@@ -225,51 +268,12 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(wrapper.text()).toContain('library.verbatim_category_hint')
   })
 
-  it('renders localized category badges for string enums, string aliases, and numeric IDs without fallback to Engineering', async () => {
-    const customBooks = [
-      { id: 'b-frontend', title: 'Web Perf', category: 'FrontendWeb', totalChunks: 3, status: 'Ready' },
-      { id: 'b-backend', title: 'DotNet Core', category: 'BackendDotNet', totalChunks: 4, status: 'Ready' },
-      { id: 'b-db', title: 'PostgreSQL Internals', category: 'DatabaseStorage', totalChunks: 5, status: 'Ready' },
-      { id: 'b-sys', title: 'Distributed Systems', category: 'SystemDesign', totalChunks: 6, status: 'Ready' },
-      { id: 'b-craft', title: 'The Pragmatic Programmer', category: 'EngineeringCraft', totalChunks: 7, status: 'Ready' },
-      { id: 'b-num0', title: 'Num 0', category: 0, totalChunks: 1, status: 'Ready' },
-      { id: 'b-num1', title: 'Num 1', category: 1, totalChunks: 1, status: 'Ready' },
-      { id: 'b-num2', title: 'Num 2', category: 2, totalChunks: 1, status: 'Ready' },
-      { id: 'b-num3', title: 'Num 3', category: 3, totalChunks: 1, status: 'Ready' },
-      { id: 'b-num4', title: 'Num 4', category: 4, totalChunks: 1, status: 'Ready' },
-      { id: 'b-num5', title: 'Num 5', category: 5, totalChunks: 1, status: 'Ready' },
-      { id: 'b-num6', title: 'Num 6', category: 6, totalChunks: 1, status: 'Ready' },
-      { id: 'b-mental', title: 'Mental Models Book', category: 'MentalModels', totalChunks: 3, status: 'Ready' },
-      { id: 'b-habits', title: 'Atomic Habits Book', category: 'HabitsProductivity', totalChunks: 3, status: 'Ready' },
-      { id: 'b-alias', title: 'Alias Craft', category: 'craft', totalChunks: 2, status: 'Ready' }
-    ]
-    mockGet.mockImplementationOnce(async (url: string) => {
-      if (url.includes('/api/v1/library/books')) {
-        return { books: customBooks }
-      }
-      return {}
-    })
-
-    const wrapper = mount(LibraryPage, {
-      global: {
-        stubs: {
-          NuxtLink: true,
-          Teleport: true
-        }
-      }
-    })
-
+  it('renders stored descriptors for active and inactive books without enum fallback', async () => {
+    const wrapper = mount(LibraryPage, { global: { stubs: { NuxtLink: true, Teleport: true } } })
     await flushPromises()
-
-    // None of the cards should fallback to the raw unlocalized string 'Engineering'
-    expect(wrapper.text()).not.toContain('Engineering')
-    expect(wrapper.text()).toContain('library.categories.frontend')
-    expect(wrapper.text()).toContain('library.categories.backend')
-    expect(wrapper.text()).toContain('library.categories.database')
-    expect(wrapper.text()).toContain('library.categories.system_design')
-    expect(wrapper.text()).toContain('library.categories.craft')
-    expect(wrapper.text()).toContain('library.categories.mental_models')
-    expect(wrapper.text()).toContain('library.categories.habits')
+    expect(wrapper.text()).toContain('Custom Topic')
+    expect(wrapper.text()).toContain('Retired Topic')
+    expect(wrapper.text()).not.toContain('library.categories.frontend')
   })
 
   it('renders dynamic localized status messages with parameter interpolation for in-progress books', async () => {
@@ -277,7 +281,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       {
         id: 'p-1',
         title: 'Book Curating',
-        category: 'EngineeringCraft',
+        categoryId: category.id, category,
         totalChunks: 0,
         status: 'Processing',
         statusMessage: 'AI is curating initial slice 3/12...'
@@ -285,7 +289,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       {
         id: 'p-2',
         title: 'Book Queued',
-        category: 'BackendDotNet',
+        categoryId: category.id, category,
         totalChunks: 0,
         status: 'Processing',
         statusMessage: 'File uploaded, queued for processing...'
@@ -293,7 +297,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       {
         id: 'p-3',
         title: 'Book Remote',
-        category: 'DatabaseStorage',
+        categoryId: category.id, category,
         totalChunks: 0,
         status: 'Processing',
         statusMessage: 'Remote PDF download initiated. Processing chapters...'
@@ -301,7 +305,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       {
         id: 'p-4',
         title: 'Book Structure',
-        category: 'SystemDesign',
+        categoryId: category.id, category,
         totalChunks: 0,
         status: 'Processing',
         statusMessage: 'Analyzing document structure and bookmarks...'
@@ -309,7 +313,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       {
         id: 'p-5',
         title: 'Book Persisting',
-        category: 'FrontendWeb',
+        categoryId: category.id, category,
         totalChunks: 0,
         status: 'Processing',
         statusMessage: 'Persisting chapters and slices...'
@@ -317,7 +321,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       {
         id: 'p-6',
         title: 'Book Pages',
-        category: 'FrontendWeb',
+        categoryId: category.id, category,
         totalChunks: 0,
         status: 'Processing',
         statusMessage: 'Analyzing content: page 15/120'
@@ -325,7 +329,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       {
         id: 'p-7',
         title: 'Book Topic',
-        category: 'FrontendWeb',
+        categoryId: category.id, category,
         totalChunks: 0,
         status: 'Processing',
         statusMessage: 'Extracting topic: Chapter 2 - Concurrency'
@@ -333,20 +337,14 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       {
         id: 'p-8',
         title: 'Book Complete',
-        category: 'FrontendWeb',
+        categoryId: category.id, category,
         totalChunks: 0,
         status: 'Processing',
         statusMessage: 'Extracted 15 slices. Complete!'
       }
     ]
 
-    mockGet.mockImplementationOnce(async (url: string) => {
-      if (url.includes('/api/v1/library/books')) {
-        return { books: processingBooks }
-      }
-      return {}
-    })
-
+    booksResponse = processingBooks
     const wrapper = mount(LibraryPage, {
       global: {
         stubs: {
@@ -421,6 +419,8 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     await fileInput.trigger('change')
     await flushPromises()
 
+    wrapper.findAllComponents(AppSelect).find(select => select.props('options')?.some((option: { value: string }) => option.value === category.id))!.vm.$emit('update:modelValue', category.id)
+    await flushPromises()
     // Submit PDF form to trigger isProcessingPdf = true
     const pdfForm = wrapper.findAll('form').find(f => f.text().includes('library.upload_pdf_action'))
     if (pdfForm) {
@@ -467,6 +467,8 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(languageSelect).toBeDefined()
     languageSelect!.vm.$emit('update:modelValue', 'vi')
     await flushPromises()
+    wrapper.findAllComponents(AppSelect).find(select => select.props('options')?.some((option: { value: string }) => option.value === category.id))!.vm.$emit('update:modelValue', category.id)
+    await flushPromises()
 
     // Submit the PDF upload form.
     const pdfForm = wrapper.findAll('form').find(f => f.text().includes('library.upload_pdf_action'))
@@ -504,7 +506,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     expect(wrapper.text()).toContain('Atomic Habits')
   })
 
-  it('automatically infers Category.BackendDotNet (1) during URL crawl when URL or title contains aspnet or dotnet', async () => {
+  it('does not infer a category from an aspnet URL and requires an explicit UUID selection', async () => {
     const wrapper = mount(LibraryPage, {
       global: {
         stubs: {
@@ -542,41 +544,34 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     await mdTabBtn!.trigger('click')
     await flushPromises()
 
-    // Verify the category select element is auto-set to 1 (BackendDotNet)
-    const select = wrapper.findComponent(AppSelect)
-    expect(select.exists()).toBe(true)
-    expect(select.props('modelValue')).toBe(1)
+    const select = wrapper.findAllComponents(AppSelect).find(select => select.props('options')?.some((option: { value: string }) => option.value === category.id))!
+    expect(select.props('modelValue')).toBe('')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(mockPost.mock.calls.some(([url]) => url === '/api/v1/library/import')).toBe(false)
+    select.vm.$emit('update:modelValue', category.id)
+    await flushPromises()
 
     // Submit the markdown form
     const form = wrapper.find('form')
     expect(form.exists()).toBe(true)
     await form.trigger('submit')
     await flushPromises()
-    // Verify importDocument was called with inferred category 1 (BackendDotNet) instead of 0 (FrontendWeb)
+    // Only the explicitly selected UUID is submitted.
     expect(mockPost).toHaveBeenCalledWith(
       '/api/v1/library/import',
       expect.objectContaining({
-        category: 1
+        categoryId: category.id
       })
     )
   })
 
   it('renders unread ready book cards with neutral Obsidian BookOpen badge and no emerald styling classes', async () => {
-    mockGet.mockResolvedValueOnce({
-      books: [
-        {
-          id: 'book-ready-1',
-          title: 'Designing Data-Intensive Applications',
-          slug: 'ddia',
-          sourceType: 0,
-          category: 2,
-          totalChunks: 12,
-          isPublished: true,
-          createdAt: '2026-09-01T00:00:00Z',
-          status: 'Ready'
-        }
-      ]
-    })
+    booksResponse = [{
+      ...mockBooks[0],
+      id: 'book-ready-1',
+      status: 'Ready'
+    }]
 
     const wrapper = mount(LibraryPage, {
       global: {
@@ -652,7 +647,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
         expect.stringContaining('/api/v1/library/books/book-1'),
         expect.objectContaining({
           title: 'Designing Data-Intensive Systems (Updated)',
-          category: 2,
+          categoryId: category.id,
           language: 'en'
         })
       )
@@ -710,7 +705,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       expect(mockReplace).toHaveBeenCalledWith(
         expect.objectContaining({
           query: expect.objectContaining({
-            category: '0'
+            categoryId: category.id
           })
         })
       )
@@ -722,7 +717,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       expect(mockReplace).toHaveBeenCalledWith(
         expect.objectContaining({
           query: expect.objectContaining({
-            category: undefined
+            categoryId: undefined
           })
         })
       )

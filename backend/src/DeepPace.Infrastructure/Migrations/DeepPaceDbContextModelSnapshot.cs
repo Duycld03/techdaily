@@ -155,10 +155,8 @@ namespace DeepPace.Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("ConcurrencyVersion")
                         .IsConcurrencyToken()
@@ -264,6 +262,8 @@ namespace DeepPace.Infrastructure.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("CurrentAttemptId");
 
@@ -413,10 +413,8 @@ namespace DeepPace.Infrastructure.Migrations
                     b.Property<string>("AuthorOrSourceUrl")
                         .HasColumnType("text");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -503,6 +501,8 @@ namespace DeepPace.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CategoryId");
+
                     b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("CurrentAttemptId");
@@ -520,6 +520,154 @@ namespace DeepPace.Infrastructure.Migrations
                         .HasFilter("\"CreatedByUserId\" IS NOT NULL AND \"SourceCatalogDocumentId\" IS NOT NULL AND \"IsDeleted\" = false");
 
                     b.ToTable("DocumentBooks");
+                });
+
+            modelBuilder.Entity("DeepPace.Domain.Entities.DocumentCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ConcurrencyVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("NameEn")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NameVi")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasFilter("\"IsDeleted\" = false");
+
+                    b.HasIndex("IsActive", "SortOrder", "Slug");
+
+                    b.ToTable("DocumentCategories", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_DocumentCategories_ConcurrencyVersion", "\"ConcurrencyVersion\" > 0");
+
+                            t.HasCheckConstraint("CK_DocumentCategories_SortOrder", "\"SortOrder\" >= 0 AND \"SortOrder\" <= 10000");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("10000000-0000-4000-8000-000000000000"),
+                            ConcurrencyVersion = 1,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            NameEn = "Frontend & Web",
+                            NameVi = "Frontend & Web",
+                            Slug = "frontend-web",
+                            SortOrder = 0
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-4000-8000-000000000001"),
+                            ConcurrencyVersion = 1,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            NameEn = "Backend & Runtime",
+                            NameVi = "Backend & Runtime",
+                            Slug = "backend-runtime",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-4000-8000-000000000002"),
+                            ConcurrencyVersion = 1,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            NameEn = "Database & Storage",
+                            NameVi = "Cơ Sở Dữ Liệu & Lưu Trữ",
+                            Slug = "database-storage",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-4000-8000-000000000003"),
+                            ConcurrencyVersion = 1,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            NameEn = "Distributed Systems",
+                            NameVi = "Hệ Thống Phân Tán",
+                            Slug = "system-design",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-4000-8000-000000000004"),
+                            ConcurrencyVersion = 1,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            NameEn = "Clean Code & Software Design",
+                            NameVi = "Mã Sạch & Thiết Kế Phần Mềm",
+                            Slug = "engineering-craft",
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-4000-8000-000000000005"),
+                            ConcurrencyVersion = 1,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            NameEn = "Mental Models & Decisions",
+                            NameVi = "Mô Hình Tư Duy & Quyết Định",
+                            Slug = "mental-models",
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            Id = new Guid("10000000-0000-4000-8000-000000000006"),
+                            ConcurrencyVersion = 1,
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsActive = true,
+                            IsDeleted = false,
+                            NameEn = "Habits & Deep Work",
+                            NameVi = "Thói Quen & Tập Trung Sâu",
+                            Slug = "habits-productivity",
+                            SortOrder = 6
+                        });
                 });
 
             modelBuilder.Entity("DeepPace.Domain.Entities.DocumentChunk", b =>
@@ -940,8 +1088,8 @@ namespace DeepPace.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<int>("Category")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("CorrectOptionIndex")
                         .ValueGeneratedOnAdd()
@@ -988,7 +1136,7 @@ namespace DeepPace.Infrastructure.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("Category", "Level");
+                    b.HasIndex("CategoryId", "Level");
 
                     b.HasIndex("Topic", "Level");
 
@@ -1166,6 +1314,11 @@ namespace DeepPace.Infrastructure.Migrations
                         {
                             RoleId = new Guid("20000000-0000-4000-8000-000000000002"),
                             PermissionKey = "ManageRoles"
+                        },
+                        new
+                        {
+                            RoleId = new Guid("20000000-0000-4000-8000-000000000002"),
+                            PermissionKey = "ManageCategories"
                         });
                 });
 
@@ -1379,8 +1532,8 @@ namespace DeepPace.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.Property<int>("Category")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1436,7 +1589,7 @@ namespace DeepPace.Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = false");
 
-                    b.HasIndex("Category", "IsPublished");
+                    b.HasIndex("CategoryId", "IsPublished");
 
                     b.ToTable("TechInsights");
                 });
@@ -1447,7 +1600,7 @@ namespace DeepPace.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Category")
+                    b.Property<string>("ContextLabel")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
@@ -1841,6 +1994,17 @@ namespace DeepPace.Infrastructure.Migrations
                     b.ToTable("UserQuizProgresses", (string)null);
                 });
 
+            modelBuilder.Entity("DeepPace.Domain.Entities.CatalogDocument", b =>
+                {
+                    b.HasOne("DeepPace.Domain.Entities.DocumentCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
             modelBuilder.Entity("DeepPace.Domain.Entities.CatalogSlice", b =>
                 {
                     b.HasOne("DeepPace.Domain.Entities.CatalogDocument", "CatalogDocument")
@@ -1880,10 +2044,18 @@ namespace DeepPace.Infrastructure.Migrations
 
             modelBuilder.Entity("DeepPace.Domain.Entities.DocumentBook", b =>
                 {
+                    b.HasOne("DeepPace.Domain.Entities.DocumentCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("DeepPace.Domain.Entities.User", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Category");
 
                     b.Navigation("CreatedByUser");
                 });
@@ -1922,10 +2094,18 @@ namespace DeepPace.Infrastructure.Migrations
 
             modelBuilder.Entity("DeepPace.Domain.Entities.QuizQuestion", b =>
                 {
+                    b.HasOne("DeepPace.Domain.Entities.DocumentCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("DeepPace.Domain.Entities.User", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Category");
 
                     b.Navigation("CreatedByUser");
                 });
@@ -2000,6 +2180,17 @@ namespace DeepPace.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DeepPace.Domain.Entities.TechInsight", b =>
+                {
+                    b.HasOne("DeepPace.Domain.Entities.DocumentCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("DeepPace.Domain.Entities.User", b =>

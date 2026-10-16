@@ -19,6 +19,7 @@ public class DeepPaceDbContext : DbContext, IDeepPaceDbContext
     public DbSet<AuthorizationInitialization> AuthorizationInitializations => Set<AuthorizationInitialization>();
     public DbSet<InterviewQuestion> InterviewQuestions => Set<InterviewQuestion>();
     public DbSet<DocumentBook> DocumentBooks => Set<DocumentBook>();
+    public DbSet<DocumentCategory> DocumentCategories => Set<DocumentCategory>();
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
     public DbSet<DocumentChunkAudio> DocumentChunkAudios => Set<DocumentChunkAudio>();
     public DbSet<DailyDrill> DailyDrills => Set<DailyDrill>();
@@ -158,5 +159,16 @@ public class DeepPaceDbContext : DbContext, IDeepPaceDbContext
         }
 
         return base.SaveChanges();
+    }
+}
+
+public class DeepPaceDbContextFactory : Microsoft.EntityFrameworkCore.Design.IDesignTimeDbContextFactory<DeepPaceDbContext>
+{
+    public DeepPaceDbContext CreateDbContext(string[] args)
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<DeepPaceDbContext>();
+        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=deeppace_db;Username=deeppace_user;Password=techdaily_password_secret",
+            o => o.UseVector());
+        return new DeepPaceDbContext(optionsBuilder.Options);
     }
 }

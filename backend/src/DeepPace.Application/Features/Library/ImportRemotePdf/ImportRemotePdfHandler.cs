@@ -1,3 +1,4 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 using System.Net;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
@@ -14,7 +15,7 @@ namespace DeepPace.Application.Features.Library.ImportRemotePdf;
 public record ImportRemotePdfRequest(
     string PdfUrl,
     string Title,
-    Category Category,
+    Guid CategoryId,
     string Language = "en",
     Guid? CreatedByUserId = null);
 
@@ -31,8 +32,8 @@ public class ImportRemotePdfValidator : AbstractValidator<ImportRemotePdfRequest
             .NotEmpty().WithMessage("Title is required.")
             .MaximumLength(250).WithMessage("Title cannot exceed 250 characters.");
 
-        RuleFor(x => x.Category)
-            .IsInEnum().WithMessage("A valid category is required.");
+        RuleFor(x => x.CategoryId)
+            .NotEmpty().WithMessage("A valid category ID is required.");
     }
 }
 
@@ -43,17 +44,20 @@ public class ImportRemotePdfHandler : IUseCase<ImportRemotePdfRequest, UploadPdf
     private readonly IDeepPaceDbContext _dbContext;
     private readonly IPdfIngestionQueue _ingestionQueue;
     private readonly IValidator<ImportRemotePdfRequest> _validator;
+    private readonly ICategoryAssignmentGuard _categoryGuard;
 
     public ImportRemotePdfHandler(
         HttpClient httpClient,
         IDeepPaceDbContext dbContext,
         IPdfIngestionQueue ingestionQueue,
-        IValidator<ImportRemotePdfRequest> validator)
+        IValidator<ImportRemotePdfRequest> validator,
+        ICategoryAssignmentGuard categoryGuard)
     {
         _httpClient = httpClient;
         _dbContext = dbContext;
         _ingestionQueue = ingestionQueue;
         _validator = validator;
+        _categoryGuard = categoryGuard;
     }
 
     public async Task<Result<UploadPdfResponse>> ExecuteAsync(
@@ -65,6 +69,9 @@ public class ImportRemotePdfHandler : IUseCase<ImportRemotePdfRequest, UploadPdf
         {
             return Error.Custom("Validation.Failed", validation.Errors.First().ErrorMessage);
         }
+        var categoryValidation = await _categoryGuard.ValidateAsync(request.CategoryId, cancellationToken);
+        if (!categoryValidation.IsSuccess) return categoryValidation.Error;
+
 
         // 1. SSRF Safety Check with IP Pinning
         Uri validatedUri;
@@ -146,7 +153,7 @@ public class ImportRemotePdfHandler : IUseCase<ImportRemotePdfRequest, UploadPdf
             Id = bookId,
             Title = bookTitle,
             Slug = slug,
-            Category = request.Category,
+            CategoryId = request.CategoryId,
             SourceType = SourceType.PdfBook,
             AuthorOrSourceUrl = request.PdfUrl,
             IsPublished = true,
@@ -157,15 +164,24 @@ public class ImportRemotePdfHandler : IUseCase<ImportRemotePdfRequest, UploadPdf
             CreatedByUserId = request.CreatedByUserId
         };
 
-        await _dbContext.DocumentBooks.AddAsync(book, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var admitted = await _categoryGuard.ExecuteAsync<Guid>(request.CategoryId, async category =>
+        {
+            book.Category = category;
+            await _dbContext.DocumentBooks.AddAsync(book, cancellationToken);
+            return book.Id;
+        }, cancellationToken);
+        if (!admitted.IsSuccess)
+        {
+            File.Delete(tempFilePath);
+            return admitted.Error;
+        }
 
         // 4. Enqueue into background ingestion channel
         await _ingestionQueue.EnqueueAsync(new PdfIngestJob(
             book.Id,
             tempFilePath,
             book.Title,
-            request.Category,
+            request.CategoryId,
             request.Language), cancellationToken);
 
         return new UploadPdfResponse
@@ -176,7 +192,8 @@ public class ImportRemotePdfHandler : IUseCase<ImportRemotePdfRequest, UploadPdf
                 Title = book.Title,
                 Slug = book.Slug,
                 SourceType = book.SourceType,
-                Category = book.Category,
+                CategoryId = book.CategoryId,
+                Category = book.Category!.ToDescriptor(),
                 AuthorOrSourceUrl = book.AuthorOrSourceUrl,
                 TotalChunks = book.TotalChunks,
                 IsPublished = book.IsPublished,

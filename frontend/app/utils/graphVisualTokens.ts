@@ -4,14 +4,6 @@
 // consumed by GraphCanvas.vue (2D Cytoscape), GraphCanvas3D.vue (WebGL),
 // GraphLegend.vue, and GraphMinimap.vue so the renderers cannot drift apart.
 
-export type PillarCategory =
-  | 'FrontendWeb'
-  | 'BackendDotNet'
-  | 'DatabaseStorage'
-  | 'SystemDesign'
-  | 'EngineeringCraft'
-  | 'MentalModels'
-  | 'HabitsProductivity'
 export interface CategoryColor {
   /** Pillar-hub fill. */
   fill: string
@@ -19,34 +11,37 @@ export interface CategoryColor {
   border: string
 }
 
-/**
- * Per-pillar palette. Category aliases coming from the API
- * (e.g. "Frontend", "BackendRuntime", "DotNet", "Postgres",
- * "DistributedSystems", "Craft") normalize onto these five canonical keys.
- */
-export const CATEGORY_PALETTE: Record<PillarCategory, CategoryColor> = {
-  FrontendWeb: { fill: '#f59e0b', border: '#fbbf24' },
-  BackendDotNet: { fill: '#0284c7', border: '#38bdf8' },
-  DatabaseStorage: { fill: '#0891b2', border: '#22d3ee' },
-  SystemDesign: { fill: '#7c3aed', border: '#a78bfa' },
-  EngineeringCraft: { fill: '#ec4899', border: '#fb7185' },
-  MentalModels: { fill: '#6366f1', border: '#818cf8' },
-  HabitsProductivity: { fill: '#10b981', border: '#34d399' }
+export const PALETTE_LIST: CategoryColor[] = [
+  { fill: '#f59e0b', border: '#fbbf24' },
+  { fill: '#0284c7', border: '#38bdf8' },
+  { fill: '#0891b2', border: '#22d3ee' },
+  { fill: '#7c3aed', border: '#a78bfa' },
+  { fill: '#ec4899', border: '#fb7185' },
+  { fill: '#6366f1', border: '#818cf8' },
+  { fill: '#10b981', border: '#34d399' },
+  { fill: '#f97316', border: '#fb923c' },
+  { fill: '#14b8a6', border: '#2dd4bf' },
+  { fill: '#8b5cf6', border: '#c084fc' },
+  { fill: '#06b6d4', border: '#67e8f9' },
+  { fill: '#d946ef', border: '#f0abfc' }
+]
+
+export function hashStringToColorIndex(str: string, modulo: number): number {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash) % modulo
 }
 
-/** Map any raw category string onto a canonical pillar key. */
-export function normalizeCategory(category?: string | null): PillarCategory {
-  const c = (category ?? '').toLowerCase()
-  if (c.includes('mental')) return 'MentalModels'
-  if (c.includes('habit') || c.includes('productivity')) return 'HabitsProductivity'
-  if (c.includes('frontend') || c.includes('web')) return 'FrontendWeb'
-  if (c.includes('database') || c.includes('storage') || c.includes('postgres')) return 'DatabaseStorage'
-  if (c.includes('system') || c.includes('distributed')) return 'SystemDesign'
-  if (c.includes('craft')) return 'EngineeringCraft'
-  // Backend / DotNet / runtime and the safe default.
-  return 'BackendDotNet'
-}
+export const UNCLASSIFIED_CATEGORY_COLOR: CategoryColor = { fill: '#64748b', border: '#94a3b8' }
 
+/** Stable across metadata edits, locale changes, ordering and graph renderers. */
+export function getCategoryPalette(categoryId?: string | null): CategoryColor {
+  if (!categoryId) return UNCLASSIFIED_CATEGORY_COLOR
+  return PALETTE_LIST[hashStringToColorIndex(categoryId.toLowerCase(), PALETTE_LIST.length)]!
+}
 /** Fixed per-type node fills that are not derived from a pillar category. */
 export const NODE_TYPE_COLOR = {
   book: '#6366f1',

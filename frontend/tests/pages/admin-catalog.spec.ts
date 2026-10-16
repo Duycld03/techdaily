@@ -3,14 +3,16 @@ import { ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import AdminCatalogPage from '~/pages/admin/catalog.vue'
-import { useCatalogStore, type AdminCatalogDocumentDetailDto } from '~/stores/useCatalogStore'
+import { useCatalogStore, type AdminCatalogDocument } from '~/stores/useCatalogStore'
 import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
+const category = { id: '99999999-9999-4999-8999-999999999999', slug: 'novel', nameEn: 'Novel', nameVi: 'Moi', sortOrder: 1, isActive: true, version: 1 }
 
 const mockAdminDocs = [
   {
     id: 'admin-doc-1',
     title: 'Distributed Systems Patterns',
-    category: 3,
+    category,
+    categoryId: category.id,
     sourceType: 1,
     visibility: 'Draft',
     processingStatus: 'Ready',
@@ -23,10 +25,11 @@ const mockAdminDocs = [
   }
 ]
 
-const mockAdminDocDetail: AdminCatalogDocumentDetailDto = {
+const mockAdminDocDetail: AdminCatalogDocument = {
   id: 'admin-doc-1',
   title: 'Distributed Systems Patterns',
-  category: 3,
+  category,
+  categoryId: category.id,
   language: 'en',
   sourceType: 1,
   visibility: 'Draft',
@@ -67,6 +70,7 @@ const mockAdminDocDetail: AdminCatalogDocumentDetailDto = {
 }
 
 const mockGet = vi.fn(async (url: string): Promise<unknown> => {
+  if (url === '/api/v1/categories') return [category]
   if (url.includes('/api/v1/catalog/capabilities')) {
     return { canManageCatalog: true }
   }

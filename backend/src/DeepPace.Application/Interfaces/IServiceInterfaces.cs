@@ -8,7 +8,7 @@ public interface ITermExplanationService
 {
     Task<Result<TermExplanationResult>> ExplainTermAsync(
         string term,
-        string category,
+        string contextLabel,
         string context,
         string locale = "en",
         CancellationToken cancellationToken = default);
@@ -17,7 +17,7 @@ public interface ITermExplanationService
 public interface ITechInsightGenerator
 {
     Task<Result<DeepPace.Domain.Entities.TechInsight>> GenerateInsightAsync(
-        DeepPace.Domain.Enums.Category? preferredCategory,
+        Guid categoryId,
         string? preferredTopic,
         List<string>? existingTitlesToAvoid = null,
         string locale = "en",
@@ -28,7 +28,7 @@ public interface IQuizGeneratorService
 {
     Task<Result<List<DeepPace.Domain.Entities.QuizQuestion>>> GenerateQuestionsAsync(
         string topic,
-        DeepPace.Domain.Enums.Category category,
+        Guid categoryId,
         DeepPace.Domain.Enums.QuizLevel level,
         int count,
         List<string> existingTitlesToAvoid,

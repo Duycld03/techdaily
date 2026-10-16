@@ -1,3 +1,5 @@
+using DeepPace.Domain.Entities;
+
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +14,20 @@ public class TechInsightsSeederTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly DeepPaceDbContext _db;
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(7)]
+    [InlineData(999)]
+    public void LegacySeedCategory_RejectsUnknownOrdinals(int ordinal)
+    {
+        var converter = typeof(TechInsightsSeeder).GetMethod("ResolveCategoryUuid",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+        Action convert = () => converter.Invoke(null, new object[] { ordinal });
+
+        convert.Should().Throw<System.Reflection.TargetInvocationException>()
+            .WithInnerException<InvalidDataException>();
+    }
 
     public TechInsightsSeederTests()
     {
@@ -43,8 +59,12 @@ public class TechInsightsSeederTests : IDisposable
         insights.Should().NotBeEmpty();
 
         // Verify all 7 categories (0 through 6) have at least one insight
-        var categories = insights.Select(i => (int)i.Category).Distinct().ToList();
-        categories.Should().Contain(new[] { 0, 1, 2, 3, 4, 5, 6 });
+        var categories = insights.Select(i => i.CategoryId).Distinct().ToList();
+        categories.Should().Contain(new[] {
+            CategoryDefaults.FrontendWebId, CategoryDefaults.BackendRuntimeId,
+            CategoryDefaults.DatabaseStorageId, CategoryDefaults.SystemDesignId,
+            CategoryDefaults.EngineeringCraftId, CategoryDefaults.MentalModelsId,
+            CategoryDefaults.HabitsProductivityId });
 
         var initialCount = insights.Count;
 
@@ -54,6 +74,25 @@ public class TechInsightsSeederTests : IDisposable
         // Assert
         var secondRunCount = await _db.TechInsights.CountAsync();
         secondRunCount.Should().Be(initialCount);
+    }
+
+    [Fact]
+    public async Task SeedAsync_PreservesExistingSeedIdentityAndEditedContent()
+    {
+        await TechInsightsSeeder.SeedAsync(_db);
+        var insight = await _db.TechInsights.FirstAsync();
+        var id = insight.Id;
+        insight.Title = "Administrator edited title";
+        insight.CategoryId = CategoryDefaults.EngineeringCraftId;
+        insight.IsDeleted = true;
+        await _db.SaveChangesAsync();
+
+        await TechInsightsSeeder.SeedAsync(_db);
+
+        var persisted = await _db.TechInsights.IgnoreQueryFilters().SingleAsync(i => i.Id == id);
+        persisted.Title.Should().Be("Administrator edited title");
+        persisted.CategoryId.Should().Be(CategoryDefaults.EngineeringCraftId);
+        persisted.IsDeleted.Should().BeTrue();
     }
 
     [Fact]

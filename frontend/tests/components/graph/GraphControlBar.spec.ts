@@ -3,11 +3,17 @@ import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import GraphControlBar from '~/components/graph/GraphControlBar.vue'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
+import { graphCategory } from '../../fixtures/graphCategories'
 
 describe('GraphControlBar.vue', () => {
   function createTestStore() {
     setActivePinia(createPinia())
     const store = useKnowledgeGraphStore()
+    store.rawData = {
+      nodes: [{ id: 'cloud-book', type: 'book', label: 'Cloud book', categoryId: graphCategory.id, category: graphCategory }],
+      edges: [],
+      stats: { totalNodes: 1, totalEdges: 0, nodeTypeCounts: {}, pillarCounts: {}, masteredCardsCount: 0 }
+    }
     return store
   }
 
@@ -22,32 +28,20 @@ describe('GraphControlBar.vue', () => {
     const fitBtn = wrapper.findAll('button').find((b) => b.attributes('title') === 'graph.fitScreen' || b.text().includes('graph.fitScreen'))
     expect(fitBtn).toBeDefined()
 
-    const pillarButtons = wrapper.findAll('button')
-
-    // Verify all 6 category pills have explicit translation keys
-    const expectedKeys = [
-      'graph.filters.allPillars',
-      'graph.filters.backendRuntime',
-      'graph.filters.databaseStorage',
-      'graph.filters.systemDesign',
-      'graph.filters.frontendWeb',
-      'graph.filters.engineeringCraft'
-    ]
-    expectedKeys.forEach((key) => {
-      const found = pillarButtons.some((b) => b.text().includes(key))
-      expect(found).toBe(true)
-    })
+    expect(wrapper.text()).toContain('graph.filters.allPillars')
+    expect(wrapper.text()).toContain('Cloud Platforms')
+    expect(wrapper.text()).toContain('categories.inactive')
+    expect(wrapper.text()).not.toContain('graph.filters.backendRuntime')
   })
 
   it('updates category filter when a pillar pill is clicked', async () => {
     const store = createTestStore()
     const wrapper = mount(GraphControlBar)
 
-    const backendBtn = wrapper.findAll('button').find((b) => b.text().includes('Backend & Runtime') || b.text().includes('graph.filters.backendRuntime'))
-    expect(backendBtn).toBeDefined()
-
-    await backendBtn!.trigger('click')
-    expect(store.selectedCategory).toBe('BackendRuntime')
+    const categoryBtn = wrapper.findAll('button').find(b => b.text().includes('Cloud Platforms'))
+    expect(categoryBtn).toBeDefined()
+    await categoryBtn!.trigger('click')
+    expect(store.selectedCategoryId).toBe(graphCategory.id)
   })
 
   it('updates node type filter when a type button is clicked', async () => {
@@ -96,7 +90,7 @@ describe('GraphControlBar.vue', () => {
 
   it('resets filters when Reset Filters button is clicked', async () => {
     const store = createTestStore()
-    store.selectedCategory = 'BackendDotNet'
+    store.selectedCategoryId = graphCategory.id
     store.searchQuery = 'postgres'
 
     const wrapper = mount(GraphControlBar)
@@ -104,7 +98,7 @@ describe('GraphControlBar.vue', () => {
     expect(resetBtn).toBeDefined()
 
     await resetBtn!.trigger('click')
-    expect(store.selectedCategory).toBe('all')
+    expect(store.selectedCategoryId).toBe('all')
     expect(store.searchQuery).toBe('')
   })
 

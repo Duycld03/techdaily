@@ -1,3 +1,6 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
+using DeepPace.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Library.DTOs;
@@ -60,7 +63,8 @@ public class GetBookByIdHandler : IUseCase<GetBookByIdRequest, GetBookByIdRespon
             Title = book.Title,
             Slug = book.Slug,
             SourceType = book.SourceType,
-            Category = book.Category,
+            CategoryId = book.CategoryId,
+            Category = book.Category!.ToDescriptor(),
             AuthorOrSourceUrl = book.AuthorOrSourceUrl,
             TotalChunks = book.TotalChunks,
             IsFeatured = book.IsFeatured,

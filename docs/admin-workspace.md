@@ -207,3 +207,405 @@ DeepPace migrates from configuration-based administrator allowlists to a secure,
    - Safety invariant: demoting or suspending an administrator cannot leave zero active administrators (`ACCOUNT_LAST_ADMIN_PROTECTED`). Self-demotion is strictly blocked (`ACCOUNT_SELF_ROLE_CHANGE_BLOCKED`).
 5. **No Role or Grant Editor**:
    - Supported permissions and role definitions are immutable code/database constants. No user-defined role creation or ad-hoc grant editor exists.
+
+## Category Administration & Taxonomy Management
+
+Authorized administrators with the `CategoryAdmin` policy manage the platform's official document taxonomy at `/admin/categories`.
+
+### Permission Model
+- **`ManageCategories`**: A dedicated permission key supported by the database authority. Exposed as `canManageCategories` in administrative capabilities (`GET /api/v1/admin/capabilities`).
+- **`CategoryAdmin` Policy**: Enforces valid authentication, active account status, and possession of `ManageCategories`.
+- Independent authority: Category administration does not grant catalog curation, account management, role assignment, or audit reading privileges.
+
+### Endpoints & Rate Limits
+| Method | Path | Authorization | Rate Limit | Description |
+| --- | --- | --- | --- | --- |
+| `GET` | `/api/v1/categories` | Authenticated | Standard | List all non-deleted categories ordered by `SortOrder` then `Slug` |
+| `GET` | `/api/v1/admin/categories` | `CategoryAdmin` | `CategoryAdminReads` (120/min) | Bounded search, optional `isActive` filter, pagination, usage statistics |
+| `POST` | `/api/v1/admin/categories` | `CategoryAdmin` | `CategoryAdminWrites` (30/min) | Creates category; returns `201 Created` with `Location` header and descriptor |
+| `GET` | `/api/v1/admin/categories/{id}` | `CategoryAdmin` | `CategoryAdminReads` (120/min) | Detailed descriptor with aggregate usage breakdown and `canDelete` flag |
+| `PATCH` | `/api/v1/admin/categories/{id}` | `CategoryAdmin` | `CategoryAdminWrites` (30/min) | Updates English/Vietnamese names, sort order, and active state under concurrency version |
+| `DELETE` | `/api/v1/admin/categories/{id}?expectedVersion=N` | `CategoryAdmin` | `CategoryAdminWrites` (30/min) | Soft-deletes unreferenced category; returns `204 No Content` |
+
+### Lifecycle & Invariants
+1. **Immutability of Identity & Slugs**:
+   - Category `Slug` is strictly immutable once created.
+   - Slugs must be trimmed lowercase ASCII kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`, 1–100 characters).
+   - Soft-deleted slugs may be reused by a new UUID; inactive slugs remain permanently reserved.
+2. **Optimistic Concurrency Control**:
+   - `ConcurrencyVersion` is a positive integer initialized to 1.
+   - `PATCH` and `DELETE` operations require `ExpectedVersion`. Mismatched versions reject with `409 Conflict`.
+3. **Inactive Categories & Content Retention**:
+   - Existing content (books, catalog titles, quiz questions, tech insights) referencing an inactive category continues to function normally for reading, review, and search.
+   - Inactive categories are rejected when attempting new assignments or adoptions (`Category.Inactive`).
+4. **Reference-Safe Soft Deletion**:
+   - A category can only be deleted if its total usage count across `DocumentBooks`, `CatalogDocuments`, `QuizQuestions`, and `TechInsights` (including soft-deleted records) is zero.
+   - Referenced categories return `409 Conflict` (`Category.InUse`) advising the administrator to deactivate instead.
+5. **Atomic Audit Logging**:
+   - Every committed category mutation emits an administrative audit event (`Category.Create`, `Category.UpdateMetadata`, `Category.Reorder`, `Category.Activate`, `Category.Deactivate`, `Category.Delete`).
+   - Rejection events are recorded without committing mutations.
+
+### Error Codes (RFC 7807 Problem Details)
+| Error Code | Status Code | Reason |
+| --- | --- | --- |
+| `Category.ValidationFailed` | `400 Bad Request` | Invalid slug regex, empty names, or invalid bounds |
+| `Category.NotFound` | `404 Not Found` | Specified category ID does not exist or has been deleted |
+| `Category.SlugConflict` | `409 Conflict` | Slug is already in use by an active or inactive category |
+| `Category.Inactive` | `409 Conflict` | Attempted new assignment to an inactive category |
+| `Category.InUse` | `409 Conflict` | Deletion blocked because category is referenced by content |
+| `Category.ConcurrencyConflict` | `409 Conflict` | Version mismatch during update or deletion |
+| `Category.Unavailable` | `503 Service Unavailable` | Authority store or audit persistence is temporarily unavailable |
+
+
+### Request & Response Examples
+
+#### 1. List Public / Learner Categories
+```http
+GET /api/v1/categories HTTP/1.1
+Host: localhost:5001
+Authorization: Bearer <learner_token>
+```
+
+Response:
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+[
+  {
+    "id": "10000000-0000-4000-8000-000000000001",
+    "slug": "frontend-web",
+    "nameEn": "Frontend & Web",
+    "nameVi": "Frontend & Web",
+    "sortOrder": 10,
+    "isActive": true,
+    "version": 1
+  },
+  {
+    "id": "10000000-0000-4000-8000-000000000002",
+    "slug": "backend-runtime",
+    "nameEn": "Backend & Runtime",
+    "nameVi": "Backend & Runtime",
+    "sortOrder": 20,
+    "isActive": true,
+    "version": 1
+  }
+]
+```
+
+#### 2. List Administrative Categories (Paginated & Filterable)
+```http
+GET /api/v1/admin/categories?search=distributed&isActive=true&page=1&pageSize=20 HTTP/1.1
+Host: localhost:5001
+Authorization: Bearer <admin_token>
+```
+
+Response:
+```http
+HTTP/1.1 200 OK
+Cache-Control: no-store
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "category": {
+        "id": "10000000-0000-4000-8000-000000000008",
+        "slug": "distributed-systems",
+        "nameEn": "Distributed Systems",
+        "nameVi": "Hệ thống phân tán",
+        "sortOrder": 70,
+        "isActive": true,
+        "version": 1
+      },
+      "booksCount": 0,
+      "catalogDocumentsCount": 0,
+      "quizQuestionsCount": 0,
+      "techInsightsCount": 0,
+      "totalUsageCount": 0,
+      "canDelete": true,
+      "id": "10000000-0000-4000-8000-000000000008",
+      "slug": "distributed-systems",
+      "nameEn": "Distributed Systems",
+      "nameVi": "Hệ thống phân tán",
+      "sortOrder": 70,
+      "isActive": true,
+      "version": 1,
+      "usageCount": 0
+    }
+  ],
+  "totalCount": 1,
+  "page": 1,
+  "pageSize": 20
+}
+```
+
+#### 3. Get Category Detail by ID
+```http
+GET /api/v1/admin/categories/10000000-0000-4000-8000-000000000008 HTTP/1.1
+Host: localhost:5001
+Authorization: Bearer <admin_token>
+```
+
+Response:
+```http
+HTTP/1.1 200 OK
+Cache-Control: no-store
+Content-Type: application/json
+
+{
+  "category": {
+    "id": "10000000-0000-4000-8000-000000000008",
+    "slug": "distributed-systems",
+    "nameEn": "Distributed Systems",
+    "nameVi": "Hệ thống phân tán",
+    "sortOrder": 70,
+    "isActive": true,
+    "version": 1
+  },
+  "booksCount": 12,
+  "catalogDocumentsCount": 3,
+  "quizQuestionsCount": 45,
+  "techInsightsCount": 8,
+  "totalUsageCount": 68,
+  "canDelete": false,
+  "id": "10000000-0000-4000-8000-000000000008",
+  "slug": "distributed-systems",
+  "nameEn": "Distributed Systems",
+  "nameVi": "Hệ thống phân tán",
+  "sortOrder": 70,
+  "isActive": true,
+  "version": 1,
+  "usageCount": 68
+}
+```
+
+#### 4. Create Category
+```http
+POST /api/v1/admin/categories HTTP/1.1
+Host: localhost:5001
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "slug": "distributed-systems",
+  "nameEn": "Distributed Systems",
+  "nameVi": "Hệ thống phân tán",
+  "sortOrder": 70,
+  "isActive": true
+}
+```
+
+Response:
+```http
+HTTP/1.1 201 Created
+Location: /api/v1/admin/categories/10000000-0000-4000-8000-000000000008
+Cache-Control: no-store
+Content-Type: application/json
+
+{
+  "id": "10000000-0000-4000-8000-000000000008",
+  "slug": "distributed-systems",
+  "nameEn": "Distributed Systems",
+  "nameVi": "Hệ thống phân tán",
+  "sortOrder": 70,
+  "isActive": true,
+  "version": 1
+}
+```
+
+#### 5. Edit Category Metadata
+```http
+PATCH /api/v1/admin/categories/10000000-0000-4000-8000-000000000008 HTTP/1.1
+Host: localhost:5001
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "nameEn": "Distributed Systems & Cloud",
+  "nameVi": "Hệ thống phân tán & Đám mây",
+  "sortOrder": 75,
+  "isActive": true,
+  "expectedVersion": 1
+}
+```
+
+Response:
+```http
+HTTP/1.1 200 OK
+Cache-Control: no-store
+Content-Type: application/json
+
+{
+  "id": "10000000-0000-4000-8000-000000000008",
+  "slug": "distributed-systems",
+  "nameEn": "Distributed Systems & Cloud",
+  "nameVi": "Hệ thống phân tán & Đám mây",
+  "sortOrder": 75,
+  "isActive": true,
+  "version": 2
+}
+```
+
+#### 6. Deactivate Category
+```http
+PATCH /api/v1/admin/categories/10000000-0000-4000-8000-000000000008 HTTP/1.1
+Host: localhost:5001
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+
+{
+  "nameEn": "Distributed Systems & Cloud",
+  "nameVi": "Hệ thống phân tán & Đám mây",
+  "sortOrder": 75,
+  "isActive": false,
+  "expectedVersion": 2
+}
+```
+
+Response:
+```http
+HTTP/1.1 200 OK
+Cache-Control: no-store
+Content-Type: application/json
+
+{
+  "id": "10000000-0000-4000-8000-000000000008",
+  "slug": "distributed-systems",
+  "nameEn": "Distributed Systems & Cloud",
+  "nameVi": "Hệ thống phân tán & Đám mây",
+  "sortOrder": 75,
+  "isActive": false,
+  "version": 3
+}
+```
+
+#### 7. Delete Unused Category
+```http
+DELETE /api/v1/admin/categories/10000000-0000-4000-8000-000000000008?expectedVersion=3 HTTP/1.1
+Host: localhost:5001
+Authorization: Bearer <admin_token>
+```
+
+Response:
+```http
+HTTP/1.1 204 No Content
+Cache-Control: no-store
+```
+
+#### 8. RFC 7807 Error Code Responses
+
+##### Validation Failure (400 Bad Request)
+```http
+HTTP/1.1 400 Bad Request
+Content-Type: application/problem+json
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "Bad Request",
+  "status": 400,
+  "code": "Category.ValidationFailed",
+  "detail": "Slug must contain only lowercase ASCII letters, numbers, and hyphens (1-100 characters)."
+}
+```
+
+##### Category Not Found (404 Not Found)
+```http
+HTTP/1.1 404 Not Found
+Content-Type: application/problem+json
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.5",
+  "title": "Not Found",
+  "status": 404,
+  "code": "Category.NotFound",
+  "detail": "The specified category was not found."
+}
+```
+
+##### Slug Conflict (409 Conflict)
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/problem+json
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+  "title": "Conflict",
+  "status": 409,
+  "code": "Category.SlugConflict",
+  "detail": "A category with slug 'distributed-systems' already exists."
+}
+```
+
+##### Deletion Blocked by References (409 Conflict)
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/problem+json
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+  "title": "Conflict",
+  "status": 409,
+  "code": "Category.InUse",
+  "detail": "The category cannot be deleted because it is referenced by existing content. Consider deactivating it instead."
+}
+```
+
+##### Inactive Assignment Rejected (409 Conflict)
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/problem+json
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+  "title": "Conflict",
+  "status": 409,
+  "code": "Category.Inactive",
+  "detail": "The category is inactive and cannot be assigned to new content."
+}
+```
+
+##### Optimistic Concurrency Conflict (409 Conflict)
+```http
+HTTP/1.1 409 Conflict
+Content-Type: application/problem+json
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+  "title": "Conflict",
+  "status": 409,
+  "code": "Category.ConcurrencyConflict",
+  "detail": "Category was modified by another operator. Reload and try again."
+}
+```
+
+##### Service Unavailable (503 Service Unavailable)
+```http
+HTTP/1.1 503 Service Unavailable
+Content-Type: application/problem+json
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.4",
+  "title": "Service Unavailable",
+  "status": 503,
+  "code": "Category.Unavailable",
+  "detail": "Category storage or audit persistence is temporarily unavailable."
+}
+```
+## Release Notes: Admin-Managed Categories & Taxonomy Cutover
+
+### Summary
+DeepPace cut over from a compile-time numeric category enum (0..6) to database-backed, bilingual administrative category entities identified by stable UUIDs with unique slugs.
+
+### Key Changes
+1. **Bilingual Admin-Managed Taxonomy**:
+   - Categories have English and Vietnamese names, immutable ASCII lowercase slugs, sort order (`0..10000`), active status, and optimistic concurrency version.
+   - Managed at `/admin/categories` under the `ManageCategories` permission.
+2. **Explicit Assignment & Safe Inactivation**:
+   - Content ingestion and catalog drafting require explicit selection from active categories; no implicit fallbacks or long-lived enum maps exist.
+   - Deactivating a category prevents future assignments while keeping existing documents, reading progress, and flashcard review queues intact.
+3. **Reference-Guarded Deletion**:
+   - Categories referenced by any document, catalog title, quiz question, or insight cannot be deleted (`Category.InUse`, `409 Conflict`). Deactivation is the supported workflow for obsolete categories with historical usage.
+4. **Intentional API & Filter Incompatibility**:
+   - Numeric category parameters (`0..6`) are retired. All public, learner, and administrative endpoints exclusively accept UUID strings. Clients should clear stale numeric query parameters.
+   - DeepPace provides taxonomy category management, not an arbitrary user tag-management feature.

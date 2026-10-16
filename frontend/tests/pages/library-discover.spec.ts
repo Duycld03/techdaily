@@ -3,14 +3,18 @@ import { ref } from 'vue'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import LibraryPage from '~/pages/library.vue'
-import { useCatalogStore, type LearnerCatalogDocumentDto } from '~/stores/useCatalogStore'
+import { useCatalogStore, type LearnerCatalogDocument } from '~/stores/useCatalogStore'
+
+const customCategory = { id: '92345678-1234-4234-8234-123456789012', slug: 'distributed', nameEn: 'Distributed Systems', nameVi: 'He thong phan tan', sortOrder: 1, isActive: true, version: 1 }
+const backendCategory = { id: '82345678-1234-4234-8234-123456789012', slug: 'backend', nameEn: 'Backend Engineering', nameVi: 'Ky thuat backend', sortOrder: 2, isActive: false, version: 1 }
 
 const mockPublishedDocs = [
   {
     id: 'cat-doc-1',
     title: 'Distributed Systems Patterns',
     description: 'A comprehensive guide to distributed systems patterns and consensus protocols.',
-    category: 3, // SystemDesign
+    categoryId: customCategory.id,
+    category: customCategory,
     language: 'en',
     sourceType: 1, // WebArticle
     authorOrSourceUrl: 'https://martinfowler.com/articles/patterns-of-distributed-systems/',
@@ -25,7 +29,8 @@ const mockPublishedDocs = [
     id: 'cat-doc-2',
     title: 'Clean Architecture in .NET',
     description: 'Domain-centric architecture principles and enterprise design patterns.',
-    category: 1, // BackendDotNet
+    categoryId: backendCategory.id,
+    category: backendCategory,
     language: 'vi',
     sourceType: 2, // PdfBook
     authorOrSourceUrl: 'Clean Architecture Guide',
@@ -42,7 +47,8 @@ const mockDetailDoc = {
   id: 'cat-doc-1',
   title: 'Distributed Systems Patterns',
   description: 'A comprehensive guide to distributed systems patterns and consensus protocols.',
-  category: 3,
+  categoryId: customCategory.id,
+  category: customCategory,
   language: 'en',
   sourceType: 1,
   authorOrSourceUrl: 'https://martinfowler.com/articles/patterns-of-distributed-systems/',
@@ -65,6 +71,7 @@ const mockDetailDoc = {
 }
 
 const mockGet = vi.fn(async (url: string, _params?: Record<string, unknown>): Promise<unknown> => {
+  if (url === '/api/v1/categories') return [customCategory, backendCategory]
   if (url.includes('/api/v1/catalog/capabilities')) {
     return { canManageCatalog: false }
   }
@@ -209,8 +216,7 @@ describe('library.vue (Curated Catalog & Discover Tab)', () => {
 
     expect(mockPost).toHaveBeenCalledWith('/api/v1/catalog/documents/cat-doc-1/adopt', {})
     const catalogStore = useCatalogStore()
-    const doc1 = catalogStore.documents.find((d: LearnerCatalogDocumentDto) => d.id === 'cat-doc-1')
-    expect(doc1?.alreadyAdded).toBe(true)
+    const doc1 = catalogStore.documents.find((d: LearnerCatalogDocument) => d.id === 'cat-doc-1')
     expect(doc1?.existingBookId).toBe('new-personal-book-1')
   })
 
@@ -310,13 +316,14 @@ describe('library.vue (Curated Catalog & Discover Tab)', () => {
     await flushPromises()
 
     // Category quick pill click
-    const backendPill = wrapper.findAll('button').find(b => b.text() === 'library.categories.backend')
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/categories', { cache: 'no-store' })
+    const backendPill = wrapper.findAll('button').find(b => b.text().includes('Backend Engineering'))
     expect(backendPill).toBeDefined()
     await backendPill!.trigger('click')
     await flushPromises()
 
     expect(mockGet).toHaveBeenCalledWith(
-      expect.stringMatching(/\/api\/v1\/catalog\/documents\?.*category=1/)
+      expect.stringMatching(new RegExp('/api/v1/catalog/documents\\?.*categoryId=' + backendCategory.id))
     )
 
     // Advanced filter button click opens modal

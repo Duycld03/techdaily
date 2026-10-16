@@ -46,7 +46,6 @@ public class CurateSliceHandlerTests : IDisposable
             string rawText,
             string chapterTitle,
             string language = "en",
-            Category? category = null,
             CancellationToken cancellationToken = default)
         {
             Interlocked.Increment(ref CallCount);
@@ -81,7 +80,7 @@ public class CurateSliceHandlerTests : IDisposable
             Id = bookId,
             Title = "ASP.NET Core Guide",
             Slug = "aspnet-core-guide",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             SourceType = SourceType.PdfBook,
             TotalChunks = 1
         };
@@ -112,11 +111,15 @@ public class CurateSliceHandlerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         fakeFormatter.CallCount.Should().Be(1);
         result.Value.Chunk.IsAiFormatted.Should().BeTrue();
-        result.Value.Chunk.OriginalTextMarkdown.Should().Contain("> [!NOTE]");
+        result.Value.Chunk.OriginalTextMarkdown.Should().Be("Raw DI text...");
+        result.Value.Chunk.SummaryMarkdown.Should().Be("Summary for Dependency Injection");
 
         // Verify entity updated in DB
+        _db.ChangeTracker.Clear();
         var updatedChunk = await _db.DocumentChunks.FirstAsync(c => c.DocumentBookId == bookId && c.ChunkOrder == 1);
         updatedChunk.IsAiFormatted.Should().BeTrue();
+        updatedChunk.OriginalTextMarkdown.Should().Be("Raw DI text...");
+        updatedChunk.SummaryMarkdown.Should().Be("Summary for Dependency Injection");
 
         var question = await _db.InterviewQuestions.FirstOrDefaultAsync(q => q.DocumentChunkId == chunk.Id);
         question.Should().NotBeNull();
@@ -133,7 +136,7 @@ public class CurateSliceHandlerTests : IDisposable
             Id = bookId,
             Title = "ASP.NET Core Guide",
             Slug = "aspnet-core-guide-" + Guid.NewGuid(),
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             SourceType = SourceType.PdfBook,
             TotalChunks = 1
         };
@@ -176,7 +179,7 @@ public class CurateSliceHandlerTests : IDisposable
             Id = bookId,
             Title = "ASP.NET Core Concurrency",
             Slug = "aspnet-core-concurrency-" + Guid.NewGuid(),
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             SourceType = SourceType.PdfBook,
             TotalChunks = 1
         };
@@ -218,7 +221,7 @@ public class CurateSliceHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task CurateSlice_ShouldSaveFormattedMarkdownToOriginalTextMarkdown_WhenBookIsEngineeringCraft()
+    public async Task CurateSlice_PreservesVerbatimSource_WhenFormatterAddsCuratedContent()
     {
         // Arrange
         var bookId = Guid.NewGuid();
@@ -227,7 +230,7 @@ public class CurateSliceHandlerTests : IDisposable
             Id = bookId,
             Title = "Thói Quen Nguyên Tử",
             Slug = "thoi-quen-nguyen-tu",
-            Category = Category.EngineeringCraft,
+            CategoryId = CategoryDefaults.EngineeringCraftId,
             SourceType = SourceType.PdfBook,
             TotalChunks = 1
         };
@@ -260,20 +263,17 @@ public class CurateSliceHandlerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value.Chunk.IsAiFormatted.Should().BeTrue();
 
-        var expectedFormatted = $"# {chunk.ChapterTitle}\n\n> [!NOTE]\n> Curated context.";
-
-        // AI-restored clean formatted markdown is saved to OriginalTextMarkdown across all categories including EngineeringCraft
-        result.Value.Chunk.OriginalTextMarkdown.Should().Be(expectedFormatted);
-        result.Value.Chunk.OriginalTextMarkdown.Should().Contain("> [!NOTE]");
+        result.Value.Chunk.OriginalTextMarkdown.Should().Be(verbatimProse);
 
         // Auxiliary fields must be populated
-        result.Value.Chunk.SummaryMarkdown.Should().Contain("Summary for Sức Mạnh Của Những Thay Đổi Nhỏ");
+        result.Value.Chunk.SummaryMarkdown.Should().Be($"Summary for {chunk.ChapterTitle}");
         result.Value.Chunk.KeyTakeaways.Should().HaveCount(2);
 
         // Database entity verification
+        _db.ChangeTracker.Clear();
         var dbChunk = await _db.DocumentChunks.FirstAsync(c => c.DocumentBookId == bookId && c.ChunkOrder == 1);
-        dbChunk.OriginalTextMarkdown.Should().Be(expectedFormatted);
-        dbChunk.SummaryMarkdown.Should().Contain("Summary for Sức Mạnh Của Những Thay Đổi Nhỏ");
+        dbChunk.OriginalTextMarkdown.Should().Be(verbatimProse);
+        dbChunk.SummaryMarkdown.Should().Be($"Summary for {chunk.ChapterTitle}");
         dbChunk.IsAiFormatted.Should().BeTrue();
     }
 }

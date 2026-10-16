@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import {
   HelpCircle,
   ChevronDown,
@@ -8,9 +8,19 @@ import {
   Sparkles
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
-import { NODE_TYPE_COLOR, SM2_STATUS_COLOR } from '~/utils/graphVisualTokens'
+import { NODE_TYPE_COLOR, SM2_STATUS_COLOR, getCategoryPalette } from '~/utils/graphVisualTokens'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 
 const store = useKnowledgeGraphStore()
+const categoryStore = useCategoryStore()
+const { locale } = useI18n()
+const categoryItems = computed(() => {
+  const representedIds = new Set(store.filteredNodes.filter(node => node.type.toLowerCase() !== 'pillar').map(node => node.categoryId))
+  return store.activePillars.filter(category => representedIds.has(category.id)).map(category => {
+    const metadata = categoryStore.getCategoryById(category.id) ?? category
+    return { id: category.id, label: categoryStore.getCategoryName(metadata, locale.value), isActive: metadata.isActive, color: getCategoryPalette(category.id) }
+  })
+})
 const STORAGE_KEY = 'deeppace_graph_legend_collapsed'
 
 function getInitialCollapsedState(): boolean {
@@ -171,6 +181,13 @@ const masteryItems: LegendItem[] = [
               class="ml-auto font-mono-telemetry tabular-nums text-[10px] text-slate-400 dark:text-slate-500"
             >{{ store.stats?.nodeTypeCounts?.[item.type] }}</span>
           </div>
+        </div>
+      </div>
+      <div v-if="categoryItems.length" class="space-y-1.5 pt-1.5 border-t border-slate-100 dark:border-white/[0.06]">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{{ $t('graph.filters.pillars') }}</div>
+        <div v-for="category in categoryItems" :key="category.id" :data-testid="`legend-category-${category.id}`" class="flex items-center gap-2.5 px-2 py-1">
+          <span data-category-color class="w-3 h-3 rounded-full shrink-0 border-2" :style="{ backgroundColor: category.color.fill, borderColor: category.color.border }" />
+          <span>{{ category.label }}<span v-if="!category.isActive"> ({{ $t('categories.inactive') }})</span></span>
         </div>
       </div>
       <!-- Flashcard Mastery Status Key -->

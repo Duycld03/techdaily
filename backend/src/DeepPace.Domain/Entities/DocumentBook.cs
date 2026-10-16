@@ -8,7 +8,8 @@ public class DocumentBook : BaseEntity
     public string Title { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public SourceType SourceType { get; set; }
-    public Category Category { get; set; }
+    public Guid CategoryId { get; set; }
+    public DocumentCategory? Category { get; set; }
     public int TotalChunks { get; set; }
     public string? AuthorOrSourceUrl { get; set; }
     public bool IsPublished { get; set; } = true;
@@ -100,6 +101,7 @@ public class DocumentBook : BaseEntity
             Title = catalogDoc.Title,
             Slug = uniqueSlug,
             SourceType = catalogDoc.SourceType,
+            CategoryId = catalogDoc.CategoryId,
             Category = catalogDoc.Category,
             TotalChunks = catalogDoc.TotalSlices,
             AuthorOrSourceUrl = catalogDoc.AuthorOrSourceUrl,

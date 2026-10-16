@@ -1,4 +1,5 @@
 using DeepPace.Domain.Enums;
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 
 namespace DeepPace.Application.Features.InterviewQuiz.DTOs;
 
@@ -6,7 +7,8 @@ public class QuizQuestionDto
 {
     public Guid Id { get; set; }
     public string Topic { get; set; } = string.Empty;
-    public Category Category { get; set; }
+    public Guid CategoryId { get; set; }
+    public required CategoryDescriptorDto Category { get; set; }
     public QuizLevel Level { get; set; }
     public string QuestionText { get; set; } = string.Empty;
     public List<string> Options { get; set; } = new();
@@ -23,7 +25,7 @@ public class QuizQuestionDto
 public record GenerateQuizRequest(
     Guid UserId,
     string Topic,
-    Category? Category,
+    Guid? CategoryId,
     QuizLevel Level,
     int Count = 5,
     string Locale = "en",
@@ -56,7 +58,7 @@ public record SubmitQuizAnswerResponse(
 
 public record GetQuizReviewQueueRequest(
     Guid UserId,
-    Category? Category = null,
+    Guid? CategoryId = null,
     QuizLevel? Level = null,
     string? Topic = null,
     int Page = 1,
@@ -87,6 +89,14 @@ public record TopicStatDto(
     decimal AccuracyRate
 );
 
+public record CategoryStatDto(
+    Guid CategoryId,
+    CategoryDescriptorDto Category,
+    int AnsweredCount,
+    int MasteredCount,
+    decimal AccuracyRate
+);
+
 public record GetQuizStatsRequest(Guid UserId);
 
 public record GetQuizStatsResponse(
@@ -95,5 +105,6 @@ public record GetQuizStatsResponse(
     int ReviewQueueCount,
     decimal AccuracyRate,
     List<LevelStatDto> LevelBreakdown,
-    List<TopicStatDto> TopicBreakdown
+    List<TopicStatDto> TopicBreakdown,
+    List<CategoryStatDto> CategoryBreakdown
 );

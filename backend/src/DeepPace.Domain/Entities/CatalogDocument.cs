@@ -7,7 +7,8 @@ public class CatalogDocument : BaseEntity
 {
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public Category Category { get; set; }
+    public Guid CategoryId { get; set; }
+    public DocumentCategory? Category { get; set; }
     public string Language { get; set; } = "en";
     public SourceType SourceType { get; set; }
     public string? AuthorOrSourceUrl { get; set; }
@@ -132,7 +133,7 @@ public class CatalogDocument : BaseEntity
     public void UpdateMetadata(
         string title,
         string description,
-        Category category,
+        Guid categoryId,
         string language,
         string? authorOrSourceUrl,
         string attributionText)
@@ -143,7 +144,7 @@ public class CatalogDocument : BaseEntity
         }
         Title = title;
         Description = description;
-        Category = category;
+        CategoryId = categoryId;
         Language = language;
         AuthorOrSourceUrl = authorOrSourceUrl;
         AttributionText = attributionText;
@@ -152,6 +153,7 @@ public class CatalogDocument : BaseEntity
         ConcurrencyVersion++;
         MarkUpdated();
     }
+
 
     public void InvalidateReviewDueToContentChange()
     {

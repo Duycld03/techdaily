@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import AppModal from '~/components/ui/AppModal.vue'
-import type { AdminCatalogSliceDto } from '~/stores/useCatalogStore'
+import type { AdminCatalogSlice } from '~/stores/useCatalogStore'
 
 defineProps<{
   open: boolean
-  slice: AdminCatalogSliceDto | null
+  slice: AdminCatalogSlice | null
 }>()
 
 defineEmits<{

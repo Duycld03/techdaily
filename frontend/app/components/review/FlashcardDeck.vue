@@ -14,6 +14,7 @@ import {
 import type { ReviewCard } from '~/stores/useReviewStore'
 import Sm2GradingButtons from '~/components/review/Sm2GradingButtons.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 
 const props = defineProps<{
   card: ReviewCard
@@ -35,42 +36,12 @@ watch(
   }
 )
 
-const categoryMeta = computed(() => {
-  const cat = props.card.category
-  switch (cat) {
-    case 1:
-    case 'BackendRuntime':
-      return {
-        label: 'Backend Runtime',
-        badgeClass: 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20'
-      }
-    case 2:
-    case 'DatabaseStorage':
-      return {
-        label: 'Database & Storage',
-        badgeClass: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20'
-      }
-    case 3:
-    case 'SystemDesign':
-      return {
-        label: 'System Design',
-        badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20'
-      }
-    case 4:
-    case 'EngineeringCraft':
-      return {
-        label: 'Engineering Craft',
-        badgeClass: 'bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/20'
-      }
-    case 0:
-    case 'FrontendWeb':
-    default:
-      return {
-        label: 'Frontend & Browser',
-        badgeClass: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-500/20'
-      }
-  }
-})
+const categoryStore = useCategoryStore()
+const { locale } = useI18n()
+const categoryMeta = computed(() => ({
+  label: categoryStore.getCategoryName(props.card.categoryId, locale.value) || categoryStore.getCategoryName(props.card.category, locale.value) || t('review.unclassified'),
+  badgeClass: 'bg-brand-500/10 text-brand-600 dark:text-brand-400 border-brand-500/20'
+}))
 
 const difficultyLabel = computed(() => {
   const diff = props.card.difficulty
@@ -98,7 +69,7 @@ const provenanceMeta = computed(() => {
     }
   }
   return {
-    label: t('review.source_monograph'),
+    label: type === 3 || type === 'DocumentChunk' ? t('review.source_monograph') : t('review.unclassified'),
     classes: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
   }
 })

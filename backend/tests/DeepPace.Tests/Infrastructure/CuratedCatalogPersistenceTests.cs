@@ -79,7 +79,7 @@ public class CuratedCatalogPersistenceTests : IDisposable
             Id = docId,
             Title = "Test Catalog Doc",
             Description = "Desc",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             AttributionText = "Attr",
             IsDeleted = false
         };
@@ -125,7 +125,7 @@ public class CuratedCatalogPersistenceTests : IDisposable
             Id = docId,
             Title = "Test Catalog Doc",
             Description = "Desc",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             AttributionText = "Attr",
             IsDeleted = false
         };
@@ -172,6 +172,7 @@ public class CuratedCatalogPersistenceTests : IDisposable
 
         var book1 = new DocumentBook
         {
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Id = Guid.NewGuid(),
             Title = "Book 1",
             Slug = "book-1",
@@ -181,6 +182,7 @@ public class CuratedCatalogPersistenceTests : IDisposable
         };
         var book2 = new DocumentBook
         {
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Id = Guid.NewGuid(),
             Title = "Book 2",
             Slug = "book-2",
@@ -206,6 +208,7 @@ public class CuratedCatalogPersistenceTests : IDisposable
 
         var book1 = new DocumentBook
         {
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Id = Guid.NewGuid(),
             Title = "Book 1",
             Slug = "book-1",
@@ -221,6 +224,7 @@ public class CuratedCatalogPersistenceTests : IDisposable
 
         var book2 = new DocumentBook
         {
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Id = Guid.NewGuid(),
             Title = "Book 1 Re-adopted",
             Slug = "book-1-readopted",
@@ -242,6 +246,7 @@ public class CuratedCatalogPersistenceTests : IDisposable
 
         var book1 = new DocumentBook
         {
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Id = Guid.NewGuid(),
             Title = "Personal Book 1",
             Slug = "personal-book-1",
@@ -251,6 +256,7 @@ public class CuratedCatalogPersistenceTests : IDisposable
         };
         var book2 = new DocumentBook
         {
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Id = Guid.NewGuid(),
             Title = "Personal Book 2",
             Slug = "personal-book-2",
@@ -274,7 +280,7 @@ public class CuratedCatalogPersistenceTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Doc to delete",
             Description = "Desc",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             AttributionText = "Attr",
             IsDeleted = false
         };

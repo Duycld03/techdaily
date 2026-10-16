@@ -135,6 +135,14 @@ public static class DependencyInjection
         services.AddScoped<IUseCase<Features.Admin.Documents.DTOs.ReplacePersonalDocumentSourceCommand, Features.Admin.Documents.DTOs.SourceReplacementResponseDto>, Features.Admin.Documents.ReplacePersonalDocumentSourceHandler>();
         services.AddScoped<IUseCase<Features.Admin.Documents.DTOs.ReplaceCatalogDocumentSourceCommand, Features.Admin.Documents.DTOs.SourceReplacementResponseDto>, Features.Admin.Documents.ReplaceCatalogDocumentSourceHandler>();
 
+        // Administrator Categories Handlers
+        services.AddScoped<IUseCase<Features.Admin.Categories.DTOs.CreateCategoryRequest, Features.Admin.Categories.DTOs.CategoryDescriptorDto>, Features.Admin.Categories.CreateCategoryHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Categories.DTOs.UpdateCategoryRequest, Features.Admin.Categories.DTOs.CategoryDescriptorDto>, Features.Admin.Categories.UpdateCategoryHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Categories.DTOs.DeleteCategoryRequest, bool>, Features.Admin.Categories.DeleteCategoryHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Categories.DTOs.GetAdminCategoriesRequest, Features.Admin.Accounts.DTOs.AdminPagedResult<Features.Admin.Categories.DTOs.AdminCategoryDetailDto>>, Features.Admin.Categories.GetAdminCategoriesHandler>();
+        services.AddScoped<IUseCase<Guid, Features.Admin.Categories.DTOs.AdminCategoryDetailDto>, Features.Admin.Categories.GetAdminCategoryByIdHandler>();
+        services.AddScoped<IUseCase<Features.Admin.Categories.DTOs.GetCategoriesRequest, IReadOnlyList<Features.Admin.Categories.DTOs.CategoryDescriptorDto>>, Features.Admin.Categories.GetCategoriesHandler>();
+
         return services;
     }
 }

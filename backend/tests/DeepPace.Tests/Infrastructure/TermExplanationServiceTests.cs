@@ -41,6 +41,27 @@ public class TermExplanationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ExplainTermAsync_PropagatesProviderCancellationWithoutCaching()
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Gemini:ApiKey"] = "test-key", ["Gemini:Model"] = "test-model"
+        }).Build();
+        var service = new TermExplanationService(_db, new CountingFakeEmbeddingService(),
+            new HttpClient(new CancelingHandler()), config, NullLogger<TermExplanationService>.Instance);
+        Func<Task> action = async () => await service.ExplainTermAsync("glaze", "", "Pottery source");
+
+        await action.Should().ThrowAsync<OperationCanceledException>();
+        (await _db.TermExplanationCaches.CountAsync()).Should().Be(0);
+    }
+
+    private sealed class CancelingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+            CancellationToken cancellationToken) => throw new OperationCanceledException();
+    }
+
+    [Fact]
     public async Task ExplainTermAsync_WhenGeminiApiFails_ShouldReturnFailureAndNotPersistToCache()
     {
         // Arrange
@@ -163,7 +184,7 @@ public class TermExplanationServiceTests : IDisposable
 
         var record = cachedRecords[0];
         record.Term.Should().Be("goroutine");
-        record.Category.Should().Be("Go Concurrency");
+        record.ContextLabel.Should().Be("Go Concurrency");
         record.Locale.Should().Be("en");
         record.ExplanationText.Should().Be("A lightweight thread managed by the Go runtime scheduler.");
         record.Embedding.Should().NotBeNull();

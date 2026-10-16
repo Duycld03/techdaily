@@ -16,7 +16,6 @@ namespace DeepPace.Tests.Infrastructure;
 
 public class PostgresAccountConcurrencyTests
 {
-    private const string DefaultPostgresConnStr = "Host=localhost;Port=5432;Database=deeppace_db;Username=deeppace_user;Password=techdaily_password_secret";
     private readonly ITestOutputHelper _output;
 
     public PostgresAccountConcurrencyTests(ITestOutputHelper output)
@@ -26,7 +25,8 @@ public class PostgresAccountConcurrencyTests
 
     private static string GetConnectionString()
     {
-        return Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION") ?? DefaultPostgresConnStr;
+        return Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION")
+            ?? throw new InvalidOperationException("TEST_POSTGRES_CONNECTION must identify an isolated PostgreSQL test database.");
     }
 
     private static DbContextOptions<DeepPaceDbContext> CreatePostgresOptions()
@@ -597,7 +597,7 @@ public class PostgresAccountConcurrencyTests
             Id = Guid.NewGuid(),
             Title = "Privileged Admission Test Doc",
             Description = "Testing privileged admission rejection on session revocation.",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             Language = "en",
             SourceType = SourceType.PdfBook,
             AttributionText = "Test Attribution",
@@ -672,7 +672,7 @@ public class PostgresAccountConcurrencyTests
             Id = Guid.NewGuid(),
             Title = "Concurrent Admission Test Doc",
             Description = "Testing concurrency between privileged admission and revocation.",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             Language = "en",
             SourceType = SourceType.PdfBook,
             AttributionText = "Test Attribution",

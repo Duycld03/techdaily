@@ -75,7 +75,7 @@ describe('server-confirmed administrator admission', () => {
     expect(access.canAccessDestination('/admin/audit')).toBe(false)
   })
 
-  it('tracks all 6 capabilities and hasAnyCapability getter', async () => {
+  it('tracks all 7 capabilities and hasAnyCapability getter', async () => {
     const access = useAdminAccessStore()
     get.mockResolvedValue({
       canViewAdminDashboard: true,
@@ -83,7 +83,8 @@ describe('server-confirmed administrator admission', () => {
       canManageAccounts: false,
       canReadAudit: false,
       canManageDocumentOperations: false,
-      canManageRoles: false
+      canManageRoles: false,
+      canManageCategories: false
     })
 
     expect(await access.verify()).toBe(true)
@@ -93,9 +94,28 @@ describe('server-confirmed administrator admission', () => {
     expect(access.canReadAudit).toBe(false)
     expect(access.canManageDocumentOperations).toBe(false)
     expect(access.canManageRoles).toBe(false)
+    expect(access.canManageCategories).toBe(false)
     expect(access.hasAnyCapability).toBe(true)
   })
 
+  it('correctly tracks canManageCategories capability and controls /admin/categories access', async () => {
+    const access = useAdminAccessStore()
+    get.mockResolvedValue({
+      canManageCatalog: false,
+      canManageAccounts: false,
+      canReadAudit: false,
+      canManageDocumentOperations: false,
+      canManageCategories: true
+    })
+
+    expect(await access.verify()).toBe(true)
+    expect(access.canManageCategories).toBe(true)
+    expect(access.canAccessDestination('/admin/categories')).toBe(true)
+    expect(access.canAccessDestination('/admin/categories/')).toBe(true)
+    expect(access.canAccessDestination('/admin/catalog')).toBe(false)
+    expect(access.canAccessDestination('/admin/users')).toBe(false)
+    expect(access.canAccessDestination('/admin/audit')).toBe(false)
+  })
   it('denies access and invalidates admin session if all 6 capability flags are false', async () => {
     const auth = useAuthStore()
     auth.setSession(adminTestJwt(), { id: 'admin-1', email: 'admin@example.test', name: 'Admin', preferredLocale: 'en' })
@@ -108,9 +128,9 @@ describe('server-confirmed administrator admission', () => {
       canManageAccounts: false,
       canReadAudit: false,
       canManageDocumentOperations: false,
-      canManageRoles: false
+      canManageRoles: false,
+      canManageCategories: false
     })
-
     expect(await access.verify()).toBe(false)
     expect(access.state).toBe('denied')
     expect(auth.adminGeneration).toBeGreaterThan(prevAdminGen)
@@ -181,7 +201,20 @@ describe('server-confirmed administrator admission', () => {
     await access.verify()
     expect(access.getFirstAccessibleAdminRoute()).toBe('/admin/catalog')
 
-    // 3. Accounts priority
+    // 3. Categories priority
+    access.reset()
+    get.mockResolvedValueOnce({
+      canViewAdminDashboard: false,
+      canManageCatalog: false,
+      canManageCategories: true,
+      canManageAccounts: true,
+      canReadAudit: true,
+      canManageDocumentOperations: true
+    })
+    await access.verify()
+    expect(access.getFirstAccessibleAdminRoute()).toBe('/admin/categories')
+
+    // 4. Accounts priority
     access.reset()
     get.mockResolvedValueOnce({
       canViewAdminDashboard: false,

@@ -8,132 +8,66 @@ using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Features.Catalog.Admin.Prepare;
 
-public record AdminPrepareCatalogRequest(
-    Guid Id,
-    string? ReplacementTempFilePath = null,
-    Guid? AdminUserId = null);
+public record AdminPrepareCatalogRequest(Guid Id, string? ReplacementTempFilePath = null, Guid? AdminUserId = null, int PresentedSessionVersion = 1);
 
-public class AdminPrepareCatalogHandler : IUseCase<AdminPrepareCatalogRequest, AdminCatalogDocumentDto>
+public class AdminPrepareCatalogHandler(
+    IDeepPaceDbContext dbContext,
+    IPdfIngestionQueue pdfQueue,
+    ICategoryAssignmentGuard categoryGuard,
+    IAdministrativeUnitOfWork unitOfWork,
+    IDocumentMutationGuard mutationGuard) : IUseCase<AdminPrepareCatalogRequest, AdminCatalogDocumentDto>
 {
-    private readonly IDeepPaceDbContext _dbContext;
-    private readonly IPdfIngestionQueue _pdfQueue;
-
-    public AdminPrepareCatalogHandler(
-        IDeepPaceDbContext dbContext,
-        IPdfIngestionQueue pdfQueue)
+    public async Task<Result<AdminCatalogDocumentDto>> ExecuteAsync(AdminPrepareCatalogRequest request, CancellationToken cancellationToken = default)
     {
-        _dbContext = dbContext;
-        _pdfQueue = pdfQueue;
-    }
-
-    public async Task<Result<AdminCatalogDocumentDto>> ExecuteAsync(
-        AdminPrepareCatalogRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var doc = await _dbContext.CatalogDocuments
-            .Include(d => d.Slices)
-            .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken);
-
-        if (doc == null || doc.IsDeleted)
-        {
-            return Error.Custom("Catalog.NotFound", "Catalog document not found.");
-        }
-
-        // Check if currently busy processing with active lease
-        if (doc.ProcessingStatus == ProcessingStatus.Processing
-            && doc.ProcessingLeaseExpiresAt.HasValue
-            && doc.ProcessingLeaseExpiresAt.Value > DateTimeOffset.UtcNow)
-        {
-            if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
-            {
-                var rejectAudit = AdminAuditEvent.Create(
-                    actorUserId: request.AdminUserId.Value,
-                    action: AdminAuditActions.CatalogPrepare,
-                    targetType: "CatalogDocument",
-                    targetId: doc.Id.ToString(),
-                    outcome: AdminAuditOutcome.Rejected,
-                    errorCode: "Catalog.Busy");
-                await _dbContext.AdminAuditEvents.AddAsync(rejectAudit, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
-            return Error.Custom("Catalog.Busy", "Preparation is currently in progress for this document. Please wait or retry after lease expires.");
-        }
-
-        if (doc.SourceType == SourceType.PdfBook)
-        {
-            if (string.IsNullOrWhiteSpace(request.ReplacementTempFilePath) || !File.Exists(request.ReplacementTempFilePath))
-            {
-                if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+        var result = await mutationGuard.ExecuteWithMutationGuardAsync(request.Id, IngestionTargetScope.Catalog,
+            () => unitOfWork.ExecutePrivilegedMutationAsync(request.AdminUserId ?? Guid.Empty, request.PresentedSessionVersion,
+                new[] { AdminPermission.ManageCatalog }, async () =>
                 {
-                    var rejectAudit = AdminAuditEvent.Create(
-                        actorUserId: request.AdminUserId.Value,
-                        action: AdminAuditActions.CatalogPrepare,
-                        targetType: "CatalogDocument",
-                        targetId: doc.Id.ToString(),
-                        outcome: AdminAuditOutcome.Rejected,
-                        errorCode: "Catalog.MissingPdfFile");
-                    await _dbContext.AdminAuditEvents.AddAsync(rejectAudit, cancellationToken);
-                    await _dbContext.SaveChangesAsync(cancellationToken);
-                }
-                return Error.Custom("Catalog.MissingPdfFile",
-                    "Temporary upload file is no longer available. Please upload the PDF file again to prepare.");
-            }
-        }
+                    var candidate = await dbContext.CatalogDocuments.AsNoTracking().IgnoreAutoIncludes().FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken);
+                    if (candidate == null || candidate.IsDeleted) return Error.Custom("Catalog.NotFound", "Catalog document not found.");
+                    return await categoryGuard.ExecuteForCatalogAsync<AdminCatalogDocumentDto>(request.Id, candidate.CategoryId, async (doc, category) =>
+                    {
+                        if (doc.ProcessingStatus == ProcessingStatus.Processing && doc.ProcessingLeaseExpiresAt > DateTimeOffset.UtcNow)
+                            return Error.Custom("Catalog.Busy", "Preparation is currently in progress. Wait until the lease expires.");
+                        if (doc.SourceType == SourceType.PdfBook && (string.IsNullOrWhiteSpace(request.ReplacementTempFilePath) || !File.Exists(request.ReplacementTempFilePath)))
+                            return Error.Custom("Catalog.MissingPdfFile", "Temporary upload file is unavailable. Upload the PDF again to prepare.");
+                        if (dbContext is DbContext context) await context.Entry(doc).Collection(d => d.Slices).LoadAsync(cancellationToken);
+                        doc.Category = category;
+                        doc.ProcessingGeneration++;
+                        doc.ProcessingStatus = ProcessingStatus.Pending;
+                        doc.ProcessingStatusMessage = "Preparation explicitly enqueued by administrator";
+                        doc.ProcessingErrorMessage = null;
+                        doc.ProcessingLeaseExpiresAt = null;
+                        await dbContext.AdminAuditEvents.AddAsync(AdminAuditEvent.Create(request.AdminUserId!.Value,
+                            AdminAuditActions.CatalogPrepare, "CatalogDocument", doc.Id.ToString(), AdminAuditOutcome.Accepted,
+                            correlationId: doc.Id.ToString(), changedFields: new[] { "ProcessingStatus", "ProcessingGeneration" },
+                            statePayload: JsonSerializer.Serialize(new { doc.ProcessingStatus, doc.ProcessingGeneration })), cancellationToken);
+                        return doc.ToAdminDto();
+                    }, cancellationToken);
+                }, cancellationToken), cancellationToken);
 
-        // Increment processing generation to invalidate any stale worker
-        doc.ProcessingGeneration++;
-        doc.ProcessingStatus = ProcessingStatus.Pending;
-        doc.ProcessingStatusMessage = "Preparation explicitly enqueued by administrator";
-        doc.ProcessingErrorMessage = null;
-        doc.ProcessingLeaseExpiresAt = null;
-
-        if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
+        if (!result.IsSuccess)
         {
-            var audit = AdminAuditEvent.Create(
-                actorUserId: request.AdminUserId.Value,
-                action: AdminAuditActions.CatalogPrepare,
-                targetType: "CatalogDocument",
-                targetId: doc.Id.ToString(),
-                outcome: AdminAuditOutcome.Accepted,
-                correlationId: doc.Id.ToString(),
-                changedFields: new[] { "ProcessingStatus", "ProcessingGeneration" },
-                statePayload: JsonSerializer.Serialize(new { ProcessingStatus = doc.ProcessingStatus.ToString(), ProcessingGeneration = doc.ProcessingGeneration }));
-            await _dbContext.AdminAuditEvents.AddAsync(audit, cancellationToken);
+            if (request.AdminUserId is { } actor && actor != Guid.Empty && result.Error.Code is "Catalog.Busy" or "Catalog.MissingPdfFile")
+                await unitOfWork.AppendCleanAuditEventAsync(AdminAuditEvent.Create(actor, AdminAuditActions.CatalogPrepare,
+                    "CatalogDocument", request.Id.ToString(), AdminAuditOutcome.Rejected, errorCode: result.Error.Code), cancellationToken);
+            return result;
         }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        if (doc.SourceType == SourceType.PdfBook && !string.IsNullOrWhiteSpace(request.ReplacementTempFilePath))
+        var document = result.Value;
+        if (document.SourceType == SourceType.PdfBook && !string.IsNullOrWhiteSpace(request.ReplacementTempFilePath))
         {
             try
             {
-                await _pdfQueue.EnqueueAsync(new PdfIngestJob(
-                    TargetId: doc.Id,
-                    TempFilePath: request.ReplacementTempFilePath,
-                    DocumentTitle: doc.Title,
-                    Category: doc.Category,
-                    Language: doc.Language,
-                    DestinationType: IngestionDestinationType.CatalogDocument,
-                    Generation: doc.ProcessingGeneration), cancellationToken);
+                await pdfQueue.EnqueueAsync(new PdfIngestJob(document.Id, request.ReplacementTempFilePath, document.Title,
+                    document.CategoryId, document.Language, IngestionDestinationType.CatalogDocument, document.ProcessingGeneration), cancellationToken);
             }
-            catch (Exception)
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
             {
-                if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
-                {
-                    var failAudit = AdminAuditEvent.Create(
-                        actorUserId: request.AdminUserId.Value,
-                        action: AdminAuditActions.CatalogDispatchFailed,
-                        targetType: "CatalogDocument",
-                        targetId: doc.Id.ToString(),
-                        outcome: AdminAuditOutcome.Failed,
-                        errorCode: "DISPATCH_FAILED",
-                        correlationId: doc.Id.ToString());
-                    await _dbContext.AdminAuditEvents.AddAsync(failAudit, cancellationToken);
-                    await _dbContext.SaveChangesAsync(cancellationToken);
-                }
+                await unitOfWork.AppendCleanAuditEventAsync(AdminAuditEvent.Create(request.AdminUserId!.Value,
+                    AdminAuditActions.CatalogDispatchFailed, "CatalogDocument", document.Id.ToString(), AdminAuditOutcome.Failed,
+                    errorCode: "DISPATCH_FAILED", correlationId: document.Id.ToString()), cancellationToken);
             }
         }
-
-        return doc.ToAdminDto();
-}
+        return result;
+    }
 }

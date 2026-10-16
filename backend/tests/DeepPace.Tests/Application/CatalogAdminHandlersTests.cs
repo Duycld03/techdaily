@@ -26,6 +26,7 @@ public class CatalogAdminHandlersTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly DeepPaceDbContext _db;
+    private readonly Guid _adminUserId = Guid.NewGuid();
     private readonly List<string> _tempFilesToCleanup = new();
 
     public CatalogAdminHandlersTests()
@@ -39,6 +40,16 @@ public class CatalogAdminHandlersTests : IDisposable
 
         _db = new DeepPaceDbContext(options);
         _db.Database.EnsureCreated();
+        _db.Users.Add(new User
+        {
+            Id = _adminUserId,
+            Email = "catalog-admin@example.test",
+            Name = "Catalog administrator",
+            RoleId = RoleDefaults.AdminRoleId,
+            Status = AccountStatus.Active,
+            AuthenticationVersion = 1
+        });
+        _db.SaveChanges();
     }
 
     public void Dispose()
@@ -58,7 +69,7 @@ public class CatalogAdminHandlersTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Admin Test Document",
             Description = "Admin description",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Language = "en",
             SourceType = SourceType.PdfBook,
             AttributionText = "Attribution text",
@@ -92,17 +103,17 @@ public class CatalogAdminHandlersTests : IDisposable
     public async Task UploadPdf_WithNonExistentTempFile_ShouldFailValidation()
     {
         var queue = new TestQueue();
-        var handler = new AdminUploadCatalogPdfHandler(_db, queue, new AdminUploadCatalogPdfValidator());
+        var handler = new AdminUploadCatalogPdfHandler(_db, queue, new AdminUploadCatalogPdfValidator(), new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db), new DeepPace.Infrastructure.Services.AdministrativeUnitOfWork(_db));
 
         var request = new AdminUploadCatalogPdfRequest(
             Title: "Test Book",
             Description: "Desc",
-            Category: Category.BackendRuntime,
+            CategoryId : CategoryDefaults.BackendRuntimeId,
             Language: "en",
             AuthorOrSourceUrl: null,
             AttributionText: "Attr",
             TempFilePath: "/tmp/non-existent-pdf-file.pdf",
-            AdminUserId: Guid.NewGuid());
+            AdminUserId: _adminUserId);
 
         var result = await handler.ExecuteAsync(request);
 
@@ -119,17 +130,17 @@ public class CatalogAdminHandlersTests : IDisposable
         _tempFilesToCleanup.Add(tempFile);
 
         var queue = new TestQueue();
-        var handler = new AdminUploadCatalogPdfHandler(_db, queue, new AdminUploadCatalogPdfValidator());
+        var handler = new AdminUploadCatalogPdfHandler(_db, queue, new AdminUploadCatalogPdfValidator(), new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db), new DeepPace.Infrastructure.Services.AdministrativeUnitOfWork(_db));
 
         var request = new AdminUploadCatalogPdfRequest(
             Title: "Test Book",
             Description: "Desc",
-            Category: Category.BackendRuntime,
+            CategoryId : CategoryDefaults.BackendRuntimeId,
             Language: "en",
             AuthorOrSourceUrl: "https://example.com/source",
             AttributionText: "Attr",
             TempFilePath: tempFile,
-            AdminUserId: Guid.NewGuid());
+            AdminUserId: _adminUserId);
 
         var result = await handler.ExecuteAsync(request);
 
@@ -150,17 +161,18 @@ public class CatalogAdminHandlersTests : IDisposable
         await _db.CatalogDocuments.AddAsync(doc);
         await _db.SaveChangesAsync();
 
-        var handler = new AdminUpdateCatalogMetadataHandler(_db, new AdminUpdateCatalogMetadataValidator());
+        var handler = new AdminUpdateCatalogMetadataHandler(_db, new AdminUpdateCatalogMetadataValidator(), new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db), new DeepPace.Infrastructure.Services.AdministrativeUnitOfWork(_db), new DeepPace.Infrastructure.Services.DocumentMutationGuard(_db));
 
         var request = new AdminUpdateCatalogMetadataRequest(
             Id: doc.Id,
             Title: "Changed Title",
             Description: doc.Description,
-            Category: doc.Category,
+            CategoryId: doc.CategoryId,
             Language: doc.Language,
             AuthorOrSourceUrl: doc.AuthorOrSourceUrl,
             AttributionText: doc.AttributionText,
-            ExpectedConcurrencyVersion: doc.ConcurrencyVersion);
+            ExpectedConcurrencyVersion: doc.ConcurrencyVersion,
+            AdminUserId: _adminUserId);
 
         var result = await handler.ExecuteAsync(request);
 
@@ -172,22 +184,23 @@ public class CatalogAdminHandlersTests : IDisposable
     public async Task UpdateMetadata_WhenDraft_ShouldIncrementRevisionAndInvalidateReview()
     {
         var doc = CreateSeedDoc(visibility: CatalogVisibility.Draft);
-        var adminId = Guid.NewGuid();
+        var adminId = _adminUserId;
         doc.Review(adminId);
         await _db.CatalogDocuments.AddAsync(doc);
         await _db.SaveChangesAsync();
 
-        var handler = new AdminUpdateCatalogMetadataHandler(_db, new AdminUpdateCatalogMetadataValidator());
+        var handler = new AdminUpdateCatalogMetadataHandler(_db, new AdminUpdateCatalogMetadataValidator(), new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db), new DeepPace.Infrastructure.Services.AdministrativeUnitOfWork(_db), new DeepPace.Infrastructure.Services.DocumentMutationGuard(_db));
 
         var request = new AdminUpdateCatalogMetadataRequest(
             Id: doc.Id,
             Title: "Changed Title",
             Description: doc.Description,
-            Category: doc.Category,
+            CategoryId: doc.CategoryId,
             Language: doc.Language,
             AuthorOrSourceUrl: doc.AuthorOrSourceUrl,
             AttributionText: doc.AttributionText,
-            ExpectedConcurrencyVersion: doc.ConcurrencyVersion);
+            ExpectedConcurrencyVersion: doc.ConcurrencyVersion,
+            AdminUserId: _adminUserId);
 
         var result = await handler.ExecuteAsync(request);
 
@@ -265,8 +278,8 @@ public class CatalogAdminHandlersTests : IDisposable
         await _db.CatalogDocuments.AddAsync(doc);
         await _db.SaveChangesAsync();
 
-        var handler = new AdminPrepareCatalogHandler(_db, new TestQueue());
-        var result = await handler.ExecuteAsync(new AdminPrepareCatalogRequest(doc.Id));
+        var handler = new AdminPrepareCatalogHandler(_db, new TestQueue(), new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db), new DeepPace.Infrastructure.Services.AdministrativeUnitOfWork(_db), new DeepPace.Infrastructure.Services.DocumentMutationGuard(_db));
+        var result = await handler.ExecuteAsync(new AdminPrepareCatalogRequest(doc.Id, AdminUserId: _adminUserId));
 
         result.IsSuccess.Should().BeFalse();
         result.Error.Code.Should().Be("Catalog.Busy");

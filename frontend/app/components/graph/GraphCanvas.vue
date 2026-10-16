@@ -3,13 +3,14 @@ import { ref, shallowRef, watch, onMounted, onBeforeUnmount, computed } from 'vu
 import { useEventListener, useDebounceFn } from '@vueuse/core'
 import cytoscape, { type Core, type EventObject, type Stylesheet, type CoseLayoutOptions } from 'cytoscape'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
-import { CATEGORY_PALETTE, MASTERED_BORDER, NODE_TYPE_COLOR } from '~/utils/graphVisualTokens'
+import { getCategoryPalette, MASTERED_BORDER, NODE_TYPE_COLOR } from '~/utils/graphVisualTokens'
 
 const emit = defineEmits<{
   (e: 'cy-ready', cy: Core): void
 }>()
 
 const store = useKnowledgeGraphStore()
+const { locale } = useI18n()
 const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
 
@@ -51,64 +52,14 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'width': 54,
         'height': 54,
         'border-width': 3.5,
-        'border-color': activeClr,
+        'border-color': 'data(borderColor)',
+        'background-color': 'data(fillColor)',
         'font-size': 12,
         'font-weight': 'bold',
         'color': textClr,
         'z-index': 10
       }
     },
-    // Pillar node colors by category with glowing accent borders
-    {
-      selector: 'node[type = "pillar"][category = "FrontendWeb"], node[type = "pillar"][category = "Frontend"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.FrontendWeb.fill,
-        'border-color': CATEGORY_PALETTE.FrontendWeb.border
-      }
-    },
-    {
-      selector: 'node[type = "pillar"][category = "BackendRuntime"], node[type = "pillar"][category = "BackendDotNet"], node[type = "pillar"][category = "DotNet"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.BackendDotNet.fill,
-        'border-color': CATEGORY_PALETTE.BackendDotNet.border
-      }
-    },
-    {
-      selector: 'node[type = "pillar"][category = "DatabaseStorage"], node[type = "pillar"][category = "Postgres"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.DatabaseStorage.fill,
-        'border-color': CATEGORY_PALETTE.DatabaseStorage.border
-      }
-    },
-    {
-      selector: 'node[type = "pillar"][category = "SystemDesign"], node[type = "pillar"][category = "DistributedSystems"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.SystemDesign.fill,
-        'border-color': CATEGORY_PALETTE.SystemDesign.border
-      }
-    },
-    {
-      selector: 'node[type = "pillar"][category = "EngineeringCraft"], node[type = "pillar"][category = "Craft"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.EngineeringCraft.fill,
-        'border-color': CATEGORY_PALETTE.EngineeringCraft.border
-      }
-    },
-    {
-      selector: 'node[type = "pillar"][category = "MentalModels"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.MentalModels.fill,
-        'border-color': CATEGORY_PALETTE.MentalModels.border
-      }
-    },
-    {
-      selector: 'node[type = "pillar"][category = "HabitsProductivity"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.HabitsProductivity.fill,
-        'border-color': CATEGORY_PALETTE.HabitsProductivity.border
-      }
-    },
-    // Topic nodes (default fallback)
     // Chunk nodes (document chapters)
     {
       selector: 'node[type = "chunk"]',
@@ -116,50 +67,7 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'shape': 'round-rectangle',
         'width': 36,
         'height': 36,
-        'background-color': CATEGORY_PALETTE.BackendDotNet.fill
-      }
-    },
-    // Topic colors by pillar (tones sourced from graphVisualTokens CATEGORY_PALETTE)
-    {
-      selector: 'node[type = "chunk"][category = "BackendRuntime"], node[type = "chunk"][category = "BackendDotNet"], node[type = "chunk"][category = "DotNet"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.BackendDotNet.border
-      }
-    },
-    {
-      selector: 'node[type = "chunk"][category = "DatabaseStorage"], node[type = "chunk"][category = "Postgres"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.DatabaseStorage.border
-      }
-    },
-    {
-      selector: 'node[type = "chunk"][category = "SystemDesign"], node[type = "chunk"][category = "DistributedSystems"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.SystemDesign.border
-      }
-    },
-    {
-      selector: 'node[type = "chunk"][category = "FrontendWeb"], node[type = "chunk"][category = "Frontend"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.FrontendWeb.border
-      }
-    },
-    {
-      selector: 'node[type = "chunk"][category = "EngineeringCraft"], node[type = "chunk"][category = "Craft"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.EngineeringCraft.border
-      }
-    },
-    {
-      selector: 'node[type = "chunk"][category = "MentalModels"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.MentalModels.border
-      }
-    },
-    {
-      selector: 'node[type = "chunk"][category = "HabitsProductivity"]',
-      style: {
-        'background-color': CATEGORY_PALETTE.HabitsProductivity.border
+        'background-color': 'data(borderColor)'
       }
     },
     // Book nodes
@@ -358,17 +266,23 @@ function syncElements() {
   cy.value.batch(() => {
     cy.value!.elements().remove()
 
-    const nodeElements = store.filteredNodes.map((node) => ({
-      group: 'nodes' as const,
-      data: {
-        id: node.id,
-        label: node.label,
-        type: (node.type || 'chunk').toLowerCase(),
-        category: node.category,
-        status: node.status,
-        summary: node.summary
+    const nodeElements = store.filteredNodes.map((node) => {
+      const palette = getCategoryPalette(node.categoryId)
+      return {
+        group: 'nodes' as const,
+        data: {
+          id: node.id,
+          label: store.getNodeLabel(node, locale.value),
+          type: (node.type || 'chunk').toLowerCase(),
+          category: node.category,
+          categoryId: node.categoryId,
+          status: node.status,
+          summary: node.summary,
+          fillColor: palette.fill,
+          borderColor: palette.border
+        }
       }
-    }))
+    })
 
     const edgeElements = store.filteredEdges.map((edge) => ({
       group: 'edges' as const,
@@ -524,7 +438,7 @@ watch(isDark, (newVal) => {
 
 // Watch store data changes
 watch(
-  [() => store.filteredNodes, () => store.filteredEdges],
+  [() => store.filteredNodes, () => store.filteredEdges, () => store.activePillars, () => locale.value],
   () => {
     syncElements()
   },

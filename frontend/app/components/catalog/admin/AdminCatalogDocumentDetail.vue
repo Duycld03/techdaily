@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import {
   CheckCircle2,
   Clock,
@@ -11,10 +11,11 @@ import {
 } from 'lucide-vue-next'
 import AppSelect, { type SelectOption } from '~/components/common/AppSelect.vue'
 import AdminCatalogSlicesReview from '~/components/catalog/admin/AdminCatalogSlicesReview.vue'
-import type { AdminCatalogDocumentDto } from '~/stores/useCatalogStore'
+import type { AdminCatalogDocument } from '~/stores/useCatalogStore'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 
 const props = defineProps<{
-  document: AdminCatalogDocumentDto
+  document: AdminCatalogDocument
   isSavingMetadata: boolean
   isPreparingSlices: boolean
   isPublishing: boolean
@@ -25,7 +26,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'save-metadata', payload: {
     title: string
-    category: number
+    categoryId: string
     language: string
     authorOrSourceUrl?: string
     attributionText?: string
@@ -37,40 +38,18 @@ const emit = defineEmits<{
   (e: 'hide'): void
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const categoryStore = useCategoryStore()
+onMounted(() => { void categoryStore.ensureCategories() })
 
 // Local Edit Metadata State
 const editTitle = ref('')
-const editCategory = ref<number>(0)
+const editCategoryId = ref('')
 const editLanguage = ref('en')
 const editAttribution = ref('')
 const editSourceUrl = ref('')
 const retryPdfFile = ref<File | null>(null)
 
-function parseCategory(val: unknown): number {
-  if (typeof val === 'number' && !isNaN(val)) return val
-  if (typeof val === 'string') {
-    const parsed = parseInt(val, 10)
-    if (!isNaN(parsed)) return parsed
-    const nameMap: Record<string, number> = {
-      frontendweb: 0,
-      frontend: 0,
-      backendruntime: 1,
-      backend: 1,
-      databasestorage: 2,
-      database: 2,
-      systemdesign: 3,
-      engineeringcraft: 4,
-      craft: 4,
-      mentalmodels: 5,
-      habitsproductivity: 6,
-      habits: 6
-    }
-    const lower = val.toLowerCase().replace(/[^a-z0-9]/g, '')
-    if (lower in nameMap) return nameMap[lower]
-  }
-  return 0
-}
 
 function formatUnmetRequirement(req: string): string {
   if (!req) return ''
@@ -98,22 +77,26 @@ const isPublished = computed(() => props.document?.visibility === 'Published')
 watch(() => props.document, (doc) => {
   if (doc) {
     editTitle.value = doc.title
-    editCategory.value = parseCategory(doc.category)
+    editCategoryId.value = doc.categoryId
     editLanguage.value = doc.language || 'en'
     editAttribution.value = doc.attributionText || ''
     editSourceUrl.value = doc.authorOrSourceUrl || ''
   }
 }, { immediate: true })
 
-const categoryOptions = computed<SelectOption[]>(() => [
-  { value: 0, label: t('library.categories.frontend') },
-  { value: 1, label: t('library.categories.backend') },
-  { value: 2, label: t('library.categories.database') },
-  { value: 3, label: t('library.categories.system_design') },
-  { value: 4, label: t('library.categories.craft') },
-  { value: 5, label: t('library.categories.mental_models') },
-  { value: 6, label: t('library.categories.habits') }
-])
+const categoryOptions = computed<SelectOption[]>(() => {
+  const current = categoryStore.getCategoryById(props.document.categoryId) || props.document.category
+  const options = categoryStore.activeCategories.map(c => ({
+    value: c.id,
+    label: categoryStore.getCategoryName(c, locale.value)
+  }))
+  if (!options.some(c => c.value === current.id)) {
+    return [...options, { value: current.id, label: `${categoryStore.getCategoryName(current, locale.value)} (${t('categories.inactive')})` }]
+  }
+  return options
+})
+const hasValidCategory = computed(() => editCategoryId.value === props.document.categoryId ||
+  (!categoryStore.error && !categoryStore.isLoading && categoryStore.activeCategories.some(c => c.id === editCategoryId.value)))
 
 const languageOptions = computed<SelectOption[]>(() => [
   { value: 'en', label: t('library.language_english') },
@@ -140,9 +123,10 @@ function getStatusLabel(status: string) {
 }
 
 function handleSave() {
+  if (!hasValidCategory.value) return
   emit('save-metadata', {
     title: editTitle.value.trim(),
-    category: editCategory.value,
+    categoryId: editCategoryId.value,
     language: editLanguage.value,
     authorOrSourceUrl: editSourceUrl.value.trim() || undefined,
     attributionText: editAttribution.value.trim() || undefined,
@@ -213,14 +197,7 @@ function handleRetry() {
         class="p-4 rounded-2xl bg-brand-50 dark:bg-brand-500/10 border border-brand-200 dark:border-brand-500/20 space-y-2 text-xs sm:text-sm"
       >
         <div class="flex items-center justify-between text-brand-700 dark:text-brand-300 font-semibold gap-2">
-          <span class="truncate">{{ document.statusMessage || $t('admin_catalog.document.status_processing_default') }}</span>
-          <span class="shrink-0 font-mono">{{ document.progressPercentage }}%</span>
-        </div>
-        <div class="w-full h-2 rounded-full bg-brand-200 dark:bg-brand-950 overflow-hidden">
-          <div
-            class="h-full bg-brand-500 transition-all duration-300"
-            :style="{ width: `${document.progressPercentage || 10}%` }"
-          ></div>
+          <span class="truncate">{{ document.processingStatusMessage || $t('admin_catalog.document.status_processing_default') }}</span>
         </div>
       </div>
 
@@ -238,7 +215,7 @@ function handleRetry() {
         </div>
 
         <!-- Optional Replacement PDF for PDF Source -->
-        <div v-if="document.sourceType === 2" class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div v-if="document.sourceType === 'PdfBook'" class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <input
             type="file"
             accept="application/pdf"
@@ -270,7 +247,7 @@ function handleRetry() {
         </h3>
         <button
           type="button"
-          :disabled="isSavingMetadata || isPublished"
+          :disabled="isSavingMetadata || isPublished || !hasValidCategory"
           @click="handleSave"
           class="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 transition-all active:scale-95 whitespace-nowrap shrink-0 disabled:opacity-50 cursor-pointer"
         >
@@ -308,11 +285,16 @@ function handleRetry() {
             {{ $t('admin_catalog.form.category') }}
           </label>
           <AppSelect
-            v-model="editCategory"
+            v-model="editCategoryId"
             :options="categoryOptions"
             :disabled="isPublished"
             size="md"
           />
+          <div v-if="categoryStore.error" role="alert">
+            {{ $t('categories.metadataUnavailable') }}
+            <button type="button" @click="categoryStore.ensureCategories()">{{ $t('categories.retry') }}</button>
+          </div>
+          <p v-else-if="categoryStore.hasLoaded && !categoryStore.activeCategories.length">{{ $t('categories.noActiveCategories') }}</p>
         </div>
 
         <div class="space-y-1.5">

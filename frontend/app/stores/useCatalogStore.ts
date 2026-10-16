@@ -2,92 +2,16 @@ import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 import { useApiClient } from "~/composables/useApiClient";
 import { useAuthStore } from "~/stores/useAuthStore";
+import type { components } from "~/types/api.generated";
 
-export interface LearnerCatalogDocument {
-  id: string;
-  title: string;
-  description: string;
-  category: number;
-  language: string;
-  sourceType: number;
-  authorOrSourceUrl?: string;
-  attributionText: string;
-  totalSlices: number;
-  estimatedReadMinutes: number;
-  publishedAt?: string;
-  existingBookId?: string | null;
-}
-
-export interface CatalogTocItem {
-  sliceOrder: number;
-  chapterTitle: string;
-  estimatedReadMinutes: number;
-}
-
-export interface CatalogFirstSlicePreview {
-  sliceOrder: number;
-  chapterTitle: string;
-  originalTextMarkdown: string;
-  summaryMarkdown: string;
-  keyTakeaways: string[];
-  estimatedReadMinutes: number;
-}
-
-export interface LearnerCatalogDetail extends LearnerCatalogDocument {
-  tableOfContents: CatalogTocItem[];
-  firstSlicePreview?: CatalogFirstSlicePreview | null;
-}
-
-export interface CatalogAdoptionResult {
-  bookId: string;
-  alreadyAdded: boolean;
-}
-
-export interface AdminCatalogDocument {
-  id: string;
-  title: string;
-  description: string;
-  category: number;
-  language: string;
-  sourceType: number;
-  authorOrSourceUrl?: string;
-  attributionText: string;
-
-  visibility: "Draft" | "Published" | "Hidden" | number;
-  processingStatus: "Pending" | "Processing" | "Ready" | "Failed" | number;
-  totalSlices: number;
-  estimatedReadMinutes: number;
-  revision: number;
-  concurrencyVersion: number;
-  processingGeneration: number;
-  processingStatusMessage?: string;
-  processingErrorMessage?: string;
-  isEligibleForPublication: boolean;
-  unmetPublicationRequirements: string[];
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export interface AdminCatalogSlice {
-  id: string;
-  catalogDocumentId: string;
-  sliceOrder: number;
-  chapterTitle: string;
-  originalTextMarkdown: string;
-  summaryMarkdown: string;
-  keyTakeaways: string[];
-  language: string;
-  estimatedReadMinutes: number;
-  isAiFormatted: boolean;
-}
-
-export interface AdminPreviewUrlResult {
-  title: string;
-  markdownContent: string;
-  sourceUrl: string;
-  estimatedWordCount: number;
-  isPdfDetected: boolean;
-}
+export type LearnerCatalogDocument = components["schemas"]["LearnerCatalogDocumentDto"];
+export type CatalogTocItem = components["schemas"]["CatalogTocItemDto"];
+export type CatalogFirstSlicePreview = components["schemas"]["CatalogFirstSlicePreviewDto"];
+export type LearnerCatalogDetail = components["schemas"]["LearnerCatalogDetailDto"];
+export type CatalogAdoptionResult = components["schemas"]["CatalogAdoptionResult"];
+export type AdminCatalogDocument = components["schemas"]["AdminCatalogDocumentDto"];
+export type AdminCatalogSlice = components["schemas"]["AdminCatalogSliceDto"];
+export type AdminPreviewUrlResult = components["schemas"]["AdminPreviewCatalogUrlResponse"];
 
 function extractErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === "object" && "message" in err) {
@@ -122,9 +46,9 @@ export const useCatalogStore = defineStore("catalog", () => {
   const page = ref(1);
   const pageSize = ref(12);
   const search = ref("");
-  const category = ref<number | null>(null);
+  const categoryId = ref<string | null>(null);
   const language = ref<string | null>(null);
-  const sourceType = ref<number | null>(null);
+  const sourceType = ref<components["schemas"]["SourceType"] | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
 
@@ -143,7 +67,7 @@ export const useCatalogStore = defineStore("catalog", () => {
   const adminSearch = ref("");
   const adminVisibility = ref<string | null>(null);
   const adminStatus = ref<string | null>(null);
-  const adminCategory = ref<number | null>(null);
+  const adminCategoryId = ref<string | null>(null);
   const isAdminLoading = ref(false);
   const adminError = ref<string | null>(null);
   const selectedAdminDoc = ref<AdminCatalogDocument | null>(null);
@@ -175,19 +99,18 @@ export const useCatalogStore = defineStore("catalog", () => {
 
   async function fetchPublishedDocuments(params?: {
     search?: string;
-    category?: number | null;
+    categoryId?: string | null;
     language?: string | null;
-    sourceType?: number | null;
+    sourceType?: components["schemas"]["SourceType"] | null;
     page?: number;
     pageSize?: number;
   }) {
     if (params?.page !== undefined) page.value = params.page;
     if (params?.pageSize !== undefined) pageSize.value = params.pageSize;
     if (params?.search !== undefined) search.value = params.search;
-    if (params?.category !== undefined) category.value = params.category;
+    if (params?.categoryId !== undefined) categoryId.value = params.categoryId;
     if (params?.language !== undefined) language.value = params.language;
     if (params?.sourceType !== undefined) sourceType.value = params.sourceType;
-
     isLoading.value = true;
     error.value = null;
 
@@ -198,10 +121,9 @@ export const useCatalogStore = defineStore("catalog", () => {
       queryParams.set("page", page.value.toString());
       queryParams.set("pageSize", pageSize.value.toString());
       if (search.value.trim()) queryParams.set("search", search.value.trim());
-      if (category.value !== null && category.value !== undefined) queryParams.set("category", category.value.toString());
+      if (categoryId.value) queryParams.set("categoryId", categoryId.value);
       if (language.value) queryParams.set("language", language.value);
       if (sourceType.value !== null && sourceType.value !== undefined) queryParams.set("sourceType", sourceType.value.toString());
-
       const response = await apiClient.get<{
         items: LearnerCatalogDocument[];
         totalCount: number;
@@ -258,16 +180,12 @@ export const useCatalogStore = defineStore("catalog", () => {
         {}
       );
 
-      // Update local state: mark adopted
-      if (result?.bookId || result?.alreadyAdded) {
-        const item = documents.value.find((d) => d.id === id);
-        if (item) {
-          if (result.bookId) item.existingBookId = result.bookId;
-          item.alreadyAdded = true;
-        }
-        if (selectedDocument.value && selectedDocument.value.id === id) {
-          if (result.bookId) selectedDocument.value.existingBookId = result.bookId;
-          selectedDocument.value.alreadyAdded = true;
+      if (result?.bookId) {
+        documents.value = documents.value.map(document =>
+          document.id === id ? { ...document, existingBookId: result.bookId } : document
+        );
+        if (selectedDocument.value?.id === id) {
+          selectedDocument.value = { ...selectedDocument.value, existingBookId: result.bookId };
         }
       }
 
@@ -284,7 +202,7 @@ export const useCatalogStore = defineStore("catalog", () => {
     search?: string;
     visibility?: string | null;
     status?: string | null;
-    category?: number | null;
+    categoryId?: string | null;
     page?: number;
     pageSize?: number;
   }) {
@@ -293,7 +211,7 @@ export const useCatalogStore = defineStore("catalog", () => {
     if (params?.search !== undefined) adminSearch.value = params.search;
     if (params?.visibility !== undefined) adminVisibility.value = params.visibility;
     if (params?.status !== undefined) adminStatus.value = params.status;
-    if (params?.category !== undefined) adminCategory.value = params.category;
+    if (params?.categoryId !== undefined) adminCategoryId.value = params.categoryId;
 
     isAdminLoading.value = true;
     adminError.value = null;
@@ -307,10 +225,7 @@ export const useCatalogStore = defineStore("catalog", () => {
       if (adminSearch.value.trim()) queryParams.set("search", adminSearch.value.trim());
       if (adminVisibility.value) queryParams.set("visibility", adminVisibility.value);
       if (adminStatus.value) queryParams.set("status", adminStatus.value);
-      if (adminCategory.value !== null && adminCategory.value !== undefined) {
-        queryParams.set("category", adminCategory.value.toString());
-      }
-
+      if (adminCategoryId.value) queryParams.set("categoryId", adminCategoryId.value);
       const response = await apiClient.get<{
         items: AdminCatalogDocument[];
         totalCount: number;
@@ -393,7 +308,7 @@ export const useCatalogStore = defineStore("catalog", () => {
     url: string;
     title: string;
     description: string;
-    category: number;
+    categoryId: string;
     language: string;
     authorOrSourceUrl?: string;
     attributionText?: string;
@@ -407,32 +322,25 @@ export const useCatalogStore = defineStore("catalog", () => {
   }
 
   async function uploadPdf(
-    input:
-      | FormData
-      | {
-          file: File;
-          title: string;
-          description?: string;
-          category: number;
-          language: string;
-          authorOrSourceUrl?: string;
-          attributionText?: string;
-        }
-  ): Promise<AdminCatalogDocument> {
-    let body: FormData;
-    if (input instanceof FormData) {
-      body = input;
-    } else {
-      body = new FormData();
-      body.append("file", input.file);
-      body.append("title", input.title);
-      body.append("description", input.description || input.title);
-      body.append("category", input.category.toString());
-      body.append("language", input.language);
-      if (input.authorOrSourceUrl) body.append("authorOrSourceUrl", input.authorOrSourceUrl);
-      if (input.attributionText) body.append("attributionText", input.attributionText);
+    input: {
+      file: File;
+      title: string;
+      description?: string;
+      categoryId: string;
+      language: string;
+      authorOrSourceUrl?: string;
+      attributionText?: string;
     }
-    const doc = await apiClient.post<AdminCatalogDocument>(
+  ): Promise<AdminCatalogDocument> {
+    const body = new FormData();
+    body.append("file", input.file);
+    body.append("title", input.title);
+    body.append("description", input.description || input.title);
+    body.append("categoryId", input.categoryId);
+    body.append("language", input.language);
+    if (input.authorOrSourceUrl) body.append("authorOrSourceUrl", input.authorOrSourceUrl);
+    if (input.attributionText) body.append("attributionText", input.attributionText);
+    const doc = await apiClient.postRaw<AdminCatalogDocument>(
       "/api/v1/admin/catalog/documents/upload-pdf",
       body
     );
@@ -445,7 +353,7 @@ export const useCatalogStore = defineStore("catalog", () => {
     payload: {
       title: string;
       description: string;
-      category: number;
+      categoryId: string;
       language: string;
       authorOrSourceUrl?: string;
       attributionText?: string;
@@ -609,7 +517,7 @@ export const useCatalogStore = defineStore("catalog", () => {
     page,
     pageSize,
     search,
-    category,
+    categoryId,
     language,
     sourceType,
     isLoading,
@@ -628,7 +536,7 @@ export const useCatalogStore = defineStore("catalog", () => {
     adminSearch,
     adminVisibility,
     adminStatus,
-    adminCategory,
+    adminCategoryId,
     isAdminLoading,
     adminError,
     selectedAdminDoc,

@@ -1,3 +1,5 @@
+using DeepPace.Domain.Entities;
+
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using DeepPace.Api.Http;
@@ -75,7 +77,7 @@ public static class CatalogEndpoints
             ClaimsPrincipal userClaims,
             [FromServices] IUseCase<GetPublishedCatalogDocumentsRequest, GetPublishedCatalogDocumentsResponse> handler,
             [FromQuery] string? search,
-            [FromQuery] Category? category,
+            [FromQuery] Guid? categoryId,
             [FromQuery] string? language,
             [FromQuery] SourceType? sourceType,
             [FromQuery] int page = 1,
@@ -83,7 +85,7 @@ public static class CatalogEndpoints
             CancellationToken ct = default) =>
         {
             var userId = GetUserIdFromClaims(userClaims);
-            var request = new GetPublishedCatalogDocumentsRequest(search, category, language, sourceType, page, pageSize, userId);
+            var request = new GetPublishedCatalogDocumentsRequest(search, categoryId, language, sourceType, page, pageSize, userId);
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Ok(success),
@@ -159,12 +161,12 @@ public static class CatalogEndpoints
             [FromQuery] string? search,
             [FromQuery] CatalogVisibility? visibility,
             [FromQuery] ProcessingStatus? status,
-            [FromQuery] Category? category,
+            [FromQuery] Guid? categoryId,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 12,
             CancellationToken ct = default) =>
         {
-            var result = await handler.ExecuteAsync(new AdminGetCatalogDocumentsRequest(search, visibility, status, category, page, pageSize), ct);
+            var result = await handler.ExecuteAsync(new AdminGetCatalogDocumentsRequest(search, visibility, status, categoryId, page, pageSize), ct);
             return result.Match(
                 success => Results.Ok(success),
                 error => error.ToProblem()
@@ -182,7 +184,7 @@ public static class CatalogEndpoints
             IFormFile file,
             [FromForm] string title,
             [FromForm] string description,
-            [FromForm] Category category,
+            [FromForm] Guid categoryId,
             [FromForm] string? authorOrSourceUrl,
             [FromForm] string? language,
             [FromForm] string? attributionText,
@@ -201,12 +203,13 @@ public static class CatalogEndpoints
             var request = new AdminUploadCatalogPdfRequest(
                 title,
                 description,
-                category,
+                categoryId,
                 language ?? "en",
                 authorOrSourceUrl,
                 attributionText,
                 tempFilePath,
-                adminUserId);
+                adminUserId,
+                GetSessionVersion(userClaims));
 
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
@@ -255,11 +258,12 @@ public static class CatalogEndpoints
                 body.Url,
                 body.Title,
                 body.Description,
-                body.Category,
+                body.CategoryId,
                 body.Language ?? "en",
                 body.AuthorOrSourceUrl,
                 body.AttributionText,
-                adminUserId);
+                adminUserId,
+                GetSessionVersion(userClaims));
 
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
@@ -329,12 +333,13 @@ public static class CatalogEndpoints
                 id,
                 body.Title,
                 body.Description,
-                body.Category,
+                body.CategoryId,
                 body.Language,
                 body.AuthorOrSourceUrl,
                 body.AttributionText,
                 body.ExpectedVersion,
-                adminUserId);
+                adminUserId,
+                GetSessionVersion(userClaims));
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Ok(success),
@@ -363,7 +368,8 @@ public static class CatalogEndpoints
             var request = new AdminPrepareCatalogRequest(
                 id,
                 body?.ReplacementTempFilePath,
-                adminUserId);
+                adminUserId,
+                GetSessionVersion(userClaims));
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Accepted($"/api/v1/admin/catalog/documents/{success.Id}", success),
@@ -467,6 +473,9 @@ public static class CatalogEndpoints
         return app;
     }
 
+    private static int GetSessionVersion(ClaimsPrincipal claims)
+        => int.TryParse(claims.FindFirst("session_version")?.Value, out var version) && version > 0 ? version : 1;
+
     private static Guid? GetUserIdFromClaims(ClaimsPrincipal claims)
     {
         var idClaim = claims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -483,19 +492,19 @@ public record AdminImportCatalogUrlApiRequest(
     string Url,
     string Title,
     string Description,
-    Category Category,
-    string? AuthorOrSourceUrl,
-    string Language,
-    string? AttributionText);
+    Guid CategoryId,
+    string? AuthorOrSourceUrl = null,
+    string Language = "en",
+    string? AttributionText = null);
 
 public record AdminUpdateCatalogMetadataApiRequest(
     string Title,
     string Description,
-    Category Category,
-    string Language,
-    string? AuthorOrSourceUrl,
-    string? AttributionText,
-    int ExpectedVersion);
+    Guid CategoryId,
+    string Language = "en",
+    string? AuthorOrSourceUrl = null,
+    string? AttributionText = null,
+    int ExpectedVersion = 1);
 
 public record AdminPrepareCatalogApiRequest(string? ReplacementTempFilePath = null);
 public record AdminPublishCatalogApiRequest(int ExpectedRevision);

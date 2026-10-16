@@ -12,7 +12,8 @@ namespace DeepPace.Tests.Infrastructure;
 
 public class PostgresCatalogAdoptionTests
 {
-    private const string PostgresConnStr = "Host=localhost;Port=5432;Database=deeppace_db;Username=deeppace_user;Password=techdaily_password_secret";
+    private static string PostgresConnStr => Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION")
+        ?? throw new InvalidOperationException("TEST_POSTGRES_CONNECTION must identify an isolated PostgreSQL test database.");
 
     private static DbContextOptions<DeepPaceDbContext> CreatePostgresOptions()
     {
@@ -50,7 +51,7 @@ public class PostgresCatalogAdoptionTests
             Id = Guid.NewGuid(),
             Title = $"Postgres Test Book {Guid.NewGuid():N}",
             Description = "A book for PostgreSQL concurrency and transaction testing.",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Language = "en",
             SourceType = SourceType.PdfBook,
             AttributionText = "Attribution test",
@@ -99,8 +100,8 @@ public class PostgresCatalogAdoptionTests
         using var db1 = new DeepPaceDbContext(options);
         using var db2 = new DeepPaceDbContext(options);
 
-        var service1 = new CatalogAdoptionService(db1, NullLogger<CatalogAdoptionService>.Instance);
-        var service2 = new CatalogAdoptionService(db2, NullLogger<CatalogAdoptionService>.Instance);
+        var service1 = new CatalogAdoptionService(db1, NullLogger<CatalogAdoptionService>.Instance, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(db1));
+        var service2 = new CatalogAdoptionService(db2, NullLogger<CatalogAdoptionService>.Instance, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(db2));
 
         var task1 = service1.AdoptAsync(doc.Id, user.Id);
         var task2 = service2.AdoptAsync(doc.Id, user.Id);
@@ -141,7 +142,7 @@ public class PostgresCatalogAdoptionTests
         await setupDb.SaveChangesAsync();
 
         using var adoptDb = new DeepPaceDbContext(options);
-        var service = new CatalogAdoptionService(adoptDb, NullLogger<CatalogAdoptionService>.Instance);
+        var service = new CatalogAdoptionService(adoptDb, NullLogger<CatalogAdoptionService>.Instance, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(adoptDb));
 
         var result = await service.AdoptAsync(doc.Id, user.Id);
 
@@ -164,7 +165,7 @@ public class PostgresCatalogAdoptionTests
         using var db = new DeepPaceDbContext(options);
         var (doc, user) = await SeedPublishedCatalogDocumentAndUserAsync(db);
 
-        var service = new CatalogAdoptionService(db, NullLogger<CatalogAdoptionService>.Instance);
+        var service = new CatalogAdoptionService(db, NullLogger<CatalogAdoptionService>.Instance, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(db));
 
         // 1. First adoption
         var adoptResult1 = await service.AdoptAsync(doc.Id, user.Id);
@@ -203,7 +204,7 @@ public class PostgresCatalogAdoptionTests
         using var db = new DeepPaceDbContext(options);
         var (doc, user) = await SeedPublishedCatalogDocumentAndUserAsync(db);
 
-        var service = new CatalogAdoptionService(db, NullLogger<CatalogAdoptionService>.Instance);
+        var service = new CatalogAdoptionService(db, NullLogger<CatalogAdoptionService>.Instance, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(db));
 
         // Create an already-cancelled token
         using var cts = new CancellationTokenSource();
@@ -240,8 +241,8 @@ public class PostgresCatalogAdoptionTests
         using var db1 = new DeepPaceDbContext(options);
         using var db2 = new DeepPaceDbContext(options);
 
-        var service1 = new CatalogAdoptionService(db1, NullLogger<CatalogAdoptionService>.Instance);
-        var service2 = new CatalogAdoptionService(db2, NullLogger<CatalogAdoptionService>.Instance);
+        var service1 = new CatalogAdoptionService(db1, NullLogger<CatalogAdoptionService>.Instance, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(db1));
+        var service2 = new CatalogAdoptionService(db2, NullLogger<CatalogAdoptionService>.Instance, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(db2));
 
         var adopt1 = await service1.AdoptAsync(doc.Id, user1.Id);
         var adopt2 = await service2.AdoptAsync(doc.Id, user2.Id);

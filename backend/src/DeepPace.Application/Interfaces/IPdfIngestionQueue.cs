@@ -1,5 +1,3 @@
-using DeepPace.Domain.Enums;
-
 namespace DeepPace.Application.Interfaces;
 
 public enum IngestionDestinationType
@@ -12,7 +10,7 @@ public record PdfIngestJob(
     Guid TargetId,
     string TempFilePath,
     string DocumentTitle,
-    Category Category,
+    Guid CategoryId,
     string Language = "en",
     IngestionDestinationType DestinationType = IngestionDestinationType.PersonalBook,
     long Generation = 0)

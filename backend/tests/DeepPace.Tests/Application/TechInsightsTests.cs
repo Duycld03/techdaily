@@ -7,6 +7,7 @@ using DeepPace.Application.Features.Insights.GetInsightsFeed;
 using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 using DeepPace.Infrastructure.Persistence;
+using DeepPace.Infrastructure.Services;
 using Xunit;
 
 namespace DeepPace.Tests.Application;
@@ -45,7 +46,7 @@ public class TechInsightsTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "dotnet-span-split",
                 Title = "Span Split Optimization",
-                Category = Category.BackendRuntime,
+                CategoryId = CategoryDefaults.BackendRuntimeId,
                 Tags = new() { "csharp", "dotnet", "memory" },
                 SummaryMarkdown = "Summary 1",
                 ProblemSnippet = "Problem 1",
@@ -59,7 +60,7 @@ public class TechInsightsTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "postgres-hot-updates",
                 Title = "Postgres HOT Updates",
-                Category = Category.DatabaseStorage,
+                CategoryId = CategoryDefaults.DatabaseStorageId,
                 Tags = new() { "postgres", "mvcc", "fillfactor" },
                 SummaryMarkdown = "Summary 2",
                 ProblemSnippet = "Problem 2",
@@ -79,7 +80,7 @@ public class TechInsightsTests : IDisposable
         allResult.Value.TotalCount.Should().Be(2);
 
         // Act 2: Filter by Category
-        var dotnetResult = await handler.ExecuteAsync(new GetInsightsFeedRequest(Category: Category.BackendRuntime));
+        var dotnetResult = await handler.ExecuteAsync(new GetInsightsFeedRequest(CategoryId: CategoryDefaults.BackendRuntimeId));
         dotnetResult.IsSuccess.Should().BeTrue();
         dotnetResult.Value.Insights.Should().HaveCount(1);
         dotnetResult.Value.Insights[0].Slug.Should().Be("dotnet-span-split");
@@ -107,7 +108,7 @@ public class TechInsightsTests : IDisposable
             Id = Guid.NewGuid(),
             Slug = "dotnet-channels",
             Title = "Dotnet Channels",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Tags = new() { "channels", "concurrency" },
             SummaryMarkdown = "Summary",
             ProblemSnippet = "Problem",
@@ -162,7 +163,7 @@ public class TechInsightsTests : IDisposable
             Id = Guid.NewGuid(),
             Slug = "card-1",
             Title = "Card 1",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Tags = new() { "csharp" },
             SummaryMarkdown = "Summary",
             ProblemSnippet = "Problem",
@@ -175,7 +176,7 @@ public class TechInsightsTests : IDisposable
             Id = Guid.NewGuid(),
             Slug = "card-2",
             Title = "Card 2",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Tags = new() { "sql" },
             SummaryMarkdown = "Summary",
             ProblemSnippet = "Problem",
@@ -222,7 +223,7 @@ public class TechInsightsTests : IDisposable
             Id = Guid.NewGuid(),
             Slug = "existing-1",
             Title = "Existing Insight One",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -231,7 +232,7 @@ public class TechInsightsTests : IDisposable
             Id = Guid.NewGuid(),
             Slug = "existing-2",
             Title = "Existing Insight Two",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedAt = DateTime.UtcNow.AddMinutes(-5)
         };
@@ -247,7 +248,7 @@ public class TechInsightsTests : IDisposable
                 Id = Guid.NewGuid(),
                 Slug = "new-generated-slug",
                 Title = "Fresh Unique Insight",
-                Category = Category.BackendRuntime,
+                CategoryId = CategoryDefaults.BackendRuntimeId,
                 SummaryMarkdown = "Summary",
                 ProblemSnippet = "Problem",
                 SolutionSnippet = "Solution",
@@ -258,10 +259,10 @@ public class TechInsightsTests : IDisposable
             };
         });
 
-        var handler = new DeepPace.Application.Features.Insights.GenerateInsight.GenerateInsightHandler(_db, fakeGenerator);
+        var handler = new DeepPace.Application.Features.Insights.GenerateInsight.GenerateInsightHandler(_db, fakeGenerator, new CategoryAssignmentGuard(_db));
 
         // Act
-        var request = new GenerateInsightRequest(PreferredCategory: Category.BackendRuntime, PreferredTopic: "về asp.net");
+        var request = new GenerateInsightRequest(CategoryId: CategoryDefaults.BackendRuntimeId, PreferredTopic: "về asp.net");
         var result = await handler.ExecuteAsync(request);
 
         // Assert
@@ -285,7 +286,7 @@ public class TechInsightsTests : IDisposable
         var service = new DeepPace.Infrastructure.Services.GeminiAiService(new System.Net.Http.HttpClient(), config, logger);
 
         // Act - Call with "asp.net"
-        var result1 = await service.GenerateInsightAsync(Category.BackendRuntime, "về asp.net", locale: "vi");
+        var result1 = await service.GenerateInsightAsync(CategoryDefaults.BackendRuntimeId, "về asp.net", locale: "vi");
 
         // Assert
         result1.IsSuccess.Should().BeFalse();
@@ -318,13 +319,13 @@ public class TechInsightsTests : IDisposable
         var service = new DeepPace.Infrastructure.Services.GeminiAiService(new HttpClient(), config, logger);
 
         // Generate #1
-        var result1 = await service.GenerateInsightAsync(Category.BackendRuntime, "về asp.net", locale: "vi");
+        var result1 = await service.GenerateInsightAsync(CategoryDefaults.BackendRuntimeId, "về asp.net", locale: "vi");
         result1.IsSuccess.Should().BeTrue();
         result1.Value.Title.Should().NotBeNullOrWhiteSpace();
 
         // Generate #2 avoiding #1
         var result2 = await service.GenerateInsightAsync(
-            Category.BackendRuntime,
+            CategoryDefaults.BackendRuntimeId,
             "về asp.net",
             existingTitlesToAvoid: new List<string> { result1.Value.Title },
             locale: "vi");
@@ -347,20 +348,20 @@ internal class FakeConfiguration : Microsoft.Extensions.Configuration.IConfigura
 
 internal class FakeInsightGenerator : DeepPace.Application.Interfaces.ITechInsightGenerator
 {
-    private readonly Func<Category?, string?, List<string>?, string, TechInsight> _func;
+    private readonly Func<Guid, string?, List<string>?, string, TechInsight> _func;
 
-    public FakeInsightGenerator(Func<Category?, string?, List<string>?, string, TechInsight> func)
+    public FakeInsightGenerator(Func<Guid, string?, List<string>?, string, TechInsight> func)
     {
         _func = func;
     }
 
     public Task<DeepPace.Application.Common.Result<TechInsight>> GenerateInsightAsync(
-        Category? preferredCategory,
+        Guid categoryId,
         string? preferredTopic,
         List<string>? existingTitlesToAvoid = null,
         string locale = "en",
         CancellationToken cancellationToken = default)
     {
-        return Task.FromResult<DeepPace.Application.Common.Result<TechInsight>>(_func(preferredCategory, preferredTopic, existingTitlesToAvoid, locale));
+        return Task.FromResult<DeepPace.Application.Common.Result<TechInsight>>(_func(categoryId, preferredTopic, existingTitlesToAvoid, locale));
     }
 }

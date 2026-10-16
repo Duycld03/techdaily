@@ -18,6 +18,7 @@ using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 using DeepPace.Infrastructure.Persistence;
+using DeepPace.Infrastructure.Services;
 using Xunit;
 
 namespace DeepPace.Tests.Application;
@@ -56,7 +57,7 @@ public class PersonalBookOwnershipIsolationTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "User A's Private Book",
             Slug = "user-a-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             CreatedByUserId = userA.Id,
             Status = ProcessingStatus.Ready,
             TotalChunks = 1,
@@ -179,12 +180,12 @@ public class PersonalBookOwnershipIsolationTests : IDisposable
     public async Task GenerateQuiz_GroundedOnAnotherUsersBook_ReturnsForbidden()
     {
         var (userA, userB, bookA, _) = await SeedTwoUsersWithBookAAsync();
-        var handler = new GenerateQuizHandler(_db, new FakeQuizGenerator(), new GenerateQuizValidator());
+        var handler = new GenerateQuizHandler(_db, new FakeQuizGenerator(), new GenerateQuizValidator(), new CategoryAssignmentGuard(_db));
 
         var request = new GenerateQuizRequest(
             UserId: userB.Id,
             Topic: "General",
-            Category: Category.BackendRuntime,
+            CategoryId: CategoryDefaults.BackendRuntimeId,
             Level: QuizLevel.Senior,
             Count: 5,
             Locale: "en",
@@ -193,7 +194,7 @@ public class PersonalBookOwnershipIsolationTests : IDisposable
 
         var result = await handler.ExecuteAsync(request);
         result.IsSuccess.Should().BeFalse();
-        result.Error.Code.Should().Be("Quiz.Forbidden");
+        result.Error.Code.Should().Be("LIBRARY_FORBIDDEN");
     }
 
     [Fact]
@@ -219,7 +220,7 @@ public class PersonalBookOwnershipIsolationTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Source Catalog Book",
             Description = "Catalog desc",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             AttributionText = "Attr",
             Visibility = CatalogVisibility.Published,
             ProcessingStatus = ProcessingStatus.Ready,
@@ -270,7 +271,7 @@ public class PersonalBookOwnershipIsolationTests : IDisposable
 
     private class FakeAiFormatter : IAiMarkdownFormatter
     {
-        public Task<Result<AiFormattedSliceResult>> FormatSliceAsync(string rawText, string chapterTitle, string language = "en", Category? category = null, CancellationToken cancellationToken = default)
+        public Task<Result<AiFormattedSliceResult>> FormatSliceAsync(string rawText, string chapterTitle, string language = "en", CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Result<AiFormattedSliceResult>.Success(new AiFormattedSliceResult("formatted", "summary", new(), 3)));
         }
@@ -288,7 +289,7 @@ public class PersonalBookOwnershipIsolationTests : IDisposable
     {
         public Task<Result<List<QuizQuestion>>> GenerateQuestionsAsync(
             string topic,
-            Category category,
+            Guid categoryId,
             QuizLevel level,
             int count = 5,
             List<string>? referenceTextChunks = null,

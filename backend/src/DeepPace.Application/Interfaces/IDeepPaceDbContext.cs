@@ -11,6 +11,7 @@ public interface IDeepPaceDbContext
     DbSet<AuthorizationInitialization> AuthorizationInitializations { get; }
     DbSet<InterviewQuestion> InterviewQuestions { get; }
     DbSet<DocumentBook> DocumentBooks { get; }
+    DbSet<DocumentCategory> DocumentCategories { get; }
     DbSet<DocumentChunk> DocumentChunks { get; }
     DbSet<DocumentChunkAudio> DocumentChunkAudios { get; }
     DbSet<DailyDrill> DailyDrills { get; }

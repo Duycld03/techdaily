@@ -66,7 +66,7 @@ public class GetOrSynthesizeChunkAudioHandlerTests : IDisposable
         {
             Title = "Test Book",
             Slug = "test-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Status = ProcessingStatus.Ready,
             TotalChunks = 1
         };
@@ -124,7 +124,7 @@ public class GetOrSynthesizeChunkAudioHandlerTests : IDisposable
         {
             Title = "Test Book",
             Slug = "test-book-2",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Status = ProcessingStatus.Ready,
             TotalChunks = 1
         };
@@ -176,7 +176,7 @@ public class GetOrSynthesizeChunkAudioHandlerTests : IDisposable
         {
             Title = "Thói Quen Nguyên Tử",
             Slug = "thoi-quen-nguyen-tu",
-            Category = Category.EngineeringCraft,
+            CategoryId = CategoryDefaults.EngineeringCraftId,
             Status = ProcessingStatus.Ready,
             TotalChunks = 1
         };
@@ -243,7 +243,7 @@ public class GetOrSynthesizeChunkAudioHandlerTests : IDisposable
         {
             Title = "Test Book",
             Slug = "test-book-3",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Status = ProcessingStatus.Ready,
             TotalChunks = 1
         };
@@ -297,7 +297,7 @@ public class GetOrSynthesizeChunkAudioHandlerTests : IDisposable
         {
             Title = "Quota Test Book",
             Slug = "quota-test-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Status = ProcessingStatus.Ready,
             TotalChunks = 1
         };
@@ -358,7 +358,7 @@ public class GetOrSynthesizeChunkAudioHandlerTests : IDisposable
         {
             Title = "English Book",
             Slug = "english-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Status = ProcessingStatus.Ready,
             TotalChunks = 1
         };

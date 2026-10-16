@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Features.Library.ImportRemotePdf;
 using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Enums;
+using DeepPace.Domain.Entities;
 using DeepPace.Infrastructure.Persistence;
 using Xunit;
 
@@ -63,12 +64,12 @@ public class ImportRemotePdfHandlerTests : IDisposable
         });
 
         using var httpClient = new HttpClient(fakeHandler);
-        var handler = new ImportRemotePdfHandler(httpClient, _db, mockQueue, validator);
+        var handler = new ImportRemotePdfHandler(httpClient, _db, mockQueue, validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db));
 
         var request = new ImportRemotePdfRequest(
             PdfUrl: "https://example.com/books/atomic-habits.pdf",
             Title: "Thói Quen Nguyên Tử",
-            Category: Category.EngineeringCraft,
+            CategoryId : CategoryDefaults.EngineeringCraftId,
             Language: "vi"
         );
 
@@ -78,7 +79,8 @@ public class ImportRemotePdfHandlerTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Book.Title.Should().Be("Thói Quen Nguyên Tử");
-        result.Value.Book.Category.Should().Be(Category.EngineeringCraft);
+        result.Value.Book.CategoryId.Should().Be(CategoryDefaults.EngineeringCraftId);
+        result.Value.Book.Category.Id.Should().Be(CategoryDefaults.EngineeringCraftId);
         result.Value.Book.SourceType.Should().Be(SourceType.PdfBook);
         result.Value.Book.AuthorOrSourceUrl.Should().Be("https://example.com/books/atomic-habits.pdf");
         result.Value.Book.Status.Should().Be(ProcessingStatus.Processing);
@@ -87,7 +89,7 @@ public class ImportRemotePdfHandlerTests : IDisposable
         var job = mockQueue.EnqueuedJobs.First();
         job.BookId.Should().Be(result.Value.Book.Id);
         job.DocumentTitle.Should().Be("Thói Quen Nguyên Tử");
-        job.Category.Should().Be(Category.EngineeringCraft);
+        job.CategoryId.Should().Be(CategoryDefaults.EngineeringCraftId);
         job.Language.Should().Be("vi");
 
         _tempFilesToCleanup.Add(job.TempFilePath);
@@ -97,7 +99,7 @@ public class ImportRemotePdfHandlerTests : IDisposable
 
         var dbBook = await _db.DocumentBooks.FirstOrDefaultAsync(b => b.Id == result.Value.Book.Id);
         dbBook.Should().NotBeNull();
-        dbBook!.Category.Should().Be(Category.EngineeringCraft);
+        dbBook!.CategoryId.Should().Be(CategoryDefaults.EngineeringCraftId);
     }
 
     [Theory]
@@ -112,12 +114,12 @@ public class ImportRemotePdfHandlerTests : IDisposable
         var mockQueue = new MockPdfIngestionQueue();
         var validator = new ImportRemotePdfValidator();
         using var httpClient = new HttpClient();
-        var handler = new ImportRemotePdfHandler(httpClient, _db, mockQueue, validator);
+        var handler = new ImportRemotePdfHandler(httpClient, _db, mockQueue, validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db));
 
         var request = new ImportRemotePdfRequest(
             PdfUrl: internalUrl,
             Title: "Restricted Document",
-            Category: Category.BackendRuntime
+            CategoryId : CategoryDefaults.BackendRuntimeId
         );
 
         // Act
@@ -147,12 +149,12 @@ public class ImportRemotePdfHandlerTests : IDisposable
         });
 
         using var httpClient = new HttpClient(fakeHandler);
-        var handler = new ImportRemotePdfHandler(httpClient, _db, mockQueue, validator);
+        var handler = new ImportRemotePdfHandler(httpClient, _db, mockQueue, validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db));
 
         var request = new ImportRemotePdfRequest(
             PdfUrl: "https://example.com/huge-dataset.pdf",
             Title: "Giant PDF Document",
-            Category: Category.DatabaseStorage
+            CategoryId : CategoryDefaults.DatabaseStorageId
         );
 
         // Act
@@ -183,12 +185,12 @@ public class ImportRemotePdfHandlerTests : IDisposable
         });
 
         using var httpClient = new HttpClient(fakeHandler);
-        var handler = new ImportRemotePdfHandler(httpClient, _db, mockQueue, validator);
+        var handler = new ImportRemotePdfHandler(httpClient, _db, mockQueue, validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db));
 
         var request = new ImportRemotePdfRequest(
             PdfUrl: "https://example.com/unbounded-stream.pdf",
             Title: "Unbounded Stream Document",
-            Category: Category.SystemDesign
+            CategoryId : CategoryDefaults.SystemDesignId
         );
 
         // Act
@@ -207,12 +209,12 @@ public class ImportRemotePdfHandlerTests : IDisposable
         var mockQueue = new MockPdfIngestionQueue();
         var validator = new ImportRemotePdfValidator();
         using var httpClient = new HttpClient();
-        var handler = new ImportRemotePdfHandler(httpClient, _db, mockQueue, validator);
+        var handler = new ImportRemotePdfHandler(httpClient, _db, mockQueue, validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db));
 
         var request = new ImportRemotePdfRequest(
             PdfUrl: "not-a-valid-url",
             Title: "",
-            Category: (Category)999
+            CategoryId: Guid.Empty
         );
 
         // Act

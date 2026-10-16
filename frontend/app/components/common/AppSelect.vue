@@ -20,6 +20,9 @@ const props = withDefaults(
     icon?: Component
     ariaLabel?: string
     id?: string
+    required?: boolean
+    invalid?: boolean
+    describedby?: string
     name?: string
     dropdownClass?: string
     teleport?: boolean
@@ -174,7 +177,8 @@ function handleTriggerKeydown(event: KeyboardEvent) {
     case ' ':
       event.preventDefault()
       if (isOpen.value && highlightedIndex.value >= 0 && highlightedIndex.value < props.options.length) {
-        selectOption(props.options[highlightedIndex.value])
+        const option = props.options[highlightedIndex.value]
+        if (option) selectOption(option)
       } else {
         toggleDropdown()
       }
@@ -216,7 +220,8 @@ function handleListboxKeydown(event: KeyboardEvent) {
     case ' ':
       event.preventDefault()
       if (highlightedIndex.value >= 0 && highlightedIndex.value < props.options.length) {
-        selectOption(props.options[highlightedIndex.value])
+        const option = props.options[highlightedIndex.value]
+        if (option) selectOption(option)
       }
       break
     case 'ArrowDown':
@@ -293,6 +298,9 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'mousedown', (ev
       :aria-haspopup="'listbox'"
       :aria-controls="listboxId"
       :aria-label="ariaLabel || effectivePlaceholder"
+      :aria-required="required || undefined"
+      :aria-invalid="invalid || undefined"
+      :aria-describedby="describedby"
       :aria-activedescendant="isOpen && highlightedIndex >= 0 ? `${componentId}-opt-${highlightedIndex}` : undefined"
       :disabled="disabled"
       @click="toggleDropdown"

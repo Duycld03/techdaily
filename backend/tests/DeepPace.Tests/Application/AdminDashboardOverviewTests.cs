@@ -37,22 +37,23 @@ public class AdminDashboardOverviewTests : IDisposable
         db.Users.AddRange(user, secondUser, new User { Email = "deleted@example.test", IsDeleted = true });
         var catalog = new CatalogDocument
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Title = "Source", Visibility = CatalogVisibility.Published,
             ProcessingStatus = ProcessingStatus.Ready
         };
         db.CatalogDocuments.AddRange(catalog,
-            new CatalogDocument { Title = "Draft", ProcessingStatus = ProcessingStatus.Pending },
-            new CatalogDocument { Title = "Hidden", Visibility = CatalogVisibility.Hidden, ProcessingStatus = ProcessingStatus.Failed },
-            new CatalogDocument { Title = "Processing", ProcessingStatus = ProcessingStatus.Processing },
-            new CatalogDocument { Title = "Deleted", IsDeleted = true });
+            new CatalogDocument { CategoryId = CategoryDefaults.SystemDesignId, Title = "Draft", ProcessingStatus = ProcessingStatus.Pending },
+            new CatalogDocument { CategoryId = CategoryDefaults.SystemDesignId, Title = "Hidden", Visibility = CatalogVisibility.Hidden, ProcessingStatus = ProcessingStatus.Failed },
+            new CatalogDocument { CategoryId = CategoryDefaults.SystemDesignId, Title = "Processing", ProcessingStatus = ProcessingStatus.Processing },
+            new CatalogDocument { CategoryId = CategoryDefaults.SystemDesignId, Title = "Deleted", IsDeleted = true });
         db.DocumentBooks.AddRange(
             DocumentBook.CreateFromCatalogSnapshot(catalog, user.Id, "first-copy"),
             DocumentBook.CreateFromCatalogSnapshot(catalog, secondUser.Id, "second-copy"),
-            new DocumentBook { Slug = "personal", CreatedByUserId = user.Id, Status = ProcessingStatus.Failed },
-            new DocumentBook { Slug = "pending", CreatedByUserId = user.Id, Status = ProcessingStatus.Pending },
-            new DocumentBook { Slug = "processing", CreatedByUserId = user.Id, Status = ProcessingStatus.Processing },
-            new DocumentBook { Slug = "legacy", Status = ProcessingStatus.Failed },
-            new DocumentBook { Slug = "deleted", CreatedByUserId = user.Id, IsDeleted = true });
+            new DocumentBook { CategoryId = CategoryDefaults.SystemDesignId, Slug = "personal", CreatedByUserId = user.Id, Status = ProcessingStatus.Failed },
+            new DocumentBook { CategoryId = CategoryDefaults.SystemDesignId, Slug = "pending", CreatedByUserId = user.Id, Status = ProcessingStatus.Pending },
+            new DocumentBook { CategoryId = CategoryDefaults.SystemDesignId, Slug = "processing", CreatedByUserId = user.Id, Status = ProcessingStatus.Processing },
+            new DocumentBook { CategoryId = CategoryDefaults.SystemDesignId, Slug = "legacy", Status = ProcessingStatus.Failed },
+            new DocumentBook { CategoryId = CategoryDefaults.SystemDesignId, Slug = "deleted", CreatedByUserId = user.Id, IsDeleted = true });
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
         _interceptor.Commands.Clear();

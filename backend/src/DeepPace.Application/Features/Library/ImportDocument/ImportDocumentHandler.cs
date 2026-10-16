@@ -1,3 +1,4 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 using System.Text.RegularExpressions;
 using FluentValidation;
 using DeepPace.Application.Common;
@@ -11,7 +12,7 @@ namespace DeepPace.Application.Features.Library.ImportDocument;
 public record ImportDocumentRequest(
     string Title,
     string MarkdownContent,
-    Category Category,
+    Guid CategoryId,
     string? SourceUrl = null,
     string Language = "en",
     Guid? CreatedByUserId = null);
@@ -27,6 +28,7 @@ public class ImportDocumentValidator : AbstractValidator<ImportDocumentRequest>
     {
         RuleFor(x => x.Title).NotEmpty().MaximumLength(255);
         RuleFor(x => x.MarkdownContent).NotEmpty().MinimumLength(50);
+        RuleFor(x => x.CategoryId).NotEmpty().WithErrorCode("Category.ValidationFailed");
     }
 }
 
@@ -35,15 +37,18 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
     private readonly IDeepPaceDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
     private readonly IValidator<ImportDocumentRequest> _validator;
+    private readonly ICategoryAssignmentGuard _categoryGuard;
 
     public ImportDocumentHandler(
         IDeepPaceDbContext dbContext,
         IEmbeddingService embeddingService,
-        IValidator<ImportDocumentRequest> validator)
+        IValidator<ImportDocumentRequest> validator,
+        ICategoryAssignmentGuard categoryGuard)
     {
         _dbContext = dbContext;
         _embeddingService = embeddingService;
         _validator = validator;
+        _categoryGuard = categoryGuard;
     }
 
     public async Task<Result<ImportDocumentResponse>> ExecuteAsync(
@@ -55,6 +60,9 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
         {
             return Error.Custom("Validation.Failed", validation.Errors.First().ErrorMessage);
         }
+        var categoryValidation = await _categoryGuard.ValidateAsync(request.CategoryId, cancellationToken);
+        if (!categoryValidation.IsSuccess) return categoryValidation.Error;
+
 
         var slug = GenerateSlug(request.Title);
 
@@ -62,7 +70,7 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
         {
             Title = request.Title,
             Slug = slug,
-            Category = request.Category,
+            CategoryId = request.CategoryId,
             SourceType = request.SourceUrl != null ? SourceType.WebDocUrl : SourceType.MarkdownSeries,
             AuthorOrSourceUrl = request.SourceUrl,
             IsPublished = true,
@@ -113,10 +121,11 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
 
         book.TotalChunks = book.Chunks.Count;
 
-        await _dbContext.DocumentBooks.AddAsync(book, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return new ImportDocumentResponse
+        return await _categoryGuard.ExecuteAsync<ImportDocumentResponse>(request.CategoryId, async category =>
+        {
+            book.Category = category;
+            await _dbContext.DocumentBooks.AddAsync(book, cancellationToken);
+            return new ImportDocumentResponse
         {
             Book = new BookDto
             {
@@ -124,13 +133,15 @@ public class ImportDocumentHandler : IUseCase<ImportDocumentRequest, ImportDocum
                 Title = book.Title,
                 Slug = book.Slug,
                 SourceType = book.SourceType,
-                Category = book.Category,
+                CategoryId = book.CategoryId,
+                Category = category.ToDescriptor(),
                 AuthorOrSourceUrl = book.AuthorOrSourceUrl,
                 TotalChunks = book.TotalChunks,
                 IsPublished = book.IsPublished,
                 CreatedAt = book.CreatedAt
             }
         };
+        }, cancellationToken);
     }
 
     private static List<string> SplitIntoChunks(string text)

@@ -15,7 +15,7 @@ public class CatalogDomainTests
             Id = Guid.NewGuid(),
             Title = "Designing Data-Intensive Applications",
             Description = "The big ideas behind reliable, scalable, and maintainable systems.",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Language = "en",
             SourceType = SourceType.PdfBook,
             AuthorOrSourceUrl = "Martin Kleppmann",
@@ -79,7 +79,7 @@ public class CatalogDomainTests
         var doc = CreateValidReadyCatalogDocument();
         var adminId = Guid.NewGuid();
 
-        doc.UpdateMetadata("Updated Title", doc.Description, doc.Category, doc.Language, doc.AuthorOrSourceUrl, doc.AttributionText);
+        doc.UpdateMetadata("Updated Title", doc.Description, doc.CategoryId, doc.Language, doc.AuthorOrSourceUrl, doc.AttributionText);
         doc.Publish(adminId);
 
         doc.Visibility.Should().Be(CatalogVisibility.Published);
@@ -169,7 +169,7 @@ public class CatalogDomainTests
         doc.Review(adminId);
         doc.Publish(adminId);
 
-        var act = () => doc.UpdateMetadata("New Title", doc.Description, doc.Category, doc.Language, doc.AuthorOrSourceUrl, doc.AttributionText);
+        var act = () => doc.UpdateMetadata("New Title", doc.Description, doc.CategoryId, doc.Language, doc.AuthorOrSourceUrl, doc.AttributionText);
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage("*hidden first*");
@@ -192,7 +192,7 @@ public class CatalogDomainTests
         book.CreatedByUserId.Should().Be(learnerId);
         book.Title.Should().Be(doc.Title);
         book.Slug.Should().Be(slug);
-        book.Category.Should().Be(doc.Category);
+        book.CategoryId.Should().Be(doc.CategoryId);
         book.SourceType.Should().Be(doc.SourceType);
         book.AuthorOrSourceUrl.Should().Be(doc.AuthorOrSourceUrl);
         book.SourceCatalogDocumentId.Should().Be(doc.Id);

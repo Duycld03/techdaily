@@ -1,3 +1,4 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 using System.Text;
 using System.Text.RegularExpressions;
 using FluentValidation;
@@ -14,7 +15,7 @@ public record UploadPdfRequest(
     string FileName,
     long FileLength,
     string? Title,
-    Category Category,
+    Guid CategoryId,
     string Language = "en",
     Guid? CreatedByUserId = null);
 
@@ -38,6 +39,7 @@ public class UploadPdfValidator : AbstractValidator<UploadPdfRequest>
             .NotEmpty()
             .Must(f => f.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
             .WithMessage("Only .pdf files are supported.");
+        RuleFor(x => x.CategoryId).NotEmpty();
     }
 }
 
@@ -46,15 +48,18 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
     private readonly IDeepPaceDbContext _dbContext;
     private readonly IPdfIngestionQueue _ingestionQueue;
     private readonly IValidator<UploadPdfRequest> _validator;
+    private readonly ICategoryAssignmentGuard _categoryGuard;
 
     public UploadPdfHandler(
         IDeepPaceDbContext dbContext,
         IPdfIngestionQueue ingestionQueue,
-        IValidator<UploadPdfRequest> validator)
+        IValidator<UploadPdfRequest> validator,
+        ICategoryAssignmentGuard categoryGuard)
     {
         _dbContext = dbContext;
         _ingestionQueue = ingestionQueue;
         _validator = validator;
+        _categoryGuard = categoryGuard;
     }
 
     public async Task<Result<UploadPdfResponse>> ExecuteAsync(
@@ -66,6 +71,9 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
         {
             return Error.Custom("Validation.Failed", validation.Errors.First().ErrorMessage);
         }
+        var categoryValidation = await _categoryGuard.ValidateAsync(request.CategoryId, cancellationToken);
+        if (!categoryValidation.IsSuccess) return categoryValidation.Error;
+
 
         var rawTitle = !string.IsNullOrWhiteSpace(request.Title)
             ? request.Title
@@ -118,7 +126,7 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
             Id = bookId,
             Title = bookTitle,
             Slug = slug,
-            Category = request.Category,
+            CategoryId = request.CategoryId,
             SourceType = SourceType.PdfBook,
             AuthorOrSourceUrl = SanitizeText(request.FileName),
             IsPublished = true,
@@ -129,14 +137,23 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
             CreatedByUserId = request.CreatedByUserId
         };
 
-        await _dbContext.DocumentBooks.AddAsync(book, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var admitted = await _categoryGuard.ExecuteAsync<Guid>(request.CategoryId, async category =>
+        {
+            book.Category = category;
+            await _dbContext.DocumentBooks.AddAsync(book, cancellationToken);
+            return book.Id;
+        }, cancellationToken);
+        if (!admitted.IsSuccess)
+        {
+            File.Delete(tempFilePath);
+            return admitted.Error;
+        }
 
         await _ingestionQueue.EnqueueAsync(new PdfIngestJob(
             book.Id,
             tempFilePath,
             bookTitle,
-            request.Category,
+            request.CategoryId,
             request.Language), cancellationToken);
 
         return new UploadPdfResponse
@@ -147,7 +164,8 @@ public class UploadPdfHandler : IUseCase<UploadPdfRequest, UploadPdfResponse>
                 Title = book.Title,
                 Slug = book.Slug,
                 SourceType = book.SourceType,
-                Category = book.Category,
+                CategoryId = book.CategoryId,
+                Category = book.Category!.ToDescriptor(),
                 AuthorOrSourceUrl = book.AuthorOrSourceUrl,
                 TotalChunks = book.TotalChunks,
                 IsPublished = book.IsPublished,

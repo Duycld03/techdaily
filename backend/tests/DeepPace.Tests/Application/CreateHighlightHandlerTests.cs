@@ -45,6 +45,7 @@ public class CreateHighlightHandlerTests : IDisposable
         };
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Id = Guid.NewGuid(),
             Title = "Designing Data-Intensive Applications",
             Slug = $"ddia-{Guid.NewGuid():N}"

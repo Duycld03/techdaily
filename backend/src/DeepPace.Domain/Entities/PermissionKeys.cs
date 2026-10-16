@@ -8,4 +8,5 @@ public static class PermissionKeys
     public const string ReadAudit = "ReadAudit";
     public const string ManageDocumentOperations = "ManageDocumentOperations";
     public const string ManageRoles = "ManageRoles";
+    public const string ManageCategories = "ManageCategories";
 }

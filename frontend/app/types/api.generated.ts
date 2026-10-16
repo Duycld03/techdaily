@@ -4,6 +4,100 @@
  */
 
 export interface paths {
+    "/api/v1/admin/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Administrator Capabilities
+         * @description Returns explicit flags for catalog management, account management, and audit reading.
+         */
+        get: operations["GetAdminCapabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List administrative roles
+         * @description Returns paginated list of system roles and supported permissions for role assignment.
+         */
+        get: operations["GetAdminRoles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/library/books/{id}/source/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Owner provide source and retry for a failed personal book */
+        post: operations["ReplacePersonalDocumentSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/documents/{id}/source/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Catalog admin replace source for a failed catalog document */
+        post: operations["ReplaceCatalogDocumentSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List all categories
+         * @description Returns all active and inactive non-deleted categories ordered by sort order then slug for authenticated clients.
+         */
+        get: operations["GetCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -16,26 +110,6 @@ export interface paths {
          * @description Checks system health, core API readiness, and live PostgreSQL database connectivity.
          */
         get: operations["HealthCheck"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/curriculum/roadmap": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Curriculum Roadmap
-         * @description Retrieves the Senior Engineering Craft Handbook roadmap grouped into 4 core technical pillars with authenticated user progress.
-         */
-        get: operations["GetCurriculumRoadmap"];
         put?: never;
         post?: never;
         delete?: never;
@@ -324,6 +398,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/review/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Review Analytics
+         * @description Returns read-only SM-2 retention analytics: at-risk segment, maturity and difficulty distributions, and source-channel retention breakdown for the current user's deck.
+         */
+        get: operations["GetReviewAnalytics"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/review/cards/{id}/grade": {
         parameters: {
             query?: never;
@@ -489,7 +583,11 @@ export interface paths {
         delete: operations["DeleteBook"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update Book Metadata
+         * @description Updates title, author/source URL, domain category, and language for an imported book owned by the authenticated user.
+         */
+        patch: operations["UpdateBook"];
         trace?: never;
     };
     "/api/v1/library/books/{id}/status": {
@@ -652,6 +750,670 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/library/chunks/{chunkId}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Synthesize Chunk Audio
+         * @description Synthesizes or retrieves cached audio narration MP3 for a specific document chunk.
+         */
+        post: operations["SynthesizeChunkAudio"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/library/audio/quota": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Audio Narration Quota
+         * @description Retrieves the monthly character usage and limits for cloud audio narration synthesis.
+         */
+        get: operations["GetAudioQuota"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Catalog Management Capability
+         * @description Checks whether the authenticated user has catalog administration permissions.
+         */
+        get: operations["GetCatalogCapabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Browse Published Catalog Documents
+         * @description Retrieves paginated published catalog documents with conjunctive filters and adoption status.
+         */
+        get: operations["GetPublishedCatalogDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/documents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Published Catalog Document Details
+         * @description Fetches published catalog document metadata, table of contents, first-slice preview, and adoption status.
+         */
+        get: operations["GetPublishedCatalogDocumentById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/documents/{id}/adopt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Adopt Catalog Document to Personal Library
+         * @description Creates an independent personal copy of the published catalog document or returns existing copy.
+         */
+        post: operations["AdoptCatalogDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Browse Catalog Documents
+         * @description Retrieves all catalog documents (drafts, published, hidden) with processing status.
+         */
+        get: operations["AdminGetCatalogDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/documents/upload-pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Upload Catalog PDF
+         * @description Uploads a PDF document draft to the catalog and initiates asynchronous extraction and processing.
+         */
+        post: operations["AdminUploadCatalogPdf"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/preview-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Preview Web URL Extraction
+         * @description Extracts readable markdown from a URL without creating a catalog document or enqueuing ingestion.
+         */
+        post: operations["AdminPreviewCatalogUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/documents/import-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Import Catalog URL
+         * @description Validates, scrapes, chunks, and initiates AI processing for a web document into the catalog.
+         */
+        post: operations["AdminImportCatalogUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/documents/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Get Catalog Document
+         * @description Retrieves detailed catalog document information, revision metadata, and slices for review.
+         */
+        get: operations["AdminGetCatalogDocumentById"];
+        /**
+         * Admin Update Catalog Metadata
+         * @description Updates catalog document metadata and permission statements. Rejected if document is published.
+         */
+        put: operations["AdminUpdateCatalogMetadata"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/documents/{id}/slices/{order}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin Get Catalog Slice
+         * @description Retrieves a single catalog slice for administrative inspection and review.
+         */
+        get: operations["AdminGetCatalogSlice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/documents/{id}/prepare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Prepare or Retry Catalog Ingestion
+         * @description Initiates or retries asynchronous processing for initial slices of a catalog draft.
+         */
+        post: operations["AdminPrepareCatalog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/documents/{id}/slices/{order}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Confirm Slice Review
+         * @description Records administrator review for a catalog draft at the current revision.
+         */
+        post: operations["AdminReviewCatalogSlice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/documents/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Publish Catalog Document
+         * @description Publishes a fully prepared and reviewed catalog document, making it available for discovery.
+         */
+        post: operations["AdminPublishCatalogDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/catalog/documents/{id}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Admin Hide Catalog Document
+         * @description Hides a published catalog document from learner discovery without affecting existing adoptions.
+         */
+        post: operations["AdminHideCatalogDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get administrator inventory overview
+         * @description Non-deleted accounts, owned personal documents (including adopted copies), and separate catalog publication/processing totals from one consistent read snapshot. Processing counts are persisted document states, not queue depth.
+         */
+        get: operations["GetAdminDashboardOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Observe database connectivity
+         * @description Bounded database connectivity check with an observation timestamp. Does not contact external AI services.
+         */
+        get: operations["GetAdminDashboardStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/dashboard/ai-probe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Explicitly check AI services
+         * @description User-triggered text-generation and embedding probes with a 15-second overall timeout. Limited to one request per administrator per minute. Returns sanitized observations, never provider bodies or credentials.
+         */
+        post: operations["ProbeAdminAiServices"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List and search user accounts
+         * @description Returns bounded paginated list of accounts with status filter and identity search.
+         */
+        get: operations["GetAdminAccounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get account details
+         * @description Returns identity, access status, and administrative metadata without exposing credentials or learning content.
+         */
+        get: operations["GetAdminAccountById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend user account
+         * @description Transitions account to Suspended, revokes all sessions, and records audit event.
+         */
+        post: operations["SuspendAdminAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate suspended account
+         * @description Restores account to Active state, allowing fresh sign-in.
+         */
+        post: operations["ReactivateAdminAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/revoke-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Force sign-out across all devices
+         * @description Revokes all refresh tokens and advances authentication version, invalidating all existing sessions.
+         */
+        post: operations["RevokeAdminAccountSessions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/users/{id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Assign role to user account
+         * @description Assigns a database-backed role to an account, advances control version, revokes active sessions, and writes audit record.
+         */
+        put: operations["AssignAdminAccountRole"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List administrative audit events
+         * @description Returns paginated history of administrative actions with conjunctive filters and ISO UTC time boundaries.
+         */
+        get: operations["GetAdminAuditEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/audit/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get audit event details
+         * @description Returns approved event details including changed field names and state payload.
+         */
+        get: operations["GetAdminAuditEventById"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List and search cross-scope document inventory */
+        get: operations["GetAdminDocumentInventory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/documents/{scope}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get allowlisted document detail and retry eligibility */
+        get: operations["GetAdminDocumentDetail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/documents/{scope}/{id}/attempts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get paged attempt processing history for a document */
+        get: operations["GetAdminDocumentAttempts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/documents/{scope}/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request an audited retry of failed/interrupted document ingestion */
+        post: operations["RetryAdminDocumentIngestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List administrative categories
+         * @description Returns paginated categories with usage statistics and delete eligibility.
+         */
+        get: operations["GetAdminCategories"];
+        put?: never;
+        /**
+         * Create a new document category
+         * @description Creates a new taxonomy category with slug, English name, Vietnamese name, sort order, and active flag.
+         */
+        post: operations["CreateAdminCategory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get administrative category details
+         * @description Returns detailed category descriptor with aggregate usage breakdown across books, catalog, quiz, and insights.
+         */
+        get: operations["GetAdminCategoryById"];
+        put?: never;
+        post?: never;
+        /**
+         * Soft-delete unused category
+         * @description Soft-deletes an unused category if it has zero references across document books, catalog, quiz questions, and tech insights.
+         */
+        delete: operations["DeleteAdminCategory"];
+        options?: never;
+        head?: never;
+        /**
+         * Update category metadata
+         * @description Updates category names, sort order, and active status under optimistic concurrency control.
+         */
+        patch: operations["UpdateAdminCategory"];
+        trace?: never;
+    };
     "/api/v1/notes/highlights": {
         parameters: {
             query?: never;
@@ -709,7 +1471,7 @@ export interface paths {
         };
         /**
          * Get Knowledge Graph
-         * @description Retrieves the full architecture knowledge graph with topics, books, cards, and highlights for the authenticated user.
+         * @description Retrieves the authenticated user's personal knowledge graph, derived strictly from their own learned artifacts: books they imported, curriculum topics they have touched (via their flashcards or highlight tags), their personal highlights and spaced-repetition cards, and only the pillar hubs those nodes connect to. It does not project the global seeded curriculum or content owned by other users.
          */
         get: operations["GetKnowledgeGraph"];
         put?: never;
@@ -831,7 +1593,7 @@ export interface paths {
         put?: never;
         /**
          * Verify Registration Code
-         * @description Verifies the email OTP, creates the user, provisions starter content, and returns an authenticated session.
+         * @description Verifies the email OTP, creates the user, and returns an authenticated session.
          */
         post: operations["RegisterVerify"];
         delete?: never;
@@ -1048,6 +1810,446 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {unknown} */
+        AccountStatus: "Active" | "Suspended";
+        AdminAccountActionRequest: {
+            reason: string;
+            /** Format: int32 */
+            expectedVersion: number;
+        };
+        AdminAccountDetailDto: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            name: string;
+            avatarUrl: string | null;
+            preferredLocale: string;
+            /** Format: date-time */
+            createdAt: string;
+            status: components["schemas"]["AccountStatus"];
+            /** Format: int32 */
+            adminControlVersion: number;
+            hasPassword: boolean;
+            hasGoogleAuth: boolean;
+            /** Format: uuid */
+            suspendedByUserId: string | null;
+            /** Format: date-time */
+            suspendedAt: string | null;
+            suspensionReason: string | null;
+            role: components["schemas"]["RoleDescriptorDto"];
+        };
+        AdminAccountSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            email: string;
+            name: string;
+            avatarUrl: string | null;
+            status: components["schemas"]["AccountStatus"];
+            /** Format: date-time */
+            createdAt: string;
+            role: components["schemas"]["RoleDescriptorDto"];
+        };
+        AdminAiProbeDto: {
+            textGeneration: components["schemas"]["AiServiceObservationDto"];
+            embeddings: components["schemas"]["AiServiceObservationDto"];
+            /** Format: date-time */
+            checkedAt: string;
+            isHealthy?: boolean;
+        };
+        AdminAssignRoleActionRequest: {
+            /** Format: uuid */
+            roleId: string;
+            reason: string;
+            /** Format: int32 */
+            expectedVersion: number;
+        };
+        AdminAuditEventDetailDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            occurredAt: string;
+            /** Format: uuid */
+            actorUserId: string;
+            actorEmail: string | null;
+            action: string;
+            targetType: string;
+            targetId: string;
+            outcome: components["schemas"]["AdminAuditOutcome"];
+            reason: string | null;
+            errorCode: string | null;
+            correlationId: string | null;
+            changedFields: string[];
+            statePayload: Record<string, never>;
+        };
+        AdminAuditEventDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            occurredAt: string;
+            /** Format: uuid */
+            actorUserId: string;
+            action: string;
+            targetType: string;
+            targetId: string;
+            outcome: components["schemas"]["AdminAuditOutcome"];
+            reason: string | null;
+            errorCode: string | null;
+            correlationId: string | null;
+        };
+        /** @enum {unknown} */
+        AdminAuditOutcome: "Succeeded" | "Accepted" | "Rejected" | "Failed";
+        AdminCapabilitiesDto: {
+            /** @default false */
+            canManageCatalog: boolean;
+            /** @default false */
+            canManageAccounts: boolean;
+            /** @default false */
+            canReadAudit: boolean;
+            /** @default false */
+            canManageDocumentOperations: boolean;
+            /** @default false */
+            canViewAdminDashboard: boolean;
+            /** @default false */
+            canManageRoles: boolean;
+            /** @default false */
+            canManageCategories: boolean;
+        };
+        AdminCatalogCountsDto: {
+            /** Format: int64 */
+            total: number;
+            /** Format: int64 */
+            draft: number;
+            /** Format: int64 */
+            published: number;
+            /** Format: int64 */
+            hidden: number;
+            processing: components["schemas"]["DocumentProcessingCountsDto"];
+        };
+        AdminCatalogDocumentDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: string;
+            /** Format: uuid */
+            categoryId: string;
+            category: components["schemas"]["CategoryDescriptorDto"];
+            language: string;
+            sourceType: components["schemas"]["SourceType"];
+            authorOrSourceUrl: string | null;
+            attributionText: string;
+            visibility: components["schemas"]["CatalogVisibility"];
+            processingStatus: components["schemas"]["ProcessingStatus"];
+            /** Format: int32 */
+            totalSlices: number;
+            /** Format: int32 */
+            estimatedReadMinutes: number;
+            /** Format: int32 */
+            revision: number;
+            /** Format: int32 */
+            concurrencyVersion: number;
+            /** Format: int64 */
+            processingGeneration: number;
+            processingStatusMessage: string | null;
+            processingErrorMessage: string | null;
+            /** Format: uuid */
+            createdByUserId: string | null;
+            /** Format: uuid */
+            reviewedByUserId: string | null;
+            /** Format: int32 */
+            reviewedRevision: number | null;
+            /** Format: date-time */
+            reviewedAt: string | null;
+            /** Format: uuid */
+            publishedByUserId: string | null;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: uuid */
+            hiddenByUserId: string | null;
+            /** Format: date-time */
+            hiddenAt: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string | null;
+            isEligibleForPublication: boolean;
+            unmetPublicationRequirements: string[];
+        };
+        AdminCatalogSliceDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            catalogDocumentId: string;
+            /** Format: int32 */
+            sliceOrder: number;
+            chapterTitle: string;
+            originalTextMarkdown: string;
+            summaryMarkdown: string;
+            keyTakeaways: string[];
+            language: string;
+            /** Format: int32 */
+            estimatedReadMinutes: number;
+            isAiFormatted: boolean;
+        };
+        AdminCategoryDetailDto: {
+            category: components["schemas"]["CategoryDescriptorDto"];
+            /** Format: int32 */
+            booksCount: number;
+            /** Format: int32 */
+            catalogDocumentsCount: number;
+            /** Format: int32 */
+            quizQuestionsCount: number;
+            /** Format: int32 */
+            techInsightsCount: number;
+            /** Format: int32 */
+            totalUsageCount: number;
+            canDelete: boolean;
+            /** Format: uuid */
+            id?: string;
+            slug?: string | null;
+            nameEn?: string | null;
+            nameVi?: string | null;
+            /** Format: int32 */
+            sortOrder?: number;
+            isActive?: boolean;
+            /** Format: int32 */
+            version?: number;
+            /** Format: int32 */
+            usageCount?: number;
+        };
+        AdminDashboardOverviewDto: {
+            /** Format: int64 */
+            accountCount: number;
+            personalDocuments: components["schemas"]["DocumentProcessingCountsDto"];
+            catalogDocuments: components["schemas"]["AdminCatalogCountsDto"];
+            /** Format: date-time */
+            observedAt: string;
+        };
+        AdminDashboardStatusDto: {
+            database: components["schemas"]["ServiceObservationDto"];
+            /** Format: date-time */
+            observedAt: string;
+        };
+        AdminDocumentAttemptItemDto: {
+            /** Format: uuid */
+            attemptId: string;
+            /** Format: uuid */
+            targetDocumentId: string;
+            scope: string;
+            origin: string;
+            stage: string;
+            state: string;
+            /** Format: int32 */
+            progressPercent: number;
+            /** Format: date-time */
+            queuedAtUtc: string;
+            /** Format: date-time */
+            startedAtUtc: string | null;
+            /** Format: date-time */
+            endedAtUtc: string | null;
+            safeErrorCode: string | null;
+            safeErrorGuidance: string | null;
+        };
+        AdminDocumentDetailDto: {
+            /** Format: uuid */
+            id: string;
+            scope: string;
+            title: string;
+            /** Format: uuid */
+            ownerUserId: string | null;
+            ownerName: string | null;
+            ownerEmail: string | null;
+            sourceType: string;
+            /** Format: uuid */
+            categoryId: string;
+            category: components["schemas"]["CategoryDescriptorDto"];
+            language: string;
+            status: string;
+            sourceAvailability: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            observedAt: string;
+            /** Format: int32 */
+            controlVersion: number;
+            /** Format: int64 */
+            currentAttemptGeneration: number;
+            /** Format: uuid */
+            currentAttemptId: string | null;
+            isRetryEligible: boolean;
+            ineligibleReasonCode: string | null;
+            ineligibleReason: string | null;
+            /** Format: date-time */
+            retentionExpiresAtUtc: string | null;
+            sanitizedSourceUrl: string | null;
+        };
+        AdminDocumentInventoryItemDto: {
+            /** Format: uuid */
+            id: string;
+            scope: string;
+            title: string;
+            /** Format: uuid */
+            ownerUserId: string | null;
+            ownerName: string | null;
+            ownerEmail: string | null;
+            sourceType: string;
+            /** Format: uuid */
+            categoryId: string;
+            category: components["schemas"]["CategoryDescriptorDto"];
+            language: string;
+            status: string;
+            sourceAvailability: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            observedAt: string;
+        };
+        AdminGetCatalogDocumentsResponse: {
+            items: components["schemas"]["AdminCatalogDocumentDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        AdminHideCatalogApiRequest: {
+            /**
+             * Format: int32
+             * @default 0
+             */
+            expectedConcurrencyVersion: number;
+        } | null;
+        AdminImportCatalogUrlApiRequest: {
+            url: string;
+            title: string;
+            description: string;
+            /** Format: uuid */
+            categoryId: string;
+            /** @default null */
+            authorOrSourceUrl: string | null;
+            /** @default en */
+            language: string;
+            /** @default null */
+            attributionText: string | null;
+        };
+        AdminPagedResultOfAdminAccountSummaryDto: {
+            items: components["schemas"]["AdminAccountSummaryDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        AdminPagedResultOfAdminAuditEventDto: {
+            items: components["schemas"]["AdminAuditEventDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        AdminPagedResultOfAdminCategoryDetailDto: {
+            items: components["schemas"]["AdminCategoryDetailDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        AdminPagedResultOfAdminDocumentAttemptItemDto: {
+            items: components["schemas"]["AdminDocumentAttemptItemDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        AdminPagedResultOfAdminDocumentInventoryItemDto: {
+            items: components["schemas"]["AdminDocumentInventoryItemDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        AdminPagedResultOfAdminRoleOptionDto: {
+            items: components["schemas"]["AdminRoleOptionDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
+        AdminPrepareCatalogApiRequest: {
+            /** @default null */
+            replacementTempFilePath: string | null;
+        } | null;
+        AdminPreviewCatalogUrlApiRequest: {
+            url: string;
+        };
+        AdminPreviewCatalogUrlResponse: {
+            title: string;
+            sourceUrl: string;
+            markdownContent: string;
+            /** Format: int32 */
+            estimatedWordCount: number;
+            /** @default false */
+            isPdfDetected: boolean;
+            /** @default null */
+            detectedPdfUrl: string | null;
+        };
+        AdminPublishCatalogApiRequest: {
+            /** Format: int32 */
+            expectedRevision: number;
+        };
+        AdminRetryDocumentResponseDto: {
+            /** Format: uuid */
+            attemptId: string;
+            /** Format: uuid */
+            targetDocumentId: string;
+            state: string;
+            /** Format: int32 */
+            controlVersion: number;
+        };
+        AdminRetryPayload: {
+            /** Format: uuid */
+            attemptId: string;
+            /** Format: int32 */
+            expectedVersion: number;
+            requestId: string;
+            reason: string;
+        };
+        AdminRoleOptionDto: {
+            /** Format: uuid */
+            id: string;
+            key: string;
+            nameEn: string;
+            nameVi: string;
+            permissionKeys: string[];
+        };
+        AdminUpdateCatalogMetadataApiRequest: {
+            title: string;
+            description: string;
+            /** Format: uuid */
+            categoryId: string;
+            /** @default en */
+            language: string;
+            /** @default null */
+            authorOrSourceUrl: string | null;
+            /** @default null */
+            attributionText: string | null;
+            /**
+             * Format: int32
+             * @default 1
+             */
+            expectedVersion: number;
+        };
         AiHealthResponse: {
             status: string;
             textModel: string;
@@ -1064,6 +2266,31 @@ export interface components {
             /** @default null */
             error: string | null;
         };
+        AiServiceObservationDto: {
+            model: string | null;
+            status: string;
+            /** Format: int64 */
+            latencyMs: number | null;
+            /** Format: date-time */
+            checkedAt: string;
+            /** @default null */
+            errorCode: string | null;
+            /**
+             * Format: int32
+             * @default null
+             */
+            dimension: number | null;
+        };
+        AudioQuotaResponse: {
+            /** Format: int64 */
+            monthlyLimit?: number;
+            /** Format: int64 */
+            usedCharacters?: number;
+            /** Format: int64 */
+            remainingCharacters?: number;
+            isNearLimit?: boolean;
+            isExhausted?: boolean;
+        };
         AuthSessionResponse: {
             token: string;
             user: components["schemas"]["AuthUserDto"];
@@ -1078,6 +2305,7 @@ export interface components {
             /** Format: int32 */
             dailyGoalMinutes: number;
             avatarUrl: string | null;
+            role: components["schemas"]["RoleDescriptorDto"];
         };
         BookDetailDto: {
             /** Format: uuid */
@@ -1085,7 +2313,9 @@ export interface components {
             title?: string;
             slug?: string;
             sourceType?: components["schemas"]["SourceType"];
-            category?: components["schemas"]["Category"];
+            /** Format: uuid */
+            categoryId?: string;
+            category?: components["schemas"]["CategoryDescriptorDto"];
             authorOrSourceUrl?: string | null;
             /** Format: int32 */
             totalChunks?: number;
@@ -1102,7 +2332,9 @@ export interface components {
             title?: string;
             slug?: string;
             sourceType?: components["schemas"]["SourceType"];
-            category?: components["schemas"]["Category"];
+            /** Format: uuid */
+            categoryId?: string;
+            category?: components["schemas"]["CategoryDescriptorDto"];
             authorOrSourceUrl?: string | null;
             /** Format: int32 */
             totalChunks?: number;
@@ -1115,6 +2347,7 @@ export interface components {
             errorMessage?: string | null;
             /** Format: date-time */
             createdAt?: string;
+            language?: string;
         };
         BookIngestionStatusDto: {
             /** Format: uuid */
@@ -1135,11 +2368,71 @@ export interface components {
             totalBookmarks: number;
         };
         /** @enum {unknown} */
-        CardSourceType: "Topic" | "Highlight" | "QuizMistake";
+        CardSourceType: "Highlight" | "QuizMistake" | "DocumentChunk";
         /** @enum {unknown} */
         CardStatus: "Learning" | "Reviewing" | "Mastered";
+        CatalogAdoptionResult: {
+            /** Format: uuid */
+            bookId: string;
+            alreadyAdded: boolean;
+        };
+        CatalogCapabilitiesDto: {
+            canManageCatalog: boolean;
+        };
+        CatalogFirstSlicePreviewDto: {
+            /** Format: int32 */
+            sliceOrder: number;
+            chapterTitle: string;
+            originalTextMarkdown: string;
+            summaryMarkdown: string;
+            keyTakeaways: string[];
+            /** Format: int32 */
+            estimatedReadMinutes: number;
+        } | null;
+        CatalogTocItemDto: {
+            /** Format: int32 */
+            sliceOrder: number;
+            chapterTitle: string;
+            /** Format: int32 */
+            estimatedReadMinutes: number;
+        };
         /** @enum {unknown} */
-        Category: "FrontendWeb" | "BackendRuntime" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft";
+        CatalogVisibility: "Draft" | "Published" | "Hidden";
+        CategoryDescriptorDto: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            nameEn: string;
+            nameVi: string;
+            /** Format: int32 */
+            sortOrder: number;
+            isActive: boolean;
+            /** Format: int32 */
+            version: number;
+        };
+        CategoryDescriptorDto2: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            nameEn: string;
+            nameVi: string;
+            /** Format: int32 */
+            sortOrder: number;
+            isActive: boolean;
+            /** Format: int32 */
+            version: number;
+        } | null;
+        CategoryStatDto: {
+            /** Format: uuid */
+            categoryId: string;
+            category: components["schemas"]["CategoryDescriptorDto"];
+            /** Format: int32 */
+            answeredCount: number;
+            /** Format: int32 */
+            masteredCount: number;
+            /** Format: double */
+            accuracyRate: number;
+        };
         ChangePasswordRequest: {
             currentPassword: string | null;
             newPassword: string;
@@ -1191,6 +2484,18 @@ export interface components {
             /** Format: uuid */
             cardId?: string;
         };
+        CreateCategoryInput: {
+            slug: string;
+            nameEn: string;
+            nameVi: string;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            sortOrder: number;
+            /** @default true */
+            isActive: boolean;
+        };
         CreateHighlightApiRequest: {
             /** Format: uuid */
             documentChunkId: string;
@@ -1205,31 +2510,6 @@ export interface components {
         };
         CurateSliceResponse: {
             chunk?: components["schemas"]["ChunkSummaryDto"];
-        };
-        CurriculumModuleDto: {
-            category?: components["schemas"]["Category"];
-            moduleTitle?: string;
-            description?: string;
-            /** Format: int32 */
-            startDay?: number;
-            /** Format: int32 */
-            endDay?: number;
-            /** Format: int32 */
-            completedCount?: number;
-            /** Format: int32 */
-            totalCount?: number;
-            days?: components["schemas"]["RoadmapDayNodeDto"][];
-        };
-        CurriculumRoadmapResponse: {
-            /** Format: int32 */
-            totalDays?: number;
-            /** Format: int32 */
-            completedDaysCount?: number;
-            /** Format: int32 */
-            currentActiveDay?: number;
-            /** Format: double */
-            overallProgressPercentage?: number;
-            modules?: components["schemas"]["CurriculumModuleDto"][];
         };
         DailyDrillDto: {
             /** Format: uuid */
@@ -1279,11 +2559,23 @@ export interface components {
             estimatedReadMinutes?: number;
             isAiFormatted?: boolean;
         } | null;
+        DocumentProcessingCountsDto: {
+            /** Format: int64 */
+            pending: number;
+            /** Format: int64 */
+            processing: number;
+            /** Format: int64 */
+            ready: number;
+            /** Format: int64 */
+            failed: number;
+            /** Format: int64 */
+            total?: number;
+        };
         /** @enum {unknown} */
         DrillStatus: "Pending" | "Submitted" | "Reviewed" | "Skipped";
         ExplainTermRequest: {
             term: string;
-            category: string;
+            contextLabel: string | null;
             context: string;
             /** @default en */
             locale: string;
@@ -1298,7 +2590,8 @@ export interface components {
             email: string;
         };
         GenerateInsightRequest: {
-            preferredCategory?: components["schemas"]["NullableOfCategory"];
+            /** Format: uuid */
+            categoryId: string;
             /** @default null */
             preferredTopic: string | null;
             /** @default en */
@@ -1306,9 +2599,15 @@ export interface components {
         };
         GenerateQuizApiRequest: {
             topic: string;
-            /** Format: int32 */
-            category: number | null;
-            /** Format: int32 */
+            /**
+             * Format: uuid
+             * @default null
+             */
+            categoryId: string | null;
+            /**
+             * Format: int32
+             * @default 1
+             */
             level: number;
             /**
              * Format: int32
@@ -1339,27 +2638,32 @@ export interface components {
             slice?: components["schemas"]["ChunkSummaryDto"];
         };
         GetBooksResponse: {
-            books?: components["schemas"]["BookDto"][];
+            books: components["schemas"]["BookDto"][];
             /** Format: int32 */
-            totalCount?: number;
+            totalCount: number;
             /** Format: int32 */
-            page?: number;
+            page: number;
             /** Format: int32 */
-            pageSize?: number;
+            pageSize: number;
             /** Format: int32 */
-            totalPages?: number;
+            totalPages: number;
         };
         GetHighlightsResponse: {
-            highlights?: components["schemas"]["HighlightDto"][];
+            highlights: components["schemas"]["HighlightDto"][];
             /** Format: int32 */
-            totalCount?: number;
+            totalCount: number;
             /** Format: int32 */
-            page?: number;
+            page: number;
             /** Format: int32 */
-            pageSize?: number;
+            pageSize: number;
             /** Format: int32 */
-            totalPages?: number;
-            tagCounts?: components["schemas"]["TagCountDto"][];
+            totalPages: number;
+            tagCounts: components["schemas"]["TagCountDto"][];
+            /**
+             * Format: int32
+             * @default 0
+             */
+            totalAllCount: number;
         };
         GetInsightsFeedResponse: {
             insights: components["schemas"]["TechInsightDto"][];
@@ -1376,6 +2680,15 @@ export interface components {
             suggestedTopics: {
                 [key: string]: string[];
             };
+        };
+        GetPublishedCatalogDocumentsResponse: {
+            items: components["schemas"]["LearnerCatalogDocumentDto"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
         };
         GetQuizReviewQueueResponse: {
             questions: components["schemas"]["QuizQuestionDto"][];
@@ -1399,6 +2712,30 @@ export interface components {
             accuracyRate: number;
             levelBreakdown: components["schemas"]["LevelStatDto"][];
             topicBreakdown: components["schemas"]["TopicStatDto"][];
+            categoryBreakdown: components["schemas"]["CategoryStatDto"][];
+        };
+        GetReviewAnalyticsResponse: {
+            /** Format: int32 */
+            overdueCount?: number;
+            /** Format: int32 */
+            leechCount?: number;
+            /** Format: int32 */
+            atRiskCount?: number;
+            /** Format: int32 */
+            totalCards?: number;
+            /** Format: int32 */
+            learningCount?: number;
+            /** Format: int32 */
+            reviewingCount?: number;
+            /** Format: int32 */
+            masteredCount?: number;
+            /** Format: int32 */
+            strugglingCount?: number;
+            /** Format: int32 */
+            developingCount?: number;
+            /** Format: int32 */
+            comfortableCount?: number;
+            sourceBreakdown?: components["schemas"]["SourceChannelRetentionDto"][];
         };
         GetReviewCardsResponse: {
             cards?: components["schemas"]["ReviewCardDto"][];
@@ -1418,7 +2755,6 @@ export interface components {
             totalCardsDue?: number;
         };
         GetTodayFocusResponse: {
-            topic?: components["schemas"]["TopicDto"];
             question?: components["schemas"]["InterviewQuestionDto"];
             documentChunk?: components["schemas"]["DocumentChunkDto"];
             drill?: components["schemas"]["DailyDrillDto"];
@@ -1433,7 +2769,10 @@ export interface components {
             hasActiveBook?: boolean;
         };
         GoogleAuthRequest: {
-            idToken: string;
+            /** @default null */
+            idToken: string | null;
+            /** @default null */
+            accessToken: string | null;
         };
         GradeCardJsonRequest: {
             /** Format: int32 */
@@ -1469,7 +2808,9 @@ export interface components {
             id: string;
             label: string;
             type: string;
-            category: string;
+            /** Format: uuid */
+            categoryId: string | null;
+            category: components["schemas"]["CategoryDescriptorDto2"];
             /** @default null */
             subtitle: string | null;
             /**
@@ -1509,6 +2850,11 @@ export interface components {
              * @default null
              */
             createdAt: string | null;
+            /**
+             * Format: int32
+             * @default null
+             */
+            totalChunks: number | null;
         };
         GraphStatsDto: {
             /** Format: int32 */
@@ -1545,10 +2891,13 @@ export interface components {
             createdAt?: string;
             hasFlashcard?: boolean;
         };
+        /** Format: binary */
+        IFormFile: string;
         ImportDocumentRequest: {
             title: string;
             markdownContent: string;
-            category: components["schemas"]["Category"];
+            /** Format: uuid */
+            categoryId: string;
             /** @default null */
             sourceUrl: string | null;
             /** @default en */
@@ -1565,7 +2914,8 @@ export interface components {
         ImportRemotePdfRequest: {
             pdfUrl: string;
             title: string;
-            category: components["schemas"]["Category"];
+            /** Format: uuid */
+            categoryId: string;
             /** @default en */
             language: string;
             /**
@@ -1575,11 +2925,9 @@ export interface components {
             createdByUserId: string | null;
         };
         InsightCategoryMetaDto: {
-            /** Format: int32 */
-            id: number;
-            key: string;
-            labelEn: string;
-            labelVi: string;
+            /** Format: uuid */
+            categoryId: string;
+            category: components["schemas"]["CategoryDescriptorDto"];
             /** Format: int32 */
             count: number;
         };
@@ -1600,6 +2948,50 @@ export interface components {
             edges: components["schemas"]["GraphEdgeDto"][];
             stats: components["schemas"]["GraphStatsDto"];
         };
+        LearnerCatalogDetailDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: string;
+            /** Format: uuid */
+            categoryId: string;
+            category: components["schemas"]["CategoryDescriptorDto"];
+            language: string;
+            sourceType: components["schemas"]["SourceType"];
+            authorOrSourceUrl: string | null;
+            attributionText: string;
+            /** Format: int32 */
+            totalSlices: number;
+            /** Format: int32 */
+            estimatedReadMinutes: number;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: uuid */
+            existingBookId: string | null;
+            tableOfContents: components["schemas"]["CatalogTocItemDto"][];
+            firstSlicePreview: components["schemas"]["CatalogFirstSlicePreviewDto"];
+        };
+        LearnerCatalogDocumentDto: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            description: string;
+            /** Format: uuid */
+            categoryId: string;
+            category: components["schemas"]["CategoryDescriptorDto"];
+            language: string;
+            sourceType: components["schemas"]["SourceType"];
+            authorOrSourceUrl: string | null;
+            attributionText: string;
+            /** Format: int32 */
+            totalSlices: number;
+            /** Format: int32 */
+            estimatedReadMinutes: number;
+            /** Format: date-time */
+            publishedAt: string | null;
+            /** Format: uuid */
+            existingBookId: string | null;
+        };
         LevelStatDto: {
             level: components["schemas"]["QuizLevel"];
             /** Format: int32 */
@@ -1618,11 +3010,8 @@ export interface components {
         MessageResponse: {
             message: string;
         };
-        /**
-         * @default null
-         * @enum {unknown|null}
-         */
-        NullableOfCategory: "FrontendWeb" | "BackendRuntime" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft" | null;
+        /** @enum {unknown|null} */
+        NullableOfDifficulty: "Intermediate" | "Senior" | "Lead" | null;
         OtpChallengeResponse: {
             email: string;
         };
@@ -1713,12 +3102,14 @@ export interface components {
             stalePurged: number;
         };
         /** @enum {unknown} */
-        QuizLevel: "Fresher" | "Junior" | "Middle" | "Senior";
+        QuizLevel: "Foundation" | "Fresher" | "Applied" | "Junior" | "Advanced" | "Middle" | "Mastery" | "Senior";
         QuizQuestionDto: {
             /** Format: uuid */
             id?: string;
             topic?: string;
-            category?: components["schemas"]["Category"];
+            /** Format: uuid */
+            categoryId?: string;
+            category: components["schemas"]["CategoryDescriptorDto"];
             level?: components["schemas"]["QuizLevel"];
             questionText?: string;
             options?: string[];
@@ -1760,8 +3151,6 @@ export interface components {
         ReviewCardDto: {
             /** Format: uuid */
             id?: string;
-            /** Format: uuid */
-            topicId?: string | null;
             sourceType?: components["schemas"]["CardSourceType"];
             frontMarkdown?: string | null;
             backMarkdown?: string | null;
@@ -1769,9 +3158,13 @@ export interface components {
             sourceHighlightId?: string | null;
             /** Format: uuid */
             sourceQuizQuestionId?: string | null;
+            /** Format: uuid */
+            sourceDocumentChunkId?: string | null;
             topicTitle?: string;
-            category?: components["schemas"]["Category"];
-            difficulty?: components["schemas"]["Difficulty"];
+            category?: components["schemas"]["CategoryDescriptorDto2"];
+            /** Format: uuid */
+            categoryId?: string | null;
+            difficulty?: components["schemas"]["NullableOfDifficulty"];
             topicSummary?: string;
             topicDeepDiveMarkdown?: string;
             /** Format: int32 */
@@ -1784,18 +3177,43 @@ export interface components {
             nextReviewDate?: string;
             status?: components["schemas"]["CardStatus"];
         };
-        RoadmapDayNodeDto: {
+        RoleDescriptorDto: {
+            /** Format: uuid */
+            id: string;
+            key: string;
+            nameEn: string;
+            nameVi: string;
+        };
+        ServiceObservationDto: {
+            status: string;
+            /** Format: date-time */
+            checkedAt: string;
+            /** Format: int64 */
+            latencyMs: number | null;
+            /** @default null */
+            errorCode: string | null;
+        };
+        SourceChannelRetentionDto: {
+            sourceType?: components["schemas"]["CardSourceType"];
             /** Format: int32 */
-            dayOrder?: number;
-            slug?: string;
-            title?: string;
-            summary?: string;
-            difficulty?: components["schemas"]["Difficulty"];
-            isCompleted?: boolean;
-            isActiveToday?: boolean;
-            isUnlocked?: boolean;
+            total?: number;
             /** Format: int32 */
-            drillScore?: number | null;
+            learning?: number;
+            /** Format: int32 */
+            reviewing?: number;
+            /** Format: int32 */
+            mastered?: number;
+            /** Format: double */
+            averageEaseFactor?: number;
+        };
+        SourceReplacementResponseDto: {
+            /** Format: uuid */
+            attemptId: string;
+            /** Format: uuid */
+            documentId: string;
+            state: string;
+            /** Format: int32 */
+            resultingVersion: number;
         };
         /** @enum {unknown} */
         SourceType: "PdfBook" | "MarkdownSeries" | "WebDocUrl";
@@ -1851,6 +3269,13 @@ export interface components {
             /** Format: uuid */
             bookId: string;
         };
+        SynthesizeChunkAudioApiRequest: {
+            voiceId: string | null;
+            /** @default null */
+            contentHash: string | null;
+            /** @default null */
+            narrationScript: string | null;
+        } | null;
         TagCountDto: {
             tag: string;
             /** Format: int32 */
@@ -1861,7 +3286,9 @@ export interface components {
             id: string;
             slug: string;
             title: string;
-            category: components["schemas"]["Category"];
+            /** Format: uuid */
+            categoryId: string;
+            category: components["schemas"]["CategoryDescriptorDto"];
             tags: string[];
             summaryMarkdown: string;
             problemSnippet: string;
@@ -1874,19 +3301,6 @@ export interface components {
             /** @default false */
             isBookmarkedByUser: boolean;
         };
-        TopicDto: {
-            /** Format: uuid */
-            id?: string;
-            slug?: string;
-            title?: string;
-            category?: components["schemas"]["Category"];
-            difficulty?: components["schemas"]["Difficulty"];
-            /** Format: int32 */
-            dayOrder?: number;
-            summary?: string;
-            deepDiveMarkdown?: string;
-            benchmarkSnippet?: string | null;
-        };
         TopicStatDto: {
             topic: string;
             /** Format: int32 */
@@ -1898,6 +3312,23 @@ export interface components {
         };
         UnsubscribePushRequest: {
             endpoint: string;
+        };
+        UpdateBookApiRequest: {
+            title: string;
+            authorOrSourceUrl: string | null;
+            /** Format: uuid */
+            categoryId: string;
+            /** @default null */
+            language: string | null;
+        };
+        UpdateCategoryInput: {
+            nameEn: string;
+            nameVi: string;
+            /** Format: int32 */
+            sortOrder: number;
+            isActive: boolean;
+            /** Format: int32 */
+            expectedVersion: number;
         };
         UpdateHighlightApiRequest: {
             /** @default null */
@@ -1961,6 +3392,7 @@ export interface components {
             isPushEnabled: boolean;
             hasPassword: boolean;
             isGoogleLinked: boolean;
+            role: components["schemas"]["RoleDescriptorDto"];
         };
         UserProfileResponse: {
             user: components["schemas"]["UserProfileDto"];
@@ -1984,6 +3416,284 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    GetAdminCapabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCapabilitiesDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminRoles: {
+        parameters: {
+            query?: {
+                search?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPagedResultOfAdminRoleOptionDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReplacePersonalDocumentSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    file: components["schemas"]["IFormFile"];
+                } & {
+                    requestId: string;
+                } & {
+                    /** Format: int32 */
+                    expectedVersion: number;
+                } & {
+                    explicitLanguage?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceReplacementResponseDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReplaceCatalogDocumentSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    file: components["schemas"]["IFormFile"];
+                } & {
+                    requestId: string;
+                } & {
+                    /** Format: int32 */
+                    expectedVersion: number;
+                } & {
+                    reason: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceReplacementResponseDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryDescriptorDto"][];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     HealthCheck: {
         parameters: {
             query?: never;
@@ -2009,44 +3719,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthStatusResponse"];
-                };
-            };
-        };
-    };
-    GetCurriculumRoadmap: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CurriculumRoadmapResponse"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
         };
@@ -2092,7 +3764,7 @@ export interface operations {
     GetInsightsFeed: {
         parameters: {
             query?: {
-                category?: number;
+                categoryId?: string;
                 tag?: string;
                 page?: number;
                 pageSize?: number;
@@ -2167,6 +3839,24 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2256,6 +3946,24 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
         };
     };
     SubmitQuizAnswer: {
@@ -2303,7 +4011,7 @@ export interface operations {
     GetQuizReviewQueue: {
         parameters: {
             query?: {
-                category?: number;
+                categoryId?: string;
                 level?: number;
                 topic?: string;
                 page?: number;
@@ -2387,7 +4095,6 @@ export interface operations {
             query?: {
                 bookId?: string;
                 chunkOrder?: number;
-                dayOrder?: number;
                 date?: string;
                 locale?: string;
             };
@@ -2625,6 +4332,37 @@ export interface operations {
             };
         };
     };
+    GetReviewAnalytics: {
+        parameters: {
+            query?: {
+                date?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetReviewAnalyticsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     GradeReviewCard: {
         parameters: {
             query?: never;
@@ -2776,7 +4514,7 @@ export interface operations {
             query?: {
                 search?: string;
                 status?: "Learning" | "Reviewing" | "Mastered" | null;
-                sourceType?: "Topic" | "Highlight" | "QuizMistake" | null;
+                sourceType?: "Highlight" | "QuizMistake" | "DocumentChunk" | null;
                 page?: number;
                 pageSize?: number;
             };
@@ -2940,7 +4678,7 @@ export interface operations {
     GetBooks: {
         parameters: {
             query?: {
-                category?: "FrontendWeb" | "BackendRuntime" | "DatabaseStorage" | "SystemDesign" | "EngineeringCraft" | null;
+                categoryId?: string;
                 search?: string;
                 page?: number;
                 pageSize?: number;
@@ -3037,6 +4775,68 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateBook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBookApiRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookDto"];
+                };
             };
             /** @description Bad Request */
             400: {
@@ -3402,6 +5202,2196 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SynthesizeChunkAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chunkId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SynthesizeChunkAudioApiRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAudioQuota: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AudioQuotaResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetCatalogCapabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogCapabilitiesDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetPublishedCatalogDocuments: {
+        parameters: {
+            query?: {
+                search?: string;
+                categoryId?: string;
+                language?: string;
+                sourceType?: "PdfBook" | "MarkdownSeries" | "WebDocUrl" | null;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetPublishedCatalogDocumentsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetPublishedCatalogDocumentById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearnerCatalogDetailDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdoptCatalogDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogAdoptionResult"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogAdoptionResult"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminGetCatalogDocuments: {
+        parameters: {
+            query?: {
+                search?: string;
+                visibility?: "Draft" | "Published" | "Hidden" | null;
+                status?: "Pending" | "Processing" | "Ready" | "Failed" | null;
+                categoryId?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminGetCatalogDocumentsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminUploadCatalogPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    file: components["schemas"]["IFormFile"];
+                } & {
+                    title: string;
+                } & {
+                    description: string;
+                } & {
+                    /** Format: uuid */
+                    categoryId: string;
+                } & {
+                    authorOrSourceUrl?: string;
+                } & {
+                    language?: string;
+                } & {
+                    attributionText?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogDocumentDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminPreviewCatalogUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminPreviewCatalogUrlApiRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPreviewCatalogUrlResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminImportCatalogUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminImportCatalogUrlApiRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogDocumentDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminGetCatalogDocumentById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogDocumentDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminUpdateCatalogMetadata: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUpdateCatalogMetadataApiRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogDocumentDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminGetCatalogSlice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                order: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogSliceDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminPrepareCatalog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminPrepareCatalogApiRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogDocumentDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminReviewCatalogSlice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                order: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogDocumentDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminPublishCatalogDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminPublishCatalogApiRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogDocumentDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AdminHideCatalogDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["AdminHideCatalogApiRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCatalogDocumentDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminDashboardOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminDashboardOverviewDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminDashboardStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminDashboardStatusDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ProbeAdminAiServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAiProbeDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAiProbeDto"];
+                };
+            };
+        };
+    };
+    GetAdminAccounts: {
+        parameters: {
+            query?: {
+                search?: string;
+                status?: "Active" | "Suspended" | null;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPagedResultOfAdminAccountSummaryDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminAccountById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAccountDetailDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    SuspendAdminAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminAccountActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAccountDetailDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    ReactivateAdminAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminAccountActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAccountDetailDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RevokeAdminAccountSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminAccountActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAccountDetailDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    AssignAdminAccountRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminAssignRoleActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAccountDetailDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminAuditEvents: {
+        parameters: {
+            query?: {
+                actorUserId?: string;
+                action?: string;
+                targetType?: string;
+                targetId?: string;
+                outcome?: "Succeeded" | "Accepted" | "Rejected" | "Failed" | null;
+                from?: string;
+                to?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPagedResultOfAdminAuditEventDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminAuditEventById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAuditEventDetailDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminDocumentInventory: {
+        parameters: {
+            query?: {
+                search?: string;
+                scope?: string;
+                ownerId?: string;
+                sourceType?: string;
+                categoryId?: string;
+                language?: string;
+                status?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPagedResultOfAdminDocumentInventoryItemDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminDocumentDetail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scope: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminDocumentDetailDto"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminDocumentAttempts: {
+        parameters: {
+            query?: {
+                state?: string;
+                fromUtc?: string;
+                toUtc?: string;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path: {
+                scope: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPagedResultOfAdminDocumentAttemptItemDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    RetryAdminDocumentIngestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scope: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminRetryPayload"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminRetryDocumentResponseDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminCategories: {
+        parameters: {
+            query?: {
+                search?: string;
+                isActive?: boolean;
+                page?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminPagedResultOfAdminCategoryDetailDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    CreateAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCategoryInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryDescriptorDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    GetAdminCategoryById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCategoryDetailDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    DeleteAdminCategory: {
+        parameters: {
+            query: {
+                expectedVersion: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    UpdateAdminCategory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCategoryInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryDescriptorDto"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

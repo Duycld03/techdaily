@@ -3,6 +3,8 @@ import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import GraphLegend from '~/components/graph/GraphLegend.vue'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
+import { graphCategory } from '../../fixtures/graphCategories'
+import { getCategoryPalette } from '~/utils/graphVisualTokens'
 
 describe('GraphLegend.vue', () => {
   beforeEach(() => {
@@ -11,6 +13,21 @@ describe('GraphLegend.vue', () => {
     vi.clearAllMocks()
   })
 
+  it('renders represented category metadata using the shared UUID palette', () => {
+    const store = useKnowledgeGraphStore()
+    store.rawData = {
+      nodes: [{ id: 'cloud-book', type: 'book', label: 'Cloud book', categoryId: graphCategory.id, category: graphCategory }],
+      edges: [],
+      stats: { totalNodes: 1, totalEdges: 0, nodeTypeCounts: {}, pillarCounts: {}, masteredCardsCount: 0 }
+    }
+    const wrapper = mount(GraphLegend)
+    const category = wrapper.find(`[data-testid="legend-category-${graphCategory.id}"]`)
+    expect(category.text()).toContain('Cloud Platforms')
+    const color = category.find('[data-category-color]')
+    expect((color.element as HTMLElement).style.backgroundColor).toBe(
+      (() => { const element = document.createElement('span'); element.style.backgroundColor = getCategoryPalette(graphCategory.id).fill; return element.style.backgroundColor })()
+    )
+  })
   it('renders expanded legend card by default on desktop', () => {
     const wrapper = mount(GraphLegend)
 

@@ -17,7 +17,6 @@ using Microsoft.Extensions.Options;
 using Pgvector;
 using DeepPace.Api.Authorization;
 using DeepPace.Api.Endpoints;
-using DeepPace.Application;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Catalog.Admin.ImportUrl;
 using DeepPace.Application.Features.Catalog.Admin.Publish;
@@ -108,12 +107,7 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
         builder.Services.AddOpenApi();
         builder.Services.AddScoped(_ => new DeepPaceDbContext(_dbOptions));
         builder.Services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
-        builder.Services.AddApplicationServices();
-
-        builder.Services.AddScoped<ICatalogAdoptionService, CatalogAdoptionService>();
-        builder.Services.AddScoped<IAdminPermissionResolver, AdminPermissionResolver>();
-        builder.Services.AddScoped<ICatalogAdminService, CatalogAdminService>();
-        builder.Services.AddScoped<IAuthorizationReadinessService, AuthorizationReadinessService>();
+        builder.Services.AddApiTestApplicationServices();
         builder.Services.AddScoped<IPdfIngestionQueue, FakePdfQueue>();
         builder.Services.AddScoped<IWebArticleCrawler, FakeArticleCrawler>();
         builder.Services.AddScoped<IAiMarkdownFormatter, FakeAiMarkdownFormatter>();
@@ -169,7 +163,7 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Title = "Distributed Systems Invariants",
             Description = "A masterclass in replicated log safety and consensus.",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Language = "en",
             SourceType = SourceType.WebDocUrl,
             AuthorOrSourceUrl = "https://principles.systems/raft",
@@ -212,7 +206,7 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
             Url: "https://principles.systems/raft",
             Title: "Raft Consensus and Replicated State Machines",
             Description: "Formal verification of leader election and log invariants.",
-            Category: Category.BackendRuntime,
+            CategoryId : CategoryDefaults.BackendRuntimeId,
             AuthorOrSourceUrl: "https://principles.systems/raft",
             Language: "en",
             AttributionText: "Stanford & USENIX ATC 2014");
@@ -576,7 +570,7 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
         var personalDocReq = new ImportDocumentRequest(
             Title: "Personal Microservice Design Notes",
             MarkdownContent: "# Microservice Architecture\n\nDatabase per service pattern ensures loose coupling and independent scalability across bounded contexts.",
-            Category: Category.BackendRuntime);
+            CategoryId : CategoryDefaults.BackendRuntimeId);
 
         var importMsg = CreateAuthenticatedRequest(HttpMethod.Post, "/api/v1/library/import", _learner1UserId);
         importMsg.Content = JsonContent.Create(personalDocReq);
@@ -611,7 +605,6 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
 
     public class DynamicTestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
-        public static Guid DefaultUserId { get; set; } = Guid.NewGuid();
         public static bool IsAuthenticated { get; set; } = true;
 
         public DynamicTestAuthHandler(
@@ -629,11 +622,10 @@ public class CatalogIsolationAndBehavioralIntegrationTests : IAsyncLifetime
                 return Task.FromResult(AuthenticateResult.NoResult());
             }
 
-            var userId = DefaultUserId;
-            if (Context.Request.Headers.TryGetValue("X-Test-UserId", out var headerVal) &&
-                Guid.TryParse(headerVal.ToString(), out var parsedGuid))
+            if (!Context.Request.Headers.TryGetValue("X-Test-UserId", out var headerVal) ||
+                !Guid.TryParse(headerVal.ToString(), out var userId) || userId == Guid.Empty)
             {
-                userId = parsedGuid;
+                return Task.FromResult(AuthenticateResult.NoResult());
             }
 
             var claims = new List<Claim>
@@ -688,7 +680,6 @@ Raft safety guarantees election safety, leader append-only, and log matching inv
             string rawText,
             string chapterTitle,
             string language = "en",
-            Category? category = null,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Result<AiFormattedSliceResult>.Success(new AiFormattedSliceResult(

@@ -2,13 +2,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useReviewStore, type ReviewCard } from '~/stores/useReviewStore'
 
+const requestedUrls = vi.hoisted(() => [] as string[])
+
 const mockCards: ReviewCard[] = [
   {
     id: 'c-101',
     title: 'Vue 3 Reactivity Engine',
     frontMarkdown: 'What is Vue 3 Reactivity?',
     backMarkdown: 'Proxy vs Object.defineProperty',
-    category: 0,
+    categoryId: '8f326e3a-9401-4385-b287-737487a2c717',
+    category: { id: '8f326e3a-9401-4385-b287-737487a2c717', slug: 'reactivity', nameEn: 'Reactivity', nameVi: 'Phản ứng', sortOrder: 1, isActive: false, version: 1 },
     difficulty: 1,
     repetitionCount: 1,
     easeFactor: 2.5,
@@ -21,7 +24,8 @@ const mockCards: ReviewCard[] = [
     title: 'PostgreSQL MVCC & VACUUM',
     frontMarkdown: 'What is MVCC?',
     backMarkdown: 'Multi-version concurrency control mechanics',
-    category: 2,
+    categoryId: null,
+    category: null,
     difficulty: 2,
     repetitionCount: 2,
     easeFactor: 2.36,
@@ -34,6 +38,7 @@ const mockCards: ReviewCard[] = [
 vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     get: vi.fn(async (url: string) => {
+      requestedUrls.push(url)
       if (url.includes('/deck')) return { dueCards: [...mockCards], totalCardsDue: 2 }
       if (url.includes('/analytics')) {
         return {
@@ -132,6 +137,19 @@ vi.mock('~/composables/useApiClient', () => ({
 describe('useReviewStore (SM-2 Spaced Repetition)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+  })
+
+  it('filters by novel UUID and preserves inactive or absent category provenance', async () => {
+    requestedUrls.length = 0
+    const review = useReviewStore()
+    await review.fetchDeckCards({ categoryId: '8f326e3a-9401-4385-b287-737487a2c717' })
+    expect(requestedUrls).toContain('/api/v1/review/cards?categoryId=8f326e3a-9401-4385-b287-737487a2c717')
+    expect(review.deckCards[0]?.category?.isActive).toBe(false)
+    expect(review.deckCards[1]?.categoryId).toBeNull()
+    await review.updateCard('c-101', { frontMarkdown: 'Edited', backMarkdown: 'Answer' })
+    expect(review.deckCards[0]?.categoryId).toBe(mockCards[0]?.categoryId)
+    await review.resetCardProgress('c-101')
+    expect(review.deckCards[0]?.category).toEqual(mockCards[0]?.category)
   })
 
   it('fetches review deck correctly', async () => {

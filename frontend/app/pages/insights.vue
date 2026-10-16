@@ -23,12 +23,15 @@ import {
 import { useInsightsStore } from '~/stores/useInsightsStore'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useApiError } from '~/composables/useApiError'
+import { useCategoryStore, type CategoryDescriptor } from '~/stores/useCategoryStore'
+import AppSelect from '~/components/common/AppSelect.vue'
 import MarkdownIt from 'markdown-it'
 
 const { t, locale } = useI18n()
 const { formatError } = useApiError()
 const authStore = useAuthStore()
 const insightsStore = useInsightsStore()
+const categoryStore = useCategoryStore()
 const toast = useToast()
 const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
 
@@ -36,6 +39,7 @@ const viewMode = ref<'explore' | 'saved'>('explore')
 const bookmarkedCount = computed(() => insightsStore.bookmarkedInsights.length)
 
 function renderMarkdown(raw: string | undefined | null): string {
+  if (!raw) return ''
   const clean = raw.normalize('NFC').replace(/\\n/g, '\n').replace(/\\`/g, '`')
   return md.render(clean)
 }
@@ -61,87 +65,35 @@ const isGenerateModalOpen = ref(false)
 const customTopicInput = ref('')
 const activeCodeTab = ref<'solution' | 'problem'>('solution')
 
-
-const defaultTopics = [
-  'Kestrel Socket Pipeline',
-  'ArrayPool<T> Zero-Allocation',
-  'PostgreSQL Index-Only Scans',
-  'System.Threading.Channels',
-  'Transactional Outbox Pattern'
-]
-
-const currentSuggestedTopics = computed(() => {
-  const cat = insightsStore.selectedCategory
-  if (cat !== null && insightsStore.suggestedTopics[cat] && insightsStore.suggestedTopics[cat].length > 0) {
-    return insightsStore.suggestedTopics[cat]
-  }
-  return defaultTopics
-})
+const generationCategoryId = ref('')
+const generationCategory = computed(() => categoryStore.getCategoryById(generationCategoryId.value))
+const currentSuggestedTopics = computed(() => insightsStore.suggestedTopics[generationCategoryId.value] ?? [])
+const canGenerate = computed(() => !insightsStore.isGenerating && !categoryStore.error && !!generationCategory.value?.isActive && !!customTopicInput.value.trim())
+const categoryMessage = computed(() => categoryStore.error || !categoryStore.hasLoaded
+  ? t('categories.metadataUnavailable')
+  : !categoryStore.activeCategories.length
+    ? t('categories.noActiveCategories')
+    : t('categories.selectCategory'))
 
 function pickRandomTopic() {
   const topics = currentSuggestedTopics.value
-  const randomChoice = topics[Math.floor(Math.random() * topics.length)]
-  customTopicInput.value = randomChoice
+  const choice = topics[Math.floor(Math.random() * topics.length)]
+  if (choice) customTopicInput.value = choice
 }
 
-const computedCategories = computed(() => {
-  const list = [{ id: null as number | null, label: t('insights.all_categories') }]
-  if (insightsStore.categoryMetadata && insightsStore.categoryMetadata.length > 0) {
-    for (const cat of insightsStore.categoryMetadata) {
-      list.push({
-        id: cat.id,
-        label: locale.value === 'vi' ? cat.labelVi : cat.labelEn
-      })
-    }
-  } else {
-    list.push(
-      { id: 0, label: t('insights.cat_frontend') },
-      { id: 1, label: t('insights.cat_backend') },
-      { id: 2, label: t('insights.cat_database') },
-      { id: 3, label: t('insights.cat_system') },
-      { id: 4, label: t('insights.cat_craft') },
-      { id: 5, label: t('insights.cat_mental') },
-      { id: 6, label: t('insights.cat_habits') }
-    )
-  }
-  return list
-})
+function categoryLabel(category: CategoryDescriptor) {
+  const current = categoryStore.getCategoryById(category.id) ?? category
+  return `${categoryStore.getCategoryName(current, locale.value)} · ${current.slug}${current.isActive ? '' : ` · ${t('categories.inactive')}`}`
+}
 
-const modalPlaceholder = computed(() => {
-  switch (insightsStore.selectedCategory) {
-    case 0:
-    case 1:
-    case 2:
-    case 3:
-      return t('insights.generate_topic_placeholder_tech')
-    case 4:
-      return t('insights.generate_topic_placeholder_craft')
-    case 5:
-      return t('insights.generate_topic_placeholder_mental')
-    case 6:
-      return t('insights.generate_topic_placeholder_habits')
-    default:
-      return t('insights.generate_topic_placeholder')
-  }
-})
-
-const modalDescription = computed(() => {
-  switch (insightsStore.selectedCategory) {
-    case 0:
-    case 1:
-    case 2:
-    case 3:
-      return t('insights.generate_modal_desc_tech')
-    case 4:
-      return t('insights.generate_modal_desc_craft')
-    case 5:
-      return t('insights.generate_modal_desc_mental')
-    case 6:
-      return t('insights.generate_modal_desc_habits')
-    default:
-      return t('insights.generate_modal_desc')
-  }
-})
+const computedCategories = computed(() => [
+  { id: null as string | null, label: t('insights.all_categories') },
+  ...categoryStore.allCategories.map(category => ({ id: category.id, label: categoryLabel(category) }))
+])
+const generationCategoryOptions = computed(() => categoryStore.activeCategories
+  .map(category => ({ value: category.id, label: categoryLabel(category) })))
+const modalPlaceholder = computed(() => t('insights.generate_topic_placeholder'))
+const modalDescription = computed(() => t('insights.generate_modal_desc'))
 
 onMounted(async () => {
   if (!authStore.isLoggedIn) {
@@ -151,6 +103,7 @@ onMounted(async () => {
     })
   }
   await Promise.all([
+    categoryStore.ensureCategories(),
     insightsStore.fetchFeed(),
     insightsStore.fetchMetadata(),
     insightsStore.fetchBookmarkedInsights()
@@ -185,14 +138,14 @@ async function switchViewMode(mode: 'explore' | 'saved') {
       return
     }
     viewMode.value = 'saved'
-    await insightsStore.fetchFeed(insightsStore.selectedCategory, null, true)
+    await insightsStore.fetchFeed(insightsStore.selectedCategoryId, null, true)
   } else {
     viewMode.value = 'explore'
-    await insightsStore.fetchFeed(insightsStore.selectedCategory, null, false)
+    await insightsStore.fetchFeed(insightsStore.selectedCategoryId, null, false)
   }
 }
 
-async function handleCategorySelect(catId: number | null) {
+async function handleCategorySelect(catId: string | null) {
   const onlySaved = viewMode.value === 'saved'
   await insightsStore.fetchFeed(catId, null, onlySaved)
 }
@@ -217,9 +170,9 @@ async function handleToggleBookmark(id: string) {
 
 
 async function handleGenerateSubmit() {
-  if (insightsStore.isGenerating) return
+  if (!canGenerate.value) return
   try {
-    await insightsStore.generateWithAi(customTopicInput.value, locale.value)
+    await insightsStore.generateWithAi(generationCategoryId.value, customTopicInput.value.trim(), locale.value)
     toast.success(t('insights.toast_generate_success'))
     isGenerateModalOpen.value = false
     customTopicInput.value = ''
@@ -228,26 +181,10 @@ async function handleGenerateSubmit() {
   }
 }
 
-function getCategoryBadge(cat: number) {
-  const meta = computedCategories.value.find(c => c.id === cat)
-  const label = meta?.label || t('insights.all_categories')
-  switch (cat) {
-    case 0:
-      return { text: label, color: 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800' }
-    case 1:
-      return { text: label, color: 'bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800' }
-    case 2:
-      return { text: label, color: 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800' }
-    case 3:
-      return { text: label, color: 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' }
-    case 4:
-      return { text: label, color: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800' }
-    case 5:
-      return { text: label, color: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' }
-    case 6:
-      return { text: label, color: 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800' }
-    default:
-      return { text: label, color: 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-800' }
+function getCategoryBadge(category: CategoryDescriptor) {
+  return {
+    text: categoryLabel(category),
+    color: 'bg-brand-50 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300 border-brand-200 dark:border-brand-800'
   }
 }
 </script>
@@ -330,9 +267,10 @@ function getCategoryBadge(cat: number) {
                 v-for="cat in computedCategories"
                 :key="String(cat.id)"
                 @click="handleCategorySelect(cat.id)"
+                :aria-pressed="insightsStore.selectedCategoryId === cat.id"
                 :class="[
                   'px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-150 shrink-0 border whitespace-nowrap cursor-pointer',
-                  insightsStore.selectedCategory === cat.id
+                  insightsStore.selectedCategoryId === cat.id
                     ? 'bg-brand-600 text-white border-transparent shadow-sm shadow-brand-500/20'
                     : 'bg-white dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-canvas-elevated hover:border-slate-300 dark:hover:border-white/[0.16]'
                 ]"
@@ -340,6 +278,10 @@ function getCategoryBadge(cat: number) {
                 {{ cat.label }}
               </button>
             </div>
+      </div>
+      <div v-if="categoryStore.error" role="status" class="text-sm text-slate-600 dark:text-slate-300">
+        {{ $t('categories.metadataUnavailable') }}
+        <button type="button" class="underline font-semibold" @click="categoryStore.fetchCategories(true)">{{ $t('categories.retry') }}</button>
       </div>
 
       <!-- 3. Content Surface: Loading, Empty, or Active Insight Card -->
@@ -453,7 +395,6 @@ function getCategoryBadge(cat: number) {
         <div class="max-w-full">
           <CommonShikiCodeBlock
             :code="activeCodeTab === 'solution' ? (insightsStore.currentInsight.solutionSnippet || '') : (insightsStore.currentInsight.problemSnippet || '')"
-            :category="insightsStore.currentInsight.category"
             :tags="insightsStore.currentInsight.tags"
           >
             <template #left>
@@ -576,10 +517,28 @@ function getCategoryBadge(cat: number) {
           </div>
 
           <div class="flex-1 overflow-y-auto pr-1 space-y-4 min-h-0">
-            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-relaxed">
               {{ modalDescription }}
             </p>
 
+            <div class="space-y-2">
+              <label for="insight-generation-category-button" class="block text-sm sm:text-base font-semibold">{{ $t('categories.selectCategory') }}</label>
+              <AppSelect
+                id="insight-generation-category"
+                v-model="generationCategoryId"
+                :options="generationCategoryOptions"
+                :placeholder="$t('categories.selectCategory')"
+                :aria-label="$t('categories.selectCategory')"
+                required
+                :invalid="!!generationCategoryId && !generationCategory?.isActive"
+                :describedby="!canGenerate ? 'insight-category-help' : undefined"
+                :disabled="categoryStore.isLoading || !!categoryStore.error"
+                :teleport="false"
+                data-testid="insight-category-select"
+              />
+              <p v-if="!canGenerate" id="insight-category-help" role="status" class="text-sm">{{ categoryMessage }}</p>
+              <button v-if="categoryStore.error || !categoryStore.activeCategories.length" type="button" class="text-sm underline" @click="categoryStore.fetchCategories(true)">{{ $t('categories.retry') }}</button>
+            </div>
             <div class="space-y-3">
               <input
                 v-model="customTopicInput"
@@ -591,7 +550,7 @@ function getCategoryBadge(cat: number) {
               />
 
               <!-- Topic Inspiration Chips (Only populates input per Rule 11) -->
-              <div class="space-y-1.5 pt-1">
+              <div v-if="currentSuggestedTopics.length" class="space-y-1.5 pt-1">
                 <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span class="font-medium">{{ $t('insights.suggested_topics') }}</span>
                   <button
@@ -626,15 +585,16 @@ function getCategoryBadge(cat: number) {
           <div class="shrink-0 pt-4 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-end gap-3 mt-4">
             <button
               @click="isGenerateModalOpen = false"
-              class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors cursor-pointer"
+              class="px-4 py-2.5 rounded-xl text-sm sm:text-base font-bold whitespace-nowrap shrink-0 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-canvas-elevated transition-colors cursor-pointer"
             >
               {{ $t('insights.cancel') }}
             </button>
 
             <button
+              data-testid="generate-insight-submit"
               @click="handleGenerateSubmit"
-              :disabled="insightsStore.isGenerating"
-              class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md shadow-brand-500/20 disabled:opacity-50 transition-all cursor-pointer"
+              :disabled="!canGenerate"
+              class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm sm:text-base font-bold whitespace-nowrap shrink-0 shadow-md shadow-brand-500/20 disabled:opacity-50 transition-all cursor-pointer"
             >
               <div v-if="insightsStore.isGenerating" class="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
               <span>{{ insightsStore.isGenerating ? $t('insights.generating_btn') : $t('insights.generate_btn') }}</span>

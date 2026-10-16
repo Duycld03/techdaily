@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { beforeEach, describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import FlashcardHeroCard from '~/components/review/FlashcardHeroCard.vue'
 import MasteryGaugeCard from '~/components/review/MasteryGaugeCard.vue'
@@ -9,6 +9,9 @@ import AtRiskLeechCard from '~/components/review/AtRiskLeechCard.vue'
 import SourceChannelRetentionCard from '~/components/review/SourceChannelRetentionCard.vue'
 import EaseFactorDistributionCard from '~/components/review/EaseFactorDistributionCard.vue'
 import type { ReviewCard } from '~/stores/useReviewStore'
+import { createPinia, setActivePinia } from 'pinia'
+
+beforeEach(() => setActivePinia(createPinia()))
 
 describe('FlashcardHeroCard.vue', () => {
   it('displays due count and calculates dynamic study duration', () => {
@@ -126,7 +129,8 @@ describe('ReviewForecastChart.vue', () => {
       {
         id: '1',
         title: 'Topic 1',
-        category: 0,
+        categoryId: null,
+        category: null,
         difficulty: 1,
         frontMarkdown: 'Summary 1',
         backMarkdown: 'Deep dive 1',
@@ -139,7 +143,8 @@ describe('ReviewForecastChart.vue', () => {
       {
         id: '2',
         title: 'Topic 2',
-        category: 0,
+        categoryId: null,
+        category: null,
         difficulty: 1,
         frontMarkdown: 'Summary 2',
         backMarkdown: 'Deep dive 2',
@@ -267,7 +272,8 @@ describe('FlashcardBentoCard.vue', () => {
     id: 'bento-1',
     sourceType: 1, // Reading Highlight
     status: 1, // Reviewing
-    category: 1,
+    categoryId: null,
+    category: null,
     difficulty: 2,
     frontMarkdown: 'Explain how MVCC works in PostgreSQL.',
     backMarkdown: 'PostgreSQL uses xmin/xmax tuple headers to determine visibility.',

@@ -1,3 +1,4 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Admin.Documents.DTOs;
@@ -78,7 +79,8 @@ public class AdminGetDocumentDetailHandler : IUseCase<AdminGetDocumentDetailRequ
                 book.CreatedByUser?.Name,
                 book.CreatedByUser?.Email,
                 book.SourceType.ToString(),
-                book.Category.ToString(),
+                book.CategoryId,
+                book.Category!.ToDescriptor(),
                 book.DeclaredLanguage ?? "en",
                 book.Status.ToString(),
                 availability,
@@ -141,7 +143,8 @@ public class AdminGetDocumentDetailHandler : IUseCase<AdminGetDocumentDetailRequ
                 "System Curated",
                 null,
                 doc.SourceType.ToString(),
-                doc.Category.ToString(),
+                doc.CategoryId,
+                doc.Category!.ToDescriptor(),
                 doc.Language,
                 doc.ProcessingStatus.ToString(),
                 availability,

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import FlashcardDeck from '~/components/review/FlashcardDeck.vue'
 import Sm2GradingButtons from '~/components/review/Sm2GradingButtons.vue'
 import type { ReviewCard } from '~/stores/useReviewStore'
@@ -8,7 +9,16 @@ const mockCard: ReviewCard = {
   id: 'card-123',
   frontMarkdown: 'Why is separation of concerns critical for maintainability?',
   backMarkdown: 'Separation of concerns isolates responsibilities, preventing cascading changes across architectural boundaries.',
-  category: 1, // BackendRuntime
+  categoryId: 'cd777185-538f-48ba-b1bd-55cc9b91e2f2',
+  category: {
+    id: 'cd777185-538f-48ba-b1bd-55cc9b91e2f2',
+    slug: 'service-architecture',
+    nameEn: 'Service Architecture',
+    nameVi: 'Kiến trúc dịch vụ',
+    sortOrder: 8,
+    isActive: true,
+    version: 1
+  },
   difficulty: 2, // Senior
   repetitionCount: 3,
   easeFactor: 2.5,
@@ -20,6 +30,7 @@ const mockCard: ReviewCard = {
 describe('FlashcardDeck.vue', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    setActivePinia(createPinia())
   })
 
   it('renders front face with question and metadata, completely hiding answer summary (Zero Leakage)', () => {
@@ -32,7 +43,7 @@ describe('FlashcardDeck.vue', () => {
 
     // Question prompt is visible
     expect(wrapper.text()).toContain('Why is separation of concerns critical for maintainability?')
-    expect(wrapper.text()).toContain('Backend Runtime')
+    expect(wrapper.text()).toContain('Service Architecture')
     expect(wrapper.text()).toContain('Senior')
     expect(wrapper.text()).toContain('Repetition #3')
     expect(wrapper.text()).toContain('EF: 2.50 • 6d')

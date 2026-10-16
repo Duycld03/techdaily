@@ -13,8 +13,8 @@ public class UpdateBookValidator : AbstractValidator<UpdateBookRequest>
         RuleFor(x => x.AuthorOrSourceUrl)
             .MaximumLength(500).WithMessage("Author or source URL cannot exceed 500 characters.");
 
-        RuleFor(x => x.Category)
-            .IsInEnum().WithMessage("Category must be a valid DeepPace domain category.");
+        RuleFor(x => x.CategoryId)
+            .NotEmpty().WithMessage("Category ID is required.");
 
         RuleFor(x => x.Language)
             .Must(l => string.IsNullOrWhiteSpace(l) || l == "en" || l == "vi")

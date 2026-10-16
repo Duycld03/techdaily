@@ -1,3 +1,5 @@
+using DeepPace.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Catalog.DTOs;
@@ -8,7 +10,7 @@ namespace DeepPace.Application.Features.Catalog.Learner.GetDocuments;
 
 public record GetPublishedCatalogDocumentsRequest(
     string? Search = null,
-    Category? Category = null,
+    Guid? CategoryId = null,
     string? Language = null,
     SourceType? SourceType = null,
     int Page = 1,
@@ -39,6 +41,7 @@ public class GetPublishedCatalogDocumentsHandler : IUseCase<GetPublishedCatalogD
 
         var query = _dbContext.CatalogDocuments
             .AsNoTracking()
+            .Include(d => d.Category)
             .Where(d => d.Visibility == CatalogVisibility.Published && !d.IsDeleted);
 
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -47,9 +50,9 @@ public class GetPublishedCatalogDocumentsHandler : IUseCase<GetPublishedCatalogD
             query = query.Where(d => d.Title.ToLower().Contains(search) || d.Description.ToLower().Contains(search));
         }
 
-        if (request.Category.HasValue)
+        if (request.CategoryId.HasValue)
         {
-            query = query.Where(d => d.Category == request.Category.Value);
+            query = query.Where(d => d.CategoryId == request.CategoryId.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(request.Language))

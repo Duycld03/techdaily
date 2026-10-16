@@ -26,11 +26,13 @@ public static class ResultHttpExtensions
         {
             return StatusCodes.Status401Unauthorized;
         }
-        if (code == "FORBIDDEN" || code == "AUTH_FORBIDDEN" || code == "AUTH_ACCOUNT_SUSPENDED")
+        if (code == "FORBIDDEN" || code == "AUTH_FORBIDDEN" || code == "AUTH_ACCOUNT_SUSPENDED" || code == "LIBRARY_FORBIDDEN")
         {
             return StatusCodes.Status403Forbidden;
         }
         if (code == "CONFLICT" || code == "AUTH_EMAIL_EXISTS"
+            || code == "Category.Inactive"
+            || code == "Category.InUse"
             || code.Contains("Conflict", StringComparison.OrdinalIgnoreCase)
             || code.Contains("Ineligible", StringComparison.OrdinalIgnoreCase)
             || code.Contains("Stale", StringComparison.OrdinalIgnoreCase)
@@ -43,6 +45,10 @@ public static class ResultHttpExtensions
             || code.Contains("PublishedImmutable", StringComparison.OrdinalIgnoreCase))
         {
             return StatusCodes.Status409Conflict;
+        }
+        if (code == "AUDIT_PERSISTENCE_UNAVAILABLE" || code.EndsWith("Unavailable", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCodes.Status503ServiceUnavailable;
         }
         if (code == "AUTH_OTP_RESEND_COOLDOWN" || code == "AudioQuotaExhausted")
         {
@@ -78,6 +84,7 @@ public static class ResultHttpExtensions
         StatusCodes.Status404NotFound => "Not Found",
         StatusCodes.Status409Conflict => "Conflict",
         StatusCodes.Status429TooManyRequests => "Too Many Requests",
+        StatusCodes.Status503ServiceUnavailable => "Service Unavailable",
         _ => "Error",
     };
 }

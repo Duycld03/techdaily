@@ -18,11 +18,21 @@ import {
   FileText
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore, type GraphNode } from '~/stores/useKnowledgeGraphStore'
+import { useCategoryStore } from '~/stores/useCategoryStore'
+import { getCategoryPalette } from '~/utils/graphVisualTokens'
 
 const store = useKnowledgeGraphStore()
+const categoryStore = useCategoryStore()
+const { locale } = useI18n()
 
 const node = computed<GraphNode | null>(() => store.selectedNode)
 const isOpen = computed<boolean>(() => !!node.value)
+
+const categoryDescriptor = computed(() =>
+  categoryStore.getCategoryById(node.value?.categoryId) ?? node.value?.category
+)
+const categoryDisplayName = computed(() => categoryStore.getCategoryName(categoryDescriptor.value, locale.value))
+const categoryColor = computed(() => getCategoryPalette(node.value?.categoryId))
 
 function close() {
   store.selectNode(null)
@@ -101,9 +111,9 @@ const highlightNotesRoute = computed(() => {
 const connectedChunksCount = computed(() => {
   if (!node.value || nodeType.value !== 'pillar') return 0
   const nodeId = node.value.id
-  if (node.value.category && store.rawData?.nodes) {
+  if (node.value.categoryId && store.rawData?.nodes) {
     return store.rawData.nodes.filter(
-      (n) => n.id !== nodeId && n.type?.toLowerCase() === 'chunk' && n.category?.toLowerCase() === node.value?.category?.toLowerCase()
+      (n) => n.id !== nodeId && n.type?.toLowerCase() === 'chunk' && n.categoryId === node.value?.categoryId
     ).length
   }
   return 0
@@ -120,17 +130,17 @@ const connectedBooksCount = computed(() => {
   ).length
   if (edgeCount > 0) return edgeCount
 
-  if (node.value.category && store.rawData?.nodes) {
+  if (node.value.categoryId && store.rawData?.nodes) {
     return store.rawData.nodes.filter(
-      (n) => n.id !== nodeId && n.type?.toLowerCase() === 'book' && n.category?.toLowerCase() === node.value?.category?.toLowerCase()
+      (n) => n.id !== nodeId && n.type?.toLowerCase() === 'book' && n.categoryId === node.value?.categoryId
     ).length
   }
   return 0
 })
 
 function filterToThisPillar() {
-  if (node.value?.category) {
-    store.setCategory(node.value.category)
+  if (node.value?.categoryId) {
+    store.setCategoryId(node.value.categoryId)
   }
   close()
 }
@@ -145,26 +155,6 @@ const formattedNextReview = computed(() => {
   return `In ~${weeks} ${weeks === 1 ? 'week' : 'weeks'}`
 })
 
-// Category badge color
-function getCategoryBadgeClass(category?: string | null): string {
-  const cat = category?.toLowerCase() || ''
-  if (cat.includes('dotnet') || cat.includes('backend')) {
-    return 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20'
-  }
-  if (cat.includes('postgres') || cat.includes('database') || cat.includes('storage')) {
-    return 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20'
-  }
-  if (cat.includes('system') || cat.includes('distributed')) {
-    return 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20'
-  }
-  if (cat.includes('frontend') || cat.includes('web')) {
-    return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-  }
-  if (cat.includes('craft')) {
-    return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-  }
-  return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
-}
 
 // Mastery badge class
 function getMasteryBadgeClass(status?: string | null): string {
@@ -225,15 +215,20 @@ function getMasteryBadgeClass(status?: string | null): string {
 
           <!-- Category Badge -->
           <span
-            v-if="node?.category"
-            :class="[
-              'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap shrink-0',
-              getCategoryBadgeClass(node.category)
-            ]"
+            v-if="categoryDisplayName"
+            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap shrink-0"
+            :style="{ color: categoryColor.fill, borderColor: categoryColor.border }"
           >
-            {{ node.category }}
+            {{ categoryDisplayName }}
           </span>
 
+          <!-- Inactive Category Status Badge -->
+          <span
+            v-if="categoryDescriptor && !categoryDescriptor.isActive"
+            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap shrink-0"
+          >
+            {{ $t('categories.inactive') }}
+          </span>
           <!-- Difficulty Badge (Topic) -->
           <span
             v-if="node?.difficulty"
@@ -273,7 +268,7 @@ function getMasteryBadgeClass(status?: string | null): string {
             id="drawer-node-title"
             class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug break-words"
           >
-            {{ node?.label }}
+            {{ node ? store.getNodeLabel(node, locale) : '' }}
           </h3>
           <p
             v-if="node?.subtitle"
@@ -281,6 +276,17 @@ function getMasteryBadgeClass(status?: string | null): string {
           >
             {{ node.subtitle }}
           </p>
+        </div>
+        <!-- Category Metadata (Slug & Status) -->
+        <div v-if="categoryDescriptor" class="p-3 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] text-xs space-y-1">
+          <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+            <span>Slug:</span>
+            <span class="font-mono font-medium text-slate-700 dark:text-slate-300">{{ categoryDescriptor.slug }}</span>
+          </div>
+          <div v-if="!categoryDescriptor.isActive" class="flex items-center justify-between text-amber-600 dark:text-amber-400 font-semibold">
+            <span>Status:</span>
+            <span>{{ $t('categories.inactive') }}</span>
+          </div>
         </div>
 
         <!-- Pillar Section: Domain Summary & Metrics -->

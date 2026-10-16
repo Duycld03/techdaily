@@ -11,6 +11,7 @@ using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 using DeepPace.Infrastructure.Persistence;
+using DeepPace.Infrastructure.Services;
 using Xunit;
 
 namespace DeepPace.Tests.Application;
@@ -61,8 +62,8 @@ public class InterviewQuizTests : IDisposable
     {
         // Arrange
         var user = await CreateTestUserAsync();
-        var handler = new GenerateQuizHandler(_db, _fakeGenerator, new GenerateQuizValidator());
-        var request = new GenerateQuizRequest(user.Id, ".NET Memory", Category.BackendRuntime, QuizLevel.Senior, 5);
+        var handler = new GenerateQuizHandler(_db, _fakeGenerator, new GenerateQuizValidator(), new CategoryAssignmentGuard(_db));
+        var request = new GenerateQuizRequest(user.Id, ".NET Memory", CategoryDefaults.BackendRuntimeId, QuizLevel.Senior, 5);
 
         // Act
         var result = await handler.ExecuteAsync(request);
@@ -86,7 +87,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "postgresql mvcc",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Level = QuizLevel.Middle,
             QuestionText = "Attempted Failed Question 1",
             Options = new() { "A", "B", "C", "D" },
@@ -97,7 +98,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "postgresql mvcc",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Level = QuizLevel.Middle,
             QuestionText = "Unattempted Question 2",
             Options = new() { "A", "B", "C", "D" },
@@ -115,8 +116,8 @@ public class InterviewQuizTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var handler = new GenerateQuizHandler(_db, _fakeGenerator, new GenerateQuizValidator());
-        var request = new GenerateQuizRequest(user.Id, "PostgreSQL MVCC", Category.DatabaseStorage, QuizLevel.Middle, 1);
+        var handler = new GenerateQuizHandler(_db, _fakeGenerator, new GenerateQuizValidator(), new CategoryAssignmentGuard(_db));
+        var request = new GenerateQuizRequest(user.Id, "PostgreSQL MVCC", CategoryDefaults.DatabaseStorageId, QuizLevel.Middle, 1);
 
         // Act
         var result = await handler.ExecuteAsync(request);
@@ -136,7 +137,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "c#",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Level = QuizLevel.Junior,
             QuestionText = "Old Question 1",
             Options = new() { "A", "B", "C", "D" },
@@ -154,8 +155,8 @@ public class InterviewQuizTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var handler = new GenerateQuizHandler(_db, _fakeGenerator, new GenerateQuizValidator());
-        var request = new GenerateQuizRequest(user.Id, "về c#", Category.BackendRuntime, QuizLevel.Junior, 1);
+        var handler = new GenerateQuizHandler(_db, _fakeGenerator, new GenerateQuizValidator(), new CategoryAssignmentGuard(_db));
+        var request = new GenerateQuizRequest(user.Id, "về c#", CategoryDefaults.BackendRuntimeId, QuizLevel.Junior, 1);
 
         // Act
         var result = await handler.ExecuteAsync(request);
@@ -186,7 +187,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "postgresql mvcc",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Level = QuizLevel.Middle,
             QuestionText = "Mastered Question 1",
             Options = new() { "A", "B", "C", "D" },
@@ -197,7 +198,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "postgresql mvcc",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Level = QuizLevel.Middle,
             QuestionText = "Unmastered Question 2",
             Options = new() { "A", "B", "C", "D" },
@@ -215,8 +216,8 @@ public class InterviewQuizTests : IDisposable
         });
         await _db.SaveChangesAsync();
 
-        var handler = new GenerateQuizHandler(_db, _fakeGenerator, new GenerateQuizValidator());
-        var request = new GenerateQuizRequest(user.Id, "PostgreSQL MVCC", Category.DatabaseStorage, QuizLevel.Middle, 1);
+        var handler = new GenerateQuizHandler(_db, _fakeGenerator, new GenerateQuizValidator(), new CategoryAssignmentGuard(_db));
+        var request = new GenerateQuizRequest(user.Id, "PostgreSQL MVCC", CategoryDefaults.DatabaseStorageId, QuizLevel.Middle, 1);
 
         // Act
         var result = await handler.ExecuteAsync(request);
@@ -236,7 +237,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "c#",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Level = QuizLevel.Junior,
             QuestionText = "Prior Attempted Question",
             Options = new() { "Option A", "Option B", "Option C", "Option D" },
@@ -259,8 +260,8 @@ public class InterviewQuizTests : IDisposable
 
         // Simulate fallback fill returning the existing question
         var emptyGenerator = new FakeQuizGeneratorService(new List<QuizQuestion>());
-        var handler = new GenerateQuizHandler(_db, emptyGenerator, new GenerateQuizValidator());
-        var request = new GenerateQuizRequest(user.Id, "c#", Category.BackendRuntime, QuizLevel.Junior, 1);
+        var handler = new GenerateQuizHandler(_db, emptyGenerator, new GenerateQuizValidator(), new CategoryAssignmentGuard(_db));
+        var request = new GenerateQuizRequest(user.Id, "c#", CategoryDefaults.BackendRuntimeId, QuizLevel.Junior, 1);
 
         // Act
         var result = await handler.ExecuteAsync(request);
@@ -283,7 +284,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "React Concurrency",
-            Category = Category.FrontendWeb,
+            CategoryId = CategoryDefaults.FrontendWebId,
             Level = QuizLevel.Senior,
             QuestionText = "How does useTransition prioritize updates?",
             Options = new() { "Low priority", "Immediate blocking", "Sync only", "Never" },
@@ -319,7 +320,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "Distributed Systems",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             Level = QuizLevel.Senior,
             QuestionText = "What guarantees linearizability in Raft?",
             Options = new() { "Follower reads", "Leader log append quorum", "Eventual gossip", "Random election" },
@@ -355,7 +356,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "C# GC",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Level = QuizLevel.Senior,
             QuestionText = "GC question 1",
             Options = new() { "A", "B", "C", "D" },
@@ -366,7 +367,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "C# GC",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Level = QuizLevel.Senior,
             QuestionText = "GC question 2",
             Options = new() { "A", "B", "C", "D" },
@@ -404,7 +405,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "PostgreSQL",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Level = QuizLevel.Senior,
             QuestionText = "Q1",
             Options = new() { "A", "B", "C", "D" },
@@ -415,7 +416,7 @@ public class InterviewQuizTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "PostgreSQL",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Level = QuizLevel.Senior,
             QuestionText = "Q2",
             Options = new() { "A", "B", "C", "D" },
@@ -490,7 +491,7 @@ public class InterviewQuizTests : IDisposable
         var service = new DeepPace.Infrastructure.Services.GeminiAiService(httpClient, fakeConfig, logger);
 
         // Act
-        var result = await service.GenerateQuestionsAsync("asp.net", Category.BackendRuntime, QuizLevel.Junior, 1, new());
+        var result = await service.GenerateQuestionsAsync("asp.net", CategoryDefaults.BackendRuntimeId, QuizLevel.Junior, 1, new());
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -534,7 +535,7 @@ public class InterviewQuizTests : IDisposable
 
         public Task<Result<List<QuizQuestion>>> GenerateQuestionsAsync(
             string topic,
-            Category category,
+            Guid categoryId,
             QuizLevel level,
             int count,
             List<string> existingTitlesToAvoid,
@@ -553,7 +554,7 @@ public class InterviewQuizTests : IDisposable
                 {
                     Id = Guid.NewGuid(),
                     Topic = topic,
-                    Category = category,
+                    CategoryId = categoryId,
                     Level = level,
                     QuestionText = $"Generated Question {i} for {topic}",
                     Options = new() { "Option A", "Option B", "Option C", "Option D" },

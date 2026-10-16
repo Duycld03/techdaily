@@ -4,6 +4,7 @@ using DeepPace.Application.Common;
 using DeepPace.Application.Features.InterviewQuiz.DTOs;
 using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Enums;
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 
 namespace DeepPace.Application.Features.InterviewQuiz.GetQuizStats;
 
@@ -34,6 +35,7 @@ public class GetQuizStatsHandler : IUseCase<GetQuizStatsRequest, GetQuizStatsRes
         var progresses = await _dbContext.UserQuizProgresses
             .AsNoTracking()
             .Include(p => p.Question)
+            .ThenInclude(q => q.Category)
             .Where(p => p.UserId == request.UserId && !p.Question.IsDeleted)
             .ToListAsync(cancellationToken);
 
@@ -75,13 +77,29 @@ public class GetQuizStatsHandler : IUseCase<GetQuizStatsRequest, GetQuizStatsRes
             .Take(10)
             .ToList();
 
+        var categoryBreakdown = progresses
+            .GroupBy(p => p.Question.CategoryId)
+            .Select(g =>
+            {
+                var attempts = g.Sum(p => p.CorrectCount + p.IncorrectCount);
+                var correct = g.Sum(p => p.CorrectCount);
+                return new CategoryStatDto(
+                    g.Key, g.First().Question.Category!.ToDescriptor(), g.Count(),
+                    g.Count(p => p.IsMastered),
+                    attempts > 0 ? Math.Round((decimal)correct / attempts * 100, 1) : 0m);
+            })
+            .OrderBy(c => c.Category.SortOrder)
+            .ThenBy(c => c.Category.Slug)
+            .ToList();
+
         return new GetQuizStatsResponse(
             totalAnswered,
             masteredCount,
             reviewQueueCount,
             accuracyRate,
             levelBreakdown,
-            topicBreakdown
+            topicBreakdown,
+            categoryBreakdown
         );
     }
 }

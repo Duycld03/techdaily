@@ -185,8 +185,7 @@ export function formatLanguageLabel(lang: string): string {
 export function detectCodeLanguage(
   code: string,
   fallbackLang?: string,
-  tags?: string[],
-  category?: number
+  tags?: string[]
 ): string {
   const normalizedFallback = normalizeLanguage(fallbackLang)
   if (
@@ -313,13 +312,8 @@ export function detectCodeLanguage(
     return 'bash'
   }
 
-  // 11. Category Fallback (0: FrontendWeb, 1: BackendRuntime, 2: DatabaseStorage, 3: SystemDesign)
-  if (category === 0) return 'typescript'
-  if (category === 1) return 'csharp'
-  if (category === 2) return 'sql'
-  if (category === 3) return 'csharp'
-
-  return 'csharp'
+  // Language follows source content or plaintext; never guess from category
+  return 'text'
 }
 
 export async function highlightCode(

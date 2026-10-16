@@ -51,7 +51,7 @@ public class GetHighlightsHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Designing Data-Intensive Applications",
             Slug = $"ddia-{Guid.NewGuid():N}",
-            Category = Category.DatabaseStorage
+            CategoryId = CategoryDefaults.DatabaseStorageId
         };
         await _db.DocumentBooks.AddAsync(book);
 

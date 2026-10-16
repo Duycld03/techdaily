@@ -38,11 +38,13 @@ export interface AdminCapabilityFlags {
   canReadAudit?: boolean
   canManageDocumentOperations?: boolean
   canManageRoles?: boolean
+  canManageCategories?: boolean
 }
 
 export function getFirstAccessibleAdminRoute(capabilities?: AdminCapabilityFlags | null): string {
   if (capabilities?.canViewAdminDashboard) return '/admin/dashboard'
   if (capabilities?.canManageCatalog) return '/admin/catalog'
+  if (capabilities?.canManageCategories) return '/admin/categories'
   if (capabilities?.canManageAccounts) return '/admin/users'
   if (capabilities?.canManageDocumentOperations) return '/admin/documents'
   if (capabilities?.canReadAudit) return '/admin/audit'
@@ -57,6 +59,9 @@ export function canAccessAdminDestination(path: string, capabilities?: AdminCapa
   }
   if (norm === '/admin/catalog' || norm.startsWith('/admin/catalog/')) {
     return Boolean(capabilities.canManageCatalog)
+  }
+  if (norm === '/admin/categories' || norm.startsWith('/admin/categories/')) {
+    return Boolean(capabilities.canManageCategories)
   }
   if (norm === '/admin/users' || norm.startsWith('/admin/users/')) {
     return Boolean(capabilities.canManageAccounts)

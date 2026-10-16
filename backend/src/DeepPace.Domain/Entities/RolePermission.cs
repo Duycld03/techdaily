@@ -9,7 +9,8 @@ public class RolePermission
         PermissionKeys.ManageAccounts,
         PermissionKeys.ReadAudit,
         PermissionKeys.ManageDocumentOperations,
-        PermissionKeys.ManageRoles
+        PermissionKeys.ManageRoles,
+        PermissionKeys.ManageCategories
     };
 
     public Guid RoleId { get; set; }

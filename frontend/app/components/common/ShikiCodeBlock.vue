@@ -12,7 +12,6 @@ const props = withDefaults(
   defineProps<{
     code: string;
     language?: string;
-    category?: number;
     tags?: string[];
   }>(),
   {
@@ -29,7 +28,6 @@ const detectedLanguage = computed(() => {
     normalizedCode.value,
     props.language,
     props.tags,
-    props.category,
   );
 });
 

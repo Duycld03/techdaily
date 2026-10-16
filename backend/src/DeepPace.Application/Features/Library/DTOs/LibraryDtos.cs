@@ -1,3 +1,4 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Features.Library.DTOs;
@@ -8,7 +9,8 @@ public class BookDto
     public string Title { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public SourceType SourceType { get; set; }
-    public Category Category { get; set; }
+    public Guid CategoryId { get; set; }
+    public CategoryDescriptorDto Category { get; set; } = null!;
     public string? AuthorOrSourceUrl { get; set; }
     public int TotalChunks { get; set; }
     public bool IsPublished { get; set; }
@@ -37,7 +39,8 @@ public class BookDetailDto
     public string Title { get; set; } = string.Empty;
     public string Slug { get; set; } = string.Empty;
     public SourceType SourceType { get; set; }
-    public Category Category { get; set; }
+    public Guid CategoryId { get; set; }
+    public CategoryDescriptorDto Category { get; set; } = null!;
     public string? AuthorOrSourceUrl { get; set; }
     public int TotalChunks { get; set; }
     public bool IsFeatured { get; set; }

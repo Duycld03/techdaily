@@ -211,7 +211,7 @@ public class DailyPushNotificationWorkerTests : IDisposable
                 Title = "Kafka Internals",
                 Slug = "kafka-internals",
                 SourceType = SourceType.MarkdownSeries,
-                Category = Category.SystemDesign,
+                CategoryId = CategoryDefaults.SystemDesignId,
                 TotalChunks = 1,
                 Status = ProcessingStatus.Ready
             };

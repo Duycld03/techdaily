@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Pencil, RotateCcw, Trash2 } from 'lucide-vue-next'
 import type { ReviewCard } from '~/stores/useReviewStore'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 
 const props = defineProps<{
   card: ReviewCard
@@ -15,6 +16,13 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { locale } = useI18n()
+const categoryStore = useCategoryStore()
+const categoryLabel = computed(() =>
+  categoryStore.getCategoryName(props.card.categoryId, locale.value) ||
+  categoryStore.getCategoryName(props.card.category, locale.value) ||
+  t('review.unclassified')
+)
 const { render: renderMarkdown, isHighlighterReady } = useMarkdownRenderer()
 
 const isDueToday = computed(() => {
@@ -60,13 +68,16 @@ const plainAnswer = computed(() => {
 const sourceLabel = computed(() => {
   switch (props.card.sourceType) {
     case 1:
+    case 'Highlight':
       return t('review.source_highlight')
     case 2:
+    case 'QuizMistake':
       return t('review.source_quiz_mistake')
     case 3:
+    case 'DocumentChunk':
       return t('review.source_chunk')
     default:
-      return t('review.source_chunk')
+      return t('review.unclassified')
   }
 })
 </script>
@@ -118,6 +129,7 @@ const sourceLabel = computed(() => {
           </button>
         </div>
       </div>
+      <span class="text-xs font-semibold text-brand-600 dark:text-brand-400">{{ categoryLabel }}</span>
 
       <!-- Middle Body: Question & Answer preview -->
       <h4

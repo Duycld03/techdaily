@@ -6,6 +6,7 @@ import {
   useKnowledgeGraphStore,
   type KnowledgeGraphResponse
 } from '~/stores/useKnowledgeGraphStore'
+import { graphCategory, otherGraphCategory } from '../fixtures/graphCategories'
 
 // The store's fetchGraph early-returns when rawData is already set, so the API is not hit;
 // the mock is a safety net against accidental network access.
@@ -74,7 +75,8 @@ describe('pages/graph.vue empty states', () => {
           id: 'topic_1',
           label: 'Async I/O',
           type: 'topic',
-          category: 'BackendRuntime'
+          categoryId: graphCategory.id,
+          category: graphCategory
         }
       ],
       edges: [],
@@ -82,12 +84,12 @@ describe('pages/graph.vue empty states', () => {
         totalNodes: 1,
         totalEdges: 0,
         nodeTypeCounts: { topic: 1 },
-        pillarCounts: { BackendRuntime: 1 },
+        pillarCounts: { [graphCategory.id]: 1 },
         masteredCardsCount: 0
       }
     }
     // Filter to a category the node does not belong to, hiding every node.
-    store.setCategory('FrontendWeb')
+    store.setCategoryId(otherGraphCategory.id)
 
     const wrapper = mountGraph()
     await flushPromises()

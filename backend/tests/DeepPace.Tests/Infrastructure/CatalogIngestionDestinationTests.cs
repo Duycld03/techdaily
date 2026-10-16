@@ -51,7 +51,7 @@ public class CatalogIngestionDestinationTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Catalog Test Doc",
             Description = "Catalog Doc Description",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             SourceType = SourceType.PdfBook,
             Language = "en",
             AttributionText = "Source Attribution",
@@ -107,7 +107,7 @@ public class CatalogIngestionDestinationTests : IDisposable
             doc.Id,
             tempPdfPath,
             doc.Title,
-            doc.Category,
+            doc.CategoryId,
             doc.Language,
             IngestionDestinationType.CatalogDocument,
             Generation: 1), cts.Token);
@@ -176,7 +176,7 @@ public class CatalogIngestionDestinationTests : IDisposable
             doc.Id,
             tempPdfPath,
             doc.Title,
-            doc.Category,
+            doc.CategoryId,
             doc.Language,
             IngestionDestinationType.CatalogDocument,
             Generation: 1), cts.Token);
@@ -223,7 +223,7 @@ public class CatalogIngestionDestinationTests : IDisposable
             doc.Id,
             missingFilePath,
             doc.Title,
-            doc.Category,
+            doc.CategoryId,
             doc.Language,
             IngestionDestinationType.CatalogDocument,
             Generation: 1), cts.Token);
@@ -290,7 +290,7 @@ public class CatalogIngestionDestinationTests : IDisposable
             doc.Id,
             tempPdfPath,
             doc.Title,
-            doc.Category,
+            doc.CategoryId,
             doc.Language,
             IngestionDestinationType.CatalogDocument,
             Generation: 1), cts.Token);
@@ -373,7 +373,7 @@ public class CatalogIngestionDestinationTests : IDisposable
             doc.Id,
             tempPdfPath,
             doc.Title,
-            doc.Category,
+            doc.CategoryId,
             doc.Language,
             IngestionDestinationType.CatalogDocument,
             Generation: 2), cts.Token);
@@ -503,7 +503,7 @@ public class CatalogIngestionDestinationTests : IDisposable
             doc.Id,
             tempPdfPath,
             doc.Title,
-            doc.Category,
+            doc.CategoryId,
             doc.Language,
             IngestionDestinationType.CatalogDocument,
             Generation: 2), cts.Token);
@@ -552,7 +552,6 @@ public class CatalogIngestionDestinationTests : IDisposable
             string rawText,
             string chapterTitle,
             string language = "en",
-            Category? category = null,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Result<AiFormattedSliceResult>.Success(new AiFormattedSliceResult(
@@ -570,7 +569,6 @@ public class CatalogIngestionDestinationTests : IDisposable
             string rawText,
             string chapterTitle,
             string language = "en",
-            Category? category = null,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Result<AiFormattedSliceResult>.Failure(

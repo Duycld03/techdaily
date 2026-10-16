@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Domain.Entities;
-using DeepPace.Domain.Enums;
 
 namespace DeepPace.Infrastructure.Persistence.Seeders;
 
@@ -43,7 +42,7 @@ public static class TechInsightsSeeder
                     Id = Guid.NewGuid(),
                     Slug = item.Slug,
                     Title = item.Title,
-                    Category = (Category)item.Category,
+                    CategoryId = ResolveCategoryUuid(item.Category),
                     Tags = item.Tags ?? new List<string>(),
                     SummaryMarkdown = item.SummaryMarkdown,
                     ProblemSnippet = item.ProblemSnippet,
@@ -58,25 +57,22 @@ public static class TechInsightsSeeder
                 };
                 await context.TechInsights.AddAsync(insight);
             }
-            else
-            {
-                existing.Title = item.Title;
-                existing.Category = (Category)item.Category;
-                existing.Tags = item.Tags ?? new List<string>();
-                existing.SummaryMarkdown = item.SummaryMarkdown;
-                existing.ProblemSnippet = item.ProblemSnippet;
-                existing.SolutionSnippet = item.SolutionSnippet;
-                existing.UnderTheHoodMarkdown = item.UnderTheHoodMarkdown;
-                existing.BenchmarkStats = item.BenchmarkStats;
-                existing.SourceUrl = item.SourceUrl;
-                existing.IsPublished = true;
-                existing.IsDeleted = false;
-                existing.UpdatedAt = DateTime.UtcNow;
-            }
         }
 
         await context.SaveChangesAsync();
     }
+
+    private static Guid ResolveCategoryUuid(int legacyCategoryOrdinal) => legacyCategoryOrdinal switch
+    {
+        0 => CategoryDefaults.FrontendWebId,
+        1 => CategoryDefaults.BackendRuntimeId,
+        2 => CategoryDefaults.DatabaseStorageId,
+        3 => CategoryDefaults.SystemDesignId,
+        4 => CategoryDefaults.EngineeringCraftId,
+        5 => CategoryDefaults.MentalModelsId,
+        6 => CategoryDefaults.HabitsProductivityId,
+        _ => throw new InvalidDataException($"Unknown legacy category ordinal: {legacyCategoryOrdinal}.")
+    };
 
     private static List<InsightSeedItem> LoadSeedItems()
     {

@@ -1,219 +1,148 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 using DeepPace.Application.Features.InterviewQuiz.DTOs;
 using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
-using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Features.InterviewQuiz.GenerateQuiz;
 
-public class GenerateQuizHandler : IUseCase<GenerateQuizRequest, GenerateQuizResponse>
+public class GenerateQuizHandler(
+    IDeepPaceDbContext dbContext,
+    IQuizGeneratorService quizGenerator,
+    IValidator<GenerateQuizRequest> validator,
+    ICategoryAssignmentGuard categoryGuard) : IUseCase<GenerateQuizRequest, GenerateQuizResponse>
 {
-    private readonly IDeepPaceDbContext _dbContext;
-    private readonly IQuizGeneratorService _quizGenerator;
-    private readonly IValidator<GenerateQuizRequest> _validator;
-
-    public GenerateQuizHandler(
-        IDeepPaceDbContext dbContext,
-        IQuizGeneratorService quizGenerator,
-        IValidator<GenerateQuizRequest> validator)
-    {
-        _dbContext = dbContext;
-        _quizGenerator = quizGenerator;
-        _validator = validator;
-    }
-
     public async Task<Result<GenerateQuizResponse>> ExecuteAsync(
         GenerateQuizRequest request,
         CancellationToken cancellationToken = default)
     {
-        var validationResult = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validationResult.IsValid)
-        {
-            var errors = string.Join("; ", validationResult.Errors.Select(e => e.ErrorMessage));
-            return new Error("Error.Validation", errors);
-        }
+        var validation = await validator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+            return new Error("Error.Validation", string.Join("; ", validation.Errors.Select(e => e.ErrorMessage)));
 
         var normalizedTopic = NormalizeTopic(request.Topic);
-        var category = request.Category ?? InferCategoryFromTopic(normalizedTopic);
-
+        Guid categoryId;
         if (request.BookId.HasValue)
         {
-            var book = await _dbContext.DocumentBooks
-                .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.Id == request.BookId.Value, cancellationToken);
-            if (book == null || (book.CreatedByUserId != null && book.CreatedByUserId != request.UserId))
-            {
-                return Error.Custom("Quiz.Forbidden", "Access to this book is not permitted.");
-            }
-
-            category = request.Category ?? book.Category;
+            var book = await dbContext.DocumentBooks.AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Id == request.BookId && !b.IsDeleted && b.CreatedByUserId == request.UserId, cancellationToken);
+            if (book == null) return Error.Custom("LIBRARY_FORBIDDEN", "Access to this book is not permitted.");
+            if (request.CategoryId.HasValue && request.CategoryId != book.CategoryId)
+                return Error.Custom("Category.ValidationFailed", "The selected category must match the source book.");
+            categoryId = book.CategoryId;
             if (request.IsGrounded && !normalizedTopic.Contains(book.Title, StringComparison.OrdinalIgnoreCase))
-            {
                 normalizedTopic = $"{book.Title}: {normalizedTopic}";
-            }
         }
-
-        // 1. Fetch IDs of questions already attempted by this user (to prevent repeating completed/attempted questions)
-        var attemptedQuestionIds = await _dbContext.UserQuizProgresses
-            .AsNoTracking()
-            .Where(p => p.UserId == request.UserId)
-            .Select(p => p.QuestionId)
-            .ToListAsync(cancellationToken);
-
-        // 2. Fetch existing unattempted questions in DB matching topic and level
-        var candidates = await _dbContext.QuizQuestions
-            .AsNoTracking()
-            .Where(q => !q.IsDeleted &&
-                        q.Level == request.Level &&
-                        (q.Topic.ToLower() == normalizedTopic || q.Topic.ToLower() == request.Topic.Trim().ToLower()) &&
-                        !attemptedQuestionIds.Contains(q.Id))
-            .Take(request.Count * 2)
-            .ToListAsync(cancellationToken);
-
-        var existingUnattempted = candidates;
-        if (candidates.Count > request.Count)
+        else
         {
-            var rng = new Random();
-            existingUnattempted = candidates.OrderBy(_ => rng.Next()).Take(request.Count).ToList();
+            if (!request.CategoryId.HasValue || request.CategoryId == Guid.Empty)
+                return Error.Custom("Category.ValidationFailed", "CategoryId is required for standalone generation.");
+            categoryId = request.CategoryId.Value;
+            var categoryValidation = await categoryGuard.ValidateAsync(categoryId, cancellationToken);
+            if (!categoryValidation.IsSuccess) return categoryValidation.Error;
         }
 
-        var finalQuestions = new List<QuizQuestion>(existingUnattempted);
+        var originalTopic = request.Topic.Trim().ToLowerInvariant();
+        var matchingTopic = normalizedTopic.ToLowerInvariant();
+        var matching = dbContext.QuizQuestions.AsNoTracking()
+            .Where(q => !q.IsDeleted && q.CategoryId == categoryId && q.Level == request.Level &&
+                (q.CreatedByUserId == null || q.CreatedByUserId == request.UserId) &&
+                (q.Topic.ToLower() == matchingTopic || q.Topic.ToLower() == originalTopic));
+        var progresses = await dbContext.UserQuizProgresses.AsNoTracking()
+            .Where(p => p.UserId == request.UserId)
+            .ToDictionaryAsync(p => p.QuestionId, cancellationToken);
+        var attemptedIds = progresses.Keys.ToList();
+        var finalQuestions = await matching.Where(q => !attemptedIds.Contains(q.Id))
+            .OrderByDescending(q => q.CreatedAt).Take(request.Count).ToListAsync(cancellationToken);
+        var generatedQuestions = new List<QuizQuestion>();
+        Error? generationError = null;
 
-        // 3. If we don't have enough unattempted questions, generate the rest with Gemini
         if (finalQuestions.Count < request.Count)
         {
-            var needed = request.Count - finalQuestions.Count;
-
-            var existingTitles = await _dbContext.QuizQuestions
-                .AsNoTracking()
-                .Where(q => !q.IsDeleted && (q.Topic.ToLower() == normalizedTopic || q.Topic.ToLower() == request.Topic.Trim().ToLower() || q.Category == category))
-                .OrderByDescending(q => q.CreatedAt)
-                .Select(q => q.QuestionText)
-                .Take(50)
-                .ToListAsync(cancellationToken);
-
-            var genResult = await _quizGenerator.GenerateQuestionsAsync(
-                normalizedTopic,
-                category,
-                request.Level,
-                needed,
-                existingTitles,
-                request.Locale,
-                cancellationToken);
-
-            if (genResult.IsSuccess && genResult.Value != null && genResult.Value.Count > 0)
+            var existingTitles = await dbContext.QuizQuestions.AsNoTracking()
+                .Where(q => !q.IsDeleted && q.CategoryId == categoryId &&
+                    (q.CreatedByUserId == null || q.CreatedByUserId == request.UserId))
+                .OrderByDescending(q => q.CreatedAt).Select(q => q.QuestionText)
+                .Take(50).ToListAsync(cancellationToken);
+            var generated = await quizGenerator.GenerateQuestionsAsync(normalizedTopic, categoryId,
+                request.Level, request.Count - finalQuestions.Count, existingTitles, request.Locale, cancellationToken);
+            if (!generated.IsSuccess)
+                generationError = generated.Error;
+            else
             {
-                var candidateTexts = genResult.Value.Select(q => q.QuestionText.Trim()).ToList();
-                var existingTexts = await _dbContext.QuizQuestions
-                    .AsNoTracking()
-                    .Where(q => candidateTexts.Contains(q.QuestionText.Trim()))
-                    .Select(q => q.QuestionText.Trim())
-                    .ToListAsync(cancellationToken);
-
-                var toPersist = genResult.Value
-                    .Where(q => !existingTexts.Contains(q.QuestionText.Trim()))
-                    .ToList();
-
-                foreach (var q in toPersist)
+                var unique = generated.Value
+                    .Where(q => !string.IsNullOrWhiteSpace(q.QuestionText))
+                    .DistinctBy(q => q.QuestionText.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .Take(request.Count - finalQuestions.Count).ToList();
+                var texts = unique.Select(q => q.QuestionText.Trim()).ToList();
+                var existing = await matching.Where(q => texts.Contains(q.QuestionText.Trim())).ToListAsync(cancellationToken);
+                foreach (var question in unique)
                 {
-                    q.CreatedByUserId = request.UserId;
-                    q.Topic = normalizedTopic;
+                    var duplicate = existing.FirstOrDefault(q => string.Equals(q.QuestionText.Trim(), question.QuestionText.Trim(), StringComparison.OrdinalIgnoreCase));
+                    if (duplicate != null)
+                    {
+                        if (!finalQuestions.Any(q => q.Id == duplicate.Id) &&
+                            (!progresses.TryGetValue(duplicate.Id, out var progress) || !progress.IsMastered))
+                            finalQuestions.Add(duplicate);
+                        continue;
+                    }
+                    question.CategoryId = categoryId;
+                    question.Topic = normalizedTopic;
+                    question.Level = request.Level;
+                    question.CreatedByUserId = request.UserId;
+                    generatedQuestions.Add(question);
+                    finalQuestions.Add(question);
                 }
-
-                if (toPersist.Count > 0)
-                {
-                    await _dbContext.QuizQuestions.AddRangeAsync(toPersist, cancellationToken);
-                    await _dbContext.SaveChangesAsync(cancellationToken);
-                }
-
-                finalQuestions.AddRange(genResult.Value);
             }
         }
 
-        // Fallback: If still under requested count (e.g. generator returned fewer), fill from other topic questions
         if (finalQuestions.Count < request.Count)
         {
             var currentIds = finalQuestions.Select(q => q.Id).ToList();
-            var fallbackFill = await _dbContext.QuizQuestions
-                .AsNoTracking()
-                .Where(q => !q.IsDeleted &&
-                            q.Level == request.Level &&
-                            (q.Topic.ToLower() == normalizedTopic || q.Topic.ToLower() == request.Topic.Trim().ToLower()) &&
-                            !currentIds.Contains(q.Id))
-                .Take(request.Count - finalQuestions.Count)
-                .ToListAsync(cancellationToken);
+            var masteredIds = progresses.Where(p => p.Value.IsMastered).Select(p => p.Key).ToList();
+            var recovery = await matching.Where(q => !currentIds.Contains(q.Id) && !masteredIds.Contains(q.Id))
+                .OrderByDescending(q => q.CreatedAt).Take(request.Count - finalQuestions.Count).ToListAsync(cancellationToken);
+            finalQuestions.AddRange(recovery);
+        }
+        if (finalQuestions.Count == 0)
+            return generationError ?? Error.Custom("AiService.GenerationFailed", "No suitable questions could be generated.");
 
-            finalQuestions.AddRange(fallbackFill);
+        async Task<Result<GenerateQuizResponse>> Persist(DocumentCategory category)
+        {
+            foreach (var question in generatedQuestions)
+                question.Category = category;
+            if (generatedQuestions.Count > 0)
+                await dbContext.QuizQuestions.AddRangeAsync(generatedQuestions, cancellationToken);
+            var dtos = finalQuestions.Take(request.Count).Select(q =>
+            {
+                progresses.TryGetValue(q.Id, out var progress);
+                return new QuizQuestionDto
+                {
+                    Id = q.Id, Topic = q.Topic, CategoryId = category.Id, Category = category.ToDescriptor(),
+                    Level = q.Level, QuestionText = q.QuestionText, Options = q.Options,
+                    CorrectOptionIndex = q.CorrectOptionIndex, ExplanationMarkdown = q.ExplanationMarkdown,
+                    Tags = q.Tags, IsMastered = progress?.IsMastered ?? false,
+                    LastSelectedOptionIndex = null, IsLastAnswerCorrect = null,
+                    CorrectCount = progress?.CorrectCount ?? 0, IncorrectCount = progress?.IncorrectCount ?? 0
+                };
+            }).ToList();
+            return new GenerateQuizResponse(dtos, normalizedTopic, request.Level, dtos.Count);
         }
 
-        // 4. Load user progress for these questions
-        var questionIds = finalQuestions.Select(q => q.Id).ToList();
-        var progresses = await _dbContext.UserQuizProgresses
-            .AsNoTracking()
-            .Where(p => p.UserId == request.UserId && questionIds.Contains(p.QuestionId))
-            .ToDictionaryAsync(p => p.QuestionId, cancellationToken);
-
-        // 5. Map to DTOs
-        var dtos = finalQuestions.Select(q =>
-        {
-            progresses.TryGetValue(q.Id, out var prog);
-            return new QuizQuestionDto
-            {
-                Id = q.Id,
-                Topic = q.Topic,
-                Category = q.Category,
-                Level = q.Level,
-                QuestionText = q.QuestionText,
-                Options = q.Options,
-                CorrectOptionIndex = q.CorrectOptionIndex,
-                ExplanationMarkdown = q.ExplanationMarkdown,
-                Tags = q.Tags,
-                IsMastered = prog?.IsMastered ?? false,
-                LastSelectedOptionIndex = null,
-                IsLastAnswerCorrect = null,
-                CorrectCount = prog?.CorrectCount ?? 0,
-                IncorrectCount = prog?.IncorrectCount ?? 0
-            };
-        }).ToList();
-
-        return new GenerateQuizResponse(
-            dtos,
-            normalizedTopic,
-            request.Level,
-            dtos.Count
-        );
+        return request.BookId.HasValue
+            ? await categoryGuard.ExecuteForBookAsync<GenerateQuizResponse>(request.BookId.Value, request.UserId,
+                categoryId, (_, category) => Persist(category), cancellationToken)
+            : await categoryGuard.ExecuteAsync<GenerateQuizResponse>(categoryId, Persist, cancellationToken);
     }
 
     public static string NormalizeTopic(string rawTopic)
     {
         if (string.IsNullOrWhiteSpace(rawTopic)) return string.Empty;
         var trimmed = rawTopic.Trim();
-        var cleaned = System.Text.RegularExpressions.Regex.Replace(
-            trimmed,
-            @"^(về|ve|about|chủ đề|chu de)\s+",
-            "",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
-
+        var cleaned = System.Text.RegularExpressions.Regex.Replace(trimmed,
+            @"^(về|ve|about|chủ đề|chu de)\s+", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
         return string.IsNullOrWhiteSpace(cleaned) ? trimmed.ToLowerInvariant() : cleaned.ToLowerInvariant();
-    }
-
-    private static Category InferCategoryFromTopic(string topic)
-    {
-        var lower = topic.ToLowerInvariant();
-        if (lower.Contains("habit") || lower.Contains("thói quen") || lower.Contains("deep work") || lower.Contains("focus") || lower.Contains("tập trung") || lower.Contains("productivity") || lower.Contains("procrastination"))
-            return Category.HabitsProductivity;
-        if (lower.Contains("mental model") || lower.Contains("tư duy") || lower.Contains("decision") || lower.Contains("ra quyết định") || lower.Contains("stoic") || lower.Contains("khắc kỷ") || lower.Contains("psychology"))
-            return Category.MentalModels;
-        if (lower.Contains("postgres") || lower.Contains("sql") || lower.Contains("database") || lower.Contains("redis") || lower.Contains("mongo"))
-            return Category.DatabaseStorage;
-        if (lower.Contains("vue") || lower.Contains("react") || lower.Contains("frontend") || lower.Contains("css") || lower.Contains("browser") || lower.Contains("javascript") || lower.Contains("typescript"))
-            return Category.FrontendWeb;
-        if (lower.Contains("system") || lower.Contains("distributed") || lower.Contains("microservice") || lower.Contains("kafka") || lower.Contains("docker") || lower.Contains("kubernetes"))
-            return Category.SystemDesign;
-        if (lower.Contains("craft") || lower.Contains("clean code") || lower.Contains("testing") || lower.Contains("refactor") || lower.Contains("architecture"))
-            return Category.EngineeringCraft;
-        return Category.BackendRuntime;
     }
 }

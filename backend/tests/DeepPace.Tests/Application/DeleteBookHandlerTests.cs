@@ -53,7 +53,7 @@ public class DeleteBookHandlerTests : IDisposable
             Id = bookId,
             Title = "Architecture Handbook",
             Slug = "architecture-handbook",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             SourceType = SourceType.MarkdownSeries,
             TotalChunks = 1,
             CreatedByUserId = userId
@@ -131,7 +131,7 @@ public class DeleteBookHandlerTests : IDisposable
             Id = bookId,
             Title = "Forbidden Book",
             Slug = "forbidden-book",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             SourceType = SourceType.MarkdownSeries,
             TotalChunks = 1,
             CreatedByUserId = ownerId

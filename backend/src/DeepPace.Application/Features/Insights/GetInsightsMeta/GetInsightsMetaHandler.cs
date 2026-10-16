@@ -1,3 +1,5 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
+
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
@@ -11,58 +13,6 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
 {
     private readonly IDeepPaceDbContext _dbContext;
 
-    private static readonly Dictionary<int, List<string>> DefaultTopics = new()
-    {
-        [0] = new()
-        {
-            "Vue 3 shallowRef vs reactive",
-            "Component Composition vs Re-renders",
-            "Web Workers Offloading",
-            "Event Loop & Microtasks"
-        },
-        [1] = new()
-        {
-            "Kestrel Socket Pipeline",
-            "ArrayPool<T> Memory Pooling",
-            "System.Threading.Channels",
-            "OutputCache Tag Eviction"
-        },
-        [2] = new()
-        {
-            "PostgreSQL Index-Only Scan & INCLUDE",
-            "Heap-Only Tuples (HOT)",
-            "GIN Index for JSONB",
-            "PgBouncer Connection Pooling"
-        },
-        [3] = new()
-        {
-            "Transactional Outbox & CDC",
-            "Cache Stampede & XFetch",
-            "Token Bucket Rate Limiting",
-            "Circuit Breaker with Jitter"
-        },
-        [4] = new()
-        {
-            "Clean Code Refactoring",
-            "Design Patterns in Practice",
-            "Testing Invariants",
-            "Defensive Programming"
-        },
-        [5] = new()
-        {
-            "First Principles Thinking",
-            "Inversion (Pre-Mortem)",
-            "Second-Order Thinking",
-            "Probabilistic Thinking"
-        },
-        [6] = new()
-        {
-            "Atomic Habits & Cue Design",
-            "Deep Work 90m Blocks",
-            "Parkinson's Law",
-            "Context Switching Elimination"
-        }
-    };
 
     private static readonly Regex NoisePrefixRegex = new(
         @"^(chương\s+\d+[:\-\s]*|chapter\s+\d+[:\-\s]*|tóm\s+tắt\s+chương[:\-\s]*|\(section\s+\d+\)[:\-\s]*|qui\s+luật\s+số\s+\d+[:\-\s]*)",
@@ -85,107 +35,46 @@ public class GetInsightsMetaHandler : IUseCase<GetInsightsMetaRequest, GetInsigh
         GetInsightsMetaRequest request,
         CancellationToken cancellationToken = default)
     {
+        if (request.UserId == Guid.Empty)
+            return Error.Custom("Unauthorized", "An authenticated user is required.");
+
+        var catalog = await _dbContext.DocumentCategories
+            .AsNoTracking()
+            .Where(c => !c.IsDeleted)
+            .OrderBy(c => c.SortOrder)
+            .ThenBy(c => c.Slug)
+            .ToListAsync(cancellationToken);
         var insightCounts = await _dbContext.TechInsights
             .AsNoTracking()
-            .Where(i => i.IsPublished)
-            .GroupBy(i => i.Category)
-            .Select(g => new { Category = g.Key, Count = g.Count() })
-            .ToListAsync(cancellationToken);
-
-        var countMap = insightCounts.ToDictionary(g => g.Category, g => g.Count);
-
-        var categories = new List<InsightCategoryMetaDto>
-        {
-            new(
-                (int)Category.FrontendWeb,
-                "frontend",
-                "Frontend & Web Architecture",
-                "Frontend & Trình Duyệt",
-                countMap.GetValueOrDefault(Category.FrontendWeb, 0)
-            ),
-            new(
-                (int)Category.BackendRuntime,
-                "backend",
-                "Backend & Runtime Systems",
-                "Hệ Thống Backend & Runtime",
-                countMap.GetValueOrDefault(Category.BackendRuntime, 0)
-            ),
-            new(
-                (int)Category.DatabaseStorage,
-                "database",
-                "Database & Storage",
-                "Cơ Sở Dữ Liệu & Lưu Trữ",
-                countMap.GetValueOrDefault(Category.DatabaseStorage, 0)
-            ),
-            new(
-                (int)Category.SystemDesign,
-                "system_design",
-                "Distributed Systems & Architecture",
-                "Thiết Kế Hệ Thống",
-                countMap.GetValueOrDefault(Category.SystemDesign, 0)
-            ),
-            new(
-                (int)Category.EngineeringCraft,
-                "craft",
-                "Clean Code & Software Design",
-                "Mã Sạch & Thiết Kế Mã",
-                countMap.GetValueOrDefault(Category.EngineeringCraft, 0)
-            ),
-            new(
-                (int)Category.MentalModels,
-                "mental_models",
-                "Mental Models & Decisions",
-                "Mô Hình Tư Duy & Ra Quyết Định",
-                countMap.GetValueOrDefault(Category.MentalModels, 0)
-            ),
-            new(
-                (int)Category.HabitsProductivity,
-                "habits",
-                "Habits & Deep Work",
-                "Thói Quen & Tập Trung Sâu",
-                countMap.GetValueOrDefault(Category.HabitsProductivity, 0)
-            )
-        };
-
-        var activeTopics = await _dbContext.DocumentChunks
+            .Where(i => i.IsPublished && !i.IsDeleted)
+            .GroupBy(i => i.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.CategoryId, g => g.Count, cancellationToken);
+        var books = await _dbContext.DocumentBooks
             .AsNoTracking()
-            .Where(c => !c.IsDeleted && !c.DocumentBook.IsDeleted && c.DocumentBook.Status == ProcessingStatus.Ready)
-            .OrderBy(c => c.ChunkOrder)
-            .Select(c => new { c.DocumentBook.Category, Title = c.ChapterTitle })
+            .Where(b => !b.IsDeleted && b.CreatedByUserId == request.UserId && b.Status == ProcessingStatus.Ready)
+            .OrderBy(b => b.Title)
+            .ThenBy(b => b.Id)
+            .Select(b => new { b.Id, b.CategoryId, b.Title })
             .ToListAsync(cancellationToken);
-
-        var dbTopicGroups = activeTopics
-            .GroupBy(t => (int)t.Category)
-            .ToDictionary(
-                g => g.Key,
-                g => g.Select(x => CleanTopicTitle(x.Title))
-                      .Where(t => !string.IsNullOrEmpty(t))
-                      .Distinct(StringComparer.OrdinalIgnoreCase)
-                      .Take(8)
-                      .ToList()
-            );
-
-        var suggestedTopics = new Dictionary<int, List<string>>();
-
-        foreach (var categoryId in new[] { 0, 1, 2, 3, 4, 5, 6 })
-        {
-            var topicsForCat = dbTopicGroups.TryGetValue(categoryId, out var dbTopics)
-                ? dbTopics
-                : new List<string>();
-
-            if (topicsForCat.Count < 2)
-            {
-                var defaults = DefaultTopics.GetValueOrDefault(categoryId, new List<string>());
-                topicsForCat = topicsForCat.Union(defaults, StringComparer.OrdinalIgnoreCase).Take(8).ToList();
-            }
-            else
-            {
-                topicsForCat = topicsForCat.Take(8).ToList();
-            }
-
-            suggestedTopics[categoryId] = topicsForCat;
-        }
-
-        return new GetInsightsMetaResponse(categories, suggestedTopics);
+        var bookIds = books.Select(b => b.Id).ToList();
+        var chapters = await _dbContext.DocumentChunks
+            .AsNoTracking()
+            .Where(c => !c.IsDeleted && bookIds.Contains(c.DocumentBookId))
+            .OrderBy(c => c.DocumentBookId)
+            .ThenBy(c => c.ChunkOrder)
+            .Select(c => new { c.DocumentBook.CategoryId, Title = c.ChapterTitle })
+            .ToListAsync(cancellationToken);
+        var topics = books.Select(b => (b.CategoryId, b.Title))
+            .Concat(chapters.Select(c => (c.CategoryId, c.Title)))
+            .GroupBy(t => t.CategoryId)
+            .ToDictionary(g => g.Key, g => g.Select(t => CleanTopicTitle(t.Title))
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(8)
+                .ToList());
+        return new GetInsightsMetaResponse(
+            catalog.Select(c => new InsightCategoryMetaDto(c.Id, c.ToDescriptor(), insightCounts.GetValueOrDefault(c.Id))).ToList(),
+            catalog.ToDictionary(c => c.Id, c => topics.GetValueOrDefault(c.Id, [])));
     }
 }

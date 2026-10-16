@@ -2,205 +2,96 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useInterviewQuizStore } from '~/stores/useInterviewQuizStore'
 
-vi.mock('~/composables/useToast', () => ({
-  useToast: () => ({
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn()
-  })
+const { category, inactive, get, post } = vi.hoisted(() => ({
+  category: { id: '97e10b46-4a79-43f4-8b29-91c85582f899', slug: 'new-subject', nameEn: 'New subject', nameVi: 'Chủ đề mới', sortOrder: 8, isActive: true, version: 1 },
+  inactive: { id: 'bb03c028-488c-472c-b1cf-0d8354879109', slug: 'retained', nameEn: 'Retained subject', nameVi: 'Chủ đề lưu giữ', sortOrder: 9, isActive: false, version: 2 },
+  get: vi.fn(), post: vi.fn()
 }))
+vi.mock('~/composables/useToast', () => ({ useToast: () => ({ success: vi.fn(), error: vi.fn(), info: vi.fn() }) }))
+vi.mock('~/composables/useApiClient', () => ({ useApiClient: () => ({ get, post }) }))
 
-vi.mock('~/composables/useApiClient', () => ({
-  useApiClient: () => ({
-    get: vi.fn(async (url: string) => {
-      if (url.includes('/api/v1/quiz/review-queue')) {
-        const urlObj = new URL('http://localhost' + url)
-        const page = parseInt(urlObj.searchParams.get('page') || '1', 10)
-        const pageSize = parseInt(urlObj.searchParams.get('pageSize') || '20', 10)
-        return {
-          questions: [
-            {
-              id: 'q-review-1',
-              topic: '.NET Memory',
-              category: 1,
-              level: 3,
-              questionText: 'Explain GC Gen 2 latency',
-              options: ['A. Span', 'B. Heap', 'C. Lock', 'D. None'],
-              correctOptionIndex: 0,
-              explanationMarkdown: 'Deep breakdown',
-              tags: ['dotnet'],
-              isMastered: false,
-              correctCount: 0,
-              incorrectCount: 2
-            }
-          ],
-          totalCount: 1,
-          page,
-          pageSize,
-          totalPages: 1
-        }
-      }
-      if (url.includes('/api/v1/quiz/stats')) {
-        return {
-          totalAnswered: 10,
-          masteredCount: 8,
-          reviewQueueCount: 2,
-          accuracyRate: 80.0,
-          levelBreakdown: [
-            { level: 3, answeredCount: 10, masteredCount: 8, accuracyRate: 80.0 }
-          ],
-          topicBreakdown: [
-            { topic: '.NET Memory', answeredCount: 10, masteredCount: 8, accuracyRate: 80.0 }
-          ]
-        }
-      }
-      throw new Error('Unknown endpoint')
-    }),
-    post: vi.fn(async (url: string, body: any) => {
-      if (url.includes('/api/v1/quiz/generate')) {
-        return {
-          questions: [
-            {
-              id: 'q-1',
-              topic: body.topic || '.NET Memory',
-              category: 1,
-              level: body.level || 3,
-              questionText: 'How to eliminate GC Gen 2 pauses?',
-              options: [
-                'A. Use ArrayPool and stack-allocated Spans',
-                'B. Allocate repeatedly in tight loops',
-                'C. Use a global sync lock',
-                'D. Disable garbage collection'
-              ],
-              correctOptionIndex: 0,
-              explanationMarkdown: 'ArrayPool avoids Gen 2 promotions.',
-              tags: ['csharp', 'memory'],
-              isMastered: false,
-              correctCount: 0,
-              incorrectCount: 0
-            },
-            {
-              id: 'q-2',
-              topic: body.topic || '.NET Memory',
-              category: 1,
-              level: body.level || 3,
-              questionText: 'What is the Large Object Heap threshold?',
-              options: [
-                'A. 85,000 bytes',
-                'B. 1,024 bytes',
-                'C. 64 KB',
-                'D. 1 MB'
-              ],
-              correctOptionIndex: 0,
-              explanationMarkdown: '85,000 bytes is the default LOH threshold.',
-              tags: ['csharp', 'loh'],
-              isMastered: false,
-              correctCount: 0,
-              incorrectCount: 0
-            }
-          ],
-          topic: body.topic || '.NET Memory',
-          level: body.level || 3,
-          totalCount: 2
-        }
-      }
-      if (url.includes('/api/v1/quiz/submit')) {
-        const isCorrect = body.selectedOptionIndex === 0
-        return {
-          isCorrect,
-          correctOptionIndex: 0,
-          explanationMarkdown: 'Detailed evaluation explanation',
-          isMastered: isCorrect,
-          correctCount: isCorrect ? 1 : 0,
-          incorrectCount: isCorrect ? 0 : 1
-        }
-      }
-      throw new Error('Unknown endpoint')
-    })
-  })
-}))
+function question(id: string, descriptor = category) {
+  return { id, topic: 'Source topic', questionText: `Actual question ${id}?`, categoryId: descriptor.id, category: descriptor, level: 3, options: ['A', 'B', 'C', 'D'], correctOptionIndex: 0, explanationMarkdown: 'Explanation', tags: [], isMastered: false, correctCount: 0, incorrectCount: 1 }
+}
 
-describe('useInterviewQuizStore', () => {
+describe('useInterviewQuizStore UUID categories', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.clearAllMocks()
+    get.mockImplementation(async (url: string) => {
+      if (url === '/api/v1/categories') return [category, inactive]
+      if (url.includes('/stats')) return { totalAnswered: 10, masteredCount: 8, reviewQueueCount: 2, accuracyRate: 80, levelBreakdown: [], topicBreakdown: [], categoryBreakdown: [{ categoryId: inactive.id, category: inactive, answeredCount: 2, masteredCount: 0, accuracyRate: 0 }] }
+      const params = new URL('http://localhost' + url).searchParams
+      return { questions: [question('retained', inactive)], totalCount: 1, page: Number(params.get('page')), pageSize: Number(params.get('pageSize')), totalPages: 1 }
+    })
+    post.mockImplementation(async (url: string, body: { selectedOptionIndex?: number }) => {
+      if (url.includes('/submit')) return { isCorrect: body.selectedOptionIndex === 0, correctOptionIndex: 0, explanationMarkdown: 'Explanation', isMastered: body.selectedOptionIndex === 0, correctCount: body.selectedOptionIndex === 0 ? 1 : 0, incorrectCount: body.selectedOptionIndex === 0 ? 0 : 1 }
+      return { questions: [question('one'), question('two')], topic: 'Source topic', level: 3, totalCount: 2 }
+    })
   })
 
-  it('initializes with default state', () => {
+  it('initializes without an invented category or generated questions', () => {
     const store = useInterviewQuizStore()
-    expect(store.questions.length).toBe(0)
+    expect(store.currentCategoryId).toBeNull()
+    expect(store.questions).toEqual([])
     expect(store.activeTab).toBe('generate')
-    expect(store.currentIndex).toBe(0)
-    expect(store.currentQuestion).toBeNull()
   })
 
-  it('generates quiz successfully and transitions to arena tab', async () => {
+  it('blocks standalone generation without an explicit active category before invoking AI', async () => {
     const store = useInterviewQuizStore()
-    await store.generateQuiz('.NET Memory', 3, 2)
+    await expect(store.generateQuiz('Topic', 3, 5, null)).rejects.toThrow()
+    await expect(store.generateQuiz('Topic', 3, 5, inactive.id)).rejects.toThrow()
+    expect(post).not.toHaveBeenCalled()
+  })
 
-    expect(store.questions.length).toBe(2)
+  it('sends only categoryId, preserves questionText and remembers the Generate More assignment', async () => {
+    const store = useInterviewQuizStore()
+    await store.generateQuiz('Topic', 3, 5, category.id, 'vi')
+    expect(post).toHaveBeenCalledWith('/api/v1/quiz/generate', { topic: 'Topic', level: 3, count: 5, categoryId: category.id, locale: 'vi', bookId: null, isGrounded: false })
+    expect(store.currentQuestion?.questionText).toBe('Actual question one?')
+    expect(store.currentCategoryId).toBe(category.id)
     expect(store.activeTab).toBe('arena')
-    expect(store.currentIndex).toBe(0)
-    expect(store.currentQuestion?.id).toBe('q-1')
     expect(store.progressPercentage).toBe(50)
   })
 
-  it('submits correct answer and marks question as mastered', async () => {
+  it('lets book-grounded generation derive its retained inactive category from the server', async () => {
     const store = useInterviewQuizStore()
-    await store.generateQuiz('.NET Memory', 3, 2)
-
-    const result = await store.submitAnswer('q-1', 0)
-    expect(result?.isCorrect).toBe(true)
-    expect(result?.isMastered).toBe(true)
-    expect(store.isCurrentAnswered).toBe(true)
-    expect(store.questions[0]?.isMastered).toBe(true)
+    post.mockResolvedValueOnce({ questions: [question('source', inactive)], totalCount: 1 })
+    await store.generateQuiz('Topic', 3, 5, null, 'en', 'book-id', true)
+    expect(post.mock.calls[0]![1]).toMatchObject({ categoryId: null, bookId: 'book-id', isGrounded: true })
+    expect(store.currentQuestion?.category).toEqual(inactive)
   })
 
-  it('submits incorrect answer and keeps question unmastered', async () => {
+  it('submits correct and incorrect answers without changing category provenance', async () => {
     const store = useInterviewQuizStore()
-    await store.generateQuiz('.NET Memory', 3, 2)
-
-    const result = await store.submitAnswer('q-1', 1)
-    expect(result?.isCorrect).toBe(false)
-    expect(result?.isMastered).toBe(false)
-    expect(store.questions[0]?.isMastered).toBe(false)
-    expect(store.questions[0]?.incorrectCount).toBe(1)
+    await store.generateQuiz('Topic', 3, 5, category.id)
+    expect((await store.submitAnswer('one', 0))?.isMastered).toBe(true)
+    expect((await store.submitAnswer('two', 1))?.isMastered).toBe(false)
+    expect(store.questions[0]?.categoryId).toBe(category.id)
+    expect(store.questions[1]?.incorrectCount).toBe(1)
   })
 
-  it('navigates next and prev question, transitions to summary on finish', async () => {
+  it('navigates next and previous and enters summary at the end', async () => {
     const store = useInterviewQuizStore()
-    await store.generateQuiz('.NET Memory', 3, 2)
-
-    expect(store.currentIndex).toBe(0)
+    await store.generateQuiz('Topic', 3, 5, category.id)
     store.nextQuestion()
     expect(store.currentIndex).toBe(1)
-
     store.nextQuestion()
     expect(store.activeTab).toBe('summary')
-
     store.prevQuestion()
     expect(store.currentIndex).toBe(0)
   })
 
-  it('fetches review queue and statistics', async () => {
+  it('keeps inactive UUID review filters across pagination and preserves dynamic analytics', async () => {
     const store = useInterviewQuizStore()
-    await store.fetchReviewQueue()
-    expect(store.reviewQueue.length).toBe(1)
-    expect(store.reviewQueueTotal).toBe(1)
-    expect(store.reviewPage).toBe(1)
-    expect(store.reviewTotalCount).toBe(1)
-    expect(store.reviewTotalPages).toBe(1)
-    await store.fetchStats()
-    expect(store.stats?.totalAnswered).toBe(10)
-    expect(store.stats?.accuracyRate).toBe(80.0)
-  })
-
-  it('manages review queue pagination state correctly', async () => {
-    const store = useInterviewQuizStore()
-    expect(store.reviewPage).toBe(1)
-    expect(store.reviewPageSize).toBe(10)
-
-    await store.fetchReviewQueue({ page: 2, pageSize: 10 })
+    await store.fetchReviewQueue({ categoryId: inactive.id, level: 2, topic: 'Source', page: 2, pageSize: 10 })
+    const params = new URL('http://localhost' + get.mock.calls.at(-1)![0]).searchParams
+    expect(params.get('categoryId')).toBe(inactive.id)
+    expect(params.has('category')).toBe(false)
+    expect(params.get('level')).toBe('2')
     expect(store.reviewPage).toBe(2)
-    expect(store.reviewPageSize).toBe(10)
+    expect(store.reviewQueue[0]?.category).toEqual(inactive)
+    await store.fetchStats()
+    expect(store.stats?.categoryBreakdown[0]?.categoryId).toBe(inactive.id)
   })
 })

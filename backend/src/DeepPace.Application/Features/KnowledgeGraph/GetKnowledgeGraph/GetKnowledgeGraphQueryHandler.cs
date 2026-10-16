@@ -1,8 +1,9 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
+
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.KnowledgeGraph.DTOs;
 using DeepPace.Application.Interfaces;
-using DeepPace.Domain.Enums;
 using DeepPace.Domain.Entities;
 
 namespace DeepPace.Application.Features.KnowledgeGraph.GetKnowledgeGraph;
@@ -16,16 +17,6 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
         _dbContext = dbContext;
     }
 
-    private static readonly (string Id, string Label, Category Category, string Subtitle, string Summary)[] CanonicalPillars =
-    [
-        ("pillar-FrontendWeb", "Frontend & Web", Category.FrontendWeb, "Vue 3, Nuxt 4, Browser Pipeline, Web Vitals", "Modern web architecture, client-side rendering, performance optimization, and browser lifecycle mechanics."),
-        ("pillar-BackendRuntime", "Backend & Runtime", Category.BackendRuntime, "Runtimes, Concurrency, Memory & Async I/O", "High-performance runtime internals, concurrency primitives, asynchronous execution, and service architectures."),
-        ("pillar-DatabaseStorage", "Database & Storage", Category.DatabaseStorage, "Storage Engines, Indexing & Persistence", "Relational persistence, storage engine mechanics, index strategies, transaction isolation, and caching."),
-        ("pillar-SystemDesign", "Distributed Systems", Category.SystemDesign, "Event-Driven, Consistency & Fault Tolerance", "Scalable distributed patterns, transactional outbox, idempotency, event sourcing, and resilience engineering."),
-        ("pillar-EngineeringCraft", "Engineering Craft", Category.EngineeringCraft, "Architecture, Clean Code, Testing", "Foundational engineering practices, clean architecture, automated testing, and software design principles."),
-        ("pillar-MentalModels", "Mental Models & Decisions", Category.MentalModels, "First Principles, Cognitive Biases, Inversion", "Foundational cognitive frameworks, multi-disciplinary mental models, and structured decision-making mechanisms."),
-        ("pillar-HabitsProductivity", "Habits & Deep Work", Category.HabitsProductivity, "Habit Loops, Focus Rituals, Attention Management", "Deliberate practice systems, environmental cue design, ultradian focus blocks, and sustainable daily pace.")
-    ];
 
     public async Task<Result<KnowledgeGraphResponse>> ExecuteAsync(
         GetKnowledgeGraphQuery request,
@@ -40,12 +31,14 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
         var books = await _dbContext.DocumentBooks
             .AsNoTracking()
             .Include(b => b.Chunks.Where(c => !c.IsDeleted))
+            .Include(b => b.Category)
             .Where(b => b.CreatedByUserId == request.UserId && b.IsPublished && !b.IsDeleted)
             .ToListAsync(cancellationToken);
 
         // 2. Load user's cards
         var cards = await _dbContext.SpacedRepetitionCards
             .AsNoTracking()
+            .Include(c => c.SourceQuizQuestion).ThenInclude(q => q!.Category)
             .Where(c => c.UserId == request.UserId && !c.IsDeleted)
             .ToListAsync(cancellationToken);
 
@@ -87,22 +80,18 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
 
         var nodes = new List<GraphNodeDto>();
         var edges = new List<GraphEdgeDto>();
-        var referencedPillars = new HashSet<Category>();
+        var referencedPillars = new Dictionary<Guid, DocumentCategory>();
 
-        // Resolves the effective category of a card from its chunk/highlight/book, else EngineeringCraft
-        Category ResolveCardCategory(SpacedRepetitionCard card)
+        DocumentCategory? ResolveCardCategory(SpacedRepetitionCard card)
         {
-            if (card.SourceDocumentChunkId.HasValue && allUserChunks.TryGetValue(card.SourceDocumentChunkId.Value, out var c))
-            {
-                if (bookMap.TryGetValue(c.DocumentBookId, out var b))
-                    return b.Category;
-            }
-            if (card.SourceHighlightId.HasValue && highlightMap.TryGetValue(card.SourceHighlightId.Value, out var h))
-            {
-                if (h.DocumentChunk != null && bookMap.TryGetValue(h.DocumentChunk.DocumentBookId, out var b))
-                    return b.Category;
-            }
-            return Category.EngineeringCraft;
+            if (card.SourceDocumentChunkId.HasValue && allUserChunks.TryGetValue(card.SourceDocumentChunkId.Value, out var chunk))
+                return bookMap[chunk.DocumentBookId].Category;
+            if (card.SourceHighlightId.HasValue && highlightMap.TryGetValue(card.SourceHighlightId.Value, out var highlight)
+                && allUserChunks.TryGetValue(highlight.DocumentChunkId, out var highlightChunk))
+                return bookMap[highlightChunk.DocumentBookId].Category;
+            var question = card.SourceQuizQuestion;
+            return question != null && (!question.CreatedByUserId.HasValue || question.CreatedByUserId == request.UserId)
+                ? question.Category : null;
         }
 
         // 1. Book Nodes
@@ -112,7 +101,8 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 Id: book.Id.ToString(),
                 Label: book.Title,
                 Type: GraphNodeType.Book,
-                Category: book.Category.ToString(),
+                CategoryId: book.CategoryId,
+                Category: book.Category?.ToDescriptor(),
                 Subtitle: book.AuthorOrSourceUrl,
                 DayOrder: null,
                 Summary: null,
@@ -124,7 +114,8 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 DocumentChunkId: null,
                 BookId: book.Id.ToString(),
                 Tags: null,
-                CreatedAt: book.CreatedAt.UtcDateTime
+                CreatedAt: book.CreatedAt.UtcDateTime,
+                TotalChunks: book.TotalChunks
             ));
         }
 
@@ -136,7 +127,8 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 Id: chunk.Id.ToString(),
                 Label: chunk.ChapterTitle,
                 Type: GraphNodeType.Chunk,
-                Category: parentBook.Category.ToString(),
+                CategoryId: parentBook.CategoryId,
+                Category: parentBook.Category?.ToDescriptor(),
                 Subtitle: $"Chapter {chunk.ChunkOrder}",
                 DayOrder: chunk.ChunkOrder,
                 Summary: chunk.SummaryMarkdown,
@@ -171,7 +163,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 status = MasteryStatus.Learning;
             }
 
-            var category = ResolveCardCategory(card).ToString();
+            var category = ResolveCardCategory(card);
             string label = !string.IsNullOrWhiteSpace(card.FrontMarkdown)
                 ? (card.FrontMarkdown.Length > 80 ? card.FrontMarkdown[..80].Trim() + "..." : card.FrontMarkdown.Trim())
                 : "Flashcard";
@@ -180,7 +172,8 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 Id: card.Id.ToString(),
                 Label: label,
                 Type: GraphNodeType.Card,
-                Category: category,
+                CategoryId: category?.Id,
+                Category: category?.ToDescriptor(),
                 Subtitle: $"Rep: {card.RepetitionCount} | Int: {card.IntervalDays}d",
                 DayOrder: null,
                 Summary: card.BackMarkdown,
@@ -189,7 +182,9 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 IntervalDays: card.IntervalDays,
                 EaseFactor: card.EaseFactor,
                 RepetitionCount: card.RepetitionCount,
-                DocumentChunkId: card.SourceDocumentChunkId?.ToString() ?? card.SourceHighlightId?.ToString(),
+                DocumentChunkId: card.SourceDocumentChunkId?.ToString()
+                    ?? (card.SourceHighlightId.HasValue && highlightMap.TryGetValue(card.SourceHighlightId.Value, out var sourceHighlight)
+                        ? sourceHighlight.DocumentChunkId.ToString() : null),
                 BookId: null,
                 Tags: null,
                 CreatedAt: card.CreatedAt.UtcDateTime
@@ -202,15 +197,15 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             var rawText = highlight.SelectedText?.Trim() ?? string.Empty;
             var label = rawText.Length > 80 ? rawText[..80].Trim() + "..." : rawText;
 
-            string category = highlight.DocumentChunk != null && bookMap.TryGetValue(highlight.DocumentChunk.DocumentBookId, out var linkedBook)
-                ? linkedBook.Category.ToString()
-                : Category.EngineeringCraft.ToString();
+            var category = allUserChunks.TryGetValue(highlight.DocumentChunkId, out var linkedChunk)
+                ? bookMap[linkedChunk.DocumentBookId].Category : null;
 
             nodes.Add(new GraphNodeDto(
                 Id: highlight.Id.ToString(),
                 Label: label,
                 Type: GraphNodeType.Highlight,
-                Category: category,
+                CategoryId: category?.Id,
+                Category: category?.ToDescriptor(),
                 Subtitle: highlight.Note,
                 DayOrder: null,
                 Summary: highlight.Note,
@@ -220,7 +215,7 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                 EaseFactor: null,
                 RepetitionCount: null,
                 DocumentChunkId: highlight.DocumentChunkId.ToString(),
-                BookId: highlight.DocumentChunk?.DocumentBookId.ToString(),
+                BookId: linkedChunk?.DocumentBookId.ToString(),
                 Tags: highlight.Tags,
                 CreatedAt: highlight.CreatedAt.UtcDateTime
             ));
@@ -230,11 +225,15 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
         // 1. BookToPillar: each user book -> the pillar hub for its category
         foreach (var book in books)
         {
-            referencedPillars.Add(book.Category);
+            var category = book.Category;
+            if (category == null || category.IsDeleted)
+                continue;
+            var cat = category.Id;
+            referencedPillars.TryAdd(cat, category);
             edges.Add(new GraphEdgeDto(
-                Id: $"edge-book-{book.Id}-pillar-{book.Category}",
+                Id: $"edge-book-{book.Id}-pillar-{cat}",
                 Source: book.Id.ToString(),
-                Target: $"pillar-{book.Category}",
+                Target: $"pillar-{cat}",
                 RelationType: GraphRelationType.BookToPillar,
                 Label: "Library",
                 Weight: 2
@@ -279,10 +278,10 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
                     Weight: 1
                 ));
             }
-            else
+            else if (ResolveCardCategory(card) is { IsDeleted: false } category)
             {
-                var targetCategory = ResolveCardCategory(card);
-                referencedPillars.Add(targetCategory);
+                var targetCategory = category.Id;
+                referencedPillars.TryAdd(targetCategory, category);
                 edges.Add(new GraphEdgeDto(
                     Id: $"edge-card-{card.Id}-pillar-{targetCategory}",
                     Source: card.Id.ToString(),
@@ -367,32 +366,17 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             }
         }
 
-        // Pillar Hub Nodes: emit only pillars that at least one edge targets (0..7 hubs)
-        var pillarNodes = new List<GraphNodeDto>();
-        foreach (var (id, label, cat, subtitle, summary) in CanonicalPillars)
-        {
-            if (!referencedPillars.Contains(cat))
-                continue;
-
-            pillarNodes.Add(new GraphNodeDto(
-                Id: id,
-                Label: label,
+        // Only categories represented by surviving owned artifacts become hubs.
+        var pillarNodes = referencedPillars.Values
+            .OrderBy(c => c.SortOrder)
+            .ThenBy(c => c.Id)
+            .Select(category => new GraphNodeDto(
+                Id: $"pillar-{category.Id}",
+                Label: category.NameEn,
                 Type: GraphNodeType.Pillar,
-                Category: cat.ToString(),
-                Subtitle: subtitle,
-                DayOrder: null,
-                Summary: summary,
-                Difficulty: null,
-                Status: null,
-                IntervalDays: null,
-                EaseFactor: null,
-                RepetitionCount: null,
-                DocumentChunkId: null,
-                BookId: null,
-                Tags: null,
-                CreatedAt: null
-            ));
-        }
+                CategoryId: category.Id,
+                Category: category.ToDescriptor()))
+            .ToList();
         nodes.InsertRange(0, pillarNodes);
 
         // Stats
@@ -406,15 +390,14 @@ public class GetKnowledgeGraphQueryHandler : IUseCase<GetKnowledgeGraphQuery, Kn
             [GraphNodeType.Highlight] = highlights.Count
         };
 
-        var pillarCounts = CanonicalPillars
-            .ToDictionary(p => p.Category.ToString(), _ => 0);
-
+        var pillarCounts = referencedPillars.Keys.ToDictionary(id => id.ToString(), _ => 0);
         foreach (var node in nodes)
         {
-            if (!string.IsNullOrEmpty(node.Category) && pillarCounts.ContainsKey(node.Category))
-            {
-                pillarCounts[node.Category]++;
-            }
+            if (node.CategoryId is not { } categoryId)
+                continue;
+            var key = categoryId.ToString();
+            if (pillarCounts.TryGetValue(key, out var count))
+                pillarCounts[key] = count + 1;
         }
 
         var stats = new GraphStatsDto(

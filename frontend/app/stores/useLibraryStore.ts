@@ -1,14 +1,16 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { useApiClient } from "~/composables/useApiClient";
+import type { CategoryDescriptor } from "~/stores/useCategoryStore";
 
 export interface Book {
   id: string;
   title: string;
   slug: string;
   sourceType: number;
-  category: number;
-  authorOrSourceUrl?: string;
+  category: CategoryDescriptor;
+  categoryId: string;
+  authorOrSourceUrl?: string | null;
   totalChunks: number;
   isPublished: boolean;
   isFeatured?: boolean;
@@ -59,42 +61,22 @@ export const useLibraryStore = defineStore("library", () => {
   const pageSize = ref(12);
   const totalCount = ref(0);
   const totalPages = ref(0);
-  async function fetchBooks(
-    paramsOrCategory?:
-      | {
-          category?: number;
-          search?: string;
-          page?: number;
-          pageSize?: number;
-        }
-      | number,
-    maybeSearch?: string
-  ) {
-    let category: number | undefined;
-    let search: string | undefined;
-    let page: number | undefined;
-    let size: number | undefined;
-
-    if (typeof paramsOrCategory === "object" && paramsOrCategory !== null) {
-      category = paramsOrCategory.category;
-      search = paramsOrCategory.search;
-      page = paramsOrCategory.page;
-      size = paramsOrCategory.pageSize;
-    } else {
-      category = paramsOrCategory;
-      search = maybeSearch;
-    }
-
-    const targetPage = page ?? currentPage.value;
-    const targetSize = size ?? pageSize.value;
+  async function fetchBooks(params?: {
+    categoryId?: string | null;
+    search?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const { categoryId, search } = params ?? {};
+    const targetPage = params?.page ?? currentPage.value;
+    const targetSize = params?.pageSize ?? pageSize.value;
 
     isLoading.value = true;
     error.value = null;
     try {
       const api = useApiClient();
       const query = new URLSearchParams();
-      if (category !== undefined && category !== null)
-        query.append("category", category.toString());
+      if (categoryId) query.append("categoryId", categoryId);
       if (search) query.append("search", search);
       query.append("page", targetPage.toString());
       query.append("pageSize", targetSize.toString());
@@ -142,7 +124,7 @@ export const useLibraryStore = defineStore("library", () => {
   async function importDocument(params: {
     title: string;
     markdownContent: string;
-    category: number;
+    categoryId: string;
     sourceUrl?: string;
     language?: string;
   }) {
@@ -152,8 +134,8 @@ export const useLibraryStore = defineStore("library", () => {
       const api = useApiClient();
       const res = await api.post<{ book: Book }>("/api/v1/library/import", {
         title: params.title,
+        categoryId: params.categoryId,
         markdownContent: params.markdownContent,
-        category: params.category,
         sourceUrl: params.sourceUrl,
         language: params.language || "en",
       });
@@ -216,15 +198,13 @@ export const useLibraryStore = defineStore("library", () => {
       isImporting.value = false;
     }
   }
-  async function importRemotePdf(payload: { pdfUrl: string; title: string; category: number; language?: string }) {
+  async function importRemotePdf(payload: { pdfUrl: string; title: string; categoryId: string; language?: string }) {
     const api = useApiClient();
     return await api.post<{ bookId: string; title: string; status: string; message: string }>(
       '/api/v1/library/import-remote-pdf',
       payload
     );
   }
-
-
   async function deleteBook(id: string) {
     isLoading.value = true;
     error.value = null;
@@ -243,7 +223,7 @@ export const useLibraryStore = defineStore("library", () => {
       isLoading.value = false;
     }
   }
-  async function updateBook(id: string, payload: { title: string; authorOrSourceUrl?: string | null; category: number; language?: string }) {
+  async function updateBook(id: string, payload: { title: string; authorOrSourceUrl?: string | null; categoryId: string; language?: string }) {
     isLoading.value = true;
     error.value = null;
     try {

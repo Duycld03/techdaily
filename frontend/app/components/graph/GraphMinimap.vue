@@ -2,7 +2,7 @@
 import { ref, watch, onMounted, onBeforeUnmount, type PropType } from 'vue'
 import type { Core } from 'cytoscape'
 import { Compass } from 'lucide-vue-next'
-import { CATEGORY_PALETTE, NODE_TYPE_COLOR, SM2_STATUS_COLOR, normalizeCategory, normalizeSm2Status } from '~/utils/graphVisualTokens'
+import { getCategoryPalette, NODE_TYPE_COLOR, SM2_STATUS_COLOR, normalizeSm2Status } from '~/utils/graphVisualTokens'
 
 const props = defineProps({
   cy: {
@@ -13,12 +13,13 @@ const props = defineProps({
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 
-function getNodeColor(category?: string, type?: string, status?: string): string {
+function getNodeColor(categoryId?: string | null, type?: string, status?: string): string {
   const t = type?.toLowerCase()
   if (t === 'book') return NODE_TYPE_COLOR.book
   if (t === 'card') return SM2_STATUS_COLOR[normalizeSm2Status(status)]
   if (t === 'highlight') return NODE_TYPE_COLOR.highlight
-  return CATEGORY_PALETTE[normalizeCategory(category)].border
+  const palette = getCategoryPalette(categoryId)
+  return t === 'chunk' ? palette.border : palette.fill
 }
 
 function drawMinimap() {
@@ -66,7 +67,7 @@ function drawMinimap() {
     const x = toX(pos.x)
     const y = toY(pos.y)
     const data = node.data()
-    const color = getNodeColor(data.category, data.type, data.status)
+    const color = getNodeColor(data.categoryId, data.type, data.status)
 
     ctx.beginPath()
     ctx.arc(x, y, 2.5, 0, Math.PI * 2)

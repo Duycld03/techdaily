@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
 import { useCatalogStore } from "~/stores/useCatalogStore";
+const category = { id: '99999999-9999-4999-8999-999999999999', slug: 'novel', nameEn: 'Novel', nameVi: 'Moi', sortOrder: 1, isActive: true, version: 1 };
+const nullableLearnerFields = { authorOrSourceUrl: null, publishedAt: null, existingBookId: null };
+const nullableAdminFields = { authorOrSourceUrl: null, processingStatusMessage: null, processingErrorMessage: null, createdByUserId: null, reviewedByUserId: null, reviewedRevision: null, reviewedAt: null, publishedByUserId: null, publishedAt: null, hiddenByUserId: null, hiddenAt: null, updatedAt: null };
 
 const mockGet = vi.fn();
 const mockPost = vi.fn();
@@ -10,6 +13,7 @@ vi.mock("~/composables/useApiClient", () => ({
   useApiClient: () => ({
     get: mockGet,
     post: mockPost,
+    postRaw: mockPost,
     put: mockPut,
   }),
 }));
@@ -52,9 +56,10 @@ describe("useCatalogStore", () => {
           id: "doc-1",
           title: "Kubernetes Guide",
           description: "Cloud native docs",
-          category: 1,
+          category,
+          categoryId: category.id,
           language: "en",
-          sourceType: 0,
+          sourceType: 'PdfBook',
           attributionText: "Linux Foundation",
           totalSlices: 10,
           estimatedReadMinutes: 45,
@@ -72,9 +77,9 @@ describe("useCatalogStore", () => {
       page: 2,
       pageSize: 10,
       search: "Kubernetes",
-      category: 1,
+      categoryId: category.id,
       language: "en",
-      sourceType: 0,
+      sourceType: 'PdfBook',
     });
 
     expect(mockGet).toHaveBeenCalledWith(
@@ -84,9 +89,10 @@ describe("useCatalogStore", () => {
     expect(callUrl).toContain("page=2");
     expect(callUrl).toContain("pageSize=10");
     expect(callUrl).toContain("search=Kubernetes");
-    expect(callUrl).toContain("category=1");
+    expect(callUrl).toContain(`categoryId=${category.id}`);
+    expect(new URL(callUrl, 'https://example.test').searchParams.has('category')).toBe(false);
     expect(callUrl).toContain("language=en");
-    expect(callUrl).toContain("sourceType=0");
+    expect(callUrl).toContain("sourceType=PdfBook");
 
     expect(store.documents).toHaveLength(1);
     expect(store.documents[0]?.title).toBe("Kubernetes Guide");
@@ -155,9 +161,11 @@ describe("useCatalogStore", () => {
         id: "doc-1",
         title: "Test",
         description: "Desc",
-        category: 0,
+        category,
+        categoryId: category.id,
         language: "en",
-        sourceType: 0,
+        sourceType: 'PdfBook',
+        ...nullableLearnerFields,
         attributionText: "Attr",
         totalSlices: 1,
         estimatedReadMinutes: 5,
@@ -177,8 +185,9 @@ describe("useCatalogStore", () => {
     const result = await store.adoptDocument("doc-1");
 
     expect(result?.bookId).toBe("adopted-book-id");
+    expect(store.documents[0]?.existingBookId).toBe('adopted-book-id');
+    expect(store.documents[0]).not.toHaveProperty('alreadyAdded');
     expect(store.adoptionError["doc-1"]).toBeNull();
-    expect(store.documents[0]?.existingBookId).toBe("adopted-book-id");
   });
 
   it("maintains separate learner discovery and admin document states", async () => {
@@ -214,14 +223,12 @@ describe("useCatalogStore", () => {
         id: "admin-doc-1",
         title: "Draft",
         description: "Desc",
-        category: 0,
+        category,
+        categoryId: category.id,
         language: "en",
-        sourceType: 0,
+        sourceType: 'PdfBook',
+        ...nullableAdminFields,
         attributionText: "Attr",
-        permissionBasis: "Basis",
-        permissionEvidence: "Evidence",
-        confirmedDistributionRights: true,
-        confirmedAiProcessingRights: true,
         visibility: "Draft",
         processingStatus: "Pending",
         totalSlices: 0,
@@ -252,9 +259,11 @@ describe("useCatalogStore", () => {
         id: "doc-1",
         title: "Title",
         description: "Desc",
-        category: 0,
+        category,
+        categoryId: category.id,
         language: "en",
-        sourceType: 0,
+        sourceType: 'PdfBook',
+        ...nullableLearnerFields,
         attributionText: "Attr",
         totalSlices: 1,
         estimatedReadMinutes: 1,
@@ -265,14 +274,12 @@ describe("useCatalogStore", () => {
         id: "admin-1",
         title: "Title",
         description: "Desc",
-        category: 0,
+        category,
+        categoryId: category.id,
         language: "en",
-        sourceType: 0,
+        sourceType: 'PdfBook',
+        ...nullableAdminFields,
         attributionText: "Attr",
-        permissionBasis: "Basis",
-        permissionEvidence: "Evidence",
-        confirmedDistributionRights: true,
-        confirmedAiProcessingRights: true,
         visibility: "Draft",
         processingStatus: "Pending",
         totalSlices: 0,
@@ -325,5 +332,72 @@ describe("useCatalogStore", () => {
     // Polling should have stopped after Ready
     await vi.advanceTimersByTimeAsync(2000);
     expect(updateCallback).toHaveBeenCalledTimes(2);
+  });
+
+  it("supports categoryId in fetchPublishedDocuments query", async () => {
+    mockGet.mockResolvedValueOnce({
+      items: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: 12
+    });
+
+    const store = useCatalogStore();
+    await store.fetchPublishedDocuments({ categoryId: "44444444-4444-4000-8000-444444444444" });
+
+    expect(mockGet).toHaveBeenCalledWith(expect.stringContaining("categoryId=44444444-4444-4000-8000-444444444444"));
+  });
+
+  it("supports categoryId in fetchAdminDocuments query", async () => {
+    mockGet.mockResolvedValueOnce({
+      items: [],
+      totalCount: 0,
+      page: 1,
+      pageSize: 20
+    });
+
+    const store = useCatalogStore();
+    await store.fetchAdminDocuments({ categoryId: "55555555-5555-4000-8000-555555555555" });
+
+    expect(mockGet).toHaveBeenCalledWith(expect.stringContaining("categoryId=55555555-5555-4000-8000-555555555555"));
+  });
+
+  it("persists and clears admin category UUID filters between refreshes", async () => {
+    mockGet.mockResolvedValue({ items: [], totalCount: 0 });
+    const store = useCatalogStore();
+    await store.fetchAdminDocuments({ categoryId: category.id });
+    await store.fetchAdminDocuments();
+    expect(mockGet.mock.lastCall?.[0]).toContain(`categoryId=${category.id}`);
+    await store.fetchAdminDocuments({ categoryId: null });
+    expect(mockGet.mock.lastCall?.[0]).not.toContain('category');
+  });
+
+  it("uploads PDF multipart with only categoryId", async () => {
+    mockPost.mockResolvedValue({ id: 'created' });
+    mockGet.mockResolvedValue({ items: [], totalCount: 0 });
+    const store = useCatalogStore();
+    const file = new File(['%PDF-actual-content'], 'guide.pdf', { type: 'application/pdf' });
+    await store.uploadPdf({ file, title: 'Guide', description: 'Full description', categoryId: category.id, language: 'vi', authorOrSourceUrl: 'Author', attributionText: 'Licensed' });
+    const body = mockPost.mock.calls[0]![1] as FormData;
+    expect(body.get('file')).toBe(file);
+    expect(body.get('description')).toBe('Full description');
+    expect(body.get('language')).toBe('vi');
+    expect(body.get('authorOrSourceUrl')).toBe('Author');
+    expect(body.get('attributionText')).toBe('Licensed');
+    expect(body.get('categoryId')).toBe(category.id);
+    expect(body.has('category')).toBe(false);
+  });
+
+  it("sends URL import and metadata updates with categoryId only", async () => {
+    mockPost.mockResolvedValue({ id: 'created' });
+    mockPut.mockResolvedValue({ id: 'created' });
+    mockGet.mockResolvedValue({ items: [], totalCount: 0 });
+    const store = useCatalogStore();
+    await store.importUrl({ url: 'https://example.test/guide', title: 'Guide', description: 'Guide', categoryId: category.id, language: 'en' });
+    expect(mockPost.mock.calls[0]![1]).toMatchObject({ categoryId: category.id });
+    expect(mockPost.mock.calls[0]![1]).not.toHaveProperty('category');
+    await store.updateMetadata('created', { title: 'Renamed', description: 'Guide', categoryId: category.id, language: 'en', expectedVersion: 1 });
+    expect(mockPut.mock.calls[0]![1]).toMatchObject({ categoryId: category.id });
+    expect(mockPut.mock.calls[0]![1]).not.toHaveProperty('category');
   });
 });

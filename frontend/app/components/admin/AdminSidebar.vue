@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
-import { LayoutDashboard, LibraryBig, FileCog, Users, ScrollText, GraduationCap, LogOut, ShieldCheck } from 'lucide-vue-next'
+import { LayoutDashboard, LibraryBig, FolderTree, FileCog, Users, ScrollText, GraduationCap, LogOut, ShieldCheck } from 'lucide-vue-next'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 import { normalizeRoutePath } from '~/utils/adminRoutes'
@@ -15,6 +15,7 @@ const isLoggingOut = shallowRef(false)
 const allLinks = [
   { path: '/admin', label: 'admin.nav.dashboard', icon: LayoutDashboard, canShow: () => access.canViewAdminDashboard },
   { path: '/admin/catalog', label: 'admin.nav.documents', icon: LibraryBig, canShow: () => access.canManageCatalog },
+  { path: '/admin/categories', label: 'admin.nav.categories', icon: FolderTree, canShow: () => access.canManageCategories },
   { path: '/admin/documents', label: 'admin.nav.operations', icon: FileCog, canShow: () => access.canManageDocumentOperations },
   { path: '/admin/users', label: 'admin.nav.users', icon: Users, canShow: () => access.canManageAccounts },
   { path: '/admin/audit', label: 'admin.nav.audit', icon: ScrollText, canShow: () => access.canReadAudit }
@@ -22,7 +23,7 @@ const allLinks = [
 const links = computed(() => allLinks.filter(l => l.canShow()))
 const activePath = computed(() => normalizeRoutePath(route.path))
 function isActive(path: string): boolean {
-  return activePath.value === path || (path === '/admin' && activePath.value === '/admin/dashboard')
+  return activePath.value === path || (path === '/admin' && activePath.value === '/admin/dashboard') || (path !== '/admin' && activePath.value.startsWith(path + '/'))
 }
 async function logout() {
   if (isLoggingOut.value) return

@@ -12,9 +12,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using DeepPace.Api.Endpoints;
-using DeepPace.Application;
 using DeepPace.Application.Interfaces;
 using DeepPace.Infrastructure.Persistence;
+using DeepPace.Infrastructure.Services;
 using Xunit;
 using System.Net.Http.Json;
 using DeepPace.Application.Common;
@@ -53,8 +53,9 @@ public class LibraryEndpointsTests : IAsyncLifetime
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddRouting();
-        builder.Services.AddScoped<IDeepPaceDbContext>(_ => new DeepPaceDbContext(_dbOptions));
-        builder.Services.AddApplicationServices();
+        builder.Services.AddScoped(_ => new DeepPaceDbContext(_dbOptions));
+        builder.Services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
+        builder.Services.AddApiTestApplicationServices();
         builder.Services.AddScoped<IGoogleCloudTtsService, MockTtsService>();
 
         builder.Services.AddAuthentication(defaultScheme: "Test")
@@ -182,7 +183,7 @@ public class LibraryEndpointsTests : IAsyncLifetime
         {
             Title = "Audio Test Book",
             Slug = "audio-test-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Status = ProcessingStatus.Ready
         };
         await db.DocumentBooks.AddAsync(book);

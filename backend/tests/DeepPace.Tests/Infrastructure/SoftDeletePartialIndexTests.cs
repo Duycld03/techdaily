@@ -189,7 +189,7 @@ public class SoftDeletePartialIndexTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Design Patterns Part 1",
             Slug = "design-patterns",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             SourceType = SourceType.MarkdownSeries,
             IsDeleted = false
         };
@@ -198,7 +198,7 @@ public class SoftDeletePartialIndexTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Design Patterns Part 2",
             Slug = "design-patterns",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             SourceType = SourceType.MarkdownSeries,
             IsDeleted = false
         };
@@ -220,7 +220,7 @@ public class SoftDeletePartialIndexTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Design Patterns (Old)",
             Slug = "design-patterns",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             SourceType = SourceType.MarkdownSeries,
             IsDeleted = true
         };
@@ -232,7 +232,7 @@ public class SoftDeletePartialIndexTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Design Patterns (Re-imported)",
             Slug = "design-patterns",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             SourceType = SourceType.MarkdownSeries,
             IsDeleted = false
         };
@@ -254,7 +254,7 @@ public class SoftDeletePartialIndexTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Clean Code",
             Slug = "clean-code",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             SourceType = SourceType.MarkdownSeries,
             IsDeleted = false
         };

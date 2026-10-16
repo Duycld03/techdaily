@@ -125,20 +125,10 @@ public class PersonalBookDestination : IIngestionDestination
                     book.StatusMessage = $"AI is curating initial slice {i + 1}/{chunks.Count}...";
                     await dbContext.SaveChangesAsync(cancellationToken);
 
-                    var aiResult = await aiFormatter.FormatSliceAsync(
-                        chunk.OriginalTextMarkdown,
-                        chunk.ChapterTitle,
-                        chunk.Language,
-                        book.Category,
-                        cancellationToken);
+                    var aiResult = await aiFormatter.FormatSliceAsync(chunk.OriginalTextMarkdown, chunk.ChapterTitle, chunk.Language, cancellationToken);
 
                     if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
                     {
-                        if (book.Category != Category.EngineeringCraft)
-                        {
-                            chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
-                        }
-
                         chunk.SummaryMarkdown = !string.IsNullOrWhiteSpace(aiResult.Value.SummaryMarkdown)
                             ? aiResult.Value.SummaryMarkdown
                             : aiResult.Value.FormattedMarkdown;

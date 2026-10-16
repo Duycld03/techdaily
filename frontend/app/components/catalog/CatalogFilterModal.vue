@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { X, SlidersHorizontal, RotateCcw, Globe, FileText, Layers, Check } from 'lucide-vue-next'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 
 export interface CatalogFilterState {
-  category?: number
+  categoryId?: string
   sourceType?: number
   language?: string
 }
@@ -19,9 +20,10 @@ const emit = defineEmits<{
   (e: 'reset'): void
 }>()
 
-const { t } = useI18n()
-
-const localCategory = ref<number | undefined>(undefined)
+const { t, locale } = useI18n()
+const categoryStore = useCategoryStore()
+const localCategory = ref<string | undefined>(undefined)
+onMounted(() => categoryStore.ensureCategories())
 const localSourceType = ref<number | undefined>(undefined)
 const localLanguage = ref<string | undefined>(undefined)
 
@@ -29,7 +31,7 @@ watch(
   () => props.isOpen,
   (open) => {
     if (open) {
-      localCategory.value = props.currentFilters.category
+      localCategory.value = props.currentFilters.categoryId
       localSourceType.value = props.currentFilters.sourceType
       localLanguage.value = props.currentFilters.language
     }
@@ -37,15 +39,13 @@ watch(
   { immediate: true }
 )
 
-const categories = [
-  { id: undefined, label: () => t('library.categories.all') },
-  { id: 0, label: () => t('library.categories.frontend') },
-  { id: 1, label: () => t('library.categories.backend') },
-  { id: 2, label: () => t('library.categories.database') },
-  { id: 3, label: () => t('library.categories.system_design') },
-  { id: 4, label: () => t('library.categories.craft') },
-  { id: 5, label: () => t('library.categories.cloud') }
-]
+const categories = computed(() => [
+  { id: undefined as string | undefined, label: () => t('library.categories.all') },
+  ...categoryStore.allCategories.map(cat => ({
+    id: cat.id,
+    label: () => `${categoryStore.getCategoryName(cat, locale.value)}${cat.isActive ? '' : ` (${t('categories.inactive')})`}`
+  }))
+])
 
 const sourceTypes = [
   { id: undefined, label: () => t('library.discover.source_all'), icon: FileText },
@@ -76,11 +76,12 @@ function handleReset() {
 }
 
 function handleApply() {
-  emit('apply', {
-    category: localCategory.value,
+  const payload: CatalogFilterState = {
+    categoryId: localCategory.value,
     sourceType: localSourceType.value,
     language: localLanguage.value
-  })
+  }
+  emit('apply', payload)
   emit('close')
 }
 
@@ -135,6 +136,10 @@ function handleBackdropClick(e: MouseEvent) {
           <label class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('library.category_label') }}
           </label>
+          <div v-if="categoryStore.error" role="alert" class="text-sm text-red-600 dark:text-red-400">
+            {{ $t('categories.metadataUnavailable') }}
+            <button type="button" :disabled="categoryStore.isLoading" class="underline ml-2" @click="categoryStore.ensureCategories()">{{ $t('categories.retry') }}</button>
+          </div>
           <div class="flex flex-wrap items-center gap-2">
             <button
               v-for="cat in categories"

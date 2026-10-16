@@ -1,3 +1,5 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
+
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Insights.DTOs;
@@ -19,11 +21,13 @@ public class GetInsightsFeedHandler : IUseCase<GetInsightsFeedRequest, GetInsigh
         CancellationToken cancellationToken = default)
     {
         var query = _dbContext.TechInsights
-            .Where(i => i.IsPublished);
+            .AsNoTracking()
+            .Include(i => i.Category)
+            .Where(i => i.IsPublished && !i.IsDeleted);
 
-        if (request.Category.HasValue)
+        if (request.CategoryId.HasValue)
         {
-            query = query.Where(i => i.Category == request.Category.Value);
+            query = query.Where(i => i.CategoryId == request.CategoryId.Value);
         }
 
         var insights = await query.ToListAsync(cancellationToken);
@@ -69,7 +73,8 @@ public class GetInsightsFeedHandler : IUseCase<GetInsightsFeedRequest, GetInsigh
                 i.Id,
                 i.Slug,
                 i.Title,
-                i.Category,
+                i.CategoryId,
+                i.Category!.ToDescriptor(),
                 i.Tags,
                 i.SummaryMarkdown,
                 i.ProblemSnippet,

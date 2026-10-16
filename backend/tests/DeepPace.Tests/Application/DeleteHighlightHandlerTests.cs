@@ -51,7 +51,7 @@ public class DeleteHighlightHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Designing Data-Intensive Applications",
             Slug = "ddia",
-            Category = Category.DatabaseStorage
+            CategoryId = CategoryDefaults.DatabaseStorageId
         };
         await _db.DocumentBooks.AddAsync(book);
 

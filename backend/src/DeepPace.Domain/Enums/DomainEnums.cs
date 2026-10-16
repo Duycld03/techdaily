@@ -1,16 +1,5 @@
 namespace DeepPace.Domain.Enums;
 
-public enum Category
-{
-    FrontendWeb = 0,
-    BackendRuntime = 1,
-    DatabaseStorage = 2,
-    SystemDesign = 3,
-    EngineeringCraft = 4,
-    MentalModels = 5,
-    HabitsProductivity = 6
-}
-
 public enum Difficulty
 {
     Intermediate,
@@ -83,6 +72,7 @@ public enum AdminAuditOutcome
     Failed = 4
 }
 
+
 public static class AdminAuditActions
 {
     public const string UserSuspend = "User.Suspend";
@@ -102,6 +92,13 @@ public static class AdminAuditActions
     public const string DocumentIngestionRetryRequested = "Document.IngestionRetryRequested";
     public const string DocumentIngestionRetryCompleted = "Document.IngestionRetryCompleted";
     public const string DocumentSourceReplaced = "Document.SourceReplaced";
+
+    public const string CategoryCreate = "Category.Create";
+    public const string CategoryUpdateMetadata = "Category.UpdateMetadata";
+    public const string CategoryReorder = "Category.Reorder";
+    public const string CategoryActivate = "Category.Activate";
+    public const string CategoryDeactivate = "Category.Deactivate";
+    public const string CategoryDelete = "Category.Delete";
 }
 
 public enum IngestionAttemptOrigin

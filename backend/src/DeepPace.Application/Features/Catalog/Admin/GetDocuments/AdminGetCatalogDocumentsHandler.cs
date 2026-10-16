@@ -1,3 +1,5 @@
+using DeepPace.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Catalog.DTOs;
@@ -10,7 +12,7 @@ public record AdminGetCatalogDocumentsRequest(
     string? Search = null,
     CatalogVisibility? Visibility = null,
     ProcessingStatus? Status = null,
-    Category? Category = null,
+    Guid? CategoryId = null,
     int Page = 1,
     int PageSize = 20);
 
@@ -57,9 +59,9 @@ public class AdminGetCatalogDocumentsHandler : IUseCase<AdminGetCatalogDocuments
             query = query.Where(d => d.ProcessingStatus == request.Status.Value);
         }
 
-        if (request.Category.HasValue)
+        if (request.CategoryId.HasValue)
         {
-            query = query.Where(d => d.Category == request.Category.Value);
+            query = query.Where(d => d.CategoryId == request.CategoryId.Value);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

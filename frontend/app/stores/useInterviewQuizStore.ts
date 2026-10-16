@@ -3,13 +3,15 @@ import { ref, computed } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
 import { useToast } from '~/composables/useToast'
 import { useApiError } from '~/composables/useApiError'
+import { useCategoryStore, type CategoryDescriptor } from '~/stores/useCategoryStore'
 
 export interface QuizQuestion {
   id: string
   topic: string
-  category: number
-  level: number // 0=Fresher, 1=Junior, 2=Middle, 3=Senior
+  categoryId: string
+  category: CategoryDescriptor
   questionText: string
+  level: number // 0=Fresher, 1=Junior, 2=Middle, 3=Senior
   options: string[]
   correctOptionIndex: number
   explanationMarkdown: string
@@ -44,6 +46,14 @@ export interface TopicStat {
   accuracyRate: number
 }
 
+export interface CategoryStat {
+  categoryId: string
+  category: CategoryDescriptor
+  answeredCount: number
+  masteredCount: number
+  accuracyRate: number
+}
+
 export interface QuizStats {
   totalAnswered: number
   masteredCount: number
@@ -51,12 +61,14 @@ export interface QuizStats {
   accuracyRate: number
   levelBreakdown: LevelStat[]
   topicBreakdown: TopicStat[]
+  categoryBreakdown: CategoryStat[]
 }
 
 export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
   const api = useApiClient()
   const toast = useToast()
   const { formatError, t } = useApiError()
+  const categoryStore = useCategoryStore()
 
   const questions = ref<QuizQuestion[]>([])
   const currentIndex = ref(0)
@@ -69,11 +81,15 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
   const reviewTotalCount = ref(0)
   const reviewTotalPages = ref(0)
   const stats = ref<QuizStats | null>(null)
+  const reviewCategoryId = ref<string | null>(null)
+  const reviewLevel = ref<number | null>(null)
+  const reviewTopic = ref<string | null>(null)
 
   const activeTab = ref<'generate' | 'arena' | 'review' | 'stats' | 'summary'>('generate')
   const currentTopic = ref('.NET 10 Internals')
   const currentLevel = ref(3) // 3 = Senior
   const currentCount = ref(5)
+  const currentCategoryId = ref<string | null>(null)
 
   const isLoading = ref(false)
   const isGenerating = ref(false)
@@ -115,16 +131,23 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
     topic: string,
     level: number = 3,
     count: number = 5,
-    category?: number | null,
+    categoryId: string | null = null,
     locale: string = 'en',
     bookId?: string | null,
     isGrounded?: boolean
   ) {
+    if (!bookId) {
+      await categoryStore.ensureCategories()
+      if (!categoryId || !categoryStore.getCategoryById(categoryId)?.isActive || categoryStore.error) {
+        throw new Error(t('categories.selectCategory'))
+      }
+    }
     isGenerating.value = true
     error.value = null
     currentTopic.value = topic
     currentLevel.value = level
     currentCount.value = count
+    currentCategoryId.value = categoryId
 
     try {
       const response = await api.post<{
@@ -136,7 +159,7 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
         topic,
         level,
         count,
-        category: category ?? null,
+        categoryId,
         locale,
         bookId: bookId || null,
         isGrounded: !!isGrounded
@@ -154,6 +177,7 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
       return response
     } catch (err: any) {
       const formatted = formatError(err, 'quiz.generate_failed')
+      await categoryStore.fetchCategories(true)
       error.value = formatted
       toast.error(formatted)
       throw err
@@ -221,41 +245,17 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
     }
   }
 
-  async function fetchReviewQueue(
-    paramsOrCategory?:
-      | {
-          category?: number | null
-          level?: number | null
-          topic?: string | null
-          page?: number
-          pageSize?: number
-        }
-      | number
-      | null,
-    maybeLevel?: number | null,
-    maybeTopic?: string | null,
-    maybePage?: number,
-    maybePageSize?: number
-  ) {
-    let category: number | null | undefined
-    let level: number | null | undefined
-    let topic: string | null | undefined
-    let page: number | undefined
-    let pageSize: number | undefined
-
-    if (typeof paramsOrCategory === 'object' && paramsOrCategory !== null) {
-      category = paramsOrCategory.category
-      level = paramsOrCategory.level
-      topic = paramsOrCategory.topic
-      page = paramsOrCategory.page
-      pageSize = paramsOrCategory.pageSize
-    } else {
-      category = paramsOrCategory
-      level = maybeLevel
-      topic = maybeTopic
-      page = maybePage
-      pageSize = maybePageSize
-    }
+  async function fetchReviewQueue(params: {
+    categoryId?: string | null
+    level?: number | null
+    topic?: string | null
+    page?: number
+    pageSize?: number
+  } = {}) {
+    if (params.categoryId !== undefined) reviewCategoryId.value = params.categoryId
+    if (params.level !== undefined) reviewLevel.value = params.level
+    if (params.topic !== undefined) reviewTopic.value = params.topic
+    const { page, pageSize } = params
 
     const targetPage = page ?? reviewPage.value
     const targetPageSize = pageSize ?? reviewPageSize.value
@@ -263,9 +263,9 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
     isLoading.value = true
     try {
       const queryParams = new URLSearchParams()
-      if (category !== undefined && category !== null) queryParams.set('category', category.toString())
-      if (level !== undefined && level !== null) queryParams.set('level', level.toString())
-      if (topic) queryParams.set('topic', topic)
+      if (reviewCategoryId.value) queryParams.set('categoryId', reviewCategoryId.value)
+      if (reviewLevel.value !== null) queryParams.set('level', reviewLevel.value.toString())
+      if (reviewTopic.value) queryParams.set('topic', reviewTopic.value)
       queryParams.set('page', targetPage.toString())
       queryParams.set('pageSize', targetPageSize.toString())
 
@@ -335,11 +335,15 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
     submissions,
     reviewQueue,
     reviewQueueTotal,
+    reviewCategoryId,
+    reviewLevel,
+    reviewTopic,
     stats,
     activeTab,
     currentTopic,
     currentLevel,
     currentCount,
+    currentCategoryId,
     isLoading,
     isGenerating,
     isSubmitting,

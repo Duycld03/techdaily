@@ -1,10 +1,13 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
+
 namespace DeepPace.Application.Features.KnowledgeGraph.DTOs;
 
 public sealed record GraphNodeDto(
     string Id,
     string Label,
     string Type,
-    string Category,
+    Guid? CategoryId,
+    CategoryDescriptorDto? Category,
     string? Subtitle = null,
     int? DayOrder = null,
     string? Summary = null,
@@ -16,7 +19,8 @@ public sealed record GraphNodeDto(
     string? DocumentChunkId = null,
     string? BookId = null,
     List<string>? Tags = null,
-    DateTime? CreatedAt = null
+    DateTime? CreatedAt = null,
+    int? TotalChunks = null
 );
 
 public sealed record GraphEdgeDto(

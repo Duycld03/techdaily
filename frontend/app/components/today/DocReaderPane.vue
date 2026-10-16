@@ -98,7 +98,7 @@ const copied = ref(false)
 
 // Explainer Modal state
 const selectedTerm = ref<string | null>(null)
-const selectedCategory = ref<string>('Architecture')
+const selectedContextLabel = ref<string>('')
 const selectedContext = ref<string>('')
 const isExplainerOpen = ref(false)
 
@@ -157,7 +157,7 @@ function triggerExplainWithAi() {
   if (!floatingMenu.value.text) return
   selectedTerm.value = floatingMenu.value.text
   selectedContext.value = floatingMenu.value.context
-  selectedCategory.value = props.chunk.chapterTitle
+  selectedContextLabel.value = props.chunk.chapterTitle
   isExplainerOpen.value = true
   floatingMenu.value.visible = false
 }
@@ -444,7 +444,7 @@ onUnmounted(() => {
     <TermExplainerModal
       v-if="isExplainerOpen && selectedTerm"
       :term="selectedTerm"
-      :category="selectedCategory"
+      :context-label="selectedContextLabel"
       :context="selectedContext"
       @close="isExplainerOpen = false"
     />

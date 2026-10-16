@@ -39,6 +39,117 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_CustomCategory_UsesUuidHubsAndStats_WithStableRenamedInactiveIdentity()
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "custom-graph@test.local", Name = "Graph owner" };
+        var other = new User { Id = Guid.NewGuid(), Email = "other-graph@test.local", Name = "Other" };
+        var category = DocumentCategory.Create("astrophysics", "Astrophysics", "Vật lý thiên văn", 51);
+        var hidden = DocumentCategory.Create("hidden-subject", "Hidden", "Ẩn");
+        var deleted = DocumentCategory.Create("deleted-subject", "Deleted", "Đã xóa");
+        _db.Users.AddRange(user, other);
+        _db.DocumentCategories.AddRange(category, hidden, deleted);
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(), Title = "Custom book", Slug = "custom-graph",
+            CategoryId = category.Id, CreatedByUserId = user.Id, IsPublished = true
+        };
+        _db.DocumentBooks.AddRange(book,
+            new DocumentBook { Id = Guid.NewGuid(), Title = "Hidden", Slug = "hidden-graph", CategoryId = hidden.Id, CreatedByUserId = other.Id, IsPublished = true },
+            new DocumentBook { Id = Guid.NewGuid(), Title = "Deleted", Slug = "deleted-graph", CategoryId = deleted.Id, CreatedByUserId = user.Id, IsPublished = true, IsDeleted = true });
+        var question = new QuizQuestion
+        {
+            Id = Guid.NewGuid(), Topic = "Orbital mechanics", CategoryId = category.Id,
+            QuestionText = "What is an orbit?", Level = QuizLevel.Mastery
+        };
+        _db.QuizQuestions.Add(question);
+        var privateQuestion = new QuizQuestion
+        {
+            Id = Guid.NewGuid(), CategoryId = hidden.Id, CreatedByUserId = other.Id,
+            Topic = "Private question", QuestionText = "Private", Level = QuizLevel.Mastery
+        };
+        _db.QuizQuestions.Add(privateQuestion);
+        var privateCard = SpacedRepetitionCard.CreateFromQuizMistake(user.Id, privateQuestion.Id, "Private source", "Answer");
+        _db.SpacedRepetitionCards.Add(privateCard);
+        var quizCard = SpacedRepetitionCard.CreateFromQuizMistake(user.Id, question.Id, "Orbit", "Answer");
+        var orphan = SpacedRepetitionCard.CreateFromDrillMistake(user.Id, null, "Unknown provenance", "Answer");
+        _db.SpacedRepetitionCards.AddRange(quizCard, orphan);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var before = (await _handler.ExecuteAsync(new(user.Id))).Value;
+        var pillar = before.Nodes.Single(n => n.Type == GraphNodeType.Pillar);
+        pillar.Id.Should().Be($"pillar-{category.Id}");
+        pillar.CategoryId.Should().Be(category.Id);
+        pillar.Category!.NameVi.Should().Be("Vật lý thiên văn");
+        before.Stats.PillarCounts.Should().ContainSingle().Which.Key.Should().Be(category.Id.ToString());
+        before.Stats.PillarCounts[category.Id.ToString()].Should().Be(3);
+        before.Edges.Should().Contain(e => e.Source == quizCard.Id.ToString() && e.Target == pillar.Id);
+        var orphanNode = before.Nodes.Single(n => n.Id == orphan.Id.ToString());
+        orphanNode.CategoryId.Should().BeNull();
+        orphanNode.Category.Should().BeNull();
+        before.Edges.Should().NotContain(e => e.Source == orphan.Id.ToString());
+        var privateNode = before.Nodes.Single(n => n.Id == privateCard.Id.ToString());
+        privateNode.CategoryId.Should().BeNull();
+        privateNode.Category.Should().BeNull();
+        before.Edges.Should().NotContain(e => e.Source == privateCard.Id.ToString());
+        var nodeIds = before.Nodes.Select(n => n.Id).ToHashSet();
+        before.Edges.Should().OnlyContain(e => nodeIds.Contains(e.Source) && nodeIds.Contains(e.Target));
+
+        var stored = await _db.DocumentCategories.SingleAsync(c => c.Id == category.Id);
+        stored.UpdateMetadata("Renamed subject", "Tên mới", 90, false, stored.ConcurrencyVersion);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        var after = (await _handler.ExecuteAsync(new(user.Id))).Value;
+        after.Nodes.Select(n => n.Id).Should().BeEquivalentTo(before.Nodes.Select(n => n.Id));
+        after.Edges.Should().BeEquivalentTo(before.Edges);
+        after.Nodes.Single(n => n.Id == pillar.Id).Category!.NameEn.Should().Be("Renamed subject");
+        after.Nodes.Single(n => n.Id == pillar.Id).Category!.IsActive.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ReclassifiedBook_ProjectsCurrentCategoryForItsChunksHighlightsAndCards()
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "reclassified-graph@test.local", Name = "Owner" };
+        var original = DocumentCategory.Create("old-graph-subject", "Old", "Cũ");
+        var current = DocumentCategory.Create("new-graph-subject", "New subject", "Chủ đề mới", 11, false);
+        _db.Users.Add(user);
+        _db.DocumentCategories.AddRange(original, current);
+        var book = new DocumentBook
+        {
+            Id = Guid.NewGuid(), Title = "Book", Slug = "reclassified-graph",
+            CategoryId = original.Id, CreatedByUserId = user.Id, IsPublished = true,
+            TotalChunks = 9, AuthorOrSourceUrl = "https://example.test/source"
+        };
+        var chunk = new DocumentChunk { Id = Guid.NewGuid(), DocumentBook = book, DocumentBookId = book.Id, ChapterTitle = "Chapter" };
+        var highlight = new UserHighlight { Id = Guid.NewGuid(), UserId = user.Id, DocumentChunk = chunk, DocumentChunkId = chunk.Id, SelectedText = "Quote" };
+        var card = SpacedRepetitionCard.CreateFromHighlight(user.Id, highlight.Id, "Front", "Back");
+        card.ApplyReview(5);
+        card.ApplyReview(5);
+        _db.UserHighlights.Add(highlight);
+        _db.SpacedRepetitionCards.Add(card);
+        await _db.SaveChangesAsync();
+        book.CategoryId = current.Id;
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var graph = (await _handler.ExecuteAsync(new(user.Id))).Value;
+
+        graph.Nodes.Should().HaveCount(5);
+        var bookNode = graph.Nodes.Single(n => n.Id == book.Id.ToString());
+        bookNode.TotalChunks.Should().Be(9);
+        bookNode.Subtitle.Should().Be("https://example.test/source");
+        graph.Nodes.Should().OnlyContain(n => n.CategoryId == current.Id && n.Category != null && n.Category.Id == current.Id && !n.Category.IsActive);
+        graph.Stats.PillarCounts.Should().ContainKey(current.Id.ToString()).WhoseValue.Should().Be(5);
+        graph.Stats.PillarCounts.Should().NotContainKey(original.Id.ToString());
+        graph.Edges.Should().Contain(e => e.Source == book.Id.ToString() && e.Target == $"pillar-{current.Id}");
+        graph.Edges.Should().Contain(e => e.Source == card.Id.ToString() && e.Target == highlight.Id.ToString());
+        var cardNode = graph.Nodes.Single(n => n.Id == card.Id.ToString());
+        cardNode.DocumentChunkId.Should().Be(chunk.Id.ToString());
+        cardNode.RepetitionCount.Should().Be(2);
+        cardNode.IntervalDays.Should().Be(6);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenUserIdIsEmpty_ShouldReturnUnauthorized()
     {
         // Arrange
@@ -65,7 +176,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Designing Data-Intensive Applications",
             Slug = "ddia",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             AuthorOrSourceUrl = "Martin Kleppmann",
             IsPublished = true,
             IsDeleted = false,
@@ -107,7 +218,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeTrue();
         var response = result.Value;
-        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar && n.Id == "pillar-DatabaseStorage");
+        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar && n.Id == $"pillar-{book.CategoryId}");
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Chunk && n.Id == chunk.Id.ToString());
         response.Nodes.Should().NotContain(n => n.Type == "topic");
         response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Book && n.Id == book.Id.ToString());
@@ -154,7 +265,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "CLR via C#",
             Slug = "clr-via-csharp",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedByUserId = userA.Id
         };
@@ -225,7 +336,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "My Imported Book",
             Slug = "my-book",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             IsPublished = true,
             CreatedByUserId = owner.Id
         };
@@ -234,7 +345,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Someone Else's Book",
             Slug = "stranger-book",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             IsPublished = true,
             CreatedByUserId = stranger.Id
         };
@@ -263,7 +374,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Published Book",
             Slug = "pub-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             IsDeleted = false,
             CreatedByUserId = user.Id
@@ -274,7 +385,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Draft Book",
             Slug = "draft-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = false,
             IsDeleted = false,
             CreatedByUserId = user.Id
@@ -285,7 +396,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Deleted Book",
             Slug = "deleted-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             IsDeleted = true,
             CreatedByUserId = user.Id
@@ -318,7 +429,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Backend Book",
             Slug = "backend-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -371,7 +482,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Backend Book",
             Slug = "backend-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -398,15 +509,10 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         var pillars = result.Value.Nodes.Where(n => n.Type == GraphNodeType.Pillar).ToList();
 
         pillars.Should().ContainSingle();
-        pillars.Single().Id.Should().Be("pillar-BackendRuntime");
+        pillars.Single().Id.Should().Be($"pillar-{book.CategoryId}");
         result.Value.Stats.NodeTypeCounts[GraphNodeType.Pillar].Should().Be(1);
 
-        pillars.Should().NotContain(p => p.Id == "pillar-FrontendWeb");
-        pillars.Should().NotContain(p => p.Id == "pillar-DatabaseStorage");
-        pillars.Should().NotContain(p => p.Id == "pillar-SystemDesign");
-        pillars.Should().NotContain(p => p.Id == "pillar-EngineeringCraft");
-        pillars.Should().NotContain(p => p.Id == "pillar-MentalModels");
-        pillars.Should().NotContain(p => p.Id == "pillar-HabitsProductivity");
+        pillars.Should().OnlyContain(p => p.CategoryId == book.CategoryId);
     }
 
     [Fact]
@@ -421,7 +527,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "30-Day Senior Engineer Curriculum",
             Slug = "30-day-senior-curriculum",
-            Category = Category.EngineeringCraft,
+            CategoryId = CategoryDefaults.EngineeringCraftId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -438,7 +544,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             .ToList();
 
         bookToPillar.Should().ContainSingle();
-        bookToPillar.Single().Target.Should().Be("pillar-EngineeringCraft");
+        bookToPillar.Single().Target.Should().Be($"pillar-{book.CategoryId}");
     }
 
     [Fact]
@@ -454,7 +560,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "ASP.NET Core Web APIs",
             Slug = "aspnet-core-10.0",
-            Category = Category.FrontendWeb,
+            CategoryId = CategoryDefaults.FrontendWebId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -467,11 +573,11 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         // Assert
         result.IsSuccess.Should().BeTrue();
         var node = result.Value.Nodes.Single(n => n.Id == aspnetBook.Id.ToString());
-        node.Category.Should().Be(Category.FrontendWeb.ToString());
+        node.Category!.Id.Should().Be(aspnetBook.CategoryId);
 
         result.Value.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
             && e.Source == aspnetBook.Id.ToString()
-            && e.Target == "pillar-FrontendWeb");
+            && e.Target == $"pillar-{aspnetBook.CategoryId}");
     }
 
     [Fact]
@@ -486,7 +592,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Pro .NET Garbage Collection",
             Slug = "pro-dotnet-gc",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -495,7 +601,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Kubernetes in Action",
             Slug = "k8s-action",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -599,7 +705,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Database Internals",
             Slug = "db-internals",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -676,7 +782,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Pro .NET Memory Management",
             Slug = "pro-dotnet-memory",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -731,7 +837,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "High Performance Browser Networking",
             Slug = "hpbn",
-            Category = Category.FrontendWeb,
+            CategoryId = CategoryDefaults.FrontendWebId,
             IsPublished = true,
             CreatedByUserId = otherUser.Id
         };
@@ -773,7 +879,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "CLR Internals",
             Slug = "clr-internals",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedByUserId = otherUser.Id
         };
@@ -832,7 +938,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Pro .NET Memory",
             Slug = "pro-dotnet-memory",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -872,7 +978,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         {
             Id = Guid.NewGuid(),
             Topic = "System Design",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             Level = QuizLevel.Senior,
             QuestionText = "What is MVCC?",
             ExplanationMarkdown = "Multi-version concurrency control",
@@ -902,8 +1008,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         // The orphan quiz card is anchored via CardToPillar, forcing its pillar hub to exist.
         response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToPillar
             && e.Source == orphanCard.Id.ToString()
-            && e.Target == "pillar-EngineeringCraft");
-        response.Nodes.Should().Contain(n => n.Id == "pillar-EngineeringCraft");
+            && e.Target == $"pillar-{question.CategoryId}");
+        response.Nodes.Should().Contain(n => n.Id == $"pillar-{question.CategoryId}");
 
         // No card is a degree-0 node.
         foreach (var cardId in new[] { chunkCard.Id.ToString(), highlightCard.Id.ToString(), orphanCard.Id.ToString() })
@@ -924,7 +1030,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "The Great Mental Models",
             Slug = "great-mental-models",
-            Category = Category.MentalModels,
+            CategoryId = CategoryDefaults.MentalModelsId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -933,7 +1039,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Atomic Habits",
             Slug = "atomic-habits",
-            Category = Category.HabitsProductivity,
+            CategoryId = CategoryDefaults.HabitsProductivityId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -949,8 +1055,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         var pillars = response.Nodes.Where(n => n.Type == GraphNodeType.Pillar).ToList();
 
         pillars.Should().HaveCount(2);
-        pillars.Should().Contain(p => p.Id == "pillar-MentalModels");
-        pillars.Should().Contain(p => p.Id == "pillar-HabitsProductivity");
+        pillars.Should().Contain(p => p.Id == $"pillar-{mentalBook.CategoryId}");
+        pillars.Should().Contain(p => p.Id == $"pillar-{habitsBook.CategoryId}");
 
         // Verify zero dangling edges
         var nodeIds = response.Nodes.Select(n => n.Id).ToHashSet();
@@ -962,10 +1068,10 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
 
         response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
             && e.Source == mentalBook.Id.ToString()
-            && e.Target == "pillar-MentalModels");
+            && e.Target == $"pillar-{mentalBook.CategoryId}");
         response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.BookToPillar
             && e.Source == habitsBook.Id.ToString()
-            && e.Target == "pillar-HabitsProductivity");
+            && e.Target == $"pillar-{habitsBook.CategoryId}");
     }
 
     [Fact]
@@ -980,7 +1086,7 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Atomic Habits",
             Slug = "atomic-habits",
-            Category = Category.HabitsProductivity,
+            CategoryId = CategoryDefaults.HabitsProductivityId,
             IsPublished = true,
             CreatedByUserId = user.Id
         };
@@ -1007,8 +1113,8 @@ public class GetKnowledgeGraphQueryHandlerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         var response = result.Value;
 
-        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar && n.Id == "pillar-HabitsProductivity");
-        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Card && n.Id == card.Id.ToString() && n.Category == "HabitsProductivity");
+        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Pillar && n.Id == $"pillar-{book.CategoryId}");
+        response.Nodes.Should().Contain(n => n.Type == GraphNodeType.Card && n.Id == card.Id.ToString() && n.CategoryId == book.CategoryId);
         response.Edges.Should().Contain(e => e.RelationType == GraphRelationType.CardToChunk
             && e.Source == card.Id.ToString()
             && e.Target == chunk.Id.ToString());

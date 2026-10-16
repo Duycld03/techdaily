@@ -3,12 +3,14 @@ import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import GraphDetailDrawer from '~/components/graph/GraphDetailDrawer.vue'
 import { useKnowledgeGraphStore, type GraphNode } from '~/stores/useKnowledgeGraphStore'
+import { graphCategory, otherGraphCategory } from '../../fixtures/graphCategories'
 
 const mockChunkNode: GraphNode = {
   id: 'chunk_1',
   label: 'PostgreSQL MVCC & Vacuum',
   type: 'chunk',
-  category: 'BackendDotNet',
+  categoryId: graphCategory.id,
+  category: graphCategory,
   subtitle: 'Chapter 3: Storage Internals',
   summary: 'Multi-version concurrency control mechanics and autovacuum tuning',
   difficulty: 'Advanced',
@@ -19,7 +21,8 @@ const mockBookNode: GraphNode = {
   id: 'book_1',
   label: 'Designing Data-Intensive Applications',
   type: 'book',
-  category: 'DatabaseStorage',
+  categoryId: otherGraphCategory.id,
+  category: otherGraphCategory,
   subtitle: 'Martin Kleppmann • 12 Chapters',
   summary: 'Comprehensive guide to reliable, scalable, and maintainable systems.',
   bookId: 'book_1'
@@ -29,7 +32,8 @@ const mockCardNode: GraphNode = {
   id: 'card_1',
   label: 'What causes PostgreSQL table bloat?',
   type: 'card',
-  category: 'DatabaseStorage',
+  categoryId: otherGraphCategory.id,
+  category: otherGraphCategory,
   status: 'Mastered',
   intervalDays: 25,
   easeFactor: 2.6,
@@ -41,7 +45,8 @@ const mockHighlightNode: GraphNode = {
   id: 'hl_1',
   label: 'MVCC creates a new tuple version on every update statement in PostgreSQL.',
   type: 'highlight',
-  category: 'DatabaseStorage',
+  categoryId: otherGraphCategory.id,
+  category: otherGraphCategory,
   summary: 'Crucial insight into why frequent updates lead to table and index bloat.',
   bookId: 'book_1',
   documentChunkId: 'chunk_7',
@@ -49,10 +54,11 @@ const mockHighlightNode: GraphNode = {
 }
 
 const mockPillarNode: GraphNode = {
-  id: 'pillar-BackendDotNet',
-  label: 'Backend (.NET)',
+  id: `pillar-${graphCategory.id}`,
+  label: 'Cloud Platforms',
   type: 'pillar',
-  category: 'BackendDotNet',
+  categoryId: graphCategory.id,
+  category: graphCategory,
   subtitle: '.NET Runtime, CLR, Concurrency & Async I/O',
   summary: 'Core architectural pillar for .NET backend development and high-throughput services.'
 }
@@ -70,8 +76,8 @@ describe('GraphDetailDrawer.vue', () => {
     store.rawData = {
       nodes: [mockChunkNode, mockBookNode, mockCardNode, mockHighlightNode, mockPillarNode],
       edges: [
-        { id: 'edge_pillar_chunk', source: 'chunk_1', target: 'pillar-BackendDotNet', relationType: 'ChunkToBook' },
-        { id: 'edge_pillar_book', source: 'book_1', target: 'pillar-BackendDotNet', relationType: 'BookToPillar' }
+        { id: 'edge_pillar_chunk', source: 'chunk_1', target: `pillar-${graphCategory.id}`, relationType: 'ChunkToBook' },
+        { id: 'edge_pillar_book', source: 'book_1', target: `pillar-${graphCategory.id}`, relationType: 'BookToPillar' }
       ],
       stats: {
         totalNodes: 4,
@@ -107,7 +113,8 @@ describe('GraphDetailDrawer.vue', () => {
 
     expect(wrapper.find('aside').exists()).toBe(true)
     expect(wrapper.text()).toContain('PostgreSQL MVCC & Vacuum')
-    expect(wrapper.text()).toContain('BackendDotNet')
+    expect(wrapper.text()).toContain('Cloud Platforms')
+    expect(wrapper.text()).toContain('categories.inactive')
     expect(wrapper.text()).toContain('Advanced')
     expect(wrapper.text()).toContain('Chapter 3: Storage Internals')
     expect(wrapper.text()).toContain('Multi-version concurrency control mechanics and autovacuum tuning')
@@ -219,7 +226,7 @@ describe('GraphDetailDrawer.vue', () => {
 
   it('renders pillar node metadata, domain summary, metrics, and filter action with whitespace-nowrap shrink-0', async () => {
     const store = createTestStore()
-    store.selectNode('pillar-BackendDotNet')
+    store.selectNode(`pillar-${graphCategory.id}`)
     const wrapper = mount(GraphDetailDrawer, {
       global: {
         stubs: { NuxtLink: NuxtLinkStub }
@@ -228,11 +235,11 @@ describe('GraphDetailDrawer.vue', () => {
 
     expect(wrapper.find('aside').exists()).toBe(true)
     // Title, subtitle, and summary
-    expect(wrapper.text()).toContain('Backend (.NET)')
+    expect(wrapper.text()).toContain('Cloud Platforms')
     expect(wrapper.text()).toContain('.NET Runtime, CLR, Concurrency & Async I/O')
     expect(wrapper.text()).toContain('Core architectural pillar for .NET backend development and high-throughput services.')
     // Category badge
-    expect(wrapper.text()).toContain('BackendDotNet')
+    expect(wrapper.text()).toContain('Cloud Platforms')
 
     // Connected metrics
     const topicsCount = wrapper.find('[data-test="pillar-topics-count"]')
@@ -247,9 +254,9 @@ describe('GraphDetailDrawer.vue', () => {
     const filterBtn = wrapper.find('[data-test="filter-to-pillar"]')
     expect(filterBtn.exists()).toBe(true)
     // Clicking the filter button sets category in store and closes drawer
-    const setCategorySpy = vi.spyOn(store, 'setCategory')
+    const setCategorySpy = vi.spyOn(store, 'setCategoryId')
     await filterBtn.trigger('click')
-    expect(setCategorySpy).toHaveBeenCalledWith('BackendDotNet')
+    expect(setCategorySpy).toHaveBeenCalledWith(graphCategory.id)
     expect(store.selectedNodeId).toBeNull()
   })
 })

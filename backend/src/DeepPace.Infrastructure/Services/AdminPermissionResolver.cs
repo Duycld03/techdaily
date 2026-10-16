@@ -61,6 +61,7 @@ public class AdminPermissionResolver : IAdminPermissionResolver
             var canManageDocOps = recognizedKeys.Contains(PermissionKeys.ManageDocumentOperations);
             var canViewDashboard = recognizedKeys.Contains(PermissionKeys.ViewAdminDashboard);
             var canManageRoles = recognizedKeys.Contains(PermissionKeys.ManageRoles) && canManageAccounts;
+            var canManageCategories = recognizedKeys.Contains(PermissionKeys.ManageCategories);
 
             var dto = new AdminCapabilitiesDto(
                 CanManageCatalog: canManageCatalog,
@@ -68,7 +69,8 @@ public class AdminPermissionResolver : IAdminPermissionResolver
                 CanReadAudit: canReadAudit,
                 CanManageDocumentOperations: canManageDocOps,
                 CanViewAdminDashboard: canViewDashboard,
-                CanManageRoles: canManageRoles);
+                CanManageRoles: canManageRoles,
+                CanManageCategories: canManageCategories);
 
             return Result<AdminCapabilitiesDto>.Success(dto);
         }
@@ -96,6 +98,7 @@ public class AdminPermissionResolver : IAdminPermissionResolver
             AdminPermission.ReadAudit => caps.CanReadAudit,
             AdminPermission.ManageDocumentOperations => caps.CanManageDocumentOperations,
             AdminPermission.ManageRoles => caps.CanManageRoles,
+            AdminPermission.ManageCategories => caps.CanManageCategories,
             _ => false
         };
 

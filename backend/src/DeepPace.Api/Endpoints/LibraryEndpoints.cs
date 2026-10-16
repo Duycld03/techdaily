@@ -1,3 +1,5 @@
+using DeepPace.Domain.Entities;
+
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
@@ -30,7 +32,7 @@ public static class LibraryEndpoints
         // Public Book Browsing
         group.MapGet("/books", async (
             ClaimsPrincipal userClaims,
-            [FromQuery] Category? category,
+            [FromQuery] Guid? categoryId,
             [FromQuery] string? search,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 12,
@@ -38,10 +40,10 @@ public static class LibraryEndpoints
             CancellationToken ct = default) =>
         {
             var userId = GetUserIdFromClaims(userClaims);
-            var result = await handler.ExecuteAsync(new GetBooksRequest(category, search, page, pageSize, userId), ct);
+            var result = await handler.ExecuteAsync(new GetBooksRequest(categoryId, search, page, pageSize, userId), ct);
             return result.Match(
                 success => Results.Ok(success),
-                error => error.ToProblem(StatusCodes.Status400BadRequest)
+                error => error.ToProblem()
             );
         })
         .WithName("GetBooks")
@@ -159,7 +161,7 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(authorizedRequest, ct);
             return result.Match(
                 success => Results.Created($"/api/v1/library/books/{success.Book.Id}", success),
-                error => error.ToProblem(StatusCodes.Status400BadRequest)
+                error => error.ToProblem()
             );
         })
         .RequireAuthorization()
@@ -217,15 +219,11 @@ public static class LibraryEndpoints
                 return Results.Unauthorized();
             }
 
-            var request = new UpdateBookRequest(id, userId.Value, body.Title, body.AuthorOrSourceUrl, body.Category, body.Language);
+            var request = new UpdateBookRequest(id, userId.Value, body.Title, body.AuthorOrSourceUrl, body.CategoryId, body.Language);
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Ok(success.Book),
-                error => error == Error.NotFound
-                    ? error.ToProblem(StatusCodes.Status404NotFound)
-                    : error.Code == "LIBRARY_FORBIDDEN"
-                        ? error.ToProblem(StatusCodes.Status403Forbidden)
-                        : error.ToProblem(StatusCodes.Status400BadRequest)
+                error => error.ToProblem()
             );
         })
         .RequireAuthorization()
@@ -259,8 +257,8 @@ public static class LibraryEndpoints
             }
 
             var title = form["title"].ToString();
-            var categoryStr = form["category"].ToString();
-            var category = Enum.TryParse<Category>(categoryStr, out var cat) ? cat : Category.BackendRuntime;
+            if (!Guid.TryParse(form["categoryId"].ToString(), out var categoryId) || categoryId == Guid.Empty)
+                return Error.Custom("Category.ValidationFailed", "A category UUID is required.").ToProblem();
             var language = form["language"].ToString();
             if (string.IsNullOrWhiteSpace(language)) language = "en";
 
@@ -270,14 +268,14 @@ public static class LibraryEndpoints
                 FileName: file.FileName,
                 FileLength: file.Length,
                 Title: string.IsNullOrWhiteSpace(title) ? null : title,
-                Category: category,
+                CategoryId: categoryId,
                 Language: language,
                 CreatedByUserId: userId);
 
             var result = await handler.ExecuteAsync(request, ct);
             return result.Match(
                 success => Results.Accepted($"/api/v1/library/books/{success.Book.Id}/status", success),
-                error => error.ToProblem(StatusCodes.Status400BadRequest)
+                error => error.ToProblem()
             );
         })
         .DisableAntiforgery()
@@ -301,7 +299,7 @@ public static class LibraryEndpoints
             var result = await handler.ExecuteAsync(authorizedRequest, ct);
             return result.Match(
                 success => Results.Accepted($"/api/v1/library/books/{success.Book.Id}/status", success),
-                error => error.ToProblem(StatusCodes.Status400BadRequest)
+                error => error.ToProblem()
             );
         })
         .RequireAuthorization()
@@ -431,5 +429,5 @@ public static class LibraryEndpoints
 }
 
 public record SynthesizeChunkAudioApiRequest(string? VoiceId, string? ContentHash = null, string? NarrationScript = null);
-public record UpdateBookApiRequest(string Title, string? AuthorOrSourceUrl, Category Category, string? Language = null);
+public record UpdateBookApiRequest(string Title, string? AuthorOrSourceUrl, Guid CategoryId, string? Language = null);
 

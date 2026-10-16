@@ -59,7 +59,7 @@ public class ExportBookMarkdownHandlerTests : IDisposable
             Title = "Designing Data-Intensive Applications",
             Slug = "designing-data-intensive-applications",
             AuthorOrSourceUrl = "Martin Kleppmann",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             TotalChunks = 2
         };
 
@@ -136,7 +136,7 @@ public class ExportBookMarkdownHandlerTests : IDisposable
             Title = "Database Internals",
             Slug = "database-internals",
             AuthorOrSourceUrl = "Alex Petrov",
-            Category = Category.DatabaseStorage,
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             TotalChunks = 1
         };
 

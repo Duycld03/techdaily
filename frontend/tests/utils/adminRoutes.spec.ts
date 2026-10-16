@@ -22,9 +22,10 @@ describe('administrator route boundaries', () => {
   })
 
   describe('deterministic landing and destination access', () => {
-    it('resolves deterministic landing in order: dashboard, catalog, users, documents, audit, fallback to login', () => {
+    it('resolves deterministic landing in order: dashboard, catalog, categories, users, documents, audit, fallback to login', () => {
       expect(getFirstAccessibleAdminRoute({ canViewAdminDashboard: true, canManageCatalog: true })).toBe('/admin/dashboard')
       expect(getFirstAccessibleAdminRoute({ canManageCatalog: true, canManageAccounts: true })).toBe('/admin/catalog')
+      expect(getFirstAccessibleAdminRoute({ canManageCategories: true, canManageAccounts: true })).toBe('/admin/categories')
       expect(getFirstAccessibleAdminRoute({ canManageAccounts: true, canReadAudit: true })).toBe('/admin/users')
       expect(getFirstAccessibleAdminRoute({ canManageDocumentOperations: true, canReadAudit: true })).toBe('/admin/documents')
       expect(getFirstAccessibleAdminRoute({ canReadAudit: true })).toBe('/admin/audit')
@@ -37,6 +38,7 @@ describe('administrator route boundaries', () => {
       const allCaps = {
         canViewAdminDashboard: true,
         canManageCatalog: true,
+        canManageCategories: true,
         canManageAccounts: true,
         canReadAudit: true,
         canManageDocumentOperations: true,
@@ -46,6 +48,7 @@ describe('administrator route boundaries', () => {
       expect(canAccessAdminDestination('/admin', allCaps)).toBe(true)
       expect(canAccessAdminDestination('/admin/dashboard', allCaps)).toBe(true)
       expect(canAccessAdminDestination('/admin/catalog', allCaps)).toBe(true)
+      expect(canAccessAdminDestination('/admin/categories', allCaps)).toBe(true)
       expect(canAccessAdminDestination('/admin/users', allCaps)).toBe(true)
       expect(canAccessAdminDestination('/admin/documents', allCaps)).toBe(true)
       expect(canAccessAdminDestination('/admin/audit', allCaps)).toBe(true)
@@ -58,6 +61,7 @@ describe('administrator route boundaries', () => {
       expect(canAccessAdminDestination('/admin', rolesOnly)).toBe(false)
       expect(canAccessAdminDestination('/admin/dashboard', rolesOnly)).toBe(false)
       expect(canAccessAdminDestination('/admin/catalog', rolesOnly)).toBe(false)
+      expect(canAccessAdminDestination('/admin/categories', rolesOnly)).toBe(false)
       expect(canAccessAdminDestination('/admin/users', rolesOnly)).toBe(false)
       expect(canAccessAdminDestination('/admin/documents', rolesOnly)).toBe(false)
       expect(canAccessAdminDestination('/admin/audit', rolesOnly)).toBe(false)

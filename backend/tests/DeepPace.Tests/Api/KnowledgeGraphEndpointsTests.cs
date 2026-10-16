@@ -14,7 +14,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using DeepPace.Api.Endpoints;
-using DeepPace.Application;
 using DeepPace.Application.Features.KnowledgeGraph.DTOs;
 using DeepPace.Application.Interfaces;
 using DeepPace.Domain.Entities;
@@ -53,8 +52,9 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Services.AddRouting();
-        builder.Services.AddScoped<IDeepPaceDbContext>(_ => new DeepPaceDbContext(_dbOptions));
-        builder.Services.AddApplicationServices();
+        builder.Services.AddScoped(_ => new DeepPaceDbContext(_dbOptions));
+        builder.Services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
+        builder.Services.AddApiTestApplicationServices();
 
         builder.Services.AddAuthentication(defaultScheme: "Test")
             .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", _ => { });
@@ -108,7 +108,7 @@ public class KnowledgeGraphEndpointsTests : IAsyncLifetime
                 Id = Guid.NewGuid(),
                 Title = "Under the Hood of CLR Generational GC",
                 Slug = "clr-gc-book",
-                Category = Category.BackendRuntime,
+                CategoryId = CategoryDefaults.BackendRuntimeId,
                 IsPublished = true,
                 CreatedByUserId = _userId
             };

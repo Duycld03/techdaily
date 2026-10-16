@@ -7,7 +7,8 @@ public class TechInsight : BaseEntity
 {
     public string Slug { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
-    public Category Category { get; set; }
+    public Guid CategoryId { get; set; }
+    public DocumentCategory? Category { get; set; }
     public List<string> Tags { get; set; } = new();
     public string SummaryMarkdown { get; set; } = string.Empty;
     public string ProblemSnippet { get; set; } = string.Empty;

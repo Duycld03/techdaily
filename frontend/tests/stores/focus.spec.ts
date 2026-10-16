@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
 
+const explanationRequests = vi.hoisted(() => [] as unknown[])
 const mockFocusData = {
   question: {
     id: 'q-1',
@@ -44,6 +45,10 @@ vi.mock('~/composables/useApiClient', () => ({
       throw new Error('Not found')
     }),
     post: vi.fn(async (url: string, body: any) => {
+      if (url.includes('/explain-term')) {
+        explanationRequests.push(body)
+        return { term: body.term, explanation: 'Real explanation', locale: body.locale }
+      }
       if (url.includes('/submit')) {
         if (url.includes('invalid-drill-id')) {
           throw new Error('HTTP Error 401')
@@ -83,6 +88,14 @@ vi.mock('~/composables/useApiClient', () => ({
 describe('useDailyFocusStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+  })
+
+  it('sends free-text source contextLabel and locale to the explanation API without category aliases', async () => {
+    explanationRequests.length = 0
+    await useDailyFocusStore().explainTerm('Genome', 'Novel biological systems', 'Selected source text', 'vi')
+    expect(explanationRequests).toEqual([{
+      term: 'Genome', contextLabel: 'Novel biological systems', context: 'Selected source text', locale: 'vi'
+    }])
   })
 
   it('fetches today focus curriculum and stores it in state', async () => {

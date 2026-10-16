@@ -141,7 +141,7 @@ public class EmbeddingAndSemanticCacheTests : IDisposable
         var cached = new TermExplanationCache
         {
             Term = "optimistic locking",
-            Category = "Database",
+            ContextLabel = "Database",
             Locale = "en",
             ExplanationText = "A concurrency control method where records are checked before committing.",
             HitCount = 1

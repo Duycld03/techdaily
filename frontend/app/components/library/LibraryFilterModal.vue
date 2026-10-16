@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { X, SlidersHorizontal, RotateCcw } from 'lucide-vue-next'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 
 export interface LibraryFilterState {
-  category?: number
+  categoryId?: string
   language?: string
 }
 
@@ -18,16 +19,16 @@ const emit = defineEmits<{
   (e: 'reset'): void
 }>()
 
-const { t } = useI18n()
-
-const localCategory = ref<number | undefined>(undefined)
+const { t, locale } = useI18n()
+const categoryStore = useCategoryStore()
+const localCategory = ref<string | undefined>(undefined)
+onMounted(() => categoryStore.ensureCategories())
 const localLanguage = ref<string | undefined>(undefined)
-
 watch(
   () => props.isOpen,
   (open) => {
     if (open) {
-      localCategory.value = props.currentFilters.category
+      localCategory.value = props.currentFilters.categoryId
       localLanguage.value = props.currentFilters.language
     }
   },
@@ -35,14 +36,11 @@ watch(
 )
 
 const categories = computed(() => [
-  { id: undefined, label: t('library.categories.all') },
-  { id: 0, label: t('library.categories.frontend') },
-  { id: 1, label: t('library.categories.backend') },
-  { id: 2, label: t('library.categories.database') },
-  { id: 3, label: t('library.categories.system_design') },
-  { id: 4, label: t('library.categories.craft') },
-  { id: 5, label: t('library.categories.mental_models') },
-  { id: 6, label: t('library.categories.habits') }
+  { id: undefined as string | undefined, label: t('library.categories.all') },
+  ...categoryStore.allCategories.map(cat => ({
+    id: cat.id,
+    label: `${categoryStore.getCategoryName(cat, locale.value)}${cat.isActive ? '' : ` (${t('categories.inactive')})`}`
+  }))
 ])
 
 const languages = computed(() => [
@@ -65,10 +63,11 @@ function handleReset() {
 }
 
 function handleApply() {
-  emit('apply', {
-    category: localCategory.value,
+  const payload: LibraryFilterState = {
+    categoryId: localCategory.value,
     language: localLanguage.value
-  })
+  }
+  emit('apply', payload)
   emit('close')
 }
 
@@ -118,11 +117,15 @@ function handleBackdropClick(e: MouseEvent) {
           </button>
         </div>
 
-        <!-- Section 1: Categories (All 7 DeepPace Categories + All) -->
+        <!-- Section 1: Categories -->
         <div class="space-y-2.5">
           <label class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('library.category_label') }}
           </label>
+          <div v-if="categoryStore.error" role="alert" class="text-sm text-red-600 dark:text-red-400">
+            {{ $t('categories.metadataUnavailable') }}
+            <button type="button" :disabled="categoryStore.isLoading" class="underline ml-2" @click="categoryStore.ensureCategories()">{{ $t('categories.retry') }}</button>
+          </div>
           <div class="flex flex-wrap items-center gap-2">
             <button
               v-for="cat in categories"

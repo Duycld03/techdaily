@@ -6,7 +6,7 @@ namespace DeepPace.Application.Features.DailyFocus.ExplainTerm;
 
 public record ExplainTermRequest(
     string Term,
-    string Category,
+    string? ContextLabel,
     string Context,
     string Locale = "en");
 
@@ -24,6 +24,7 @@ public class ExplainTermValidator : AbstractValidator<ExplainTermRequest>
     {
         RuleFor(x => x.Term).NotEmpty().MaximumLength(500);
         RuleFor(x => x.Locale).NotEmpty().MaximumLength(10);
+        RuleFor(x => x.ContextLabel).MaximumLength(255);
     }
 }
 
@@ -50,12 +51,12 @@ public class ExplainTermHandler : IUseCase<ExplainTermRequest, ExplainTermRespon
             return Error.Custom("Validation.Failed", validation.Errors.First().ErrorMessage);
         }
 
-        var safeCategory = string.IsNullOrWhiteSpace(request.Category) ? "Software Architecture" : request.Category;
+        var safeContextLabel = string.IsNullOrWhiteSpace(request.ContextLabel) ? string.Empty : request.ContextLabel.Trim();
         var safeContext = request.Context ?? string.Empty;
 
         var explanationResult = await _termExplanationService.ExplainTermAsync(
             request.Term,
-            safeCategory,
+            safeContextLabel,
             safeContext,
             request.Locale,
             cancellationToken);

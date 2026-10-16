@@ -1,3 +1,6 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
+using DeepPace.Domain.Entities;
+
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Admin.Accounts.DTOs;
@@ -59,9 +62,9 @@ public class AdminGetDocumentInventoryHandler : IUseCase<AdminDocumentInventoryQ
                 personalQuery = personalQuery.Where(b => b.SourceType == sType);
             }
 
-            if (!string.IsNullOrWhiteSpace(query.Category) && Enum.TryParse<Category>(query.Category, true, out var cat))
+            if (query.CategoryId.HasValue)
             {
-                personalQuery = personalQuery.Where(b => b.Category == cat);
+                personalQuery = personalQuery.Where(b => b.CategoryId == query.CategoryId.Value);
             }
 
             var personalItems = await personalQuery.Select(b => new
@@ -72,7 +75,8 @@ public class AdminGetDocumentInventoryHandler : IUseCase<AdminDocumentInventoryQ
                 OwnerName = b.CreatedByUser != null ? b.CreatedByUser.Name : null,
                 OwnerEmail = b.CreatedByUser != null ? b.CreatedByUser.Email : null,
                 SourceType = b.SourceType.ToString(),
-                Category = b.Category.ToString(),
+                b.CategoryId,
+                b.Category,
                 Language = b.DeclaredLanguage ?? "en",
                 Status = b.Status.ToString(),
                 b.CreatedAt,
@@ -104,7 +108,8 @@ public class AdminGetDocumentInventoryHandler : IUseCase<AdminDocumentInventoryQ
                     p.OwnerName,
                     p.OwnerEmail,
                     p.SourceType,
-                    p.Category,
+                    p.CategoryId,
+                    p.Category!.ToDescriptor(),
                     p.Language,
                     p.Status,
                     availability,
@@ -136,9 +141,9 @@ public class AdminGetDocumentInventoryHandler : IUseCase<AdminDocumentInventoryQ
                 catalogQuery = catalogQuery.Where(c => c.SourceType == sType);
             }
 
-            if (!string.IsNullOrWhiteSpace(query.Category) && Enum.TryParse<Category>(query.Category, true, out var cat))
+            if (query.CategoryId.HasValue)
             {
-                catalogQuery = catalogQuery.Where(c => c.Category == cat);
+                catalogQuery = catalogQuery.Where(c => c.CategoryId == query.CategoryId.Value);
             }
 
             if (!string.IsNullOrWhiteSpace(query.Language))
@@ -151,7 +156,8 @@ public class AdminGetDocumentInventoryHandler : IUseCase<AdminDocumentInventoryQ
                 c.Id,
                 c.Title,
                 SourceType = c.SourceType.ToString(),
-                Category = c.Category.ToString(),
+                c.CategoryId,
+                c.Category,
                 Language = c.Language,
                 Status = c.ProcessingStatus.ToString(),
                 c.CreatedAt,
@@ -182,7 +188,8 @@ public class AdminGetDocumentInventoryHandler : IUseCase<AdminDocumentInventoryQ
                     "System Curated",
                     null,
                     c.SourceType,
-                    c.Category,
+                    c.CategoryId,
+                    c.Category!.ToDescriptor(),
                     c.Language,
                     c.Status,
                     availability,

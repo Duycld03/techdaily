@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import {
-  CATEGORY_PALETTE,
+  getCategoryPalette,
+  PALETTE_LIST,
+  UNCLASSIFIED_CATEGORY_COLOR,
   EDGE_FAMILY_LINK_WIDTH_3D,
   EDGE_FAMILY_STYLE,
   NODE_TYPE_COLOR,
   SM2_STATUS_COLOR,
-  normalizeCategory,
   normalizeSm2Status,
   resolveEdgeFamily
 } from '~/utils/graphVisualTokens'
@@ -59,31 +60,19 @@ describe('graphVisualTokens', () => {
   })
 
   describe('category palette', () => {
-    it('resolves the canonical fill for each pillar', () => {
-      expect(CATEGORY_PALETTE.FrontendWeb.fill).toBe('#f59e0b')
-      expect(CATEGORY_PALETTE.BackendDotNet.fill).toBe('#0284c7')
-      expect(CATEGORY_PALETTE.DatabaseStorage.fill).toBe('#0891b2')
-      expect(CATEGORY_PALETTE.SystemDesign.fill).toBe('#7c3aed')
-      expect(CATEGORY_PALETTE.EngineeringCraft.fill).toBe('#ec4899')
-      expect(CATEGORY_PALETTE.MentalModels.fill).toBe('#6366f1')
-      expect(CATEGORY_PALETTE.MentalModels.border).toBe('#818cf8')
-      expect(CATEGORY_PALETTE.HabitsProductivity.fill).toBe('#10b981')
-      expect(CATEGORY_PALETTE.HabitsProductivity.border).toBe('#34d399')
+    it('deterministically maps arbitrary UUIDs without depending on metadata or order', () => {
+      const id = 'a17c9c32-6acf-4cf6-9b51-098398989a21'
+      const palette = getCategoryPalette(id)
+      expect(PALETTE_LIST).toContainEqual(palette)
+      getCategoryPalette('b17c9c32-6acf-4cf6-9b51-098398989a22')
+      expect(getCategoryPalette(id.toUpperCase())).toEqual(palette)
+      expect(getCategoryPalette(id)).toEqual(palette)
     })
 
-    it('normalizes API category aliases onto canonical keys', () => {
-      expect(normalizeCategory('Frontend')).toBe('FrontendWeb')
-      expect(normalizeCategory('BackendRuntime')).toBe('BackendDotNet')
-      expect(normalizeCategory('DotNet')).toBe('BackendDotNet')
-      expect(normalizeCategory('Postgres')).toBe('DatabaseStorage')
-      expect(normalizeCategory('DistributedSystems')).toBe('SystemDesign')
-      expect(normalizeCategory('Craft')).toBe('EngineeringCraft')
-      expect(normalizeCategory('MentalModels')).toBe('MentalModels')
-      expect(normalizeCategory('mental')).toBe('MentalModels')
-      expect(normalizeCategory('HabitsProductivity')).toBe('HabitsProductivity')
-      expect(normalizeCategory('habit')).toBe('HabitsProductivity')
-      expect(normalizeCategory('productivity')).toBe('HabitsProductivity')
-      expect(normalizeCategory(null)).toBe('BackendDotNet')
+    it('uses neutral colors for missing provenance instead of a backend category', () => {
+      expect(getCategoryPalette(null)).toEqual(UNCLASSIFIED_CATEGORY_COLOR)
+      expect(getCategoryPalette(undefined)).toEqual(UNCLASSIFIED_CATEGORY_COLOR)
+      expect(getCategoryPalette('')).toEqual(UNCLASSIFIED_CATEGORY_COLOR)
     })
   })
 

@@ -1006,7 +1006,7 @@ async function handleHighlightAndNote() {
     <TermExplainerModal
       v-if="isExplainerOpen"
       :term="currentTerm"
-      :category="book?.title || 'System Architecture'"
+      :context-label="book?.title || ''"
       :context="currentContext"
       @close="isExplainerOpen = false"
     />

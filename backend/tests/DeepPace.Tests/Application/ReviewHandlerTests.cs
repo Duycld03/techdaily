@@ -102,7 +102,7 @@ public class ReviewHandlerTests : IDisposable
         var user = new User { Id = userId, Email = "reader@deeppace.test", Name = "Reader" };
         await _db.Users.AddAsync(user);
 
-        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Designing Data-Intensive Applications", Slug = "ddia", Category = Category.DatabaseStorage };
+        var book = new DocumentBook { Id = Guid.NewGuid(), Title = "Designing Data-Intensive Applications", Slug = "ddia", CategoryId = CategoryDefaults.DatabaseStorageId };
         var chunk = new DocumentChunk { Id = Guid.NewGuid(), DocumentBookId = book.Id, ChunkOrder = 1, ChapterTitle = "Reliability" };
         await _db.DocumentBooks.AddAsync(book);
         await _db.DocumentChunks.AddAsync(chunk);
@@ -142,7 +142,7 @@ public class ReviewHandlerTests : IDisposable
         var user = new User { Id = userId, Email = "reader2@deeppace.test", Name = "Reader 2" };
         await _db.Users.AddAsync(user);
 
-        var book2 = new DocumentBook { Id = Guid.NewGuid(), Title = "Database Internals", Slug = "db-internals", Category = Category.DatabaseStorage };
+        var book2 = new DocumentBook { Id = Guid.NewGuid(), Title = "Database Internals", Slug = "db-internals", CategoryId = CategoryDefaults.DatabaseStorageId };
         var chunk2 = new DocumentChunk { Id = Guid.NewGuid(), DocumentBookId = book2.Id, ChunkOrder = 1, ChapterTitle = "LSM Trees" };
         await _db.DocumentBooks.AddAsync(book2);
         await _db.DocumentChunks.AddAsync(chunk2);

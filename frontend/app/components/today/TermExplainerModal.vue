@@ -6,11 +6,11 @@ import { Sparkles, X, Check, Copy, AlertCircle, RotateCcw } from "lucide-vue-nex
 const props = withDefaults(
   defineProps<{
     term: string;
-    category?: string;
+    contextLabel?: string;
     context?: string;
   }>(),
   {
-    category: "Software Architecture",
+    contextLabel: "",
     context: "",
   },
 );
@@ -49,7 +49,7 @@ async function loadExplanation() {
   try {
     const res = await focusStore.explainTerm(
       props.term,
-      props.category || "Software Architecture",
+      props.contextLabel,
       props.context || "",
       locale.value,
     );
@@ -99,9 +99,9 @@ async function copyText() {
             <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <span
                 class="text-xs font-bold uppercase tracking-wider text-brand-700 dark:text-brand-400 truncate max-w-[180px] sm:max-w-xs"
-                :title="category"
+                :title="contextLabel"
               >
-                {{ category }}
+                {{ contextLabel }}
               </span>
               <span
                 v-if="isFromCache"

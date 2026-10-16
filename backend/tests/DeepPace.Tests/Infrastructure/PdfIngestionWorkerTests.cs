@@ -9,6 +9,7 @@ using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 using DeepPace.Infrastructure.Persistence;
 using DeepPace.Infrastructure.Workers;
+using DeepPace.Infrastructure.Workers.IngestionDestinations;
 using Xunit;
 
 namespace DeepPace.Tests.Infrastructure;
@@ -44,16 +45,19 @@ public class PdfIngestionWorkerTests : IDisposable
     }
 
     [Fact]
-    public async Task PdfIngestionWorker_ShouldPreserveVerbatimProse_WhenBookIsEngineeringCraft()
+    public async Task PdfIngestionWorker_ShouldPreserveVerbatimSource_WhenFormatterAddsRestoredContent()
     {
         // Arrange
         var bookId = Guid.NewGuid();
+        var owner = new User { Email = "pdf-source@example.test", Name = "PDF reader" };
+        var category = DocumentCategory.Create("novel-pdf-source", "Novel PDF source", "Nguồn PDF mới");
         var book = new DocumentBook
         {
             Id = bookId,
             Title = "Thói Quen Nguyên Tử",
             Slug = "thoi-quen-nguyen-tu-" + Guid.NewGuid().ToString().Substring(0, 6),
-            Category = Category.EngineeringCraft,
+            CategoryId = category.Id,
+            CreatedByUserId = owner.Id,
             SourceType = SourceType.PdfBook,
             AuthorOrSourceUrl = "https://example.com/atomic-habits.pdf",
             Status = ProcessingStatus.Processing,
@@ -67,6 +71,8 @@ public class PdfIngestionWorkerTests : IDisposable
 
         using (var setupDb = new DeepPaceDbContext(options))
         {
+            setupDb.Users.Add(owner);
+            setupDb.DocumentCategories.Add(category);
             await setupDb.DocumentBooks.AddAsync(book);
             await setupDb.SaveChangesAsync();
         }
@@ -109,7 +115,7 @@ public class PdfIngestionWorkerTests : IDisposable
         var workerTask = worker.StartAsync(cts.Token);
 
         // Act: Enqueue ingestion job
-        await queue.EnqueueAsync(new PdfIngestJob(bookId, tempPdfPath, book.Title, Category.EngineeringCraft, "vi"), cts.Token);
+        await queue.EnqueueAsync(new PdfIngestJob(bookId, tempPdfPath, book.Title, category.Id, "vi"), cts.Token);
 
         // Wait until processed
         DocumentChunk? chunk = null;
@@ -130,10 +136,53 @@ public class PdfIngestionWorkerTests : IDisposable
 
         // Assert
         chunk.Should().NotBeNull();
-        chunk!.OriginalTextMarkdown.Should().Be(verbatimOriginal, "OriginalTextMarkdown must remain 100% verbatim for Category.EngineeringCraft!");
-        chunk.OriginalTextMarkdown.Should().NotContain("AI Condensed Summary");
-        chunk.SummaryMarkdown.Should().Contain("Summary for Phần Giới Thiệu");
+        chunk!.OriginalTextMarkdown.Should().Be(verbatimOriginal, "formatting must not replace verbatim source text");
+        chunk.SummaryMarkdown.Should().Be("Summary for Phần Giới Thiệu");
         chunk.IsAiFormatted.Should().BeTrue();
+        using var verificationDb = new DeepPaceDbContext(options);
+        var persistedBook = await verificationDb.DocumentBooks.AsNoTracking().SingleAsync(b => b.Id == bookId);
+        persistedBook.CategoryId.Should().Be(category.Id);
+        persistedBook.CreatedByUserId.Should().Be(owner.Id);
+        persistedBook.Status.Should().Be(ProcessingStatus.Ready);
+    }
+
+    [Fact]
+    public async Task CatalogPdfIngestion_PreservesVerbatimSource_WhenFormatterAddsRestoredContent()
+    {
+        var options = new DbContextOptionsBuilder<DeepPaceDbContext>().UseSqlite(_connectionString).Options;
+        await using var db = new DeepPaceDbContext(options);
+        var category = DocumentCategory.Create("novel-catalog-pdf", "Novel catalog PDF", "PDF danh mục mới");
+        var document = new CatalogDocument
+        {
+            Title = "Catalog source",
+            CategoryId = category.Id,
+            SourceType = SourceType.PdfBook,
+            Language = "vi",
+            AttributionText = "Original author",
+            ProcessingGeneration = 1
+        };
+        db.DocumentCategories.Add(category);
+        db.CatalogDocuments.Add(document);
+        await db.SaveChangesAsync();
+        const string source = "  Nội dung gốc phải được giữ nguyên.\r\n\r\nDòng thứ hai với dấu tiếng Việt.\n";
+        var extraction = new PdfExtractionResult(document.Title, 1,
+            [new ExtractedPdfSlice(1, "Chapter", source, 2, ["Original takeaway"])]);
+        var job = new PdfIngestJob(document.Id, string.Empty, document.Title, category.Id, "vi",
+            IngestionDestinationType.CatalogDocument, Generation: 1);
+
+        var persisted = await new CatalogDocumentDestination().PersistAndFormatSlicesAsync(
+            job, extraction, db, new FakeAiFormatter(), null, CancellationToken.None);
+
+        persisted.Should().BeTrue();
+        db.ChangeTracker.Clear();
+        var slice = await db.CatalogSlices.SingleAsync(s => s.CatalogDocumentId == document.Id);
+        slice.OriginalTextMarkdown.Should().Be(source);
+        slice.SummaryMarkdown.Should().Be("Summary for Chapter");
+        slice.IsAiFormatted.Should().BeTrue();
+        var savedDocument = await db.CatalogDocuments.SingleAsync(d => d.Id == document.Id);
+        savedDocument.CategoryId.Should().Be(category.Id);
+        savedDocument.ProcessingStatus.Should().Be(ProcessingStatus.Ready);
+        savedDocument.Visibility.Should().Be(CatalogVisibility.Draft);
     }
 
     private class FakePdfExtractor : IPdfExtractor
@@ -158,7 +207,6 @@ public class PdfIngestionWorkerTests : IDisposable
             string rawText,
             string chapterTitle,
             string language = "en",
-            Category? category = null,
             CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Result<AiFormattedSliceResult>.Success(new AiFormattedSliceResult(

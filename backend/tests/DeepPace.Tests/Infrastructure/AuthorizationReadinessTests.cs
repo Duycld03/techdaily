@@ -100,6 +100,41 @@ public class AuthorizationReadinessTests : IDisposable
     }
 
     [Fact]
+    public async Task Readiness_WhenUnusedCategoryDeleted_RemainsReady()
+    {
+        var category = await _db.DocumentCategories.FirstAsync();
+        category.Delete(category.ConcurrencyVersion);
+        await _db.SaveChangesAsync();
+
+        var status = await _readinessService.GetReadinessAsync();
+
+        status.IsReady.Should().BeTrue();
+        status.HasRequiredSchemaAndRoles.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Readiness_WhenCategoryTableIsEmpty_RemainsReady()
+    {
+        await _db.DocumentCategories.IgnoreQueryFilters().ExecuteDeleteAsync();
+
+        var status = await _readinessService.GetReadinessAsync();
+
+        status.IsReady.Should().BeTrue();
+        status.HasRequiredSchemaAndRoles.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Readiness_WhenCategorySchemaIsMissing_FailsReadiness()
+    {
+        await _db.Database.ExecuteSqlRawAsync("DROP TABLE \"DocumentCategories\"");
+
+        var status = await _readinessService.GetReadinessAsync();
+
+        status.IsReady.Should().BeFalse();
+        status.HasRequiredSchemaAndRoles.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Capabilities_WhenAwaitingInitialization_ReadinessReportsUninitialized()
     {
         SeedRolesAndPermissions();

@@ -3,6 +3,9 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import GraphCanvas3D from '~/components/graph/GraphCanvas3D.vue'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
+import { graphCategory } from '../../fixtures/graphCategories'
+import { getCategoryPalette } from '~/utils/graphVisualTokens'
+import { ref } from 'vue'
 
 const mockControls = {
   enableDamping: false,
@@ -83,25 +86,60 @@ describe('GraphCanvas3D.vue', () => {
     const store = useKnowledgeGraphStore()
     store.rawData = {
       nodes: [
-        { id: 'pillar-BackendRuntime', label: 'Backend Runtime', type: 'pillar', category: 'BackendRuntime' },
-        { id: 'topic-csharp-clr', label: 'C# CLR Execution', type: 'topic', category: 'BackendRuntime' },
-        { id: 'card-1', label: 'Memory Allocation Drill', type: 'card', category: 'BackendRuntime', status: 'Mastered' }
+        { id: `pillar-${graphCategory.id}`, label: 'Cloud Platforms', type: 'pillar', categoryId: graphCategory.id, category: graphCategory },
+        { id: 'topic-csharp-clr', label: 'C# CLR Execution', type: 'topic', categoryId: graphCategory.id, category: graphCategory },
+        { id: 'card-1', label: 'Memory Allocation Drill', type: 'card', categoryId: graphCategory.id, category: graphCategory, status: 'Mastered' }
       ],
       edges: [
-        { id: 'e1', source: 'topic-csharp-clr', target: 'pillar-BackendRuntime', relationType: 'TopicToPillar' },
+        { id: 'e1', source: 'topic-csharp-clr', target: `pillar-${graphCategory.id}`, relationType: 'TopicToPillar' },
         { id: 'e2', source: 'card-1', target: 'topic-csharp-clr', relationType: 'CardToTopic' }
       ],
       stats: {
         totalNodes: 3,
         totalEdges: 2,
         nodeTypeCounts: { pillar: 1, topic: 1, card: 1 },
-        pillarCounts: { BackendRuntime: 3 },
+        pillarCounts: { [graphCategory.id]: 3 },
         masteredCardsCount: 1
       }
     }
     return store
   }
 
+  it('executes the tooltip callback with live theme and escaped user content', async () => {
+    createTestStore()
+    const theme = ref('dark')
+    vi.stubGlobal('useColorMode', () => theme)
+    const wrapper = mount(GraphCanvas3D)
+    await flushPromises()
+    const tooltip = mockGraphInstance.nodeLabel.mock.calls[0]?.[0]
+    const malicious = {
+      id: 'unsafe', type: '<img src=x onerror=alert(1)>', label: '<script>alert(1)</script>',
+      categoryId: graphCategory.id, category: { ...graphCategory, nameEn: '<b>Cloud</b>', nameVi: '<b>Cloud</b>' }
+    }
+    const darkHtml = tooltip(malicious)
+    expect(darkHtml).toContain('rgba(15, 23, 42, 0.92)')
+    expect(darkHtml).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+    expect(darkHtml).toContain('&lt;b&gt;Cloud&lt;/b&gt;')
+    expect(darkHtml).not.toContain('<img')
+    expect(darkHtml).not.toContain('<script')
+    expect(darkHtml).toContain('categories.inactive')
+    theme.value = 'light'
+    expect(tooltip(malicious)).toContain('rgba(255, 255, 255, 0.95)')
+    expect(tooltip({ ...malicious, type: 'chunk', subtitle: '<img src=x>' })).toContain('&lt;img src=x&gt;')
+    expect(tooltip({ ...malicious, type: 'highlight', tags: ['<svg onload=alert(1)>'] })).toContain('&lt;svg onload=alert(1)&gt;')
+    wrapper.unmount()
+    vi.unstubAllGlobals()
+  })
+
+  it('uses the shared UUID palette in the real node color callback', async () => {
+    createTestStore()
+    const wrapper = mount(GraphCanvas3D)
+    await flushPromises()
+    const color = mockGraphInstance.nodeColor.mock.calls[0]?.[0]
+    expect(color({ id: 'hub', type: 'pillar', categoryId: graphCategory.id, category: graphCategory })).toBe(getCategoryPalette(graphCategory.id).fill)
+    expect(color({ id: 'chunk', type: 'chunk', categoryId: graphCategory.id, category: graphCategory })).toBe(getCategoryPalette(graphCategory.id).border)
+    wrapper.unmount()
+  })
   it('mounts and initializes 3d-force-graph instance', async () => {
     createTestStore()
     const wrapper = mount(GraphCanvas3D)

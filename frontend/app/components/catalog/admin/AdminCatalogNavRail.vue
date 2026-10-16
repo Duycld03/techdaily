@@ -2,10 +2,10 @@
 import { computed } from 'vue'
 import { Search, Loader2 } from 'lucide-vue-next'
 import AppSelect, { type SelectOption } from '~/components/common/AppSelect.vue'
-import type { AdminCatalogDocumentDto } from '~/stores/useCatalogStore'
+import type { AdminCatalogDocument } from '~/stores/useCatalogStore'
 
 const props = defineProps<{
-  documents: AdminCatalogDocumentDto[]
+  documents: AdminCatalogDocument[]
   selectedDocId: string | null
   isCreatingNewDraft: boolean
   isLoading: boolean

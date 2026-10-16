@@ -16,6 +16,17 @@ public interface IAdministrativeUnitOfWork
         Func<User, User, Task<Result<(TResult Result, AdminAuditEvent AuditEvent)>>> command,
         CancellationToken ct = default);
 
+    Task<Result<TResult>> ExecuteCategoryCommandAsync<TResult>(
+        Guid actorUserId,
+        int presentedSessionVersion,
+        IReadOnlyCollection<AdminPermission> requiredPermissions,
+        Guid? targetCategoryId,
+        int? expectedVersion,
+        string commandName,
+        string? correlationId,
+        Func<User, DocumentCategory?, Task<Result<(TResult Result, AdminAuditEvent? AuditEvent)>>> command,
+        CancellationToken ct = default);
+
     Task<Result<TResult>> ExecutePrivilegedMutationAsync<TResult>(
         Guid actorUserId,
         int presentedSessionVersion,

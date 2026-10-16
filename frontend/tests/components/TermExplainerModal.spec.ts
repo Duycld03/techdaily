@@ -63,6 +63,7 @@ describe("TermExplainerModal.vue", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   function createWrapper(props: Record<string, unknown> = {}, locale = "en") {
@@ -70,7 +71,7 @@ describe("TermExplainerModal.vue", () => {
     return mount(TermExplainerModal, {
       props: {
         term: "Write-Ahead Log",
-        category: "Storage Engine",
+        contextLabel: "Storage Engine",
         context: "Append-only log structure for crash recovery.",
         ...props,
       },
@@ -81,6 +82,25 @@ describe("TermExplainerModal.vue", () => {
       },
     });
   }
+
+  it("passes the source label and selected excerpt without inventing a subject", async () => {
+    createWrapper({ contextLabel: "Novel distributed biology", context: "Source passage" });
+    await flushPromises();
+    expect(mockExplainTerm).toHaveBeenCalledWith("Write-Ahead Log", "Novel distributed biology", "Source passage", "en");
+  });
+
+  it("keeps an absent source label empty", async () => {
+    createWrapper({ contextLabel: undefined });
+    await flushPromises();
+    expect(mockExplainTerm).toHaveBeenCalledWith("Write-Ahead Log", "", "Append-only log structure for crash recovery.", "en");
+  });
+
+  it("preserves the active Vietnamese locale in the explanation request", async () => {
+    vi.stubGlobal("useI18n", () => ({ locale: ref("vi") }));
+    createWrapper({ contextLabel: "Sinh học" }, "vi");
+    await flushPromises();
+    expect(mockExplainTerm).toHaveBeenCalledWith("Write-Ahead Log", "Sinh học", "Append-only log structure for crash recovery.", "vi");
+  });
 
   it("renders header with term title and category details", async () => {
     const wrapper = createWrapper();

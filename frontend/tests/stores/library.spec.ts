@@ -2,13 +2,16 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { setActivePinia, createPinia } from "pinia";
 import { useLibraryStore } from "~/stores/useLibraryStore";
 
+const categoryId = "33333333-3333-4000-8000-333333333333";
+const category = { id: categoryId, slug: "novel", nameEn: "Novel subject", nameVi: "Chủ đề mới", isActive: true, sortOrder: 0, version: 1 };
 const mockBooks = [
   {
     id: "b-1",
     title: "Designing Data-Intensive Applications",
     slug: "ddia",
     sourceType: 0,
-    category: 1,
+    category,
+    categoryId,
     authorOrSourceUrl: "Martin Kleppmann",
     totalChunks: 12,
     isPublished: true,
@@ -19,7 +22,8 @@ const mockBooks = [
     title: "Vue 3 Core Architecture",
     slug: "vue3-core",
     sourceType: 0,
-    category: 0,
+    category,
+    categoryId,
     authorOrSourceUrl: "Evan You",
     totalChunks: 8,
     isPublished: true,
@@ -43,7 +47,8 @@ const mockPost = vi.fn(async (url: string, body: Record<string, unknown>) => {
         title: body.title,
         slug: "sre-book",
         sourceType: 1,
-        category: body.category,
+        category,
+        categoryId: body.categoryId,
         totalChunks: 5,
         isPublished: true,
         createdAt: "2026-08-31T00:00:00Z",
@@ -73,7 +78,8 @@ const mockPatch = vi.fn(async (url: string, body: Record<string, unknown>) => {
   return {
     id: "b-1",
     title: body.title,
-    category: body.category,
+    category,
+    categoryId: body.categoryId,
     authorOrSourceUrl: body.authorOrSourceUrl,
     totalChunks: 12,
     isPublished: true,
@@ -146,6 +152,29 @@ describe("useLibraryStore", () => {
     vi.clearAllMocks();
   });
 
+  it("preserves exact Markdown and source URL while sending only the UUID assignment", async () => {
+    const library = useLibraryStore();
+    const payload = {
+      title: "Novel topic",
+      markdownContent: "# Original\n\n  unchanged prose\n",
+      sourceUrl: "https://example.com/original?q=1",
+      categoryId: "33333333-3333-4000-8000-333333333333",
+      language: "vi",
+    };
+    await library.importDocument(payload);
+    expect(mockPost).toHaveBeenCalledWith("/api/v1/library/import", payload);
+    expect(mockPost.mock.calls[0]?.[1]).not.toHaveProperty("category");
+  });
+
+  it("round trips a UUID filter without a legacy query key", async () => {
+    const library = useLibraryStore();
+    const id = "33333333-3333-4000-8000-333333333333";
+    await library.fetchBooks({ categoryId: id });
+    const url = new URL(mockGet.mock.calls[0]![0], "https://example.com");
+    expect(url.searchParams.get("categoryId")).toBe(id);
+    expect(url.searchParams.has("category")).toBe(false);
+  });
+
   it("fetches books list with categories and search filtering", async () => {
     const library = useLibraryStore();
     expect(library.books).toHaveLength(0);
@@ -188,7 +217,7 @@ describe("useLibraryStore", () => {
     const result = await library.importDocument({
       title: "Site Reliability Engineering",
       markdownContent: "# Chapter 1\nSRE principles...",
-      category: 3,
+      categoryId,
     });
 
     expect(result.id).toBe("b-3");
@@ -202,7 +231,7 @@ describe("useLibraryStore", () => {
     const res = await library.importRemotePdf({
       pdfUrl: "https://example.com/books/atomic-habits.pdf",
       title: "Atomic Habits",
-      category: 4,
+      categoryId,
       language: "vi"
     });
 
@@ -211,7 +240,7 @@ describe("useLibraryStore", () => {
       expect.objectContaining({
         pdfUrl: "https://example.com/books/atomic-habits.pdf",
         title: "Atomic Habits",
-        category: 4
+        categoryId,
       })
     );
     expect(res.bookId).toBe("b-remote-1");
@@ -275,7 +304,7 @@ describe("useLibraryStore", () => {
     const updated = await library.updateBook("b-1", {
       title: "Updated Title",
       authorOrSourceUrl: "New Author",
-      category: 6,
+      categoryId,
       language: "vi"
     });
 
@@ -284,14 +313,37 @@ describe("useLibraryStore", () => {
       {
         title: "Updated Title",
         authorOrSourceUrl: "New Author",
-        category: 6,
+        categoryId,
         language: "vi"
       }
     );
     expect(updated.title).toBe("Updated Title");
     expect(updated.language).toBe("vi");
     expect(library.books.find(b => b.id === "b-1")?.title).toBe("Updated Title");
-    expect(library.books.find(b => b.id === "b-1")?.category).toBe(6);
+    expect(library.books.find(b => b.id === "b-1")?.categoryId).toBe(categoryId);
     expect(library.books.find(b => b.id === "b-1")?.language).toBe("vi");
+  });
+
+  it("supports categoryId filter in fetchBooks query parameters", async () => {
+    const library = useLibraryStore();
+    await library.fetchBooks({ categoryId: "11111111-1111-4000-8000-111111111111" });
+    expect(library.books.length).toBe(2);
+  });
+
+  it("updates book with categoryId via patch", async () => {
+    const library = useLibraryStore();
+    await library.fetchBooks();
+
+    await library.updateBook("b-1", {
+      title: "Category UUID Title",
+      categoryId: "11111111-1111-4000-8000-111111111111"
+    });
+
+    expect(mockPatch).toHaveBeenCalledWith(
+      "/api/v1/library/books/b-1",
+      expect.objectContaining({
+        categoryId: "11111111-1111-4000-8000-111111111111"
+      })
+    );
   });
 });

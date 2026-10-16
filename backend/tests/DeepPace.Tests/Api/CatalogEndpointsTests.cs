@@ -10,13 +10,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using DeepPace.Api.Authorization;
 using DeepPace.Api.Endpoints;
-using DeepPace.Application;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.Catalog.DTOs;
 using DeepPace.Application.Interfaces;
@@ -34,7 +32,6 @@ public class CatalogEndpointsTests : IAsyncLifetime
     private readonly DbContextOptions<DeepPaceDbContext> _dbOptions;
     private WebApplication _app = null!;
     private HttpClient _client = null!;
-    private ConfigurationManager _configuration = null!;
 
     private readonly Guid _adminUserId = Guid.NewGuid();
     private readonly Guid _regularUserId = Guid.NewGuid();
@@ -84,11 +81,7 @@ public class CatalogEndpointsTests : IAsyncLifetime
         builder.Services.AddOpenApi();
         builder.Services.AddScoped(_ => new DeepPaceDbContext(_dbOptions));
         builder.Services.AddScoped<IDeepPaceDbContext>(sp => sp.GetRequiredService<DeepPaceDbContext>());
-        builder.Services.AddApplicationServices();
-        builder.Services.AddScoped<ICatalogAdoptionService, CatalogAdoptionService>();
-        builder.Services.AddScoped<IAdminPermissionResolver, AdminPermissionResolver>();
-        builder.Services.AddScoped<ICatalogAdminService, CatalogAdminService>();
-        builder.Services.AddScoped<IAuthorizationReadinessService, AuthorizationReadinessService>();
+        builder.Services.AddApiTestApplicationServices();
         builder.Services.AddScoped<IPdfIngestionQueue, FakePdfQueue>();
         builder.Services.AddScoped<IWebArticleCrawler, FakeArticleCrawler>();
 
@@ -146,9 +139,9 @@ public class CatalogEndpointsTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Capabilities_WhenDeletedUserInAllowlist_ReturnsCanManageCatalogFalse()
+    public async Task Capabilities_WhenDeletedAdminUser_ReturnsCanManageCatalogFalse()
     {
-        // User is configured in allowlist, but soft-deleted in database
+        // The database role grants access only to active, non-deleted users.
         TestCatalogAuthHandler.IsAuthenticated = true;
         TestCatalogAuthHandler.CurrentUserId = _deletedAdminUserId;
 
@@ -204,7 +197,7 @@ public class CatalogEndpointsTests : IAsyncLifetime
         var regularRes = await _client.GetAsync("/api/v1/admin/catalog/documents");
         regularRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        // 3. Deleted user in allowlist -> 403 Forbidden
+        // 3. Deleted admin user -> 403 Forbidden
         TestCatalogAuthHandler.CurrentUserId = _deletedAdminUserId;
         var deletedRes = await _client.GetAsync("/api/v1/admin/catalog/documents");
         deletedRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -215,8 +208,10 @@ public class CatalogEndpointsTests : IAsyncLifetime
         adminRes.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    [Fact]
-    public async Task AdminRoutes_RevocationImmediateWhenRemovedFromConfiguration()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AdminRoutes_RevocationImmediateWhenDatabaseRoleOrGrantChanges(bool revokeGrant)
     {
         // Initially active admin has access
         TestCatalogAuthHandler.IsAuthenticated = true;
@@ -225,15 +220,30 @@ public class CatalogEndpointsTests : IAsyncLifetime
         var initialRes = await _client.GetAsync("/api/v1/admin/catalog/documents");
         initialRes.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Operator revokes admin by reassigning role in database
+        // Keep the authenticated identity unchanged while revoking database authority.
         using (var db = new DeepPaceDbContext(_dbOptions))
         {
-            var user = await db.Users.FindAsync(_adminUserId);
-            user!.RoleId = RoleDefaults.LearnerRoleId;
+            if (revokeGrant)
+            {
+                var grant = await db.RolePermissions.SingleAsync(p =>
+                    p.RoleId == RoleDefaults.AdminRoleId && p.PermissionKey == PermissionKeys.ManageCatalog);
+                db.RolePermissions.Remove(grant);
+            }
+            else
+            {
+                var user = await db.Users.FindAsync(_adminUserId);
+                user!.RoleId = RoleDefaults.LearnerRoleId;
+            }
             await db.SaveChangesAsync();
         }
         var revokedRes = await _client.GetAsync("/api/v1/admin/catalog/documents");
         revokedRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var capabilitiesRes = await _client.GetAsync("/api/v1/catalog/capabilities");
+        capabilitiesRes.StatusCode.Should().Be(HttpStatusCode.OK);
+        var capabilities = await capabilitiesRes.Content.ReadFromJsonAsync<CatalogCapabilitiesDto>();
+        capabilities.Should().NotBeNull();
+        capabilities!.CanManageCatalog.Should().BeFalse();
     }
 
     [Fact]
@@ -244,7 +254,7 @@ public class CatalogEndpointsTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Title = "Adoption Test Catalog Doc",
             Description = "Desc",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             AttributionText = "Attribution",
             Visibility = CatalogVisibility.Published,
             ProcessingStatus = ProcessingStatus.Ready,
@@ -297,7 +307,7 @@ public class CatalogEndpointsTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Title = "Hidden Catalog Doc",
             Description = "Desc",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             AttributionText = "Attribution",
             Visibility = CatalogVisibility.Hidden,
             ProcessingStatus = ProcessingStatus.Ready
@@ -331,7 +341,7 @@ public class CatalogEndpointsTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Title = "Prepare Doc",
             Description = "Desc",
-            Category = Category.FrontendWeb,
+            CategoryId = CategoryDefaults.FrontendWebId,
             AttributionText = "Attr",
             Visibility = CatalogVisibility.Draft,
             SourceType = SourceType.WebDocUrl,
@@ -359,7 +369,7 @@ public class CatalogEndpointsTests : IAsyncLifetime
             Id = Guid.NewGuid(),
             Title = "Unprepared Draft",
             Description = "Desc",
-            Category = Category.FrontendWeb,
+            CategoryId = CategoryDefaults.FrontendWebId,
             AttributionText = "Attr",
             Visibility = CatalogVisibility.Draft,
             ProcessingStatus = ProcessingStatus.Pending,
@@ -383,7 +393,7 @@ public class CatalogEndpointsTests : IAsyncLifetime
         response.Content.Headers.ContentType?.MediaType.Should().Be("application/problem+json");
     }
     [Fact]
-    public async Task OpenApi_ExposesCatalogContracts_WithoutSecretsOrRoleManagementEndpoints()
+    public async Task OpenApi_ExposesCatalogContracts_WithoutAdministratorIdentity()
     {
         var response = await _client.GetAsync("/openapi/v1.json");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -394,11 +404,6 @@ public class CatalogEndpointsTests : IAsyncLifetime
         content.Should().Contain("/api/v1/catalog/documents");
         content.Should().Contain("/api/v1/catalog/capabilities");
         content.Should().Contain("/api/v1/admin/catalog/documents");
-
-        // No public role management endpoints exist
-        content.Should().NotContain("/api/v1/roles");
-        content.Should().NotContain("/api/v1/admin/roles");
-        content.Should().NotContain("RoleManagement");
 
         // No real administrator accounts or secrets leaked
         content.Should().NotContain(_adminUserId.ToString());

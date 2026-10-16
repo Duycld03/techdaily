@@ -1,3 +1,5 @@
+using DeepPace.Domain.Entities;
+
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -81,20 +83,10 @@ public class CurateSliceHandler : IUseCase<CurateSliceRequest, CurateSliceRespon
                 {
                     try
                     {
-                        var aiResult = await _aiFormatter.FormatSliceAsync(
-                            chunk.OriginalTextMarkdown,
-                            chunk.ChapterTitle,
-                            chunk.Language,
-                            chunk.DocumentBook?.Category,
-                            cancellationToken);
+                        var aiResult = await _aiFormatter.FormatSliceAsync(chunk.OriginalTextMarkdown, chunk.ChapterTitle, chunk.Language, cancellationToken);
 
                         if (aiResult.IsSuccess && !string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
                         {
-                            if (!string.IsNullOrWhiteSpace(aiResult.Value.FormattedMarkdown))
-                            {
-                                chunk.OriginalTextMarkdown = aiResult.Value.FormattedMarkdown;
-                            }
-
                             chunk.SummaryMarkdown = !string.IsNullOrWhiteSpace(aiResult.Value.SummaryMarkdown)
                                 ? aiResult.Value.SummaryMarkdown
                                 : aiResult.Value.FormattedMarkdown;

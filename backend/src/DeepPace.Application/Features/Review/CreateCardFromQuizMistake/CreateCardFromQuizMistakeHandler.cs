@@ -34,7 +34,8 @@ public class CreateCardFromQuizMistakeHandler : IUseCase<CreateCardFromQuizMista
         CancellationToken cancellationToken = default)
     {
         var question = await _dbContext.QuizQuestions
-            .FirstOrDefaultAsync(q => q.Id == request.QuestionId, cancellationToken);
+            .FirstOrDefaultAsync(q => q.Id == request.QuestionId && !q.IsDeleted
+                && (!q.CreatedByUserId.HasValue || q.CreatedByUserId == request.UserId), cancellationToken);
 
         if (question == null)
         {

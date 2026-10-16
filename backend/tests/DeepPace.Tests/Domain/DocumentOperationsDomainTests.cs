@@ -303,6 +303,7 @@ public class DocumentOperationsDomainTests
     {
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Id = Guid.NewGuid(),
             Title = "Distributed Systems",
             CreatedByUserId = _userId,
@@ -335,6 +336,7 @@ public class DocumentOperationsDomainTests
     {
         var doc = new CatalogDocument
         {
+            CategoryId = CategoryDefaults.DatabaseStorageId,
             Id = Guid.NewGuid(),
             Title = "Postgres Internals"
         };
@@ -359,6 +361,7 @@ public class DocumentOperationsDomainTests
     {
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Id = Guid.NewGuid(),
             Title = "Go Concurrency",
             CreatedByUserId = _userId,
@@ -380,6 +383,7 @@ public class DocumentOperationsDomainTests
     {
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.EngineeringCraftId,
             Id = Guid.NewGuid(),
             Title = "Legacy Book",
             CreatedByUserId = null, // Unowned
@@ -401,6 +405,7 @@ public class DocumentOperationsDomainTests
     {
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.EngineeringCraftId,
             Id = Guid.NewGuid(),
             Title = "Clean Architecture",
             CreatedByUserId = _userId,
@@ -422,6 +427,7 @@ public class DocumentOperationsDomainTests
     {
         var doc = new CatalogDocument
         {
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Id = Guid.NewGuid(),
             Title = "Docker Deep Dive",
             Visibility = CatalogVisibility.Published,
@@ -443,6 +449,7 @@ public class DocumentOperationsDomainTests
     {
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Id = Guid.NewGuid(),
             Title = "Kubernetes in Action",
             CreatedByUserId = _userId,

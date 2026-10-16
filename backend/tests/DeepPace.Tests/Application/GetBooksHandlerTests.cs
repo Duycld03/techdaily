@@ -46,7 +46,7 @@ public class GetBooksHandlerTests : IDisposable
             {
                 Title = $"Book {i:D2}",
                 Slug = $"book-{i:D2}",
-                Category = Category.BackendRuntime,
+                CategoryId = CategoryDefaults.BackendRuntimeId,
                 IsPublished = true,
                 CreatedAt = DateTimeOffset.UtcNow.AddMinutes(i)
             });
@@ -77,7 +77,7 @@ public class GetBooksHandlerTests : IDisposable
             {
                 Title = $"Book {i:D2}",
                 Slug = $"book-{i:D2}",
-                Category = Category.BackendRuntime,
+                CategoryId = CategoryDefaults.BackendRuntimeId,
                 IsPublished = true,
                 CreatedAt = DateTimeOffset.UtcNow.AddMinutes(i)
             });
@@ -101,14 +101,14 @@ public class GetBooksHandlerTests : IDisposable
     {
         // Arrange
         _db.DocumentBooks.AddRange(
-            new DocumentBook { Title = "DotNet Book", Slug = "dotnet-book", Category = Category.BackendRuntime, IsPublished = true },
-            new DocumentBook { Title = "Frontend Book", Slug = "frontend-book", Category = Category.FrontendWeb, IsPublished = true },
-            new DocumentBook { Title = "System Design Book", Slug = "system-design-book", Category = Category.SystemDesign, IsPublished = true }
+            new DocumentBook { Title = "DotNet Book", Slug = "dotnet-book", CategoryId = CategoryDefaults.BackendRuntimeId, IsPublished = true },
+            new DocumentBook { Title = "Frontend Book", Slug = "frontend-book", CategoryId = CategoryDefaults.FrontendWebId, IsPublished = true },
+            new DocumentBook { Title = "System Design Book", Slug = "system-design-book", CategoryId = CategoryDefaults.SystemDesignId, IsPublished = true }
         );
         await _db.SaveChangesAsync();
 
         // Act
-        var result = await _handler.ExecuteAsync(new GetBooksRequest(Category: Category.FrontendWeb));
+        var result = await _handler.ExecuteAsync(new GetBooksRequest(CategoryId : CategoryDefaults.FrontendWebId));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -122,8 +122,8 @@ public class GetBooksHandlerTests : IDisposable
     {
         // Arrange
         _db.DocumentBooks.AddRange(
-            new DocumentBook { Title = "Designing Data-Intensive Applications", Slug = "ddia", Category = Category.DatabaseStorage, IsPublished = true },
-            new DocumentBook { Title = "Clean Architecture", Slug = "clean-architecture", Category = Category.EngineeringCraft, IsPublished = true }
+            new DocumentBook { Title = "Designing Data-Intensive Applications", Slug = "ddia", CategoryId = CategoryDefaults.DatabaseStorageId, IsPublished = true },
+            new DocumentBook { Title = "Clean Architecture", Slug = "clean-architecture", CategoryId = CategoryDefaults.EngineeringCraftId, IsPublished = true }
         );
         await _db.SaveChangesAsync();
 
@@ -145,9 +145,9 @@ public class GetBooksHandlerTests : IDisposable
     {
         // Arrange
         _db.DocumentBooks.AddRange(
-            new DocumentBook { Title = "Published Book", Slug = "pub", Category = Category.BackendRuntime, IsPublished = true, IsDeleted = false },
-            new DocumentBook { Title = "Unpublished Book", Slug = "unpub", Category = Category.BackendRuntime, IsPublished = false, IsDeleted = false },
-            new DocumentBook { Title = "Deleted Book", Slug = "del", Category = Category.BackendRuntime, IsPublished = true, IsDeleted = true }
+            new DocumentBook { Title = "Published Book", Slug = "pub", CategoryId = CategoryDefaults.BackendRuntimeId, IsPublished = true, IsDeleted = false },
+            new DocumentBook { Title = "Unpublished Book", Slug = "unpub", CategoryId = CategoryDefaults.BackendRuntimeId, IsPublished = false, IsDeleted = false },
+            new DocumentBook { Title = "Deleted Book", Slug = "del", CategoryId = CategoryDefaults.BackendRuntimeId, IsPublished = true, IsDeleted = true }
         );
         await _db.SaveChangesAsync();
 
@@ -186,7 +186,7 @@ public class GetBooksHandlerTests : IDisposable
         {
             Title = "User 1 Book",
             Slug = "user-1-book",
-            Category = Category.FrontendWeb,
+            CategoryId = CategoryDefaults.FrontendWebId,
             IsPublished = true,
             CreatedByUserId = user1Id
         });
@@ -194,7 +194,7 @@ public class GetBooksHandlerTests : IDisposable
         {
             Title = "User 2 Book",
             Slug = "user-2-book",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             IsPublished = true,
             CreatedByUserId = user2Id
         });

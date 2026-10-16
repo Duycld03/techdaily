@@ -11,7 +11,8 @@ namespace DeepPace.Tests.Infrastructure;
 
 public class PostgresRoleSchemaAndBackfillTests
 {
-    private const string PostgresConnStr = "Host=localhost;Port=5432;Database=deeppace_db;Username=deeppace_user;Password=techdaily_password_secret";
+    private static string PostgresConnStr => Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION")
+        ?? throw new InvalidOperationException("TEST_POSTGRES_CONNECTION must identify an isolated PostgreSQL test database.");
     private readonly ITestOutputHelper _output;
 
     public PostgresRoleSchemaAndBackfillTests(ITestOutputHelper output)
@@ -41,7 +42,7 @@ public class PostgresRoleSchemaAndBackfillTests
     }
 
     [Fact]
-    public async Task DefaultSeed_ShouldContainFixedLearnerAndAdminRolesWithSixGrants()
+    public async Task DefaultSeed_ShouldContainFixedLearnerAndAdminRolesWithSevenGrants()
     {
         if (!CheckPostgresConnection())
         {
@@ -66,7 +67,7 @@ public class PostgresRoleSchemaAndBackfillTests
             .Select(rp => rp.PermissionKey)
             .ToListAsync();
 
-        adminGrants.Should().HaveCount(6);
+        adminGrants.Should().HaveCount(7);
         adminGrants.Should().Contain(new[]
         {
             PermissionKeys.ManageAccounts,
@@ -74,9 +75,9 @@ public class PostgresRoleSchemaAndBackfillTests
             PermissionKeys.ManageDocumentOperations,
             PermissionKeys.ManageRoles,
             PermissionKeys.ReadAudit,
-            PermissionKeys.ViewAdminDashboard
+            PermissionKeys.ViewAdminDashboard,
+            PermissionKeys.ManageCategories
         });
-
         var learnerGrants = await db.RolePermissions
             .Where(rp => rp.RoleId == RoleDefaults.LearnerRoleId)
             .ToListAsync();

@@ -13,6 +13,7 @@ export interface AdminCapabilities {
   canReadAudit: boolean
   canManageDocumentOperations: boolean
   canManageRoles: boolean
+  canManageCategories: boolean
 }
 
 export const useAdminAccessStore = defineStore('admin-access', () => {
@@ -25,7 +26,8 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
     canManageAccounts: false,
     canReadAudit: false,
     canManageDocumentOperations: false,
-    canManageRoles: false
+    canManageRoles: false,
+    canManageCategories: false
   })
 
   const canViewAdminDashboard = computed(() => capabilities.value.canViewAdminDashboard)
@@ -34,13 +36,15 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
   const canReadAudit = computed(() => capabilities.value.canReadAudit)
   const canManageDocumentOperations = computed(() => capabilities.value.canManageDocumentOperations)
   const canManageRoles = computed(() => capabilities.value.canManageRoles)
+  const canManageCategories = computed(() => capabilities.value.canManageCategories)
   const hasAnyCapability = computed(() =>
     capabilities.value.canViewAdminDashboard ||
     capabilities.value.canManageCatalog ||
     capabilities.value.canManageAccounts ||
     capabilities.value.canReadAudit ||
     capabilities.value.canManageDocumentOperations ||
-    capabilities.value.canManageRoles
+    capabilities.value.canManageRoles ||
+    capabilities.value.canManageCategories
   )
 
   const isAuthorized = computed(() => state.value === 'authorized')
@@ -57,7 +61,8 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
       canManageAccounts: false,
       canReadAudit: false,
       canManageDocumentOperations: false,
-      canManageRoles: false
+      canManageRoles: false,
+      canManageCategories: false
     }
   }
 
@@ -70,6 +75,9 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
     }
     if (norm === '/admin/catalog' || norm.startsWith('/admin/catalog/')) {
       return capabilities.value.canManageCatalog
+    }
+    if (norm === '/admin/categories' || norm.startsWith('/admin/categories/')) {
+      return capabilities.value.canManageCategories
     }
     if (norm === '/admin/users' || norm.startsWith('/admin/users/')) {
       return capabilities.value.canManageAccounts
@@ -86,6 +94,7 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
   function getFirstAccessibleAdminRoute(): string {
     if (capabilities.value.canViewAdminDashboard) return '/admin/dashboard'
     if (capabilities.value.canManageCatalog) return '/admin/catalog'
+    if (capabilities.value.canManageCategories) return '/admin/categories'
     if (capabilities.value.canManageAccounts) return '/admin/users'
     if (capabilities.value.canManageDocumentOperations) return '/admin/documents'
     if (capabilities.value.canReadAudit) return '/admin/audit'
@@ -109,7 +118,8 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
           canManageAccounts: Boolean(res.canManageAccounts),
           canReadAudit: Boolean(res.canReadAudit),
           canManageDocumentOperations: Boolean(res.canManageDocumentOperations),
-          canManageRoles: Boolean(res.canManageRoles)
+          canManageRoles: Boolean(res.canManageRoles),
+          canManageCategories: Boolean(res.canManageCategories)
         }
         capabilities.value = newCaps
 
@@ -119,7 +129,8 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
           !newCaps.canManageAccounts &&
           !newCaps.canReadAudit &&
           !newCaps.canManageDocumentOperations &&
-          !newCaps.canManageRoles
+          !newCaps.canManageRoles &&
+          !newCaps.canManageCategories
         ) {
           auth.invalidateAdminAccess()
           state.value = 'denied'
@@ -159,6 +170,7 @@ export const useAdminAccessStore = defineStore('admin-access', () => {
     canReadAudit,
     canManageDocumentOperations,
     canManageRoles,
+    canManageCategories,
     hasAnyCapability,
     isAuthorized,
     canAccessDestination,

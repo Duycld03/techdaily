@@ -49,13 +49,13 @@ public class AdminGetAuditEventsHandler : IUseCase<AdminGetAuditEventsRequest, A
         if (!string.IsNullOrWhiteSpace(request.Action))
         {
             var action = request.Action.Trim();
-            query = query.Where(e => e.Action == action);
+            query = query.Where(e => e.Action == action || e.Action.ToLower() == action.ToLower());
         }
 
         if (!string.IsNullOrWhiteSpace(request.TargetType))
         {
             var targetType = request.TargetType.Trim();
-            query = query.Where(e => e.TargetType == targetType);
+            query = query.Where(e => e.TargetType == targetType || e.TargetType.ToLower() == targetType.ToLower());
         }
 
         if (!string.IsNullOrWhiteSpace(request.TargetId))

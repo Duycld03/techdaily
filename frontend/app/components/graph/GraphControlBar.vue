@@ -13,12 +13,15 @@ import {
   Globe
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 
 const emit = defineEmits<{
   (e: 'fit-screen'): void
 }>()
 
 const store = useKnowledgeGraphStore()
+const categoryStore = useCategoryStore()
+const { t, locale } = useI18n()
 const isExpanded = ref(false)
 
 const isMobileScreen = ref(false)
@@ -59,17 +62,13 @@ function onReset() {
   store.resetFilters()
 }
 
-// Category filter pills
-const categoryPills = [
-  { id: 'all', key: 'graph.filters.allPillars', defaultLabel: 'All Pillars' },
-  { id: 'MentalModels', key: 'graph.filters.mentalModels', defaultLabel: 'Mental Models' },
-  { id: 'HabitsProductivity', key: 'graph.filters.habitsProductivity', defaultLabel: 'Habits & Focus' },
-  { id: 'EngineeringCraft', key: 'graph.filters.engineeringCraft', defaultLabel: 'Engineering Craft' },
-  { id: 'SystemDesign', key: 'graph.filters.systemDesign', defaultLabel: 'Distributed Systems' },
-  { id: 'BackendRuntime', key: 'graph.filters.backendRuntime', defaultLabel: 'Backend & Runtime' },
-  { id: 'FrontendWeb', key: 'graph.filters.frontendWeb', defaultLabel: 'Frontend & Web' },
-  { id: 'DatabaseStorage', key: 'graph.filters.databaseStorage', defaultLabel: 'Database & Storage' }
-]
+const categoryPills = computed(() => [
+  { id: 'all', label: t('graph.filters.allPillars'), isActive: true },
+  ...store.activePillars.map(category => {
+    const metadata = categoryStore.getCategoryById(category.id) ?? category
+    return { id: category.id, label: categoryStore.getCategoryName(metadata, locale.value), isActive: metadata.isActive }
+  })
+])
 
 // Node type toggles
 const nodeTypes = [
@@ -90,7 +89,7 @@ const masteryOptions = [
 
 const hasActiveFilters = computed(() => {
   return (
-    store.selectedCategory.toLowerCase() !== 'all' ||
+    store.selectedCategoryId !== 'all' ||
     store.selectedNodeType.toLowerCase() !== 'all' ||
     store.selectedMastery.toLowerCase() !== 'all' ||
     store.searchQuery.trim() !== ''
@@ -207,15 +206,17 @@ const hasActiveFilters = computed(() => {
           v-for="pill in categoryPills"
           :key="pill.id"
           type="button"
+          :data-testid="`graph-category-${pill.id}`"
           :class="[
             'px-2.5 py-1 rounded-xl text-xs font-medium transition-all whitespace-nowrap shrink-0',
-            store.selectedCategory.toLowerCase() === pill.id.toLowerCase()
+            store.selectedCategoryId === pill.id
               ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm font-semibold'
               : 'bg-slate-100/80 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-canvas-elevated border border-transparent dark:border-white/[0.04]'
           ]"
-          @click="store.setCategory(pill.id)"
+          @click="store.setCategoryId(pill.id)"
         >
-          {{ pill.key ? $t(pill.key) : pill.defaultLabel }}
+          {{ pill.label }}
+          <span v-if="!pill.isActive">({{ $t('categories.inactive') }})</span>
         </button>
       </div>
 

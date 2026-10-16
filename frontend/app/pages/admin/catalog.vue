@@ -7,19 +7,21 @@ import AdminCatalogNavRail from '~/components/catalog/admin/AdminCatalogNavRail.
 import AdminCatalogDraftForm from '~/components/catalog/admin/AdminCatalogDraftForm.vue'
 import AdminCatalogDocumentDetail from '~/components/catalog/admin/AdminCatalogDocumentDetail.vue'
 import AdminCatalogSliceModal from '~/components/catalog/admin/AdminCatalogSliceModal.vue'
-import { useCatalogStore, type AdminCatalogSliceDto } from '~/stores/useCatalogStore'
+import { useCatalogStore, type AdminCatalogSlice } from '~/stores/useCatalogStore'
 import { useApiError } from '~/composables/useApiError'
 import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
+import { useCategoryStore } from '~/stores/useCategoryStore'
 
 const { t } = useI18n()
 const catalogStore = useCatalogStore()
+const categoryStore = useCategoryStore()
 const toast = useToast()
 const { formatError } = useApiError()
 
 const access = useAdminAccessStore()
 const isCreatingNewDraft = ref(false)
 const selectedDocId = ref<string | null>(null)
-const selectedSlice = ref<AdminCatalogSliceDto | null>(null)
+const selectedSlice = ref<AdminCatalogSlice | null>(null)
 const isSliceModalOpen = ref(false)
 
 const search = ref('')
@@ -35,12 +37,18 @@ const isRetrying = ref(false)
 const runAction = async (loading: Ref<boolean>, fn: () => Promise<void>) => {
   loading.value = true
   try { await fn() }
-  catch (err: unknown) { toast.error(formatError(err)) }
+  catch (err: unknown) {
+    if (err && typeof err === 'object' && 'code' in err && typeof err.code === 'string' && err.code.startsWith('Category.')) {
+      await categoryStore.fetchCategories(true)
+    }
+    toast.error(formatError(err))
+  }
   finally { loading.value = false }
 }
 
 onMounted(async () => {
   if (!access.isAuthorized) return
+  void categoryStore.ensureCategories()
   try {
     await catalogStore.fetchAdminDocuments()
     if (catalogStore.adminDocuments.length > 0 && !selectedDocId.value) {
@@ -83,7 +91,7 @@ async function handleSaveMetadata(payload: any) {
     await catalogStore.updateMetadata(catalogStore.selectedAdminDocument!.id, {
       title: payload.title,
       description: catalogStore.selectedAdminDocument!.description || payload.title,
-      category: payload.category,
+      categoryId: payload.categoryId,
       language: payload.language,
       authorOrSourceUrl: payload.authorOrSourceUrl,
       attributionText: payload.attributionText,

@@ -88,6 +88,22 @@ public class AuthorizationReadinessService : IAuthorizationReadinessService
                     FailureReason: $"Admin role requires at least 6 protected permissions; found {adminPermCount}.");
             }
 
+            // Validate the schema independently of administrator-managed category rows.
+            try
+            {
+                _ = await _dbContext.DocumentCategories.IgnoreQueryFilters().AsNoTracking()
+                    .FirstOrDefaultAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                return new AuthorizationReadinessStatus(
+                    IsReady: false,
+                    IsDatabaseConnected: true,
+                    HasRequiredSchemaAndRoles: false,
+                    IsInitialized: false,
+                    FailureReason: $"Required DocumentCategories table is missing or invalid: {ex.Message}");
+            }
+
             // Check initialization receipt
             bool isInitialized;
             try

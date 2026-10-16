@@ -42,7 +42,7 @@ public class GetBookByIdAndSliceHandlerTests : IDisposable
         {
             Title = "ASP.NET Core Architecture",
             Slug = "aspnet-core-architecture",
-            Category = Category.BackendRuntime,
+            CategoryId = CategoryDefaults.BackendRuntimeId,
             Status = ProcessingStatus.Ready,
             TotalChunks = 2
         };
@@ -113,7 +113,7 @@ public class GetBookByIdAndSliceHandlerTests : IDisposable
         {
             Title = "Vue 3 Internals",
             Slug = "vue-3-internals",
-            Category = Category.FrontendWeb,
+            CategoryId = CategoryDefaults.FrontendWebId,
             Status = ProcessingStatus.Ready,
             TotalChunks = 1
         };

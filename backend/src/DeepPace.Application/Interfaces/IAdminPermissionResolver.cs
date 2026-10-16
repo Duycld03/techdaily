@@ -9,7 +9,8 @@ public enum AdminPermission
     ManageAccounts,
     ReadAudit,
     ManageDocumentOperations,
-    ManageRoles
+    ManageRoles,
+    ManageCategories
 }
 
 public record AdminCapabilitiesDto(
@@ -18,7 +19,8 @@ public record AdminCapabilitiesDto(
     bool CanReadAudit = false,
     bool CanManageDocumentOperations = false,
     bool CanViewAdminDashboard = false,
-    bool CanManageRoles = false);
+    bool CanManageRoles = false,
+    bool CanManageCategories = false);
 
 public enum AuthorityOutcome
 {

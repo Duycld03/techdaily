@@ -9,23 +9,24 @@ import {
   Maximize2,
   Type
 } from 'lucide-vue-next'
-import { useKnowledgeGraphStore, type GraphNode, type GraphEdge } from '~/stores/useKnowledgeGraphStore'
+import { useKnowledgeGraphStore, type GraphNode } from '~/stores/useKnowledgeGraphStore'
 import {
-  CATEGORY_PALETTE,
+  getCategoryPalette,
   EDGE_FAMILY_LINK_WIDTH_3D,
   EDGE_PARTICLE_SPEED,
   NODE_TYPE_COLOR,
   SM2_STATUS_COLOR,
-  normalizeCategory,
   normalizeSm2Status,
   resolveEdgeFamily
 } from '~/utils/graphVisualTokens'
-
+import { useCategoryStore } from '~/stores/useCategoryStore'
+const { t, locale } = useI18n()
 const emit = defineEmits<{
   (e: 'ready', graph: any): void
 }>()
 
 const store = useKnowledgeGraphStore()
+const categoryStore = useCategoryStore()
 const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
 
@@ -87,9 +88,10 @@ function hexToRgba(hex: string, alpha: number): string {
 function getBaseNodeColor(node: GraphNode): string {
   const type = (node.type || '').toLowerCase()
   if (type === 'card') return SM2_STATUS_COLOR[normalizeSm2Status(node.status)]
-  if (type === 'highlight') return NODE_TYPE_COLOR.highlight
   if (type === 'book') return NODE_TYPE_COLOR.book
-  return CATEGORY_PALETTE[normalizeCategory(node.category)].fill
+  if (type === 'highlight') return NODE_TYPE_COLOR.highlight
+  const palette = getCategoryPalette(node.categoryId)
+  return type === 'chunk' ? palette.border : palette.fill
 }
 
 // Node color resolver with interactive legend hover dimming
@@ -112,11 +114,21 @@ function isEdgeConnectedToNode(edge: any, targetNodeId: string | null): boolean 
   return sourceId === targetNodeId || targetId === targetNodeId
 }
 
-// Format 3D tooltip text
+const HTML_ENTITIES: Record<string, string> = {
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, character => HTML_ENTITIES[character]!)
+}
+
+// This callback returns HTML to the graph library, so every user-controlled field is escaped.
 function getTooltipHtml(node: GraphNode): string {
-  const type = (node.type || 'Node').toUpperCase()
-  const category = node.category || 'General'
   const dark = isDark.value
+  const type = escapeHtml((node.type || 'Node').toUpperCase())
+  const catDesc = (node.categoryId ? categoryStore.getCategoryById(node.categoryId) : undefined) ?? node.category
+  const category = escapeHtml(catDesc ? categoryStore.getCategoryName(catDesc, locale.value) : '')
+  const inactiveBadge = catDesc && !catDesc.isActive ? ` <span style="font-size: 10px; color: #f59e0b; font-weight: 700;">(${escapeHtml(t('categories.inactive'))})</span>` : ''
   const bg = dark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(255, 255, 255, 0.95)'
   const clr = dark ? '#f8fafc' : '#0f172a'
   const subClr = dark ? '#94a3b8' : '#64748b'
@@ -126,18 +138,18 @@ function getTooltipHtml(node: GraphNode): string {
   if (node.type === 'card') {
     extra = `<div style="font-size: 11px; margin-top: 4px; color: #a78bfa;">Interval: ${node.intervalDays ?? 1}d • EF: ${(node.easeFactor ?? 2.5).toFixed(2)}</div>`
   } else if (node.type === 'chunk' && node.subtitle) {
-    extra = `<div style="font-size: 11px; margin-top: 4px; color: #38bdf8;">${node.subtitle}</div>`
+    extra = `<div style="font-size: 11px; margin-top: 4px; color: #38bdf8;">${escapeHtml(node.subtitle)}</div>`
   } else if (node.type === 'highlight' && node.tags?.length) {
-    extra = `<div style="font-size: 11px; margin-top: 4px; color: #38bdf8;">Tags: ${node.tags.slice(0, 3).join(', ')}</div>`
+    extra = `<div style="font-size: 11px; margin-top: 4px; color: #38bdf8;">Tags: ${escapeHtml(node.tags.slice(0, 3).join(', '))}</div>`
   }
 
   return `
     <div style="background: ${bg}; color: ${clr}; border: 1px solid ${border}; border-radius: 12px; padding: 10px 14px; font-family: ui-sans-serif, system-ui, sans-serif; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); max-width: 260px; pointer-events: none;">
       <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
         <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 6px; border-radius: 6px;">${type}</span>
-        <span style="font-size: 11px; color: ${subClr};">${category}</span>
+        <span style="font-size: 11px; color: ${subClr};">${category}${inactiveBadge}</span>
       </div>
-      <div style="font-size: 13px; font-weight: 700; line-height: 1.3;">${node.label}</div>
+      <div style="font-size: 13px; font-weight: 700; line-height: 1.3;">${escapeHtml(store.getNodeLabel(node, locale.value))}</div>
       ${extra}
     </div>
   `
@@ -301,7 +313,7 @@ onMounted(async () => {
           return null
         }
 
-        const sprite = new SpriteText(node.label || node.id)
+        const sprite = new SpriteText(store.getNodeLabel(node, locale.value) || node.id)
         sprite.color = isDark.value ? '#ffffff' : '#0f172a'
         sprite.textHeight = isPillar ? 7 : (isBook ? 5.5 : 4)
         sprite.backgroundColor = isDark.value ? 'rgba(18, 18, 21, 0.85)' : 'rgba(255, 255, 255, 0.85)'
@@ -402,7 +414,7 @@ onMounted(async () => {
 
 // Watch for data changes
 watch(
-  () => [store.filteredNodes, store.filteredEdges],
+  () => [store.filteredNodes, store.filteredEdges, store.activePillars, locale.value],
   () => {
     updateGraphData()
   },

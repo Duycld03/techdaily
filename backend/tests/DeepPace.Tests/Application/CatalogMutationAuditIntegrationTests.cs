@@ -36,6 +36,16 @@ public class CatalogMutationAuditIntegrationTests : IDisposable
 
         _db = new DeepPaceDbContext(options);
         _db.Database.EnsureCreated();
+        _db.Users.Add(new User
+        {
+            Id = _adminUserId,
+            Email = "catalog-audit-admin@example.test",
+            Name = "Catalog administrator",
+            RoleId = RoleDefaults.AdminRoleId,
+            Status = AccountStatus.Active,
+            AuthenticationVersion = 1
+        });
+        _db.SaveChanges();
     }
 
     public void Dispose()
@@ -90,7 +100,7 @@ public class CatalogMutationAuditIntegrationTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Original Title",
             Description = "Desc",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             Language = "en",
             SourceType = SourceType.WebDocUrl,
             Visibility = CatalogVisibility.Draft,
@@ -100,13 +110,13 @@ public class CatalogMutationAuditIntegrationTests : IDisposable
         await _db.SaveChangesAsync();
 
         var validator = new AdminUpdateCatalogMetadataValidator();
-        var handler = new AdminUpdateCatalogMetadataHandler(_db, validator);
+        var handler = new AdminUpdateCatalogMetadataHandler(_db, validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db), new DeepPace.Infrastructure.Services.AdministrativeUnitOfWork(_db), new DeepPace.Infrastructure.Services.DocumentMutationGuard(_db));
 
         var res = await handler.ExecuteAsync(new AdminUpdateCatalogMetadataRequest(
             doc.Id,
             "Updated Title",
             "Updated Desc",
-            Category.SystemDesign,
+            CategoryDefaults.SystemDesignId,
             "en",
             null,
             "Attribution",
@@ -130,7 +140,7 @@ public class CatalogMutationAuditIntegrationTests : IDisposable
             Id = Guid.NewGuid(),
             Title = "Published Title",
             Description = "Desc",
-            Category = Category.SystemDesign,
+            CategoryId = CategoryDefaults.SystemDesignId,
             Language = "en",
             SourceType = SourceType.WebDocUrl,
             Visibility = CatalogVisibility.Published,
@@ -140,13 +150,13 @@ public class CatalogMutationAuditIntegrationTests : IDisposable
         await _db.SaveChangesAsync();
 
         var validator = new AdminUpdateCatalogMetadataValidator();
-        var handler = new AdminUpdateCatalogMetadataHandler(_db, validator);
+        var handler = new AdminUpdateCatalogMetadataHandler(_db, validator, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db), new DeepPace.Infrastructure.Services.AdministrativeUnitOfWork(_db), new DeepPace.Infrastructure.Services.DocumentMutationGuard(_db));
 
         var res = await handler.ExecuteAsync(new AdminUpdateCatalogMetadataRequest(
             doc.Id,
             "Updated Title",
             "Updated Desc",
-            Category.SystemDesign,
+            CategoryDefaults.SystemDesignId,
             "en",
             null,
             "Attribution",
@@ -175,7 +185,7 @@ public class CatalogMutationAuditIntegrationTests : IDisposable
                 Id = Guid.NewGuid(),
                 Title = "Doc to Prepare",
                 Description = "Desc",
-                Category = Category.EngineeringCraft,
+                CategoryId = CategoryDefaults.EngineeringCraftId,
                 Language = "en",
                 SourceType = SourceType.PdfBook,
                 Visibility = CatalogVisibility.Draft,
@@ -186,7 +196,7 @@ public class CatalogMutationAuditIntegrationTests : IDisposable
             await _db.SaveChangesAsync();
 
             var throwingQueue = new ThrowingPdfQueue();
-            var handler = new AdminPrepareCatalogHandler(_db, throwingQueue);
+            var handler = new AdminPrepareCatalogHandler(_db, throwingQueue, new DeepPace.Infrastructure.Services.CategoryAssignmentGuard(_db), new DeepPace.Infrastructure.Services.AdministrativeUnitOfWork(_db), new DeepPace.Infrastructure.Services.DocumentMutationGuard(_db));
 
             var res = await handler.ExecuteAsync(new AdminPrepareCatalogRequest(doc.Id, tempFile, _adminUserId));
 

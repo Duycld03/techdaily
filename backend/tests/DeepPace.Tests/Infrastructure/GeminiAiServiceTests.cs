@@ -12,14 +12,101 @@ namespace DeepPace.Tests.Infrastructure;
 
 public class GeminiAiServiceTests
 {
+    [Theory]
+    [InlineData("insight")]
+    [InlineData("questions")]
+    [InlineData("formatter")]
+    public async Task Generation_PropagatesProviderCancellation(string operation)
+    {
+        var handler = new MockHttpMessageHandler { ThrowCancellation = true };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Gemini:ApiKey"] = "test-key", ["Gemini:Model"] = "test-model"
+        }).Build();
+        var service = new GeminiAiService(new HttpClient(handler), config, NullLogger<GeminiAiService>.Instance);
+        Func<Task> action = operation switch
+        {
+            "insight" => async () => { await service.GenerateInsightAsync(Guid.NewGuid(), "Pottery"); },
+            "questions" => async () => { await service.GenerateQuestionsAsync("Pottery", Guid.NewGuid(), QuizLevel.Foundation, 1, []); },
+            _ => async () => { await service.FormatSliceAsync("Source words", "Chapter"); }
+        };
+
+        await action.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("\"invented-category\"")]
+    public async Task GenerateInsightAsync_PreservesRequestedUuidRegardlessOfAiCategory(string aiCategory)
+    {
+        var categoryId = Guid.NewGuid();
+        var handler = new MockHttpMessageHandler
+        {
+            ResponseToReturn = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(new
+                {
+                    candidates = new[] { new { content = new { parts = new[] {
+                        new { text = $"{{\"title\":\"Source topic\",\"category\":{aiCategory}}}" }
+                    } } } }
+                }))
+            }
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Gemini:ApiKey"] = "test-key",
+            ["Gemini:Model"] = "test-model"
+        }).Build();
+        var service = new GeminiAiService(new HttpClient(handler), config, NullLogger<GeminiAiService>.Instance);
+
+        var result = await service.GenerateInsightAsync(categoryId, "Pottery glazing");
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.CategoryId.Should().Be(categoryId);
+        handler.CapturedRequestBody.Should().Contain("Pottery glazing");
+        handler.CapturedRequestBody.Should().NotContain(categoryId.ToString());
+    }
+
+    [Fact]
+    public async Task GenerateQuestionsAsync_AssignsRequestedUuidAndPreservesQuestionText()
+    {
+        var categoryId = Guid.NewGuid();
+        var handler = new MockHttpMessageHandler
+        {
+            ResponseToReturn = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(new
+                {
+                    candidates = new[] { new { content = new { parts = new[] {
+                        new { text = "[{\"questionText\":\"Which glaze?\",\"category\":0,\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctOptionIndex\":1,\"explanationMarkdown\":\"B works.\"}]" }
+                    } } } }
+                }))
+            }
+        };
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Gemini:ApiKey"] = "test-key", ["Gemini:Model"] = "test-model"
+        }).Build();
+        var service = new GeminiAiService(new HttpClient(handler), config, NullLogger<GeminiAiService>.Instance);
+
+        var result = await service.GenerateQuestionsAsync("Pottery", categoryId, QuizLevel.Foundation, 1, []);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().ContainSingle().Which.CategoryId.Should().Be(categoryId);
+        result.Value[0].QuestionText.Should().Be("Which glaze?");
+        handler.CapturedRequestBody.Should().NotContain(categoryId.ToString());
+        result.Value[0].Topic.Should().Be("Pottery");
+    }
     private class MockHttpMessageHandler : HttpMessageHandler
     {
         public HttpRequestMessage? CapturedRequest { get; private set; }
         public string? CapturedRequestBody { get; private set; }
         public HttpResponseMessage ResponseToReturn { get; set; } = new(HttpStatusCode.OK);
+        public bool ThrowCancellation { get; set; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (ThrowCancellation) throw new OperationCanceledException();
             CapturedRequest = request;
             if (request.Content != null)
             {
@@ -30,7 +117,7 @@ public class GeminiAiServiceTests
     }
 
     [Fact]
-    public async Task FormatSliceAsync_WhenEngineeringCraft_ShouldIncludeVerbatimMandateAndStructuralRestorationInPrompt()
+    public async Task FormatSliceAsync_WhenProviderReturnsRestoredMarkdown_ShouldPreserveParsedContentAndDrill()
     {
         // Arrange
         var handler = new MockHttpMessageHandler();
@@ -94,31 +181,11 @@ public class GeminiAiServiceTests
         var result = await service.FormatSliceAsync(
             rawText: rawText,
             chapterTitle: chapterTitle,
-            language: "vi",
-            category: Category.EngineeringCraft);
+            language: "vi");
 
         // Assert
         result.IsSuccess.Should().BeTrue();
         handler.CapturedRequestBody.Should().NotBeNull();
-
-        using var requestDoc = JsonDocument.Parse(handler.CapturedRequestBody!);
-        var root = requestDoc.RootElement;
-
-        // Verify generation config maxOutputTokens is 8192
-        var generationConfig = root.GetProperty("generationConfig");
-        generationConfig.GetProperty("maxOutputTokens").GetInt32().Should().Be(8192);
-
-        // Verify systemInstruction includes strict verbatim mandate and structural restoration rules
-        var systemInstructionText = root.GetProperty("systemInstruction").GetProperty("parts")[0].GetProperty("text").GetString();
-        systemInstructionText.Should().NotBeNullOrWhiteSpace();
-
-        systemInstructionText.Should().Contain("100% Verbatim Text Retention & Structural Restoration");
-        systemInstructionText.Should().Contain("ZERO SUMMARIZATION");
-        systemInstructionText.Should().Contain("Detect Run-in Headings");
-        systemInstructionText.Should().Contain("### {SectionTitle}");
-        systemInstructionText.Should().Contain("Eliminate Duplicated Heading Echo");
-        systemInstructionText.Should().Contain(@"\n\n");
-        systemInstructionText.Should().Contain("Preserve Spoken Dialogue & Quotes");
 
         // Verify parsed result contains clean restored markdown with promoted heading
         result.Value.FormattedMarkdown.Should().Contain("### Sức mạnh đáng kinh ngạc của những thói quen nhỏ bé");
@@ -127,13 +194,10 @@ public class GeminiAiServiceTests
         result.Value.KeyTakeaways.Should().HaveCount(3);
         result.Value.ScenarioDrill.Should().NotBeNull();
         result.Value.ScenarioDrill!.CorrectOptionIndex.Should().Be(1);
-        systemInstructionText.Should().Contain("CRITICAL LANGUAGE INVARIANT");
-        systemInstructionText.Should().Contain("The document is written in VIETNAMESE");
-        systemInstructionText.Should().Contain("### Ý chính cốt lõi");
     }
 
     [Fact]
-    public async Task FormatSliceAsync_WhenEnglishTechnicalBook_ShouldUseEnglishInstructions()
+    public async Task FormatSliceAsync_WhenProviderReturnsNoTakeaways_ShouldPreserveContentWithoutInventingAdvice()
     {
         // Arrange
         var handler = new MockHttpMessageHandler();
@@ -162,7 +226,7 @@ public class GeminiAiServiceTests
                                 {
                                     formattedMarkdown = "# Title\n\n> [!NOTE]\n> Context\n\nBody",
                                     summaryMarkdown = "Summary",
-                                    keyTakeaways = new[] { "P1", "P2", "P3" },
+                                    keyTakeaways = Array.Empty<string>(),
                                     estimatedReadMinutes = 3
                                 })
                             }
@@ -178,18 +242,14 @@ public class GeminiAiServiceTests
         };
 
         // Act
-        var result = await service.FormatSliceAsync("Content", "Title", "en", Category.BackendRuntime);
+        var result = await service.FormatSliceAsync("Content", "Title", "en");
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+        result.Value.KeyTakeaways.Should().BeEmpty("missing source-grounded takeaways must not be replaced by canned engineering advice");
+        result.Value.FormattedMarkdown.Should().Be("# Title\n\n> [!NOTE]\n> Context\n\nBody");
         handler.CapturedRequestBody.Should().NotBeNull();
 
-        using var requestDoc = JsonDocument.Parse(handler.CapturedRequestBody!);
-        var systemInstructionText = requestDoc.RootElement.GetProperty("systemInstruction").GetProperty("parts")[0].GetProperty("text").GetString();
-
-        systemInstructionText.Should().Contain("You are a Principal Software Architect");
-        systemInstructionText.Should().Contain("### Key Takeaways");
-        systemInstructionText.Should().NotContain("CRITICAL LANGUAGE INVARIANT");
     }
 
     [Fact]
@@ -207,7 +267,7 @@ public class GeminiAiServiceTests
         var service = new GeminiAiService(client, config, NullLogger<GeminiAiService>.Instance);
 
         // Act
-        var result = await service.GenerateInsightAsync(Category.BackendRuntime, "asp.net", locale: "en");
+        var result = await service.GenerateInsightAsync(Guid.NewGuid(), "asp.net", locale: "en");
 
         // Assert
         result.IsSuccess.Should().BeFalse();

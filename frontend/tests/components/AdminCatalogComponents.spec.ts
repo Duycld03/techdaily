@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import AdminCatalogHeader from '~/components/catalog/admin/AdminCatalogHeader.vue'
 import AdminCatalogNavRail from '~/components/catalog/admin/AdminCatalogNavRail.vue'
@@ -7,59 +7,49 @@ import AdminCatalogDraftForm from '~/components/catalog/admin/AdminCatalogDraftF
 import AdminCatalogSlicesReview from '~/components/catalog/admin/AdminCatalogSlicesReview.vue'
 import AdminCatalogDocumentDetail from '~/components/catalog/admin/AdminCatalogDocumentDetail.vue'
 import AdminCatalogSliceModal from '~/components/catalog/admin/AdminCatalogSliceModal.vue'
-import { useCatalogStore, type AdminCatalogDocumentDto, type AdminCatalogSliceDto } from '~/stores/useCatalogStore'
-
-const mockDoc: AdminCatalogDocumentDto = {
+import { useCatalogStore, type AdminCatalogDocument, type AdminCatalogSlice } from '~/stores/useCatalogStore'
+import { useCategoryStore } from '~/stores/useCategoryStore'
+import CatalogCard from '~/components/catalog/CatalogCard.vue'
+import CatalogPreviewModal from '~/components/catalog/CatalogPreviewModal.vue'
+const category = { id: '99999999-9999-4999-8999-999999999999', slug: 'novel-category', nameEn: 'Novel category', nameVi: 'Danh muc moi', sortOrder: 1, isActive: true, version: 1 }
+const mockDoc: AdminCatalogDocument = {
   id: 'doc-1',
   title: 'High Performance Browser Networking',
-  slug: 'high-performance-browser-networking',
-  category: 1,
+  description: 'Networking',
+  sourceType: 'WebDocUrl',
+  categoryId: category.id,
+  category,
   language: 'en',
   authorOrSourceUrl: 'https://hpbn.co',
   attributionText: 'Ilya Grigorik',
-  permissionBasis: 'CC-BY-NC-ND',
-  permissionEvidence: 'Public Book',
-  confirmedDistributionRights: true,
-  confirmedAiProcessingRights: true,
   visibility: 'Draft',
   processingStatus: 'Ready',
-  progressPercentage: 100,
-  statusMessage: 'Ready',
+  processingStatusMessage: 'Ready',
   processingErrorMessage: null,
   totalSlices: 5,
   estimatedReadMinutes: 25,
   revision: 2,
   concurrencyVersion: 1,
+  processingGeneration: 1,
+  createdByUserId: null,
+  reviewedRevision: null,
+  publishedByUserId: null,
+  publishedAt: null,
+  hiddenByUserId: null,
+  hiddenAt: null,
   reviewedByUserId: null,
   reviewedAt: null,
   isEligibleForPublication: false,
   unmetPublicationRequirements: ['Administrator review is required before publication.'],
-  slices: [
-    {
-      id: 'slice-1',
-      sliceOrder: 1,
-      chapterTitle: 'Primer on Web Performance',
-      isAiFormatted: true,
-      estimatedReadMinutes: 5,
-      summaryMarkdown: 'Summary 1',
-      originalTextMarkdown: 'Markdown text 1'
-    },
-    {
-      id: 'slice-2',
-      sliceOrder: 2,
-      chapterTitle: 'TCP Optimization',
-      isAiFormatted: false,
-      estimatedReadMinutes: 6,
-      summaryMarkdown: null,
-      originalTextMarkdown: 'Markdown text 2'
-    }
-  ],
   createdAt: '2026-10-14T00:00:00Z',
   updatedAt: '2026-10-14T00:00:00Z'
 }
 
-const mockSlice: AdminCatalogSliceDto = {
+const mockSlice: AdminCatalogSlice = {
   id: 'slice-1',
+  catalogDocumentId: 'doc-1',
+  language: 'en',
+  keyTakeaways: [],
   sliceOrder: 1,
   chapterTitle: 'Primer on Web Performance',
   isAiFormatted: true,
@@ -81,6 +71,99 @@ const defaultGlobal = {
 
 beforeEach(() => {
   setActivePinia(createPinia())
+  const categories = useCategoryStore()
+  categories.categories = [category]
+  categories.hasLoaded = true
+  vi.spyOn(categories, 'ensureCategories').mockResolvedValue(undefined)
+})
+describe('catalog real wire behavior', () => {
+  it.each([CatalogCard, CatalogPreviewModal])('blocks new adoption under fresh inactive metadata but retains owned reading', async (component) => {
+    useCategoryStore().categories = [{ ...category, isActive: false }]
+    const document = { id: 'doc', title: 'Guide', description: '', categoryId: category.id, category, language: 'en', sourceType: 'PdfBook' as const, attributionText: '', totalSlices: 1, estimatedReadMinutes: 5, authorOrSourceUrl: null, publishedAt: null, existingBookId: null, tableOfContents: [], firstSlicePreview: null }
+    const wrapper = mount(component, { props: { document, open: true }, global: defaultGlobal })
+    expect(wrapper.text()).toContain('api_errors.Category.Inactive')
+    const adopt = wrapper.findAll('button').find(button => button.text().includes('categories.inactive'))!
+    expect(adopt.attributes('disabled')).toBeDefined()
+    await adopt.trigger('click')
+    expect(wrapper.emitted('adopt')).toBeUndefined()
+    await wrapper.setProps({ document: { ...document, existingBookId: 'owned-copy' } })
+    expect(wrapper.text()).toContain('library.discover.open_book')
+    expect(wrapper.text()).not.toContain('api_errors.Category.Inactive')
+  })
+
+  it('passes the selected replacement PDF to retry processing', async () => {
+    const wrapper = mount(AdminCatalogDocumentDetail, {
+      props: { document: { ...mockDoc, sourceType: 'PdfBook', processingStatus: 'Failed' }, isSavingMetadata: false, isPreparingSlices: false, isPublishing: false, isHiding: false, isRetrying: false },
+      global: defaultGlobal
+    })
+    const file = new File(['%PDF-replacement'], 'replacement.pdf', { type: 'application/pdf' })
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', { value: [file] })
+    await input.trigger('change')
+    await wrapper.findAll('button').find(button => button.text().includes('admin_catalog.retry_preparation'))!.trigger('click')
+    expect(wrapper.emitted('retry-processing')?.[0]).toEqual([file])
+  })
+
+  it('renders the actual markdownContent URL preview', async () => {
+    vi.spyOn(useCatalogStore(), 'previewUrl').mockResolvedValue({
+      title: 'Preview title', sourceUrl: 'https://example.test/article',
+      markdownContent: '# Actual article body', estimatedWordCount: 4,
+      isPdfDetected: false, detectedPdfUrl: null
+    })
+    const wrapper = mount(AdminCatalogDraftForm, { global: defaultGlobal })
+    await wrapper.findAll('button').find(button => button.text().includes('admin_catalog.import_url'))!.trigger('click')
+    await wrapper.find('input[type="url"]').setValue('https://example.test/article')
+    await wrapper.findAll('button').find(button => button.text().includes('admin_catalog.preview_url'))!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('# Actual article body')
+  })
+
+  it('opens the adopted owned copy using existingBookId', () => {
+    const wrapper = mount(CatalogCard, {
+      props: { document: { id: 'doc', title: 'Guide', description: '', categoryId: category.id, category, language: 'en', sourceType: 'PdfBook', attributionText: '', totalSlices: 1, estimatedReadMinutes: 5, authorOrSourceUrl: null, publishedAt: null, existingBookId: 'owned-book-id' } },
+      global: { ...defaultGlobal, stubs: { ...defaultGlobal.stubs, NuxtLink: { props: ['to'], template: '<a :href="to.path"><slot /></a>' } } }
+    })
+    expect(wrapper.find('[data-testid="catalog-card-open-book-btn"]').attributes('href')).toBe('/read/owned-book-id')
+    expect(wrapper.find('[data-testid="catalog-card-adopt-btn"]').exists()).toBe(false)
+  })
+})
+
+
+describe('CatalogCard category metadata', () => {
+  it('prefers fresh shared metadata by UUID and falls back to the stored descriptor', async () => {
+    const categories = useCategoryStore()
+    categories.categories = [{ ...category, nameEn: 'Renamed category', isActive: false }]
+    const wrapper = mount(CatalogCard, {
+      props: { document: { id: 'doc', title: 'Guide', description: '', categoryId: category.id, category, language: 'en', sourceType: 'PdfBook', attributionText: '', totalSlices: 1, estimatedReadMinutes: 5, authorOrSourceUrl: null, publishedAt: null, existingBookId: null } },
+      global: defaultGlobal
+    })
+    expect(wrapper.text()).toContain('Renamed category')
+    categories.categories = []
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('Novel category')
+  })
+})
+
+describe('Catalog category assignment rejection', () => {
+  it('refreshes choices without discarding the draft or selected UUID', async () => {
+    const categories = useCategoryStore()
+    const refresh = vi.spyOn(categories, 'fetchCategories').mockResolvedValue([])
+    vi.spyOn(useCatalogStore(), 'importUrl').mockRejectedValue({ code: 'Category.Inactive', message: 'Inactive' })
+    const wrapper = mount(AdminCatalogDraftForm, { global: defaultGlobal })
+    await wrapper.findAll('button').find(b => b.text().includes('admin_catalog.import_url'))!.trigger('click')
+    const title = wrapper.findAll('input[type="text"]').find(i => i.attributes('placeholder') === 'admin_catalog.form.title_placeholder')!
+    await title.setValue('Retained draft')
+    await wrapper.find('input[type="url"]').setValue('https://example.test/guide')
+    const select = wrapper.findAllComponents({ name: 'AppSelect' })[0]!
+    select.vm.$emit('update:modelValue', category.id)
+    await wrapper.vm.$nextTick()
+    await wrapper.findAll('button').find(b => b.text().includes('admin_catalog.create_draft_btn'))!.trigger('click')
+    await wrapper.vm.$nextTick()
+    expect(refresh).toHaveBeenCalledWith(true)
+    expect((title.element as HTMLInputElement).value).toBe('Retained draft')
+    expect((wrapper.find('input[type="url"]').element as HTMLInputElement).value).toBe('https://example.test/guide')
+    expect(select.props('modelValue')).toBe(category.id)
+  })
 })
 describe('AdminCatalogHeader.vue', () => {
   it('emits refresh and new-draft events on button clicks', async () => {
@@ -188,6 +271,8 @@ describe('AdminCatalogDraftForm.vue', () => {
     const urlInput = wrapper.find('input[type="url"]')
     expect(urlInput.exists()).toBe(true)
     await urlInput.setValue('https://nextjs.org/docs')
+    wrapper.findAllComponents({ name: 'AppSelect' })[0]!.vm.$emit('update:modelValue', category.id)
+    await wrapper.vm.$nextTick()
 
     // Submit
     const submitBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.create_draft_btn'))
@@ -198,7 +283,7 @@ describe('AdminCatalogDraftForm.vue', () => {
       url: 'https://nextjs.org/docs',
       title: 'Next.js Documentation',
       description: 'Next.js Documentation',
-      category: 0,
+      categoryId: category.id,
       language: 'en',
       authorOrSourceUrl: undefined,
       attributionText: undefined
@@ -232,6 +317,8 @@ describe('AdminCatalogDraftForm.vue', () => {
     const attributionInput = wrapper.findAll('input[type="text"]').find(i => i.attributes('placeholder') === 'admin_catalog.form.attribution_placeholder')
     expect(attributionInput).toBeDefined()
     await attributionInput!.setValue('Vercel')
+    wrapper.findAllComponents({ name: 'AppSelect' })[0]!.vm.$emit('update:modelValue', category.id)
+    await wrapper.vm.$nextTick()
 
     // Submit
     const submitBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.create_draft_btn'))
@@ -241,7 +328,7 @@ describe('AdminCatalogDraftForm.vue', () => {
       url: 'https://nextjs.org/docs',
       title: 'Next.js Documentation',
       description: 'Next.js Documentation',
-      category: 0,
+      categoryId: category.id,
       language: 'en',
       authorOrSourceUrl: 'https://nextjs.org/docs',
       attributionText: 'Vercel'
@@ -273,6 +360,77 @@ describe('AdminCatalogDraftForm.vue', () => {
     expect(mockImport).not.toHaveBeenCalled()
     expect(wrapper.emitted('created')).toBeFalsy()
   })
+
+  it('submits web URL draft with active category selected from categoryStore', async () => {
+    const categoryStore = useCategoryStore()
+    categoryStore.categories = [
+      { ...category }
+    ]
+
+    const store = useCatalogStore()
+    const mockImport = vi.fn().mockResolvedValue({ id: 'doc-imported-cat' })
+    store.importUrl = mockImport
+
+    const wrapper = mount(AdminCatalogDraftForm, {
+      global: defaultGlobal
+    })
+
+    // Switch to URL mode
+    const urlModeBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.import_url'))
+    await urlModeBtn!.trigger('click')
+
+    const titleInput = wrapper.findAll('input[type="text"]').find(i => i.attributes('placeholder') === 'admin_catalog.form.title_placeholder')
+    await titleInput!.setValue('Distributed Systems Guide')
+
+    const urlInput = wrapper.find('input[type="url"]')
+    await urlInput.setValue('https://dist-sys.com/docs')
+    wrapper.findAllComponents({ name: 'AppSelect' })[0]!.vm.$emit('update:modelValue', category.id)
+    await wrapper.vm.$nextTick()
+
+    const submitBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.create_draft_btn'))
+    await submitBtn!.trigger('click')
+
+    expect(mockImport).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://dist-sys.com/docs',
+      title: 'Distributed Systems Guide',
+      categoryId: category.id
+    }))
+    expect(wrapper.emitted('created')).toBeTruthy()
+  })
+
+  it('fetches novel metadata on direct mount without selecting it implicitly', async () => {
+    const categories = useCategoryStore()
+    categories.categories = []
+    categories.hasLoaded = false
+    vi.mocked(categories.ensureCategories).mockImplementation(async () => {
+      categories.categories = [category]
+      categories.hasLoaded = true
+    })
+    const wrapper = mount(AdminCatalogDraftForm, { global: defaultGlobal })
+    await wrapper.vm.$nextTick()
+    expect(categories.ensureCategories).toHaveBeenCalled()
+    const select = wrapper.findAllComponents({ name: 'AppSelect' })[0]!
+    expect(select.props('options')).toEqual([{ value: category.id, label: 'Novel category' }])
+    expect(select.props('modelValue')).toBe('')
+    expect(wrapper.findAll('button').find(b => b.text().includes('admin_catalog.create_draft_btn'))!.attributes('disabled')).toBeDefined()
+  })
+
+  it.each([null, 'Unavailable'])('blocks creation with no active categories or metadata error (%s)', async (error) => {
+    const categories = useCategoryStore()
+    categories.categories = []
+    categories.error = error
+    const store = useCatalogStore()
+    const create = vi.spyOn(store, 'importUrl')
+    const wrapper = mount(AdminCatalogDraftForm, { global: defaultGlobal })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain(error ? 'categories.metadataUnavailable' : 'categories.noActiveCategories')
+    expect(wrapper.findAll('button').find(b => b.text().includes('admin_catalog.create_draft_btn'))!.attributes('disabled')).toBeDefined()
+    expect(create).not.toHaveBeenCalled()
+    if (error) {
+      await wrapper.findAll('button').find(b => b.text().includes('categories.retry'))!.trigger('click')
+      expect(categories.ensureCategories).toHaveBeenCalledTimes(2)
+    }
+  })
 })
 
 describe('AdminCatalogSlicesReview.vue', () => {
@@ -285,8 +443,7 @@ describe('AdminCatalogSlicesReview.vue', () => {
       global: defaultGlobal
     })
 
-    expect(wrapper.text()).toContain('Primer on Web Performance')
-    expect(wrapper.text()).toContain('TCP Optimization')
+    expect(wrapper.findAll('button[title]')).toHaveLength(mockDoc.totalSlices)
     expect(wrapper.text()).toContain('admin_catalog.slices_ready_summary')
 
     // Prepare button must NOT be rendered when document is ready or has slices
@@ -302,10 +459,10 @@ describe('AdminCatalogSlicesReview.vue', () => {
   })
 
   it('renders prepare initial slices button when document has 0 slices and status is not Ready', async () => {
-    const unextractedDoc: AdminCatalogDocumentDto = {
+    const unextractedDoc: AdminCatalogDocument = {
       ...mockDoc,
       processingStatus: 'Pending',
-      slices: []
+      totalSlices: 0
     }
     const wrapper = mount(AdminCatalogSlicesReview, {
       props: {
@@ -352,14 +509,15 @@ describe('AdminCatalogDocumentDetail.vue', () => {
     expect(publishBtn).toBeDefined()
   })
 
-  it('normalizes string enum category to numeric index', async () => {
-    const docWithStringEnum = {
+  it('retains the current inactive UUID during metadata edits', async () => {
+    const docWithInactiveCategory = {
       ...mockDoc,
-      category: 'SystemDesign' as unknown as number
+      category: { ...category, isActive: false }
     }
+    useCategoryStore().categories = []
     const wrapper = mount(AdminCatalogDocumentDetail, {
       props: {
-        document: docWithStringEnum,
+        document: docWithInactiveCategory,
         isSavingMetadata: false,
         isPreparingSlices: false,
         isPublishing: false,
@@ -369,16 +527,19 @@ describe('AdminCatalogDocumentDetail.vue', () => {
       global: defaultGlobal
     })
 
-    // Trigger save and ensure category is normalized to 3 (SystemDesign)
+    expect(wrapper.findAllComponents({ name: 'AppSelect' })[0]!.props('options')).toEqual([
+      { value: category.id, label: expect.stringContaining('Novel category') }
+    ])
     const saveBtn = wrapper.findAll('button').find(b => b.text().includes('admin_catalog.save_changes'))
     await saveBtn!.trigger('click')
     expect(wrapper.emitted('save-metadata')![0][0]).toMatchObject({
-      category: 3
+      categoryId: category.id
     })
+    expect(wrapper.emitted('save-metadata')![0][0]).not.toHaveProperty('category')
   })
 
   it('enforces read-only metadata state, disabled save, notice banner, and hides Publish button when Published', async () => {
-    const publishedDoc: AdminCatalogDocumentDto = {
+    const publishedDoc: AdminCatalogDocument = {
       ...mockDoc,
       visibility: 'Published',
       isEligibleForPublication: true,

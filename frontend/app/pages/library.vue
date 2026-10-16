@@ -10,14 +10,25 @@ import CatalogCard from '~/components/catalog/CatalogCard.vue'
 import CatalogPreviewModal from '~/components/catalog/CatalogPreviewModal.vue'
 import CatalogFilterModal, { type CatalogFilterState } from '~/components/catalog/CatalogFilterModal.vue'
 import LibraryFilterModal, { type LibraryFilterState } from '~/components/library/LibraryFilterModal.vue'
-import { useCatalogStore, type LearnerCatalogDocumentDto } from '~/stores/useCatalogStore'
+import { useCatalogStore, type LearnerCatalogDocument } from '~/stores/useCatalogStore'
 import { useLibraryStore } from '~/stores/useLibraryStore'
+import { useCategoryStore, type CategoryDescriptor } from '~/stores/useCategoryStore'
 const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { formatError } = useApiError()
 const libraryStore = useLibraryStore()
 const catalogStore = useCatalogStore()
+const categoryStore = useCategoryStore()
+const assignmentAvailable = (id: string) => !categoryStore.error && !categoryStore.isLoading && categoryStore.activeCategories.some(category => category.id === id)
+const categoryFeedback = computed(() => categoryStore.error
+  ? t('categories.metadataUnavailable')
+  : categoryStore.hasLoaded && !categoryStore.activeCategories.length ? t('categories.noActiveCategories') : '')
+async function refreshRejectedCategory(error: unknown) {
+  if (error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' && error.code.startsWith('Category.')) {
+    await categoryStore.fetchCategories(true)
+  }
+}
 const toast = useToast()
 
 const currentTab = computed<'mine' | 'discover'>({
@@ -35,7 +46,7 @@ const currentTab = computed<'mine' | 'discover'>({
 
 // Discover state
 const discoverSearch = ref('')
-const discoverCategory = ref<number | undefined>(undefined)
+const discoverCategory = ref<string | undefined>(undefined)
 const discoverSourceType = ref<number | undefined>(undefined)
 const discoverLanguage = ref<string | undefined>(undefined)
 const isPreviewModalOpen = ref(false)
@@ -52,21 +63,20 @@ const activeDiscoverFilterCount = computed(() => {
 
 const quickDiscoverCategories = computed(() => [
   { id: undefined, label: t('library.categories.all') },
-  { id: 0, label: t('library.categories.frontend') },
-  { id: 1, label: t('library.categories.backend') },
-  { id: 2, label: t('library.categories.database') },
-  { id: 3, label: t('library.categories.system_design') }
+  ...categoryStore.allCategories.map(category => ({ id: category.id, label: categoryStore.getCategoryName(category, locale.value) }))
 ])
 
-function handleDiscoverCategorySelect(catId?: number) {
+function handleDiscoverCategorySelect(catId?: string) {
   discoverCategory.value = catId
+  router.replace({ query: { ...route.query, category: undefined, categoryId: catId, page: undefined } })
   loadDiscover(1)
 }
 
 function handleApplyCatalogFilters(filters: CatalogFilterState) {
-  discoverCategory.value = filters.category
+  discoverCategory.value = filters.categoryId || undefined
   discoverSourceType.value = filters.sourceType
   discoverLanguage.value = filters.language
+  router.replace({ query: { ...route.query, category: undefined, categoryId: discoverCategory.value, page: undefined } })
   loadDiscover(1)
 }
 
@@ -74,6 +84,7 @@ function handleResetCatalogFilters() {
   discoverCategory.value = undefined
   discoverSourceType.value = undefined
   discoverLanguage.value = undefined
+  router.replace({ query: { ...route.query, category: undefined, categoryId: undefined, page: undefined } })
   loadDiscover(1)
 }
 
@@ -92,18 +103,13 @@ const discoverLanguageOptions = computed(() => [
 
 const discoverCategoryOptions = computed(() => [
   { value: '', label: t('library.categories.all') },
-  { value: 0, label: t('library.categories.frontend') },
-  { value: 1, label: t('library.categories.backend') },
-  { value: 2, label: t('library.categories.database') },
-  { value: 3, label: t('library.categories.system_design') },
-  { value: 4, label: t('library.categories.craft') },
-  { value: 5, label: t('library.categories.cloud') }
+  ...categoryStore.allCategories.map(category => ({ value: category.id, label: categoryStore.getCategoryName(category, locale.value) }))
 ])
 
 async function loadDiscover(page = 1) {
   await catalogStore.fetchPublishedDocuments({
     search: discoverSearch.value || undefined,
-    category: discoverCategory.value,
+    categoryId: discoverCategory.value ?? null,
     sourceType: discoverSourceType.value,
     language: discoverLanguage.value || undefined,
     page,
@@ -119,7 +125,7 @@ function onDiscoverPageChange(newPage: number) {
   loadDiscover(newPage)
 }
 
-async function handleOpenPreview(doc: LearnerCatalogDocumentDto) {
+async function handleOpenPreview(doc: LearnerCatalogDocument) {
   try {
     await catalogStore.fetchPublishedDocumentById(doc.id)
     isPreviewModalOpen.value = true
@@ -144,7 +150,7 @@ async function handleAdoptDocument(doc: { id: string }) {
   }
 }
 const searchQuery = ref('')
-const selectedCategory = ref<number | undefined>(undefined)
+const selectedCategory = ref<string | undefined>(undefined)
 const selectedLanguage = ref<string | undefined>(undefined)
 const isLibraryFilterModalOpen = ref(false)
 
@@ -155,21 +161,16 @@ const activeLibraryFilterCount = computed(() => {
   return count
 })
 
-const quickCategories = computed(() => [
-  { id: undefined, label: t('library.categories.all') },
-  { id: 0, label: t('library.categories.frontend') },
-  { id: 1, label: t('library.categories.backend') },
-  { id: 2, label: t('library.categories.database') },
-  { id: 3, label: t('library.categories.system_design') }
-])
+const quickCategories = quickDiscoverCategories
 
 function handleApplyLibraryFilters(filters: LibraryFilterState) {
-  selectedCategory.value = filters.category
+  selectedCategory.value = filters.categoryId || undefined
   selectedLanguage.value = filters.language
   router.replace({
     query: {
       ...route.query,
-      category: selectedCategory.value !== undefined ? String(selectedCategory.value) : undefined,
+      category: undefined,
+      categoryId: selectedCategory.value,
       language: selectedLanguage.value || undefined,
       page: undefined
     }
@@ -184,6 +185,7 @@ function handleResetLibraryFilters() {
     query: {
       ...route.query,
       category: undefined,
+      categoryId: undefined,
       language: undefined,
       page: undefined
     }
@@ -212,14 +214,14 @@ const activeTab = ref<'markdown' | 'pdf' | 'url'>('markdown')
 
 // Tab 1: Markdown form state
 const importTitle = ref('')
-const importCategory = ref(0)
+const importCategory = ref('')
 const importSourceUrl = ref('')
 const importContent = ref('')
 
 // Tab 2: PDF Upload state
 const pdfFile = ref<File | null>(null)
 const pdfTitle = ref('')
-const pdfCategory = ref(0)
+const pdfCategory = ref('')
 const isDraggingPdf = ref(false)
 const isUploadingPdf = ref(false)
 const isProcessingPdf = ref(false)
@@ -243,188 +245,16 @@ const bookToDelete = ref<{ id: string; title: string } | null>(null)
 const isDeleteModalOpen = ref(false)
 const isDeleting = ref(false)
 
-const categories = computed(() => [
-  { id: undefined, label: t('library.categories.all') },
-  { id: 0, label: t('library.categories.frontend') },
-  { id: 1, label: t('library.categories.backend') },
-  { id: 2, label: t('library.categories.database') },
-  { id: 3, label: t('library.categories.system_design') },
-  { id: 4, label: t('library.categories.craft') },
-  { id: 5, label: t('library.categories.mental_models') },
-  { id: 6, label: t('library.categories.habits') }
-])
-
-const formCategoryOptions = computed(() => [
-  { value: 0, label: t('library.categories.frontend') },
-  { value: 1, label: t('library.categories.backend') },
-  { value: 2, label: t('library.categories.database') },
-  { value: 3, label: t('library.categories.system_design') },
-  { value: 4, label: t('library.categories.craft') },
-  { value: 5, label: t('library.categories.mental_models') },
-  { value: 6, label: t('library.categories.habits') }
-])
+const formCategoryOptions = computed(() => categoryStore.activeCategories.map(category => ({
+  value: category.id,
+  label: categoryStore.getCategoryName(category, locale.value)
+})))
 const languageOptions = computed(() => [
   { value: 'en', label: t('library.language_english') },
   { value: 'vi', label: t('library.language_vietnamese') }
 ])
-function getCategoryLabel(category: number | string | undefined | null): string {
-  if (category === undefined || category === null) {
-    return t('library.categories.craft')
-  }
-
-  const normalized = String(category).toLowerCase()
-  switch (normalized) {
-    case '0':
-    case 'frontendweb':
-    case 'frontend':
-      return t('library.categories.frontend')
-    case '1':
-    case 'backenddotnet':
-    case 'backendruntime':
-    case 'backend':
-      return t('library.categories.backend')
-    case '2':
-    case 'databasestorage':
-    case 'database':
-      return t('library.categories.database')
-    case '3':
-    case 'systemdesign':
-    case 'system_design':
-      return t('library.categories.system_design')
-    case '4':
-    case 'engineeringcraft':
-    case 'craft':
-      return t('library.categories.craft')
-    case '5':
-    case 'mentalmodels':
-    case 'mental_models':
-      return t('library.categories.mental_models')
-    case '6':
-    case 'habitsproductivity':
-    case 'habits':
-      return t('library.categories.habits')
-    default:
-      return categories.value.find((c) => String(c.id) === normalized)?.label || t('library.categories.craft')
-  }
-}
-
-function inferCategoryFromContext(title = '', url = '', content = ''): number {
-  const combined = `${title} ${url} ${content}`.toLowerCase()
-
-  if (
-    combined.includes('atomic habits') ||
-    combined.includes('deep work') ||
-    combined.includes('productivity') ||
-    combined.includes('focus') ||
-    combined.includes('flow state') ||
-    combined.includes('habit') ||
-    combined.includes('procrastination') ||
-    combined.includes('cal newport') ||
-    combined.includes('james clear') ||
-    combined.includes('thói quen') ||
-    combined.includes('tập trung') ||
-    combined.includes('năng suất') ||
-    combined.includes('trì hoãn')
-  ) {
-    return 6 // HabitsProductivity
-  }
-
-  if (
-    combined.includes('mental model') ||
-    combined.includes('first principles') ||
-    combined.includes('cognitive bias') ||
-    combined.includes('decision making') ||
-    combined.includes('psychology') ||
-    combined.includes('stoic') ||
-    combined.includes('charlie munger') ||
-    combined.includes('farnam street') ||
-    combined.includes('mô hình tư duy') ||
-    combined.includes('tư duy') ||
-    combined.includes('tâm lý học') ||
-    combined.includes('ra quyết định')
-  ) {
-    return 5 // MentalModels
-  }
-
-  if (
-    combined.includes('aspnet') ||
-    combined.includes('aspnetcore') ||
-    combined.includes('dotnet') ||
-    combined.includes('.net') ||
-    combined.includes('csharp') ||
-    combined.includes('c#') ||
-    combined.includes('entityframework') ||
-    combined.includes('efcore') ||
-    combined.includes('golang') ||
-    combined.includes('rust') ||
-    combined.includes('java') ||
-    combined.includes('spring') ||
-    combined.includes('python') ||
-    combined.includes('concurrency') ||
-    combined.includes('runtime') ||
-    combined.includes('backend')
-  ) {
-    return 1 // BackendRuntime
-  }
-
-  if (
-    combined.includes('postgres') ||
-    combined.includes('postgresql') ||
-    combined.includes('redis') ||
-    combined.includes('mysql') ||
-    combined.includes('mongodb') ||
-    combined.includes('database') ||
-    combined.includes('storage engine') ||
-    combined.includes('sql')
-  ) {
-    return 2 // DatabaseStorage
-  }
-
-  if (
-    combined.includes('system design') ||
-    combined.includes('distributed') ||
-    combined.includes('microservice') ||
-    combined.includes('kafka') ||
-    combined.includes('kubernetes') ||
-    combined.includes('docker') ||
-    combined.includes('outbox') ||
-    combined.includes('event sourcing')
-  ) {
-    return 3 // SystemDesign
-  }
-
-  if (
-    combined.includes('vue') ||
-    combined.includes('react') ||
-    combined.includes('angular') ||
-    combined.includes('frontend') ||
-    combined.includes('browser') ||
-    combined.includes('css') ||
-    combined.includes('html') ||
-    combined.includes('dom') ||
-    combined.includes('javascript') ||
-    combined.includes('typescript')
-  ) {
-    return 0 // FrontendWeb
-  }
-
-  if (
-    combined.includes('clean code') ||
-    combined.includes('refactor') ||
-    combined.includes('design pattern') ||
-    combined.includes('craftsmanship') ||
-    combined.includes('solid') ||
-    combined.includes('unit test') ||
-    combined.includes('pragmatic') ||
-    combined.includes('mindset') ||
-    combined.includes('leadership') ||
-    combined.includes('soft skills') ||
-    combined.includes('architecture')
-  ) {
-    return 4 // EngineeringCraft
-  }
-
-  return 4 // EngineeringCraft
+function getCategoryLabel(category: CategoryDescriptor | null | undefined): string {
+  return categoryStore.getCategoryName(categoryStore.getCategoryById(category?.id) ?? category, locale.value)
 }
 
 function getStatusMessage(book: any): string {
@@ -488,7 +318,7 @@ function getStatusMessage(book: any): string {
 const { pause: stopBackgroundPolling, resume: startBackgroundPolling } = useIntervalFn(
   async () => {
     await libraryStore.fetchBooks({
-      category: selectedCategory.value,
+      categoryId: selectedCategory.value,
       search: searchQuery.value,
       page: libraryStore.currentPage,
       pageSize: libraryStore.pageSize
@@ -536,7 +366,7 @@ const { pause: stopPdfPolling, resume: startPdfPolling } = useIntervalFn(
         isImportModalOpen.value = false
         pdfFile.value = null
         pdfTitle.value = ''
-        await libraryStore.fetchBooks(selectedCategory.value ?? undefined, searchQuery.value)
+        await libraryStore.fetchBooks({ categoryId: selectedCategory.value, search: searchQuery.value })
       } else if (status.status === 'Failed' || (status.status as any) === 3) {
         stopPdfPolling()
         pollingBookId.value = null
@@ -552,12 +382,16 @@ const { pause: stopPdfPolling, resume: startPdfPolling } = useIntervalFn(
 )
 
 onMounted(async () => {
+  await categoryStore.ensureCategories()
   const queryPage = route.query.page ? parseInt(route.query.page as string, 10) : 1
   const initialPage = isNaN(queryPage) || queryPage < 1 ? 1 : queryPage
 
+  if (typeof route.query.categoryId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(route.query.categoryId)) {
+    selectedCategory.value = route.query.categoryId
+    discoverCategory.value = route.query.categoryId
+  }
   if (route.query.category !== undefined) {
-    const cat = parseInt(route.query.category as string, 10)
-    if (!isNaN(cat)) selectedCategory.value = cat
+    await router.replace({ query: { ...route.query, category: undefined } })
   }
   if (typeof route.query.search === 'string') {
     searchQuery.value = route.query.search
@@ -609,7 +443,7 @@ function loadBookmarks() {
 
 async function loadBooksWithPagination(page = 1) {
   await libraryStore.fetchBooks({
-    category: selectedCategory.value,
+    categoryId: selectedCategory.value,
     search: searchQuery.value,
     page,
     pageSize: libraryStore.pageSize
@@ -626,12 +460,13 @@ function onPageChange(newPage: number) {
   loadBooksWithPagination(newPage)
 }
 
-function handleCategorySelect(catId?: number) {
+function handleCategorySelect(catId?: string) {
   selectedCategory.value = catId
   router.replace({
     query: {
       ...route.query,
-      category: catId !== undefined ? catId.toString() : undefined,
+      category: undefined,
+      categoryId: catId,
       page: undefined
     }
   })
@@ -657,6 +492,7 @@ function resetFilters() {
     query: {
       ...route.query,
       category: undefined,
+      categoryId: undefined,
       language: undefined,
       search: undefined,
       page: undefined
@@ -665,14 +501,15 @@ function resetFilters() {
   loadBooksWithPagination(1)
 }
 async function handleImportSubmit() {
-  if (!importTitle.value || !importContent.value) return
+  if (!importTitle.value || !importContent.value || !assignmentAvailable(importCategory.value)) return
 
   try {
     await libraryStore.importDocument({
       title: importTitle.value,
       markdownContent: importContent.value,
-      category: importCategory.value,
-      sourceUrl: importSourceUrl.value || undefined
+      categoryId: importCategory.value,
+      sourceUrl: importSourceUrl.value || undefined,
+      language: importLanguage.value
     })
 
     toast.success(t('library.toast_import_success'))
@@ -681,6 +518,7 @@ async function handleImportSubmit() {
     importSourceUrl.value = ''
     isImportModalOpen.value = false
   } catch (err: any) {
+    await refreshRejectedCategory(err)
     toast.error(formatError(err, 'library.toast_import_failed'))
   }
 }
@@ -712,17 +550,10 @@ function selectPdf(file: File) {
   if (!pdfTitle.value) {
     pdfTitle.value = file.name.replace(/\.pdf$/i, '')
   }
-  const inferredPdfCat = inferCategoryFromContext(pdfTitle.value, file.name)
-  if (inferredPdfCat !== 0) {
-    pdfCategory.value = inferredPdfCat
-  }
-  if (importCategory.value === 0 && inferredPdfCat !== 0) {
-    importCategory.value = inferredPdfCat
-  }
 }
 
 async function handlePdfUpload() {
-  if (!pdfFile.value) return
+  if (!pdfFile.value || !assignmentAvailable(pdfCategory.value)) return
   isUploadingPdf.value = true
   isProcessingPdf.value = true
   pdfProgress.value = 5
@@ -732,7 +563,7 @@ async function handlePdfUpload() {
     const formData = new FormData()
     formData.append('file', pdfFile.value, pdfFile.value.name)
     if (pdfTitle.value) formData.append('title', pdfTitle.value)
-    formData.append('category', pdfCategory.value.toString())
+    formData.append('categoryId', pdfCategory.value)
     formData.append('language', uploadLanguage.value)
 
     const book = await libraryStore.uploadPdf(formData)
@@ -749,6 +580,7 @@ async function handlePdfUpload() {
       isProcessingPdf.value = false
     }
   } catch (err: any) {
+    await refreshRejectedCategory(err)
     stopPdfPolling()
     pollingBookId.value = null
     isProcessingPdf.value = false
@@ -765,11 +597,6 @@ async function handleCrawlUrl() {
   isPdfDetected.value = false
   detectedPdfUrl.value = null
 
-  // Pre-infer category from crawl URL input to avoid defaulting blindly to 0
-  const preInferred = inferCategoryFromContext('', crawlUrlInput.value)
-  if (preInferred !== 0) {
-    importCategory.value = preInferred
-  }
 
   try {
     const result = await libraryStore.crawlUrl(crawlUrlInput.value)
@@ -778,13 +605,6 @@ async function handleCrawlUrl() {
     importContent.value = result.markdownContent
     crawlSuccess.value = true
 
-    // Auto-infer category from crawled metadata (title, URL, markdown body)
-    const inferred = inferCategoryFromContext(
-      result.title,
-      result.sourceUrl || crawlUrlInput.value,
-      result.markdownContent
-    )
-    importCategory.value = inferred
     if (result.isPdfDetected) {
       isPdfDetected.value = true
       detectedPdfUrl.value = result.detectedPdfUrl || null
@@ -801,13 +621,13 @@ async function handleCrawlUrl() {
 }
 
 async function handleImportRemotePdf() {
-  if (!detectedPdfUrl.value) return
+  if (!detectedPdfUrl.value || !assignmentAvailable(importCategory.value)) return
   isProcessingPdf.value = true
   try {
     await libraryStore.importRemotePdf({
       pdfUrl: detectedPdfUrl.value,
       title: importTitle.value || 'PDF Document',
-      category: importCategory.value,
+      categoryId: importCategory.value,
       language: importLanguage.value
     })
     isImportModalOpen.value = false
@@ -815,6 +635,7 @@ async function handleImportRemotePdf() {
     await loadBooksWithPagination(1)
     checkBackgroundPolling()
   } catch (err: any) {
+    await refreshRejectedCategory(err)
     toast.error(formatError(err, 'library.toast_import_failed'))
   } finally {
     isProcessingPdf.value = false
@@ -848,46 +669,33 @@ const editingBook = ref<{
   id: string
   title: string
   authorOrSourceUrl?: string | null
-  category: number
+  categoryId: string
+  category: CategoryDescriptor
   language?: string
 } | null>(null)
 const editTitle = ref('')
 const editAuthor = ref('')
-const editCategory = ref(0)
+const editCategory = ref('')
 const editLanguage = ref('en')
-function openEditModal(book: { id: string; title: string; authorOrSourceUrl?: string | null; category?: number | string; language?: string }) {
-  let catNum = 0
-  if (typeof book.category === 'number') {
-    catNum = book.category
-  } else if (typeof book.category === 'string') {
-    const map: Record<string, number> = {
-      frontendweb: 0,
-      backendruntime: 1,
-      backenddotnet: 1,
-      databasestorage: 2,
-      systemdesign: 3,
-      engineeringcraft: 4,
-      mentalmodels: 5,
-      habitsproductivity: 6
-    }
-    catNum = map[book.category.toLowerCase()] ?? 0
-  }
-  editingBook.value = {
-    id: book.id,
-    title: book.title,
-    authorOrSourceUrl: book.authorOrSourceUrl,
-    category: catNum,
-    language: book.language || 'en'
-  }
+const editCategoryOptions = computed(() => {
+  const retained = editingBook.value?.category
+  const current = categoryStore.getCategoryById(editingBook.value?.categoryId) ?? retained
+  const options = formCategoryOptions.value
+  if (!current || current.isActive) return options
+  return [...options, { value: current.id, label: `${categoryStore.getCategoryName(current, locale.value)} (${t('categories.inactive')})` }]
+})
+function openEditModal(book: { id: string; title: string; authorOrSourceUrl?: string | null; categoryId: string; category: CategoryDescriptor; language?: string }) {
+  editingBook.value = { ...book, language: book.language || 'en' }
   editTitle.value = book.title || ''
   editAuthor.value = book.authorOrSourceUrl || ''
-  editCategory.value = catNum
+  editCategory.value = book.categoryId
   editLanguage.value = book.language || 'en'
   isEditModalOpen.value = true
 }
 
 async function handleSaveEditBook() {
   if (!editingBook.value) return
+  if (editCategory.value !== editingBook.value.categoryId && !assignmentAvailable(editCategory.value)) return
   if (!editTitle.value.trim()) {
     toast.error(t('library.edit_title_required'))
     return
@@ -898,7 +706,7 @@ async function handleSaveEditBook() {
     await libraryStore.updateBook(editingBook.value.id, {
       title: editTitle.value.trim(),
       authorOrSourceUrl: editAuthor.value.trim() || null,
-      category: editCategory.value,
+      categoryId: editCategory.value,
       language: editLanguage.value
     })
     toast.success(t('library.toast_edit_success'))
@@ -906,6 +714,7 @@ async function handleSaveEditBook() {
     editingBook.value = null
     await loadBooksWithPagination(libraryStore.currentPage)
   } catch (err: unknown) {
+    await refreshRejectedCategory(err)
     const message = err instanceof Error ? err.message : t('library.toast_edit_error')
     toast.error(message)
   } finally {
@@ -1327,7 +1136,7 @@ async function handleSaveEditBook() {
     <CatalogFilterModal
       :is-open="isCatalogFilterModalOpen"
       :current-filters="{
-        category: discoverCategory,
+        categoryId: discoverCategory,
         sourceType: discoverSourceType,
         language: discoverLanguage
       }"
@@ -1340,7 +1149,7 @@ async function handleSaveEditBook() {
     <LibraryFilterModal
       :is-open="isLibraryFilterModalOpen"
       :current-filters="{
-        category: selectedCategory,
+        categoryId: selectedCategory,
         language: selectedLanguage
       }"
       @close="isLibraryFilterModalOpen = false"
@@ -1358,6 +1167,10 @@ async function handleSaveEditBook() {
       max-width="max-w-2xl"
       @close="isImportModalOpen = false"
     >
+      <div v-if="categoryFeedback" role="status" class="text-sm sm:text-base text-amber-700 dark:text-amber-300">
+        <p>{{ categoryFeedback }}</p>
+        <button type="button" class="mt-2 font-semibold whitespace-nowrap" :disabled="categoryStore.isLoading" @click="categoryStore.fetchCategories(true)">{{ $t('categories.retry') }}</button>
+      </div>
       <!-- 3-Tab Selector -->
       <div class="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 bg-slate-100 dark:bg-canvas-subtle rounded-2xl border border-slate-200/80 dark:border-white/[0.08]">
         <button
@@ -1423,6 +1236,8 @@ async function handleSaveEditBook() {
               v-model="importCategory"
               :options="formCategoryOptions"
               :aria-label="$t('library.category_label')"
+              :placeholder="$t('categories.selectCategory')"
+              :disabled="categoryStore.isLoading || !!categoryStore.error"
             />
           </div>
 
@@ -1550,6 +1365,8 @@ async function handleSaveEditBook() {
               v-model="pdfCategory"
               :options="formCategoryOptions"
               :aria-label="$t('library.category_label')"
+              :placeholder="$t('categories.selectCategory')"
+              :disabled="categoryStore.isLoading || !!categoryStore.error"
             />
           </div>
 
@@ -1569,7 +1386,7 @@ async function handleSaveEditBook() {
         </div>
 
         <!-- Hidden accessible submit button for keyboard & test automation -->
-        <button type="submit" class="hidden">{{ $t('library.upload_pdf_action') }}</button>
+        <button type="submit" :disabled="!assignmentAvailable(pdfCategory)" class="hidden">{{ $t('library.upload_pdf_action') }}</button>
       </form>
 
       <!-- TAB 3: Web URL Crawler Form -->
@@ -1606,6 +1423,8 @@ async function handleSaveEditBook() {
             v-model="importCategory"
             :options="formCategoryOptions"
             :aria-label="$t('library.category_label')"
+            :placeholder="$t('categories.selectCategory')"
+            :disabled="categoryStore.isLoading || !!categoryStore.error"
           />
           <div class="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 flex items-center gap-2.5 text-xs text-amber-800 dark:text-amber-300">
             <Lightbulb class="w-4 h-4 shrink-0 text-amber-500" />
@@ -1633,7 +1452,7 @@ async function handleSaveEditBook() {
           <button
             type="button"
             @click="handleImportRemotePdf"
-            :disabled="isProcessingPdf"
+            :disabled="isProcessingPdf || !assignmentAvailable(importCategory)"
             class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap shrink-0"
           >
             <FileUp class="w-4 h-4 shrink-0" />
@@ -1663,7 +1482,7 @@ async function handleSaveEditBook() {
         <button
           v-if="activeTab === 'markdown'"
           type="button"
-          :disabled="libraryStore.isImporting || !importTitle || !importContent"
+          :disabled="libraryStore.isImporting || !importTitle || !importContent || !assignmentAvailable(importCategory)"
           class="h-9 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 disabled:opacity-50 px-4 flex items-center justify-center gap-1.5 cursor-pointer"
           @click="handleImportSubmit"
         >
@@ -1674,7 +1493,7 @@ async function handleSaveEditBook() {
         <button
           v-else-if="activeTab === 'pdf'"
           type="button"
-          :disabled="!pdfFile || isUploadingPdf || isProcessingPdf"
+          :disabled="!pdfFile || isUploadingPdf || isProcessingPdf || !assignmentAvailable(pdfCategory)"
           class="h-9 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs sm:text-sm shadow-sm transition-all active:scale-95 disabled:opacity-50 px-4 flex items-center justify-center gap-1.5 cursor-pointer"
           @click="handlePdfUpload"
         >
@@ -1729,14 +1548,14 @@ async function handleSaveEditBook() {
           />
         </div>
 
-        <!-- Category Field (Accessible AppSelect with all 7 DeepPace pillars) -->
+        <!-- Category assignment, including retained inactive metadata -->
         <div>
           <label class="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
             {{ $t('library.category_label') }}
           </label>
           <AppSelect
             v-model="editCategory"
-            :options="formCategoryOptions"
+            :options="editCategoryOptions"
             :aria-label="$t('library.category_label')"
           />
         </div>

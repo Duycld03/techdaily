@@ -1,3 +1,4 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Features.Catalog.DTOs;
@@ -6,7 +7,8 @@ public record AdminCatalogDocumentDto(
     Guid Id,
     string Title,
     string Description,
-    Category Category,
+    Guid CategoryId,
+    CategoryDescriptorDto Category,
     string Language,
     SourceType SourceType,
     string? AuthorOrSourceUrl,
@@ -50,7 +52,8 @@ public record LearnerCatalogDocumentDto(
     Guid Id,
     string Title,
     string Description,
-    Category Category,
+    Guid CategoryId,
+    CategoryDescriptorDto Category,
     string Language,
     SourceType SourceType,
     string? AuthorOrSourceUrl,
@@ -77,7 +80,8 @@ public record LearnerCatalogDetailDto(
     Guid Id,
     string Title,
     string Description,
-    Category Category,
+    Guid CategoryId,
+    CategoryDescriptorDto Category,
     string Language,
     SourceType SourceType,
     string? AuthorOrSourceUrl,

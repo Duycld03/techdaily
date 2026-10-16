@@ -1,3 +1,4 @@
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 using DeepPace.Domain.Entities;
 
 namespace DeepPace.Application.Features.Catalog.DTOs;
@@ -12,7 +13,8 @@ public static class CatalogDtoMappingExtensions
             Id: doc.Id,
             Title: doc.Title,
             Description: doc.Description,
-            Category: doc.Category,
+            CategoryId: doc.CategoryId,
+            Category: doc.Category!.ToDescriptor(),
             Language: doc.Language,
             SourceType: doc.SourceType,
             AuthorOrSourceUrl: doc.AuthorOrSourceUrl,
@@ -62,7 +64,8 @@ public static class CatalogDtoMappingExtensions
             Id: doc.Id,
             Title: doc.Title,
             Description: doc.Description,
-            Category: doc.Category,
+            CategoryId: doc.CategoryId,
+            Category: doc.Category!.ToDescriptor(),
             Language: doc.Language,
             SourceType: doc.SourceType,
             AuthorOrSourceUrl: doc.AuthorOrSourceUrl,
@@ -99,7 +102,8 @@ public static class CatalogDtoMappingExtensions
             Id: doc.Id,
             Title: doc.Title,
             Description: doc.Description,
-            Category: doc.Category,
+            CategoryId: doc.CategoryId,
+            Category: doc.Category!.ToDescriptor(),
             Language: doc.Language,
             SourceType: doc.SourceType,
             AuthorOrSourceUrl: doc.AuthorOrSourceUrl,

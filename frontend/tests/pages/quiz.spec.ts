@@ -8,6 +8,11 @@ declare module '~/pages/quiz.vue' {
 }
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useInterviewQuizStore } from '~/stores/useInterviewQuizStore'
+import { useCategoryStore } from '~/stores/useCategoryStore'
+
+const category = { id: '97e10b46-4a79-43f4-8b29-91c85582f899', slug: 'new-subject', nameEn: 'New subject', nameVi: 'Chủ đề mới', sortOrder: 8, isActive: true, version: 1 }
+const inactive = { id: 'bb03c028-488c-472c-b1cf-0d8354879109', slug: 'retained', nameEn: 'Retained subject', nameVi: 'Chủ đề lưu giữ', sortOrder: 9, isActive: false, version: 2 }
+const offPageBookId = '11ee7e16-2892-4524-ae92-8ce69d034e50'
 
 const mockQuizStats = {
   totalAnswered: 40,
@@ -24,12 +29,16 @@ const mockQuizStats = {
     { topic: 'C# 13 Runtime', answeredCount: 10, masteredCount: 8, accuracyRate: 80 },
     { topic: 'PostgreSQL 17 Storage Engine', answeredCount: 10, masteredCount: 7, accuracyRate: 70 },
     { topic: 'Distributed Systems', answeredCount: 10, masteredCount: 4, accuracyRate: 40 }
+  ],
+  categoryBreakdown: [
+    { categoryId: inactive.id, category: inactive, answeredCount: 2, masteredCount: 0, accuracyRate: 0 }
   ]
 }
 
 vi.mock('~/composables/useApiClient', () => ({
   useApiClient: () => ({
     get: vi.fn(async (url: string) => {
+      if (url === '/api/v1/categories') return [category, inactive]
       if (url.includes('/api/v1/quiz/stats')) {
         return { ...mockQuizStats }
       }
@@ -39,7 +48,8 @@ vi.mock('~/composables/useApiClient', () => ({
             {
               id: 'q-1',
               topic: '.NET 10',
-              category: 1,
+              categoryId: inactive.id,
+              category: inactive,
               level: 3,
               questionText: 'What is dynamic PGO?',
               options: ['A', 'B'],
@@ -56,6 +66,9 @@ vi.mock('~/composables/useApiClient', () => ({
           pageSize: 10,
           totalPages: 2
         }
+      }
+      if (url === `/api/v1/library/books/${offPageBookId}`) {
+        return { book: { id: offPageBookId, title: 'Owned document beyond page one', slug: 'off-page', sourceType: 1, categoryId: inactive.id, category: inactive, totalChunks: 1, isPublished: false, createdAt: '2026-10-16T00:00:00Z', chunks: [] } }
       }
       if (url.includes('/api/v1/library/books')) {
         return { books: [] }
@@ -225,13 +238,15 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     expect(wrapper.text()).toContain('quiz.count_5')
     expect(wrapper.text()).toContain('quiz.count_10')
 
-    // Topic input and safe fallback population
+    // A topic alone must never silently assign a default category.
     const topicInput = wrapper.find('input[type="text"]')
-    expect(topicInput.exists()).toBe(true)
-
-    await generateBtn.trigger('click')
-    await wrapper.vm.$nextTick()
-    expect((topicInput.element as HTMLInputElement).value).not.toBe('')
+    await topicInput.setValue('New subject topic')
+    expect(generateBtn.attributes('disabled')).toBeDefined()
+    const categorySelect = wrapper.find('[data-testid="quiz-category-select"]')
+    await categorySelect.find('[role="combobox"]').trigger('click')
+    expect(categorySelect.find(`[data-testid="app-select-option-${inactive.id}"]`).exists()).toBe(false)
+    await categorySelect.find(`[data-testid="app-select-option-${category.id}"]`).trigger('click')
+    expect(generateBtn.attributes('disabled')).toBeUndefined()
   })
 
   it('renders unboxed direct-canvas arena studio and handles keyboard shortcuts', async () => {
@@ -240,7 +255,8 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
       {
         id: 'q-1',
         topic: 'ASP.NET Core Performance',
-        category: 1,
+        categoryId: category.id,
+        category,
         level: 3,
         questionText: 'Which collection pool avoids LOH allocation?',
         options: ['List<T>', 'ArrayPool<T>', 'Queue<T>', 'Stack<T>'],
@@ -277,5 +293,99 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c' }))
     await wrapper.vm.$nextTick()
     expect(optionCards[2]!.props('state')).toBe('selected')
+  })
+  it('retains inactive review choices and renders UUID category analytics', async () => {
+    const wrapper = mount(QuizPage, { global: { stubs: { Teleport: true } } })
+    await flushPromises()
+    const store = useInterviewQuizStore()
+    store.activeTab = 'review'
+    await wrapper.vm.$nextTick()
+    const filter = wrapper.find('[data-testid="quiz-review-category-select"]')
+    await filter.find('[role="combobox"]').trigger('click')
+    expect(filter.find(`[data-testid="app-select-option-${inactive.id}"]`).exists()).toBe(true)
+    await filter.find(`[data-testid="app-select-option-${inactive.id}"]`).trigger('click')
+    await flushPromises()
+    expect(store.reviewCategoryId).toBe(inactive.id)
+    expect(store.reviewPage).toBe(1)
+    store.activeTab = 'stats'
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain(inactive.nameEn)
+    expect(wrapper.text()).toContain('categories.inactive')
+  })
+  it('blocks a stale generation selection without erasing the topic or historical mistakes', async () => {
+    const wrapper = mount(QuizPage, { global: { stubs: { Teleport: true } } })
+    await flushPromises()
+    await wrapper.find('input[type="text"]').setValue('Retain my quiz topic')
+    const select = wrapper.find('[data-testid="quiz-category-select"]')
+    await select.find('[role="combobox"]').trigger('click')
+    await select.find(`[data-testid="app-select-option-${category.id}"]`).trigger('click')
+    useCategoryStore().categories = [{ ...category, isActive: false }, inactive]
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="generate-quiz-btn"]').attributes('disabled')).toBeDefined()
+    expect((wrapper.find('input[type="text"]').element as HTMLInputElement).value).toBe('Retain my quiz topic')
+    expect(useInterviewQuizStore().reviewQueue[0]?.categoryId).toBe(inactive.id)
+  })
+  it('resolves a grounded reader deep link outside the current library page and retains its inactive assignment', async () => {
+    const previousRoute = Reflect.get(globalThis, 'useRoute')
+    vi.stubGlobal('useRoute', () => ({ query: { bookId: offPageBookId, topic: 'Owned source topic' } }))
+    try {
+      const store = useInterviewQuizStore()
+      const generate = vi.spyOn(store, 'generateQuiz').mockResolvedValue(undefined)
+      const wrapper = mount(QuizPage)
+      await flushPromises()
+      expect(wrapper.text()).toContain(inactive.nameEn)
+      const submit = wrapper.find('[data-testid="generate-quiz-btn"]')
+      expect(submit.attributes('disabled')).toBeUndefined()
+      await submit.trigger('click')
+      expect(generate).toHaveBeenCalledWith('Owned source topic', 3, 5, null, 'en', offPageBookId, true)
+      wrapper.unmount()
+    } finally {
+      vi.stubGlobal('useRoute', previousRoute)
+    }
+  })
+  it('loads an inactive UUID review filter directly from the URL without discarding other preferences', async () => {
+    const previousRoute = Reflect.get(globalThis, 'useRoute')
+    vi.stubGlobal('useRoute', () => ({ query: { tab: 'review', page: '3', categoryId: inactive.id, level: '2', topic: 'Retained topic', reader: 'compact' } }))
+    try {
+      const store = useInterviewQuizStore()
+      const fetch = vi.spyOn(store, 'fetchReviewQueue')
+      mount(QuizPage)
+      await flushPromises()
+      expect(fetch).toHaveBeenCalledWith({ categoryId: inactive.id, level: 2, topic: 'Retained topic', page: 3 })
+    } finally {
+      vi.stubGlobal('useRoute', previousRoute)
+    }
+  })
+
+  it('clears only an obsolete numeric category URL filter', async () => {
+    const previousRoute = Reflect.get(globalThis, 'useRoute')
+    const previousRouter = Reflect.get(globalThis, 'useRouter')
+    const replace = vi.fn()
+    vi.stubGlobal('useRoute', () => ({ query: { tab: 'review', category: '1', reader: 'compact', topic: 'Retained topic', level: '2' } }))
+    vi.stubGlobal('useRouter', () => ({ replace, push: vi.fn() }))
+    try {
+      mount(QuizPage)
+      await flushPromises()
+      expect(replace).toHaveBeenCalledWith({ query: expect.objectContaining({ category: undefined, reader: 'compact', topic: 'Retained topic', level: '2' }) })
+    } finally {
+      vi.stubGlobal('useRoute', previousRoute)
+      vi.stubGlobal('useRouter', previousRouter)
+    }
+  })
+
+  it('does not start a partial Practice All session when a later page fails', async () => {
+    const wrapper = mount(QuizPage)
+    await flushPromises()
+    const store = useInterviewQuizStore()
+    store.activeTab = 'review'
+    store.reviewTotalPages = 2
+    const fetch = vi.spyOn(store, 'fetchReviewQueue')
+    fetch.mockResolvedValueOnce({ questions: [...store.reviewQueue], totalCount: 101, page: 1, pageSize: 100, totalPages: 2 })
+    fetch.mockResolvedValueOnce(undefined)
+    const start = vi.spyOn(store, 'startReviewSession')
+    await wrapper.vm.$nextTick()
+    await wrapper.findAll('button').find(button => button.text().includes('quiz.practice_all_mistakes'))!.trigger('click')
+    await flushPromises()
+    expect(start).not.toHaveBeenCalled()
   })
 })

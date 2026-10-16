@@ -8,16 +8,11 @@ using DeepPace.Domain.Entities;
 using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Features.Catalog.Admin.UpdateMetadata;
+
 public record AdminUpdateCatalogMetadataRequest(
-    Guid Id,
-    string Title,
-    string Description,
-    Category Category,
-    string Language,
-    string? AuthorOrSourceUrl,
-    string? AttributionText,
-    int ExpectedConcurrencyVersion,
-    Guid? AdminUserId = null);
+    Guid Id, string Title, string Description, Guid CategoryId, string Language,
+    string? AuthorOrSourceUrl, string? AttributionText, int ExpectedConcurrencyVersion,
+    Guid? AdminUserId = null, int PresentedSessionVersion = 1);
 
 public class AdminUpdateCatalogMetadataValidator : AbstractValidator<AdminUpdateCatalogMetadataRequest>
 {
@@ -26,118 +21,73 @@ public class AdminUpdateCatalogMetadataValidator : AbstractValidator<AdminUpdate
         RuleFor(x => x.Id).NotEmpty();
         RuleFor(x => x.Title).NotEmpty().MaximumLength(255);
         RuleFor(x => x.Description).NotEmpty();
+        RuleFor(x => x.CategoryId).NotEmpty();
         RuleFor(x => x.Language).NotEmpty().MaximumLength(10);
         RuleFor(x => x.AttributionText).MaximumLength(2000);
     }
 }
 
-public class AdminUpdateCatalogMetadataHandler : IUseCase<AdminUpdateCatalogMetadataRequest, AdminCatalogDocumentDto>
+public class AdminUpdateCatalogMetadataHandler(
+    IDeepPaceDbContext dbContext,
+    IValidator<AdminUpdateCatalogMetadataRequest> validator,
+    ICategoryAssignmentGuard categoryGuard,
+    IAdministrativeUnitOfWork unitOfWork,
+    IDocumentMutationGuard mutationGuard) : IUseCase<AdminUpdateCatalogMetadataRequest, AdminCatalogDocumentDto>
 {
-    private readonly IDeepPaceDbContext _dbContext;
-    private readonly IValidator<AdminUpdateCatalogMetadataRequest> _validator;
-
-    public AdminUpdateCatalogMetadataHandler(
-        IDeepPaceDbContext dbContext,
-        IValidator<AdminUpdateCatalogMetadataRequest> validator)
+    public async Task<Result<AdminCatalogDocumentDto>> ExecuteAsync(AdminUpdateCatalogMetadataRequest request, CancellationToken cancellationToken = default)
     {
-        _dbContext = dbContext;
-        _validator = validator;
+        var validation = await validator.ValidateAsync(request, cancellationToken);
+        if (!validation.IsValid)
+            return Error.Custom(request.CategoryId == Guid.Empty ? "Category.ValidationFailed" : "Validation.Failed", validation.Errors.First().ErrorMessage);
+
+        var result = await mutationGuard.ExecuteWithMutationGuardAsync(request.Id, IngestionTargetScope.Catalog,
+            () => unitOfWork.ExecutePrivilegedMutationAsync(request.AdminUserId ?? Guid.Empty, request.PresentedSessionVersion,
+                new[] { AdminPermission.ManageCatalog }, () => AdmitAsync(request, cancellationToken), cancellationToken), cancellationToken);
+        if (!result.IsSuccess && request.AdminUserId is { } actor && actor != Guid.Empty && result.Error.Code.StartsWith("Catalog.", StringComparison.Ordinal))
+            await unitOfWork.AppendCleanAuditEventAsync(AdminAuditEvent.Create(actor, AdminAuditActions.CatalogUpdateMetadata,
+                "CatalogDocument", request.Id.ToString(), AdminAuditOutcome.Rejected, errorCode: result.Error.Code), cancellationToken);
+        return result;
     }
 
-    public async Task<Result<AdminCatalogDocumentDto>> ExecuteAsync(
-        AdminUpdateCatalogMetadataRequest request,
-        CancellationToken cancellationToken = default)
+    private async Task<Result<AdminCatalogDocumentDto>> AdmitAsync(AdminUpdateCatalogMetadataRequest request, CancellationToken ct)
     {
-        var validation = await _validator.ValidateAsync(request, cancellationToken);
-        if (!validation.IsValid)
+        var candidate = await dbContext.CatalogDocuments.AsNoTracking().IgnoreAutoIncludes().FirstOrDefaultAsync(d => d.Id == request.Id, ct);
+        if (candidate == null || candidate.IsDeleted) return Error.Custom("Catalog.NotFound", "Catalog document not found.");
+        if (candidate.CategoryId == request.CategoryId)
+            return await categoryGuard.ExecuteForCatalogAsync(request.Id, candidate.CategoryId,
+                (doc, category) => UpdateAsync(doc, category, request, ct), ct);
+
+        return await categoryGuard.ExecuteAsync<AdminCatalogDocumentDto>(request.CategoryId, async category =>
         {
-            return Error.Custom("Validation.Failed", validation.Errors.First().ErrorMessage);
-        }
+            if (dbContext is not DbContext context) return Error.Custom("Category.Unavailable", "Document persistence is unavailable.");
+            var doc = context.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true
+                ? await dbContext.CatalogDocuments.FromSqlInterpolated($"SELECT * FROM \"CatalogDocuments\" WHERE \"Id\" = {request.Id} FOR UPDATE").IgnoreAutoIncludes().FirstOrDefaultAsync(ct)
+                : await dbContext.CatalogDocuments.IgnoreAutoIncludes().FirstOrDefaultAsync(d => d.Id == request.Id, ct);
+            if (doc == null) return Error.Custom("Catalog.NotFound", "Catalog document not found.");
+            await context.Entry(doc).ReloadAsync(ct);
+            if (doc.IsDeleted) return Error.Custom("Catalog.NotFound", "Catalog document not found.");
+            if (doc.CategoryId != candidate.CategoryId) return Error.Custom("Category.ConcurrencyConflict", "The catalog category changed. Reload before editing.");
+            return await UpdateAsync(doc, category, request, ct);
+        }, ct);
+    }
 
-        var doc = await _dbContext.CatalogDocuments
-            .Include(d => d.Slices)
-            .FirstOrDefaultAsync(d => d.Id == request.Id, cancellationToken);
-
-        if (doc == null || doc.IsDeleted)
-        {
-            return Error.Custom("Catalog.NotFound", "Catalog document not found.");
-        }
-
-        var hasActiveAttempt = await _dbContext.IngestionAttempts
-            .AnyAsync(a => a.TargetScope == IngestionTargetScope.Catalog &&
-                           a.TargetDocumentId == doc.Id &&
-                           (a.State == IngestionAttemptState.Queued || a.State == IngestionAttemptState.Running),
-                cancellationToken);
-
-        if (hasActiveAttempt)
-        {
+    private async Task<Result<AdminCatalogDocumentDto>> UpdateAsync(CatalogDocument doc, DocumentCategory category, AdminUpdateCatalogMetadataRequest request, CancellationToken ct)
+    {
+        if (await dbContext.IngestionAttempts.AnyAsync(a => a.TargetScope == IngestionTargetScope.Catalog && a.TargetDocumentId == doc.Id &&
+            (a.State == IngestionAttemptState.Queued || a.State == IngestionAttemptState.Running), ct))
             return Error.Custom("Catalog.ActiveAttemptInProgress", "Cannot modify metadata while document ingestion is actively in progress.");
-        }
-
         if (doc.Visibility == CatalogVisibility.Published)
-        {
-            if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
-            {
-                var rejectAudit = AdminAuditEvent.Create(
-                    actorUserId: request.AdminUserId.Value,
-                    action: AdminAuditActions.CatalogUpdateMetadata,
-                    targetType: "CatalogDocument",
-                    targetId: doc.Id.ToString(),
-                    outcome: AdminAuditOutcome.Rejected,
-                    errorCode: "Catalog.PublishedImmutable");
-                await _dbContext.AdminAuditEvents.AddAsync(rejectAudit, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
-            return Error.Custom("Catalog.PublishedImmutable",
-                "Published documents are immutable. The document must be hidden before editing metadata.");
-        }
-
+            return Error.Custom("Catalog.PublishedImmutable", "Published documents must be hidden before editing metadata.");
         if (doc.ConcurrencyVersion != request.ExpectedConcurrencyVersion)
-        {
-            if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
-            {
-                var rejectAudit = AdminAuditEvent.Create(
-                    actorUserId: request.AdminUserId.Value,
-                    action: AdminAuditActions.CatalogUpdateMetadata,
-                    targetType: "CatalogDocument",
-                    targetId: doc.Id.ToString(),
-                    outcome: AdminAuditOutcome.Rejected,
-                    errorCode: "Catalog.ConcurrencyConflict");
-                await _dbContext.AdminAuditEvents.AddAsync(rejectAudit, cancellationToken);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
-            return Error.Custom("Catalog.ConcurrencyConflict",
-                "Document metadata has been modified by another administrator. Please reload.");
-        }
-        try
-        {
-            doc.UpdateMetadata(
-                title: request.Title,
-                description: request.Description,
-                category: request.Category,
-                language: request.Language,
-                authorOrSourceUrl: request.AuthorOrSourceUrl,
-                attributionText: string.IsNullOrWhiteSpace(request.AttributionText) ? (request.AuthorOrSourceUrl ?? request.Title) : request.AttributionText);
-            if (request.AdminUserId.HasValue && request.AdminUserId.Value != Guid.Empty)
-            {
-                var audit = AdminAuditEvent.Create(
-                    actorUserId: request.AdminUserId.Value,
-                    action: AdminAuditActions.CatalogUpdateMetadata,
-                    targetType: "CatalogDocument",
-                    targetId: doc.Id.ToString(),
-                    outcome: AdminAuditOutcome.Succeeded,
-                    correlationId: doc.Id.ToString(),
-                    changedFields: new[] { "Title", "Description", "Category", "Language", "AuthorOrSourceUrl", "AttributionText", "ConcurrencyVersion" },
-                    statePayload: JsonSerializer.Serialize(new { ConcurrencyVersion = doc.ConcurrencyVersion }));
-                await _dbContext.AdminAuditEvents.AddAsync(audit, cancellationToken);
-            }
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            return doc.ToAdminDto();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Error.Custom("Catalog.InvalidOperation", ex.Message);
-        }
+            return Error.Custom("Catalog.ConcurrencyConflict", "Document metadata changed. Reload before editing.");
+        if (dbContext is DbContext context) await context.Entry(doc).Collection(d => d.Slices).LoadAsync(ct);
+        doc.UpdateMetadata(request.Title, request.Description, category.Id, request.Language, request.AuthorOrSourceUrl,
+            string.IsNullOrWhiteSpace(request.AttributionText) ? request.AuthorOrSourceUrl ?? request.Title : request.AttributionText);
+        doc.Category = category;
+        await dbContext.AdminAuditEvents.AddAsync(AdminAuditEvent.Create(request.AdminUserId!.Value,
+            AdminAuditActions.CatalogUpdateMetadata, "CatalogDocument", doc.Id.ToString(), AdminAuditOutcome.Succeeded,
+            correlationId: doc.Id.ToString(), changedFields: new[] { "Title", "Description", "CategoryId", "Language", "AuthorOrSourceUrl", "AttributionText", "ConcurrencyVersion" },
+            statePayload: JsonSerializer.Serialize(new { doc.ConcurrencyVersion })), ct);
+        return doc.ToAdminDto();
     }
 }

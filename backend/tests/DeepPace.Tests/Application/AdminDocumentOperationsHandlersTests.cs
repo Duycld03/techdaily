@@ -77,6 +77,7 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
     {
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Id = Guid.NewGuid(),
             Title = "Personal Book Active",
             CreatedByUserId = _learnerUserId,
@@ -86,6 +87,7 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
 
         var deletedBook = new DocumentBook
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Id = Guid.NewGuid(),
             Title = "Personal Book Deleted",
             CreatedByUserId = _learnerUserId,
@@ -95,6 +97,7 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
 
         var catalogDoc = new CatalogDocument
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Id = Guid.NewGuid(),
             Title = "Catalog Doc Active",
             ProcessingStatus = ProcessingStatus.Ready,
@@ -120,6 +123,7 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
     {
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Id = Guid.NewGuid(),
             Title = "Algorithms",
             CreatedByUserId = _learnerUserId,
@@ -211,6 +215,7 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
     {
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Id = Guid.NewGuid(),
             Title = "Kafka Internals",
             CreatedByUserId = _learnerUserId,
@@ -273,6 +278,7 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
     {
         var doc = new CatalogDocument
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Id = Guid.NewGuid(),
             Title = "Published Guide",
             Visibility = CatalogVisibility.Published,
@@ -367,6 +373,7 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
 
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Id = Guid.NewGuid(),
             Title = "Rust Concurrency",
             CreatedByUserId = _learnerUserId,
@@ -423,6 +430,7 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
 
         var book = new DocumentBook
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Id = Guid.NewGuid(),
             Title = "Secrets",
             CreatedByUserId = _learnerUserId, // Owned by learner
@@ -468,6 +476,7 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
 
         var doc = new CatalogDocument
         {
+            CategoryId = CategoryDefaults.SystemDesignId,
             Id = Guid.NewGuid(),
             Title = "Catalog Microservices",
             Visibility = CatalogVisibility.Draft,

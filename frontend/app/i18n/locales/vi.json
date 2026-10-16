@@ -1,4 +1,11 @@
 {
+  "categories": {
+    "selectCategory": "Chọn danh mục",
+    "inactive": "Ngừng hoạt động",
+    "metadataUnavailable": "Không thể tải danh mục. Dữ liệu bạn nhập vẫn được giữ lại. Vui lòng thử lại.",
+    "noActiveCategories": "Chưa có danh mục đang hoạt động. Quản trị viên cần tạo hoặc kích hoạt danh mục trước khi bạn tiếp tục.",
+    "retry": "Thử lại"
+  },
   "nav": {
     "group_practice": "Luyện Tập",
     "group_knowledge": "Tri Thức & Ghi Nhớ",
@@ -225,6 +232,7 @@
     "error_switch_failed": "Không thể chuyển đổi tài liệu đang đọc."
   },
   "review": {
+    "unclassified": "Chưa phân loại",
     "atrisk_title": "Thẻ Cần Chú Ý",
     "atrisk_desc": "Đang trôi khỏi trí nhớ",
     "atrisk_overdue": "Quá hạn",
@@ -1238,6 +1246,7 @@
     "google_sign_in_with": "Đăng nhập với Google"
   },
   "quiz": {
+    "all_levels": "Tất cả cấp độ",
     "title": "Luyện Phản Xạ Tư Duy",
     "subtitle": "Bài tập truy hồi chủ động & làm chủ kiến thức ngắt quãng",
     "tab_generate": "Tạo Đề",
@@ -1295,6 +1304,9 @@
     "grounded_desc": "Tạo câu hỏi sát với tài liệu kỹ thuật đang đọc",
     "select_book": "Chọn Sách:",
     "any_book_in_library": "Tất cả sách trong thư viện (Tự động khớp)",
+    "source_loading": "Đang tải tài liệu gốc đã chọn...",
+    "source_unavailable": "Không thể tải tài liệu gốc đã chọn.",
+    "retry_source": "Tải lại tài liệu gốc",
     "rate_limit_error": "Đã đạt giới hạn. Vui lòng chờ giây lát trước khi tạo đề mới.",
     "btn_push_sm2": "Đưa vào Bộ Ôn Tập SM-2",
     "btn_pushed_sm2": "Đã Thêm vào SM-2",
@@ -1364,6 +1376,12 @@
     "Crawler": {
       "Failed": "Không thể trích xuất nội dung từ đường dẫn web này.",
       "NoContent": "Không tìm thấy nội dung bài viết kỹ thuật có thể trích xuất."
+    },
+    "Category": {
+      "SlugConflict": "Định danh danh mục (slug) đã tồn tại.",
+      "InUse": "Không thể xóa danh mục đang được sử dụng bởi tài liệu hoặc nội dung học tập.",
+      "Inactive": "Danh mục hiện không hoạt động và không thể gán cho nội dung mới.",
+      "ConcurrencyConflict": "Danh mục đã bị thay đổi bởi người quản trị khác. Vui lòng tải lại và thử lại."
     }
   },
   "common": {
@@ -1433,6 +1451,8 @@
       "admin": "Quản trị",
       "title": "Điều hướng quản trị",
       "dashboard": "Tổng quan",
+      "catalog": "Tài liệu tuyển chọn",
+      "categories": "Danh mục",
       "documents": "Tài liệu",
       "operations": "Vận hành tài liệu",
       "users": "Tài khoản",
@@ -1568,7 +1588,88 @@
       "ManageAccounts": "Quản lý tài khoản",
       "ReadAudit": "Xem nhật ký kiểm toán",
       "ManageDocumentOperations": "Quản lý tài liệu",
-      "ManageRoles": "Quản lý vai trò"
+      "ManageRoles": "Quản lý vai trò",
+      "ManageCategories": "Quản lý danh mục học tập"
+    },
+    "audit": {
+      "actions": {
+        "Category.Create": "Tạo danh mục",
+        "Category.UpdateMetadata": "Cập nhật siêu dữ liệu danh mục",
+        "Category.Reorder": "Sắp xếp lại danh mục",
+        "Category.Activate": "Kích hoạt danh mục",
+        "Category.Deactivate": "Vô hiệu hóa danh mục",
+        "Category.Delete": "Xóa danh mục"
+      }
+    },
+    "categories": {
+      "title": "Danh mục",
+      "description": "Quản lý phân loại danh mục tài liệu học tập dùng chung trên toàn hệ thống.",
+      "manage": "Quản lý danh mục",
+      "newCategory": "Thêm danh mục mới",
+      "create": "Tạo danh mục",
+      "edit": "Chỉnh sửa danh mục",
+      "save": "Lưu thay đổi",
+      "cancel": "Hủy",
+      "refresh": "Làm mới",
+      "loading": "Đang tải danh mục...",
+      "empty": "Không tìm thấy danh mục nào.",
+      "conflict": {
+        "currentVersion": "Giá trị hiện tại trên máy chủ (phiên bản {version})",
+        "confirmDraft": "Tôi đã xem các giá trị hiện tại. Lưu bản chỉnh sửa của tôi bằng phiên bản này.",
+        "reloadFailed": "Không thể làm mới danh mục. Bản chỉnh sửa vẫn được giữ; vui lòng thử lại."
+      },
+      "columns": {
+        "sortOrder": "Thứ tự sắp xếp",
+        "slug": "Định danh (Slug)",
+        "nameEn": "Tên tiếng Anh",
+        "nameVi": "Tên tiếng Việt",
+        "status": "Trạng thái",
+        "actions": "Thao tác"
+      },
+      "fields": {
+        "slug": "Định danh (Slug)",
+        "slugPlaceholder": "ví dụ: distributed-systems",
+        "slugHelp": "Mã định danh duy nhất (chữ cái thường, số, dấu gạch ngang đơn). Không thể thay đổi sau khi tạo.",
+        "nameEn": "Tên tiếng Anh",
+        "nameEnPlaceholder": "Tên danh mục bằng tiếng Anh",
+        "nameVi": "Tên tiếng Việt",
+        "nameViPlaceholder": "Tên danh mục bằng tiếng Việt",
+        "sortOrder": "Thứ tự sắp xếp",
+        "sortOrderHelp": "Số nguyên thứ tự hiển thị từ 0 đến 10000.",
+        "status": "Trạng thái"
+      },
+      "status": {
+        "active": "Đang hoạt động",
+        "inactive": "Không hoạt động"
+      },
+      "actions": {
+        "create": "Tạo danh mục",
+        "edit": "Chỉnh sửa",
+        "activate": "Kích hoạt",
+        "deactivate": "Vô hiệu hóa",
+        "delete": "Xóa"
+      },
+      "modals": {
+        "deactivateTitle": "Vô hiệu hóa danh mục",
+        "deactivateConfirm": "Bạn có chắc chắn muốn vô hiệu hóa \"{name}\"? Tài liệu hiện tại vẫn giữ nguyên danh mục này, nhưng không thể gán cho tài liệu hoặc nội dung học tập mới.",
+        "deleteTitle": "Xóa danh mục",
+        "deleteConfirm": "Bạn có chắc chắn muốn xóa vĩnh viễn \"{name}\"? Thao tác này không thể hoàn tác.",
+        "deleteWarning": "Cảnh báo: Không thể xóa danh mục đang được sử dụng bởi tài liệu hoặc nội dung học tập."
+      },
+      "errors": {
+        "Category.SlugConflict": "Định danh danh mục (slug) đã tồn tại.",
+        "Category.InUse": "Không thể xóa danh mục đang được sử dụng bởi tài liệu hoặc nội dung học tập.",
+        "Category.Inactive": "Danh mục hiện không hoạt động và không thể gán cho nội dung mới.",
+        "Category.ConcurrencyConflict": "Danh mục đã bị thay đổi bởi người quản trị khác. Vui lòng tải lại và thử lại.",
+        "slugConflict": "Định danh danh mục (slug) đã tồn tại.",
+        "inUse": "Không thể xóa danh mục đang được sử dụng bởi tài liệu hoặc nội dung học tập.",
+        "inactive": "Danh mục hiện không hoạt động và không thể gán cho nội dung mới.",
+        "concurrencyConflict": "Danh mục đã bị thay đổi bởi người quản trị khác. Vui lòng tải lại và thử lại."
+      },
+      "Category.SlugConflict": "Định danh danh mục (slug) đã tồn tại.",
+      "Category.InUse": "Không thể xóa danh mục đang được sử dụng bởi tài liệu hoặc nội dung học tập.",
+      "Category.Inactive": "Danh mục hiện không hoạt động và không thể gán cho nội dung mới.",
+      "Category.ConcurrencyConflict": "Danh mục đã bị thay đổi bởi người quản trị khác. Vui lòng tải lại và thử lại."
     }
   }
 ,
@@ -1624,6 +1725,14 @@
   },
   "admin_audit": {
     "title": "Nhật ký quản trị",
+    "actions": {
+      "Category.Create": "Tạo danh mục",
+      "Category.UpdateMetadata": "Cập nhật siêu dữ liệu danh mục",
+      "Category.Reorder": "Sắp xếp lại danh mục",
+      "Category.Activate": "Kích hoạt danh mục",
+      "Category.Deactivate": "Vô hiệu hóa danh mục",
+      "Category.Delete": "Xóa danh mục"
+    },
     "refresh": "Làm mới",
     "filter_action": "Lọc hành động...",
     "filter_outcome_all": "Mọi kết quả",

@@ -1,4 +1,4 @@
-using DeepPace.Domain.Enums;
+using DeepPace.Application.Features.Admin.Categories.DTOs;
 
 namespace DeepPace.Application.Features.Insights.DTOs;
 
@@ -6,7 +6,8 @@ public record TechInsightDto(
     Guid Id,
     string Slug,
     string Title,
-    Category Category,
+    Guid CategoryId,
+    CategoryDescriptorDto Category,
     List<string> Tags,
     string SummaryMarkdown,
     string ProblemSnippet,
@@ -19,7 +20,7 @@ public record TechInsightDto(
 );
 
 public record GetInsightsFeedRequest(
-    Category? Category = null,
+    Guid? CategoryId = null,
     string? Tag = null,
     int Page = 1,
     int PageSize = 10,
@@ -37,7 +38,7 @@ public record GetInsightsFeedResponse(
 );
 
 public record GenerateInsightRequest(
-    Category? PreferredCategory = null,
+    Guid CategoryId,
     string? PreferredTopic = null,
     string Locale = "en"
 );
@@ -54,16 +55,14 @@ public record BookmarkInsightResponse(
 );
 
 public record InsightCategoryMetaDto(
-    int Id,
-    string Key,
-    string LabelEn,
-    string LabelVi,
+    Guid CategoryId,
+    CategoryDescriptorDto Category,
     int Count
 );
 
-public record GetInsightsMetaRequest();
+public record GetInsightsMetaRequest(Guid UserId);
 
 public record GetInsightsMetaResponse(
     List<InsightCategoryMetaDto> Categories,
-    Dictionary<int, List<string>> SuggestedTopics
+    Dictionary<Guid, List<string>> SuggestedTopics
 );
