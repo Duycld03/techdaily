@@ -143,13 +143,43 @@ DeepPace (Clean Architecture)
 
 ### Frontend Toolchain
 
-Local development, CI, and frontend container builds use the npm version declared in `frontend/package.json`. Select the Node version in `.node-version` first (with fnm: `fnm use --install-if-missing`), then run from the repository root:
+The project pins **Node.js 24.22.0 LTS** in `.node-version` and **npm 11.21.1** in `frontend/package.json`. CI reads those declarations; both frontend Docker stages use the same exact Node release.
+
+Initialize the existing fnm installation once in the interactive shell configuration (for Zsh, `~/.zshrc`):
+
+```zsh
+eval "$(fnm env --use-on-cd --version-file-strategy=recursive)"
+```
+
+On a new workstation, run this one-time setup from the repository root:
 
 ```bash
+fnm install "$(cat .node-version)"
+fnm default "$(cat .node-version)"
+fnm use
 npm install --global "$(node -p 'require("./frontend/package.json").packageManager')"
 ```
 
-`package-lock.json` is npm-generated. Use `npm --prefix frontend install` when updating dependencies and commit the regenerated lockfile; use `npm --prefix frontend ci` for reproducible installs. Do not maintain lockfile metadata by hand.
+After setup, fresh terminals and directory changes select Node automatically. Normal development remains `./run-dev.sh`; no daily `fnm use`, Node selection, or per-project global-tool reinstall is needed. This workstation's existing shell initialization is retained.
+
+Global tools belong to the selected fnm installation. Before a future runtime migration, inventory each installation with `fnm exec --using=<version> npm ls --global --depth=0 --json`, preserve a private recovery record, and reinstall the retained tools at their recorded versions under the new runtime. Keep CLI settings and credentials outside retiring prefixes unchanged; do not copy old `node_modules` trees. The existing standalone `omp` is retained instead of its duplicate npm package, so this setup does not require Bun.
+
+`package-lock.json` is npm-generated, never hand-edited. For runtime engine metadata, use `npm --prefix frontend install --package-lock-only --ignore-scripts`; for dependency changes, use `npm --prefix frontend install` and commit the generated lockfile. Use `npm --prefix frontend ci` for clean, reproducible installs. Preserve locked application dependency versions when changing only the runtime.
+
+For an isolated local frontend container build, exclude local dependencies, generated output, and environment files from the context:
+
+```bash
+tar --exclude='./node_modules' --exclude='./.nuxt' --exclude='./.output' \
+  --exclude='./.env' --exclude='./.env.*' --exclude='./coverage' --exclude='./.git' \
+  -C frontend -cf - . | docker build --target runner --tag deeppace-frontend:node-lts-runner -
+docker run --rm -p 127.0.0.1:3318:3000 deeppace-frontend:node-lts-runner
+```
+
+The container serves the anonymous login route at `http://127.0.0.1:3318/login`. Normal fullstack development still uses `./run-dev.sh`; do not run that launcher as an unattended migration probe because it manages ports 3000/5000 and starts the backend. Migration checks use direct frontend startup on a separate unused loopback port instead.
+
+Before retiring an old runtime, require clean installation, native lint, the full test suite, production build, CLI checks, and dev/container startup. Report typecheck's real result; new diagnostics block migration, while independently recorded pre-existing diagnostics remain visible. Inspect retiring prefixes for user configuration or credentials, correct stale executable/launcher references, and complete active-process handover. Any unresolved user-file preservation or active dependency blocks removal. Use `fnm uninstall <old-version>` only for inventoried superseded installations after these gates; preserve standalone tools, settings, caches, and unrelated data.
+
+For rollback before removal, restore the recorded selection with `fnm default <previous-version>` and `fnm use <previous-version>`, revert only this migration's runtime declarations, and reinstall frontend dependencies with the restored declared npm. After removal, first reinstall the recorded runtime with `fnm install <previous-version>` and its exact global-tool versions from the private recovery inventory. Registry access is required for recovery after retirement; old installations are not kept as permanent fallbacks.
 
 ### Configure Secrets
 All secrets load from a single gitignored `.env` at the repo root using native .NET `Section__Key` names (double underscore → `Section:Key`). Copy the template and fill in your values before starting:

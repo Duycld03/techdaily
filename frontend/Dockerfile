@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim AS build
+FROM node:24.22.0-bookworm-slim AS build
 WORKDIR /app
 ENV ONNXRUNTIME_NODE_INSTALL=skip
 COPY package*.json ./
@@ -8,7 +8,7 @@ RUN npm install --global "$(node -p 'require("./package.json").packageManager')"
 COPY . .
 RUN npm run build
 
-FROM node:22-bookworm-slim AS runner
+FROM node:24.22.0-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
