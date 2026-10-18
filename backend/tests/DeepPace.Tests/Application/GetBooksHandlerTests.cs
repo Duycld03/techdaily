@@ -209,4 +209,56 @@ public class GetBooksHandlerTests : IDisposable
         result.Value.Books.Should().HaveCount(1);
         result.Value.Books[0].Title.Should().Be("User 1 Book");
     }
+
+    [Theory]
+    [InlineData("vi", "vi")]
+    [InlineData("en", "en")]
+    [InlineData(null, "en")]
+    public async Task GetBooks_WithoutActiveSlices_UsesDeclarationThenLegacyDefault(string? declaration, string expectedLanguage)
+    {
+        var book = new DocumentBook
+        {
+            Title = "Incomplete import", Slug = "incomplete-import",
+            CategoryId = CategoryDefaults.BackendRuntimeId, DeclaredLanguage = declaration,
+            Chunks = [new DocumentChunk { ChunkOrder = 1, Language = "en", IsDeleted = true }]
+        };
+        _db.DocumentBooks.Add(book);
+        await _db.SaveChangesAsync();
+
+        var result = await _handler.ExecuteAsync(new GetBooksRequest());
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Books.Should().ContainSingle().Which.Language.Should().Be(expectedLanguage);
+    }
+
+    [Fact]
+    public async Task GetBooks_RetainedAdoptedSlices_UseFirstActiveSliceInOrderNotDeclaration()
+    {
+        var owner = new User { Email = "adopter@example.test", Name = "Adopter" };
+        var source = new CatalogDocument
+        {
+            Title = "Retained source", CategoryId = CategoryDefaults.BackendRuntimeId,
+            Visibility = CatalogVisibility.Published, ProcessingStatus = ProcessingStatus.Ready, Language = "en"
+        };
+        var copy = DocumentBook.CreateFromCatalogSnapshot(source, owner.Id, "retained-copy");
+        copy.DeclaredLanguage = "en";
+        copy.Chunks =
+        [
+            new DocumentChunk { ChunkOrder = 3, Language = "en" },
+            new DocumentChunk { ChunkOrder = 1, Language = "en", IsDeleted = true },
+            new DocumentChunk { ChunkOrder = 2, Language = "vi" }
+        ];
+        source.Hide(owner.Id);
+        _db.Users.Add(owner);
+        _db.CatalogDocuments.Add(source);
+        _db.DocumentBooks.Add(copy);
+        await _db.SaveChangesAsync();
+
+        var result = await _handler.ExecuteAsync(new GetBooksRequest(UserId: owner.Id));
+
+        result.IsSuccess.Should().BeTrue();
+        var returned = result.Value.Books.Should().ContainSingle().Which;
+        returned.Id.Should().Be(copy.Id);
+        returned.Language.Should().Be("vi");
+    }
 }

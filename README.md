@@ -81,8 +81,12 @@ DeepPace (Clean Architecture)
   - **Markdown Tab:** Paste raw technical notes and auto-slice by markdown headings (`#`, `##`).
   - **Async PDF Ingestion Tab:** Upload large technical books, cheatsheets, and slides up to **300 MB (8,000+ pages)** with zero-LOH disk spooling, asynchronous Channels queue, native PDF Bookmarks/Outline tree chapter extraction, and real-time polling progress.
   - **URL Article Crawler Tab:** Crawl any Microsoft Learn, Dev.to, Medium, or GitHub raw documentation link with live markdown preview and syntax tag preservation.
+- **Route-Driven Discovery & Filter Toolbar:**
+  - **Curated Discover Tab:** Browse and adopt administrator-curated technical documentation and engineering literature without leaving the learner workspace.
+  - **Shared Accessible Toolbar:** Unified single-row category chip bar and modal filter with full keyboard navigation and focus management.
+  - **Committed Query Contract:** URL query state synchronization (`tab`, `category`, `search`, `language`, `sourceType`, `page`) with Enter-to-commit search, clear button (`✕`), and category reset.
+  - **Independent Publication vs Processing State:** Ingestion status (`Ready`, `Processing`, `Failed`) is strictly decoupled from publication visibility (`Published`, `Hidden`, `Draft`). Adopting a curated book creates an independent personal copy that remains readable even if the catalog entry is subsequently hidden.
 - **Document Management:** Safe soft-deletion with cascading chunk cleanup.
-
 ### 5. 📖 Immersive Book Reader (`/read/[bookId]`)
 - **Table of Contents Sidebar:** Real-time chapter navigation, active slice indicator, and reading completion status.
 - **On-Device & Multi-Engine Audio Narration:** Full two-row responsive audio player bar with seekable sentence scrubber slider, cascading engine fallback (Device ONNX Web Worker → System Web Speech API → Cloud TTS), sleep timer (5–60 min), auto-advance to next slice, and IndexedDB audio chunk caching.

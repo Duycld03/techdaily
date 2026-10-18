@@ -1,4 +1,5 @@
 using DeepPace.Application.Features.Admin.Categories.DTOs;
+using DeepPace.Domain.Enums;
 
 namespace DeepPace.Application.Features.Admin.Documents.DTOs;
 
@@ -16,7 +17,8 @@ public record AdminDocumentInventoryItemDto(
     string Status,
     string SourceAvailability,
     DateTimeOffset CreatedAt,
-    DateTimeOffset ObservedAt);
+    DateTimeOffset ObservedAt,
+    CatalogVisibility? Visibility);
 
 public record AdminDocumentDetailDto(
     Guid Id,
@@ -40,7 +42,8 @@ public record AdminDocumentDetailDto(
     string? IneligibleReasonCode,
     string? IneligibleReason,
     DateTimeOffset? RetentionExpiresAtUtc,
-    string? SanitizedSourceUrl);
+    string? SanitizedSourceUrl,
+    CatalogVisibility? Visibility);
 
 public record AdminDocumentAttemptItemDto(
     Guid AttemptId,

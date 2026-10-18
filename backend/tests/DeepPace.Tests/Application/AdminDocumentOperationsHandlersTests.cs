@@ -1,4 +1,6 @@
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -116,6 +118,51 @@ public class AdminDocumentOperationsHandlersTests : IDisposable
         result.Value.Items.Should().Contain(i => i.Id == book.Id && i.Scope == "Personal");
         result.Value.Items.Should().Contain(i => i.Id == catalogDoc.Id && i.Scope == "Catalog");
         result.Value.Items.Should().NotContain(i => i.Id == deletedBook.Id);
+    }
+
+    [Fact]
+    public async Task InventoryAndDetail_HiddenReadyCatalog_KeepVisibilitySeparateFromPersonalCopies()
+    {
+        var catalog = new CatalogDocument
+        {
+            Title = "Hidden ready source", CategoryId = CategoryDefaults.SystemDesignId,
+            ProcessingStatus = ProcessingStatus.Ready, Visibility = CatalogVisibility.Published
+        };
+        var adopted = DocumentBook.CreateFromCatalogSnapshot(catalog, _learnerUserId, "adopted-copy");
+        var imported = new DocumentBook
+        {
+            Title = "Imported copy", Slug = "imported-copy", CategoryId = CategoryDefaults.SystemDesignId,
+            CreatedByUserId = _learnerUserId, Status = ProcessingStatus.Ready
+        };
+        catalog.Hide(_adminUserId);
+        _db.CatalogDocuments.Add(catalog);
+        _db.DocumentBooks.AddRange(imported, adopted);
+        await _db.SaveChangesAsync();
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        jsonOptions.Converters.Add(new JsonStringEnumConverter());
+
+        var inventory = await new AdminGetDocumentInventoryHandler(_db).ExecuteAsync(new AdminDocumentInventoryQuery());
+        inventory.IsSuccess.Should().BeTrue();
+        inventory.Value.TotalCount.Should().Be(3);
+        var detailHandler = new AdminGetDocumentDetailHandler(_db, _mutationGuard);
+        foreach (var item in inventory.Value.Items)
+        {
+            var detail = await detailHandler.ExecuteAsync(new AdminGetDocumentDetailRequest(item.Scope, item.Id));
+            detail.IsSuccess.Should().BeTrue();
+            detail.Value.Id.Should().Be(item.Id);
+            foreach (var metadata in new[]
+                     {
+                         JsonSerializer.SerializeToElement(item, jsonOptions),
+                         JsonSerializer.SerializeToElement(detail.Value, jsonOptions)
+                     })
+            {
+                metadata.GetProperty("status").GetString().Should().Be("Ready");
+                if (item.Id == catalog.Id)
+                    metadata.GetProperty("visibility").GetString().Should().Be("Hidden");
+                else
+                    metadata.GetProperty("visibility").ValueKind.Should().Be(JsonValueKind.Null);
+            }
+        }
     }
 
     [Fact]

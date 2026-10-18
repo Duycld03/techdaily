@@ -114,7 +114,8 @@ public class AdminGetDocumentInventoryHandler : IUseCase<AdminDocumentInventoryQ
                     p.Status,
                     availability,
                     p.CreatedAt,
-                    now));
+                    now,
+                    null));
             }
         }
 
@@ -160,6 +161,7 @@ public class AdminGetDocumentInventoryHandler : IUseCase<AdminDocumentInventoryQ
                 c.Category,
                 Language = c.Language,
                 Status = c.ProcessingStatus.ToString(),
+                c.Visibility,
                 c.CreatedAt,
                 c.CurrentAttemptId
             }).ToListAsync(cancellationToken);
@@ -194,7 +196,8 @@ public class AdminGetDocumentInventoryHandler : IUseCase<AdminDocumentInventoryQ
                     c.Status,
                     availability,
                     c.CreatedAt,
-                    now));
+                    now,
+                    c.Visibility));
             }
         }
 

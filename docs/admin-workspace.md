@@ -164,6 +164,17 @@ Events contain:
   - **Fail-Safe Persistence**: If rejection audit persistence fails, the operation safely returns `AUDIT_PERSISTENCE_UNAVAILABLE` (503) rather than failing silently or inventing unpersisted state.
 - `Failed`: Infrastructure dispatch or execution failure (e.g., worker queue failure after acceptance commit).
 
+## Document Operations & Publication State Governance
+
+Authorized administrators with `DocumentOperationsAdmin` permission inspect operations inventory and ingestion attempts across personal and catalog documents at `/admin/documents`:
+
+### Authoritative Visibility & Processing Status Boundaries
+- **Catalog Publication Visibility**: `GET /api/v1/admin/documents` and `GET /api/v1/admin/documents/{scope}/{id}` project authoritative catalog publication visibility (`Draft`, `Published`, `Hidden`) for entries with scope `Catalog`.
+- **Processing Status vs. Publication**: Processing status (`Pending`, `Processing`, `Ready`, `Failed`) reflects ingestion state only. A catalog entry can concurrently be `Ready` in processing while `Hidden` in publication visibility.
+- **Personal Scope Exclusion**: Personal imported or adopted books return `visibility: null` because catalog publication controls do not apply to personal library items.
+- **Authoritative Reads & No Background Synchronization Jobs**: Operations reads derive catalog visibility directly from the authoritative catalog entity at query time; no background synchronization jobs or duplicate visibility caches are introduced.
+- **Retry Ineligibility Guidance**: Ready catalog documents that are Hidden report ineligibility code `AlreadyReady`, conveying completed source processing without implying current publication or Discover visibility.
+
 ## Capability Policies & Route Admission
 - `GET /api/v1/admin/capabilities`: Authenticated discovery endpoint returning:
   `{ canManageCatalog, canManageAccounts, canReadAudit, canManageDocumentOperations, canViewAdminDashboard, canManageRoles, canManageCategories }`

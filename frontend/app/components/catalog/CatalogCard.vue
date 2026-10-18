@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { BookOpen, Plus, Eye, ExternalLink, Clock, Layers, CheckCircle2, Loader2, FileText, Globe } from 'lucide-vue-next'
+import { Plus, Eye, Clock, Layers, CheckCircle2, Loader2, FileText, Globe } from 'lucide-vue-next'
 import type { LearnerCatalogDocument } from '~/stores/useCatalogStore'
 import { useCategoryStore } from '~/stores/useCategoryStore'
 const props = defineProps<{
@@ -8,7 +8,7 @@ const props = defineProps<{
   isAdopting?: boolean
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'preview', document: LearnerCatalogDocument): void
   (e: 'adopt', document: LearnerCatalogDocument): void
 }>()

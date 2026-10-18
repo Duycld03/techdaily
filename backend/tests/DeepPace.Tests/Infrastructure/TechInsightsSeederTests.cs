@@ -1,5 +1,3 @@
-using DeepPace.Domain.Entities;
-
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;

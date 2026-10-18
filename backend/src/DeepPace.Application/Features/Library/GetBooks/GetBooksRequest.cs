@@ -5,4 +5,5 @@ public record GetBooksRequest(
     string? Search = null,
     int Page = 1,
     int PageSize = 12,
-    Guid? UserId = null);
+    Guid? UserId = null,
+    string? Language = null);

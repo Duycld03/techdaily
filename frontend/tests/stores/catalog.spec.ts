@@ -99,6 +99,29 @@ describe("useCatalogStore", () => {
     expect(store.totalCount).toBe(1);
   });
 
+  it("replaces committed discovery criteria instead of retaining filters absent from the next query", async () => {
+    mockGet.mockResolvedValue({ items: [], totalCount: 0, page: 1, pageSize: 12 });
+    const store = useCatalogStore();
+    await store.fetchPublishedDocuments({
+      search: "consensus",
+      categoryId: category.id,
+      language: "vi",
+      sourceType: "PdfBook",
+      page: 3,
+    });
+    await store.fetchPublishedDocuments({ page: 1 });
+
+    const query = new URL(String(mockGet.mock.calls.at(-1)?.[0]), "https://example.test").searchParams;
+    expect(query.get("page")).toBe("1");
+    for (const field of ["search", "categoryId", "language", "sourceType"]) {
+      expect(query.has(field)).toBe(false);
+    }
+    expect(store.search).toBe("");
+    expect(store.categoryId).toBeNull();
+    expect(store.language).toBeNull();
+    expect(store.sourceType).toBeNull();
+  });
+
   it("discards stale discovery responses when requests race", async () => {
     const store = useCatalogStore();
 

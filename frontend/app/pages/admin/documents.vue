@@ -5,21 +5,15 @@ import {
   Search,
   RefreshCw,
   RotateCcw,
-  AlertTriangle,
-  CheckCircle2,
   Clock,
-  Layers,
-  Globe,
-  FileText,
-  User,
-  Shield,
   Loader2,
-  XCircle,
   AlertCircle
 } from 'lucide-vue-next'
 import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 import { useAdminDocumentsStore } from '~/stores/useAdminDocumentsStore'
 import type { AdminDocumentInventoryItem } from '~/stores/useAdminDocumentsStore'
+import { useCategoryStore } from '~/stores/useCategoryStore'
+import type { components } from '~/types/api.generated'
 import MasterDetailLayout from '~/components/layout/MasterDetailLayout.vue'
 import AppModal from '~/components/ui/AppModal.vue'
 import { useToast } from '~/composables/useToast'
@@ -30,10 +24,16 @@ definePageMeta({
 
 const access = useAdminAccessStore()
 const store = useAdminDocumentsStore()
+const categoryStore = useCategoryStore()
 const toast = useToast()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const searchInput = ref('')
 const selectedScope = ref<'Personal' | 'Catalog' | ''>('')
+const sourceTypeKeys: Record<components['schemas']['SourceType'], string> = {
+  PdfBook: 'admin_documents.source_PdfBook',
+  MarkdownSeries: 'admin_documents.source_MarkdownSeries',
+  WebDocUrl: 'admin_documents.source_WebDocUrl'
+}
 const selectedStatus = ref('')
 const selectedId = ref<string | null>(null)
 
@@ -45,8 +45,9 @@ const retryError = ref<string | null>(null)
 onMounted(async () => {
   if (access.canManageDocumentOperations) {
     await store.fetchDocuments()
-    if (store.documents.length > 0 && !selectedId.value) {
-      handleSelect(store.documents[0])
+    const first = store.documents[0]
+    if (first && !selectedId.value) {
+      handleSelect(first)
     }
   }
 })
@@ -95,7 +96,7 @@ function closeRetryModal() {
 
 async function submitRetry() {
   if (!retryReason.value.trim()) {
-    retryError.value = 'Reason is required for administrator retry'
+    retryError.value = t('admin_documents.retry_reason_required')
     return
   }
 
@@ -103,13 +104,13 @@ async function submitRetry() {
   try {
     const res = await store.retryDocument(retryReason.value.trim())
     if (res) {
-      toast.success('Retry initiated successfully')
+      toast.success(t('admin_documents.retry_success'))
       closeRetryModal()
     } else {
-      retryError.value = 'Unable to initiate retry'
+      retryError.value = t('admin_documents.retry_error')
     }
   } catch (err: unknown) {
-    retryError.value = err instanceof Error ? err.message : 'Failed to initiate retry'
+    retryError.value = err instanceof Error ? err.message : t('admin_documents.retry_error')
   }
 }
 
@@ -144,6 +145,22 @@ function formatScope(scope: string): string {
   if (scope.toLowerCase() === 'personal') return t('admin_documents.scope_personal')
   if (scope.toLowerCase() === 'catalog') return t('admin_documents.scope_catalog')
   return scope
+}
+
+function formatOwner(doc: AdminDocumentInventoryItem): string {
+  return doc.scope === 'Catalog'
+    ? t('admin_documents.system_catalog')
+    : doc.ownerName || t('admin_documents.owner_unknown')
+}
+
+function formatCategory(doc: AdminDocumentInventoryItem): string {
+  return categoryStore.getCategoryName(doc.category, locale.value) || t('admin_documents.category_unavailable')
+}
+
+function formatSourceType(sourceType: string): string {
+  return Object.hasOwn(sourceTypeKeys, sourceType)
+    ? t(sourceTypeKeys[sourceType as components['schemas']['SourceType']])
+    : t('admin_documents.source_unknown')
 }
 
 function formatSourceAvailability(availability: string): string {
@@ -199,8 +216,9 @@ function stateBadgeClass(state: string): string {
           <button
             type="button"
             class="flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-white/10 px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-colors whitespace-nowrap shrink-0"
+            :aria-label="$t('admin_documents.refresh')"
             :disabled="store.isLoading"
-            @click="store.fetchDocuments()"
+            @click="store.fetchDocuments(true)"
           >
             <RefreshCw class="h-4 w-4 shrink-0" :class="{ 'animate-spin': store.isLoading }" aria-hidden="true" />
             <span class="hidden sm:inline">{{ $t('admin_documents.refresh') }}</span>
@@ -218,6 +236,7 @@ function stateBadgeClass(state: string): string {
                 v-model="searchInput"
                 type="text"
                 :placeholder="$t('admin_documents.search_placeholder')"
+                :aria-label="$t('admin_documents.search_placeholder')"
                 class="w-full rounded-xl border border-slate-300 dark:border-white/10 bg-white dark:bg-canvas-subtle/50 pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 @keydown.enter="handleSearch"
               />
@@ -253,7 +272,8 @@ function stateBadgeClass(state: string): string {
             </div>
 
             <!-- Status Filter Pills -->
-            <div class="flex gap-1.5 overflow-x-auto pb-1">
+            <p class="text-xs font-semibold text-slate-500">{{ $t('admin_documents.processing_status') }}</p>
+            <div role="group" :aria-label="$t('admin_documents.processing_status')" class="flex gap-1.5 overflow-x-auto pb-1">
               <button
                 type="button"
                 class="px-2 py-0.5 text-xs rounded-lg font-semibold transition-colors whitespace-nowrap shrink-0"
@@ -309,7 +329,7 @@ function stateBadgeClass(state: string): string {
                 : 'bg-white dark:bg-canvas-subtle/30 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10'"
               @click="handleSelect(doc)"
             >
-              <div class="flex items-start justify-between gap-2">
+              <div class="flex flex-col items-start gap-1.5 min-w-0">
                 <span class="text-sm sm:text-base font-semibold text-slate-900 dark:text-white line-clamp-1">
                   {{ doc.title }}
                 </span>
@@ -317,16 +337,19 @@ function stateBadgeClass(state: string): string {
                   class="rounded-full px-2 py-0.5 text-xs font-semibold border whitespace-nowrap shrink-0"
                   :class="stateBadgeClass(doc.status)"
                 >
-                  {{ formatDocumentStatus(doc.status) }}
+                  {{ $t('admin_documents.processing_status') }}: {{ formatDocumentStatus(doc.status) }}
                 </span>
               </div>
 
+              <span v-if="doc.scope === 'Catalog' && doc.visibility" class="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                {{ $t('admin_documents.publication') }}: {{ $t(`admin_documents.visibility_${doc.visibility}`) }}
+              </span>
               <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                 <span class="rounded bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 font-medium whitespace-nowrap shrink-0">
                   {{ formatScope(doc.scope) }}
                 </span>
                 <span class="truncate">
-                  {{ doc.ownerName || $t('admin_documents.system_catalog') }}
+                  {{ formatOwner(doc) }}
                 </span>
               </div>
             </button>
@@ -363,6 +386,11 @@ function stateBadgeClass(state: string): string {
           <Loader2 class="h-8 w-8 animate-spin text-brand-500" />
         </div>
 
+        <div v-else-if="store.detailError" class="flex flex-col items-center justify-center h-full py-16 text-rose-500">
+          <AlertCircle class="h-12 w-12 mb-3 text-rose-500" aria-hidden="true" />
+          <p class="text-sm sm:text-base font-semibold">{{ store.detailError }}</p>
+        </div>
+
         <div v-else-if="!store.selectedDocument" class="flex flex-col items-center justify-center h-full py-16 text-slate-400">
           <FileCog class="h-12 w-12 mb-3 opacity-20" aria-hidden="true" />
           <p class="text-sm sm:text-base">{{ $t('admin_documents.select_hint') }}</p>
@@ -377,7 +405,10 @@ function stateBadgeClass(state: string): string {
                   {{ formatScope(store.selectedDocument.scope) }}
                 </span>
                 <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold border whitespace-nowrap shrink-0" :class="stateBadgeClass(store.selectedDocument.status)">
-                  {{ formatDocumentStatus(store.selectedDocument.status) }}
+                  {{ $t('admin_documents.processing_status') }}: {{ formatDocumentStatus(store.selectedDocument.status) }}
+                </span>
+                <span v-if="store.selectedDocument.scope === 'Catalog' && store.selectedDocument.visibility" class="rounded-full px-2.5 py-0.5 text-xs font-semibold border border-slate-300 dark:border-white/20 text-slate-700 dark:text-slate-200">
+                  {{ $t('admin_documents.publication') }}: {{ $t(`admin_documents.visibility_${store.selectedDocument.visibility}`) }}
                 </span>
                 <span class="text-xs text-slate-400 font-mono">
                   v{{ store.selectedDocument.controlVersion }} (gen {{ store.selectedDocument.currentAttemptGeneration }})
@@ -414,7 +445,7 @@ function stateBadgeClass(state: string): string {
             <div class="p-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-canvas-subtle/50 space-y-1">
               <span class="text-xs text-slate-400 block">{{ $t('admin_documents.owner') }}</span>
               <p class="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                {{ store.selectedDocument.ownerName || $t('admin_documents.system_catalog') }}
+                {{ formatOwner(store.selectedDocument) }}
               </p>
               <p v-if="store.selectedDocument.ownerEmail" class="text-xs text-slate-500 truncate">
                 {{ store.selectedDocument.ownerEmail }}
@@ -424,10 +455,10 @@ function stateBadgeClass(state: string): string {
             <div class="p-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-canvas-subtle/50 space-y-1">
               <span class="text-xs text-slate-400 block">{{ $t('admin_documents.category') }} / {{ $t('admin_documents.language') }}</span>
               <p class="text-sm font-semibold text-slate-900 dark:text-white">
-                {{ store.selectedDocument.category }} ({{ store.selectedDocument.language }})
+                {{ formatCategory(store.selectedDocument) }} ({{ store.selectedDocument.language }})
               </p>
               <p class="text-xs text-slate-500">
-                {{ store.selectedDocument.sourceType }} &bull; {{ formatSourceAvailability(store.selectedDocument.sourceAvailability) }}
+                {{ formatSourceType(store.selectedDocument.sourceType) }} &bull; {{ formatSourceAvailability(store.selectedDocument.sourceAvailability) }}
               </p>
             </div>
 
@@ -455,6 +486,10 @@ function stateBadgeClass(state: string): string {
             <div v-if="store.isLoadingAttempts" class="flex justify-center py-6">
               <Loader2 class="h-6 w-6 animate-spin text-brand-500" />
             </div>
+            <div v-else-if="store.attemptsError" class="p-4 rounded-xl border border-rose-200 dark:border-rose-500/20 bg-rose-50 dark:bg-rose-500/10 text-xs text-rose-700 dark:text-rose-300">
+              {{ store.attemptsError }}
+            </div>
+
 
             <div v-else-if="store.attempts.length === 0" class="text-center py-8 text-sm text-slate-500 dark:text-slate-400 border border-dashed border-slate-200 dark:border-white/10 rounded-xl">
               {{ $t('admin_documents.no_attempts') }}
@@ -508,8 +543,8 @@ function stateBadgeClass(state: string): string {
         </p>
 
         <div v-if="store.selectedDocument" class="p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs space-y-1">
-          <p><span class="text-slate-400">Document:</span> <strong class="text-slate-800 dark:text-slate-200">{{ store.selectedDocument.title }}</strong></p>
-          <p><span class="text-slate-400">Scope:</span> {{ store.selectedDocument.scope }} &bull; <span class="text-slate-400">Version:</span> {{ store.selectedDocument.controlVersion }}</p>
+          <p><span class="text-slate-400">{{ $t('admin_documents.detail_title') }}:</span> <strong class="text-slate-800 dark:text-slate-200">{{ store.selectedDocument.title }}</strong></p>
+          <p><span class="text-slate-400">{{ $t('admin_documents.scope') }}:</span> {{ formatScope(store.selectedDocument.scope) }} &bull; <span class="text-slate-400">{{ $t('admin_documents.control_version') }}:</span> {{ store.selectedDocument.controlVersion }}</p>
         </div>
 
         <div class="space-y-1.5">

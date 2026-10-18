@@ -93,7 +93,8 @@ public class AdminGetDocumentDetailHandler : IUseCase<AdminGetDocumentDetailRequ
                 eligibility.IneligibleReasonCode,
                 eligibility.LocalizedMessage,
                 source?.RetentionExpiresAtUtc,
-                SanitizeUrl(book.AuthorOrSourceUrl));
+                SanitizeUrl(book.AuthorOrSourceUrl),
+                null);
 
             return dto;
         }
@@ -157,7 +158,8 @@ public class AdminGetDocumentDetailHandler : IUseCase<AdminGetDocumentDetailRequ
                 eligibility.IneligibleReasonCode,
                 eligibility.LocalizedMessage,
                 source?.RetentionExpiresAtUtc,
-                SanitizeUrl(doc.AuthorOrSourceUrl));
+                SanitizeUrl(doc.AuthorOrSourceUrl),
+                doc.Visibility);
 
             return dto;
         }

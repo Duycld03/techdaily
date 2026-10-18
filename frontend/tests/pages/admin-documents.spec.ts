@@ -1,10 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import AdminDocumentsPage from '../../app/pages/admin/documents.vue'
 import { useAdminAccessStore } from '../../app/stores/useAdminAccessStore'
 import { useAdminDocumentsStore } from '../../app/stores/useAdminDocumentsStore'
 import type { AdminDocumentDetail, AdminDocumentInventoryItem } from '../../app/stores/useAdminDocumentsStore'
+import { ref } from 'vue'
+import en from '../../app/i18n/locales/en.json'
+import viLocale from '../../app/i18n/locales/vi.json'
+
+const category = { id: 'category-1', slug: 'architecture', nameEn: 'Architecture', nameVi: 'Kiến trúc', sortOrder: 1, isActive: false, version: 1 }
 
 const { mockGet, mockPost } = vi.hoisted(() => ({
   mockGet: vi.fn(),
@@ -24,11 +29,13 @@ const mockDocs: AdminDocumentInventoryItem[] = [
     ownerUserId: 'user-1',
     ownerName: 'Alice',
     ownerEmail: 'alice@example.com',
-    sourceType: 'Pdf',
-    category: 'Cloud',
+    sourceType: 'PdfBook',
+    categoryId: category.id,
+    category,
+    visibility: null,
     language: 'en',
-    status: 'Ready',
-    sourceAvailability: 'Retained',
+    status: 'Failed',
+    sourceAvailability: 'Available',
     createdAt: '2026-10-15T00:00:00Z',
     observedAt: '2026-10-15T00:00:00Z'
   },
@@ -39,11 +46,13 @@ const mockDocs: AdminDocumentInventoryItem[] = [
     ownerUserId: null,
     ownerName: null,
     ownerEmail: null,
-    sourceType: 'Web',
-    category: 'Architecture',
+    sourceType: 'WebDocUrl',
+    categoryId: category.id,
+    category,
+    visibility: 'Hidden',
     language: 'en',
-    status: 'Failed',
-    sourceAvailability: 'Retained',
+    status: 'Ready',
+    sourceAvailability: 'Available',
     createdAt: '2026-10-15T00:00:00Z',
     observedAt: '2026-10-15T00:00:00Z'
   }
@@ -56,11 +65,13 @@ const mockDocDetail: AdminDocumentDetail = {
   ownerUserId: 'user-1',
   ownerName: 'Alice',
   ownerEmail: 'alice@example.com',
-  sourceType: 'Pdf',
-  category: 'Cloud',
+  sourceType: 'PdfBook',
+  categoryId: category.id,
+  category,
+  visibility: null,
   language: 'en',
-  status: 'Ready',
-  sourceAvailability: 'Retained',
+  status: 'Failed',
+  sourceAvailability: 'Available',
   createdAt: '2026-10-15T00:00:00Z',
   observedAt: '2026-10-15T00:00:00Z',
   controlVersion: 2,
@@ -74,6 +85,7 @@ const mockDocDetail: AdminDocumentDetail = {
 }
 
 describe('admin/documents.vue (MasterDetail Operations Page)', () => {
+  afterEach(() => vi.unstubAllGlobals())
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
@@ -260,5 +272,61 @@ describe('admin/documents.vue (MasterDetail Operations Page)', () => {
     const [url, payload] = mockPost.mock.calls[0] as [string, { reason: string }]
     expect(url).toBe('/api/v1/admin/documents/Personal/doc-1/retry')
     expect(payload.reason).toBe('Re-running failed PDF ingestion after timeout')
+  })
+
+  it('distinguishes hidden publication from ready processing in rail and detail with localized metadata', async () => {
+    const locale = ref('en')
+    const translate = (key: string) => {
+      const dictionary = locale.value === 'vi' ? viLocale : en
+      return key.split('.').reduce<unknown>((value, part) => value && typeof value === 'object' ? Reflect.get(value, part) : undefined, dictionary) as string || key
+    }
+    vi.stubGlobal('useI18n', () => ({ locale, t: translate }))
+    mockGet.mockImplementation((url: string) => {
+      if (url.includes('/attempts')) return Promise.resolve({ items: [], totalCount: 0, page: 1, pageSize: 20 })
+      if (url.includes('/documents?')) return Promise.resolve({ items: mockDocs, totalCount: 2, page: 1, pageSize: 20 })
+      const document = url.includes('/Catalog/') ? mockDocs[1]! : { ...mockDocs[0]!, ownerName: null, ownerUserId: null, ownerEmail: null }
+      return Promise.resolve({ ...mockDocDetail, ...document, ownerName: document.scope === 'Catalog' ? 'System Curated' : document.ownerName, isRetryEligible: false, ineligibleReasonCode: 'AlreadyReady' })
+    })
+    const wrapper = mount(AdminDocumentsPage, {
+      global: {
+        stubs: { MasterDetailLayout: { template: '<div><header><slot name="header" /></header><nav><slot name="nav" /></nav><main><slot name="content" /></main></div>' }, AppModal: true },
+        mocks: { $t: translate }
+      }
+    })
+    await flushPromises()
+    const catalogRow = wrapper.findAll('nav button').find(button => button.text().includes('Distributed Transactions'))!
+    await catalogRow.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('main').text()).toContain(category.nameEn)
+    for (const region of [catalogRow, wrapper.find('main')]) {
+      expect(region.text()).toContain(en.admin_documents.publication)
+      expect(region.text()).toContain(en.admin_documents.visibility_Hidden)
+      expect(region.text()).toContain(en.admin_documents.processing_status)
+      expect(region.text()).toContain(en.admin_documents.status_ready)
+    }
+    expect(wrapper.find('main').text()).toContain(category.nameEn)
+    expect(wrapper.text()).not.toContain('System Curated')
+    expect(wrapper.text()).not.toContain('WebDocUrl')
+    expect(wrapper.text()).not.toContain('"nameEn"')
+    const personalRow = wrapper.findAll('nav button').find(button => button.text().includes('Kubernetes Architecture'))!
+    expect(personalRow.text()).toContain('Alice')
+    expect(personalRow.text()).not.toContain(en.admin_documents.publication)
+    locale.value = 'vi'
+    await flushPromises()
+    expect(wrapper.find('main').text()).toContain(category.nameVi)
+    expect(wrapper.find('main').text()).toContain(viLocale.admin_documents.system_catalog)
+    expect(wrapper.find('main').text()).toContain(viLocale.admin_documents.source_WebDocUrl)
+    expect(wrapper.find('main').text()).toContain(viLocale.admin_documents.ineligible_AlreadyReady)
+    expect(catalogRow.text()).toContain(viLocale.admin_documents.scope_catalog)
+    expect(wrapper.find('main').text()).toContain(viLocale.admin_documents.visibility_Hidden)
+    expect(wrapper.find('main').text()).toContain(viLocale.admin_documents.status_ready)
+    expect(wrapper.find('main').text()).toContain('Distributed Transactions')
+    await personalRow.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('main').text()).toContain(viLocale.admin_documents.owner_unknown)
+    expect(wrapper.find('main').text()).not.toContain(viLocale.admin_documents.publication)
+    expect(wrapper.find('main').text()).not.toContain(viLocale.admin_documents.system_catalog)
+    wrapper.unmount()
+    vi.unstubAllGlobals()
   })
 })

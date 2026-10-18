@@ -199,8 +199,9 @@ Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons 
   - Date filter placeholders SHALL render localized strings (`"Từ ngày (YYYY-MM-DD)"` / `"From (YYYY-MM-DD)"` and `"Đến ngày (YYYY-MM-DD)"` / `"To (YYYY-MM-DD)"`).
   - Event outcome badges in both the event list and detail modal SHALL display localized outcome labels (`"Thành công"`, `"Đã tiếp nhận"`, `"Bị từ chối"`, `"Thất bại"` in Vietnamese, and `"Succeeded"`, `"Accepted"`, `"Rejected"`, `"Failed"` in English).
 - On `/admin/documents`:
-  - Document status pills in both master card items and the detail header SHALL render localized labels (`"Sẵn sàng"`, `"Thất bại"`, `"Đang xử lý"`, `"Trong hàng đợi"` in Vietnamese, and `"Ready"`, `"Failed"`, `"Processing"`, `"Queued"` in English).
-  - Scope badges SHALL display localized strings (`"Cá nhân"` / `"Personal"`, `"Catalog"` / `"Catalog"`).
+  - Document status pills in both master card items and the detail header SHALL render localized labels (`"Sẵn sàng"`, `"Thất bại"`, `"Đang xử lý"`, `"Trong hàng đợi"` in Vietnamese, and `"Ready"`, `"Failed"`, `"Processing"`, `"Queued"` in English) and identify them as processing status rather than publication status.
+  - Scope filters and badges SHALL display localized strings (`"Cá nhân"` / `"Personal"`, `"Tuyển chọn"` / `"Catalog"`). Expanded curated-document labels SHALL use `"Tài liệu tuyển chọn"` in Vietnamese, distinct from taxonomy category labels such as `"Chuyên mục"`.
+  - System-curated ownership and source-type labels SHALL be localized rather than displaying internal English ownership labels or enum names. Source document titles, author names and source excerpts SHALL retain their original language.
   - Navigation list pagination buttons SHALL display localized labels (`"Trước"` / `"Prev"` and `"Sau"` / `"Next"`).
   - Ineligible retry warning banners SHALL map `ineligibleReasonCode` to user-facing localized guidance instead of displaying raw English backend messages.
   - Source availability indicators SHALL render localized labels (`"Thiếu nguồn"` / `"Missing"`, `"Khả dụng"` / `"Available"`).
@@ -246,7 +247,26 @@ Administrator UI SHALL reuse DeepPace colors, typography, surface styles, icons 
 
 #### Scenario: Document operations viewed in Vietnamese
 - **WHEN** an administrator views `/admin/documents` with locale set to Vietnamese (`vi`)
-- **THEN** document status badges in the master rail and detail view display `"Sẵn sàng"`, `"Thất bại"`, `"Đang xử lý"`, or `"Trong hàng đợi"`
+- **THEN** document processing badges in the master rail and detail view display `"Sẵn sàng"`, `"Thất bại"`, `"Đang xử lý"`, or `"Trong hàng đợi"`
+- **AND** curated-document filters and badges display `"Tuyển chọn"`, while system ownership and source-type metadata use Vietnamese labels
 - **AND** pagination controls display `"Trước"` and `"Sau"`
 - **AND** metadata timestamp cards and attempt history render Vietnamese headers and timestamp prefixes
-- **AND** any ineligible retry message displays localized guidance.
+- **AND** any ineligible retry message displays localized guidance without equating completed processing with publication.
+
+### Requirement: Learner navigation isolation
+Learner desktop and mobile navigation SHALL contain no administrative destinations, including catalog administration, regardless of the signed-in account's permissions. Returning to learning or loading Discover SHALL NOT insert administrative links. This separation SHALL NOT change shared-session behavior, administrator route authorization or access through the dedicated administrator workspace.
+
+#### Scenario: Privileged account opens Discover
+- **WHEN** an account with catalog-management permission opens `/library?tab=discover`
+- **THEN** neither the learner desktop sidebar nor the mobile menu contains catalog administration or another administrative destination
+- **AND** permission discovery does not insert one afterward.
+
+#### Scenario: Return from administration to learning
+- **WHEN** an administrator uses Switch to learning and subsequently navigates between learner pages
+- **THEN** the learner navigation remains free of administrative links
+- **AND** the same session retains its existing authorized administrator access through the dedicated workspace.
+
+#### Scenario: Direct administration entry still enforces permission
+- **WHEN** an account requests a protected administrator URL directly
+- **THEN** existing destination-specific server-confirmed admission applies independently of learner menu contents
+- **AND** removing learner links neither grants new permission nor bypasses authentication.

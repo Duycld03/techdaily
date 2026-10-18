@@ -1,5 +1,3 @@
-using DeepPace.Domain.Entities;
-
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using FluentValidation;

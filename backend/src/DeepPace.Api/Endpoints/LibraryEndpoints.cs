@@ -34,13 +34,14 @@ public static class LibraryEndpoints
             ClaimsPrincipal userClaims,
             [FromQuery] Guid? categoryId,
             [FromQuery] string? search,
+            [FromQuery] string? language,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 12,
             [FromServices] IUseCase<GetBooksRequest, GetBooksResponse> handler = null!,
             CancellationToken ct = default) =>
         {
             var userId = GetUserIdFromClaims(userClaims);
-            var result = await handler.ExecuteAsync(new GetBooksRequest(categoryId, search, page, pageSize, userId), ct);
+            var result = await handler.ExecuteAsync(new GetBooksRequest(categoryId, search, page, pageSize, userId, Language: language), ct);
             return result.Match(
                 success => Results.Ok(success),
                 error => error.ToProblem()
@@ -48,7 +49,7 @@ public static class LibraryEndpoints
         })
         .WithName("GetBooks")
         .WithSummary("Get Books")
-        .WithDescription("Retrieves paginated technical books with category filtering, search terms, and reading progress metadata.")
+        .WithDescription("Retrieves paginated technical books with category and language filtering, search terms, and reading progress metadata.")
         .Produces<GetBooksResponse>(StatusCodes.Status200OK)
         .ProducesProblem(StatusCodes.Status400BadRequest)
         .ProducesProblem(StatusCodes.Status401Unauthorized);

@@ -113,18 +113,33 @@ vi.mock('~/composables/useApiClient', () => ({
   })
 }))
 
-const mockRouterPush = vi.fn()
 const mockRouteQuery = ref<Record<string, string>>({})
+function extractQuery(to: unknown): Record<string, string> {
+  if (!to || typeof to !== 'object' || !('query' in to)) return {}
+  const q = to.query
+  if (!q || typeof q !== 'object') return {}
+  const result: Record<string, string> = {}
+  for (const [key, val] of Object.entries(q)) {
+    if (typeof val === 'string') result[key] = val
+  }
+  return result
+}
+const mockRouterPush = vi.fn(async (to: unknown) => {
+  mockRouteQuery.value = extractQuery(to)
+})
+const mockRouterReplace = vi.fn(async (to: unknown) => {
+  mockRouteQuery.value = extractQuery(to)
+})
 
-;(globalThis as any).useRouter = () => ({
+vi.stubGlobal('useRouter', () => ({
   push: mockRouterPush,
-  replace: vi.fn()
-})
-;(globalThis as any).useRoute = () => ({
+  replace: mockRouterReplace
+}))
+vi.stubGlobal('useRoute', () => ({
   path: '/library',
-  query: mockRouteQuery.value,
+  get query() { return mockRouteQuery.value },
   fullPath: '/library'
-})
+}))
 
 describe('library.vue (Curated Catalog & Discover Tab)', () => {
   beforeEach(() => {

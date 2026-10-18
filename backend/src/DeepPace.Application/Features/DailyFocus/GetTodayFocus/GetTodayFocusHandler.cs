@@ -1,5 +1,3 @@
-using DeepPace.Domain.Entities;
-
 using Microsoft.EntityFrameworkCore;
 using DeepPace.Application.Common;
 using DeepPace.Application.Features.DailyFocus.DTOs;

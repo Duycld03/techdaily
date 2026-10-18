@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { BookOpen, Plus, ExternalLink, Layers, CheckCircle2, Loader2, Clock, Globe } from 'lucide-vue-next'
+import { BookOpen, Plus, ExternalLink, Layers, CheckCircle2, Loader2, Clock } from 'lucide-vue-next'
 import AppModal from '~/components/ui/AppModal.vue'
 import type { LearnerCatalogDetail } from '~/stores/useCatalogStore'
 import { useCategoryStore } from '~/stores/useCategoryStore'
@@ -10,12 +10,12 @@ const props = defineProps<{
   isAdopting?: boolean
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'close'): void
   (e: 'adopt', documentId: string): void
 }>()
 
-const { t, locale } = useI18n()
+const { locale } = useI18n()
 const categoryStore = useCategoryStore()
 const categoryIsInactive = computed(() => props.document ? !(categoryStore.getCategoryById(props.document.categoryId) || props.document.category).isActive : false)
 const categoryLabel = computed(() => props.document
@@ -32,7 +32,7 @@ const isExternalUrl = computed(() => {
   <AppModal
     :open="open"
     :title="$t('library.discover.preview_title')"
-    maxWidth="max-w-4xl"
+    max-width="max-w-4xl"
     @close="$emit('close')"
   >
     <div v-if="document" class="space-y-3.5">

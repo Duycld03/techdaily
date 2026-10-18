@@ -2,6 +2,7 @@ using System.Net;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using FluentAssertions;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -156,6 +157,107 @@ public class LibraryEndpointsTests : IAsyncLifetime
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetBooks_LanguageCombinesOwnerCategorySearchBeforeCountsAndPaging()
+    {
+        using var db = new DeepPaceDbContext(_dbOptions);
+        var otherOwner = Guid.NewGuid();
+        db.Users.AddRange(
+            new User { Id = _userId, Email = "owner@example.test", Name = "Owner" },
+            new User { Id = otherOwner, Email = "other@example.test", Name = "Other" });
+        var now = DateTimeOffset.UtcNow;
+        var matches = Enumerable.Range(1, 3).Select(index => new DocumentBook
+        {
+            Title = $"Language match {index}", Slug = $"language-match-{index}",
+            CategoryId = CategoryDefaults.BackendRuntimeId, CreatedByUserId = _userId,
+            DeclaredLanguage = "vi", CreatedAt = now.AddMinutes(index)
+        }).ToArray();
+        db.DocumentBooks.AddRange(matches);
+        db.DocumentBooks.AddRange(
+            new DocumentBook { Title = "Language match English", Slug = "english", CategoryId = CategoryDefaults.BackendRuntimeId, CreatedByUserId = _userId, DeclaredLanguage = "en", CreatedAt = now.AddMinutes(10) },
+            new DocumentBook { Title = "Language match other owner", Slug = "other-owner", CategoryId = CategoryDefaults.BackendRuntimeId, CreatedByUserId = otherOwner, DeclaredLanguage = "vi" },
+            new DocumentBook { Title = "Language match other category", Slug = "other-category", CategoryId = CategoryDefaults.FrontendWebId, CreatedByUserId = _userId, DeclaredLanguage = "vi" },
+            new DocumentBook { Title = "Unrelated", Slug = "unrelated", CategoryId = CategoryDefaults.BackendRuntimeId, CreatedByUserId = _userId, DeclaredLanguage = "vi" },
+            new DocumentBook { Title = "Language match deleted", Slug = "deleted", CategoryId = CategoryDefaults.BackendRuntimeId, CreatedByUserId = _userId, DeclaredLanguage = "vi", IsDeleted = true },
+            new DocumentBook { Title = "Language match unpublished", Slug = "unpublished", CategoryId = CategoryDefaults.BackendRuntimeId, CreatedByUserId = _userId, DeclaredLanguage = "vi", IsPublished = false });
+        await db.SaveChangesAsync();
+        var criteria = $"/api/v1/library/books?categoryId={CategoryDefaults.BackendRuntimeId}&search=Language%20match&pageSize=2";
+
+        var response = await _client.GetAsync($"{criteria}&language=%20VI%20&page=2");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var body = json.RootElement;
+        body.GetProperty("totalCount").GetInt32().Should().Be(3);
+        body.GetProperty("totalPages").GetInt32().Should().Be(2);
+        body.GetProperty("page").GetInt32().Should().Be(2);
+        var book = body.GetProperty("books").EnumerateArray().Should().ContainSingle().Which;
+        book.GetProperty("id").GetGuid().Should().Be(matches[0].Id);
+        book.GetProperty("language").GetString().Should().Be("vi");
+
+        foreach (var language in new[] { "", "&language=", "&language=%20%20" })
+        {
+            var cleared = await _client.GetAsync($"{criteria}{language}");
+            cleared.StatusCode.Should().Be(HttpStatusCode.OK);
+            using var clearedJson = JsonDocument.Parse(await cleared.Content.ReadAsStringAsync());
+            clearedJson.RootElement.GetProperty("totalCount").GetInt32().Should().Be(4);
+            clearedJson.RootElement.GetProperty("totalPages").GetInt32().Should().Be(2);
+        }
+    }
+
+    [Fact]
+    public async Task GetBooks_LanguageUsesEditedSlicesInsteadOfStaleDeclaration()
+    {
+        using var db = new DeepPaceDbContext(_dbOptions);
+        db.Users.Add(new User { Id = _userId, Email = "editor@example.test", Name = "Editor" });
+        var book = new DocumentBook
+        {
+            Title = "Edited language", Slug = "edited-language", CategoryId = CategoryDefaults.BackendRuntimeId,
+            CreatedByUserId = _userId, DeclaredLanguage = "en",
+            Chunks = [new DocumentChunk { ChunkOrder = 1, Language = "en" }]
+        };
+        db.DocumentBooks.Add(book);
+        await db.SaveChangesAsync();
+        var updated = await _client.PatchAsJsonAsync($"/api/v1/library/books/{book.Id}", new
+        {
+            title = book.Title, categoryId = book.CategoryId, language = "vi"
+        });
+        updated.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var vietnamese = await _client.GetAsync("/api/v1/library/books?language=vi");
+        vietnamese.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var viJson = JsonDocument.Parse(await vietnamese.Content.ReadAsStringAsync());
+        var returned = viJson.RootElement.GetProperty("books").EnumerateArray().Should().ContainSingle().Which;
+        returned.GetProperty("id").GetGuid().Should().Be(book.Id);
+        returned.GetProperty("language").GetString().Should().Be("vi");
+        var english = await _client.GetAsync("/api/v1/library/books?language=en");
+        english.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var enJson = JsonDocument.Parse(await english.Content.ReadAsStringAsync());
+        enJson.RootElement.GetProperty("totalCount").GetInt32().Should().Be(0);
+        await db.Entry(book).ReloadAsync();
+        book.DeclaredLanguage.Should().Be("en");
+    }
+
+    [Theory]
+    [InlineData("fr")]
+    [InlineData("en-US")]
+    [InlineData("%27%3BSELECT")]
+    [InlineData("PRIVATE_LANGUAGE_SENTINEL")]
+    [InlineData("en%27%3BPRIVATE_LANGUAGE_SENTINEL")]
+    public async Task GetBooks_UnsupportedLanguage_Returns400ProblemDetails(string language)
+    {
+        var response = await _client.GetAsync($"/api/v1/library/books?language={language}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+        using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        json.RootElement.GetProperty("status").GetInt32().Should().Be(400);
+        json.RootElement.GetProperty("detail").GetString().Should().NotBeNullOrWhiteSpace();
+        json.RootElement.GetProperty("code").GetString().Should().Be("Library.InvalidLanguage");
+        var body = await response.Content.ReadAsStringAsync();
+        foreach (var diagnostic in new[] { "PRIVATE_LANGUAGE_SENTINEL", "SELECT", "System.", "stackTrace", "Npgsql", "Sqlite", "SELECT *", "DocumentBooks" })
+            body.Should().NotContain(diagnostic);
     }
 
     [Fact]

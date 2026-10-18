@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { navGroups, getNavGroups, isLinkActive } from '~/composables/useNavigationMenu'
+import { createPinia, setActivePinia } from 'pinia'
+import { navGroups, getNavGroups, isLinkActive, useNavigationMenu } from '~/composables/useNavigationMenu'
+import { useCatalogStore } from '~/stores/useCatalogStore'
 
 describe('useNavigationMenu', () => {
   it('defines structured navigation groups with complete route entries', () => {
@@ -57,14 +59,14 @@ describe('useNavigationMenu', () => {
     expect(account?.links.some((l) => l.path === '/showcase')).toBe(false)
   })
 
-  it('includes admin_catalog route when canManageCatalog is true and excludes when false', () => {
-    const adminGroups = getNavGroups(false, true)
-    const knowledgeAdmin = adminGroups[1]
-    expect(knowledgeAdmin?.links.map((l) => l.path)).toContain('/admin/catalog')
+  it('keeps learner navigation isolated when catalog management becomes available', () => {
+    setActivePinia(createPinia())
+    const catalog = useCatalogStore()
+    const menu = useNavigationMenu()
 
-    const regularGroups = getNavGroups(false, false)
-    const knowledgeRegular = regularGroups[1]
-    expect(knowledgeRegular?.links.map((l) => l.path)).not.toContain('/admin/catalog')
+    expect(menu.navGroups.value.flatMap(group => group.links).some(link => link.path.startsWith('/admin'))).toBe(false)
+    catalog.canManageCatalog = true
+    expect(menu.navGroups.value.flatMap(group => group.links).some(link => link.path.startsWith('/admin'))).toBe(false)
   })
 
   it('correctly matches active links without false positives on root path', () => {

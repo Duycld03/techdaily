@@ -21,6 +21,12 @@ public class GetBooksHandler : IUseCase<GetBooksRequest, GetBooksResponse>
         GetBooksRequest request,
         CancellationToken cancellationToken = default)
     {
+        var language = request.Language?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(language) && language is not ("en" or "vi"))
+        {
+            return Error.Custom("Library.InvalidLanguage", "Language must be either 'en' or 'vi'.");
+        }
+
         var page = request.Page > 0 ? request.Page : 1;
         var pageSize = request.PageSize > 0 ? Math.Min(request.PageSize, 100) : 12;
 
@@ -43,32 +49,42 @@ public class GetBooksHandler : IUseCase<GetBooksRequest, GetBooksResponse>
             query = query.Where(b => b.Title.ToLower().Contains(search) || b.Slug.ToLower().Contains(search));
         }
 
-        var totalCount = await query.CountAsync(cancellationToken);
+        var booksQuery = query.Select(b => new
+        {
+            b.Id,
+            b.Title,
+            b.Slug,
+            b.SourceType,
+            b.CategoryId,
+            b.Category,
+            b.AuthorOrSourceUrl,
+            b.TotalChunks,
+            b.IsPublished,
+            b.IsFeatured,
+            b.Status,
+            b.ProgressPercentage,
+            b.StatusMessage,
+            b.ErrorMessage,
+            b.CreatedAt,
+            Language = b.Chunks
+                .Where(c => !c.IsDeleted)
+                .OrderBy(c => c.ChunkOrder)
+                .Select(c => c.Language)
+                .FirstOrDefault() ?? b.DeclaredLanguage ?? "en"
+        });
+
+        if (!string.IsNullOrEmpty(language))
+        {
+            booksQuery = booksQuery.Where(b => b.Language == language);
+        }
+
+        var totalCount = await booksQuery.CountAsync(cancellationToken);
         var totalPages = totalCount == 0 ? 0 : (int)Math.Ceiling((double)totalCount / pageSize);
 
-        var rawBooks = await query
+        var rawBooks = await booksQuery
             .OrderByDescending(b => b.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(b => new
-            {
-                b.Id,
-                b.Title,
-                b.Slug,
-                b.SourceType,
-                b.CategoryId,
-                b.Category,
-                b.AuthorOrSourceUrl,
-                b.TotalChunks,
-                b.IsPublished,
-                b.IsFeatured,
-                b.Status,
-                b.ProgressPercentage,
-                b.StatusMessage,
-                b.ErrorMessage,
-                b.CreatedAt,
-                Language = b.Chunks.Select(c => c.Language).FirstOrDefault() ?? "en"
-            })
             .ToListAsync(cancellationToken);
 
         var books = rawBooks.Select(b => new BookDto

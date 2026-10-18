@@ -16,8 +16,10 @@ function environment(): MigrationEnvironment {
     set: (key, value) => { cookies.set(key, value) }, remove: key => { cookies.delete(key) } }, exclusive: async work => work() }
 }
 function legacySession(env: MigrationEnvironment, scope: 'local' | 'session' = 'local', id = 'account-a') {
-  env[scope]!.setItem(LEGACY_SESSION.token, token(id))
+  const currentToken = token(id)
+  env[scope]!.setItem(LEGACY_SESSION.token, currentToken)
   env[scope]!.setItem(LEGACY_SESSION.user, JSON.stringify({ id, email: `${id}@example.test`, name: id, preferredLocale: 'vi' }))
+  return currentToken
 }
 
 describe('Canonical storage registry and validators', () => {
@@ -140,23 +142,24 @@ describe('Resumable storage transfer', () => {
 describe('Identity migration and fencing', () => {
   it.each(['local', 'session'] as const)('preserves the %s persistence scope and identity pair', async scope => {
     const env = environment()
-    legacySession(env, scope)
+    const activeToken = legacySession(env, scope)
     const cookies = vi.spyOn(env.cookies, 'set')
     await migrateLegacyStorage(env)
-    expect(env[scope]!.getItem(CLIENT_STORAGE.token)).toBe(token())
+    expect(env[scope]!.getItem(CLIENT_STORAGE.token)).toBe(activeToken)
     expect(JSON.parse(env[scope]!.getItem(CLIENT_STORAGE.user)!).preferredLocale).toBe('vi')
     expect(env[scope === 'local' ? 'session' : 'local']!.getItem(CLIENT_STORAGE.token)).toBeNull()
-    expect(cookies).toHaveBeenCalledWith(CLIENT_STORAGE.token, token(), scope === 'local')
+    expect(cookies).toHaveBeenCalledWith(CLIENT_STORAGE.token, activeToken, scope === 'local')
     expect(env[scope]!.getItem(LEGACY_SESSION.token)).toBeNull()
   })
   it('keeps ambiguous cookie-only credentials session scoped', async () => {
     const env = environment()
-    env.cookies.set(LEGACY_SESSION.token, token(), true)
+    const activeToken = token()
+    env.cookies.set(LEGACY_SESSION.token, activeToken, true)
     const writes = vi.spyOn(env.cookies, 'set')
     await migrateLegacyStorage(env)
     expect(env.local!.getItem(CLIENT_STORAGE.token)).toBeNull()
-    expect(env.session!.getItem(CLIENT_STORAGE.token)).toBe(token())
-    expect(writes).toHaveBeenCalledWith(CLIENT_STORAGE.token, token(), false)
+    expect(env.session!.getItem(CLIENT_STORAGE.token)).toBe(activeToken)
+    expect(writes).toHaveBeenCalledWith(CLIENT_STORAGE.token, activeToken, false)
   })
   it('never imports an older account when canonical credentials exist', async () => {
     const env = environment()

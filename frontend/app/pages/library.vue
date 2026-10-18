@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
-import { BookOpen, Search, Plus, ExternalLink, Layers, X, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Sparkles, Download, Lightbulb, GraduationCap, ChevronRight, Pencil, Compass, Eye, SlidersHorizontal } from 'lucide-vue-next'
+import { BookOpen, Plus, FileText, Bookmark, Trash2, AlertTriangle, FileUp, Globe, CheckCircle2, UploadCloud, Loader2, Download, Lightbulb, GraduationCap, ChevronRight, Pencil, Compass } from 'lucide-vue-next'
 import AppModal from '~/components/ui/AppModal.vue'
 import BasePagination from '~/components/common/BasePagination.vue'
 import AppSelect from '~/components/common/AppSelect.vue'
 import BoardLayout from '~/components/layout/BoardLayout.vue'
 import CatalogCard from '~/components/catalog/CatalogCard.vue'
 import CatalogPreviewModal from '~/components/catalog/CatalogPreviewModal.vue'
-import CatalogFilterModal, { type CatalogFilterState } from '~/components/catalog/CatalogFilterModal.vue'
-import LibraryFilterModal, { type LibraryFilterState } from '~/components/library/LibraryFilterModal.vue'
+import CatalogFilterModal from '~/components/catalog/CatalogFilterModal.vue'
+import LibraryFilterModal from '~/components/library/LibraryFilterModal.vue'
+import LibraryToolbar from '~/components/library/LibraryToolbar.vue'
+import { useLibraryQueryState } from '~/composables/useLibraryQueryState'
 import { useCatalogStore, type LearnerCatalogDocument } from '~/stores/useCatalogStore'
 import { useLibraryStore } from '~/stores/useLibraryStore'
 import { useCategoryStore, type CategoryDescriptor } from '~/stores/useCategoryStore'
 const { t, locale } = useI18n()
-const route = useRoute()
-const router = useRouter()
 const { formatError } = useApiError()
 const libraryStore = useLibraryStore()
 const catalogStore = useCatalogStore()
@@ -31,98 +31,42 @@ async function refreshRejectedCategory(error: unknown) {
 }
 const toast = useToast()
 
-const currentTab = computed<'mine' | 'discover'>({
-  get: () => (route.query.tab === 'discover' ? 'discover' : 'mine'),
-  set: (val) => {
-    router.push({
-      query: {
-        ...route.query,
-        tab: val === 'discover' ? 'discover' : undefined,
-        page: undefined
-      }
-    })
-  }
-})
-
-// Discover state
-const discoverSearch = ref('')
-const discoverCategory = ref<string | undefined>(undefined)
-const discoverSourceType = ref<number | undefined>(undefined)
-const discoverLanguage = ref<string | undefined>(undefined)
+const {
+  query: libraryQuery,
+  currentTab,
+  searchDraft: searchQuery,
+  commitSearch: handleSearch,
+  clearSearch,
+  selectCategory: handleCategorySelect,
+  applyFilters,
+  resetFilters,
+  changePage: onPageChange,
+  canonicalize
+} = useLibraryQueryState()
+const selectedCategory = computed(() => libraryQuery.value.categoryId ?? undefined)
+const selectedLanguage = computed(() => libraryQuery.value.language ?? undefined)
+const selectedSourceType = computed(() => libraryQuery.value.sourceType ?? undefined)
 const isPreviewModalOpen = ref(false)
 const isCatalogFilterModalOpen = ref(false)
+const isLibraryFilterModalOpen = ref(false)
 const adoptingDocId = ref<string | null>(null)
+const activeLibraryFilterCount = computed(() => Number(!!selectedCategory.value) + Number(!!selectedLanguage.value))
+const activeDiscoverFilterCount = computed(() => activeLibraryFilterCount.value + Number(!!selectedSourceType.value))
+const quickCategories = computed(() => categoryStore.allCategories.map(category => ({
+  id: category.id,
+  label: categoryStore.getCategoryName(category, locale.value)
+})))
 
-const activeDiscoverFilterCount = computed(() => {
-  let count = 0
-  if (discoverCategory.value !== undefined) count++
-  if (discoverSourceType.value !== undefined) count++
-  if (discoverLanguage.value !== undefined && discoverLanguage.value !== '') count++
-  return count
-})
-
-const quickDiscoverCategories = computed(() => [
-  { id: undefined, label: t('library.categories.all') },
-  ...categoryStore.allCategories.map(category => ({ id: category.id, label: categoryStore.getCategoryName(category, locale.value) }))
-])
-
-function handleDiscoverCategorySelect(catId?: string) {
-  discoverCategory.value = catId
-  router.replace({ query: { ...route.query, category: undefined, categoryId: catId, page: undefined } })
-  loadDiscover(1)
-}
-
-function handleApplyCatalogFilters(filters: CatalogFilterState) {
-  discoverCategory.value = filters.categoryId || undefined
-  discoverSourceType.value = filters.sourceType
-  discoverLanguage.value = filters.language
-  router.replace({ query: { ...route.query, category: undefined, categoryId: discoverCategory.value, page: undefined } })
-  loadDiscover(1)
-}
-
-function handleResetCatalogFilters() {
-  discoverCategory.value = undefined
-  discoverSourceType.value = undefined
-  discoverLanguage.value = undefined
-  router.replace({ query: { ...route.query, category: undefined, categoryId: undefined, page: undefined } })
-  loadDiscover(1)
-}
-
-const discoverSourceTypeOptions = computed(() => [
-  { value: '', label: t('library.discover.source_all') },
-  { value: 1, label: t('library.discover.source_web') },
-  { value: 2, label: t('library.discover.source_pdf') },
-  { value: 3, label: t('library.discover.source_markdown') }
-])
-
-const discoverLanguageOptions = computed(() => [
-  { value: '', label: t('library.discover.language_all') },
-  { value: 'en', label: t('library.language_english') },
-  { value: 'vi', label: t('library.language_vietnamese') }
-])
-
-const discoverCategoryOptions = computed(() => [
-  { value: '', label: t('library.categories.all') },
-  ...categoryStore.allCategories.map(category => ({ value: category.id, label: categoryStore.getCategoryName(category, locale.value) }))
-])
-
-async function loadDiscover(page = 1) {
+async function loadDiscover(page = libraryQuery.value.page) {
+  const query = libraryQuery.value
   await catalogStore.fetchPublishedDocuments({
-    search: discoverSearch.value || undefined,
-    categoryId: discoverCategory.value ?? null,
-    sourceType: discoverSourceType.value,
-    language: discoverLanguage.value || undefined,
+    search: query.search,
+    categoryId: query.categoryId,
+    sourceType: query.sourceType,
+    language: query.language,
     page,
     pageSize: 12
   })
-}
-
-function handleDiscoverSearch() {
-  loadDiscover(1)
-}
-
-function onDiscoverPageChange(newPage: number) {
-  loadDiscover(newPage)
 }
 
 async function handleOpenPreview(doc: LearnerCatalogDocument) {
@@ -138,7 +82,7 @@ async function handleAdoptDocument(doc: { id: string }) {
   adoptingDocId.value = doc.id
   try {
     const res = await catalogStore.adoptDocument(doc.id)
-    if (res.alreadyAdded) {
+    if (res?.alreadyAdded) {
       toast.info(t('library.discover.already_added'))
     } else {
       toast.success(t('library.discover.adoption_success'))
@@ -148,49 +92,6 @@ async function handleAdoptDocument(doc: { id: string }) {
   } finally {
     adoptingDocId.value = null
   }
-}
-const searchQuery = ref('')
-const selectedCategory = ref<string | undefined>(undefined)
-const selectedLanguage = ref<string | undefined>(undefined)
-const isLibraryFilterModalOpen = ref(false)
-
-const activeLibraryFilterCount = computed(() => {
-  let count = 0
-  if (selectedCategory.value !== undefined) count++
-  if (selectedLanguage.value !== undefined && selectedLanguage.value !== '') count++
-  return count
-})
-
-const quickCategories = quickDiscoverCategories
-
-function handleApplyLibraryFilters(filters: LibraryFilterState) {
-  selectedCategory.value = filters.categoryId || undefined
-  selectedLanguage.value = filters.language
-  router.replace({
-    query: {
-      ...route.query,
-      category: undefined,
-      categoryId: selectedCategory.value,
-      language: selectedLanguage.value || undefined,
-      page: undefined
-    }
-  })
-  loadBooksWithPagination(1)
-}
-
-function handleResetLibraryFilters() {
-  selectedCategory.value = undefined
-  selectedLanguage.value = undefined
-  router.replace({
-    query: {
-      ...route.query,
-      category: undefined,
-      categoryId: undefined,
-      language: undefined,
-      page: undefined
-    }
-  })
-  loadBooksWithPagination(1)
 }
 const bookmarks = ref<Record<string, number>>({})
 const exportingBookId = ref<string | null>(null)
@@ -317,12 +218,7 @@ function getStatusMessage(book: any): string {
 
 const { pause: stopBackgroundPolling, resume: startBackgroundPolling } = useIntervalFn(
   async () => {
-    await libraryStore.fetchBooks({
-      categoryId: selectedCategory.value,
-      search: searchQuery.value,
-      page: libraryStore.currentPage,
-      pageSize: libraryStore.pageSize
-    })
+    await loadBooksWithPagination()
     const stillActive = libraryStore.books.some(
       b => b.status === 'Processing' || (b.status as any) === 1
     )
@@ -366,7 +262,7 @@ const { pause: stopPdfPolling, resume: startPdfPolling } = useIntervalFn(
         isImportModalOpen.value = false
         pdfFile.value = null
         pdfTitle.value = ''
-        await libraryStore.fetchBooks({ categoryId: selectedCategory.value, search: searchQuery.value })
+        await loadBooksWithPagination()
       } else if (status.status === 'Failed' || (status.status as any) === 3) {
         stopPdfPolling()
         pollingBookId.value = null
@@ -381,46 +277,28 @@ const { pause: stopPdfPolling, resume: startPdfPolling } = useIntervalFn(
   { immediate: false }
 )
 
-onMounted(async () => {
-  await categoryStore.ensureCategories()
-  const queryPage = route.query.page ? parseInt(route.query.page as string, 10) : 1
-  const initialPage = isNaN(queryPage) || queryPage < 1 ? 1 : queryPage
-
-  if (typeof route.query.categoryId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(route.query.categoryId)) {
-    selectedCategory.value = route.query.categoryId
-    discoverCategory.value = route.query.categoryId
-  }
-  if (route.query.category !== undefined) {
-    await router.replace({ query: { ...route.query, category: undefined } })
-  }
-  if (typeof route.query.search === 'string') {
-    searchQuery.value = route.query.search
-  }
-  if (typeof route.query.language === 'string') {
-    selectedLanguage.value = route.query.language
-  }
-
-  if (currentTab.value === 'discover') {
-    catalogStore.fetchCapabilities().catch(() => {})
-    await loadDiscover(initialPage)
-  } else {
-    await loadBooksWithPagination(initialPage)
+onMounted(() => {
+  watch(libraryQuery, async (query, _previous, onCleanup) => {
+    let current = true
+    onCleanup(() => {
+      current = false
+      libraryStore.cancelInFlight()
+      catalogStore.cancelInFlight()
+    })
+    stopBackgroundPolling()
+    if (await canonicalize() || !current) return
+    void categoryStore.ensureCategories()
+    if (!current) return
+    if (query.tab === 'discover') {
+      await loadDiscover(query.page)
+      return
+    }
+    await loadBooksWithPagination(query.page)
+    if (!current) return
     checkBackgroundPolling()
     loadBookmarks()
-  }
+  }, { immediate: true, flush: 'post' })
 })
-
-watch(
-  () => route.query.tab,
-  async (newTab) => {
-    if (newTab === 'discover') {
-      await loadDiscover(1)
-    } else {
-      await loadBooksWithPagination(1)
-      checkBackgroundPolling()
-    }
-  }
-)
 
 
 function loadBookmarks() {
@@ -441,65 +319,17 @@ function loadBookmarks() {
   }
 }
 
-async function loadBooksWithPagination(page = 1) {
+async function loadBooksWithPagination(page = libraryQuery.value.page) {
+  const query = libraryQuery.value
   await libraryStore.fetchBooks({
-    categoryId: selectedCategory.value,
-    search: searchQuery.value,
+    categoryId: query.categoryId,
+    search: query.search,
+    language: query.language,
     page,
     pageSize: libraryStore.pageSize
   })
 }
 
-function onPageChange(newPage: number) {
-  router.replace({
-    query: {
-      ...route.query,
-      page: newPage > 1 ? newPage.toString() : undefined
-    }
-  })
-  loadBooksWithPagination(newPage)
-}
-
-function handleCategorySelect(catId?: string) {
-  selectedCategory.value = catId
-  router.replace({
-    query: {
-      ...route.query,
-      category: undefined,
-      categoryId: catId,
-      page: undefined
-    }
-  })
-  loadBooksWithPagination(1)
-}
-
-function handleSearch() {
-  router.replace({
-    query: {
-      ...route.query,
-      search: searchQuery.value ? searchQuery.value : undefined,
-      page: undefined
-    }
-  })
-  loadBooksWithPagination(1)
-}
-
-function resetFilters() {
-  selectedCategory.value = undefined
-  selectedLanguage.value = undefined
-  searchQuery.value = ''
-  router.replace({
-    query: {
-      ...route.query,
-      category: undefined,
-      categoryId: undefined,
-      language: undefined,
-      search: undefined,
-      page: undefined
-    }
-  })
-  loadBooksWithPagination(1)
-}
 async function handleImportSubmit() {
   if (!importTitle.value || !importContent.value || !assignmentAvailable(importCategory.value)) return
 
@@ -632,7 +462,8 @@ async function handleImportRemotePdf() {
     })
     isImportModalOpen.value = false
     toast.success(t('library.upload_success_async'))
-    await loadBooksWithPagination(1)
+    if (libraryQuery.value.page !== 1) await onPageChange(1)
+    else await loadBooksWithPagination()
     checkBackgroundPolling()
   } catch (err: any) {
     await refreshRejectedCategory(err)
@@ -788,120 +619,19 @@ async function handleSaveEditBook() {
 
         <!-- Filters Bar -->
         <template #filters>
-          <!-- My Library Filters -->
-          <div v-if="currentTab === 'mine'" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full py-0.5">
-            <div class="relative flex-1 sm:w-72 sm:flex-initial min-w-0">
-              <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-              <input
-                v-model="searchQuery"
-                @keyup.enter="handleSearch"
-                type="text"
-                :placeholder="$t('library.search_placeholder')"
-                class="h-10 w-full pl-9 pr-8 text-xs sm:text-sm rounded-xl bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
-                data-testid="library-search-input"
-              />
-              <button
-                v-if="searchQuery"
-                @click="searchQuery = ''; handleSearch()"
-                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
-                aria-label="Clear search"
-              >
-                <X class="w-3.5 h-3.5" :stroke-width="1.5" />
-              </button>
-            </div>
-
-            <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar sm:overflow-visible py-0.5" data-testid="library-category-chips">
-              <!-- Quick Category Chips matching Discover -->
-              <button
-                v-for="cat in quickCategories"
-                :key="String(cat.id)"
-                type="button"
-                @click="handleCategorySelect(cat.id)"
-                :class="[
-                  'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-colors duration-150 outline-none focus:outline-none whitespace-nowrap shrink-0 cursor-pointer',
-                  selectedCategory === cat.id
-                    ? 'bg-slate-100 dark:bg-canvas-elevated border-slate-300 dark:border-white/[0.12] text-brand-600 dark:text-brand-400 shadow-sm'
-                    : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-white/[0.16]'
-                ]"
-              >
-                {{ cat.label }}
-              </button>
-
-              <!-- Advanced Filter Trigger Button -->
-              <button
-                type="button"
-                data-testid="library-advanced-filter-btn"
-                @click="isLibraryFilterModalOpen = true"
-                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-canvas-subtle text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08] hover:border-brand-500/40 transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-sm"
-              >
-                <SlidersHorizontal class="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                <span>{{ $t('library.discover.advanced_filter_btn') }}</span>
-                <span
-                  v-if="activeLibraryFilterCount > 0"
-                  class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-brand-500 text-white"
-                >
-                  {{ activeLibraryFilterCount }}
-                </span>
-              </button>
-
-            </div>
-          </div>
-
-          <!-- Discover Catalog Filters -->
-          <div v-else class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full py-0.5">
-            <div class="relative flex-1 sm:w-72 sm:flex-initial min-w-0">
-              <Search class="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" :stroke-width="1.5" />
-              <input
-                v-model="discoverSearch"
-                @keyup.enter="handleDiscoverSearch"
-                type="text"
-                :placeholder="$t('library.discover.search_placeholder')"
-                class="h-10 w-full pl-9 pr-8 text-xs sm:text-sm rounded-xl bg-white dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-brand-500 transition-colors shadow-sm"
-              />
-              <button
-                v-if="discoverSearch"
-                @click="discoverSearch = ''; handleDiscoverSearch()"
-                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-full cursor-pointer"
-              >
-                <X class="w-3.5 h-3.5" :stroke-width="1.5" />
-              </button>
-            </div>
-
-            <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto no-scrollbar sm:overflow-visible py-0.5">
-              <!-- Category Quick Pills -->
-              <button
-                v-for="cat in quickDiscoverCategories"
-                :key="String(cat.id)"
-                type="button"
-                @click="handleDiscoverCategorySelect(cat.id)"
-                :class="[
-                  'px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-colors duration-150 outline-none focus:outline-none whitespace-nowrap shrink-0 cursor-pointer',
-                  discoverCategory === cat.id
-                    ? 'bg-slate-100 dark:bg-canvas-elevated border-slate-300 dark:border-white/[0.12] text-brand-600 dark:text-brand-400 shadow-sm'
-                    : 'bg-white dark:bg-canvas-subtle border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-300 dark:hover:border-white/[0.16]'
-                ]"
-              >
-                {{ cat.label }}
-              </button>
-
-              <!-- Advanced Filter Trigger Button -->
-              <button
-                type="button"
-                data-testid="catalog-advanced-filter-btn"
-                @click="isCatalogFilterModalOpen = true"
-                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold bg-white dark:bg-canvas-subtle text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/[0.08] hover:border-brand-500/40 transition-colors whitespace-nowrap shrink-0 cursor-pointer shadow-sm"
-              >
-                <SlidersHorizontal class="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                <span>{{ $t('library.discover.advanced_filter_btn') }}</span>
-                <span
-                  v-if="activeDiscoverFilterCount > 0"
-                  class="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-brand-600 text-white leading-tight"
-                >
-                  {{ activeDiscoverFilterCount }}
-                </span>
-              </button>
-            </div>
-          </div>
+          <LibraryToolbar
+            v-model="searchQuery"
+            :scope="currentTab === 'mine' ? 'library' : 'catalog'"
+            :search-placeholder="$t(currentTab === 'mine' ? 'library.search_placeholder' : 'library.discover.search_placeholder')"
+            :categories="quickCategories"
+            :selected-category="libraryQuery.categoryId"
+            :active-filter-count="currentTab === 'mine' ? activeLibraryFilterCount : activeDiscoverFilterCount"
+            :filters-open="currentTab === 'mine' ? isLibraryFilterModalOpen : isCatalogFilterModalOpen"
+            @search="handleSearch"
+            @clear="clearSearch"
+            @category="handleCategorySelect"
+            @filters="isLibraryFilterModalOpen = currentTab === 'mine'; isCatalogFilterModalOpen = currentTab === 'discover'"
+          />
         </template>
 
         <!-- Content Slot -->
@@ -970,17 +700,17 @@ async function handleSaveEditBook() {
                         </template>
                         <template v-else-if="bookmarks[book.id]">
                           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          {{ bookmarks[book.id] >= book.totalChunks ? $t('library.status_completed') : $t('library.status_in_progress') }}
+                          {{ (bookmarks[book.id] ?? 0) >= book.totalChunks ? $t('library.status_completed') : $t('library.status_in_progress') }}
                         </template>
                       </span>
                       <span class="font-mono text-[11px]">
-                        {{ bookmarks[book.id] ? $t('library.slice_progress', { current: bookmarks[book.id], total: book.totalChunks, percent: Math.round((bookmarks[book.id] / (book.totalChunks || 1)) * 100) }) : $t('library.slices_total', { count: book.totalChunks }) }}
+                        {{ bookmarks[book.id] ? $t('library.slice_progress', { current: bookmarks[book.id], total: book.totalChunks, percent: Math.round(((bookmarks[book.id] ?? 0) / (book.totalChunks || 1)) * 100) }) : $t('library.slices_total', { count: book.totalChunks }) }}
                       </span>
                     </div>
                     <div class="w-full h-1 bg-slate-100 dark:bg-canvas-elevated rounded-full overflow-hidden">
                       <div
                         class="h-full bg-brand-500 rounded-full transition-all"
-                        :style="{ width: `${bookmarks[book.id] ? Math.min(100, Math.round((bookmarks[book.id] / (book.totalChunks || 1)) * 100)) : 0}%` }"
+                        :style="{ width: `${bookmarks[book.id] ? Math.min(100, Math.round(((bookmarks[book.id] ?? 0) / (book.totalChunks || 1)) * 100)) : 0}%` }"
                       ></div>
                     </div>
                   </div>
@@ -1117,7 +847,7 @@ async function handleSaveEditBook() {
             :total-count="catalogStore.totalCount"
             :page-size="catalogStore.pageSize"
             show-summary
-            @change="onDiscoverPageChange"
+            @change="onPageChange"
           />
         </div>
       </template>
@@ -1136,13 +866,13 @@ async function handleSaveEditBook() {
     <CatalogFilterModal
       :is-open="isCatalogFilterModalOpen"
       :current-filters="{
-        categoryId: discoverCategory,
-        sourceType: discoverSourceType,
-        language: discoverLanguage
+        categoryId: selectedCategory,
+        sourceType: selectedSourceType,
+        language: selectedLanguage
       }"
       @close="isCatalogFilterModalOpen = false"
-      @apply="handleApplyCatalogFilters"
-      @reset="handleResetCatalogFilters"
+      @apply="applyFilters"
+      @reset="resetFilters"
     />
 
     <!-- Library Advanced Filter Modal -->
@@ -1153,8 +883,8 @@ async function handleSaveEditBook() {
         language: selectedLanguage
       }"
       @close="isLibraryFilterModalOpen = false"
-      @apply="handleApplyLibraryFilters"
-      @reset="handleResetLibraryFilters"
+      @apply="applyFilters"
+      @reset="resetFilters"
     />
   </div>
 

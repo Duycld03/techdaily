@@ -678,10 +678,10 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
     })
 
     it('resets category filter when "All" chip is clicked', async () => {
-      const mockReplace = vi.fn()
+      const mockPush = vi.fn()
       vi.stubGlobal('useRouter', () => ({
-        push: vi.fn(),
-        replace: mockReplace,
+        push: mockPush,
+        replace: vi.fn(),
         back: vi.fn()
       }))
 
@@ -702,7 +702,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       await categoryChips[1].trigger('click')
       await flushPromises()
 
-      expect(mockReplace).toHaveBeenCalledWith(
+      expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           query: expect.objectContaining({
             categoryId: category.id
@@ -714,7 +714,7 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
       await categoryChips[0].trigger('click')
       await flushPromises()
 
-      expect(mockReplace).toHaveBeenCalledWith(
+      expect(mockPush).toHaveBeenCalledWith(
         expect.objectContaining({
           query: expect.objectContaining({
             categoryId: undefined
@@ -729,6 +729,9 @@ describe('library.vue (Universal Pillars & Remote PDF Crawler)', () => {
           stubs: {
             NuxtLink: true,
             Teleport: true
+          },
+          mocks: {
+            $t: (key: string) => key === 'common.clear_search' ? 'Clear search' : key
           }
         }
       })

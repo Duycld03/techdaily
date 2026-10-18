@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useApiClient } from "~/composables/useApiClient";
 import { useAuthStore } from "~/stores/useAuthStore";
 import type { components } from "~/types/api.generated";
@@ -51,6 +51,16 @@ export const useCatalogStore = defineStore("catalog", () => {
   const sourceType = ref<components["schemas"]["SourceType"] | null>(null);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
+
+  const currentPage = computed({
+    get: () => page.value,
+    set: (val: number) => { page.value = val; }
+  });
+  const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / (pageSize.value || 12))));
+
+  function cancelInFlight() {
+    activeDiscoveryRequestSeq++;
+  }
 
   // Race condition protection for discovery
   let activeDiscoveryRequestSeq = 0;
@@ -105,12 +115,12 @@ export const useCatalogStore = defineStore("catalog", () => {
     page?: number;
     pageSize?: number;
   }) {
-    if (params?.page !== undefined) page.value = params.page;
-    if (params?.pageSize !== undefined) pageSize.value = params.pageSize;
-    if (params?.search !== undefined) search.value = params.search;
-    if (params?.categoryId !== undefined) categoryId.value = params.categoryId;
-    if (params?.language !== undefined) language.value = params.language;
-    if (params?.sourceType !== undefined) sourceType.value = params.sourceType;
+    page.value = params?.page ?? 1;
+    pageSize.value = params?.pageSize ?? pageSize.value;
+    search.value = params?.search?.trim() ?? "";
+    categoryId.value = params?.categoryId ?? null;
+    language.value = params?.language ?? null;
+    sourceType.value = params?.sourceType ?? null;
     isLoading.value = true;
     error.value = null;
 
@@ -528,6 +538,9 @@ export const useCatalogStore = defineStore("catalog", () => {
     fetchPublishedDocumentById,
     adoptDocument,
 
+    currentPage,
+    totalPages,
+    cancelInFlight,
     // Admin
     adminDocuments,
     adminTotalCount,

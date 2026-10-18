@@ -551,7 +551,7 @@ export interface paths {
         };
         /**
          * Get Books
-         * @description Retrieves paginated technical books with category filtering, search terms, and reading progress metadata.
+         * @description Retrieves paginated technical books with category and language filtering, search terms, and reading progress metadata.
          */
         get: operations["GetBooks"];
         put?: never;
@@ -2081,6 +2081,7 @@ export interface components {
             /** Format: date-time */
             retentionExpiresAtUtc: string | null;
             sanitizedSourceUrl: string | null;
+            visibility: components["schemas"]["NullableOfCatalogVisibility"];
         };
         AdminDocumentInventoryItemDto: {
             /** Format: uuid */
@@ -2102,6 +2103,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             observedAt: string;
+            visibility: components["schemas"]["NullableOfCatalogVisibility"];
         };
         AdminGetCatalogDocumentsResponse: {
             items: components["schemas"]["AdminCatalogDocumentDto"][];
@@ -3010,8 +3012,24 @@ export interface components {
         MessageResponse: {
             message: string;
         };
+        /** @enum {unknown} */
+        NullableOfAccountStatus: "Active" | "Suspended" | null;
+        /** @enum {unknown} */
+        NullableOfAdminAuditOutcome: "Succeeded" | "Accepted" | "Rejected" | "Failed" | null;
+        /** @enum {unknown} */
+        NullableOfCardSourceType: "Highlight" | "QuizMistake" | "DocumentChunk" | null;
+        /** @enum {unknown} */
+        NullableOfCardStatus: "Learning" | "Reviewing" | "Mastered" | null;
+        /** @enum {unknown|null} */
+        NullableOfCatalogVisibility: "Draft" | "Published" | "Hidden" | null;
+        /** @enum {unknown} */
+        NullableOfCatalogVisibility2: "Draft" | "Published" | "Hidden" | null;
         /** @enum {unknown|null} */
         NullableOfDifficulty: "Intermediate" | "Senior" | "Lead" | null;
+        /** @enum {unknown} */
+        NullableOfProcessingStatus: "Pending" | "Processing" | "Ready" | "Failed" | null;
+        /** @enum {unknown} */
+        NullableOfSourceType: "PdfBook" | "MarkdownSeries" | "WebDocUrl" | null;
         OtpChallengeResponse: {
             email: string;
         };
@@ -3946,6 +3964,24 @@ export interface operations {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
             /** @description Conflict */
             409: {
                 headers: {
@@ -3999,6 +4035,15 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4513,8 +4558,8 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string;
-                status?: "Learning" | "Reviewing" | "Mastered" | null;
-                sourceType?: "Highlight" | "QuizMistake" | "DocumentChunk" | null;
+                status?: components["schemas"]["NullableOfCardStatus"];
+                sourceType?: components["schemas"]["NullableOfCardSourceType"];
                 page?: number;
                 pageSize?: number;
             };
@@ -4680,6 +4725,7 @@ export interface operations {
             query?: {
                 categoryId?: string;
                 search?: string;
+                language?: string;
                 page?: number;
                 pageSize?: number;
             };
@@ -5335,7 +5381,7 @@ export interface operations {
                 search?: string;
                 categoryId?: string;
                 language?: string;
-                sourceType?: "PdfBook" | "MarkdownSeries" | "WebDocUrl" | null;
+                sourceType?: components["schemas"]["NullableOfSourceType"];
                 page?: number;
                 pageSize?: number;
             };
@@ -5476,8 +5522,8 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string;
-                visibility?: "Draft" | "Published" | "Hidden" | null;
-                status?: "Pending" | "Processing" | "Ready" | "Failed" | null;
+                visibility?: components["schemas"]["NullableOfCatalogVisibility2"];
+                status?: components["schemas"]["NullableOfProcessingStatus"];
                 categoryId?: string;
                 page?: number;
                 pageSize?: number;
@@ -6272,7 +6318,7 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string;
-                status?: "Active" | "Suspended" | null;
+                status?: components["schemas"]["NullableOfAccountStatus"];
                 page?: number;
                 pageSize?: number;
             };
@@ -6678,7 +6724,7 @@ export interface operations {
                 action?: string;
                 targetType?: string;
                 targetId?: string;
-                outcome?: "Succeeded" | "Accepted" | "Rejected" | "Failed" | null;
+                outcome?: components["schemas"]["NullableOfAdminAuditOutcome"];
                 from?: string;
                 to?: string;
                 page?: number;

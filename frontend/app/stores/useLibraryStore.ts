@@ -61,15 +61,21 @@ export const useLibraryStore = defineStore("library", () => {
   const pageSize = ref(12);
   const totalCount = ref(0);
   const totalPages = ref(0);
+  let activeBooksRequestSeq = 0;
+  function cancelInFlight() {
+    activeBooksRequestSeq++;
+  }
   async function fetchBooks(params?: {
     categoryId?: string | null;
     search?: string;
+    language?: string | null;
     page?: number;
     pageSize?: number;
   }) {
-    const { categoryId, search } = params ?? {};
+    const { categoryId, search, language } = params ?? {};
     const targetPage = params?.page ?? currentPage.value;
     const targetSize = params?.pageSize ?? pageSize.value;
+    const requestSeq = ++activeBooksRequestSeq;
 
     isLoading.value = true;
     error.value = null;
@@ -78,6 +84,7 @@ export const useLibraryStore = defineStore("library", () => {
       const query = new URLSearchParams();
       if (categoryId) query.append("categoryId", categoryId);
       if (search) query.append("search", search);
+      if (language) query.append("language", language);
       query.append("page", targetPage.toString());
       query.append("pageSize", targetSize.toString());
 
@@ -88,6 +95,7 @@ export const useLibraryStore = defineStore("library", () => {
         pageSize?: number;
         totalPages?: number;
       }>(`/api/v1/library/books?${query.toString()}`);
+      if (requestSeq !== activeBooksRequestSeq) return;
 
       books.value = res.books || [];
       totalCount.value = res.totalCount ?? (res.books ? res.books.length : 0);
@@ -97,9 +105,9 @@ export const useLibraryStore = defineStore("library", () => {
         res.totalPages ??
         (totalCount.value > 0 ? Math.ceil(totalCount.value / pageSize.value) : 0);
     } catch (err: unknown) {
-      error.value = err instanceof Error ? err.message : "Failed to load books.";
+      if (requestSeq === activeBooksRequestSeq) error.value = err instanceof Error ? err.message : "Failed to load books.";
     } finally {
-      isLoading.value = false;
+      if (requestSeq === activeBooksRequestSeq) isLoading.value = false;
     }
   }
 
@@ -375,6 +383,7 @@ export const useLibraryStore = defineStore("library", () => {
     pageSize,
     totalCount,
     totalPages,
+    cancelInFlight,
     fetchBooks,
     fetchBookById,
     fetchSlice,

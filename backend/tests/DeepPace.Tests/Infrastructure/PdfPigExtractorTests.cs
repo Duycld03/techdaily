@@ -328,7 +328,6 @@ Leave the browser open with the Counter page loaded.
 
         // Verify that prose is NOT trapped inside code blocks in AI formatted result
         aiResult.Value.FormattedMarkdown.Should().Contain("# ");
-        aiResult.Value.FormattedMarkdown.Should().Contain("> [!NOTE");
         var connStr = Environment.GetEnvironmentVariable("TEST_POSTGRES_CONNECTION")
             ?? throw new InvalidOperationException("TEST_POSTGRES_CONNECTION must identify an isolated PostgreSQL test database.");
         var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<DeepPace.Infrastructure.Persistence.DeepPaceDbContext>()

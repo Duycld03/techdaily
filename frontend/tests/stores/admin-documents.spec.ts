@@ -46,11 +46,13 @@ describe('useAdminDocumentsStore', () => {
           ownerUserId: 'u-1',
           ownerName: 'Alice',
           ownerEmail: 'alice@example.com',
-          sourceType: 'Pdf',
-          category: 'DevOps',
+          sourceType: 'PdfBook',
+          categoryId: 'category-1',
+          category: { id: 'category-1', slug: 'devops', nameEn: 'DevOps', nameVi: 'Vận hành', sortOrder: 1, isActive: false, version: 1 },
+          visibility: null,
           language: 'en',
           status: 'Ready',
-          sourceAvailability: 'Retained',
+          sourceAvailability: 'Available',
           createdAt: '2026-10-15T00:00:00Z',
           observedAt: '2026-10-15T00:00:00Z'
         }
@@ -62,7 +64,7 @@ describe('useAdminDocumentsStore', () => {
 
     store.search = 'k8s'
     store.scopeFilter = 'Personal'
-    store.sourceTypeFilter = 'Pdf'
+    store.sourceTypeFilter = 'PdfBook'
     store.statusFilter = 'Ready'
 
     await store.fetchDocuments()
@@ -72,7 +74,7 @@ describe('useAdminDocumentsStore', () => {
     expect(callUrl).toContain('/api/v1/admin/documents?')
     expect(callUrl).toContain('search=k8s')
     expect(callUrl).toContain('scope=Personal')
-    expect(callUrl).toContain('sourceType=Pdf')
+    expect(callUrl).toContain('sourceType=PdfBook')
     expect(callUrl).toContain('status=Ready')
     expect(callUrl).toContain('page=1')
     expect(callUrl).toContain('pageSize=20')
@@ -104,11 +106,13 @@ describe('useAdminDocumentsStore', () => {
       ownerUserId: 'u-1',
       ownerName: 'Alice',
       ownerEmail: 'alice@example.com',
-      sourceType: 'Pdf',
-      category: 'Backend',
+      sourceType: 'PdfBook',
+      categoryId: 'category-1',
+      category: { id: 'category-1', slug: 'backend', nameEn: 'Backend', nameVi: 'Máy chủ', sortOrder: 1, isActive: true, version: 1 },
+      visibility: null,
       language: 'en',
       status: 'Ready',
-      sourceAvailability: 'Retained',
+      sourceAvailability: 'Available',
       createdAt: '2026-10-15T00:00:00Z',
       observedAt: '2026-10-15T00:00:00Z',
       controlVersion: 2,
@@ -224,5 +228,104 @@ describe('useAdminDocumentsStore', () => {
     expect(store.page).toBe(1)
     expect(store.totalCount).toBe(0)
     expect(store.error).toBeNull()
+  })
+
+  it('refreshes selected detail from authoritative reads when inventory refresh observes catalog hiding', async () => {
+    const store = useAdminDocumentsStore()
+    const published = {
+      id: 'catalog-1', scope: 'Catalog', title: 'Catalog source', ownerUserId: null, ownerName: 'System Curated', ownerEmail: null,
+      sourceType: 'WebDocUrl', categoryId: 'category-1',
+      category: { id: 'category-1', slug: 'web', nameEn: 'Web', nameVi: 'Trang web', sortOrder: 1, isActive: false, version: 1 },
+      language: 'en', status: 'Ready', visibility: 'Published', sourceAvailability: 'Available',
+      createdAt: '2026-10-15T00:00:00Z', observedAt: '2026-10-15T00:00:00Z', controlVersion: 1,
+      currentAttemptGeneration: 1, currentAttemptId: null, isRetryEligible: false, ineligibleReasonCode: 'AlreadyReady',
+      ineligibleReason: null, retentionExpiresAtUtc: null, sanitizedSourceUrl: null
+    }
+    let hidden = false
+    get.mockImplementation((url: string) => {
+      const current = { ...published, visibility: hidden ? 'Hidden' : 'Published' }
+      if (url.includes('/attempts')) return Promise.resolve({ items: [], totalCount: 0, page: 1, pageSize: 20 })
+      if (url.includes('/documents?')) return Promise.resolve({ items: [current], totalCount: 1, page: 1, pageSize: 20 })
+      return Promise.resolve(current)
+    })
+    await store.fetchDocuments()
+    await store.selectDocument('catalog-1', 'Catalog')
+    hidden = true
+    await store.fetchDocuments(true)
+    expect(store.documents[0]).toMatchObject({ id: 'catalog-1', visibility: 'Hidden', status: 'Ready' })
+    expect(store.selectedDocument).toMatchObject({ id: 'catalog-1', visibility: 'Hidden', status: 'Ready' })
+    expect(post).not.toHaveBeenCalled()
+  })
+
+  it('handles detail failure during refresh without losing selected identity and exposes detail error', async () => {
+    const store = useAdminDocumentsStore()
+    const doc = {
+      id: 'catalog-fail-1', scope: 'Catalog', title: 'Catalog fail test', ownerUserId: null, ownerName: 'System Curated', ownerEmail: null,
+      sourceType: 'WebDocUrl', categoryId: 'category-1',
+      category: { id: 'category-1', slug: 'web', nameEn: 'Web', nameVi: 'Trang web', sortOrder: 1, isActive: false, version: 1 },
+      language: 'en', status: 'Ready', visibility: 'Published', sourceAvailability: 'Available',
+      createdAt: '2026-10-15T00:00:00Z', observedAt: '2026-10-15T00:00:00Z', controlVersion: 1,
+      currentAttemptGeneration: 1, currentAttemptId: null, isRetryEligible: false, ineligibleReasonCode: 'AlreadyReady',
+      ineligibleReason: null, retentionExpiresAtUtc: null, sanitizedSourceUrl: null
+    }
+    get.mockImplementation((url: string) => {
+      if (url.includes('/documents?')) return Promise.resolve({ items: [doc], totalCount: 1, page: 1, pageSize: 20 })
+      if (url.includes('/attempts')) return Promise.resolve({ items: [], totalCount: 0, page: 1, pageSize: 20 })
+      return Promise.reject(new Error('Detail network failure'))
+    })
+
+    await store.fetchDocuments()
+    await store.selectDocument('catalog-fail-1', 'Catalog')
+
+    expect(store.selectedDocumentId).toBe('catalog-fail-1')
+    expect(store.selectedDocument).toBeNull()
+    expect(store.detailError).toBe('Detail network failure')
+  })
+
+  it('retains successfully fetched detail when processing attempts request fails', async () => {
+    const store = useAdminDocumentsStore()
+    const doc = {
+      id: 'catalog-attempt-fail', scope: 'Catalog', title: 'Catalog attempt fail', ownerUserId: null, ownerName: 'System Curated', ownerEmail: null,
+      sourceType: 'WebDocUrl', categoryId: 'category-1',
+      category: { id: 'category-1', slug: 'web', nameEn: 'Web', nameVi: 'Trang web', sortOrder: 1, isActive: false, version: 1 },
+      language: 'en', status: 'Ready', visibility: 'Published', sourceAvailability: 'Available',
+      createdAt: '2026-10-15T00:00:00Z', observedAt: '2026-10-15T00:00:00Z', controlVersion: 1,
+      currentAttemptGeneration: 1, currentAttemptId: null, isRetryEligible: false, ineligibleReasonCode: 'AlreadyReady',
+      ineligibleReason: null, retentionExpiresAtUtc: null, sanitizedSourceUrl: null
+    }
+    get.mockImplementation((url: string) => {
+      if (url.includes('/documents?')) return Promise.resolve({ items: [doc], totalCount: 1, page: 1, pageSize: 20 })
+      if (url.includes('/attempts')) return Promise.reject(new Error('Attempts history unavailable'))
+      return Promise.resolve(doc)
+    })
+
+    await store.fetchDocuments()
+    await store.selectDocument('catalog-attempt-fail', 'Catalog')
+
+    expect(store.selectedDocument).toMatchObject({ id: 'catalog-attempt-fail', title: 'Catalog attempt fail' })
+    expect(store.attemptsError).toBe('Attempts history unavailable')
+    expect(store.attempts).toEqual([])
+  })
+
+  it('does not drop subsequent inventory requests with different criteria when an earlier fetch is in flight', async () => {
+    const store = useAdminDocumentsStore()
+    const { promise: firstPromise, resolve: resolveFirst } = Promise.withResolvers<unknown>()
+
+    get.mockImplementation((url: string) => {
+      if (url.includes('search=first')) return firstPromise
+      return Promise.resolve({ items: [], totalCount: 0, page: 1, pageSize: 20 })
+    })
+
+    store.search = 'first'
+    const p1 = store.fetchDocuments()
+
+    store.search = 'second'
+    const p2 = store.fetchDocuments()
+
+    resolveFirst!({ items: [], totalCount: 0, page: 1, pageSize: 20 })
+    await Promise.all([p1, p2])
+
+    const searchParams = get.mock.calls.map(([url]) => new URL(String(url), 'https://test.local').searchParams.get('search'))
+    expect(searchParams).toContain('second')
   })
 })

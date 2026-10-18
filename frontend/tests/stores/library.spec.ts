@@ -175,6 +175,34 @@ describe("useLibraryStore", () => {
     expect(url.searchParams.has("category")).toBe(false);
   });
 
+  it("combines personal language with category, search and paging in the request", async () => {
+    const library = useLibraryStore();
+    await library.fetchBooks({ categoryId, search: "architecture", language: "vi", page: 2 });
+    const query = new URL(String(mockGet.mock.calls.at(-1)?.[0]), "https://example.test").searchParams;
+    expect(query.get("language")).toBe("vi");
+    expect(query.get("categoryId")).toBe(categoryId);
+    expect(query.get("search")).toBe("architecture");
+    expect(query.get("page")).toBe("2");
+  });
+
+  it("keeps the newer personal query result when an earlier request finishes late", async () => {
+    type ListResponse = { books: typeof mockBooks; totalCount: number; page: number; pageSize: number; totalPages: number };
+    const older = Promise.withResolvers<ListResponse>();
+    const newer = Promise.withResolvers<ListResponse>();
+    mockGet.mockImplementationOnce(() => older.promise).mockImplementationOnce(() => newer.promise);
+    const library = useLibraryStore();
+    const oldRequest = library.fetchBooks({ search: "older", page: 1 });
+    const newRequest = library.fetchBooks({ search: "current", page: 2 });
+    newer.resolve({ books: mockBooks.map(book => ({ ...book, title: "Current result" })), totalCount: 20, page: 2, pageSize: 12, totalPages: 2 });
+    await newRequest;
+    older.resolve({ books: mockBooks.map(book => ({ ...book, title: "Stale result" })), totalCount: 30, page: 1, pageSize: 12, totalPages: 3 });
+    await oldRequest;
+
+    expect(library.books[0]?.title).toBe("Current result");
+    expect(library.currentPage).toBe(2);
+    expect(library.totalCount).toBe(20);
+  });
+
   it("fetches books list with categories and search filtering", async () => {
     const library = useLibraryStore();
     expect(library.books).toHaveLength(0);

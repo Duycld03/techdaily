@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted, useTemplateRef } from 'vue'
 import { X, SlidersHorizontal, RotateCcw } from 'lucide-vue-next'
 import { useCategoryStore } from '~/stores/useCategoryStore'
+import { useLibraryFilterDialog } from '~/composables/useLibraryFilterDialog'
 
 export interface LibraryFilterState {
   categoryId?: string
@@ -18,6 +19,9 @@ const emit = defineEmits<{
   (e: 'apply', filters: LibraryFilterState): void
   (e: 'reset'): void
 }>()
+
+const dialog = useTemplateRef<HTMLElement>('filter-dialog')
+useLibraryFilterDialog(() => props.isOpen, dialog, () => emit('close'))
 
 const { t, locale } = useI18n()
 const categoryStore = useCategoryStore()
@@ -86,9 +90,11 @@ function handleBackdropClick(e: MouseEvent) {
       @click="handleBackdropClick"
     >
       <div
+        ref="filter-dialog"
         class="w-full max-w-xl rounded-3xl glass-panel text-slate-900 dark:text-white shadow-2xl p-5 sm:p-6 space-y-6 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
+        :aria-label="$t('library.filter_modal_title')"
       >
         <!-- Modal Header -->
         <div class="flex items-center justify-between border-b border-slate-100 dark:border-white/[0.08] pb-4">
@@ -100,7 +106,7 @@ function handleBackdropClick(e: MouseEvent) {
               <h2 class="text-base font-bold text-slate-900 dark:text-white">
                 {{ $t('library.filter_modal_title') }}
               </h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
+              <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400">
                 {{ $t('library.filter_modal_subtitle') }}
               </p>
             </div>
@@ -133,13 +139,13 @@ function handleBackdropClick(e: MouseEvent) {
               type="button"
               @click="localCategory = cat.id"
               :class="[
-                'px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap cursor-pointer',
+                'max-w-full shrink-0 px-3.5 py-1.5 rounded-xl text-sm sm:text-base font-semibold border transition-colors duration-150 text-center whitespace-nowrap cursor-pointer',
                 localCategory === cat.id
                   ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.04]'
               ]"
             >
-              <span>{{ cat.label }}</span>
+              <span class="block truncate" :title="cat.label">{{ cat.label }}</span>
             </button>
           </div>
         </div>
@@ -156,7 +162,7 @@ function handleBackdropClick(e: MouseEvent) {
               type="button"
               @click="localLanguage = lang.id"
               :class="[
-                'px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all text-center whitespace-nowrap cursor-pointer',
+                'shrink-0 px-3.5 py-1.5 rounded-xl text-sm sm:text-base font-semibold border transition-colors duration-150 text-center whitespace-nowrap cursor-pointer',
                 (localLanguage === lang.id || (lang.id === undefined && !localLanguage))
                   ? 'bg-brand-600 text-white font-bold border-transparent shadow-sm'
                   : 'bg-slate-50 dark:bg-canvas-subtle text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/[0.04]'
@@ -168,7 +174,7 @@ function handleBackdropClick(e: MouseEvent) {
         </div>
 
         <!-- Footer Actions -->
-        <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-white/[0.08] gap-3">
+        <div class="flex flex-wrap items-center justify-between pt-4 border-t border-slate-100 dark:border-white/[0.08] gap-3">
           <button
             type="button"
             data-testid="library-filter-modal-reset-btn"
