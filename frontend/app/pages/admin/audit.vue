@@ -2,13 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import {
   ScrollText,
-  Search,
   RefreshCw,
   Filter,
   RotateCcw,
   Clock,
-  User,
-  Activity,
   CheckCircle2,
   Clock3,
   XCircle,
@@ -69,7 +66,7 @@ function applyFilters() {
   store.filters = {
     action: actionInput.value || undefined,
     targetId: targetIdInput.value || undefined,
-    outcome: (selectedOutcome.value as any) || undefined,
+    outcome: selectedOutcome.value === 'Succeeded' || selectedOutcome.value === 'Accepted' || selectedOutcome.value === 'Rejected' || selectedOutcome.value === 'Failed' ? selectedOutcome.value : undefined,
     from: fromInput.value || undefined,
     to: toInput.value || undefined
   }

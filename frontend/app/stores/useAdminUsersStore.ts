@@ -2,14 +2,7 @@ import { defineStore } from 'pinia'
 import { shallowRef, watch } from 'vue'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useApiClient } from '~/composables/useApiClient'
-
-export interface RoleDescriptor {
-  id: string
-  key: string
-  nameEn: string
-  nameVi: string
-  isProtected: boolean
-}
+import type { RoleDescriptor } from '~/utils/clientStorage'
 
 export interface AdminRoleOption {
   id: string

@@ -148,7 +148,7 @@ export function createIdbBackend(storeName = 'slice-audio'): KvBackend {
     get: <T>(key: string) => idbGet<T>(key, store),
     set: (key: string, value: unknown) => idbSet(key, value, store),
     del: (key: string) => idbDel(key, store),
-    exclusive: work => typeof navigator !== 'undefined' && navigator.locks?.request
-      ? navigator.locks.request(AUDIO_STORAGE_LOCK, work) : work(),
+    exclusive: <T>(work: () => Promise<T>) => typeof navigator !== 'undefined' && navigator.locks?.request
+      ? (navigator.locks.request(AUDIO_STORAGE_LOCK, () => work()) as Promise<T>) : work(),
   }
 }

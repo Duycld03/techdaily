@@ -12,8 +12,6 @@ import {
   CheckCircle2,
   XCircle,
   Cpu,
-  Layers,
-  Search,
   ExternalLink,
   Plus,
   X,
@@ -384,9 +382,9 @@ function getCategoryBadge(category: CategoryDescriptor) {
             <span>{{ stat }}</span>
           </div>
         </div>
-        <div
+        <!-- eslint-disable-next-line vue/no-v-html -- Markdown-it disables raw HTML, escapes attributes, and validates link URLs. -->
+        <div v-html="renderedSummaryHtml"
           class="prose dark:prose-invert max-w-none text-sm md:text-lg text-slate-700 dark:text-slate-200 leading-relaxed font-normal"
-          v-html="renderedSummaryHtml"
         ></div>
       </div>
 
@@ -441,9 +439,9 @@ function getCategoryBadge(category: CategoryDescriptor) {
           <span>{{ $t('insights.underthehood_title') }}</span>
         </div>
 
-        <div
+        <!-- eslint-disable-next-line vue/no-v-html -- Markdown-it disables raw HTML, escapes attributes, and validates link URLs. -->
+        <div v-html="renderedUnderTheHoodHtml"
           class="prose dark:prose-invert max-w-none text-sm md:text-lg text-slate-700 dark:text-slate-300 leading-relaxed"
-          v-html="renderedUnderTheHoodHtml"
         ></div>
 
         <div v-if="insightsStore.currentInsight.sourceUrl" class="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 text-xs sm:text-sm text-slate-400">

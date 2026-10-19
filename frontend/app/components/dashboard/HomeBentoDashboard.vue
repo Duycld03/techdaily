@@ -73,14 +73,12 @@ function handlePrimaryBannerCta() {
   }
 }
 
-const userName = computed(() => authStore.user?.name?.split(' ')[0] || 'Engineer')
 const targetRole = computed(() => {
   const role = (authStore.user as { targetRole?: string } | null)?.targetRole
   return role || 'Senior Software Engineer'
 })
 
 const pacer = computed(() => focusStore.data?.pacer)
-const scenario = computed(() => focusStore.data?.scenario)
 const drill = computed(() => focusStore.data?.drill)
 const streak = computed(() => focusStore.data?.currentStreak ?? 0)
 const freezeCredits = computed(() => focusStore.data?.freezeCreditsRemaining ?? 2)
@@ -144,11 +142,11 @@ const drillScore = computed(() => {
 })
 
 const scenarioTitle = computed(() => {
-  return scenario.value?.title || focusStore.data?.question?.questionText || t('dashboard.scenario_teaser_title')
+  return focusStore.data?.question?.questionText || t('dashboard.scenario_teaser_title')
 })
 
 const scenarioSituation = computed(() => {
-  return scenario.value?.situation || focusStore.data?.question?.explanationMarkdown || t('dashboard.scenario_teaser_desc')
+  return focusStore.data?.question?.explanationMarkdown || t('dashboard.scenario_teaser_desc')
 })
 
 const curriculumDay = computed(() => {
@@ -183,11 +181,7 @@ const slicePercentage = computed(() => {
 })
 
 const estimatedMinutes = computed(() => {
-  return focusStore.data?.estimatedMinutes || 4
-})
-
-const actualMinutes = computed(() => {
-  return focusStore.data?.todayMinutesSpent || 0
+  return focusStore.data?.documentChunk?.estimatedReadMinutes || 4
 })
 
 const dailyGoalMinutes = computed(() => {
@@ -440,9 +434,9 @@ onMounted(() => {
               :style="{ width: `${Math.min(100, Math.max(14, streak * 14))}%` }"
             />
           </div>
-          <div class="flex items-center justify-between text-[11px] text-slate-400 font-medium">
-            <span>{{ freezeCredits }}/2 {{ $t('dashboard.freezes') }}</span>
-            <span class="text-amber-500 font-semibold">{{ actualMinutes }}/{{ dailyGoalMinutes }}m {{ $t('dashboard.daily_goal') }}</span>
+          <div class="flex items-center justify-between gap-2 sm:gap-3 text-[11px] text-slate-400 font-medium">
+            <span class="whitespace-nowrap shrink-0">{{ freezeCredits }}/2 {{ $t('dashboard.freezes') }}</span>
+            <span class="text-amber-500 font-semibold whitespace-nowrap shrink-0">{{ dailyGoalMinutes }}m {{ $t('dashboard.daily_goal') }}</span>
           </div>
         </div>
       </div>

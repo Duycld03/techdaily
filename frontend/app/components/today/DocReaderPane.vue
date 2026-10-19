@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import { onClickOutside, useEventListener } from '@vueuse/core'
-import { BookOpen, Clock, Tag, Sparkles, Copy, Check, Highlighter, Cpu } from 'lucide-vue-next'
+import { BookOpen, Clock, Tag, Sparkles, Copy, Check, Highlighter } from 'lucide-vue-next'
 import type { DocumentChunk } from '~/stores/useDailyFocusStore'
 
 export type DocumentChunkDto = DocumentChunk
@@ -12,7 +12,7 @@ import ReaderAudioPlayer from '~/components/reader/ReaderAudioPlayer.vue'
 import { useMarkdownRenderer } from '~/composables/useMarkdownRenderer'
 import { useApiError } from '~/composables/useApiError'
 import { useReaderTypography } from '~/composables/useReaderTypography'
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const { formatError } = useApiError()
 const notesStore = useNotesStore()
 const toast = useToast()
@@ -67,7 +67,7 @@ function suppressDuplicateHeading(text: string, title?: string): string {
   if (!text || !title) return text
   const titleNorm = title.trim().toLowerCase()
   const match = text.match(/^\s*#{1,6}\s+([^\n\r]+)/)
-  if (match) {
+  if (match && match[1]) {
     const headingText = match[1].trim().toLowerCase()
     if (headingText === titleNorm || titleNorm.includes(headingText) || headingText.includes(titleNorm)) {
       return text.replace(/^\s*#{1,6}\s+[^\n\r]+(\r?\n)+/, '')
@@ -185,7 +185,7 @@ async function handleHighlightSelection() {
       selectedText: floatingMenu.value.text.trim()
     })
     toast.success(t('today.toast_highlight_saved'))
-  } catch (err: any) {
+  } catch (err: unknown) {
     toast.error(formatError(err, 'today.toast_highlight_failed'))
   } finally {
     floatingMenu.value.visible = false
@@ -396,12 +396,12 @@ onUnmounted(() => {
     <div class="w-full h-px bg-slate-200/80 dark:bg-white/[0.08] mb-5 sm:mb-6"></div>
 
     <!-- Reading Content (Rendered Architectural Deep Dive) -->
-    <div
+    <!-- eslint-disable-next-line vue/no-v-html -- clientMarkdown disables raw HTML and validates URLs; code fences use Shiki or escaping. -->
+    <div v-html="renderedDeepDiveHtml"
       ref="readerContentRef"
       class="doc-reader-content markdown-body text-slate-800 dark:text-slate-200 min-w-0 max-w-full break-words space-y-4"
       :class="[fontFamilyClass]"
       :style="{ fontSize: fontSizePx, lineHeight: lineHeightValue }"
-      v-html="renderedDeepDiveHtml"
     ></div>
 
     <!-- Discreet Floating Action Bar on Selection -->

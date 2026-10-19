@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import {
   Users,
   Search,
   RefreshCw,
-  AlertTriangle,
   Shield,
   ShieldAlert,
-  ShieldCheck,
   LogOut,
   UserCheck,
   UserX,
@@ -49,7 +47,9 @@ onMounted(async () => {
   if (access.canManageAccounts) {
     await store.fetchUsers()
     if (store.users.length > 0 && !selectedId.value) {
-      handleSelect(store.users[0])
+      const user = store.users[0]
+      if (!user) return
+      handleSelect(user)
     }
   }
 })
@@ -59,7 +59,9 @@ watch(
     if (canManage && store.users.length === 0) {
       await store.fetchUsers()
       if (store.users.length > 0 && !selectedId.value) {
-        handleSelect(store.users[0])
+        const user = store.users[0]
+        if (!user) return
+        handleSelect(user)
       }
     }
   }
@@ -84,7 +86,8 @@ function handlePageChange(newPage: number) {
   store.fetchUsers()
 }
 
-async function handleSelect(user: AdminAccountSummary) {
+async function handleSelect(user: AdminAccountSummary | undefined) {
+  if (!user) return
   selectedId.value = user.id
   await store.selectUser(user.id)
 }
@@ -307,7 +310,7 @@ const totalPages = computed(() => Math.ceil(store.totalCount / store.pageSize) |
             <div class="flex flex-wrap items-start justify-between gap-4">
               <div class="flex items-center gap-4">
                 <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-500/10 text-brand-600 dark:text-brand-400 font-bold text-lg">
-                  {{ (store.selectedUser.name || store.selectedUser.email)[0].toUpperCase() }}
+                  {{ (store.selectedUser.name || store.selectedUser.email)[0]?.toUpperCase() }}
                 </div>
                 <div>
                   <h2 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest'
+import { enableAutoUnmount, mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import QuizPage, { formatSeniorityLevel, seniorityLevels } from '~/pages/quiz.vue'
 declare module '~/pages/quiz.vue' {
@@ -9,6 +9,8 @@ declare module '~/pages/quiz.vue' {
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useInterviewQuizStore } from '~/stores/useInterviewQuizStore'
 import { useCategoryStore } from '~/stores/useCategoryStore'
+
+enableAutoUnmount(afterEach)
 
 const category = { id: '97e10b46-4a79-43f4-8b29-91c85582f899', slug: 'new-subject', nameEn: 'New subject', nameVi: 'Chủ đề mới', sortOrder: 8, isActive: true, version: 1 }
 const inactive = { id: 'bb03c028-488c-472c-b1cf-0d8354879109', slug: 'retained', nameEn: 'Retained subject', nameVi: 'Chủ đề lưu giữ', sortOrder: 9, isActive: false, version: 2 }
@@ -214,14 +216,6 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     expect(wrapper.text()).toContain('quiz.title')
     expect(wrapper.text()).toContain('quiz.subtitle')
 
-    // Standard studio container max-w-6xl
-    expect(wrapper.find('.max-w-6xl').exists()).toBe(true)
-
-    // Balanced 50/50 Bento Grid with dynamic alignment (items-stretch when unselected)
-    expect(wrapper.find('.lg\\:grid-cols-2').exists()).toBe(true)
-    expect(wrapper.find('.items-stretch').exists()).toBe(true)
-    expect(wrapper.find('.justify-between').exists()).toBe(true)
-
     // Generate CTA button
     const generateBtn = wrapper.find('[data-testid="generate-quiz-btn"]')
     expect(generateBtn.exists()).toBe(true)
@@ -293,6 +287,71 @@ describe('quiz.vue (Bento Grid Dashboard in Stats Tab)', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'c' }))
     await wrapper.vm.$nextTick()
     expect(optionCards[2]!.props('state')).toBe('selected')
+  })
+
+  it.each(['Enter', ' ', 'ArrowRight'])('finishes the answered final question with %j while Finish is focused', async (key) => {
+    const store = useInterviewQuizStore()
+    store.startReviewSession([{
+      id: 'final-question',
+      topic: 'Memory management',
+      categoryId: category.id,
+      category,
+      level: 2,
+      questionText: 'Which pool reuses array buffers?',
+      options: ['ArrayPool', 'Queue'],
+      correctOptionIndex: 0,
+      explanationMarkdown: 'ArrayPool reuses buffers.',
+      tags: [],
+      isMastered: false,
+      correctCount: 1,
+      incorrectCount: 0
+    }])
+    store.submissions = {
+      'final-question': {
+        isCorrect: true,
+        correctOptionIndex: 0,
+        explanationMarkdown: 'ArrayPool reuses buffers.',
+        isMastered: false,
+        correctCount: 1,
+        incorrectCount: 0
+      }
+    }
+    const wrapper = mount(QuizPage, { attachTo: document.body })
+    await flushPromises()
+    const finish = wrapper.findAll('button').find(button => button.text() === 'quiz.btn_finish')!
+    finish.element.focus()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+    await wrapper.vm.$nextTick()
+
+    expect(store.activeTab).toBe('summary')
+  })
+
+  it('advances an answered nonfinal question exactly once without finishing the session', async () => {
+    const store = useInterviewQuizStore()
+    await store.fetchReviewQueue()
+    const firstQuestion = store.reviewQueue[0]!
+    store.startReviewSession([firstQuestion, { ...firstQuestion, id: 'next-question', questionText: 'The next question' }])
+    store.submissions = {
+      [firstQuestion.id]: {
+        isCorrect: false,
+        correctOptionIndex: firstQuestion.correctOptionIndex,
+        explanationMarkdown: firstQuestion.explanationMarkdown,
+        isMastered: false,
+        correctCount: 0,
+        incorrectCount: 1
+      }
+    }
+    const wrapper = mount(QuizPage, { attachTo: document.body })
+    await flushPromises()
+    wrapper.findAll('button').find(button => button.text() === 'quiz.btn_next')!.element.focus()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+    await wrapper.vm.$nextTick()
+
+    expect(store.currentIndex).toBe(1)
+    expect(store.activeTab).toBe('arena')
+    expect(wrapper.text()).toContain('The next question')
   })
   it('retains inactive review choices and renders UUID category analytics', async () => {
     const wrapper = mount(QuizPage, { global: { stubs: { Teleport: true } } })

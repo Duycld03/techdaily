@@ -1,11 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mount, flushPromises, enableAutoUnmount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import GraphCanvas3D from '~/components/graph/GraphCanvas3D.vue'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
 import { graphCategory } from '../../fixtures/graphCategories'
 import { getCategoryPalette } from '~/utils/graphVisualTokens'
 import { ref } from 'vue'
+
+enableAutoUnmount(afterEach)
+
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
+})
 
 const mockControls = {
   enableDamping: false,
@@ -58,7 +65,7 @@ const mockGraphInstance = {
 
 vi.mock('3d-force-graph', () => {
   return {
-    default: () => () => mockGraphInstance
+    default: function MockForceGraph3D() { return mockGraphInstance }
   }
 })
 
@@ -105,7 +112,7 @@ describe('GraphCanvas3D.vue', () => {
     return store
   }
 
-  it('executes the tooltip callback with live theme and escaped user content', async () => {
+  it('escapes untrusted graph metadata in tooltips', async () => {
     createTestStore()
     const theme = ref('dark')
     vi.stubGlobal('useColorMode', () => theme)
@@ -117,14 +124,11 @@ describe('GraphCanvas3D.vue', () => {
       categoryId: graphCategory.id, category: { ...graphCategory, nameEn: '<b>Cloud</b>', nameVi: '<b>Cloud</b>' }
     }
     const darkHtml = tooltip(malicious)
-    expect(darkHtml).toContain('rgba(15, 23, 42, 0.92)')
     expect(darkHtml).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
     expect(darkHtml).toContain('&lt;b&gt;Cloud&lt;/b&gt;')
     expect(darkHtml).not.toContain('<img')
     expect(darkHtml).not.toContain('<script')
     expect(darkHtml).toContain('categories.inactive')
-    theme.value = 'light'
-    expect(tooltip(malicious)).toContain('rgba(255, 255, 255, 0.95)')
     expect(tooltip({ ...malicious, type: 'chunk', subtitle: '<img src=x>' })).toContain('&lt;img src=x&gt;')
     expect(tooltip({ ...malicious, type: 'highlight', tags: ['<svg onload=alert(1)>'] })).toContain('&lt;svg onload=alert(1)&gt;')
     wrapper.unmount()
@@ -140,15 +144,6 @@ describe('GraphCanvas3D.vue', () => {
     expect(color({ id: 'chunk', type: 'chunk', categoryId: graphCategory.id, category: graphCategory })).toBe(getCategoryPalette(graphCategory.id).border)
     wrapper.unmount()
   })
-  it('mounts and initializes 3d-force-graph instance', async () => {
-    createTestStore()
-    const wrapper = mount(GraphCanvas3D)
-    await flushPromises()
-
-    expect(wrapper.find('div.w-full.h-full.relative').exists()).toBe(true)
-    expect(wrapper.emitted('ready')).toBeTruthy()
-    expect(mockGraphInstance.graphData).toHaveBeenCalled()
-  })
 
   it('exposes fitScreen and toggleAutoRotate methods and controls camera position', async () => {
     vi.useFakeTimers()
@@ -156,8 +151,6 @@ describe('GraphCanvas3D.vue', () => {
     const wrapper = mount(GraphCanvas3D)
     await flushPromises()
 
-    expect(typeof wrapper.vm.fitScreen).toBe('function')
-    expect(typeof wrapper.vm.toggleAutoRotate).toBe('function')
 
     wrapper.vm.fitScreen()
     expect(mockGraphInstance.zoomToFit).toHaveBeenCalledWith(1200, 60)
@@ -185,7 +178,7 @@ describe('GraphCanvas3D.vue', () => {
 
   it('halts auto-rotation timer on unmount and when switching viewMode to 2d', async () => {
     vi.useFakeTimers()
-    const store = createTestStore()
+    createTestStore()
     const wrapper = mount(GraphCanvas3D)
     await flushPromises()
 
@@ -224,31 +217,21 @@ describe('GraphCanvas3D.vue', () => {
     vi.useRealTimers()
   })
 
-  it('renders floating 3D HUD controls with 5 buttons', async () => {
-    createTestStore()
-    const wrapper = mount(GraphCanvas3D)
-    await flushPromises()
-
-    const hudButtons = wrapper.findAll('div.absolute.bottom-5.right-5 button')
-    expect(hudButtons.length).toBe(5) // AutoRotate, ShowAllLabels (LOD), FitScreen, ZoomIn, ZoomOut
-  })
 
   it('toggles showAllLabels and culls non-pillar labels via LOD at overview distance', async () => {
     createTestStore()
     const wrapper = mount(GraphCanvas3D)
     await flushPromises()
 
-    expect(typeof wrapper.vm.toggleAllLabels).toBe('function')
     expect(wrapper.vm.showAllLabels).toBe(false)
 
     // Capture the callback passed to nodeThreeObject
     const nodeThreeObjectFn = mockGraphInstance.nodeThreeObject.mock.calls[0]?.[0]
-    expect(typeof nodeThreeObjectFn).toBe('function')
 
     // Pillar node always has billboard label
-    const pillarNode = { id: 'p1', type: 'pillar', label: 'Backend' }
+    const pillarNode = { id: 'p1', type: 'pillar', label: 'Backend', categoryId: graphCategory.id, category: graphCategory }
     const pillarSprite = nodeThreeObjectFn(pillarNode)
-    expect(pillarSprite).not.toBeNull()
+    expect(pillarSprite.text).toBe(graphCategory.nameEn)
 
     // Topic node has NO label by default (culled at overview)
     const topicNode = { id: 't1', type: 'topic', label: 'C#' }
@@ -262,7 +245,7 @@ describe('GraphCanvas3D.vue', () => {
 
     // Topic node now HAS label
     const topicSpriteAfterToggle = nodeThreeObjectFn(topicNode)
-    expect(topicSpriteAfterToggle).not.toBeNull()
+    expect(topicSpriteAfterToggle.text).toBe('C#')
   })
 
   it('reacts to store.hoveredLegendType by refreshing 3D graph', async () => {

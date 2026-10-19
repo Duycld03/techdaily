@@ -16,7 +16,7 @@ export default defineNuxtPlugin(async (app) => {
   }
 
   await migrateLegacyStorage(browserMigrationEnvironment())
-  const auth = app.runWithContext(() => useAuthStore())
+  const auth = useAuthStore(app.$pinia)
   auth.init(true)
   // Cache transfer is independent of session admission and has no remote side effects.
   void import('~/utils/legacyAudioMigration').then(module => module.migrateLegacyAudio()).catch(() => {})

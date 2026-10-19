@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, shallowRef, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useEventListener, useDebounceFn } from '@vueuse/core'
-import cytoscape, { type Core, type EventObject, type Stylesheet, type CoseLayoutOptions } from 'cytoscape'
+import cytoscape, { type Core, type EventObject, type StylesheetStyle, type CoseLayoutOptions } from 'cytoscape'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
 import { getCategoryPalette, MASTERED_BORDER, NODE_TYPE_COLOR } from '~/utils/graphVisualTokens'
 
@@ -17,7 +17,7 @@ const isDark = computed(() => colorMode.value === 'dark')
 const containerRef = ref<HTMLDivElement | null>(null)
 const cy = shallowRef<Core | null>(null)
 
-function getStylesheet(dark: boolean): Stylesheet[] {
+function getStylesheet(dark: boolean): StylesheetStyle[] {
   const textClr = dark ? '#f8fafc' : '#0f172a'
   const borderClr = dark ? '#27272a' : '#cbd5e1'
   const edgeClr = dark ? '#27272a' : '#cbd5e1'
@@ -35,8 +35,8 @@ function getStylesheet(dark: boolean): Stylesheet[] {
         'font-weight': 500,
         'text-valign': 'bottom',
         'text-margin-y': 6,
-        'text-max-width': 100,
-        'text-overflow-wrap': 'ellipsis',
+        'text-max-width': '100px',
+        'text-overflow-wrap': 'whitespace',
         'border-width': 1.5,
         'border-color': borderClr,
         'background-opacity': 1,
@@ -351,7 +351,7 @@ function applySearchHighlights() {
 function fitScreen() {
   if (!cy.value || cy.value.nodes().length === 0) return
   cy.value.animate({
-    fit: { padding: 90 },
+    fit: { eles: cy.value.elements(), padding: 90 },
     duration: 400
   })
 }
@@ -453,7 +453,7 @@ watch(
   }
 )
 
-function matchesLegendType(nodeData: any, legendType: string): boolean {
+function matchesLegendType(nodeData: { type?: string; status?: string }, legendType: string): boolean {
   const nodeType = (nodeData.type || '').toLowerCase()
   const status = (nodeData.status || 'learning').toLowerCase()
 

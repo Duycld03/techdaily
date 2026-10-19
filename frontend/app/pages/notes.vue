@@ -178,7 +178,7 @@ watch(highlightSearchQuery, (newVal) => {
 
 function getPrimaryTag(item: Highlight): string {
   if (item.tags && item.tags.length > 0) {
-    const first = item.tags[0].trim().replace(/^#/, '')
+    const first = item.tags[0]?.trim().replace(/^#/, '')
     if (first) return first
   }
   return 'Highlight'
@@ -250,19 +250,6 @@ async function saveModalEditing() {
   }
 }
 
-// Backward-compatible wrappers for tests
-function startEditing(item: Highlight) {
-  openEditModal(item)
-}
-function cancelEditing() {
-  closeModal()
-}
-function closeEditModal() {
-  closeModal()
-}
-async function saveEditing(_item?: Highlight) {
-  await saveModalEditing()
-}
 defineExpose({
   tagCounts,
   selectedTag,
@@ -643,10 +630,10 @@ async function confirmDeleteHighlight() {
               <span>{{ $t('notes.reflection_note') }}</span>
             </div>
 
-            <div
+            <!-- eslint-disable-next-line vue/no-v-html -- Markdown-it disables raw HTML, escapes attributes, and validates link URLs. -->
+            <div v-html="renderMarkdown(editingHighlight.note)"
               v-if="editingHighlight.note"
               class="prose prose-sm dark:prose-invert max-w-none p-3.5 rounded-2xl bg-white dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] text-xs sm:text-sm leading-relaxed text-slate-800 dark:text-slate-200"
-              v-html="renderMarkdown(editingHighlight.note)"
             ></div>
 
             <p v-else class="text-xs text-slate-400 dark:text-slate-500 italic p-3 bg-slate-50 dark:bg-canvas-subtle rounded-xl border border-dashed border-slate-200 dark:border-white/[0.08]">

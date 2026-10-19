@@ -121,8 +121,8 @@ export const useLibraryStore = defineStore("library", () => {
       );
       selectedBook.value = res.book;
       return res.book;
-    } catch (err: any) {
-      error.value = err.message || "Failed to load book details.";
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : "Failed to load book details.";
       throw err;
     } finally {
       isLoading.value = false;
@@ -150,8 +150,8 @@ export const useLibraryStore = defineStore("library", () => {
 
       books.value.unshift(res.book);
       return res.book;
-    } catch (err: any) {
-      error.value = err.message || "Failed to import document.";
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : "Failed to import document.";
       throw err;
     } finally {
       isImporting.value = false;
@@ -163,15 +163,15 @@ export const useLibraryStore = defineStore("library", () => {
     error.value = null;
     try {
       const api = useApiClient();
-      const res = await api.postRaw<any>(
+      const res = await api.postRaw<Book | { book: Book }>(
         "/api/v1/library/upload-pdf",
         formData,
       );
-      const book: Book = res.book || res;
+      const book = "book" in res ? res.book : res;
       books.value.unshift(book);
       return book;
-    } catch (err: any) {
-      error.value = err.message || "Failed to upload and process PDF.";
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : "Failed to upload and process PDF.";
       throw err;
     } finally {
       isImporting.value = false;
@@ -199,8 +199,8 @@ export const useLibraryStore = defineStore("library", () => {
         detectedPdfUrl?: string | null;
       }>("/api/v1/library/crawl-url", { url });
       return res;
-    } catch (err: any) {
-      error.value = err.message || "Failed to crawl article from URL.";
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : "Failed to crawl article from URL.";
       throw err;
     } finally {
       isImporting.value = false;
@@ -224,8 +224,8 @@ export const useLibraryStore = defineStore("library", () => {
         selectedBook.value = null;
       }
       return true;
-    } catch (err: any) {
-      error.value = err.message || "Failed to delete document.";
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : "Failed to delete document.";
       throw err;
     } finally {
       isLoading.value = false;

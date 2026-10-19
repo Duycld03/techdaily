@@ -2,8 +2,8 @@
 defineProps<{ touchTargets?: boolean }>()
 const { locale, setLocale } = useI18n()
 
-async function changeLocale(newLocale: string) {
-  await setLocale(newLocale as any)
+async function changeLocale(newLocale: Parameters<typeof setLocale>[0]) {
+  await setLocale(newLocale)
 }
 </script>
 

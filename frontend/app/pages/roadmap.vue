@@ -52,7 +52,8 @@ onClickOutside(trackMenuRef, () => {
 onMounted(async () => {
   await focusStore.fetchTodayFocus(undefined, undefined, locale.value)
 
-  const queryBookId = route.query?.bookId as string | undefined
+  const rawBookId = route.query.bookId
+  const queryBookId = Array.isArray(rawBookId) ? rawBookId[0] : rawBookId
 
   if (queryBookId) {
     selectedBookId.value = queryBookId
@@ -60,7 +61,7 @@ onMounted(async () => {
   } else if (focusStore.data?.pacer?.bookId) {
     selectedBookId.value = focusStore.data.pacer.bookId
     await loadBookDetails(focusStore.data.pacer.bookId)
-  } else if (availableBookTracks.value.length > 0) {
+  } else if (availableBookTracks.value.length > 0 && availableBookTracks.value[0]) {
     const defaultBookId = availableBookTracks.value[0].id
     selectedBookId.value = defaultBookId
     await loadBookDetails(defaultBookId)
@@ -184,7 +185,7 @@ function parseSliceTitle(rawTitle?: string) {
   const title = (rawTitle || 'Chapter Overview').trim()
   if (title.includes(':')) {
     const parts = title.split(':')
-    const prefix = parts[0].trim()
+    const prefix = parts[0]?.trim() ?? ''
     const rest = parts.slice(1).join(':').trim()
     if (prefix.length > 0 && prefix.length <= 45) {
       return {
@@ -197,7 +198,7 @@ function parseSliceTitle(rawTitle?: string) {
 
   if (title.includes(' - ')) {
     const parts = title.split(' - ')
-    const prefix = parts[0].trim()
+    const prefix = parts[0]?.trim() ?? ''
     const rest = parts.slice(1).join(' - ').trim()
     if (prefix.length > 0 && prefix.length <= 45) {
       return {
@@ -210,7 +211,7 @@ function parseSliceTitle(rawTitle?: string) {
 
   if (title.includes('.') && !title.includes(' ')) {
     const parts = title.split('.')
-    const prefix = parts[0].trim()
+    const prefix = parts[0]?.trim() ?? ''
     const rest = parts.slice(1).join('.').trim()
     if (prefix.length > 0 && prefix.length <= 35 && /^[A-Za-z0-9_]+$/.test(prefix)) {
       return {
@@ -287,8 +288,8 @@ const chapterMilestones = computed<ChapterMilestone[]>(() => {
 
     let displayTitle = currentGroupName
     if (currentGroupIsStandalone && currentGroupChunks.length > 1) {
-      const first = currentGroupChunks[0].chunkOrder
-      const last = currentGroupChunks[currentGroupChunks.length - 1].chunkOrder
+      const first = currentGroupChunks[0]?.chunkOrder ?? 1
+      const last = currentGroupChunks[currentGroupChunks.length - 1]?.chunkOrder ?? 1
       displayTitle = `${t('roadmap.module')} ${list.length + 1}: ${currentGroupName} (${t('roadmap.slices')} ${first}–${last})`
     }
 
@@ -348,7 +349,7 @@ watch(
       const active = milestones.find((m) => m.isActive)
       if (active) {
         expandedChapters.value.add(active.chapterIndex)
-      } else if (milestones.length > 0) {
+      } else if (milestones.length > 0 && milestones[0]) {
         expandedChapters.value.add(milestones[0].chapterIndex)
       }
     }

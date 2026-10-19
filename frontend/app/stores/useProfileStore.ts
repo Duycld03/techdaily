@@ -47,8 +47,8 @@ export const useProfileStore = defineStore('profile', () => {
       profile.value = res.user
       stats.value = res.stats
       return res
-    } catch (err: any) {
-      error.value = err.message || 'Failed to load profile.'
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Failed to load profile.'
     } finally {
       isLoading.value = false
     }
@@ -100,8 +100,8 @@ export const useProfileStore = defineStore('profile', () => {
 
       successMessage.value = 'Profile updated successfully.'
       return updated
-    } catch (err: any) {
-      error.value = err.message || 'Failed to update profile.'
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Failed to update profile.'
       throw err
     } finally {
       isUpdating.value = false
@@ -125,8 +125,8 @@ export const useProfileStore = defineStore('profile', () => {
 
       successMessage.value = res.message || 'Password changed successfully.'
       return res
-    } catch (err: any) {
-      error.value = err.message || 'Failed to change password.'
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Failed to change password.'
       throw err
     } finally {
       isUpdating.value = false

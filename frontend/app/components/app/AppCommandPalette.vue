@@ -2,6 +2,7 @@
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import { useCommandPalette } from '~/composables/useCommandPalette'
+import type { LucideIcon } from 'lucide-vue-next'
 import {
   Search,
   LayoutGrid,
@@ -31,7 +32,7 @@ interface CommandItem {
   titleKey: string
   descKey: string
   path: string
-  icon: any
+  icon: LucideIcon
   category: 'practice' | 'knowledge' | 'account'
   keywords: string[]
 }

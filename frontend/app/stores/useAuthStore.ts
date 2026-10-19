@@ -228,15 +228,17 @@ export const useAuthStore = defineStore('auth', () => {
         await clearSession()
       }
       return false
-    } catch (err: any) {
-      // If it's a network drop / 502 / server restart, do NOT wipe local credentials!
-      if (err?.isNetworkError || (typeof err?.status === 'number' && err.status >= 500)) {
+    } catch (err: unknown) {
+      const failure = err && typeof err === 'object' ? err : {}
+      const status = 'status' in failure && typeof failure.status === 'number' ? failure.status : undefined
+      // Network drops and server failures must not wipe local credentials.
+      if (('isNetworkError' in failure && failure.isNetworkError) || (status !== undefined && status >= 500)) {
         lastRefreshError.value = 503
         return false
       }
-      if (err?.status === 401 || err?.status === 403) {
+      if (status === 401 || status === 403) {
         await clearSession()
-        lastRefreshError.value = err.status
+        lastRefreshError.value = status
       } else {
         lastRefreshError.value = 503
       }

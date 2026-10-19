@@ -15,28 +15,23 @@ function getDayOffset(offset: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-const mockForecastCards: ReviewCard[] = [
-  { id: 'f-1', nextReviewDate: getDayOffset(0), status: 1 } as ReviewCard,
-  { id: 'f-2', nextReviewDate: getDayOffset(0), status: 1 } as ReviewCard,
-  { id: 'f-3', nextReviewDate: getDayOffset(0), status: 1 } as ReviewCard,
-  { id: 'f-4', nextReviewDate: getDayOffset(1), status: 1 } as ReviewCard,
-  { id: 'f-5', nextReviewDate: getDayOffset(1), status: 1 } as ReviewCard,
-  { id: 'f-6', nextReviewDate: getDayOffset(2), status: 1 } as ReviewCard,
-  { id: 'f-7', nextReviewDate: getDayOffset(2), status: 1 } as ReviewCard,
-  { id: 'f-8', nextReviewDate: getDayOffset(2), status: 1 } as ReviewCard,
-  { id: 'f-9', nextReviewDate: getDayOffset(2), status: 1 } as ReviewCard,
-  { id: 'f-10', nextReviewDate: getDayOffset(3), status: 1 } as ReviewCard,
-  { id: 'f-11', nextReviewDate: getDayOffset(4), status: 1 } as ReviewCard,
-  { id: 'f-12', nextReviewDate: getDayOffset(4), status: 1 } as ReviewCard,
-  { id: 'f-13', nextReviewDate: getDayOffset(5), status: 1 } as ReviewCard,
-  { id: 'f-14', nextReviewDate: getDayOffset(6), status: 1 } as ReviewCard,
-  { id: 'f-15', nextReviewDate: getDayOffset(6), status: 1 } as ReviewCard,
-]
+const forecastOffsets = [0, 0, 0, 1, 1, 2, 2, 2, 2, 3, 4, 4, 5, 6, 6]
+const mockForecastCards: ReviewCard[] = forecastOffsets.map((offset, index) => ({
+  id: `f-${index + 1}`,
+  nextReviewDate: getDayOffset(offset),
+  status: 1,
+  categoryId: null,
+  category: null,
+  difficulty: 1,
+  repetitionCount: 1,
+  easeFactor: 2.5,
+  intervalDays: 1
+}))
 
 const mockSources: SourceChannelRetention[] = [
-  { sourceType: 'Highlight', total: 24, mastered: 18, averageEaseFactor: 2.38 },
-  { sourceType: 'QuizMistake', total: 16, mastered: 9, averageEaseFactor: 1.85 },
-  { sourceType: 'DocumentChunk', total: 12, mastered: 11, averageEaseFactor: 2.45 }
+  { sourceType: 'Highlight', total: 24, learning: 2, reviewing: 4, mastered: 18, averageEaseFactor: 2.38 },
+  { sourceType: 'QuizMistake', total: 16, learning: 3, reviewing: 4, mastered: 9, averageEaseFactor: 1.85 },
+  { sourceType: 'DocumentChunk', total: 12, learning: 0, reviewing: 1, mastered: 11, averageEaseFactor: 2.45 }
 ]
 
 function onReviewAtRisk() {

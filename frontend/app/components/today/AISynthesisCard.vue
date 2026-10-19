@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useIntervalFn } from '@vueuse/core'
 import { Loader2, RefreshCw, AlertCircle, Cpu } from 'lucide-vue-next'
 
-const props = defineProps<{
+defineProps<{
   chapterTitle?: string
 }>()
 
@@ -14,7 +14,7 @@ const emit = defineEmits<{
 const elapsedSeconds = ref(0)
 const isTimedOut = ref(false)
 
-const { pause, resume } = useIntervalFn(() => {
+const { resume } = useIntervalFn(() => {
   elapsedSeconds.value++
   if (elapsedSeconds.value >= 6) {
     isTimedOut.value = true

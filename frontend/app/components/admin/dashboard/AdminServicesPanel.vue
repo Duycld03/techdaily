@@ -6,7 +6,7 @@ import { useAdminDashboardStore } from '~/stores/useAdminDashboardStore'
 import AdminObservationRow from './AdminObservationRow.vue'
 const store = useAdminDashboardStore()
 const { locale } = useI18n()
-const now = useNow({ interval: 1000 })
+const now = useNow()
 const statusStale = computed(() => Boolean(store.status && (store.statusError || store.isStatusLoading || now.value.getTime() - Date.parse(store.status.observedAt) > 300_000)))
 const aiStale = computed(() => Boolean(store.aiProbe && now.value.getTime() - Date.parse(store.aiProbe.checkedAt) > 300_000))
 const cooldown = computed(() => store.lastProbeStartedAt ? Math.max(0, Math.ceil((60_000 - (now.value.getTime() - store.lastProbeStartedAt)) / 1000)) : 0)

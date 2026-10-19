@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useApiClient } from '~/composables/useApiClient'
 import type { CategoryDescriptor } from '~/stores/useCategoryStore'
+import type { components } from '~/types/api.generated'
 
 export interface ReviewCard {
   id: string
@@ -15,7 +16,7 @@ export interface ReviewCard {
   topicTitle?: string
   categoryId: string | null
   category: CategoryDescriptor | null
-  difficulty: number
+  difficulty?: number | components['schemas']['NullableOfDifficulty']
   repetitionCount: number
   easeFactor: number
   intervalDays: number
@@ -103,7 +104,7 @@ export const useReviewStore = defineStore('review', () => {
       if (date) queryParts.push(`date=${encodeURIComponent(date)}`)
       if (categoryId) queryParts.push(`categoryId=${encodeURIComponent(categoryId)}`)
       const query = queryParts.length ? `?${queryParts.join('&')}` : ''
-      const res = await api.get<any>(`/api/v1/review/deck${query}`)
+      const res = await api.get<ReviewCard[] | { dueCards?: ReviewCard[]; cards?: ReviewCard[]; totalCardsDue?: number }>(`/api/v1/review/deck${query}`)
       if (Array.isArray(res)) {
         cards.value = res
         totalCardsDue.value = res.length

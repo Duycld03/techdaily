@@ -121,7 +121,7 @@ ctx.onmessage = async (event: MessageEvent<WorkerIncomingMessage>) => {
   const jobId = ++currentJobId
 
   try {
-    let entry = await getPipeline(model, reqId)
+    const entry = await getPipeline(model, reqId)
     if (jobId !== currentJobId || cancelledReqIds.has(reqId)) {
       cancelledReqIds.delete(reqId)
       if (activeReqId === reqId) activeReqId = null

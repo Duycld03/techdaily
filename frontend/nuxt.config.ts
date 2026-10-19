@@ -47,11 +47,7 @@ export default defineNuxtConfig({
     ],
     defaultLocale: 'en',
     strategy: 'no_prefix',
-    lazy: true,
     langDir: 'locales',
-    bundle: {
-      optimizeTranslationDirective: false
-    }
   },
 
   // Cross-origin isolation on reader routes only, so on-device narration can
@@ -145,9 +141,8 @@ export default defineNuxtConfig({
       ],
       script: [
         { src: 'https://accounts.google.com/gsi/client', async: true, defer: true },
-        {
-          type: 'application/ld+json',
-          children: JSON.stringify({
+        (() => {
+          const schema = JSON.stringify({
             '@context': 'https://schema.org',
             '@type': ['WebApplication', 'EducationalApplication'],
             name: 'DeepPace',
@@ -161,7 +156,12 @@ export default defineNuxtConfig({
               priceCurrency: 'USD'
             }
           })
-        }
+          return {
+            type: 'application/ld+json',
+            innerHTML: schema,
+            children: schema
+          } as unknown as { type: 'application/ld+json'; innerHTML: string }
+        })()
       ]
     }
   }

@@ -1,16 +1,54 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import HomeBentoDashboard from '~/components/dashboard/HomeBentoDashboard.vue'
 import { useAuthStore, type AuthUser } from '~/stores/useAuthStore'
 import { useDailyFocusStore, type TodayFocusResponse } from '~/stores/useDailyFocusStore'
 import { useReviewStore } from '~/stores/useReviewStore'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
+import { useNotesStore } from '~/stores/useNotesStore'
+
+enableAutoUnmount(afterEach)
+
+type FocusFixture = Partial<Omit<TodayFocusResponse, 'question' | 'documentChunk' | 'drill' | 'pacer'>> & {
+  question?: Partial<TodayFocusResponse['question']>
+  documentChunk?: Partial<NonNullable<TodayFocusResponse['documentChunk']>>
+  drill?: Partial<TodayFocusResponse['drill']>
+  pacer?: Partial<NonNullable<TodayFocusResponse['pacer']>>
+}
+
+function focusResponse(overrides: FocusFixture = {}): TodayFocusResponse {
+  const { question, documentChunk, drill, pacer, ...state } = overrides
+  return {
+    question: {
+      id: 'question-1', questionText: 'Daily question', options: [], expectedKeyPoints: [],
+      modelAnswerMarkdown: '', difficulty: 2, ...question
+    },
+    drill: { id: 'drill-1', scheduledDate: '2026-10-19', status: 0, attemptCount: 0, ...drill },
+    currentStreak: 0,
+    longestStreak: 0,
+    freezeCreditsRemaining: 2,
+    ...state,
+    documentChunk: documentChunk ? {
+      id: 'chunk-1', chunkOrder: 1, chapterTitle: 'Chapter', originalTextMarkdown: '',
+      summaryMarkdown: '', keyTakeaways: [], language: 'en', estimatedReadMinutes: 4,
+      ...documentChunk
+    } : undefined,
+    pacer: pacer ? {
+      bookId: 'book-1', bookTitle: 'Book', chapterTitle: 'Chapter', currentChunkOrder: 1,
+      totalChunks: 1, progressPercentage: 0, hasPrevious: false, hasNext: false,
+      availableBooks: [], ...pacer
+    } : undefined
+  }
+}
 
 describe('HomeBentoDashboard.vue', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    vi.spyOn(useReviewStore(), 'fetchDeckCards').mockResolvedValue(undefined)
+    vi.spyOn(useKnowledgeGraphStore(), 'fetchGraph').mockResolvedValue(undefined)
+    vi.spyOn(useNotesStore(), 'fetchHighlights').mockResolvedValue(undefined)
   })
 
   it('mounts cleanly without crashing when all stores are empty', () => {
@@ -56,7 +94,7 @@ describe('HomeBentoDashboard.vue', () => {
 
   it('renders active reading slice and scenario drill when focusStore has data', () => {
     const focusStore = useDailyFocusStore()
-    focusStore.data = {
+    focusStore.data = focusResponse({
       documentChunk: {
         id: 'chunk-1',
         chapterTitle: 'Distributed Consensus & Raft',
@@ -68,13 +106,13 @@ describe('HomeBentoDashboard.vue', () => {
         currentChunkOrder: 3,
         totalChunks: 15
       },
-      scenario: {
-        title: 'Handling Network Partitions in Cluster',
-        situation: 'Two nodes lose heartbeat connection simultaneously.'
+      question: {
+        questionText: 'Handling Network Partitions in Cluster',
+        explanationMarkdown: 'Two nodes lose heartbeat connection simultaneously.'
       },
       currentStreak: 7,
       freezeCreditsRemaining: 2
-    } as unknown as TodayFocusResponse
+    })
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
@@ -91,6 +129,44 @@ describe('HomeBentoDashboard.vue', () => {
     expect(wrapper.text()).toContain('Distributed Systems Patterns')
     expect(wrapper.text()).toContain('7')
     expect(wrapper.text()).toContain('2/2')
+  })
+
+  it('does not report measured study time when the daily focus contract has none', () => {
+    useDailyFocusStore().data = {
+      question: {
+        id: 'question-1',
+        questionText: 'How should a partitioned cluster preserve consistency?',
+        options: ['Reject minority writes', 'Accept all writes'],
+        expectedKeyPoints: [],
+        modelAnswerMarkdown: '',
+        difficulty: 2
+      },
+      documentChunk: {
+        id: 'chunk-1',
+        chunkOrder: 3,
+        chapterTitle: 'Consensus',
+        originalTextMarkdown: 'Consensus requires a quorum.',
+        summaryMarkdown: 'Preserve consistency with a quorum.',
+        keyTakeaways: [],
+        language: 'en',
+        estimatedReadMinutes: 9
+      },
+      drill: {
+        id: 'drill-1',
+        scheduledDate: '2026-10-19',
+        status: 0,
+        attemptCount: 0
+      },
+      currentStreak: 7,
+      longestStreak: 7,
+      freezeCreditsRemaining: 2
+    } satisfies TodayFocusResponse
+    const wrapper = mount(HomeBentoDashboard, { global: { stubs: { NuxtLink: true } } })
+
+    expect(wrapper.text()).toContain('How should a partitioned cluster preserve consistency?')
+    expect(wrapper.text()).toContain('9 today.estimated_read')
+    const dailyGoal = wrapper.findAll('span').find(span => span.text().includes('dashboard.daily_goal'))!
+    expect(dailyGoal.text()).toMatch(/^\d+m dashboard\.daily_goal$/)
   })
 
   it('renders node and edge counts directly in knowledge constellation telemetry', () => {
@@ -118,7 +194,7 @@ describe('HomeBentoDashboard.vue', () => {
 
   it('renders calculated learnedChunksCount across availableBooks in knowledge telemetry', () => {
     const focusStore = useDailyFocusStore()
-    focusStore.data = {
+    focusStore.data = focusResponse({
       pacer: {
         bookId: 'book-1',
         bookTitle: 'System Design',
@@ -147,7 +223,7 @@ describe('HomeBentoDashboard.vue', () => {
           }
         ]
       }
-    } as unknown as TodayFocusResponse
+    })
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
@@ -190,11 +266,11 @@ describe('HomeBentoDashboard.vue', () => {
   })
   it('renders dynamic slice progress badge and routes to gitbook reader on start reading', async () => {
     const focusStore = useDailyFocusStore()
-    focusStore.data = {
+    focusStore.data = focusResponse({
       documentChunk: { id: 'chunk-1', chapterTitle: 'ASP.NET Core Architecture', summaryMarkdown: 'Architecture summary' },
       pacer: { bookId: 'aspnet-doc', currentChunkOrder: 4, totalChunks: 23 },
-      scenario: { title: 'Middleware Pipeline Debugging' }
-    } as unknown as TodayFocusResponse
+      question: { questionText: 'Middleware Pipeline Debugging' }
+    })
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
@@ -218,10 +294,10 @@ describe('HomeBentoDashboard.vue', () => {
 
   it('routes to /today when start today practice is clicked', async () => {
     const focusStore = useDailyFocusStore()
-    focusStore.data = {
+    focusStore.data = focusResponse({
       documentChunk: { id: 'chunk-1', chapterTitle: 'ASP.NET Core Architecture', summaryMarkdown: 'Architecture summary' },
-      scenario: { title: 'Middleware Pipeline Debugging' }
-    } as unknown as TodayFocusResponse
+      question: { questionText: 'Middleware Pipeline Debugging' }
+    })
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {
@@ -241,9 +317,9 @@ describe('HomeBentoDashboard.vue', () => {
 
   it('renders unified focus card with pending drill status badge', () => {
     const focusStore = useDailyFocusStore()
-    focusStore.data = {
+    focusStore.data = focusResponse({
       documentChunk: { id: 'chunk-1', chapterTitle: 'ASP.NET Core Architecture', summaryMarkdown: 'Architecture summary' },
-    } as unknown as TodayFocusResponse
+    })
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
@@ -259,10 +335,10 @@ describe('HomeBentoDashboard.vue', () => {
 
   it('renders unified focus card with completed drill status and review CTA', async () => {
     const focusStore = useDailyFocusStore()
-    focusStore.data = {
+    focusStore.data = focusResponse({
       documentChunk: { id: 'chunk-1', chapterTitle: 'Concurrency & Channels', summaryMarkdown: 'Channels summary' },
       drill: { status: 'Submitted', isCorrect: true, score: 10 }
-    } as unknown as TodayFocusResponse
+    })
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
@@ -286,10 +362,10 @@ describe('HomeBentoDashboard.vue', () => {
 
   it('routes to /quiz when senior dilemma solve CTA is clicked', async () => {
     const focusStore = useDailyFocusStore()
-    focusStore.data = {
+    focusStore.data = focusResponse({
       documentChunk: { id: 'chunk-1', chapterTitle: 'Concurrency & Channels', summaryMarkdown: 'Channels summary' },
-      scenario: { title: 'High-Concurrency Bottleneck', situation: 'Thread pool starvation under load' }
-    } as unknown as TodayFocusResponse
+      question: { questionText: 'High-Concurrency Bottleneck', explanationMarkdown: 'Thread pool starvation under load' }
+    })
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
@@ -307,10 +383,10 @@ describe('HomeBentoDashboard.vue', () => {
   })
   it('renders failed drill with needs review status badge when score is 0', () => {
     const focusStore = useDailyFocusStore()
-    focusStore.data = {
+    focusStore.data = focusResponse({
       documentChunk: { id: 'chunk-1', chapterTitle: 'Concurrency & Channels', summaryMarkdown: 'Channels summary' },
       drill: { status: 'Submitted', isCorrect: false, score: 0 }
-    } as unknown as TodayFocusResponse
+    })
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
@@ -326,12 +402,12 @@ describe('HomeBentoDashboard.vue', () => {
 
   it('renders Card A and Card B as distinct cards in action-stage without drill badges in Card A', () => {
     const focusStore = useDailyFocusStore()
-    focusStore.data = {
+    focusStore.data = focusResponse({
       documentChunk: { id: 'chunk-1', chapterTitle: 'Kafka Partitions', summaryMarkdown: 'Kafka summary' },
       pacer: { bookId: 'b-1', bookTitle: 'Kafka Internals', currentChunkOrder: 2, totalChunks: 10 },
-      scenario: { title: 'Consumer Rebalance Storm', situation: 'High consumer lag scenario' },
+      question: { questionText: 'Consumer Rebalance Storm', explanationMarkdown: 'High consumer lag scenario' },
       drill: { status: 'Submitted', isCorrect: true, score: 10 }
-    } as unknown as TodayFocusResponse
+    })
 
     const wrapper = mount(HomeBentoDashboard, {
       global: {
@@ -354,10 +430,10 @@ describe('HomeBentoDashboard.vue', () => {
   })
   it('renders Tier 2 split practice subgrid with daily drill and senior dilemma cards', () => {
     const focusStore = useDailyFocusStore()
-    focusStore.data = {
-      scenario: { title: 'Async Replication Failover', situation: 'Leader election split brain' },
+    focusStore.data = focusResponse({
+      question: { questionText: 'Async Replication Failover', explanationMarkdown: 'Leader election split brain' },
       drill: { status: 'Pending' }
-    } as unknown as TodayFocusResponse
+    })
     const wrapper = mount(HomeBentoDashboard, {
       global: {
         stubs: {

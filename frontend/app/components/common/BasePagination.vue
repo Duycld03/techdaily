@@ -30,13 +30,13 @@ const hasSummary = computed(() => Boolean(props.showSummary || props.showItemSum
 
 const shouldRender = computed(() => props.totalPages > 1 || hasSummary.value)
 
-let t: (key: string, params?: Record<string, any>) => string
+let t: (key: string, params?: Record<string, string | number>) => string
 
 try {
   const i18n = useI18n()
   t = i18n.t
 } catch {
-  t = (key: string, params?: Record<string, any>) => {
+  t = (key: string, params?: Record<string, string | number>) => {
     if (params) {
       let res = key
       for (const [k, v] of Object.entries(params)) {
@@ -48,7 +48,7 @@ try {
   }
 }
 
-function translate(key: string, params?: Record<string, any>, fallback?: string): string {
+function translate(key: string, params?: Record<string, string | number>, fallback?: string): string {
   try {
     const val = t(key, params)
     if (val && !val.startsWith('common.pagination.')) {

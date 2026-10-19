@@ -94,8 +94,8 @@ export const useInsightsStore = defineStore('insights', () => {
       insights.value = response.insights || []
       totalCount.value = response.totalCount || 0
       currentIndex.value = 0
-    } catch (err: any) {
-      error.value = err?.message || 'Failed to fetch insights feed'
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Failed to fetch insights feed'
       insights.value = []
     } finally {
       isLoading.value = false
@@ -109,7 +109,7 @@ export const useInsightsStore = defineStore('insights', () => {
       const response = await api.get<InsightsFeedResponse>('/api/v1/insights/feed?onlyBookmarked=true&pageSize=50')
       bookmarkedInsights.value = response.insights || []
       return bookmarkedInsights.value
-    } catch (err) {
+    } catch {
       bookmarkedInsights.value = []
       return []
     } finally {
@@ -167,8 +167,8 @@ export const useInsightsStore = defineStore('insights', () => {
         totalCount.value++
         return response
       }
-    } catch (err: any) {
-      error.value = err?.message || 'Failed to generate insight with AI'
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Failed to generate insight with AI'
       await categoryStore.fetchCategories(true)
       throw err
     } finally {
@@ -182,36 +182,32 @@ export const useInsightsStore = defineStore('insights', () => {
       throw new Error('UNAUTHENTICATED')
     }
 
-    try {
-      const api = useApiClient()
-      const response = await api.post<{ isBookmarked: boolean; totalBookmarks: number }>(
-        `/api/v1/insights/${insightId}/bookmark`
-      )
+    const api = useApiClient()
+    const response = await api.post<{ isBookmarked: boolean; totalBookmarks: number }>(
+      `/api/v1/insights/${insightId}/bookmark`
+    )
 
-      if (response) {
-        const target = insights.value.find(i => i.id === insightId)
-        if (target) {
-          target.bookmarksCount = response.totalBookmarks
-          target.isBookmarkedByUser = response.isBookmarked
-        }
-
-        // Also update bookmarked list
-        if (!response.isBookmarked) {
-          bookmarkedInsights.value = bookmarkedInsights.value.filter(i => i.id !== insightId)
-          if (onlyBookmarked.value) {
-            insights.value = insights.value.filter(i => i.id !== insightId)
-            if (currentIndex.value >= insights.value.length) {
-              currentIndex.value = Math.max(0, insights.value.length - 1)
-            }
-          }
-        } else if (target && !bookmarkedInsights.value.some(i => i.id === insightId)) {
-          bookmarkedInsights.value.unshift({ ...target, isBookmarkedByUser: true })
-        }
+    if (response) {
+      const target = insights.value.find(i => i.id === insightId)
+      if (target) {
+        target.bookmarksCount = response.totalBookmarks
+        target.isBookmarkedByUser = response.isBookmarked
       }
-      return response
-    } catch (err: any) {
-      throw err
+
+      // Also update bookmarked list
+      if (!response.isBookmarked) {
+        bookmarkedInsights.value = bookmarkedInsights.value.filter(i => i.id !== insightId)
+        if (onlyBookmarked.value) {
+          insights.value = insights.value.filter(i => i.id !== insightId)
+          if (currentIndex.value >= insights.value.length) {
+            currentIndex.value = Math.max(0, insights.value.length - 1)
+          }
+        }
+      } else if (target && !bookmarkedInsights.value.some(i => i.id === insightId)) {
+        bookmarkedInsights.value.unshift({ ...target, isBookmarkedByUser: true })
+      }
     }
+    return response
   }
 
   async function fetchMetadata() {

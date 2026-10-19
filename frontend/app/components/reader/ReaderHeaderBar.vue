@@ -21,7 +21,7 @@ interface Props {
   progressPercentage: number;
 }
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 const emit = defineEmits<{
   (e: "toggle-toc"): void;
@@ -30,7 +30,6 @@ const emit = defineEmits<{
   (e: "next-slice"): void;
 }>();
 
-const { t } = useI18n();
 
 const {
   typography,

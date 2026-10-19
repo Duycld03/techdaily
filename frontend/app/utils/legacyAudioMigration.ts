@@ -175,7 +175,7 @@ async function migrateBrowserAudio(): Promise<MigrationResult> {
       if (!source.objectStoreNames.contains(STORE)) return 'deferred'
       destination = await openAudioDatabase(indexedDB, CLIENT_STORAGE.audioDatabase, true)
       if (!destination) return 'deferred'
-      const result = await transferLegacyAudio(idbStore(source), idbStore(destination), work => navigator.locks.request(AUDIO_STORAGE_LOCK, { ifAvailable: true }, lock => lock ? work() : undefined))
+      const result = await transferLegacyAudio(idbStore(source), idbStore(destination), <T>(work: () => Promise<T>) => navigator.locks.request(AUDIO_STORAGE_LOCK, { ifAvailable: true }, lock => (lock ? work() : undefined)) as Promise<T | undefined>)
       if (result !== 'complete' || source.objectStoreNames.length !== 1) return 'deferred'
       source.close()
       if (!await deleteLegacyAudioDatabase(indexedDB)) return 'deferred'

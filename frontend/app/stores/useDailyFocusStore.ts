@@ -90,7 +90,7 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
     let bookId: string | undefined
     let chunkOrder: number | undefined
     let date: string | undefined
-    let locale: string = 'en'
+    let locale: string
 
     if (typeof params === 'string') {
       bookId = params
@@ -131,7 +131,7 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
       }
 
       return res
-    } catch (err: any) {
+    } catch (err: unknown) {
       error.value = formatError(err, 'today.error_load_failed')
     } finally {
       isLoading.value = false
@@ -145,7 +145,7 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
       const pacer = await api.post<PacerInfo>('/api/v1/daily/switch-book', { bookId })
       await fetchTodayFocus({ bookId, chunkOrder: pacer.currentChunkOrder, locale })
       return pacer
-    } catch (err: any) {
+    } catch (err: unknown) {
       const toast = useToast()
       toast.error(formatError(err, 'pacer.error_switch_failed'))
       throw err
@@ -164,7 +164,7 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
         isGeneratingQuestion.value = false
       }
       return question
-    } catch (err) {
+    } catch {
       isGeneratingQuestion.value = false
     }
   }
@@ -202,7 +202,7 @@ export const useDailyFocusStore = defineStore('dailyFocus', () => {
       }
 
       return res
-    } catch (err: any) {
+    } catch (err: unknown) {
       try {
         const toast = useToast()
         toast.error(formatError(err, 'today.error_submit_failed'))

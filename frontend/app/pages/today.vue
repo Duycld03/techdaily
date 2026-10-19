@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ArrowUpRight,
-  BookMarked,
   Loader2,
   List,
   Clock,
@@ -300,7 +299,7 @@ watch(locale, (newLocale) => {
         <!-- Duration badge -->
         <div class="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-canvas-elevated border border-slate-200/80 dark:border-white/[0.08] text-[11px] font-semibold text-slate-600 dark:text-slate-300">
           <Clock class="w-3 h-3 text-brand-400" />
-          <span>{{ focusStore.data?.estimatedMinutes || 4 }}m</span>
+          <span>{{ focusStore.data?.documentChunk?.estimatedReadMinutes || 4 }}m</span>
         </div>
 
         <!-- Pacer Prev/Next Slice -->

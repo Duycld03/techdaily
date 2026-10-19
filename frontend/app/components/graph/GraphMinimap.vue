@@ -117,8 +117,12 @@ function onCanvasClick(evt: MouseEvent) {
   const modelY = cy + (clickY - canvas.height / 2) / scale
 
   if (Number.isFinite(modelX) && Number.isFinite(modelY)) {
+    const zoom = cyInstance.zoom()
     cyInstance.animate({
-      center: { x: modelX, y: modelY },
+      pan: {
+        x: cyInstance.width() / 2 - modelX * zoom,
+        y: cyInstance.height() / 2 - modelY * zoom
+      },
       duration: 300
     })
   }

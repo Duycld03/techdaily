@@ -23,20 +23,16 @@ async function runResponsiveSmokeSuite() {
   console.log(`🎯 Target URL: ${targetBaseUrl}`)
   console.log(`📸 Screenshot Export: ${shouldTakeScreenshots ? 'ENABLED (' + screenshotsDir + ')' : 'DISABLED'}\n`)
   const isNoAuth = process.env.NO_AUTH === 'true'
-  const authToken = isNoAuth ? null : (process.env.AUTH_TOKEN || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1laWQiOiJmYzg0NmIwZC1iMzFjLTQxZjMtYTNjYi00NzI4NDc3NDkxNzgiLCJlbWFpbCI6InRydW9uZ2R1eTIwMDNAZ21haWwuY29tIiwidW5pcXVlX25hbWUiOiJEdXkgbmd1eeG7hW4iLCJuYmYiOjE3ODk3MzQ1ODAsImV4cCI6MTc5MjMyNjU4MCwiaWF0IjoxNzg5NzM0NTgwLCJpc3MiOiJUZWNoRGFpbHkiLCJhdWQiOiJUZWNoRGFpbHlVc2VycyJ9.o7upTrPV62CKhXS7of1oD443T41Nc_pRqRsFKn5bkH4')
-  const authUser = isNoAuth ? null : (process.env.AUTH_USER || JSON.stringify({
-    id: 'fc846b0d-b31c-41f3-a3cb-472847749178',
-    email: 'truongduy2003@gmail.com',
-    name: 'Duy nguyễn',
-    preferredLocale: 'vi',
-    avatarUrl: 'https://lh3.googleusercontent.com/a/ACg8ocJvy9e89hgWG_I9HrEISNe7raMFXDzbcUMOmb5M4YuephBnftU=s96-c',
-    targetRole: 'Mid-Level Engineer',
-    dailyGoalMinutes: 10
-  }))
+  // Never hardcode JWTs or user identities; supply authentic test credentials through the environment.
+  const authToken = isNoAuth ? null : process.env.AUTH_TOKEN
+  const authUser = isNoAuth ? null : process.env.AUTH_USER
+  if (!isNoAuth && (!authToken || !authUser)) {
+    throw new Error('AUTH_TOKEN and AUTH_USER are required. Supply an authentic test session or set NO_AUTH=true.')
+  }
   if (isNoAuth) {
     console.log('🔓 Running in unauthenticated mode (NO_AUTH=true)')
   } else {
-    console.log('🔑 Using authenticated session for: truongduy2003@gmail.com')
+    console.log('Using the authenticated test session supplied through the environment.')
   }
 
 
@@ -88,15 +84,27 @@ async function runResponsiveSmokeSuite() {
         ])
       }
 
-      await context.addInitScript(({ token, user }) => {
-        try {
+      if (authToken && authUser) {
+        await context.addInitScript(({ token, user }) => {
           localStorage.setItem('deeppace_token', token)
           localStorage.setItem('deeppace_user', user)
-        } catch {
-          // ignore storage errors in initial test script
-        }
-      }, { token: authToken, user: authUser })
+        }, { token: authToken, user: authUser })
+      }
       const page = await context.newPage()
+
+      if (isNoAuth) {
+        for (const protectedRoute of ['/graph', '/roadmap']) {
+          await page.goto(`${targetBaseUrl}${protectedRoute}`, { waitUntil: 'domcontentloaded' })
+          await page.waitForURL(url => url.pathname === '/login')
+          const redirected = new URL(page.url())
+          assert(redirected.searchParams.get('redirect') === protectedRoute, `${protectedRoute} redirects guests to login`)
+        }
+        const cookies = await context.cookies()
+        assert(!cookies.some(cookie => ['deeppace_token', 'deeppace_user'].includes(cookie.name)), 'Guest context has no authentication cookies')
+        assert(await page.evaluate(() => !localStorage.getItem('deeppace_token') && !localStorage.getItem('deeppace_user')), 'Guest context has no stored credentials')
+        await context.close()
+        continue
+      }
 
       // -------------------------------------------------------------
       // 1. /graph - Responsive Control Bar & 2D Canvas

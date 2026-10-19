@@ -82,9 +82,9 @@ export interface MediaSessionMetadataPayload {
 
 export function getAvailableSystemVoices(speechSynth?: SpeechSynthesis | null): SystemVoiceOption[] {
   if (typeof window === 'undefined') return []
-  const synth = speechSynth ?? (typeof window.speechSynthesis !== 'undefined' ? window.speechSynthesis : null)
+  const synth = speechSynth ?? (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis ? window.speechSynthesis : null)
   if (!synth) return []
-  return synth.getVoices().map(v => ({
+  return (synth.getVoices() || []).map(v => ({
     id: v.voiceURI || v.name,
     name: v.name,
     lang: v.lang,
@@ -212,8 +212,16 @@ export function resolveCloudVoiceForLanguage(lang?: string | null, customVoiceId
   return matches ? customVoiceId : defaultVoice
 }
 
+export type AudioErrorType =
+  | 'QUOTA_EXHAUSTED'
+  | 'DEVICE_OOM'
+  | 'DEVICE_INIT_FAILED'
+  | 'NETWORK_ERROR'
+  | 'SYSTEM_TTS_FAILED'
+  | 'UNKNOWN'
+
 export interface AudioErrorInfo {
-  code: 'QUOTA_EXHAUSTED' | 'DEVICE_OOM' | 'DEVICE_INIT_FAILED' | 'NETWORK_ERROR' | 'UNKNOWN'
+  code: AudioErrorType
   rawMessage: string
   suggestCloudFallback?: boolean
 }
@@ -425,7 +433,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
 
   function getSpeechSynth(): SpeechSynthesis | null {
     if (deps.speechSynthesis) return deps.speechSynthesis
-    if (isClient && 'speechSynthesis' in window) {
+    if (isClient && typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
       return window.speechSynthesis
     }
     return null
@@ -530,7 +538,7 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     if (deps.fetchClient) return deps.fetchClient
     return async (input, init) => {
       let url = typeof input === 'string' ? input : input.toString()
-      let baseUrl = ''
+      let baseUrl: string
       try {
         if (process.env.API_INTERNAL_URL) {
           baseUrl = process.env.API_INTERNAL_URL
@@ -782,6 +790,14 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     }
 
     const matched = matching.find(v => v.id === selectedSystemVoice.value) || matching[0]
+    if (!matched) {
+      engineMode.value = 'cloud'
+      activeCascadeTier.value = 'cloud'
+      if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
+      deps.onFallbackToCloud?.()
+      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, initialOffset)
+      return
+    }
     selectedSystemVoice.value = matched.id
     activeCascadeTier.value = 'system'
 
@@ -816,11 +832,14 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
     if (initialOffset > 0 && duration.value > 0) {
       let acc = 0
       for (let i = 0; i < systemSentenceDurations.length; i++) {
-        if (acc + systemSentenceDurations[i] > initialOffset || i === systemSentenceDurations.length - 1) {
-          startSentenceIndex = i
-          break
+        const dur = systemSentenceDurations[i]
+        if (typeof dur === 'number') {
+          if (acc + dur > initialOffset || i === systemSentenceDurations.length - 1) {
+            startSentenceIndex = i
+            break
+          }
+          acc += dur
         }
-        acc += systemSentenceDurations[i]
       }
     }
 
@@ -840,11 +859,17 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
         }
         return
       }
+      if (!UtteranceCtor || !synth || !matched) {
+        return
+      }
 
       const text = systemSentences[idx]
+      if (typeof text !== 'string') {
+        return
+      }
       const utterance = new UtteranceCtor(text)
       const allRaw = synth.getVoices()
-      const actualVoice = allRaw.find(v => (v.voiceURI || v.name) === matched.id)
+      const actualVoice = allRaw ? allRaw.find(v => (v.voiceURI || v.name) === matched.id) : undefined
       if (actualVoice) {
         utterance.voice = actualVoice
       }
@@ -1267,11 +1292,13 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
       let targetIndex = 0
       for (let i = 0; i < systemSentenceDurations.length; i++) {
         const dur = systemSentenceDurations[i]
-        if (accumulated + dur > targetTime || i === systemSentenceDurations.length - 1) {
-          targetIndex = i
-          break
+        if (typeof dur === 'number') {
+          if (accumulated + dur > targetTime || i === systemSentenceDurations.length - 1) {
+            targetIndex = i
+            break
+          }
+          accumulated += dur
         }
-        accumulated += dur
       }
 
       systemSentenceIndex = targetIndex

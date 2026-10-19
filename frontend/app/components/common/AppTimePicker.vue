@@ -29,7 +29,7 @@ const formattedTime = computed({
   get() {
     if (!props.modelValue) return '08:00'
     const parts = props.modelValue.split(':')
-    if (parts.length >= 2) {
+    if (parts[0] !== undefined && parts[1] !== undefined) {
       return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`
     }
     return '08:00'

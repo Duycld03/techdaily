@@ -194,7 +194,7 @@ export function browserMigrationEnvironment(): MigrationEnvironment {
       remove(key) { document.cookie = `${key}=; Max-Age=0; Path=/; SameSite=Lax` },
     },
     exclusive: typeof navigator !== 'undefined' && navigator.locks?.request
-      ? work => navigator.locks.request(STORAGE_MIGRATION_LOCK, { ifAvailable: true }, lock => lock ? work() : undefined)
+      ? <T>(work: () => T | Promise<T>) => (navigator.locks.request(STORAGE_MIGRATION_LOCK, { ifAvailable: true }, lock => (lock ? work() : undefined)) as Promise<T | undefined>)
       : undefined,
   }
 }

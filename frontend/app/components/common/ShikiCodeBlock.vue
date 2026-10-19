@@ -113,10 +113,10 @@ async function copyCode() {
     </div>
 
     <!-- Highlighted Code Body -->
-    <div
+    <!-- eslint-disable-next-line vue/no-v-html -- Shiki serializes code as escaped text; raw code is not inserted as HTML -->
+    <div v-html="highlightedHtml"
       v-if="highlightedHtml"
       class="shiki-container p-4 sm:p-5 overflow-x-auto text-xs sm:text-sm leading-relaxed"
-      v-html="highlightedHtml"
     ></div>
     <pre
       v-else

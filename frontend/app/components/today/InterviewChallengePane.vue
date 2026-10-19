@@ -43,6 +43,7 @@ const selectedOption = ref<number | null>(
 watch(
   () => props.drill,
   (newDrill) => {
+    if (!newDrill) return;
     if (
       newDrill.selectedOptionIndex !== undefined &&
       newDrill.selectedOptionIndex !== null
@@ -56,8 +57,7 @@ watch(
 const isReviewed = computed(
   () =>
     props.drill?.status === 2 ||
-    props.drill?.status === "Reviewed" ||
-    props.drill?.status === "reviewed"
+    props.drill?.status === "Reviewed"
 );
 
 const isCorrect = computed(() => {
@@ -113,7 +113,7 @@ async function handleOptionSubmit() {
         origin: { y: 0.6 },
       });
     }
-  } catch (err) {
+  } catch {
     // handled in store
   }
 }
@@ -303,9 +303,9 @@ async function handleOptionSubmit() {
             <span>{{ $t("today.correct_explanation_header") }}</span>
           </div>
 
-          <div
+          <!-- eslint-disable-next-line vue/no-v-html -- clientMarkdown disables raw HTML and validates URLs; code fences use Shiki or escaping. -->
+          <div v-html="renderedExplanation"
             class="prose dark:prose-invert max-w-none text-sm md:text-lg leading-relaxed text-slate-700 dark:text-slate-300"
-            v-html="renderedExplanation"
           ></div>
         </div>
       </div>

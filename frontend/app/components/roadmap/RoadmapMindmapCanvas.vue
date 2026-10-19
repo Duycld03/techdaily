@@ -9,7 +9,6 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   BookOpen,
-  Compass,
   ChevronDown,
   ChevronRight,
   Flame,
@@ -100,10 +99,11 @@ watch(
     if (newTree.chapters.length === 0) return
     if (expandedChapterIds.value.size === 0) {
       const active = newTree.chapters.find((c) => c.isActive)
+      const firstChapter = newTree.chapters[0]
       if (active) {
         expandedChapterIds.value.add(active.id)
-      } else if (newTree.chapters[0]) {
-        expandedChapterIds.value.add(newTree.chapters[0].id)
+      } else if (firstChapter) {
+        expandedChapterIds.value.add(firstChapter.id)
       }
     }
   },
@@ -242,8 +242,11 @@ let initialTouchScale = 1.0
 
 function getTouchDistance(e: TouchEvent): number {
   if (e.touches.length < 2) return 0
-  const dx = e.touches[0].clientX - e.touches[1].clientX
-  const dy = e.touches[0].clientY - e.touches[1].clientY
+  const touch0 = e.touches[0]
+  const touch1 = e.touches[1]
+  if (!touch0 || !touch1) return 0
+  const dx = touch0.clientX - touch1.clientX
+  const dy = touch0.clientY - touch1.clientY
   return Math.sqrt(dx * dx + dy * dy)
 }
 
@@ -257,10 +260,12 @@ function onTouchStart(e: TouchEvent) {
   if (e.touches.length === 1) {
     const target = e.target as HTMLElement | null
     if (target?.closest('.interactive-node') || target?.closest('button') || target?.closest('input')) return
+    const touch = e.touches[0]
+    if (!touch) return
     isPanning.value = true
     dragStart.value = {
-      x: e.touches[0].clientX - pan.value.x,
-      y: e.touches[0].clientY - pan.value.y
+      x: touch.clientX - pan.value.x,
+      y: touch.clientY - pan.value.y
     }
   }
 }
@@ -275,9 +280,11 @@ function onTouchMove(e: TouchEvent) {
     return
   }
   if (!isPanning.value || e.touches.length !== 1) return
+  const touch = e.touches[0]
+  if (!touch) return
   pan.value = {
-    x: e.touches[0].clientX - dragStart.value.x,
-    y: e.touches[0].clientY - dragStart.value.y
+    x: touch.clientX - dragStart.value.x,
+    y: touch.clientY - dragStart.value.y
   }
 }
 
@@ -323,6 +330,7 @@ function focusActiveNode() {
   // 3. Fallback: first chapter
   if (layout.value.chapters.length > 0) {
     const firstChapter = layout.value.chapters[0]
+    if (!firstChapter) return
     scale.value = 1.0
     pan.value = {
       x: Math.round(clientWidth / 2 - (firstChapter.x + firstChapter.width / 2) * scale.value),

@@ -21,8 +21,8 @@ import {
   filterSystemVoicesForLanguage,
   resolveCloudVoiceForLanguage,
   useSliceAudio,
+  type NarrationSource
 } from '~/composables/useSliceAudio'
-import type { NarrationSource } from '~/composables/useSliceAudio'
 
 const props = withDefaults(
   defineProps<{
@@ -44,8 +44,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const toast = useToast()
 
-const SLEEP_TIMER_PRESETS = [15, 30, 45, 60, 'end_of_slice'] as const
-export type SleepTimerOption = (typeof SLEEP_TIMER_PRESETS)[number] | null
+export type SleepTimerOption = 15 | 30 | 45 | 60 | 'end_of_slice' | null
 const isAdvancing = ref(false)
 const sleepTimer = ref<SleepTimerOption>(null)
 const sleepTimerRemaining = ref<number | null>(null)
@@ -206,7 +205,7 @@ const source = computed<NarrationSource | null>(() => {
 watch([() => props.chunk, playing], ([chunk, isPlaying]) => {
   if (isPlaying && chunk) {
     updateMediaSessionMetadata({
-      title: chunk.title || `Slice #${chunk.chunkIndex ?? 1}`,
+      title: chunk.chapterTitle || `Slice #${chunk.chunkOrder ?? 1}`,
       artist: 'DeepPace Reader',
       album: props.bookTitle || 'Technical Documentation',
     })
@@ -266,7 +265,7 @@ const currentSystemVoice = computed({
     const matching = filterSystemVoicesForLanguage(systemVoices.value, props.chunk?.language)
     if (matching.length === 0) return ''
     const found = matching.find(v => v.id === selectedSystemVoice.value)
-    return found ? found.id : matching[0].id
+    return found ? found.id : (matching[0]?.id ?? '')
   },
   set(val: string | number) {
     const voiceId = String(val)

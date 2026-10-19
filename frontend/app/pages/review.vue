@@ -10,27 +10,16 @@ import {
   X,
   Pencil,
   RotateCcw,
-  Trash2,
   Library,
-  BookOpen,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  EyeOff,
   AlertTriangle,
   Check,
-  HelpCircle,
-  FileText,
   SlidersHorizontal,
-  Gauge,
-  Keyboard,
   Flame,
   Activity,
   Key,
   BarChart3
 } from 'lucide-vue-next'
 import confetti from 'canvas-confetti'
-import StudioLayout from '~/components/layout/StudioLayout.vue'
 import FlashcardHeroCard from '~/components/review/FlashcardHeroCard.vue'
 import MasteryGaugeCard from '~/components/review/MasteryGaugeCard.vue'
 import ReviewForecastChart from '~/components/review/ReviewForecastChart.vue'
@@ -88,39 +77,6 @@ const sessionProgress = computed(() => {
   return { reviewed, total, percentage }
 })
 
-const cardMasteryBadge = computed(() => {
-  if (!currentCard.value) return { label: '', classes: '' }
-  switch (currentCard.value.status) {
-    case 1:
-      return {
-        label: t('review.status_reviewing'),
-        classes: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
-      }
-    case 2:
-      return {
-        label: t('review.status_mastered'),
-        classes: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-      }
-    case 0:
-    default:
-      return {
-        label: t('review.status_learning'),
-        classes: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-      }
-  }
-})
-
-const cardSourceContext = computed(() => {
-  if (!currentCard.value) return null
-  const card = currentCard.value as any
-  const bookTitle = card.bookTitle || card.sourceBookTitle || (card.sourceType === 1 ? 'Reading Highlight' : null)
-  const chapterTitle = card.chapterTitle || card.sourceChapterTitle
-  if (!bookTitle && !chapterTitle) return null
-  return {
-    bookTitle: bookTitle || 'Technical Monograph',
-    chapterTitle: chapterTitle || 'Reference Chapter'
-  }
-})
 
 async function onGrade(score: number) {
   if (!currentCard.value) return
@@ -912,17 +868,17 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
           <div v-else class="space-y-4">
             <div class="space-y-1.5">
               <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('review.front_label') }}</div>
-              <div
+              <!-- eslint-disable-next-line vue/no-v-html -- Markdown-it disables raw HTML, escapes attributes, and validates link URLs. -->
+              <div v-html="renderMarkdown(editFrontMarkdown)"
                 class="p-4 rounded-xl bg-slate-50 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.06] text-xs sm:text-sm prose dark:prose-invert max-w-none"
-                v-html="renderMarkdown(editFrontMarkdown)"
               ></div>
             </div>
 
             <div class="space-y-1.5">
               <div class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ $t('review.back_label') }}</div>
-              <div
+              <!-- eslint-disable-next-line vue/no-v-html -- Markdown-it disables raw HTML, escapes attributes, and validates link URLs. -->
+              <div v-html="renderMarkdown(editBackMarkdown)"
                 class="p-4 rounded-xl bg-brand-500/10 border border-brand-500/20 text-xs sm:text-sm prose dark:prose-invert max-w-none"
-                v-html="renderMarkdown(editBackMarkdown)"
               ></div>
             </div>
           </div>

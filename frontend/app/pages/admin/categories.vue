@@ -8,8 +8,6 @@ import {
   Pencil,
   Trash2,
   CheckCircle2,
-  XCircle,
-  AlertTriangle,
   Loader2,
   Info,
   Power

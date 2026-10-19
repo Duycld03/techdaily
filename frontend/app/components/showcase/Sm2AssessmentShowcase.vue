@@ -29,8 +29,11 @@ const futureDate = new Date(Date.now() + 86400000 * 5).toISOString().slice(0, 10
 const sampleCards: ReviewCard[] = [
   {
     id: 'card-1',
-    question: 'What is the primary difference between WAL (Write-Ahead Logging) and LSM-Trees?',
-    answer: 'WAL enforces immediate durability by appending changes sequentially before updating memory, while LSM-trees batch writes in memory (memtable) and flush sequentially into immutable SSTables with background compaction.',
+    frontMarkdown: 'What is the primary difference between WAL (Write-Ahead Logging) and LSM-Trees?',
+    backMarkdown: 'WAL enforces immediate durability by appending changes sequentially before updating memory, while LSM-trees batch writes in memory (memtable) and flush sequentially into immutable SSTables with background compaction.',
+    categoryId: null,
+    category: null,
+    difficulty: 1,
     easeFactor: 2.10,
     intervalDays: 1,
     repetitionCount: 2,
@@ -41,8 +44,11 @@ const sampleCards: ReviewCard[] = [
   },
   {
     id: 'card-2',
-    question: 'How does Optimistic Concurrency Control (OCC) prevent lost updates?',
-    answer: 'OCC allows concurrent transactions without acquiring locks during execution, validating read-set and write-set versions at commit time and aborting transactions on conflict.',
+    frontMarkdown: 'How does Optimistic Concurrency Control (OCC) prevent lost updates?',
+    backMarkdown: 'OCC allows concurrent transactions without acquiring locks during execution, validating read-set and write-set versions at commit time and aborting transactions on conflict.',
+    categoryId: null,
+    category: null,
+    difficulty: 2,
     easeFactor: 1.65,
     intervalDays: 3,
     repetitionCount: 4,
@@ -53,8 +59,11 @@ const sampleCards: ReviewCard[] = [
   },
   {
     id: 'card-3',
-    question: 'What quorum condition must be satisfied in Paxos/Raft to commit an entry?',
-    answer: 'An entry is committed when written to a strict majority of nodes (floor(N/2) + 1). Any two majorities overlap by at least one node, ensuring the committed entry persists into subsequent terms.',
+    frontMarkdown: 'What quorum condition must be satisfied in Paxos/Raft to commit an entry?',
+    backMarkdown: 'An entry is committed when written to a strict majority of nodes (floor(N/2) + 1). Any two majorities overlap by at least one node, ensuring the committed entry persists into subsequent terms.',
+    categoryId: null,
+    category: null,
+    difficulty: 3,
     easeFactor: 2.50,
     intervalDays: 14,
     repetitionCount: 6,
@@ -64,9 +73,8 @@ const sampleCards: ReviewCard[] = [
     sourceType: 'DocumentChunk'
   }
 ]
-
 function onCardAction(action: string, card: ReviewCard) {
-  toast.success(`Action '${action}' on card: ${card.question.slice(0, 30)}...`)
+  toast.success(`Action '${action}' on card: ${(card.frontMarkdown ?? '').slice(0, 30)}...`)
 }
 </script>
 

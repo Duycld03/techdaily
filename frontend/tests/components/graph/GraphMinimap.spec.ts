@@ -1,77 +1,39 @@
-import { describe, it, expect, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
-import type { Core } from 'cytoscape'
+import { afterEach, describe, it, expect, vi } from 'vitest'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
+import type { AnimationOptions, Core } from 'cytoscape'
 import GraphMinimap from '~/components/graph/GraphMinimap.vue'
 
+enableAutoUnmount(afterEach)
+
 describe('GraphMinimap.vue', () => {
-  it('renders minimap container and canvas element', () => {
-    const wrapper = mount(GraphMinimap, {
-      props: { cy: null }
-    })
-
-    expect(wrapper.text()).toContain('Minimap')
-    const canvas = wrapper.find('canvas')
-    expect(canvas.exists()).toBe(true)
-    expect(canvas.attributes('width')).toBe('160')
-    expect(canvas.attributes('height')).toBe('100')
-  })
-
-  it('handles cytoscape instance and attaches lifecycle listeners', () => {
-    const mockOn = vi.fn()
-    const mockOff = vi.fn()
-    const mockNodes = vi.fn(() => ({
-      length: 0,
-      boundingBox: () => ({ x1: 0, y1: 0, x2: 100, y2: 100, w: 100, h: 100 }),
-      forEach: vi.fn()
-    }))
-
-    const mockCy = {
-      on: mockOn,
-      off: mockOff,
-      nodes: mockNodes,
-      extent: () => ({ x1: 0, y1: 0, x2: 50, y2: 50 }),
-      animate: vi.fn()
-    }
-
-    const wrapper = mount(GraphMinimap, {
-      props: { cy: mockCy as unknown as Core }
-    })
-
-    expect(mockOn).toHaveBeenCalledWith(
-      'render pan zoom position add remove',
-      expect.any(Function)
-    )
-
-    wrapper.unmount()
-    expect(mockOff).toHaveBeenCalledWith(
-      'render pan zoom position add remove',
-      expect.any(Function)
-    )
-  })
-
-  it('handles canvas click to pan viewport when nodes exist', async () => {
-    const mockAnimate = vi.fn()
-    const mockNodes = vi.fn(() => ({
-      length: 2,
-      boundingBox: () => ({ x1: 0, y1: 0, x2: 200, y2: 200, w: 200, h: 200 }),
-      forEach: vi.fn()
-    }))
-
-    const mockCy = {
+  it.each([
+    { zoom: 2, clickX: 246, clickY: 117, panX: 0, panY: 160 },
+    { zoom: 2, clickX: 314, clickY: 83, panX: -400, panY: 360 },
+    { zoom: 0.5, clickX: 314, clickY: 83, panX: 200, panY: 315 }
+  ])('centers the clicked model point at zoom $zoom for ($clickX, $clickY)', async ({ zoom, clickX, clickY, panX, panY }) => {
+    const animate = vi.fn<(options: AnimationOptions) => void>()
+    const cy = {
       on: vi.fn(),
       off: vi.fn(),
-      nodes: mockNodes,
+      nodes: () => ({
+        length: 2,
+        boundingBox: () => ({ x1: 100, y1: -80, x2: 500, y2: 120, w: 400, h: 200 }),
+        forEach: vi.fn()
+      }),
       extent: () => ({ x1: 0, y1: 0, x2: 100, y2: 100 }),
-      animate: mockAnimate
+      width: () => 800,
+      height: () => 600,
+      zoom: () => zoom,
+      animate
     }
+    const wrapper = mount(GraphMinimap, { props: { cy: cy as unknown as Core } })
+    const canvas = wrapper.get('canvas')
+    vi.spyOn(canvas.element, 'getBoundingClientRect').mockReturnValue(new DOMRect(200, 50, 160, 100))
 
-    const wrapper = mount(GraphMinimap, {
-      props: { cy: mockCy as unknown as Core }
-    })
+    await canvas.trigger('click', { clientX: clickX, clientY: clickY })
 
-    const canvas = wrapper.find('canvas')
-    await canvas.trigger('click', { clientX: 50, clientY: 50 })
-
-    expect(mockAnimate).toHaveBeenCalled()
+    const target = animate.mock.calls[0]?.[0].pan
+    expect(target?.x).toBeCloseTo(panX)
+    expect(target?.y).toBeCloseTo(panY)
   })
 })

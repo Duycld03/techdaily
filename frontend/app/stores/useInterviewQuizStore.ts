@@ -127,6 +127,11 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
     }
   })
 
+  const isLastQuestion = computed(() => {
+    if (questions.value.length === 0) return true
+    return currentIndex.value >= questions.value.length - 1
+  })
+
   async function generateQuiz(
     topic: string,
     level: number = 3,
@@ -175,7 +180,7 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
         toast.info(t('quiz.no_questions_generated'))
       }
       return response
-    } catch (err: any) {
+    } catch (err: unknown) {
       const formatted = formatError(err, 'quiz.generate_failed')
       await categoryStore.fetchCategories(true)
       error.value = formatted
@@ -217,7 +222,7 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
       }
 
       return result
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(formatError(err, 'quiz.submit_failed'))
       throw err
     } finally {
@@ -313,7 +318,7 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
       const response = await api.get<QuizStats>('/api/v1/quiz/stats')
       stats.value = response
       return response
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(formatError(err, 'quiz.stats_failed'))
     } finally {
       isLoading.value = false
@@ -353,6 +358,7 @@ export const useInterviewQuizStore = defineStore('interviewQuiz', () => {
     isCurrentAnswered,
     progressPercentage,
     sessionScore,
+    isLastQuestion,
     generateQuiz,
     submitAnswer,
     nextQuestion,

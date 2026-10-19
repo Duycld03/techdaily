@@ -4,7 +4,6 @@ import { useEventListener } from '@vueuse/core'
 import {
   Eye,
   EyeOff,
-  BookOpen,
   HelpCircle,
   CheckCircle2,
   Tag
@@ -42,11 +41,11 @@ const categoryMeta = computed(() => ({
 }))
 
 const difficultyLabel = computed(() => {
-  const diff = props.card.difficulty
-  if (diff === 0 || diff === 'Fresher' || diff === 'Junior') return 'Junior'
-  if (diff === 1 || diff === 'Middle' || diff === 'Intermediate') return 'Mid-Level'
-  if (diff === 2 || diff === 'Senior') return 'Senior'
-  if (diff === 3 || diff === 'Lead' || diff === 'Staff') return 'Staff'
+  const diff = String(props.card.difficulty)
+  if (diff === '0' || diff === 'Fresher' || diff === 'Junior') return 'Junior'
+  if (diff === '1' || diff === 'Middle' || diff === 'Intermediate') return 'Mid-Level'
+  if (diff === '2' || diff === 'Senior') return 'Senior'
+  if (diff === '3' || diff === 'Lead' || diff === 'Staff') return 'Staff'
   return 'Senior / Staff'
 })
 
@@ -92,18 +91,8 @@ const renderedAnswer = computed(() => {
   const content = props.card.backMarkdown?.trim() || ''
   return renderMarkdown(content)
 })
-const hasDistinctDeepDive = computed(() => {
-  return false
-})
-
-const renderedDeepDive = computed(() => {
-  return ''
-})
 const conceptTags = computed(() => {
-  const card = props.card as any
-  if (Array.isArray(card.conceptTags) && card.conceptTags.length) {
-    return card.conceptTags
-  }
+  const card = props.card
   const tags: string[] = []
   const title = (card.frontMarkdown || '').toLowerCase()
   if (title.includes('proxy')) tags.push('Proxy', 'Object.defineProperty')
@@ -119,48 +108,7 @@ const conceptTags = computed(() => {
   return tags
 })
 
-const sourceExcerpt = computed(() => {
-  const card = props.card as any
-  if (card.sourceExcerpt) return card.sourceExcerpt
-  if (card.sourceHighlightText) return card.sourceHighlightText
-  if (card.sourceContext) return card.sourceContext
-  return null
-})
 
-const sm2Forecast = computed(() => {
-  const currentInterval = props.card.intervalDays || 1
-  const ef = Number(props.card.easeFactor || 2.5)
-  return [
-    {
-      grade: 1,
-      score: 1,
-      label: 'Chưa nhớ',
-      interval: '1d',
-      color: 'border-rose-500/40 text-rose-600 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20'
-    },
-    {
-      grade: 2,
-      score: 3,
-      label: 'Khó',
-      interval: `${Math.max(1, Math.round(currentInterval * 1.2))}d`,
-      color: 'border-amber-500/40 text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
-    },
-    {
-      grade: 3,
-      score: 4,
-      label: 'Tốt',
-      interval: `${Math.max(1, Math.round(currentInterval * ef))}d`,
-      color: 'border-brand-500/40 text-brand-600 dark:text-brand-400 bg-brand-500/10 hover:bg-brand-500/20'
-    },
-    {
-      grade: 4,
-      score: 5,
-      label: 'Rất dễ',
-      interval: `${Math.max(1, Math.round(currentInterval * ef * 1.3))}d`,
-      color: 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
-    }
-  ]
-})
 function handleGrade(score: number) {
   emit('grade', score)
   isFlipped.value = false
@@ -256,9 +204,9 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
             <span>{{ $t('review.question_prompt') }}</span>
           </div>
 
-          <div
+          <!-- eslint-disable-next-line vue/no-v-html -- clientMarkdown disables raw HTML and validates URLs; code fences use Shiki or escaping. -->
+          <div v-html="renderedQuestion"
             class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-relaxed tracking-tight prose dark:prose-invert max-w-none prose-p:my-1.5 prose-ul:my-2 prose-li:my-0.5"
-            v-html="renderedQuestion"
           ></div>
         </div>
 
@@ -276,16 +224,6 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
           </span>
         </div>
 
-        <!-- Source Excerpt Box -->
-        <div v-if="sourceExcerpt" class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.06] space-y-1">
-          <div class="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            <BookOpen class="w-3 h-3 text-brand-500" />
-            <span>Original Documentation Context</span>
-          </div>
-          <p class="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed">
-            "{{ sourceExcerpt }}"
-          </p>
-        </div>
 
         <!-- Flip CTA Button -->
         <div class="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-center">
@@ -322,17 +260,11 @@ useEventListener(typeof window !== 'undefined' ? window : null, 'keydown', handl
 
         <!-- Summary / Solution -->
         <div class="space-y-2 max-h-[380px] sm:max-h-[460px] overflow-y-auto pr-1">
-          <div
+          <!-- eslint-disable-next-line vue/no-v-html -- clientMarkdown disables raw HTML and validates URLs; code fences use Shiki or escaping. -->
+          <div v-html="renderedAnswer"
             class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-relaxed prose dark:prose-invert max-w-none prose-p:my-1.5 prose-ul:my-2 prose-strong:text-brand-600 dark:prose-strong:text-brand-400"
-            v-html="renderedAnswer"
           ></div>
         </div>
-        <!-- Technical Mechanics (Deep Dive) -->
-        <div
-          v-if="hasDistinctDeepDive"
-          class="space-y-2 p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-canvas border border-slate-200/80 dark:border-white/[0.06] overflow-y-auto max-h-[300px] prose prose-sm dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed"
-          v-html="renderedDeepDive"
-        ></div>
 
         <!-- SM-2 Grading Pill Bar -->
         <div class="pt-3 border-t border-slate-100 dark:border-white/[0.06] space-y-2">

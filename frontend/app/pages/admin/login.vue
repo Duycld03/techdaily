@@ -56,7 +56,7 @@ onMounted(() => { if (auth.isLoggedIn && access.state === 'pending') void verify
           <p v-if="access.state === 'denied'" role="alert" class="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm sm:text-base text-amber-800 dark:text-amber-200">{{ $t('admin.login.denied') }}</p>
           <div v-if="access.state === 'unavailable'" class="space-y-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
             <p role="status" class="text-sm sm:text-base text-amber-800 dark:text-amber-200">{{ $t('admin.access.unavailable') }}</p>
-            <button type="button" class="min-h-11 rounded-xl bg-brand-600 px-4 text-sm sm:text-base font-semibold text-white whitespace-nowrap shrink-0" :disabled="access.state === 'checking'" @click="verifyAndEnter">{{ $t('admin.access.retry') }}</button>
+            <button type="button" class="min-h-11 rounded-xl bg-brand-600 px-4 text-sm sm:text-base font-semibold text-white whitespace-nowrap shrink-0" :disabled="(access.state as string) === 'checking'" @click="verifyAndEnter">{{ $t('admin.access.retry') }}</button>
           </div>
           <AdminLoginForm :submitting="submitting" :error="error" :initial-email="auth.user?.email" :initial-remember="auth.isPersistentSession" @submit="submit" />
         </div>

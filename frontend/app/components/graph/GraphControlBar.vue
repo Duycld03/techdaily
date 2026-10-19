@@ -7,15 +7,13 @@ import {
   Maximize2,
   RotateCcw,
   SlidersHorizontal,
-  ChevronDown,
-  ChevronUp,
   Network,
   Globe
 } from 'lucide-vue-next'
 import { useKnowledgeGraphStore } from '~/stores/useKnowledgeGraphStore'
 import { useCategoryStore } from '~/stores/useCategoryStore'
 
-const emit = defineEmits<{
+defineEmits<{
   (e: 'fit-screen'): void
 }>()
 

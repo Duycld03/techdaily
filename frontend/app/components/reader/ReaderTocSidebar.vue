@@ -30,7 +30,6 @@ const emit = defineEmits<{
   (e: "export-markdown"): void;
 }>();
 
-const { t } = useI18n();
 const searchQuery = ref("");
 
 interface ChunkWithIndex extends ChunkSummary {

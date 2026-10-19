@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, type Ref } from 'vue'
-import { ShieldAlert, ArrowLeft, FileText } from 'lucide-vue-next'
+import { ref, onMounted, onBeforeUnmount, type Ref } from 'vue'
+import { FileText } from 'lucide-vue-next'
 import MasterDetailLayout from '~/components/layout/MasterDetailLayout.vue'
 import AdminCatalogHeader from '~/components/catalog/admin/AdminCatalogHeader.vue'
 import AdminCatalogNavRail from '~/components/catalog/admin/AdminCatalogNavRail.vue'
@@ -85,7 +85,13 @@ async function handleFilterChange() {
   })
 }
 
-async function handleSaveMetadata(payload: any) {
+async function handleSaveMetadata(payload: {
+  title: string
+  categoryId: string
+  language: string
+  authorOrSourceUrl?: string
+  attributionText?: string
+}) {
   if (!catalogStore.selectedAdminDocument) return
   await runAction(isSavingMetadata, async () => {
     await catalogStore.updateMetadata(catalogStore.selectedAdminDocument!.id, {

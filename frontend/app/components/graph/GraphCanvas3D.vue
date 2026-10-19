@@ -2,14 +2,25 @@
 import { ref, shallowRef, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useEventListener, useDebounceFn } from '@vueuse/core'
 import {
-  RotateCcw,
   Compass,
   ZoomIn,
   ZoomOut,
   Maximize2,
   Type
 } from 'lucide-vue-next'
-import { useKnowledgeGraphStore, type GraphNode } from '~/stores/useKnowledgeGraphStore'
+import { useKnowledgeGraphStore, type GraphNode, type GraphEdge } from '~/stores/useKnowledgeGraphStore'
+import type { ForceGraph3DInstance, NodeObject, LinkObject } from '3d-force-graph'
+import type { Camera, Scene, WebGLRenderer, Object3D } from 'three'
+import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js'
+
+type Graph3DNode = GraphNode & NodeObject
+type Graph3DLink = Omit<GraphEdge, 'source' | 'target'> & LinkObject<Graph3DNode>
+type Graph3DInstance = ForceGraph3DInstance<Graph3DNode, Graph3DLink>
+// Runtime supports null to keep the default mesh without an extended label.
+// three-forcegraph's declaration omits that supported accessor result.
+type Graph3DWithNullableLabel = Omit<Graph3DInstance, 'nodeThreeObject'> & {
+  nodeThreeObject(accessor: (node: Graph3DNode) => Object3D | null): Graph3DInstance
+}
 import {
   getCategoryPalette,
   EDGE_FAMILY_LINK_WIDTH_3D,
@@ -22,7 +33,7 @@ import {
 import { useCategoryStore } from '~/stores/useCategoryStore'
 const { t, locale } = useI18n()
 const emit = defineEmits<{
-  (e: 'ready', graph: any): void
+  (e: 'ready', graph: Graph3DInstance): void
 }>()
 
 const store = useKnowledgeGraphStore()
@@ -31,11 +42,11 @@ const colorMode = useColorMode()
 const isDark = computed(() => colorMode.value === 'dark')
 
 const containerRef = ref<HTMLDivElement | null>(null)
-const graphInstance = shallowRef<any>(null)
-const scene = shallowRef<any>(null)
-const camera = shallowRef<any>(null)
-const renderer = shallowRef<any>(null)
-const controls = shallowRef<any>(null)
+const graphInstance = shallowRef<Graph3DInstance | null>(null)
+const scene = shallowRef<Scene | null>(null)
+const camera = shallowRef<Camera | null>(null)
+const renderer = shallowRef<WebGLRenderer | null>(null)
+const controls = shallowRef<TrackballControls | null>(null)
 const isAutoRotate = ref(false)
 const hoveredNode = ref<GraphNode | null>(null)
 const showAllLabels = ref(false)
@@ -107,7 +118,7 @@ function getNodeColor(node: GraphNode): string {
   return baseColor
 }
 
-function isEdgeConnectedToNode(edge: any, targetNodeId: string | null): boolean {
+function isEdgeConnectedToNode(edge: Graph3DLink, targetNodeId: string | null): boolean {
   if (!targetNodeId) return false
   const sourceId = typeof edge.source === 'object' ? edge.source?.id : edge.source
   const targetId = typeof edge.target === 'object' ? edge.target?.id : edge.target
@@ -283,26 +294,20 @@ onMounted(async () => {
   try {
     // Dynamic import to eliminate SSR ReferenceError: window is not defined
     const ForceGraph3DModule = await import('3d-force-graph')
-    const ForceGraph3D = ForceGraph3DModule.default
+    // Add the store-owned node/link overload omitted by the packaged constructor declaration.
+    const ForceGraph3D = ForceGraph3DModule.default as (new (
+      element: HTMLElement,
+      config?: import('3d-force-graph').ConfigOptions
+    ) => Graph3DWithNullableLabel) & typeof ForceGraph3DModule.default
     const SpriteTextModule = await import('three-spritetext')
     const SpriteText = SpriteTextModule.default
 
     const bgClr = isDark.value ? '#09090b' : '#f8fafc'
 
-    const fg = ForceGraph3D()(containerRef.value)
-      .backgroundColor(bgClr)
-      .showNavInfo(false)
-      .nodeId('id')
-      .nodeVal((node: any) => getNodeVal(node))
-      .nodeColor((node: any) => getNodeColor(node))
-      .nodeLabel((node: any) => getTooltipHtml(node))
-      .nodeResolution(24)
-      .nodeRelSize(3)
-      .nodeThreeObjectExtend(true)
-      .nodeThreeObject((node: any) => {
+    const fg = new ForceGraph3D(containerRef.value)
+      .nodeThreeObject((node) => {
         const isPillar = node.type === 'pillar'
         const isBook = node.type === 'book'
-        const isChunk = node.type === 'chunk'
         const isSelected = store.selectedNodeId === node.id
         const isHovered = hoveredNode.value?.id === node.id
 
@@ -322,23 +327,32 @@ onMounted(async () => {
         sprite.position.y = isPillar ? 22 : (isBook ? 15 : 11)
         return sprite
       })
+      .backgroundColor(bgClr)
+      .showNavInfo(false)
+      .nodeId('id')
+      .nodeVal(getNodeVal)
+      .nodeColor(getNodeColor)
+      .nodeLabel(getTooltipHtml)
+      .nodeResolution(24)
+      .nodeRelSize(3)
+      .nodeThreeObjectExtend(true)
       .linkSource('source')
       .linkTarget('target')
-      .linkColor((edge: any) => {
+      .linkColor((edge) => {
         const activeNodeId = hoveredNode.value?.id || store.selectedNodeId
         if (activeNodeId && isEdgeConnectedToNode(edge, activeNodeId)) {
           return '#38bdf8'
         }
         return isDark.value ? 'rgba(148, 163, 184, 0.22)' : 'rgba(100, 116, 139, 0.28)'
       })
-      .linkWidth((edge: any) => {
+      .linkWidth((edge) => {
         const activeNodeId = hoveredNode.value?.id || store.selectedNodeId
         return activeNodeId && isEdgeConnectedToNode(edge, activeNodeId)
           ? 2.5
           : EDGE_FAMILY_LINK_WIDTH_3D[resolveEdgeFamily(edge.relationType)]
       })
       .linkOpacity(0.35)
-      .linkDirectionalParticles((edge: any) => {
+      .linkDirectionalParticles((edge) => {
         const activeNodeId = hoveredNode.value?.id || store.selectedNodeId
         return activeNodeId && isEdgeConnectedToNode(edge, activeNodeId) ? 4 : 0
       })
@@ -348,7 +362,7 @@ onMounted(async () => {
       .warmupTicks(70)
       .cooldownTicks(120)
       .cooldownTime(2500)
-      .onNodeClick((node: any) => {
+      .onNodeClick((node) => {
         if (!node) return
         store.selectNode(node.id)
 
@@ -363,12 +377,12 @@ onMounted(async () => {
           const distRatio = 1 + distance / Math.hypot(node.x || 1, node.y || 1, node.z || 1)
           graphInstance.value.cameraPosition(
             { x: (node.x || 0) * distRatio, y: (node.y || 0) * distRatio, z: (node.z || 0) * distRatio },
-            node,
+            { x: node.x ?? 0, y: node.y ?? 0, z: node.z ?? 0 },
             1200
           )
         }
       })
-      .onNodeHover((node: any) => {
+      .onNodeHover((node) => {
         hoveredNode.value = node || null
         if (containerRef.value) {
           containerRef.value.style.cursor = node ? 'pointer' : 'default'
@@ -382,12 +396,11 @@ onMounted(async () => {
     scene.value = fg.scene?.() || null
     camera.value = fg.camera?.() || null
     renderer.value = fg.renderer?.() || null
-    controls.value = fg.controls?.() || null
+    // The library defaults to TrackballControls but exposes only object in its declaration.
+    controls.value = fg.controls() as TrackballControls
 
-    // Configure OrbitControls
+    // Configure the existing trackball navigation limits.
     if (controls.value) {
-      controls.value.enableDamping = true
-      controls.value.dampingFactor = 0.1
       controls.value.maxDistance = 1400
       controls.value.minDistance = 30
     }

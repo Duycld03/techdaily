@@ -7,10 +7,7 @@ import {
   Clock,
   Sparkles,
   Copy,
-  Bookmark,
-  Share2,
   Highlighter,
-  X,
   AlertTriangle,
   AlertCircle,
   RefreshCw,
@@ -44,6 +41,7 @@ definePageMeta({
 
 const { t, locale } = useI18n();
 const toast = useToast();
+const { formatError } = useApiError();
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
@@ -52,11 +50,13 @@ const libraryStore = useLibraryStore();
 const notesStore = useNotesStore();
 const {
   render: renderMarkdown,
-  initHighlighter,
   isHighlighterReady,
 } = useMarkdownRenderer();
 
-const bookId = computed(() => route.params.bookId as string);
+const bookId = computed(() => {
+  const raw = route.params.bookId;
+  return (Array.isArray(raw) ? raw[0] : raw) || "";
+});
 const book = ref<BookDetail | null>(null);
 const activeChunkIndex = ref(0);
 const isTocOpen = ref(true);
@@ -144,8 +144,8 @@ async function handleExportMarkdown() {
   try {
     await libraryStore.exportBookMarkdown(book.value.id, book.value.slug);
     toast.success(t("reader.toast_export_success") || "Notes exported successfully!");
-  } catch (err: any) {
-    toast.error(err.message || "Failed to export notes.");
+  } catch (err: unknown) {
+    toast.error(formatError(err instanceof Error && err.message ? err.message : "Failed to export notes."));
   } finally {
     isExportingMarkdown.value = false;
   }
@@ -199,7 +199,7 @@ async function ensureSliceLoaded(order: number) {
 const nextChunk = computed<ChunkSummary | null>(() => {
   if (!book.value?.chunks?.length) return null;
   if (activeChunkIndex.value < book.value.chunks.length - 1) {
-    return book.value.chunks[activeChunkIndex.value + 1];
+    return book.value.chunks[activeChunkIndex.value + 1] ?? null;
   }
   return null;
 });
@@ -207,7 +207,7 @@ const nextChunk = computed<ChunkSummary | null>(() => {
 const prevChunk = computed<ChunkSummary | null>(() => {
   if (!book.value?.chunks?.length) return null;
   if (activeChunkIndex.value > 0) {
-    return book.value.chunks[activeChunkIndex.value - 1];
+    return book.value.chunks[activeChunkIndex.value - 1] ?? null;
   }
   return null;
 });
@@ -236,7 +236,7 @@ const renderedMarkdown = computed(() => {
   if (currentChunk.value.chapterTitle) {
     const titleNorm = currentChunk.value.chapterTitle.trim().toLowerCase();
     const match = text.match(/^\s*#{1,6}\s+([^\n\r]+)/);
-    if (match) {
+    if (match && match[1]) {
       const headingText = match[1].trim().toLowerCase();
       if (
         headingText === titleNorm ||
@@ -256,7 +256,7 @@ const renderedMarkdown = computed(() => {
     );
   }
 
-  return renderMarkdown(text, book.value?.authorOrSourceUrl);
+  return renderMarkdown(text, book.value?.authorOrSourceUrl ?? undefined);
 });
 
 onMounted(async () => {
@@ -268,7 +268,7 @@ onMounted(async () => {
     if (savedCompleted) {
       completedSlices.value = new Set(JSON.parse(savedCompleted));
     }
-  } catch (e) {
+  } catch {
     // ignore
   }
 
@@ -303,7 +303,7 @@ onMounted(async () => {
     const activeOrder = activeChunkIndex.value + 1;
     await ensureSliceLoaded(activeOrder);
     checkAndCurateSlice();
-  } catch (err) {
+  } catch {
     // handled by store
   }
 
@@ -357,8 +357,8 @@ async function checkAndCurateSlice() {
     } else {
       curationError.value = "Failed to curate slice";
     }
-  } catch (err: any) {
-    curationError.value = err.message || "Failed to curate slice";
+  } catch (err: unknown) {
+    curationError.value = formatError(err instanceof Error && err.message ? err.message : "Failed to curate slice");
   } finally {
     isCuratingCurrentSlice.value = false;
   }
@@ -462,7 +462,7 @@ function markCurrentSliceCompleted() {
       `deeppace_completed_${bookId.value}`,
       JSON.stringify(Array.from(completedSlices.value)),
     );
-  } catch (e) {
+  } catch {
     // ignore
   }
 }
@@ -479,14 +479,18 @@ function selectChunk(index: number) {
   activeChunkIndex.value = index;
   isMobileTocOpen.value = false;
 
-  const chunkOrder = book.value.chunks[index].chunkOrder;
+  const targetChunk = book.value.chunks[index];
+  if (!targetChunk) return;
+  const chunkOrder = targetChunk.chunkOrder;
   // Save bookmark
   try {
-    localStorage.setItem(
-      `deeppace_bookmark_${bookId.value}`,
-      chunkOrder.toString(),
-    );
-  } catch (e) {
+    if (bookId.value) {
+      localStorage.setItem(
+        `deeppace_bookmark_${bookId.value}`,
+        chunkOrder.toString(),
+      );
+    }
+  } catch {
     // ignore
   }
 
@@ -494,7 +498,7 @@ function selectChunk(index: number) {
   markCurrentSliceCompleted();
 
   // Synchronize reading progress and pacer streak with backend UserBookPacer API
-  if (authStore.isAuthenticated) {
+  if (authStore.isAuthenticated && bookId.value) {
     void focusStore
       .fetchTodayFocus({
         bookId: bookId.value,
@@ -541,7 +545,7 @@ function goToPrevSlice() {
 // Scoped Text Selection Listener with 400ms Debounce
 let selectionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-function handleTextSelection(event: MouseEvent) {
+function handleTextSelection() {
   if (isNotePopoverOpen.value) {
     return;
   }
@@ -827,14 +831,14 @@ async function handleHighlightAndNote() {
           </div>
 
           <!-- Markdown Body -->
-          <article
+          <!-- eslint-disable-next-line vue/no-v-html -- Shared renderer disables raw HTML, validates URLs, and uses escaped Shiki/code fences. -->
+          <article v-html="renderedMarkdown"
             class="markdown-body prose prose-slate dark:prose-invert max-w-full min-w-0 break-words prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-white prose-a:text-brand-600 dark:prose-a:text-brand-400 hover:prose-a:underline prose-code:font-mono prose-code:px-2 prose-code:py-0.5 prose-code:rounded-lg prose-code:text-xs prose-code:sm:text-sm prose-code:bg-slate-100 prose-code:text-slate-800 prose-code:border prose-code:border-slate-200/90 dark:prose-code:bg-canvas-elevated dark:prose-code:text-brand-300 dark:prose-code:border-white/[0.08] prose-code:font-medium prose-code:before:content-none prose-code:after:content-none prose-blockquote:not-italic prose-blockquote:before:content-none prose-blockquote:after:content-none prose-p:my-4 transition-all duration-150"
             :class="[fontFamilyClass]"
             :style="{
               fontSize: fontSizePx,
               lineHeight: lineHeightValue
             }"
-            v-html="renderedMarkdown"
           ></article>
 
           <!-- Key Takeaways Callout -->

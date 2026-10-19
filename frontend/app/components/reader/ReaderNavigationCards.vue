@@ -16,7 +16,6 @@ const emit = defineEmits<{
   (e: "next-slice"): void;
 }>();
 
-const { t } = useI18n();
 </script>
 
 <template>

@@ -6,7 +6,6 @@ import {
   Globe,
   Bell,
   Loader2,
-  Clock,
   Compass,
   AlertCircle,
   CheckCircle2,
@@ -228,8 +227,11 @@ onMounted(async () => {
   await checkSubscriptionStatus()
 
   // 5. Brave push check
-  if (typeof navigator !== 'undefined' && (navigator as any).brave && typeof (navigator as any).brave.isBrave === 'function') {
-    (navigator as any).brave.isBrave().then((isB: boolean) => {
+  const brave = typeof navigator !== 'undefined'
+    ? (navigator as Navigator & { brave?: { isBrave?: () => Promise<boolean> } }).brave
+    : undefined
+  if (typeof brave?.isBrave === 'function') {
+    brave.isBrave().then((isB: boolean) => {
       if (isB && !isSubscribed.value) {
         showBraveGuide.value = true
       }
@@ -515,7 +517,7 @@ async function handleTimezoneChange(newTz: string | number) {
                     :options="commonTimezones"
                     :icon="Compass"
                     :placeholder="$t('settings.select_timezone')"
-                    @update:modelValue="handleTimezoneChange"
+                    @update:model-value="handleTimezoneChange"
                   />
                 </div>
 

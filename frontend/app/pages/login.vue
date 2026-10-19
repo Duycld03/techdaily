@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
-import { useIntervalFn, useEventListener, useDebounceFn } from '@vueuse/core'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useIntervalFn } from '@vueuse/core'
 import {
   Lock,
   Mail,
@@ -10,17 +10,12 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Sparkles,
-  Terminal,
-  Layers,
-  Brain,
   Key,
   RefreshCw,
   RotateCcw,
   Info,
   Send,
   Shield,
-  Zap
 } from 'lucide-vue-next'
 import AppLogo from '~/components/common/AppLogo.vue'
 import ThemeToggle from '~/components/common/ThemeToggle.vue'
@@ -32,10 +27,9 @@ import { useAuthStore } from '~/stores/useAuthStore'
 const authStore = useAuthStore()
 const route = useRoute()
 const config = useRuntimeConfig()
-const { t, locale, setLocale } = useI18n()
+const { t, locale } = useI18n()
 const { formatError } = useApiError()
 const toast = useToast()
-const colorMode = useColorMode()
 
 const authMode = ref<'login' | 'register' | 'forgot-password'>('login')
 const email = ref('')
@@ -136,29 +130,74 @@ watch(() => authStore.isLoggedIn, (loggedIn) => {
   }
 })
 
-let tokenClient: any = null
+// Narrow SDK surface used here, matching Google's Identity/OAuth JavaScript references.
+interface GoogleCredentialResponse {
+  credential: string
+  select_by: string
+  state?: string
+}
+interface GoogleTokenResponse {
+  access_token?: string
+  error?: string
+}
+interface GoogleTokenClient {
+  requestAccessToken(config?: { prompt?: string }): void
+}
+interface GoogleIdentitySdk {
+  accounts?: {
+    oauth2?: {
+      initTokenClient(config: {
+        client_id: string
+        scope: string
+        callback: (response: GoogleTokenResponse) => void
+      }): GoogleTokenClient
+    }
+    id?: {
+      initialize(config: {
+        client_id: string
+        callback: (response: GoogleCredentialResponse) => void
+        auto_select?: boolean
+        cancel_on_tap_outside?: boolean
+      }): void
+      prompt(): void
+    }
+  }
+}
+function getGoogleSdk(): GoogleIdentitySdk | undefined {
+  return (window as Window & { google?: GoogleIdentitySdk }).google
+}
+function getGoogleErrorDetail(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object') return
+  const data = 'data' in error ? error.data : undefined
+  const response = 'response' in error ? error.response : undefined
+  const responseData = response && typeof response === 'object' && '_data' in response ? response._data : undefined
+  const detail = data && typeof data === 'object' && 'detail' in data ? data.detail : undefined
+  const responseDetail = responseData && typeof responseData === 'object' && 'detail' in responseData ? responseData.detail : undefined
+  return typeof detail === 'string' && detail ? detail : typeof responseDetail === 'string' ? responseDetail : undefined
+}
+let tokenClient: GoogleTokenClient | null = null
 
-function initGoogleAuth() {
-  if (typeof window === 'undefined') return
+function initGoogleAuth(): GoogleTokenClient | null {
+  if (typeof window === 'undefined') return null
   if (!config.public.googleClientId) {
     console.warn('[DeepPace Auth] Google Client ID is not configured. Google Sign-In is disabled.')
-    return
+    return null
   }
-  const google = (window as any).google
+  const google = getGoogleSdk()
   if (google?.accounts?.oauth2) {
     try {
       tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: config.public.googleClientId,
         scope: 'openid email profile',
-        callback: async (tokenResponse: any) => {
+        callback: async (tokenResponse) => {
           if (tokenResponse?.access_token) {
             isLoading.value = true
             try {
               await authStore.googleLogin(tokenResponse.access_token)
               toast.success(t('auth.toast_google_success'))
               await navigateTo(getRedirectTarget())
-            } catch (err: any) {
-              const rawError = (err as any)?.data?.detail || (err as any)?.response?._data?.detail
+            } catch (err: unknown) {
+              const rawError = getGoogleErrorDetail(err)
               console.error('[DeepPace Auth] Google login failed:', err, rawError)
               const formatted = formatError(err, 'auth.toast_google_failed')
               errorMessage.value = rawError ? `${formatted} (${rawError})` : formatted
@@ -188,12 +227,13 @@ function initGoogleAuth() {
       console.warn('Google Identity initialization failed:', err)
     }
   }
+  return tokenClient
 }
 
 let googlePollAttempts = 0
 const { pause: stopGooglePoll, resume: startGooglePoll } = useIntervalFn(() => {
   googlePollAttempts++
-  if (typeof window !== 'undefined' && ((window as any).google?.accounts?.oauth2 || (window as any).google?.accounts?.id)) {
+  if (typeof window !== 'undefined' && (getGoogleSdk()?.accounts?.oauth2 || getGoogleSdk()?.accounts?.id)) {
     stopGooglePoll()
     initGoogleAuth()
   } else if (googlePollAttempts >= 50) {
@@ -207,11 +247,11 @@ function triggerGoogleSignIn() {
     return
   }
 
-  const google = (window as any).google
+  const google = getGoogleSdk()
   if (google?.accounts?.oauth2 && config.public.googleClientId) {
-    initGoogleAuth()
-    if (tokenClient) {
-      tokenClient.requestAccessToken({ prompt: 'select_account' })
+    const initializedClient = initGoogleAuth()
+    if (initializedClient) {
+      initializedClient.requestAccessToken({ prompt: 'select_account' })
       return
     }
   }
@@ -228,7 +268,7 @@ function triggerGoogleSignIn() {
   toast.info(t('auth.toast_google_failed'))
 }
 
-async function handleGoogleCredentialResponse(response: any) {
+async function handleGoogleCredentialResponse(response: GoogleCredentialResponse) {
   if (!response?.credential) return
 
   isLoading.value = true
@@ -236,8 +276,8 @@ async function handleGoogleCredentialResponse(response: any) {
     await authStore.googleLogin(response.credential)
     toast.success(t('auth.toast_google_success'))
     await navigateTo(getRedirectTarget())
-  } catch (err: any) {
-    const rawError = (err as any)?.data?.detail || (err as any)?.response?._data?.detail
+  } catch (err: unknown) {
+    const rawError = getGoogleErrorDetail(err)
     console.error('[DeepPace Auth] Google login failed:', err, rawError)
     const formatted = formatError(err, 'auth.toast_google_failed')
     errorMessage.value = rawError ? `${formatted} (${rawError})` : formatted

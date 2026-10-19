@@ -1,21 +1,36 @@
 <script lang="ts">
-export const seniorityLevels = [
+export interface SeniorityLevelItem {
+  id: number
+  key: string
+  label: string
+  desc: string
+}
+
+export const seniorityLevels: SeniorityLevelItem[] = [
   { id: 0, key: 'level_fresher', label: 'Foundation', desc: 'Core principles, primary mechanisms & syntax' },
   { id: 1, key: 'level_junior', label: 'Applied', desc: 'Practical execution, common edge cases & patterns' },
   { id: 2, key: 'level_middle', label: 'Advanced', desc: 'Complex trade-offs, architecture & integration' },
   { id: 3, key: 'level_senior', label: 'Mastery', desc: 'Under-the-hood dynamics & high-leverage systems' }
 ]
 
-export function formatSeniorityLevel(level: string | number) {
+const DEFAULT_SENIORITY_LEVEL: SeniorityLevelItem = {
+  id: 3,
+  key: 'level_senior',
+  label: 'Mastery',
+  desc: 'Under-the-hood dynamics & high-leverage systems'
+}
+
+export function formatSeniorityLevel(level?: string | number): SeniorityLevelItem {
+  if (level === undefined || level === null) return DEFAULT_SENIORITY_LEVEL
   if (typeof level === 'number') {
-    return seniorityLevels[level] || seniorityLevels[3]
+    return seniorityLevels[level] ?? DEFAULT_SENIORITY_LEVEL
   }
   const levelStr = String(level).trim().toLowerCase()
-  if (levelStr === 'foundation' || levelStr === 'fresher' || levelStr === '0') return seniorityLevels[0]
-  if (levelStr === 'applied' || levelStr === 'junior' || levelStr === '1') return seniorityLevels[1]
-  if (levelStr === 'advanced' || levelStr === 'middle' || levelStr === 'mid' || levelStr === '2') return seniorityLevels[2]
-  if (levelStr === 'mastery' || levelStr === 'senior' || levelStr === '3') return seniorityLevels[3]
-  return seniorityLevels[3]
+  if (levelStr === 'foundation' || levelStr === 'fresher' || levelStr === '0') return seniorityLevels[0] ?? DEFAULT_SENIORITY_LEVEL
+  if (levelStr === 'applied' || levelStr === 'junior' || levelStr === '1') return seniorityLevels[1] ?? DEFAULT_SENIORITY_LEVEL
+  if (levelStr === 'advanced' || levelStr === 'middle' || levelStr === 'mid' || levelStr === '2') return seniorityLevels[2] ?? DEFAULT_SENIORITY_LEVEL
+  if (levelStr === 'mastery' || levelStr === 'senior' || levelStr === '3') return seniorityLevels[3] ?? DEFAULT_SENIORITY_LEVEL
+  return DEFAULT_SENIORITY_LEVEL
 }
 </script>
 
@@ -25,7 +40,6 @@ import { useEventListener } from '@vueuse/core'
 import {
   HelpCircle,
   Sparkles,
-  Zap,
   RotateCcw,
   BarChart3,
   CheckCircle2,
@@ -36,8 +50,6 @@ import {
   Award,
   BookOpen,
   Loader2,
-  Layers,
-  ChevronRight,
   TrendingUp,
   Target,
   Check,
@@ -47,7 +59,7 @@ import {
   Clock
 } from 'lucide-vue-next'
 import { useReviewStore } from '~/stores/useReviewStore'
-import { useInterviewQuizStore, type QuizQuestion } from '~/stores/useInterviewQuizStore'
+import { useInterviewQuizStore } from '~/stores/useInterviewQuizStore'
 import { useAuthStore } from '~/stores/useAuthStore'
 import { useProfileStore } from '~/stores/useProfileStore'
 import { useLibraryStore, type BookDetail } from '~/stores/useLibraryStore'
@@ -69,6 +81,7 @@ const libraryStore = useLibraryStore()
 const reviewStore = useReviewStore()
 const categoryStore = useCategoryStore()
 const toast = useToast()
+const { formatError } = useApiError()
 const apiClient = useApiClient()
 
 const sessionMistakes = computed(() => {
@@ -87,8 +100,8 @@ async function handlePushToReview(questionId: string) {
     await reviewStore.createCardFromQuizMistake(questionId)
     pushedQuestionIds.value.add(questionId)
     toast.success(t('quiz.toast_pushed_to_sm2'))
-  } catch (err: any) {
-    toast.error(err.message || t('quiz.toast_push_sm2_failed'))
+  } catch (err: unknown) {
+    toast.error(formatError(err, 'quiz.toast_push_sm2_failed'))
   } finally {
     pushingQuestionId.value = null
   }
@@ -428,9 +441,7 @@ function handleKeydown(e: KeyboardEvent) {
   } else if (quizStore.isCurrentAnswered) {
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
       e.preventDefault()
-      if (!quizStore.isLastQuestion) {
-        handleNextQuestion()
-      }
+      handleNextQuestion()
     }
   }
 }
@@ -886,7 +897,7 @@ defineExpose({
 
           <div class="flex items-center gap-2 shrink-0">
             <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/[0.06]">
-              {{ formatSeniorityLevel(currentQ.level).label }}
+              {{ formatSeniorityLevel(currentQ?.level).label }}
             </span>
             <span
               v-if="currentQ.isMastered"
@@ -966,9 +977,9 @@ defineExpose({
               <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 {{ $t('quiz.explanation_header') }}
               </h3>
-              <div
+              <!-- eslint-disable-next-line vue/no-v-html -- Shared renderer disables raw HTML, validates URLs, and uses escaped Shiki/code fences. -->
+              <div v-html="renderedExplanationHtml"
                 class="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed min-w-0 max-w-full"
-                v-html="renderedExplanationHtml"
               ></div>
             </div>
 
@@ -987,7 +998,7 @@ defineExpose({
                 @click="handleNextQuestion()"
                 class="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm sm:text-base shadow-sm flex items-center gap-2 transition-all whitespace-nowrap shrink-0 cursor-pointer"
               >
-                <span>{{ quizStore.currentIndex === quizStore.questions.length - 1 ? $t('quiz.btn_finish') : $t('quiz.btn_next') }}</span>
+                <span>{{ quizStore.isLastQuestion ? $t('quiz.btn_finish') : $t('quiz.btn_next') }}</span>
                 <ArrowRight class="w-4 h-4" :stroke-width="1.5" />
               </button>
             </div>
@@ -1060,7 +1071,7 @@ defineExpose({
                   'h-8 rounded-lg flex items-center justify-center text-xs font-mono font-bold border transition-colors cursor-pointer',
                   quizStore.submissions[q.id]?.isCorrect
                     ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                    : quizStore.submissions[q.id] && !quizStore.submissions[q.id].isCorrect
+                    : quizStore.submissions[q.id] && !quizStore.submissions[q.id]?.isCorrect
                     ? 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
                     : quizStore.currentIndex === idx
                     ? 'bg-brand-500 text-white border-brand-600 shadow-sm ring-2 ring-brand-500/20'

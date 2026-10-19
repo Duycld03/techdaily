@@ -66,7 +66,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
       let serverRenderedHydration = false
       try {
         const app = useNuxtApp()
-        serverRenderedHydration = app.isHydrating && Boolean(app.payload.serverRendered)
+        serverRenderedHydration = Boolean(app.isHydrating && app.payload.serverRendered)
       } catch { /* Route guards can run outside Nuxt in isolated tests. */ }
       if (serverRenderedHydration) return
     }

@@ -5,7 +5,7 @@ import {
   RotateCcw, Clock, TrendingUp, Repeat, Keyboard,
   SettingsIcon, Bell, ShieldCheck,
   Search, Plus, List, Grid2x2, ChevronLeft, ChevronRight,
-  BookOpen, Hash, Flame, Target
+  BookOpen, Hash, Flame
 } from 'lucide-vue-next'
 import StudioLayout from '~/components/layout/StudioLayout.vue'
 import MasterDetailLayout from '~/components/layout/MasterDetailLayout.vue'

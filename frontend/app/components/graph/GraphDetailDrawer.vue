@@ -6,10 +6,7 @@ import {
   BookOpen,
   Layers,
   Highlighter,
-  HelpCircle,
-  Map,
   Quote,
-  Clock,
   Sparkles,
   ExternalLink,
   Tag,
@@ -53,14 +50,18 @@ const drawerOffsetY = ref(0)
 
 function onTouchStart(e: TouchEvent) {
   if (typeof window !== 'undefined' && window.innerWidth >= 768) return
-  touchStartY.value = e.touches[0].clientY
+  const touch = e.touches[0]
+  if (!touch) return
+  touchStartY.value = touch.clientY
   isDragging.value = true
   drawerOffsetY.value = 0
 }
 
 function onTouchMove(e: TouchEvent) {
   if (!isDragging.value) return
-  const currentY = e.touches[0].clientY
+  const touch = e.touches[0]
+  if (!touch) return
+  const currentY = touch.clientY
   const delta = currentY - touchStartY.value
   if (delta > 0) {
     drawerOffsetY.value = delta
@@ -139,7 +140,8 @@ const connectedBooksCount = computed(() => {
 })
 
 function filterToThisPillar() {
-  if (node.value?.categoryId) {
+  if (!node.value) return
+  if (node.value.categoryId) {
     store.setCategoryId(node.value.categoryId)
   }
   close()
@@ -170,7 +172,7 @@ function getMasteryBadgeClass(status?: string | null): string {
 </script>
 
 <template>
-  <div v-if="isOpen">
+  <div v-if="isOpen && node">
     <!-- Backdrop overlay -->
     <div
       class="fixed inset-0 bg-slate-950/40 dark:bg-black/60 backdrop-blur-sm z-40 transition-opacity duration-200"
@@ -349,7 +351,7 @@ function getMasteryBadgeClass(status?: string | null): string {
         </div>
 
         <!-- Card Section: Spaced Repetition SM-2 Metrics -->
-        <div v-if="nodeType === 'card'" class="space-y-2">
+        <div v-if="nodeType === 'card' && node" class="space-y-2">
           <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             {{ $t('graph.drawer.metrics') }}
           </h4>
@@ -359,7 +361,7 @@ function getMasteryBadgeClass(status?: string | null): string {
                 {{ $t('graph.drawer.intervalDays') }}
               </span>
               <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 block tabular-nums truncate">
-                {{ node.intervalDays ?? 0 }} days
+                {{ node?.intervalDays ?? 0 }} days
               </span>
             </div>
             <div class="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] min-w-0">
@@ -367,7 +369,7 @@ function getMasteryBadgeClass(status?: string | null): string {
                 {{ $t('graph.drawer.easeFactor') }}
               </span>
               <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 block tabular-nums truncate">
-                {{ typeof node.easeFactor === 'number' ? node.easeFactor.toFixed(2) : (node.easeFactor ?? '2.50') }}
+                {{ typeof node?.easeFactor === 'number' ? node.easeFactor.toFixed(2) : (node?.easeFactor ?? '2.50') }}
               </span>
             </div>
             <div class="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] min-w-0">
@@ -375,7 +377,7 @@ function getMasteryBadgeClass(status?: string | null): string {
                 {{ $t('graph.drawer.repetitions') }}
               </span>
               <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white mt-0.5 block tabular-nums truncate">
-                {{ node.repetitionCount ?? 0 }} reviews
+                {{ node?.repetitionCount ?? 0 }} reviews
               </span>
             </div>
             <div class="p-2 sm:p-2.5 rounded-xl bg-slate-50 dark:bg-canvas-elevated border border-slate-200/60 dark:border-white/[0.08] min-w-0">
@@ -390,7 +392,7 @@ function getMasteryBadgeClass(status?: string | null): string {
         </div>
 
         <!-- Highlight Section: Blockquote Excerpt & Personal Reflection -->
-        <div v-if="nodeType === 'highlight'" class="space-y-3">
+        <div v-if="nodeType === 'highlight' && node" class="space-y-3">
           <div class="space-y-1.5">
             <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
               <Quote class="w-3.5 h-3.5 text-violet-500" />
@@ -399,7 +401,7 @@ function getMasteryBadgeClass(status?: string | null): string {
             <blockquote
               class="relative pl-3.5 pr-3 py-2.5 border-l-4 border-violet-500 bg-violet-500/5 dark:bg-violet-500/10 rounded-r-xl text-xs sm:text-sm italic text-slate-800 dark:text-slate-200 leading-relaxed"
             >
-              "{{ node.label }}"
+              "{{ node?.label }}"
             </blockquote>
           </div>
 

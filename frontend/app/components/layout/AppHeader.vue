@@ -16,7 +16,6 @@ import { useDailyFocusStore } from '~/stores/useDailyFocusStore'
 import { useNavigationMenu } from '~/composables/useNavigationMenu'
 import { useCommandPalette } from '~/composables/useCommandPalette'
 
-const route = useRoute()
 const authStore = useAuthStore()
 const focusStore = useDailyFocusStore()
 const isMobileNavOpen = ref(false)
@@ -199,7 +198,7 @@ onUnmounted(() => {
                   v-slot="{ navigate, href }"
                 >
                   <a
-                    :href="href"
+                    :href="href ?? undefined"
                     @click="navigate(); isMobileNavOpen = false"
                     :class="[
                       'flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-colors border-l-2',

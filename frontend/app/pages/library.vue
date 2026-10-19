@@ -13,7 +13,7 @@ import LibraryFilterModal from '~/components/library/LibraryFilterModal.vue'
 import LibraryToolbar from '~/components/library/LibraryToolbar.vue'
 import { useLibraryQueryState } from '~/composables/useLibraryQueryState'
 import { useCatalogStore, type LearnerCatalogDocument } from '~/stores/useCatalogStore'
-import { useLibraryStore } from '~/stores/useLibraryStore'
+import { useLibraryStore, type Book } from '~/stores/useLibraryStore'
 import { useCategoryStore, type CategoryDescriptor } from '~/stores/useCategoryStore'
 const { t, locale } = useI18n()
 const { formatError } = useApiError()
@@ -158,7 +158,7 @@ function getCategoryLabel(category: CategoryDescriptor | null | undefined): stri
   return categoryStore.getCategoryName(categoryStore.getCategoryById(category?.id) ?? category, locale.value)
 }
 
-function getStatusMessage(book: any): string {
+function getStatusMessage(book: Pick<Book, 'statusMessage'>): string {
   const msg = book?.statusMessage
   if (!msg) {
     return t('library.processing_pdf')
@@ -177,7 +177,7 @@ function getStatusMessage(book: any): string {
 
   const extractingTopicMatch = msg.match(/extracting (?:chapter content|topic):\s*(.+)/i)
   if (extractingTopicMatch) {
-    return t('library.status_extracting_topic', { topic: extractingTopicMatch[1].trim() })
+    return t('library.status_extracting_topic', { topic: extractingTopicMatch[1]?.trim() ?? '' })
   }
 
   const extractedCompleteMatch = msg.match(/extracted (\d+) slices(?:\.\s*complete!?|\))/i)
@@ -220,7 +220,7 @@ const { pause: stopBackgroundPolling, resume: startBackgroundPolling } = useInte
   async () => {
     await loadBooksWithPagination()
     const stillActive = libraryStore.books.some(
-      b => b.status === 'Processing' || (b.status as any) === 1
+      b => b.status === 'Processing' || b.status === 1
     )
     if (!stillActive) {
       stopBackgroundPolling()
@@ -233,7 +233,7 @@ const { pause: stopBackgroundPolling, resume: startBackgroundPolling } = useInte
 function checkBackgroundPolling() {
   stopBackgroundPolling()
   const hasInProgressBook = libraryStore.books.some(
-    b => b.status === 'Processing' || (b.status as any) === 1
+    b => b.status === 'Processing' || b.status === 1
   )
   if (hasInProgressBook) {
     startBackgroundPolling()
@@ -253,7 +253,7 @@ const { pause: stopPdfPolling, resume: startPdfPolling } = useIntervalFn(
         pdfStatusMessage.value = status.statusMessage
       }
 
-      if (status.status === 'Ready' || (status.status as any) === 2 || status.statusMessage === 'Ready' || status.progressPercentage === 100) {
+      if (status.status === 'Ready' || status.status === 2 || status.statusMessage === 'Ready' || status.progressPercentage === 100) {
         stopPdfPolling()
         pollingBookId.value = null
         isProcessingPdf.value = false
@@ -263,7 +263,7 @@ const { pause: stopPdfPolling, resume: startPdfPolling } = useIntervalFn(
         pdfFile.value = null
         pdfTitle.value = ''
         await loadBooksWithPagination()
-      } else if (status.status === 'Failed' || (status.status as any) === 3) {
+      } else if (status.status === 'Failed' || status.status === 3) {
         stopPdfPolling()
         pollingBookId.value = null
         isProcessingPdf.value = false
@@ -314,7 +314,7 @@ function loadBookmarks() {
       }
     }
     bookmarks.value = loaded
-  } catch (e) {
+  } catch {
     // ignore
   }
 }
@@ -347,7 +347,7 @@ async function handleImportSubmit() {
     importContent.value = ''
     importSourceUrl.value = ''
     isImportModalOpen.value = false
-  } catch (err: any) {
+  } catch (err: unknown) {
     await refreshRejectedCategory(err)
     toast.error(formatError(err, 'library.toast_import_failed'))
   }
@@ -409,7 +409,7 @@ async function handlePdfUpload() {
       isImportModalOpen.value = false
       isProcessingPdf.value = false
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     await refreshRejectedCategory(err)
     stopPdfPolling()
     pollingBookId.value = null
@@ -443,7 +443,7 @@ async function handleCrawlUrl() {
       // Switch to markdown tab for preview & confirmation
       activeTab.value = 'markdown'
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     toast.error(formatError(err, 'library.toast_crawl_failed'))
   } finally {
     isCrawling.value = false
@@ -465,7 +465,7 @@ async function handleImportRemotePdf() {
     if (libraryQuery.value.page !== 1) await onPageChange(1)
     else await loadBooksWithPagination()
     checkBackgroundPolling()
-  } catch (err: any) {
+  } catch (err: unknown) {
     await refreshRejectedCategory(err)
     toast.error(formatError(err, 'library.toast_import_failed'))
   } finally {
@@ -678,12 +678,12 @@ async function handleSaveEditBook() {
                     <span>{{ $t('library.resumes_at', { slice: bookmarks[book.id] }) }}</span>
                   </div>
                   <!-- Ready Badge if no bookmark -->
-                  <div v-else-if="book.status === 'Ready' || (book.status as unknown as number) === 2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 text-xs font-semibold">
+                  <div v-else-if="book.status === 'Ready' || book.status === 2" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-canvas-subtle border border-slate-200/80 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 text-xs font-semibold">
                     <BookOpen class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                     <span>{{ $t('library.ready_to_read') }}</span>
                   </div>
                   <!-- In-Progress Ingestion Indicator -->
-                  <div v-if="book.status === 'Processing' || (book.status as any) === 1" class="p-3 rounded-2xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20">
+                  <div v-if="book.status === 'Processing' || book.status === 1" class="p-3 rounded-2xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20">
                     <div class="flex items-center gap-2 text-xs font-semibold text-brand-700 dark:text-brand-300">
                       <Loader2 class="w-3.5 h-3.5 text-brand-500 animate-spin shrink-0" />
                       <span class="truncate">{{ getStatusMessage(book) }}</span>
@@ -694,7 +694,7 @@ async function handleSaveEditBook() {
                   <div class="space-y-1 pt-1">
                     <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                       <span class="inline-flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400 text-[11px]">
-                        <template v-if="book.status === 'Processing' || (book.status as any) === 1">
+                        <template v-if="book.status === 'Processing' || book.status === 1">
                           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                           {{ $t('library.status_processing') }}
                         </template>

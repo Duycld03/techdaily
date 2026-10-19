@@ -312,7 +312,6 @@ export function useMarkdownRenderer() {
             if (!remaining) {
               // The first paragraph only contained the marker and/or duplicate title
               tokens.splice(i + 1, 3);
-              closeIdx -= 3;
 
               // Check if the next paragraph is purely the duplicate title
               const nextPara = tokens[i + 1];
@@ -327,7 +326,6 @@ export function useMarkdownRenderer() {
                   alertType.toLowerCase()
                 ) {
                   tokens.splice(i + 1, 3);
-                  closeIdx -= 3;
                 }
               }
             } else {

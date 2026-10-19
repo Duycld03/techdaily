@@ -2,6 +2,7 @@ import { useAuthStore } from '~/stores/useAuthStore'
 import { useToast } from '~/composables/useToast'
 import { watch } from 'vue'
 import { isAdminLogin, isAdminRoute, loginRedirectFor } from '~/utils/adminRoutes'
+import { profileForToken } from '~/utils/clientStorage'
 
 export class ApiError extends Error {
   code?: string
@@ -19,13 +20,10 @@ export class ApiError extends Error {
     Object.setPrototypeOf(this, ApiError.prototype)
   }
 }
-interface LockManagerLike {
-  request: (name: string, callback: () => Promise<string | null>) => Promise<string | null>
+export interface ApiRequestOptions extends RequestInit {
+  query?: Record<string, string | number | boolean | null | undefined>
 }
 
-interface NavigatorWithLocks {
-  locks: LockManagerLike
-}
 
 let inFlightRefreshPromise: Promise<string | null> | null = null
 let isRedirectingToLogin = false
@@ -96,20 +94,17 @@ export function useApiClient() {
           'Content-Type': 'application/json'
         }
       })
-    } catch (networkErr: any) {
-      const error: any = new Error('Token refresh network error: ' + (networkErr?.message || 'Failed to fetch'))
-      error.isNetworkError = true
-      throw error
+    } catch (networkErr: unknown) {
+      const message = networkErr instanceof Error ? networkErr.message : 'Failed to fetch'
+      throw Object.assign(new Error('Token refresh network error: ' + message), { isNetworkError: true })
     }
 
     if (!res.ok) {
-      const error: any = new Error(`Token refresh failed with status ${res.status}`)
-      error.status = res.status
-      throw error
+      throw Object.assign(new Error(`Token refresh failed with status ${res.status}`), { status: res.status })
     }
     const rawData: unknown = await res.json()
     let newToken: string | null = null
-    let returnedUser: any = null
+    let returnedUser: unknown = null
     if (rawData && typeof rawData === 'object') {
       if ('accessToken' in rawData && typeof rawData.accessToken === 'string') {
         newToken = rawData.accessToken
@@ -125,16 +120,15 @@ export function useApiClient() {
     }
 
     if (generation !== auth.sessionGeneration) throw new ApiError('The account changed during renewal.', 409, 'SESSION_CHANGED')
-    await auth.setSession(newToken, returnedUser || auth.user)
+    await auth.setSession(newToken, profileForToken(newToken, returnedUser || auth.user))
     if (generation !== auth.sessionGeneration) throw new ApiError('The account changed during renewal.', 409, 'SESSION_CHANGED')
 
     return newToken
   }
 
   async function refreshAuthToken(): Promise<string | null> {
-    if (typeof navigator !== 'undefined' && (navigator as any).locks && typeof (navigator as any).locks.request === 'function') {
-      const nav = navigator as unknown as NavigatorWithLocks
-      return await nav.locks.request('deeppace_auth_refresh', async () => {
+    if (typeof navigator !== 'undefined' && navigator.locks && typeof navigator.locks.request === 'function') {
+      return await navigator.locks.request('deeppace_auth_refresh', async () => {
         const token = getAuthToken()
         if (token) {
           const exp = parseJwtExp(token)
@@ -173,18 +167,29 @@ export function useApiClient() {
     let details: unknown
     let data: unknown
     try {
-      const body = await response.json()
+      const body: unknown = await response.json()
       data = body
-      message = body.detail || body.message || body.title || message
-      code = body.code || (body.extensions && typeof body.extensions === 'object' ? (body.extensions as Record<string, unknown>).code as string : undefined)
-      details = body.errors
+      if (body && typeof body === 'object') {
+        const problem = body as Record<string, unknown>
+        for (const field of ['detail', 'message', 'title'] as const) {
+          const value = problem[field]
+          if (typeof value === 'string' && value) {
+            message = value
+            break
+          }
+        }
+        if ('code' in body && typeof body.code === 'string') code = body.code
+        if (!code && 'extensions' in body && body.extensions && typeof body.extensions === 'object' &&
+          'code' in body.extensions && typeof body.extensions.code === 'string') code = body.extensions.code
+        if ('errors' in body) details = body.errors
+      }
     } catch { /* Empty and non-JSON error bodies use the HTTP status. */ }
     code ||= response.status === 401 ? 'UNAUTHORIZED' : response.status === 403 ? 'FORBIDDEN'
       : response.status === 404 ? 'RESOURCE_NOT_FOUND' : response.status >= 500 ? 'SERVER_ERROR' : undefined
     return new ApiError(message, response.status, code, details, data)
   }
 
-  async function performRequest<T>(endpoint: string, options: RequestInit, generation: number): Promise<T> {
+  async function performRequest<T>(endpoint: string, options: ApiRequestOptions, generation: number): Promise<T> {
     const isAuthEndpoint = endpoint.startsWith('/api/v1/auth/')
     if (!isAuthEndpoint && !isServer) {
       const token = getAuthToken()
@@ -198,14 +203,27 @@ export function useApiClient() {
     const token = getAuthToken()
     if (token) headers.Authorization = `Bearer ${token}`
     if (!(options.body instanceof FormData) && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
-    let response = await fetch(`${baseUrl}${endpoint}`, { ...options, credentials: options.credentials || 'include', headers })
+    let requestUrl = `${baseUrl}${endpoint}`
+    if (options.query) {
+      const searchParams = new URLSearchParams()
+      for (const [key, val] of Object.entries(options.query)) {
+        if (val !== undefined && val !== null && val !== '') {
+          searchParams.set(key, String(val))
+        }
+      }
+      const qs = searchParams.toString()
+      if (qs) {
+        requestUrl += (requestUrl.includes('?') ? '&' : '?') + qs
+      }
+    }
+    let response = await fetch(requestUrl, { ...options, credentials: options.credentials || 'include', headers })
     if (generation !== auth.sessionGeneration) throw new ApiError('The account changed during the request.', 409, 'SESSION_CHANGED')
 
     if (response.status === 401 && !isAuthEndpoint && !isServer) {
       try {
         const renewed = await refreshAuthToken()
         options.signal?.throwIfAborted()
-        if (renewed) response = await fetch(`${baseUrl}${endpoint}`, {
+        if (renewed) response = await fetch(requestUrl, {
           ...options, credentials: options.credentials || 'include',
           headers: { ...headers, Authorization: `Bearer ${renewed}` }
         })
@@ -234,7 +252,7 @@ export function useApiClient() {
     return text.trim() ? JSON.parse(text) : {} as T
   }
 
-  async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  async function request<T>(endpoint: string, options: ApiRequestOptions = {}): Promise<T> {
     const generation = auth.sessionGeneration
     const privileged = endpoint.startsWith('/api/v1/admin/') || endpoint === '/api/v1/catalog/capabilities'
     if (!privileged) return performRequest<T>(endpoint, options, generation)
@@ -255,7 +273,7 @@ export function useApiClient() {
   }
 
   return {
-    get: <T>(url: string, options?: RequestInit) => request<T>(url, { method: 'GET', ...options }),
+    get: <T>(url: string, options?: ApiRequestOptions) => request<T>(url, { method: 'GET', ...options }),
     post: <T>(url: string, body?: unknown, options?: RequestInit) =>
       request<T>(url, {
         method: 'POST',
@@ -280,7 +298,7 @@ export function useApiClient() {
         body: body ? JSON.stringify(body) : undefined,
         ...options
       }),
-    delete: <T>(url: string, options?: RequestInit) => request<T>(url, { method: 'DELETE', ...options }),
+    delete: <T>(url: string, options?: ApiRequestOptions) => request<T>(url, { method: 'DELETE', ...options }),
     download: async (url: string, defaultFileName = 'export.md'): Promise<void> => {
       const token = getAuthToken()
       const headers: Record<string, string> = {}

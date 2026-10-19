@@ -42,18 +42,15 @@ const forecastDays = computed<ForecastDay[]>(() => {
     const dayLabel = isVi.value ? viDays[dayOfWeek] : enDays[dayOfWeek]
     const fullDayLabel = isVi.value ? viFullDays[dayOfWeek] : enFullDays[dayOfWeek]
 
-    let count = 0
-    if (i === 0) {
-      // Due today or overdue
-      count = props.cards.filter((c) => c.nextReviewDate && c.nextReviewDate <= dateStr).length
-    } else {
-      count = props.cards.filter((c) => c.nextReviewDate === dateStr).length
-    }
+    // Include overdue cards in today's forecast.
+    const count = i === 0
+      ? props.cards.filter((c) => c.nextReviewDate && c.nextReviewDate <= dateStr).length
+      : props.cards.filter((c) => c.nextReviewDate === dateStr).length
 
     result.push({
       dateStr,
-      dayLabel,
-      fullDayLabel,
+      dayLabel: dayLabel ?? '',
+      fullDayLabel: fullDayLabel ?? '',
       dayNum: d.getDate(),
       count,
       isToday: i === 0
@@ -78,13 +75,19 @@ const peakDayInfo = computed(() => {
   }
   let maxDay = forecastDays.value[0]
   for (const day of forecastDays.value) {
-    if (day.count > maxDay.count) {
+    if (maxDay && day.count > maxDay.count) {
       maxDay = day
     }
   }
+  if (maxDay) {
+    return {
+      count: maxDay.count,
+      day: maxDay.fullDayLabel
+    }
+  }
   return {
-    count: maxDay.count,
-    day: maxDay.fullDayLabel
+    count: 0,
+    day: isVi.value ? 'Hôm nay' : 'Today'
   }
 })
 

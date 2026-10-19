@@ -55,7 +55,7 @@ async function loadExplanation() {
     );
     explanation.value = res.explanation;
     isFromCache.value = !!res.isFromCache;
-  } catch (err: any) {
+  } catch (err: unknown) {
     errorMessage.value = formatError(err, "today.explain_error");
     explanation.value = "";
   } finally {
@@ -162,9 +162,9 @@ async function copyText() {
 
         <!-- Success Explanation -->
         <div v-else-if="explanation" class="space-y-3">
-          <div
+          <!-- eslint-disable-next-line vue/no-v-html -- clientMarkdown disables raw HTML and validates URLs; code fences use Shiki or escaping. -->
+          <div v-html="renderedExplanation"
             class="prose prose-slate dark:prose-invert max-w-none text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-canvas-subtle p-5 rounded-2xl border border-slate-200 dark:border-white/[0.08]"
-            v-html="renderedExplanation"
           />
         </div>
       </div>
