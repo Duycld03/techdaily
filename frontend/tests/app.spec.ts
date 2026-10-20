@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
-import { ref } from 'vue'
+import { defineComponent, h, nextTick, ref } from 'vue'
+import type { PropType } from 'vue'
 import App from '~/app.vue'
 import { useAdminAccessStore } from '~/stores/useAdminAccessStore'
 import { clearAuthStorage } from './helpers/admin'
@@ -157,5 +158,38 @@ describe('app.vue shell isolation and page keying', () => {
     expect(wrapper.findComponent({ name: 'AppSidebar' }).exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'AdminShell' }).exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'NuxtPage' }).exists()).toBe(true)
+  })
+
+  it('retains live reader state across slice-query changes but resets it for another book', async () => {
+    const ReadingState = defineComponent({
+      setup() {
+        const position = ref('')
+        return () => h('input', {
+          value: position.value,
+          onInput: (event: Event) => { position.value = (event.target as HTMLInputElement).value },
+        })
+      },
+    })
+    const PageOutlet = defineComponent({
+      props: {
+        pageKey: { type: Function as PropType<(route: { path: string; fullPath: string }) => string>, required: true },
+      },
+      setup(props) {
+        return () => h(ReadingState, { key: props.pageKey(currentRoute.value) })
+      },
+    })
+    currentRoute.value = { path: '/read/book-1', fullPath: '/read/book-1?slice=1' }
+    const wrapper = mount(App, { global: { stubs: {
+      AppHeader: true, AppSidebar: true, AppToastContainer: true, AppCommandPalette: true,
+      NuxtPage: PageOutlet,
+    } } })
+    await wrapper.get('input').setValue('Paused at sentence 3')
+    currentRoute.value = { path: '/read/book-1', fullPath: '/read/book-1?slice=2' }
+    await nextTick()
+    expect(wrapper.get('input').element.value).toBe('Paused at sentence 3')
+    currentRoute.value = { path: '/read/book-2', fullPath: '/read/book-2?slice=1' }
+    await nextTick()
+    expect(wrapper.get('input').element.value).toBe('')
+    wrapper.unmount()
   })
 })

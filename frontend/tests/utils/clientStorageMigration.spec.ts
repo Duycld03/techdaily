@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { CLIENT_STORAGE, isCurrentSessionToken, profileForToken, type StorageAdapter } from '~/utils/clientStorage'
-import { LEGACY_SESSION, completeMigrationPhase, hasLegacySessionCookies, legacyBookRecord, migrateLegacyStorage, retireLegacyIdentity, transferStorageRecord, type MigrationEnvironment } from '~/utils/legacyStorageMigration'
+import { CLIENT_STORAGE, isCurrentSessionToken, parseAudioPreference, profileForToken, readAudioPreference, writeAudioPreference, type StorageAdapter } from '~/utils/clientStorage'
+import { LEGACY_SESSION, completeMigrationPhase, hasLegacySessionCookies, legacyBookRecord, migrateLegacyStorage, migrationPhaseComplete, retireLegacyIdentity, transferStorageRecord, type MigrationEnvironment } from '~/utils/legacyStorageMigration'
 
 function storage(): StorageAdapter {
   const data = new Map<string, string>()
@@ -212,5 +212,161 @@ describe('Identity migration and fencing', () => {
   it('treats SSR legacy cookies only as a candidate signal', () => {
     expect(hasLegacySessionCookies(key => key === LEGACY_SESSION.token ? 'untrusted' : null)).toBe(true)
     expect(hasLegacySessionCookies(() => null)).toBe(false)
+  })
+})
+
+describe('Explicit narration preference transition', () => {
+  const oldEngine = 'deeppace_reader_audio_engine'
+  const preference = (mode: string) => JSON.stringify({ version: 1, mode })
+
+  it.each(['auto', 'system', 'cloud', 'device'] as const)('accepts and verifies the explicit %s preference', mode => {
+    const target = storage()
+    expect(writeAudioPreference(mode, target)).toBe(true)
+    expect(target.getItem(CLIENT_STORAGE.audioPreference)).toBe(preference(mode))
+    expect(parseAudioPreference(target.getItem(CLIENT_STORAGE.audioPreference))).toBe(mode)
+    expect(readAudioPreference(target)).toBe(mode)
+  })
+
+  it.each([null, '', 'cloud', '{}', '{"version":2,"mode":"cloud"}', '{"version":1,"mode":"local"}',
+    '{"version":1,"mode":"Auto"}', '{"version":1,"mode":"auto","unexpected":true}', '[]', 'null'])('rejects unsupported preference records: %s', raw => {
+    expect(parseAudioPreference(raw)).toBeNull()
+  })
+
+  it('does not claim a preference write succeeded without matching readback', () => {
+    const target = storage()
+    vi.spyOn(target, 'setItem').mockImplementation(() => {})
+    expect(writeAudioPreference('cloud', target)).toBe(false)
+    expect(readAudioPreference(target)).toBe('auto')
+    expect(writeAudioPreference('system', null)).toBe(false)
+  })
+
+  it('preserves an explicit canonical choice while retiring the ambiguous old value', async () => {
+    const env = environment()
+    env.local!.setItem(oldEngine, 'device')
+    env.local!.setItem(CLIENT_STORAGE.audioPreference, preference('system'))
+    expect(await migrateLegacyStorage(env)).toBe('complete')
+    expect(readAudioPreference(env.local)).toBe('system')
+    expect(env.local!.getItem(oldEngine)).toBeNull()
+    expect(migrationPhaseComplete(env.local, 'audioPreference')).toBe(true)
+  })
+
+  it.each(['cloud', 'system', 'device', 'invalid'])('resets ambiguous %s to Auto after earlier phases completed without touching other data', async old => {
+    const env = environment()
+    for (const phase of ['identity', 'preferences', 'audio'] as const) completeMigrationPhase(env.local!, phase)
+    completeMigrationPhase(env.session!, 'identity')
+    const untouched = {
+      deeppace_reader_audio_speed: '1.5',
+      deeppace_reader_audio_voice_vi: 'vi-VN-Neural2-A',
+      deeppace_reader_audio_system_voice: 'native-voice',
+      deeppace_bookmark_book: '7',
+      deeppace_completed_book: '[1,2]',
+      third_party: 'keep',
+    }
+    for (const [key, value] of Object.entries(untouched)) env.local!.setItem(key, value)
+    env.local!.setItem(oldEngine, old)
+    expect(await migrateLegacyStorage(env)).toBe('complete')
+    expect(env.local!.getItem(CLIENT_STORAGE.audioPreference)).toBe(preference('auto'))
+    expect(env.local!.getItem(oldEngine)).toBeNull()
+    for (const [key, value] of Object.entries(untouched)) expect(env.local!.getItem(key)).toBe(value)
+    for (const phase of ['identity', 'preferences', 'audio', 'audioPreference'] as const) {
+      expect(migrationPhaseComplete(env.local, phase)).toBe(true)
+    }
+  })
+
+  it('replaces malformed canonical preference with verified Auto before retirement', async () => {
+    const env = environment()
+    env.local!.setItem(oldEngine, 'cloud')
+    env.local!.setItem(CLIENT_STORAGE.audioPreference, '{"version":9,"mode":"cloud"}')
+    await migrateLegacyStorage(env)
+    expect(env.local!.getItem(CLIENT_STORAGE.audioPreference)).toBe(preference('auto'))
+    expect(env.local!.getItem(oldEngine)).toBeNull()
+  })
+
+  it.each(['throw', 'ignored'] as const)('keeps retirement pending on %s destination writes and retries safely', async failure => {
+    const env = environment()
+    env.local!.setItem(oldEngine, 'cloud')
+    const original = env.local!.setItem.bind(env.local)
+    const write = vi.spyOn(env.local!, 'setItem').mockImplementation((key, value) => {
+      if (key === CLIENT_STORAGE.audioPreference) {
+        if (failure === 'throw') throw new Error('quota')
+        return
+      }
+      original(key, value)
+    })
+    expect(await migrateLegacyStorage(env)).toBe('deferred')
+    expect(readAudioPreference(env.local)).toBe('auto')
+    expect(env.local!.getItem(oldEngine)).toBe('cloud')
+    expect(migrationPhaseComplete(env.local, 'audioPreference')).toBe(false)
+    expect(migrationPhaseComplete(env.local, 'identity')).toBe(true)
+    write.mockRestore()
+    expect(await migrateLegacyStorage(env)).toBe('complete')
+    expect(env.local!.getItem(oldEngine)).toBeNull()
+    expect(migrationPhaseComplete(env.local, 'audioPreference')).toBe(true)
+  })
+
+  it('retries interrupted retirement without replacing a newer explicit choice', async () => {
+    const env = environment()
+    env.local!.setItem(oldEngine, 'cloud')
+    const original = env.local!.removeItem.bind(env.local)
+    const remove = vi.spyOn(env.local!, 'removeItem').mockImplementation(key => {
+      if (key === oldEngine) throw new Error('denied')
+      original(key)
+    })
+    expect(await migrateLegacyStorage(env)).toBe('deferred')
+    expect(env.local!.getItem(CLIENT_STORAGE.audioPreference)).toBe(preference('auto'))
+    expect(migrationPhaseComplete(env.local, 'audioPreference')).toBe(false)
+    expect(writeAudioPreference('device', env.local)).toBe(true)
+    remove.mockRestore()
+    expect(await migrateLegacyStorage(env)).toBe('complete')
+    expect(readAudioPreference(env.local)).toBe('device')
+    expect(env.local!.getItem(oldEngine)).toBeNull()
+  })
+
+  it('leaves completion pending when source removal is silently ignored', async () => {
+    const env = environment()
+    env.local!.setItem(oldEngine, 'cloud')
+    const original = env.local!.removeItem.bind(env.local)
+    vi.spyOn(env.local!, 'removeItem').mockImplementation(key => {
+      if (key !== oldEngine) original(key)
+    })
+    expect(await migrateLegacyStorage(env)).toBe('deferred')
+    expect(env.local!.getItem(oldEngine)).toBe('cloud')
+    expect(migrationPhaseComplete(env.local, 'audioPreference')).toBe(false)
+  })
+
+  it.each(['unavailable', 'occupied'] as const)('uses canonical-or-Auto without consulting old engine when coordination is %s', async coordination => {
+    const env = environment()
+    env.local!.setItem(oldEngine, 'cloud')
+    env.exclusive = coordination === 'unavailable' ? undefined : async () => undefined
+    expect(await migrateLegacyStorage(env)).toBe('deferred')
+    const read = vi.spyOn(env.local!, 'getItem')
+    expect(readAudioPreference(env.local)).toBe('auto')
+    env.local!.setItem(CLIENT_STORAGE.audioPreference, preference('device'))
+    expect(readAudioPreference(env.local)).toBe('device')
+    expect(read.mock.calls.some(([key]) => key === oldEngine)).toBe(false)
+    expect(migrationPhaseComplete(env.local, 'audioPreference')).toBe(false)
+    read.mockRestore()
+    expect(env.local!.getItem(oldEngine)).toBe('cloud')
+    env.exclusive = async work => work()
+    expect(await migrateLegacyStorage(env)).toBe('complete')
+    expect(readAudioPreference(env.local)).toBe('device')
+  })
+
+  it('guards denied preference reads and writes without consulting obsolete data', () => {
+    const target = storage()
+    vi.spyOn(target, 'getItem').mockImplementation(() => { throw new Error('denied') })
+    vi.spyOn(target, 'setItem').mockImplementation(() => { throw new Error('denied') })
+    expect(() => readAudioPreference(target)).not.toThrow()
+    expect(readAudioPreference(target)).toBe('auto')
+    expect(writeAudioPreference('system', target)).toBe(false)
+  })
+
+  it('does not revisit an independently completed preference transition', async () => {
+    const env = environment()
+    await migrateLegacyStorage(env)
+    env.local!.setItem(oldEngine, 'reintroduced')
+    const read = vi.spyOn(env.local!, 'getItem')
+    await migrateLegacyStorage(env)
+    expect(read.mock.calls.some(([key]) => key === oldEngine)).toBe(false)
   })
 })

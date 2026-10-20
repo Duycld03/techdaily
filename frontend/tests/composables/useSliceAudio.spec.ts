@@ -5,17 +5,16 @@ import { computeContentHash, extractNarrationScript } from '~/utils/narrationScr
 import { resolveVoiceForLanguage } from '~/utils/ttsVoices'
 import {
   AUDIO_SPEED_STORAGE_KEY,
-  AUDIO_ENGINE_STORAGE_KEY,
   AUDIO_SYSTEM_VOICE_STORAGE_KEY,
   AUDIO_AUTO_ADVANCE_STORAGE_KEY,
-  useSliceAudio,
+  useSliceAudio as createSliceAudio,
   categorizeAudioError,
-  resolveCascadedEngine,
   filterSystemVoicesForLanguage,
   getAvailableSystemVoices,
   playSliceTransitionChime,
   updateMediaSessionMetadata,
   type SynthHandlers,
+  type SliceAudioDeps,
   type TtsEngine,
   type NarrationSource,
   type SystemVoiceOption,
@@ -119,6 +118,15 @@ async function expectedKey(src: NarrationSource): Promise<string> {
 
 const createObjectUrl = vi.fn((_blob: Blob) => 'blob:mock')
 
+const activePlayers: ReturnType<typeof createSliceAudio>[] = []
+function useSliceAudio(deps: SliceAudioDeps = {}) {
+  const player = createSliceAudio({ defaultEngine: 'device', ...deps })
+  // Playback fixtures start with a previously fetched healthy quota.
+  player.audioQuota.value = { monthlyLimit: 950000, usedCharacters: 0, remainingCharacters: 950000, isNearLimit: false, isExhausted: false }
+  activePlayers.push(player)
+  return player
+}
+
 describe('useSliceAudio', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -128,6 +136,7 @@ describe('useSliceAudio', () => {
   })
 
   afterEach(() => {
+    for (const player of activePlayers.splice(0)) player.dispose()
     vi.restoreAllMocks()
   })
 
@@ -189,20 +198,6 @@ describe('useSliceAudio', () => {
     expect(store.has(await expectedKey(second))).toBe(true)
   })
 
-  it('unconditionally cancels any in-flight worker synthesis when loadAndPlay is called', async () => {
-    const engine = streamingEngine()
-    const { cache } = memoryCache()
-    const player = useSliceAudio({ engine, cache, createAudio: createFakeAudio })
-
-    const chunkA = source({ markdown: 'Sentence A. Sentence B.' })
-    await player.loadAndPlay(chunkA)
-    expect(engine.cancel).toHaveBeenCalled()
-
-    engine.cancel.mockClear()
-    const chunkB = source({ markdown: 'Sentence C. Sentence D.' })
-    await player.loadAndPlay(chunkB)
-    expect(engine.cancel).toHaveBeenCalled()
-  })
 
   it('tracks per-sentence synth progress and stores the raw download percentage', async () => {
     const engine = streamingEngine()
@@ -305,7 +300,7 @@ describe('useSliceAudio', () => {
     expect(player.errorInfo.value?.suggestCloudFallback).toBe(true)
 
     // Switching engine mode clears error state
-    player.setEngineMode('cloud')
+    player.setEnginePreference('cloud')
     expect(player.errorMessage.value).toBeNull()
     expect(player.errorInfo.value).toBeNull()
   })
@@ -525,7 +520,6 @@ describe('useSliceAudio', () => {
     expect(quota).not.toBeNull()
     expect(player.isNearQuota.value).toBe(true)
     expect(player.isQuotaExhausted.value).toBe(false)
-    expect(player.engineMode.value).toBe('device')
   })
 
   it('resolves relative URLs in production environments when no custom fetchClient is provided', async () => {
@@ -652,6 +646,8 @@ describe('useSliceAudio', () => {
       src: '',
       currentTime: 0,
       duration: 0,
+      readyState: 1,
+      ended: false,
       paused: true,
       playbackRate: 1,
       addEventListener(type: string, cb: () => void) {
@@ -794,35 +790,6 @@ describe('useSliceAudio', () => {
     expect(cache.set).toHaveBeenCalledTimes(1)
   })
 
-  it('cancels active on-device synthesis and resets progress counters when switching to Cloud engine', () => {
-    const cancelMock = vi.fn()
-    const engine: TtsEngine = {
-      synthesize: vi.fn(),
-      cancel: cancelMock,
-      dispose: vi.fn(),
-    }
-    const { cache } = memoryCache()
-    const audio = createFakeAudio()
-
-    const player = useSliceAudio({
-      defaultEngine: 'device',
-      engine,
-      cache,
-      createAudio: () => audio,
-    })
-
-    player.synthIndex.value = 5
-    player.synthTotal.value = 15
-    player.targetBufferCount.value = 5
-
-    player.setEngineMode('cloud')
-
-    expect(cancelMock).toHaveBeenCalledTimes(1)
-    expect(player.synthIndex.value).toBe(0)
-    expect(player.synthTotal.value).toBe(0)
-    expect(player.targetBufferCount.value).toBe(0)
-    expect(player.engineMode.value).toBe('cloud')
-  })
 
   it('restarts playback from 0:00 when play is invoked on ended audio', async () => {
     const audio = createFakeAudio()
@@ -850,15 +817,13 @@ describe('useSliceAudio', () => {
     expect(audio.play).toHaveBeenCalled()
   })
 
-  it('restores 5 of 15 sentences from partial cache, plays all 5 sentences immediately, and synthesizes remaining 10 sentences', async () => {
+  it('reuses five generated Local sentences and synthesizes only the ten missing sentences', async () => {
     const { cache } = memoryCache()
     const audio = createFakeAudio()
 
     // 15 sentences markdown
     const fifteenSentences = Array.from({ length: 15 }, (_, i) => `Sentence ${i + 1}.`).join(' ')
     const src = source({ chunkId: 'chunk-15-sentences', markdown: fifteenSentences })
-    const script = extractNarrationScript(fifteenSentences)
-    const contentHash = await computeContentHash(script)
     const key = await expectedKey(src)
     // Pre-populate partial cache with 5 chunks out of 15
     const partialChunks = Array.from({ length: 5 }, (_, i) => new Float32Array([0.1 * (i + 1), 0.1 * (i + 1)]))
@@ -896,39 +861,12 @@ describe('useSliceAudio', () => {
     expect(synthesizedSentences[0]![0]).toBe('Sentence 6.')
     expect(synthesizedSentences[0]![9]).toBe('Sentence 15.')
 
-    // Verify pre-roll played all 5 restored chunks
-    expect(player.targetBufferCount.value).toBe(5)
     expect(player.synthTotal.value).toBe(15)
     expect(player.synthIndex.value).toBe(15)
     expect(cache.set).toHaveBeenCalledTimes(1)
     expect(cache.deletePartial).toHaveBeenCalledWith(key)
   })
 
-  it('preserves playback offset via loadedmetadata when transitioning to complete assembled file', async () => {
-    const audio = createFakeAudio()
-    // Start with readyState 0 (metadata not yet loaded)
-    audio.readyState = 0
-
-    const engine = streamingEngine()
-    const { cache } = memoryCache()
-
-    const player = useSliceAudio({
-      defaultEngine: 'device',
-      engine,
-      cache,
-      createAudio: () => audio,
-    })
-
-    // Simulate playback reaching 12.5 seconds
-    audio.currentTime = 12.5
-    await player.loadAndPlay(source())
-
-    // Trigger loadedmetadata event
-    audio._fire('loadedmetadata')
-
-    // Offset should be preserved on the audio element
-    expect(audio.currentTime).toBe(12.5)
-  })
 
   it('handles stream underrun by entering buffering status and resumes playback when next chunk arrives', async () => {
     const audio = createFakeAudio()
@@ -965,7 +903,10 @@ describe('useSliceAudio', () => {
       expect(player.status.value).toBe('ready')
     })
     expect(audio.play).toHaveBeenCalledTimes(1)
-    // Simulate pre-roll audio ending before chunk 3 has arrived (stream underrun)
+    // Native media naturally emits pause before ended; this is not user intent.
+    audio.paused = true
+    audio.ended = true
+    audio._fire('pause')
     audio._fire('ended')
     expect(player.status.value).toBe('loading') // buffering state
     expect(player.playing.value).toBe(true) // still in playing state
@@ -981,7 +922,7 @@ describe('useSliceAudio', () => {
     await loadPromise
   })
 
-  it('prepares audio source and metadata without playing when autoPlay is false', async () => {
+  it('does not generate or play an uncached idle source when autoplay is false', async () => {
     const audio = createFakeAudio()
     const engine = streamingEngine()
     const { cache } = memoryCache()
@@ -993,9 +934,9 @@ describe('useSliceAudio', () => {
       createAudio: () => audio,
     })
 
-    await player.loadAndPlay(source(), false)
+    await player.loadAndPlay(source(), { autoplay: false })
 
-    expect(player.status.value).toBe('ready')
+    expect(engine.synthesize).not.toHaveBeenCalled()
     expect(audio.play).not.toHaveBeenCalled()
   })
 
@@ -1154,54 +1095,6 @@ describe('useSliceAudio', () => {
       expect(frVoices).toHaveLength(0)
     })
 
-    it('resolves cascade Priority 1: System TTS when matching system voice is present', () => {
-      const engine = resolveCascadedEngine({
-        sliceLanguage: 'vi',
-        availableSystemVoices: sampleVoices,
-        isOnline: true,
-        isQuotaExhausted: false,
-      })
-      expect(engine).toBe('system')
-    })
-
-    it('resolves cascade Priority 2: Cloud TTS when system voice is missing but online and quota healthy', () => {
-      const engine = resolveCascadedEngine({
-        sliceLanguage: 'fr',
-        availableSystemVoices: sampleVoices,
-        isOnline: true,
-        isQuotaExhausted: false,
-      })
-      expect(engine).toBe('cloud')
-    })
-
-    it('resolves cascade Priority 3: Device TTS when cloud quota is exhausted or offline', () => {
-      const engineOffline = resolveCascadedEngine({
-        sliceLanguage: 'fr',
-        availableSystemVoices: sampleVoices,
-        isOnline: false,
-        isQuotaExhausted: false,
-      })
-      expect(engineOffline).toBe('device')
-
-      const engineExhausted = resolveCascadedEngine({
-        sliceLanguage: 'fr',
-        availableSystemVoices: sampleVoices,
-        isOnline: true,
-        isQuotaExhausted: true,
-      })
-      expect(engineExhausted).toBe('device')
-    })
-
-    it('honors manual user override over automatic cascade resolution', () => {
-      const engine = resolveCascadedEngine({
-        manualOverride: 'cloud',
-        sliceLanguage: 'vi',
-        availableSystemVoices: sampleVoices,
-        isOnline: true,
-        isQuotaExhausted: false,
-      })
-      expect(engine).toBe('cloud')
-    })
 
     it('executes System TTS narration, sets speed, and invokes onSliceEnded on completion', async () => {
       class FakeUtterance {
@@ -1274,114 +1167,6 @@ describe('useSliceAudio', () => {
       expect(onSliceEnded).toHaveBeenCalledTimes(1)
     })
 
-    it('automatically cascades to Cloud TTS, updates engineMode and invokes onFallbackToCloud when System TTS emits synthesis-failed error', async () => {
-      let registeredErrorCb: ((ev: SpeechSynthesisErrorEvent) => void) | null = null
-      class FailingUtterance {
-        text: string
-        lang = ''
-        voice: SpeechSynthesisVoice | null = null
-        rate = 1
-        pitch = 1
-        onstart: ((ev: SpeechSynthesisEvent) => void) | null = null
-        onend: ((ev: SpeechSynthesisEvent) => void) | null = null
-        onerror: ((ev: SpeechSynthesisErrorEvent) => void) | null = null
-        constructor(text: string) {
-          this.text = text
-        }
-      }
-      Reflect.set(globalThis, 'SpeechSynthesisUtterance', FailingUtterance)
-
-      const mockSynth = {
-        getVoices: vi.fn(() => [
-          { voiceURI: 'vi-vn-x-vic-local', name: 'Google Vietnamese', lang: 'vi-VN', default: true },
-        ]),
-        speak: vi.fn((utt: { onerror: ((ev: SpeechSynthesisErrorEvent) => void) | null }) => {
-          registeredErrorCb = utt.onerror
-        }),
-        pause: vi.fn(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-        speaking: false,
-        paused: false,
-      } as unknown as SpeechSynthesis
-
-      const audio = createFakeAudio()
-      const { cache } = memoryCache()
-      const onFallbackToCloud = vi.fn()
-      const mockBlob = new Blob(['cloud audio bytes'], { type: 'audio/mpeg' })
-      const fetchClient = vi.fn(async () => {
-        return new Response(mockBlob, {
-          status: 200,
-          headers: { 'Content-Type': 'audio/mpeg' },
-        })
-      })
-
-      const player = useSliceAudio({
-        defaultEngine: 'system',
-        speechSynthesis: mockSynth,
-        cache,
-        createAudio: () => audio,
-        fetchClient,
-        onFallbackToCloud,
-      })
-
-      await player.loadAndPlay(source({ language: 'vi' }))
-      expect(player.engineMode.value).toBe('system')
-      expect(mockSynth.speak).toHaveBeenCalled()
-
-      // Simulate Android Chrome synthesis-failed error
-      const errorEvent = { error: 'synthesis-failed' } as SpeechSynthesisErrorEvent
-      await registeredErrorCb?.(errorEvent)
-
-      expect(onFallbackToCloud).toHaveBeenCalledTimes(1)
-      expect(player.engineMode.value).toBe('cloud')
-      expect(player.activeCascadeTier.value).toBe('cloud')
-      expect(localStorage.getItem(AUDIO_ENGINE_STORAGE_KEY)).toBe('cloud')
-      expect(fetchClient).toHaveBeenCalled()
-    })
-
-    it('invokes onFallbackToCloud, updates engineMode and localStorage to cloud when no matching system voices exist', async () => {
-      const mockSynth = {
-        getVoices: vi.fn(() => [
-          { voiceURI: 'vi-vn-x-vic-local', name: 'Google Vietnamese', lang: 'vi-VN', default: true },
-        ]),
-        speak: vi.fn(),
-        pause: vi.fn(),
-        resume: vi.fn(),
-        cancel: vi.fn(),
-        speaking: false,
-        paused: false,
-      } as unknown as SpeechSynthesis
-
-      const audio = createFakeAudio()
-      const { cache } = memoryCache()
-      const onFallbackToCloud = vi.fn()
-      const mockBlob = new Blob(['mock audio data'], { type: 'audio/mpeg' })
-      const fetchClient = vi.fn(async () => {
-        return new Response(mockBlob, {
-          status: 200,
-          headers: { 'Content-Type': 'audio/mpeg' },
-        })
-      })
-
-      const player = useSliceAudio({
-        defaultEngine: 'system',
-        speechSynthesis: mockSynth,
-        cache,
-        createAudio: () => audio,
-        fetchClient,
-        onFallbackToCloud,
-      })
-
-      // Load slice in German ('de') for which there are no system voices (only vi is in mockSynth)
-      await player.loadAndPlay(source({ language: 'de' }))
-
-      expect(onFallbackToCloud).toHaveBeenCalledTimes(1)
-      expect(player.engineMode.value).toBe('cloud')
-      expect(player.activeCascadeTier.value).toBe('cloud')
-      expect(localStorage.getItem(AUDIO_ENGINE_STORAGE_KEY)).toBe('cloud')
-      expect(fetchClient).toHaveBeenCalled()
-    })
 
 
     it('triggers onSliceEnded when HTMLAudioElement completes playback', async () => {
@@ -1607,20 +1392,5 @@ describe('useSliceAudio', () => {
       }
     })
 
-    it('preserves initialOffset when loading audio across engines', async () => {
-      const audio = createFakeAudio()
-      const { cache } = memoryCache()
-      const engine = streamingEngine()
-
-      const player = useSliceAudio({
-        defaultEngine: 'device',
-        engine,
-        cache,
-        createAudio: () => audio,
-      })
-
-      await player.loadAndPlay(source(), true, 15.5)
-      expect(audio.currentTime).toBe(15.5)
-    })
   })
 })

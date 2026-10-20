@@ -39,7 +39,7 @@ DeepPace (Clean Architecture)
 | **AI Synthesis Engine** | **Gemini 3.6 Flash API** | Structured Output (JSON Schema), High-Speed Quiz & Challenge Synthesis (<5s), Semantic Term Cache, JIT Look-Ahead Buffer Pre-generation |
 | **Document Ingestion** | **PdfPig + ReverseMarkdown** | Asynchronous Channel-based queue with zero-LOH disk spooling for PDFs up to 300MB (8,000+ pages), native PDF Bookmarks/Outline segmentation, HTML-to-Markdown Web Crawler |
 | **Frontend Web** | **Nuxt 4 + Vue 3.5** | Dual-Pane SSR/PWA app, Tailwind CSS + `@tailwindcss/typography`, Pinia, `@nuxtjs/i18n` (en/vi), `@nuxtjs/color-mode` (Dark/Light), Shiki TextMate Syntax Highlighter |
-| **Audio Narration Engine** | **Web Worker Neural TTS + Web Speech** | Client-side neural TTS via ONNX Runtime Web / Transformers.js with Web Worker offloading (zero server cost), 3-tier cascading fallback (Device ONNX → System Web Speech → Cloud TTS), seekable sentence scrubber, and IndexedDB caching |
+| **Audio Narration Engine** | **Web Speech + Cloud TTS + Web Worker Neural TTS** | Auto prefers suitable System speech, then Google Cloud, then Local ONNX synthesis; explicit engine preferences, engine-local listening checkpoints, seekable cached audio, and IndexedDB audio reuse |
 | **Knowledge Visualization** | **Three.js + 3D-Force-Graph + Cytoscape** | Interactive personal associative knowledge graph in 2D Canvas & 3D WebGL, visualizing relational connections between books, reading slices, highlights, and flashcards anchored to architectural pillars |
 | **Notifications** | **Web Push (VAPID)** | Real-time browser push notifications (VAPID, Service Worker) for Morning Curriculum and Streak Preservation with auto-detected IANA timezones |
 | **Identity & Security** | **JWT + Rotating Refresh Tokens + Email OTP** | PBKDF2 password hashing (16-byte salt, 100,000 SHA-256 iterations), OTP-verified email registration & password reset (SMTP transactional email), refresh-token family rotation with reuse detection, opt-in 30-day "Remember Me" persistence, Google OAuth 2.0 |
@@ -49,7 +49,7 @@ DeepPace (Clean Architecture)
 
 > 📖 **Feature Specifications & Capabilities:** See [openspec/specs/](openspec/specs/)
 ### 💡 Key Retention & Architecture Highlights
-- **On-Device Neural Audio Narration (TTS):** Zero-latency client-side neural speech synthesis run in Web Workers via ONNX Runtime Web / Transformers.js with 100% offline playback, IndexedDB chunk audio caching, and cascading fallbacks (Device ONNX → System Web Speech → Cloud TTS).
+- **Multi-Engine Audio Narration (TTS):** Auto tries System Web Speech, then Google Cloud, then Local Web Worker synthesis through ONNX Runtime Web / Transformers.js. Local models load only when requested; offline reuse requires all necessary model/audio resources to remain cached. Browser voice discovery and synthesis startup are not guaranteed zero-latency operations.
 - **Interactive 2D & 3D Knowledge Graph:** Personal associative knowledge cosmos rendered with 2D Canvas & 3D WebGL (Three.js), projecting real-time relational connections between user books, slices, highlights, and flashcards anchored to architectural pillars in a single PostgreSQL query pass.
 - **Web Push Notifications (VAPID):** Real-time browser push notifications for Morning Curriculum (08:00) and Streak Preservation (20:00) with automatic IANA timezone detection and Brave browser guidance.
 - **1-Click Flashcard (SM-2) from Reading Highlights:** Transform any highlighted technical passage in `/notes` or `/read/[bookId]` into a spaced repetition card with backend idempotency and deduplication.
@@ -60,7 +60,7 @@ DeepPace (Clean Architecture)
 
 ### 1. 🏠 Daily Focus Hub (`/today`)
 - **Daily Doc Slice & Pacer Bar:** Curated 3–5 minute excerpt from official docs preserving original source language with structured takeaways, reading progress metrics, calendar day change auto-advance, and 1-click active book switching dropdown.
-- **Integrated Audio Narration Player:** Direct client-side speech playback of daily slices with seekable scrubber, sleep timer, auto-advance, and multi-engine fallback.
+- **Integrated Audio Narration Player:** Shared System-first Auto player with seekable cached Cloud/Local audio, sleep timer, and engine-local listening restoration. Audio completion never advances or completes a Today drill.
 - **Bilingual Resilient AI Explainer:** Highlight any complex technical term or sentence to get instant popover explanation localized to your language, powered by DOM context window extraction (±300 characters), responsive non-wrapping layout, and HTTP 500 translation resilience with instant retry button (backed by `TermExplanationCaches`).
 - **Decision Drills:** Real-world trade-off decision drills with instant option grading, trade-off analysis, and deep-dive explanations.
 - **JIT Look-Ahead Buffer:** Background pre-generation service keeping 3 decision drills ahead using Gemini 3.6 Flash with resilient 6-second timeout fallback.
@@ -89,7 +89,8 @@ DeepPace (Clean Architecture)
 - **Document Management:** Safe soft-deletion with cascading chunk cleanup.
 ### 5. 📖 Immersive Book Reader (`/read/[bookId]`)
 - **Table of Contents Sidebar:** Real-time chapter navigation, active slice indicator, and reading completion status.
-- **On-Device & Multi-Engine Audio Narration:** Full two-row responsive audio player bar with seekable sentence scrubber slider, cascading engine fallback (Device ONNX Web Worker → System Web Speech API → Cloud TTS), sleep timer (5–60 min), auto-advance to next slice, and IndexedDB audio chunk caching.
+- **Multi-Engine Audio Narration:** Two-row, panel-width-aware controls for Auto or explicit System/Cloud/Local preferences, playback speed, seeking, sleep timer, and cached audio. Compact panels keep icon controls accessible by name and retain the active sleep countdown. Engine changes restart the current slice from the beginning rather than transferring timestamps.
+- **Safe Audio Continuation:** Only genuine whole-slice completion can auto-advance the standalone reader. The next slice's full content must be ready and its destination-specific playback permission must still be valid; Pause cancels a waiting handoff without replaying the completed slice. Same-book slice-query changes preserve the live player while external slice URLs still select the requested content. Audio never advances or completes a Today drill.
 - **IDE-Grade Shiki Highlighting:** Multi-language syntax highlighting for C#, TypeScript, JavaScript, SQL, Python, Go, JSON, Bash, YAML, Dockerfile with 1-click clipboard copying.
 - **Reading Progress Bar:** Live percentage counter and automatic local bookmark persistence (`localStorage`).
 - **Floating Selection Toolbar:** 1-click AI Explanation with Gemini, text highlighting, 1-click SM-2 flashcard creation, and clipboard copying.
@@ -326,6 +327,14 @@ When activating `https://deeppace.duckdns.org`, register the domain origins in G
 ## Browser Storage Compatibility
 
 Current application and browser QA sessions use `deeppace_token` and `deeppace_user`; narration uses the `deeppace-audio` database. A versioned startup boundary transfers recognized legacy browser state once on the same origin, preserves existing canonical values and session persistence, and resumes incomplete storage/cache cleanup without generating audio.
+
+Narration stores explicit intent in `deeppace_reader_audio_preference` as `{ "version": 1, "mode": "auto" }` (also supporting `system`, `cloud`, and `device`). Automatic fallback never changes that preference. A separately coordinated one-time migration replaces the ambiguous old `deeppace_reader_audio_engine` selection with Auto after verifying its destination; valid new preferences, voices, speed, bookmarks, models, and audio caches are preserved. If coordination is deferred, consumers use a valid new preference or in-memory Auto without reading the old key.
+
+`deeppace_reader_audio_progress` is a version-1 collection of account/slice/engine/voice/content identities and listening cursors, completion markers, and update times. It contains no credentials, document text, or audio payloads. The collection retains at most 100 records and 64 KiB UTF-8, evicting the least recently updated records. Current progress is saved every five seconds during listening and flushed on pause, seek, source replacement, visibility loss, pagehide, and completion; backward seeks replace the previous intended position.
+
+Reopening waits for an explicit playback request. Matching System narration resumes at the start of the saved sentence; matching complete cached Cloud/Local audio resumes at its saved second after media metadata is available. Streaming Local progress records the audible sentence, its in-sentence offset, and its whole-slice offset independently of generation progress. Five generated sentences do not mean five heard sentences. Missing/incompatible audio, changed identity, invalid positions, and completed checkpoints restart safely at zero. Recovery is limited to the last successfully saved checkpoint on this browser, not cross-engine alignment or cross-device synchronization. Storage denial leaves listening available and reports that cross-reload saving is unavailable.
+
+The reusable local audio-QA learner credentials are kept only in the gitignored `.env` as `E2E__Audio__Email` and `E2E__Audio__Password`. Use those values through the normal login API; never commit them, substitute a fabricated session, or reuse this local fixture in production.
 
 Behavioral requirements and migration specifications are defined in OpenSpec. The repository slug, checkout/VPS paths, compatibility hosts and database restoration resource names keep their actual operational identities.
 

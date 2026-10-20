@@ -1,9 +1,9 @@
-import { CLIENT_STORAGE, browserStorage, isCurrentSessionToken, parseStoredJson, profileForToken, readStored, sessionSubject, type StorageAdapter } from './clientStorage'
+import { CLIENT_STORAGE, browserStorage, isCurrentSessionToken, parseAudioPreference, parseStoredJson, profileForToken, readStored, sessionSubject, writeAudioPreference, type StorageAdapter } from './clientStorage'
 
 /** The only Web Storage/cookie legacy boundary. Completed phases never read their sources again. */
 export const LEGACY_SESSION = { token: 'techdaily_token', user: 'techdaily_user', refresh: 'techdaily_refresh_token' } as const
 export const STORAGE_MIGRATION_LOCK = 'deeppace_storage_migration'
-export type MigrationPhase = 'identity' | 'preferences' | 'audio'
+export type MigrationPhase = 'identity' | 'preferences' | 'audio' | 'audioPreference'
 export type MigrationResult = 'complete' | 'deferred'
 type Progress = Partial<Record<MigrationPhase, true>>
 
@@ -91,6 +91,23 @@ function migratePreferences(storage: StorageAdapter): void {
   completeMigrationPhase(storage, 'preferences')
 }
 
+/**
+ * Independent of identity/preferences/audio completion: the old effective-engine value has no
+ * manual-intent provenance. Reset it once to version-1 Auto, preserving a valid explicit choice.
+ * Verify the destination before retirement and retirement before marking this phase complete.
+ */
+function migrateAudioPreference(storage: StorageAdapter): void {
+  if (migrationPhaseComplete(storage, 'audioPreference')) return
+  if (parseAudioPreference(storage.getItem(CLIENT_STORAGE.audioPreference)) === null
+    && !writeAudioPreference('auto', storage)) throw new Error('Audio preference destination unavailable')
+  const source = 'deeppace_reader_audio_engine'
+  if (storage.getItem(source) !== null) {
+    storage.removeItem(source)
+    if (storage.getItem(source) !== null) throw new Error('Audio preference retirement unavailable')
+  }
+  completeMigrationPhase(storage, 'audioPreference')
+}
+
 export function hasLegacySessionCookies(get: (key: string) => unknown): boolean {
   return Boolean(get(LEGACY_SESSION.token) || get(LEGACY_SESSION.user))
 }
@@ -176,6 +193,10 @@ export async function migrateLegacyStorage(env: MigrationEnvironment): Promise<M
         if (!env.local) throw new Error('Migration storage unavailable')
         migratePreferences(env.local)
       } catch { completed = false; env.diagnostic?.('preferences', 'storage_unavailable') }
+      try {
+        if (!env.local) throw new Error('Migration storage unavailable')
+        migrateAudioPreference(env.local)
+      } catch { completed = false; env.diagnostic?.('audioPreference', 'storage_unavailable') }
       return completed ? 'complete' as const : 'deferred' as const
     })
     return result ?? 'deferred'

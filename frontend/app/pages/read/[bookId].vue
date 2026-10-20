@@ -18,6 +18,7 @@ import ReaderHeaderBar from "~/components/reader/ReaderHeaderBar.vue";
 import ReaderTocSidebar from "~/components/reader/ReaderTocSidebar.vue";
 import ReaderNavigationCards from "~/components/reader/ReaderNavigationCards.vue";
 import ReaderAudioPlayer from "~/components/reader/ReaderAudioPlayer.vue";
+import type { AudioNavigationRequest } from "~/components/reader/ReaderAudioPlayer.vue";
 import TermExplainerModal from "~/components/today/TermExplainerModal.vue";
 import { extractSurroundingContext } from "~/utils/contextExtractor";
 
@@ -429,6 +430,12 @@ watch(activeChunkIndex, async () => {
   checkAndCurateSlice();
 });
 
+watch(() => route.query.slice, (value) => {
+  const order = Number.parseInt((Array.isArray(value) ? value[0] : value) || '', 10);
+  if (!Number.isInteger(order) || order < 1 || order > totalChunks.value) return;
+  if (order - 1 !== activeChunkIndex.value) selectChunk(order - 1);
+});
+
 onUnmounted(() => {
   cancelPendingPrefetch();
   if (selectionDebounceTimer) {
@@ -516,17 +523,25 @@ function selectChunk(index: number) {
   });
 }
 
-function handleAutoAdvance() {
-  if (activeChunkIndex.value < totalChunks.value - 1) {
-    goToNextSlice();
-  }
+function handleAutoAdvance(navigation: AudioNavigationRequest) {
+  void handleSeekSlice('next', navigation);
 }
 
-function handleSeekSlice(direction: 'next' | 'prev') {
-  if (direction === 'next') {
-    goToNextSlice();
-  } else if (direction === 'prev') {
-    goToPrevSlice();
+async function handleSeekSlice(direction: 'next' | 'prev', navigation: AudioNavigationRequest) {
+  try {
+    const sourceBookId = bookId.value;
+    const sourceIndex = activeChunkIndex.value;
+    const targetIndex = sourceIndex + (direction === 'next' ? 1 : -1);
+    const target = book.value?.chunks[targetIndex];
+    if (!target || !navigation.isCurrent()) return;
+
+    const slice = await ensureSliceLoaded(target.chunkOrder);
+    if (!slice || bookId.value !== sourceBookId || activeChunkIndex.value !== sourceIndex) return;
+    if (!navigation.accept(slice.id)) return;
+    selectChunk(targetIndex);
+    await nextTick();
+  } finally {
+    navigation.cancel();
   }
 }
 
@@ -825,6 +840,7 @@ async function handleHighlightAndNote() {
             <ReaderAudioPlayer
               :chunk="currentChunk"
               :book-title="book?.title"
+              :book-language="book?.language"
               @auto-advance="handleAutoAdvance"
               @seek-slice="handleSeekSlice"
             />

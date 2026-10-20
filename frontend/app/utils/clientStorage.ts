@@ -8,6 +8,8 @@ export const CLIENT_STORAGE = {
   legend: 'deeppace_graph_legend_collapsed',
   autoAdvanceCards: 'deeppace_auto_advance_cards',
   audioAutoAdvance: 'deeppace_reader_audio_auto_advance',
+  audioPreference: 'deeppace_reader_audio_preference',
+  audioProgress: 'deeppace_reader_audio_progress',
   migration: 'deeppace_storage_migration_v1',
   identityRetired: 'deeppace_identity_retired_v1',
   audioDatabase: 'deeppace-audio',
@@ -19,6 +21,34 @@ export interface StorageAdapter {
   removeItem(key: string): void
   readonly length: number
   key(index: number): string | null
+}
+
+export type AudioEnginePreference = 'auto' | 'system' | 'cloud' | 'device'
+
+/** Version 1 stores explicit intent only; the obsolete effective-engine string is never a fallback. */
+export function parseAudioPreference(raw: string | null): AudioEnginePreference | null {
+  const value = parseStoredJson(raw)
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const record = value as Record<string, unknown>
+  if (Object.keys(record).length !== 2 || record.version !== 1) return null
+  return record.mode === 'auto' || record.mode === 'system' || record.mode === 'cloud' || record.mode === 'device'
+    ? record.mode
+    : null
+}
+
+/** Deferred startup uses canonical-or-Auto without reopening an uncoordinated migration source. */
+export function readAudioPreference(storage: StorageAdapter | null = browserStorage('localStorage')): AudioEnginePreference {
+  return parseAudioPreference(readStored(storage, CLIENT_STORAGE.audioPreference)) ?? 'auto'
+}
+
+export function writeAudioPreference(mode: AudioEnginePreference, storage: StorageAdapter | null = browserStorage('localStorage')): boolean {
+  if (!storage) return false
+  try {
+    const raw = JSON.stringify({ version: 1, mode })
+    if (parseAudioPreference(raw) === null) return false
+    storage.setItem(CLIENT_STORAGE.audioPreference, raw)
+    return storage.getItem(CLIENT_STORAGE.audioPreference) === raw
+  } catch { return false }
 }
 
 export interface RoleDescriptor {

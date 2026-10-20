@@ -7,37 +7,41 @@ Synthesizes a reader slice's AI-formatted text into speech entirely on the user'
 
 ### Requirement: On-Device Slice Narration Synthesis
 
-The reader SHALL synthesize narration audio for a slice **entirely on the client**, using an on-device neural text-to-speech model run in a Web Worker, without any server request for synthesis, external API credential, or usage quota. All synthesis code SHALL be client-only and MUST NOT execute during server-side rendering.
+When the local engine is selected explicitly or reached as the final fallback, the reader SHALL synthesize narration audio for a slice entirely on the client, using an on-device neural text-to-speech model run in a Web Worker, without a server synthesis request, external API credential, or usage quota. All synthesis code SHALL be client-only and MUST NOT execute during server-side rendering.
 
-Narration SHALL be available only for slices that are AI-formatted (`isAiFormatted == true`); for a non-formatted slice the reader SHALL NOT synthesize audio. Before synthesis, the reader SHALL derive a plain-text narration script from the slice's formatted markdown by removing markup and **excluding fenced code blocks** (so source code is not read aloud), preserving headings and prose.
+Narration SHALL be available only for AI-formatted slices; the reader SHALL NOT synthesize non-formatted slices. The narration script SHALL remove markdown markup and fenced code blocks while preserving headings and prose.
 
-The synthesis voice SHALL be determined automatically by the slice's content language (`Language`, `en` or `vi`); there is one on-device voice per supported language and no user-facing voice selection. When the slice does not itself carry a language, the reader SHALL fall back to the book/document language, and only then to the default `en`. The reader SHALL NOT narrate a slice whose known language is non-English using the English voice; a known `vi` language MUST select the vi voice.
+The local voice SHALL follow the slice language (`en` or `vi`), falling back to the book language and then `en` only when language is unknown. A known Vietnamese slice MUST use the Vietnamese voice. Local narration SHALL have one voice per supported language without a voice picker.
 
-The narration model for a language SHALL be downloaded lazily on first use and cached in the browser so it is fetched once and reused offline on subsequent uses. While a model is downloading or audio is being synthesized, the reader SHALL surface a localized progress/loading state.
+The model SHALL download lazily only when local narration is actually requested, with localized download/synthesis progress. Successfully cached model resources SHALL be reused, including offline when all required resources are present. An unavailable uncached model SHALL produce an actionable error rather than an unconditional offline-success promise.
 
 #### Scenario: Synthesis runs on-device without a server request
-- **WHEN** a user plays narration for an AI-formatted slice
-- **THEN** the reader synthesizes the audio locally via the on-device model worker and issues no server request for text-to-speech.
+- **WHEN** a user plays an AI-formatted slice with the local engine selected
+- **THEN** synthesis runs through the local worker with no server text-to-speech request.
 
 #### Scenario: Narration gated on AI formatting
-- **WHEN** the current slice is not AI-formatted (`isAiFormatted == false`)
-- **THEN** the reader does not synthesize audio and the playback control is hidden or disabled.
+- **WHEN** the current slice is not AI-formatted
+- **THEN** narration is hidden or disabled and no engine synthesizes it.
 
 #### Scenario: Code fences excluded from narration
-- **WHEN** the slice's formatted content contains fenced code blocks
-- **THEN** the derived narration script omits the code block contents while retaining the surrounding prose and headings.
+- **WHEN** formatted content contains fenced code blocks
+- **THEN** the narration script omits code contents while retaining headings and prose.
 
 #### Scenario: Voice selected automatically by content language
-- **WHEN** a user plays a Vietnamese slice (`Language == "vi"`)
-- **THEN** the reader synthesizes with the on-device vi voice without prompting for a voice choice.
+- **WHEN** local narration is requested for a Vietnamese slice
+- **THEN** the Vietnamese model is selected without a voice prompt.
 
 #### Scenario: Known non-English language is not narrated with the English voice
-- **WHEN** the slice or its book reports language `vi` and the user plays narration
-- **THEN** the reader selects the vi voice and does not fall back to the English voice.
+- **WHEN** the slice or its book reports Vietnamese
+- **THEN** local narration uses the Vietnamese voice rather than the English fallback.
 
 #### Scenario: Voice model downloaded once and cached for offline reuse
-- **WHEN** a user plays narration for a language whose model is not yet cached, and later plays narration again in that language
-- **THEN** the first play downloads and caches the model with a visible progress state, and the later play reuses the cached model without re-downloading, including offline.
+- **WHEN** a model has been downloaded successfully and its required resources remain cached
+- **THEN** later local narration reuses those resources without downloading them again, including offline.
+
+#### Scenario: Offline fallback has no usable model
+- **WHEN** local fallback is reached offline and required model resources are absent
+- **THEN** the player explains that local narration cannot be prepared and remains stopped without claiming playback succeeded.
 
 ### Requirement: Seekable Full-Slice Audio Cache
 
@@ -343,181 +347,160 @@ For Meta VITS / MMS-TTS architecture models (`Xenova/mms-tts-*`), the worker SHA
 
 ### Requirement: Google Cloud Narration Synthesis with Database Caching
 
-The system SHALL support server-side audio narration synthesis via Google Cloud Text-to-Speech (Cloud TTS) as the primary high-speed narration engine. All calls to Google Cloud TTS SHALL be proxied through the ASP.NET Core backend using a server-side API key (`Google__TtsApiKey`); client applications SHALL NOT be exposed to external API credentials.
+The system SHALL support server-side narration through Google Cloud Text-to-Speech as the second automatic engine after System or as an explicit user preference. All Google Cloud TTS calls SHALL be proxied through the ASP.NET Core backend using the server-side API key (`Google__TtsApiKey`); external API credentials SHALL NOT be exposed to the client.
 
-Client applications requesting audio synthesis or quota status SHALL resolve backend API routes using canonical relative URLs in production environments (matching the reverse proxy configuration) and MUST NOT fall back to hardcoded localhost addresses when environment configuration strings evaluate to empty values.
-The backend SHALL persist complete synthesized audio files in PostgreSQL (`DocumentChunkAudios`) keyed by `(DocumentChunkId, ContentHash, VoiceId)`. When a request for a slice's narration arrives:
-1. If an audio record matching `(DocumentChunkId, ContentHash, VoiceId)` exists in the database, the backend SHALL return the cached audio immediately without calling the Google Cloud TTS API.
-2. If no record exists, the backend SHALL synthesize the audio via Google Cloud TTS:
-   - If the narration text exceeds 4,500 bytes UTF-8 (to ensure safe compliance with Google Cloud TTS's single-request limit of 5,000 bytes), the backend SHALL automatically partition the text into sentence-bounded sub-chunks under 4,500 bytes.
-   - The backend SHALL synthesize each sub-chunk in order and concatenate the resulting MP3 audio byte streams into a single seamless MP3 audio stream.
-3. The backend SHALL store the complete synthesized MP3 audio and total character count in PostgreSQL (`DocumentChunkAudios`) and return the audio stream to the client.
-4. Upon receiving the audio from the server, the reader client SHALL store it in browser IndexedDB under the same `(chunkId, voice, contentHash)` cache key so subsequent seeks, pauses, and replays on that browser are served locally with zero network latency.
+Synthesis and quota requests SHALL use canonical relative backend routes in production and SHALL NOT fall back to hardcoded localhost addresses when configuration is empty.
 
-When a slice's content changes such that its `ContentHash` changes, the existing database audio record SHALL be invalidated and new audio synthesized on next play.
+The backend SHALL persist complete MP3 files in PostgreSQL (`DocumentChunkAudios`) keyed by `(DocumentChunkId, ContentHash, VoiceId)`. A matching cache hit SHALL return stored audio without a provider call. A miss SHALL partition scripts exceeding 4,500 UTF-8 bytes into sentence-bounded sub-chunks under 4,500 bytes, synthesize them in order, concatenate their MP3 output, and store the complete audio and total character count. The client SHALL cache returned audio in IndexedDB under the matching slice/voice/content identity so seeks, pauses, and replays need no network request.
+
+A changed content hash SHALL invalidate the prior audio identity and cause new synthesis on the next uncached playback request.
 
 #### Scenario: Database cache hit serves audio without calling Google Cloud API
-- **WHEN** a reader requests narration for a slice whose `(DocumentChunkId, ContentHash, VoiceId)` audio is already cached in PostgreSQL
-- **THEN** the server returns the cached audio in less than 50ms and makes zero requests to the Google Cloud TTS API.
+- **WHEN** the requested slice/hash/voice audio is already cached in PostgreSQL
+- **THEN** the server retains its existing under-50ms cache-hit contract and makes no Google Cloud TTS request.
 
 #### Scenario: Long text exceeding 5,000 bytes is automatically partitioned and concatenated
-- **WHEN** a reader requests narration for a slice whose plain-text script exceeds 4,500 UTF-8 bytes (such as a lengthy Vietnamese or English chapter)
-- **THEN** the server partitions the text along sentence boundaries into sub-chunks strictly under 4,500 bytes, synthesizes each sub-chunk without encountering Google Cloud 400 Bad Request errors, concatenates the resulting MP3 streams, and returns a single unified audio payload.
+- **WHEN** a requested narration script exceeds 4,500 UTF-8 bytes
+- **THEN** the server partitions it into sentence-bounded batches under 4,500 bytes and returns one concatenated MP3 without a provider input-limit error.
 
 #### Scenario: Database cache miss synthesizes, stores in PostgreSQL, and streams audio
-- **WHEN** a reader requests narration for a slice not yet cached in PostgreSQL
-- **THEN** the server synthesizes audio via Google Cloud TTS, writes the MP3 audio bytes to PostgreSQL, and returns the audio to the client.
+- **WHEN** requested narration is not cached in PostgreSQL
+- **THEN** the server synthesizes it, persists the complete MP3, and returns its audio payload.
 
 #### Scenario: Client stores server-synthesized audio in IndexedDB
-- **WHEN** client receives audio synthesized by Google Cloud TTS from the server
-- **THEN** client stores the audio in browser IndexedDB so repeat listens in the session do not issue repeated HTTP requests.
+- **WHEN** the client receives Cloud audio
+- **THEN** it caches the audio in IndexedDB so subsequent local replays do not repeat the request.
 
 #### Scenario: Slice content revision invalidates server cache
-- **WHEN** a slice's markdown is re-formatted or edited, altering its `ContentHash`
-- **THEN** the server does not serve stale audio from the prior hash and re-synthesizes audio under the new `ContentHash`.
+- **WHEN** reformatting or editing changes the narration content hash
+- **THEN** audio under the old hash is not served as the revised narration.
 
 #### Scenario: Production synthesis requests resolve to relative API endpoint without localhost fallback
-- **WHEN** a user initiates Google Cloud narration on a production deployment where `NUXT_PUBLIC_API_BASE_URL` is configured as an empty string
-- **THEN** the audio composable resolves the endpoint against relative origin (`/api/v1/library/chunks/.../audio`)
-- **AND** zero connection refused errors or mixed-content protocol violations occur.
+- **WHEN** production API-base configuration is empty
+- **THEN** synthesis uses the relative `/api/v1/library/chunks/.../audio` route without localhost fallback, mixed content, or connection-refused errors from a fabricated host.
 
 ### Requirement: Dual-Engine Audio Toggle and Server Quota Guard
 
-The `/read/[bookId]` reader audio player SHALL provide an in-player toggle switch allowing the user to select between **Google Cloud** (cloud-accelerated) and **On-Device** (local Web Worker) synthesis engines. The default engine SHALL be Google Cloud, and the user's preference SHALL persist in `localStorage`.
+The reader SHALL offer Auto, System, Google Cloud, and Local engine preferences. Auto SHALL be the default and SHALL use the Cascading Audio Engine Resolution Hierarchy. Only an explicit preference change SHALL alter the persisted preference; an automatic fallback SHALL update the effective engine without changing that preference.
 
-The system SHALL enforce strict isolation between the two engines:
-1. When switching from On-Device to Google Cloud, or when Google Cloud narration playback begins, the reader SHALL immediately cancel any active on-device Web Worker synthesis tasks, ceasing worker inference and preventing further chunk emissions.
-2. Any on-device sentence chunks completed prior to cancellation SHALL be preserved in the partial cache in IndexedDB under the matching `contentHash`, allowing later resumption if the user switches back.
-3. The reader audio player SHALL display on-device synthesis progress indicators (`current/total`) strictly when the On-Device engine is active. The player SHALL NOT render on-device synthesis badges or ghost loading labels when Google Cloud audio is active or playing.
+Engine transitions SHALL stop the previous engine, cancel its pending work, preserve valid local synthesis partials, and show progress only for the effective engine. Quota state SHALL retain a single shared frontend contract rather than duplicate declarations or unused library-store state.
 
-The frontend client applications SHALL consume audio narration quota models (`AudioQuotaInfo`) from a centralized TypeScript type definition without duplicating exported interface declarations across composable functions or Pinia store modules, preventing auto-import collision and symbol shadowing during compilation.
+The backend SHALL continue counting cumulative Cloud-synthesized characters in the current calendar month, with the existing frontend near-limit threshold of 900,000 and backend hard limit of 950,000. Quota responses SHALL retain `monthlyLimit`, `usedCharacters`, `remainingCharacters`, `isNearLimit`, and `isExhausted`. A synthesis request exceeding the hard allowance SHALL retain the existing RFC 7807 `AudioQuotaExhausted` problem contract and HTTP 429 response.
 
-The backend SHALL track cumulative characters synthesized via Google Cloud TTS during the current calendar month. To protect the free-tier monthly allowance (hard-capped at 950,000 characters to ensure a safe buffer below Google's 1,000,000 allowance):
-1. The backend SHALL expose current monthly quota utilization.
-2. When monthly quota consumption reaches or exceeds the threshold (900,000 characters), the reader frontend SHALL disable the Google Cloud toggle switch with an informative tooltip and automatically select the On-Device engine.
-3. If an API request to synthesize via Google Cloud is received when the monthly quota is exhausted (reaches 950,000 characters, such as via direct API call or client DOM tampering), the backend SHALL reject the request with an RFC 7807 problem details response (HTTP 429 Too Many Requests or 403 Forbidden with code `AudioQuotaExhausted`).
-4. Upon receiving a quota exhaustion response, the client SHALL display a localized error toast notifying the user that the monthly Google Cloud quota has been reached, and automatically switch the player to the On-Device engine.
+A quota guard SHALL make Cloud unavailable for selection/generation without displacing working System speech. When System is unavailable, the cascade SHALL proceed to Local. Quota exhaustion SHALL notify the user and start Local only while the current playback request still intends to play.
 
 #### Scenario: Default engine is Google Cloud
-- **WHEN** a reader opens an AI-formatted slice for the first time without a saved preference
-- **THEN** the audio player selects Google Cloud as the active engine.
+- **WHEN** the reader has no explicit supported engine preference
+- **THEN** the former Cloud-only default is replaced by Auto, and a playback request first evaluates suitable System speech.
 
 #### Scenario: Switching to Cloud engine cancels on-device worker and hides device progress
-- **WHEN** on-device synthesis is in progress and the user switches the toggle to Google Cloud or initiates Cloud playback
-- **THEN** the active on-device Web Worker synthesis task is cancelled immediately, the on-device progress badge (e.g. `2/45`) is hidden, and Cloud playback proceeds without ghost progress labels.
+- **WHEN** the effective engine changes from Local to Cloud
+- **THEN** local synthesis is canceled, valid partials remain reusable, and local progress badges disappear.
 
 #### Scenario: Partially synthesized chunks are preserved on engine switch
-- **WHEN** on-device synthesis is cancelled at 5 of 15 sentences due to switching to Google Cloud
-- **THEN** the 5 completed chunks remain stored in IndexedDB under the current `contentHash`.
-- **AND** when the user subsequently switches back to On-Device mode for that slice, synthesis resumes from sentence 6.
+- **WHEN** local synthesis has generated 5 of 15 sentences before an engine change
+- **THEN** those 5 cached sentences remain usable and a later local generation only synthesizes the missing sentences
+- **AND** that generation progress does not imply a listening position at sentence 6.
 
 #### Scenario: User toggles to On-Device engine
-- **WHEN** a user switches the audio toggle from Google Cloud to On-Device
-- **THEN** the player switches to the local Web Worker engine, synthesizes on CPU/GPU, and caches in browser IndexedDB.
+- **WHEN** a user explicitly chooses Local
+- **THEN** the preference becomes Local and the worker is loaded only when playback is requested.
 
 #### Scenario: Near-quota usage disables Google Cloud toggle
-- **WHEN** the server reports monthly character quota at or above 900,000 characters
-- **THEN** the Google Cloud toggle in the reader is disabled with an explanatory tooltip and narration defaults to On-Device mode.
+- **WHEN** monthly usage reaches the existing frontend near-limit threshold
+- **THEN** Cloud is unavailable with a localized explanation
+- **AND** working System speech remains eligible ahead of Local.
 
 #### Scenario: Quota-exhausted API call rejected and client alerted
-- **WHEN** a client submits a synthesis request to the backend after the monthly quota is exhausted
-- **THEN** the backend responds with an RFC 7807 `AudioQuotaExhausted` error, and the client displays a toast notification and reverts to the On-Device engine.
+- **WHEN** a synthesis request would exceed the current calendar month's hard Cloud allowance
+- **THEN** the backend retains HTTP 429 and the RFC 7807 `AudioQuotaExhausted` problem contract
+- **AND** an active client playback request notifies the user and restarts the current slice using Local if it can initialize.
 
 #### Scenario: Clean compilation without auto-import collisions
-- **WHEN** the frontend application is built or type-checked via `npm test` or `npx nuxi typecheck`
-- **THEN** the compiler completes without emitting duplicate auto-import collision warnings for `AudioQuotaInfo`.
+- **WHEN** the frontend is type-checked
+- **THEN** quota types resolve without duplicate declarations or auto-import collisions.
 
 #### Scenario: Audio quota utilization tracking and threshold enforcement
-- **WHEN** a reader queries the monthly audio quota utilization
-- **THEN** the server returns the current monthly character usage, remaining characters, and limit flags (`isNearLimit`, `isExhausted`) according to the canonical contract.
+- **WHEN** quota utilization is queried
+- **THEN** `monthlyLimit`, `usedCharacters`, `remainingCharacters`, `isNearLimit`, and `isExhausted` retain current-calendar-month cumulative accounting and the existing thresholds.
+
+#### Scenario: Fallback does not become a manual preference
+- **WHEN** Auto falls back to Cloud and the reader is later reopened with a usable System voice
+- **THEN** Auto still applies and System is tried before Cloud.
 
 ### Requirement: Free-Tier Voice Selection and Polished Presentation
 
-When the Google Cloud engine is active, the reader audio player SHALL provide a voice selector restricted to Google Cloud Free-Tier voices (Neural2 and WaveNet tiers) for the slice's content language, supporting at least one female and one male voice for Vietnamese (`vi-VN`) and English (`en-US`). Voice selection SHALL NOT be shown when the On-Device engine is active.
+Cloud narration SHALL provide supported Neural2/WaveNet female and male choices for Vietnamese and English. Local narration SHALL have no voice picker. Voice triggers SHALL retain the compact 32px control height, rounded shape, and alignment with the Listen button.
 
-The voice selection dropdown trigger SHALL match the exact compact rendered height, vertical alignment, and border radius of the adjacent "Listen" action button (`h-8`, exactly 32px rendered height), and the reader audio player container SHALL maintain a stable, non-shifting minimum height (`min-h-[50px]`), ensuring that switching between On-Device and Google Cloud narration engines produces zero layout shift, vertical expansion, or jitter in the reader audio player bar or the content below it.
+The existing Multi-Engine Audio Narration Toolbar Layout SHALL govern presentation: its two-row arrangement SHALL remain contained on mobile and constrained desktop panes without engine-dependent jumps. Mobile voice names SHALL retain a readable width of at least 130px, never collapse, and share a contained full-width second row with timeline/status controls. Desktop controls SHALL retain the existing two-row toolbar rather than revive obsolete single-row geometry.
 
-On mobile viewports (viewport width < 640px):
-1. **Unambiguous Voice Legibility When Idle**: In the idle or paused state, the voice selector SHALL receive sufficient width (at least 130px) without competing flex spacers, ensuring that voice names (e.g. `"Neural2-A"`, `"Chất lượng cao"`) are clearly readable and SHALL NOT be truncated into unreadable stubs (such as `"N.."`).
-2. **Dedicated Scrubber Row During Playback**: When audio playback is loaded or active (`loadedId === chunk?.id && duration > 0`), the playback scrubber, timestamp display, and synthesis status badge SHALL render in a dedicated full-width second row (`w-full`), providing a finger-accessible touch target spanning the width of the player.
-3. **No Control Collapse or Disappearance**: The voice selector SHALL NOT collapse, shrink below legible width, or disappear (`0px` width) when audio is playing on mobile viewports.
-4. **Stable Single-Row Presentation on Desktop**: On desktop and tablet viewports (viewport width ≥ 640px), all audio controls including play/pause, engine switch, voice picker, scrubber, and speed controls SHALL remain on a single horizontal row with a stable minimum height (`min-h-[50px]`).
+Frontend and backend SHALL enforce English/English and Vietnamese/Vietnamese voice compatibility. Preferences SHALL remain partitioned by language, and incompatible backend voice requests SHALL retain the `VOICE_LANGUAGE_MISMATCH` validation response.
 
-The system (both frontend client and backend synthesis handler) SHALL strictly enforce language compatibility between the document slice's content language and the selected voice model:
-1. Slices in English (`en`) SHALL only be synthesized with English voice models (`en-US-*`).
-2. Slices in Vietnamese (`vi`) SHALL only be synthesized with Vietnamese voice models (`vi-VN-*`).
-3. The system SHALL NOT synthesize English documentation with a Vietnamese voice model or Vietnamese documentation with an English voice model, even if a user previously selected a voice in another language.
-4. Voice preference persistence in client storage SHALL be partitioned by language (e.g. separate storage keys for `en` and `vi`), ensuring that selecting a preferred voice in one language does not overwrite or corrupt the voice selection when reading documents in another language.
-5. If the client submits a voice ID that does not match the slice's content language, the backend SHALL reject the request with an RFC 7807 validation error (`VOICE_LANGUAGE_MISMATCH`).
+Copy SHALL remain localized, descriptive, and free of hype labels such as "AI Audio" or "Google AI" and lightning-bolt iconography.
 
-All audio controls, buttons, tooltips, and status indicators SHALL use clean, professional, descriptive copy and SHALL NOT use hype or buzzword labels such as "AI", "AI Audio", or "Google AI". The UI SHALL use standard, subtle iconography (e.g. cloud icon or plain toggle switch) and SHALL NOT use mismatched or aggressive icons such as lightning bolts (`Zap`).
-
-The reader audio engine selection controls SHALL respect the user's current playback state during engine transitions:
-1. **No Autoplay When Paused**: If audio playback is currently paused or inactive (`playing === false`), switching between Google Cloud and On-Device engine modes SHALL update the selected engine mode and reset loaded slice state to idle, but SHALL NOT start audio synthesis or playback. The player SHALL remain paused until the user explicitly clicks the "Listen" / "Play" button.
-2. **Continuous Playback When Active**: If audio playback is currently active (`playing === true`), switching between engine modes SHALL pause the previous engine and immediately begin synthesis and playback with the newly selected engine.
-3. **Engine Toggle Audio Preparation**: Switching between Google Cloud and On-Device engine modes while playback is inactive SHALL update the selected engine mode and prepare the newly active engine's audio without starting audible autoplay, leaving the player ready to play when "Listen" is clicked.
-4. **Explicit Fallback Recovery Exception**: Activating the 1-tap `[☁ Switch to Google Cloud]` fallback button from an error state SHALL always switch to Cloud mode and initiate playback immediately.
+Engine and voice selections SHALL respect playback intent. While paused or idle, selection SHALL stop obsolete work and update preferences, voices, and available cached metadata without synthesis or autoplay. While playback is intended, an actual engine change SHALL start the selected narration at the beginning of the slice. Choosing a different voice SHALL not reuse an incompatible checkpoint. An explicit recovery action from an error state SHALL constitute a new playback request.
 
 #### Scenario: Zero layout shift when toggling between Cloud and Device engines
-- **WHEN** the user switches between On-Device and Google Cloud engine modes in the reader audio player
-- **THEN** the total outer container height of the player bar remains constant (50px) without any vertical jump, expansion, or cumulative layout shift.
+- **WHEN** engine selection changes without a change of viewport or status content
+- **THEN** the existing two-row card remains stable without control collisions or engine-dependent expansion.
 
 #### Scenario: Voice selector matches Listen button height
-- **WHEN** the user switches between On-Device and Google Cloud engine modes in the reader audio player
-- **THEN** the voice selector trigger button height matches the height of the "Listen" button (`~32px`), preventing the player bar container from expanding or changing height vertically.
+- **WHEN** Cloud voice selection is visible
+- **THEN** its trigger retains the compact 32px height of the Listen button.
 
 #### Scenario: Switching to Cloud engine on English slice selects English voice
-- **WHEN** a user who previously selected a Vietnamese voice (`vi-VN-Neural2-A`) on a Vietnamese book switches to Cloud mode on an English book slice
-- **THEN** the player resolves and uses an English voice (`en-US-Neural2-F`), never the persisted Vietnamese voice.
+- **WHEN** a reader with a saved Vietnamese voice chooses Cloud for an English slice
+- **THEN** an English voice is selected, never the saved Vietnamese voice.
 
 #### Scenario: Voice preferences persist independently per language
-- **WHEN** a user selects a male voice (`en-US-Neural2-D`) for English documents and later selects a female voice (`vi-VN-Neural2-A`) for Vietnamese documents
-- **THEN** returning to an English document restores the male English voice (`en-US-Neural2-D`), while opening a Vietnamese document uses the female Vietnamese voice (`vi-VN-Neural2-A`).
+- **WHEN** different English and Vietnamese voices are saved
+- **THEN** returning to either language restores its own preference.
 
 #### Scenario: Backend rejects voice ID conflicting with chunk language
-- **WHEN** an API request arrives to synthesize an English document chunk with a `vi-VN-*` voice ID
-- **THEN** the backend responds with HTTP 400 Bad Request and error code `VOICE_LANGUAGE_MISMATCH`.
+- **WHEN** an English slice is requested with a Vietnamese Cloud voice
+- **THEN** the backend retains its HTTP 400 `VOICE_LANGUAGE_MISMATCH` response.
 
 #### Scenario: Free-tier voice selection for Vietnamese slice
-- **WHEN** a user views a Vietnamese slice with Google Cloud engine active
-- **THEN** the player provides a choice between curated Vietnamese Neural2 female (`vi-VN-Neural2-A`) and male (`vi-VN-Neural2-D`) voices.
+- **WHEN** Cloud is selected for Vietnamese
+- **THEN** the curated Vietnamese female `vi-VN-Neural2-A` and male `vi-VN-Neural2-D` choices remain available.
 
 #### Scenario: Free-tier voice selection for English slice
-- **WHEN** a user views an English slice with Google Cloud engine active
-- **THEN** the player provides a choice between curated English Neural2 female (`en-US-Neural2-F`) and male (`en-US-Neural2-D`) voices.
+- **WHEN** Cloud is selected for English
+- **THEN** the curated English female `en-US-Neural2-F` and male `en-US-Neural2-D` choices remain available.
 
 #### Scenario: UI copy and icons avoid buzzwords
-- **WHEN** viewing the audio narration player in any state
-- **THEN** the controls render clean labels ("Google Cloud", "Thiết bị" / "Device") without "AI" prefixes, and no lightning bolt icons are rendered in the audio control.
+- **WHEN** the toolbar is displayed
+- **THEN** labels remain descriptive and no hype prefix or lightning-bolt icon is introduced.
 
 #### Scenario: Switching engine mode while paused does not autoplay
-- **WHEN** audio playback is currently paused on an on-device narration slice and the user clicks the "Cloud" engine button
-- **THEN** the active engine mode switches to Cloud, but audio playback does NOT start automatically and the player remains in a paused state showing "Listen" ("Nghe").
+- **WHEN** a paused user chooses another engine or voice with no cached audio
+- **THEN** the player remains paused and makes no synthesis request or model download.
 
 #### Scenario: Switching engine mode while playing transitions seamlessly
-- **WHEN** audio is actively playing on an on-device narration slice and the user clicks the "Cloud" engine button
-- **THEN** on-device playback stops, the engine mode switches to Cloud, and Cloud narration begins playing automatically.
+- **WHEN** an actively listening user selects another effective engine
+- **THEN** the previous engine stops and the selected engine begins the current slice from the start without slice advancement.
 
 #### Scenario: Switching to Cloud while inactive loads Cloud audio state
-- **WHEN** playback is inactive on an on-device slice and the user clicks the "Cloud" engine button
-- **THEN** the active engine mode switches to Cloud and loads the slice's Cloud audio information without starting audible autoplay, leaving the player ready to play when "Listen" is clicked.
+- **WHEN** a paused user chooses Cloud
+- **THEN** available cached metadata can be presented without playback
+- **AND** a cache miss remains idle until the user requests playback.
 
 #### Scenario: Voice selector remains readable and un-truncated on mobile when idle
-- **WHEN** a reader views an AI-formatted slice on a mobile viewport (e.g. 390px width) with Google Cloud engine active and playback idle
-- **THEN** the voice selector is displayed with sufficient width to read the selected voice name (e.g. `"Neural2-A"` or `"Standard-A"`) without being truncated to `"N.."`.
+- **WHEN** the mobile player is idle with Cloud selected
+- **THEN** the selected voice is readable rather than truncated into an ambiguous stub.
 
 #### Scenario: Dedicated full-width scrubber row on mobile during playback
-- **WHEN** audio is playing or loaded on a mobile viewport (< 640px)
-- **THEN** the scrubber slider, elapsed/total time, and synthesis progress badge render in a full-width bottom row within the player container.
-- **AND** the top row retains the Play/Pause button, Engine switch, readable Voice selector, and Speed button.
+- **WHEN** narration is loaded on mobile
+- **THEN** voice, timeline, timestamps, and status remain contained in the second row
+- **AND** playback, engine preference, and utility controls remain accessible above it.
 
 #### Scenario: Voice selector does not vanish during mobile playback
-- **WHEN** audio playback starts on a mobile device in Google Cloud mode
-- **THEN** the voice selector remains visible on the top row and does not collapse to 0px or an empty icon pill.
+- **WHEN** Cloud playback starts on mobile
+- **THEN** its voice selector retains usable width and remains visible.
 
 #### Scenario: Desktop single-row layout remains unchanged
-- **WHEN** the reader audio player is viewed on desktop (≥ 640px)
-- **THEN** all controls, including the voice picker and inline scrubber slider, are aligned horizontally in a single row at `min-h-[50px]`.
+- **WHEN** the player is rendered on desktop or inside a constrained split pane
+- **THEN** the existing two-row layout remains usable without horizontal clipping.
 
 ### Requirement: Mobile Device Resource Safeguards & Single-Threaded WASM
 
@@ -610,47 +593,67 @@ The on-device text-to-speech Web Worker and client audio player controller SHALL
 - **THEN** the client discards the worker instance reference, allowing subsequent narration requests to instantiate a clean Web Worker instance.
 
 ### Requirement: Cascading Audio Engine Resolution Hierarchy
-The reader audio system SHALL implement an automatic **Cascading Engine Resolution Hierarchy** that selects the most efficient, natural, and cost-effective text-to-speech engine available for each slice:
-1. **Priority 1 (Universal System TTS via Web Speech API across Mobile & Laptop/PC)**: On all client environments (Laptop/PC on Windows, macOS, Linux, and Mobile on Android, iOS), the system SHALL first attempt to use `window.speechSynthesis`. If the browser supports the Web Speech API and exposes at least one voice matching the slice's language (e.g. Chrome's built-in Google voices, Edge's Natural voices, macOS Siri/Linh, or Android Google Speech Services), the system SHALL resolve to `'system'`.
-2. **Priority 2 (Cloud TTS via Google Cloud API)**: If no matching system voice is installed on the host operating system, OR if System TTS encounters a runtime synthesis failure (`SpeechSynthesisErrorEvent.error` of `synthesis-failed`, `synthesis-unavailable`, `language-unavailable`, `voice-unavailable`, or `audio-busy`), the system SHALL automatically cascade to `'cloud'`, utilizing Google Cloud Text-to-Speech via the backend API.
-3. **Priority 3 (Device TTS as Last Resort)**: If Cloud TTS is unavailable (due to client being offline `navigator.onLine === false`, backend network error, or cloud quota exhaustion `QUOTA_EXHAUSTED` / HTTP 429), the system SHALL degrade gracefully to the on-device Transformers.js Web Worker (`'device'`), ensuring narration is never blocked.
-4. **Manual User Override**: If the user explicitly selects an engine mode via the UI dropdown, the system SHALL honor their selection unless that engine experiences a hard error, in which case it SHALL offer or initiate graceful fallback.
+
+For Auto playback, the reader SHALL try suitable browser System speech first, Google Cloud second, and Local last. System availability SHALL include bounded asynchronous voice discovery for the slice language. A session SHALL try each eligible engine at most once; fallback SHALL not loop, run multiple engines, persist an effective engine as a preference, or carry position across engines.
+
+System runtime synthesis failures SHALL proceed to Cloud when eligible. Cloud unavailability, network failure, server/provider unavailability, or the existing quota guard SHALL proceed to Local. Authentication/authorization rejection and invalid-content requests SHALL remain visible errors rather than be disguised as provider outages. Pause, seek, user cancellation, source replacement, buffering, and autoplay-policy rejection SHALL NOT trigger fallback.
+
+Explicit engine choices SHALL remain supported. An explicit System or Cloud failure SHALL use only downstream engines in the same hierarchy; explicit Local failure SHALL stop with an actionable error. Local SHALL not load before it is selected or needed, and its failure SHALL not trigger a return to an already attempted engine.
 
 #### Scenario: Host OS has matching Vietnamese voice installed
-- **WHEN** the user initiates narration on a Vietnamese slice and the host OS exposes a Vietnamese system voice (e.g. `vi-vn-x-vic-local` or Google tiếng Việt)
-- **THEN** the reader resolves to Priority 1 (System TTS), initiating playback instantly without calling the backend cloud API and without downloading neural weights.
+- **WHEN** Auto playback discovers an available Vietnamese System voice
+- **THEN** System speaks with no Cloud synthesis request or local-model download.
 
 #### Scenario: Host OS lacks Vietnamese voice pack
-- **WHEN** the user initiates narration on a Vietnamese slice on a device without any Vietnamese system voice installed
-- **THEN** the reader automatically bypasses System TTS and cascades to Priority 2 (Cloud TTS), synthesizing natural speech via Google Cloud.
+- **WHEN** bounded voice discovery finishes without a suitable Vietnamese voice
+- **THEN** eligible Cloud narration is used before Local.
 
 #### Scenario: Cloud TTS quota exhausted or device offline
-- **WHEN** Cloud TTS encounters a 429 quota exhaustion error or the device is offline
-- **THEN** the reader automatically degrades to Priority 3 (Device TTS), utilizing the local Web Worker to synthesize narration locally.
+- **WHEN** System is unavailable and Cloud is blocked by quota or connectivity
+- **THEN** Local is attempted without a speculative Cloud generation request.
 
 #### Scenario: User manually selects Cloud engine
-- **WHEN** the user explicitly selects "Google Cloud" from the engine dropdown
-- **THEN** the reader sets `engineMode = 'cloud'` and uses Google Cloud narration, bypassing automatic System TTS selection.
+- **WHEN** a user explicitly chooses Cloud and requests playback
+- **THEN** Cloud is used without a System attempt, while the manual preference remains distinct from its possible Local fallback.
 
 #### Scenario: System TTS runtime synthesis failure cascades automatically to Cloud TTS
-- **WHEN** a user plays a Vietnamese slice with System TTS active and the browser voice emits `synthesis-failed` (such as on Android Chrome when network synthesis fails or voice packs are missing)
-- **THEN** the reader automatically switches the active engine mode to `'cloud'`, displays a localized toast informing the user of the transition, and seamlessly synthesizes and plays the slice via Google Cloud TTS without remaining in an error state.
+- **WHEN** an active System utterance fails and Cloud is eligible
+- **THEN** System stops and Cloud restarts the same slice from its beginning with a localized transition notice.
+
+#### Scenario: Voices arrive asynchronously
+- **WHEN** the initial browser voice list is empty but a matching voice arrives within the discovery window
+- **THEN** System is used without consuming Cloud quota.
+
+#### Scenario: Cloud network failure reaches Local
+- **WHEN** an active Cloud attempt fails due to connectivity or provider unavailability
+- **THEN** Local is attempted once from the beginning of the slice and the preference is unchanged.
+
+#### Scenario: Authentication failure remains visible
+- **WHEN** a Cloud request is rejected because authentication or document authorization is invalid
+- **THEN** the application preserves its existing access-error handling and does not hide the rejection behind Local fallback.
+
+#### Scenario: User cancellation is not engine failure
+- **WHEN** a user pauses, seeks, leaves, or cancels a narration attempt
+- **THEN** no downstream engine starts and no slice-completion event is emitted.
 
 ### Requirement: System TTS Engine via Web Speech API
-The reader audio narration system SHALL support a **System TTS** engine mode (`engineMode === 'system'`) powered by the browser's native Web Speech API (`window.speechSynthesis`), alongside existing Cloud and Device engines.
-1. **Engine Selection**: The reader audio player SHALL provide a selectable engine option for "System" (or "Hệ thống" / "Thiết bị"), persisting the user's engine choice in `localStorage`.
-2. **Local Voice Discovery**: When System engine is active, the player SHALL enumerate all available voices via `speechSynthesis.getVoices()`, filtering or presenting voices matching the slice's language, including native OS engines (e.g. Android `com.google.android.tts` with local voices such as `vi-vn-x-vic-local` or Google Tiếng Việt).
-3. **Voice Customization & Persistence**: The user SHALL be able to select their preferred local voice, with the selection persisted in `localStorage`.
-4. **Playback Rate & Pitch**: The System engine SHALL honor user-configured playback speed (up to 2.0x) and pitch, applying them directly to the `SpeechSynthesisUtterance`.
-5. **Zero-Latency Execution**: System TTS SHALL start playback immediately without downloading neural network model weights or executing server-side API requests, and SHALL operate without consuming cloud quota.
+
+The reader SHALL support System TTS through the browser Web Speech API alongside Cloud and Local.
+
+1. **Engine Selection**: A System option SHALL remain available, and an explicit selection SHALL persist as a preference distinct from the effective engine.
+2. **Local Voice Discovery**: System selection SHALL enumerate and filter matching browser/OS voices, including supported Android Google Speech Services voices. Initial discovery SHALL be bounded and asynchronous when matching voices are not immediately exposed.
+3. **Voice Customization & Persistence**: A preferred System voice SHALL remain selectable and persistent.
+4. **Playback Rate & Pitch**: Existing System playback-speed support up to 2.0x and configured utterance pitch SHALL remain honored without adding an unused pitch control.
+5. **Browser Speech Startup**: After a suitable voice is discovered, System SHALL speak through utterances without application model downloads, server synthesis requests, or Cloud quota consumption. Discovery and browser voice startup SHALL NOT be described as a guaranteed zero-latency operation. The application SHALL NOT claim to cache a returned System audio file.
 
 #### Scenario: User selects System TTS engine on Android
-- **WHEN** the user selects the "System" audio engine on an Android device with Google Speech Services installed
-- **THEN** the audio player displays available local system voices (including `vi-vn-x-vic-local`), starts narration immediately upon play without model download latency, and does not increment backend cloud character usage.
+- **WHEN** System is selected on Android with a matching Google Speech Services voice
+- **THEN** matching System voices, including `vi-vn-x-vic-local` when installed, are available
+- **AND** narration starts after discovery without an application model download or backend character usage.
 
 #### Scenario: System TTS honors 2.0x playback speed
-- **WHEN** the user sets playback speed to 2.0x and initiates System TTS narration
-- **THEN** the `SpeechSynthesisUtterance.rate` is set to 2.0 and speech is synthesized at double speed.
+- **WHEN** the user sets 2.0x and requests System narration
+- **THEN** the utterance rate is 2.0.
 
 ### Requirement: Continuous Cross-Slice Auto-Advance
 The reader audio player SHALL provide an automatic slice progression mechanism that continues narration to subsequent document slices without manual user intervention.
@@ -760,24 +763,26 @@ The reader audio narration toolbar SHALL render using a container-resilient, two
 - **THEN** the main play button label dynamically updates to "Tạm dừng" (or "Pause" in English locale), and updates back to "Nghe" (or "Listen") upon pause or completion.
 
 ### Requirement: Graceful Speech Engine Fallback & Notification
-When a user initiates playback using the `System` engine (Web Speech API) and the client environment lacks compatible voices for the slice language OR speech synthesis fails during playback:
-1. The reader SHALL automatically switch the active engine mode to `Cloud`.
-2. The UI Segmented Switch SHALL immediately update its active state to highlight `Cloud`.
-3. The Voice Picker SHALL switch to the corresponding Cloud voice selection for the slice language.
-4. The system SHALL display a toast notification informing the user that the engine was transitioned to Cloud TTS due to unavailable browser voices.
-5. **Storage Invariant**: Client-side synthesis (Web Speech API and on-device Web Worker) SHALL NEVER send synthesized audio payloads, audio chunks, or character tracking records to the backend PostgreSQL database (`DocumentChunkAudios`). Only Cloud TTS synthesis requests handled by the backend server SHALL persist records to `DocumentChunkAudios`.
+
+A hard System failure SHALL select the next eligible engine in the hierarchy, update the effective-engine indicator and language-appropriate voice controls, and notify the user with the actual reason for transition. If Cloud is unavailable, the UI SHALL report Local rather than claim Cloud playback. Each engine transition SHALL restart the current slice without advancing it.
+
+System and Local narration SHALL NOT upload generated audio, partials, or character-tracking records to the backend. Only actual Cloud synthesis requests SHALL use backend audio persistence and quota tracking.
 
 #### Scenario: Web Speech API has no compatible voice for slice language
-- **WHEN** a user with `engineMode = 'system'` plays a slice whose language has no matching voices in `window.speechSynthesis.getVoices()`
-- **THEN** the engine mode automatically switches to `'cloud'`, the UI toggle updates to "Cloud", a toast notification is displayed, and audio synthesizes via the Cloud API.
+- **WHEN** discovery finds no suitable System voice and Cloud is available
+- **THEN** the effective engine and voice controls change to Cloud and a localized notice explains the fallback.
 
 #### Scenario: No backend database persistence for client-side audio
-- **WHEN** audio is played via `system` (Web Speech API) or `device` (On-Device Neural TTS)
-- **THEN** no POST request is issued to `/api/v1/library/chunks/{chunkId}/audio` and zero rows are inserted into `DocumentChunkAudios`.
+- **WHEN** narration completes using only System or Local without a Cloud attempt
+- **THEN** no audio-synthesis POST is sent and no backend audio row or character usage is created by that narration.
 
 #### Scenario: Web Speech API synthesis failure transitions to Cloud engine
-- **WHEN** audio playback fails with `synthesis-failed` while running on `engineMode = 'system'`
-- **THEN** the engine mode automatically switches to `'cloud'`, the UI toggle updates to "Cloud", a localized toast notification is displayed, and narration continues via Google Cloud.
+- **WHEN** System fails during playback and Cloud is available
+- **THEN** the UI reflects Cloud and narration restarts at the beginning, not at a transferred System timestamp.
+
+#### Scenario: Cloud is unavailable after System failure
+- **WHEN** System fails and the next usable engine is Local
+- **THEN** the UI reports Local, explains the transition, and never claims that speech will be guaranteed offline without cached resources.
 
 ### Requirement: Daily Pacer Workflow Auto-Advance Gating
 In the Daily Learning Pacer workflow (`/today`), completion of slice audio narration SHALL NOT trigger automatic advancement to the next slice, regardless of the `autoAdvance` setting. 
@@ -813,21 +818,6 @@ When synthesizing narration via System TTS (`engineMode === 'system'`), the read
 - **THEN** narration resumes from sentence 3
 - **AND** when sentence 3 completes, narration automatically continues through sentences 4 to 8
 
-### Requirement: Cross-Engine Playback Progress Retention
-
-When switching between synthesis engines (System, Cloud, Device) within the same slice:
-
-1. **Time-Based Engine Switching (Cloud <-> Device)**: The reader SHALL capture `currentTime` from the active audio element and pass it as `initialOffset` to `loadAndPlay()`, resuming playback at the exact elapsed second.
-2. **Hybrid Engine Switching (System <-> Cloud/Device)**:
-   - When switching from System to Cloud/Device, the reader SHALL map the current sentence progress ratio (`systemSentenceIndex / totalSentences`) to the target audio duration and start playback at that elapsed position.
-   - When switching from Cloud/Device to System, the reader SHALL map the elapsed time ratio (`currentTime / duration`) to the corresponding sentence index and resume narration from that sentence.
-
-#### Scenario: Switching from Cloud to Device during playback
-- **WHEN** Cloud narration is playing at 0:45 of a 2:00 slice
-- **AND** the user switches the engine to "Device"
-- **THEN** Device synthesis or cached audio loads and resumes playback at 0:45
-- **AND** playback does not reset to 0:00
-
 ---
 
 ### Requirement: Canonical narration cache database
@@ -841,3 +831,113 @@ The on-device narration cache SHALL use `deeppace-audio` with its existing suppo
 - **WHEN** narration caches a complete or partial result
 - **THEN** it writes to the canonical database under the existing appropriate store/key schema
 - **AND** current partial-cache validation and eviction behavior remain applicable.
+
+### Requirement: Restart Narration on Engine Change
+
+An actual engine change SHALL restart the current slice at zero and ignore saved target-engine progress. If paused, that restart reason SHALL remain pending until the next playback request and override restoration. Initial availability checks after reload SHALL not count as an engine change. Redundant selection SHALL not reset position or emit completion.
+
+#### Scenario: Cloud switches to Local after forty-five seconds
+- **WHEN** Cloud has played 45 seconds and the effective engine changes to Local
+- **THEN** Local starts at the beginning of the same slice, regardless of either track's duration or saved Local progress.
+
+#### Scenario: System fails after several sentences
+- **WHEN** System fails after sentence 8 and fallback chooses Cloud
+- **THEN** Cloud starts the slice from the beginning and the reader does not advance.
+
+#### Scenario: Selecting the current engine is not a restart
+- **WHEN** a user selects the already effective engine without changing the voice or source
+- **THEN** the existing playback position is not reset by a redundant selection.
+
+#### Scenario: Paused engine change overrides an older target checkpoint
+- **WHEN** paused Cloud playback is changed to Local, Local has an older checkpoint, and the user later presses Listen
+- **THEN** the deferred engine-change reason starts Local at zero rather than restoring the older Local checkpoint.
+
+### Requirement: Same-Engine Listening Position Restoration
+
+After reload or a later visit on the same browser, a playback request SHALL restore a valid checkpoint only for the same account, slice, effective engine, voice, and narration content. Resolution SHALL still honor System-first Auto rather than choose an engine merely because it has a checkpoint. No timestamp or percentage SHALL be translated to another engine.
+
+#### Scenario: System resumes a saved sentence
+- **WHEN** a matching System checkpoint records sentence 3 of 8 and the user requests playback after reload
+- **THEN** System reads from the beginning of sentence 3 and continues subsequent sentences.
+
+#### Scenario: Complete cached audio resumes at its saved second
+- **WHEN** matching complete Cloud or Local audio remains cached and its checkpoint records 45 seconds
+- **THEN** playback resumes at 45 seconds after its media metadata is available.
+
+#### Scenario: Auto resolves to a different engine on a later visit
+- **WHEN** a Cloud checkpoint exists but Auto now finds a suitable System voice
+- **THEN** System is used from the beginning rather than restoring or translating the Cloud position.
+
+#### Scenario: Voice or content identity changed
+- **WHEN** the selected voice or narration content differs from a saved checkpoint
+- **THEN** that checkpoint is not restored and the current narration begins at the start.
+
+#### Scenario: Initial Auto resolution restores the same Cloud engine
+- **WHEN** Auto is evaluated after reload, System discovery finds no suitable voice before any engine starts, and matching cached Cloud audio has a valid checkpoint
+- **THEN** Cloud is the initially resolved engine and resumes its checkpoint
+- **AND** the availability check is not treated as an engine transition that resets progress.
+
+### Requirement: Partial Local Listening Position Restoration
+
+Local generation progress and listening progress SHALL remain separate. A matching partial cache SHALL avoid re-synthesizing available sentences, while a listening checkpoint SHALL identify the actual sentence/global position heard. Restoring a valid checkpoint SHALL not play an earlier cached prefix merely because more sentences were synthesized than listened to.
+
+#### Scenario: Five generated sentences do not mean five heard sentences
+- **WHEN** 5 of 15 sentences are cached but the user stopped during sentence 2 and then reloads
+- **THEN** generation reuses the 5 available sentences while playback restores sentence 2's saved position, not sentence 6.
+
+#### Scenario: Local fragment time is not whole-slice time
+- **WHEN** a checkpoint is taken 2 seconds into a later local sentence fragment
+- **THEN** restoration uses that sentence and its offset in the whole narration rather than treating 2 seconds as the start of the slice.
+
+#### Scenario: Partial generation completes before reopening
+- **WHEN** a local checkpoint was taken during streaming and the matching complete cached file is available after reload
+- **THEN** playback restores the checkpoint's whole-slice elapsed position in the complete file.
+
+#### Scenario: Referenced cached audio was lost
+- **WHEN** the required complete audio or referenced local partial is absent or incompatible
+- **THEN** an obsolete byte-timeline checkpoint is not applied to regenerated audio and narration safely starts from the beginning.
+
+### Requirement: Checkpoint Restoration Without Autoplay
+
+Mounting a reader, loading a checkpoint, or changing an idle preference SHALL NOT start speech, Cloud synthesis, local inference, or a model download. The next playback request SHALL restore eligible progress unless a pending explicit restart takes precedence. Authorized auto-advance after natural completion SHALL remain a distinct continuation, not a reload side effect.
+
+#### Scenario: Reader reload stays quiet
+- **WHEN** a reader reloads with a valid checkpoint
+- **THEN** no narration or synthesis begins until the user activates Listen.
+
+#### Scenario: Completed narration can replay
+- **WHEN** a saved checkpoint represents natural completion and the user later presses Listen
+- **THEN** narration starts from the beginning rather than remaining stuck at the end or auto-advancing on mount.
+
+#### Scenario: Today progress does not complete a drill
+- **WHEN** audio progress is restored or narration finishes on `/today`
+- **THEN** the current slice remains subject to its existing Senior Challenge workflow and audio restoration does not advance or complete it.
+
+### Requirement: Playback Session Isolation
+
+Only the current session and current speech/media operation SHALL control playback, fallback, completion, or checkpoints. Replaced narration, accounts, and routes SHALL invalidate the session; seek, replacement utterances, and media handoffs SHALL invalidate superseded operations within it. Delayed callbacks SHALL not resurrect either. Buffering SHALL preserve playback intent without becoming user pause or completion.
+
+#### Scenario: Late Cloud response after engine change
+- **WHEN** an old Cloud request finishes after the user selected another engine
+- **THEN** it cannot replace audio, start playback, trigger fallback, or overwrite the current checkpoint.
+
+#### Scenario: Same cache key belongs to different sessions
+- **WHEN** an earlier request for the same slice and voice finishes after a newer request superseded it
+- **THEN** matching content identity alone does not authorize its callbacks to control the newer session.
+
+#### Scenario: Native pause precedes fragment ended
+- **WHEN** a streaming fragment naturally emits pause before ended while more narration is pending
+- **THEN** the session retains its intended continuation, waits or advances to available audio, and does not mark the slice complete.
+
+#### Scenario: Leaving or changing accounts fences progress
+- **WHEN** the reader is left or the active account changes with asynchronous work pending
+- **THEN** obsolete work cannot start playback or commit a checkpoint under the replacement account.
+
+#### Scenario: Superseded utterance finishes after seeking
+- **WHEN** System seeking replaces an utterance and an old utterance later emits start, end, or error
+- **THEN** the old operation cannot change the cursor, speak another sentence, trigger fallback, or complete the slice
+- **AND** the current session retains its existing attempted-engine history.
+
+#### Scenario: Old fragment callback arrives after full-file handoff
+- **WHEN** Local replaces a sentence fragment with the complete audio and an obsolete fragment callback arrives
+- **THEN** it cannot apply stale metadata, change the new position, or emit false slice completion.

@@ -1,256 +1,169 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useLibraryStore, type BookDetail } from '~/stores/useLibraryStore'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises, shallowMount } from '@vue/test-utils'
+import { ref } from 'vue'
+import ReaderPage from '../../app/pages/read/[bookId].vue'
+import { useReaderTypography } from '../../app/composables/useReaderTypography'
+import type { BookDetail, ChunkSummary } from '../../app/stores/useLibraryStore'
+import type { AudioNavigationRequest } from '../../app/components/reader/ReaderAudioPlayer.vue'
 
-const mockBookDetail: BookDetail = {
-  id: 'book-123',
-  title: 'Designing Data-Intensive Applications',
-  slug: 'ddia',
-  sourceType: 0,
-  category: 2,
-  authorOrSourceUrl: 'Martin Kleppmann',
-  totalChunks: 3,
-  isPublished: true,
-  createdAt: '2026-08-31T00:00:00Z',
-  chunks: [
-    {
-      id: 'chunk-1',
-      chunkOrder: 1,
-      chapterTitle: 'Reliability, Scalability, Maintainability',
-      summaryMarkdown: 'Summary 1',
-      originalTextMarkdown: '# Reliability\nHardware faults vs Software errors.',
-      keyTakeaways: ['Reliability is fault tolerance', 'SLO vs SLA'],
-      estimatedReadMinutes: 5
-    },
-    {
-      id: 'chunk-2',
-      chunkOrder: 2,
-      chapterTitle: 'Data Models and Query Languages',
-      summaryMarkdown: 'Summary 2',
-      originalTextMarkdown: '# Data Models\nRelational vs Document vs Graph.',
-      keyTakeaways: ['Schema-on-read vs Schema-on-write'],
-      estimatedReadMinutes: 6
-    },
-    {
-      id: 'chunk-3',
-      chunkOrder: 3,
-      chapterTitle: 'Storage and Retrieval: LSM-Trees & B-Trees',
-      summaryMarkdown: 'Summary 3',
-      originalTextMarkdown: '# Storage Engines\nSSTables, MemTable, WAL, B-Trees.',
-      keyTakeaways: ['LSM for writes, B-Trees for reads'],
-      estimatedReadMinutes: 7
-    }
-  ]
+enableAutoUnmount(afterEach)
+
+function fullSlice(order: number): ChunkSummary {
+  return {
+    id: `chunk-${order}`,
+    chunkOrder: order,
+    chapterTitle: ['Reliability', 'Data Models', 'Storage'][order - 1]!,
+    summaryMarkdown: '',
+    originalTextMarkdown: `Complete narration for chapter ${order}. This content is ready to read.`,
+    keyTakeaways: [],
+    estimatedReadMinutes: 2,
+    isAiFormatted: true,
+    language: 'en',
+  }
 }
 
-vi.mock('~/composables/useApiClient', () => ({
-  useApiClient: () => ({
-    get: vi.fn().mockResolvedValue({ book: mockBookDetail })
-  })
-}))
+function bookOverview(): BookDetail {
+  return {
+    id: 'reader-book', title: 'Data Systems', slug: 'data-systems', sourceType: 0,
+    categoryId: 'reader-category',
+    category: {
+      id: 'reader-category', slug: 'data-systems', nameEn: 'Data Systems',
+      nameVi: 'Data Systems', sortOrder: 0, isActive: true, version: 1,
+    },
+    totalChunks: 3, isPublished: true, createdAt: '2026-10-01T00:00:00Z', language: 'en',
+    // The real overview API returns metadata without the full slice content.
+    chunks: [1, 2, 3].map(order => ({ ...fullSlice(order), originalTextMarkdown: '' })),
+  }
+}
 
-describe('Immersive Document Reader (Hướng 1)', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-    localStorage.clear()
-  })
+function navigation(isCurrent = () => true): AudioNavigationRequest {
+  return { isCurrent, accept: () => isCurrent(), cancel: vi.fn() }
+}
 
-  it('calculates reading progress percentage accurately', () => {
-    const total = mockBookDetail.chunks.length
-    expect(Math.round(((0 + 1) / total) * 100)).toBe(33) // Slice 1 of 3: 33%
-    expect(Math.round(((1 + 1) / total) * 100)).toBe(67) // Slice 2 of 3: 67%
-    expect(Math.round(((2 + 1) / total) * 100)).toBe(100) // Slice 3 of 3: 100%
-  })
+let destination = Promise.withResolvers<ChunkSummary | null>()
+let deferredOrder = 2
+const query = ref<Record<string, string>>({})
 
-  it('persists and loads bookmark from localStorage correctly', () => {
-    const bookId = 'book-123'
-    // Save bookmark for slice 2
-    localStorage.setItem(`deeppace_bookmark_${bookId}`, '2')
+beforeEach(() => {
+  vi.useFakeTimers()
+  localStorage.clear()
+  destination = Promise.withResolvers<ChunkSummary | null>()
+  deferredOrder = 2
+  query.value = {}
+  vi.stubGlobal('useRoute', () => ({ params: { bookId: 'reader-book' }, get query() { return query.value } }))
+  vi.stubGlobal('useRouter', () => ({ push: vi.fn(), replace: vi.fn() }))
+  vi.stubGlobal('useAuthStore', () => ({ isAuthenticated: true, user: { id: 'reader-account' }, sessionGeneration: 0 }))
+  vi.stubGlobal('useDailyFocusStore', () => ({ fetchTodayFocus: vi.fn().mockResolvedValue(undefined) }))
+  vi.stubGlobal('useNotesStore', () => ({}))
+  vi.stubGlobal('useReaderTypography', useReaderTypography)
+  vi.stubGlobal('useMarkdownRenderer', () => ({ render: () => '', isHighlighterReady: ref(true) }))
+  vi.stubGlobal('useLibraryStore', () => ({
+    isLoading: false,
+    fetchBookById: vi.fn().mockImplementation(async () => bookOverview()),
+    fetchSlice: vi.fn().mockImplementation(async (_bookId: string, order: number) => (
+      order === deferredOrder ? destination.promise : fullSlice(order)
+    )),
+  }))
+  vi.spyOn(HTMLElement.prototype, 'scrollTo').mockImplementation(() => {})
+})
 
-    const saved = localStorage.getItem(`deeppace_bookmark_${bookId}`)
-    expect(saved).toBe('2')
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+  vi.useRealTimers()
+})
 
-    const parsedSlice = parseInt(saved!, 10)
-    expect(parsedSlice).toBe(2)
-    expect(mockBookDetail.chunks[parsedSlice - 1]?.chapterTitle).toBe('Data Models and Query Languages')
-  })
+describe('reader narration navigation', () => {
+  it('loads complete next-slice content before accepting natural continuation', async () => {
+    const wrapper = shallowMount(ReaderPage)
+    await flushPromises()
 
-  it('tracks completed slices across the document', () => {
-    const bookId = 'book-123'
-    const completed = new Set<number>()
-    completed.add(1)
-    completed.add(2)
+    wrapper.getComponent({ name: 'ReaderAudioPlayer' }).vm.$emit('auto-advance', navigation())
+    await flushPromises()
+    expect(wrapper.get('main h1').text()).toBe('Reliability')
+    expect(localStorage.getItem('deeppace_bookmark_reader-book')).toBeNull()
 
-    localStorage.setItem(`deeppace_completed_${bookId}`, JSON.stringify(Array.from(completed)))
-
-    const loaded = new Set(JSON.parse(localStorage.getItem(`deeppace_completed_${bookId}`)!))
-    expect(loaded.has(1)).toBe(true)
-    expect(loaded.has(2)).toBe(true)
-    expect(loaded.has(3)).toBe(false)
-  })
-
-  it('fetches book detail in useLibraryStore', async () => {
-    const store = useLibraryStore()
-    const book = await store.fetchBookById('book-123')
-    expect(book.title).toBe('Designing Data-Intensive Applications')
-    expect(book.chunks.length).toBe(3)
-    expect(book.chunks[0]?.chunkOrder).toBe(1)
-  })
-
-  it('falls back to chapterTitle when selection context extraction produces empty text', () => {
-    const chapterTitle = 'Chapter 3: Storage and Retrieval'
-    const surrounding = ''
-    const currentContext = surrounding || chapterTitle || ''
-    expect(currentContext).toBe('Chapter 3: Storage and Retrieval')
-  })
-
-  it('persists and loads typography settings from localStorage correctly', () => {
-    const customTypography = {
-      fontSize: 'xl',
-      fontFamily: 'serif',
-      lineSpacing: 'loose',
-      readingWidth: 'wide'
-    }
-
-    localStorage.setItem('deeppace_reader_typography', JSON.stringify(customTypography))
-
-    const loaded = JSON.parse(localStorage.getItem('deeppace_reader_typography')!)
-    expect(loaded.fontSize).toBe('xl')
-    expect(loaded.fontFamily).toBe('serif')
-    expect(loaded.lineSpacing).toBe('loose')
-    expect(loaded.readingWidth).toBe('wide')
+    destination.resolve(fullSlice(2))
+    await flushPromises()
+    expect(wrapper.get('main h1').text()).toBe('Data Models')
+    expect(localStorage.getItem('deeppace_bookmark_reader-book')).toBe('2')
   })
 
-  it('computes correct typography and container classes based on state', () => {
-    const typography = {
-      fontSize: 'lg',
-      fontFamily: 'serif',
-      lineSpacing: 'loose',
-      readingWidth: 'wide'
-    }
+  it('keeps the current slice if playback permission is canceled while destination content loads', async () => {
+    const wrapper = shallowMount(ReaderPage)
+    await flushPromises()
+    let current = true
 
-    const containerClass = typography.readingWidth === 'wide'
-      ? 'max-w-4xl'
-      : (typography.readingWidth === 'full' ? 'max-w-full' : 'max-w-3xl')
+    wrapper.getComponent({ name: 'ReaderAudioPlayer' }).vm.$emit('auto-advance', navigation(() => current))
+    current = false
+    destination.resolve(fullSlice(2))
+    await flushPromises()
 
-    const fontClass = typography.fontFamily === 'serif'
-      ? 'font-serif'
-      : (typography.fontFamily === 'mono' ? 'font-mono' : 'font-sans')
-
-    const leadingClass = typography.lineSpacing === 'loose'
-      ? 'leading-loose'
-      : (typography.lineSpacing === 'normal' ? 'leading-normal' : 'leading-relaxed')
-
-    expect(containerClass).toBe('max-w-4xl')
-    expect(fontClass).toBe('font-serif')
-    expect(leadingClass).toBe('leading-loose')
+    expect(wrapper.get('main h1').text()).toBe('Reliability')
+    expect(localStorage.getItem('deeppace_bookmark_reader-book')).toBeNull()
   })
 
-  it('steps font size within bounds', () => {
-    const fontSizes = ['sm', 'base', 'lg', 'xl', '2xl']
-    let currentIdx = fontSizes.indexOf('base')
-    expect(currentIdx).toBe(1)
+  it('does not replace a manually selected source with an older pending continuation', async () => {
+    const wrapper = shallowMount(ReaderPage)
+    await flushPromises()
 
-    // Step up
-    currentIdx = Math.min(fontSizes.length - 1, currentIdx + 1)
-    expect(fontSizes[currentIdx]).toBe('lg')
+    wrapper.getComponent({ name: 'ReaderAudioPlayer' }).vm.$emit('auto-advance', navigation())
+    wrapper.getComponent({ name: 'ReaderTocSidebar' }).vm.$emit('select-chunk', 2)
+    await flushPromises()
+    expect(wrapper.get('main h1').text()).toBe('Storage')
 
-    // Step up to max
-    currentIdx = Math.min(fontSizes.length - 1, currentIdx + 1)
-    currentIdx = Math.min(fontSizes.length - 1, currentIdx + 1)
-    expect(fontSizes[currentIdx]).toBe('2xl')
-
-    // Cannot step beyond max
-    currentIdx = Math.min(fontSizes.length - 1, currentIdx + 1)
-    expect(fontSizes[currentIdx]).toBe('2xl')
-
-    // Step down to min
-    currentIdx = 0
-    expect(fontSizes[currentIdx]).toBe('sm')
-    currentIdx = Math.max(0, currentIdx - 1)
-    expect(fontSizes[currentIdx]).toBe('sm')
+    destination.resolve(fullSlice(2))
+    await flushPromises()
+    expect(wrapper.get('main h1').text()).toBe('Storage')
+    expect(localStorage.getItem('deeppace_bookmark_reader-book')).toBe('3')
   })
 
-  it('suppresses trailing Key Takeaways from markdown text when structured takeaways are present', () => {
-    const rawMarkdownWithTakeaways = `# Reliability\nHardware faults vs Software errors.\n\n### Key Takeaways\n- Focus on fault tolerance\n- SLO vs SLA\n- Error budgets`
-    const hasValidTakeaways = true
+  it('keeps the current slice when destination content cannot be loaded', async () => {
+    const wrapper = shallowMount(ReaderPage)
+    await flushPromises()
 
-    let text = rawMarkdownWithTakeaways
-    if (hasValidTakeaways) {
-      text = text.replace(
-        /\s*#{1,4}\s+Key\s+Takeaways\s*(?:\r?\n\s*[-*+]\s+[^\r\n]+)*\s*$/i,
-        ""
-      )
-    }
+    wrapper.getComponent({ name: 'ReaderAudioPlayer' }).vm.$emit('auto-advance', navigation())
+    destination.resolve(null)
+    await flushPromises()
 
-    expect(text).not.toContain('Key Takeaways')
-    expect(text).not.toContain('Focus on fault tolerance')
-    expect(text).toContain('Hardware faults vs Software errors.')
+    expect(wrapper.get('main h1').text()).toBe('Reliability')
+    expect(localStorage.getItem('deeppace_bookmark_reader-book')).toBeNull()
   })
 
-  it('preserves markdown text as-is when no structured takeaways are present', () => {
-    const rawMarkdown = `# Reliability\nHardware faults vs Software errors.\n\n### Key Takeaways\n- Focus on fault tolerance`
-    const hasValidTakeaways = false
+  it('prepares complete content before media-session next-track navigation', async () => {
+    const wrapper = shallowMount(ReaderPage)
+    await flushPromises()
 
-    let text = rawMarkdown
-    if (hasValidTakeaways) {
-      text = text.replace(
-        /\s*#{1,4}\s+Key\s+Takeaways\s*(?:\r?\n\s*[-*+]\s+[^\r\n]+)*\s*$/i,
-        ""
-      )
-    }
+    wrapper.getComponent({ name: 'ReaderAudioPlayer' }).vm.$emit('seek-slice', 'next', navigation())
+    await flushPromises()
+    expect(wrapper.get('main h1').text()).toBe('Reliability')
 
-    expect(text).toContain('Key Takeaways')
-    expect(text).toContain('Focus on fault tolerance')
+    destination.resolve(fullSlice(2))
+    await flushPromises()
+    expect(wrapper.get('main h1').text()).toBe('Data Models')
   })
 
-  it('validates reader brand violet tokens and absence of legacy amber on takeaways container', () => {
-    const takeawayContainerClasses = 'p-4 sm:p-6 rounded-3xl bg-brand-50/50 dark:bg-brand-500/10 border border-brand-200/80 dark:border-brand-500/20 space-y-3'
-    const takeawayBulletClass = 'w-1.5 h-1.5 rounded-full bg-brand-500 mt-2 shrink-0'
+  it('prepares complete content before media-session previous-track navigation', async () => {
+    deferredOrder = 1
+    query.value = { slice: '2' }
+    const wrapper = shallowMount(ReaderPage)
+    await flushPromises()
+    expect(wrapper.get('main h1').text()).toBe('Data Models')
 
-    expect(takeawayContainerClasses).toContain('bg-brand-50/50')
-    expect(takeawayContainerClasses).toContain('dark:bg-brand-500/10')
-    expect(takeawayContainerClasses).toContain('border-brand-200/80')
-    expect(takeawayContainerClasses).toContain('dark:border-brand-500/20')
-    expect(takeawayContainerClasses).not.toContain('amber')
+    wrapper.getComponent({ name: 'ReaderAudioPlayer' }).vm.$emit('seek-slice', 'prev', navigation())
+    await flushPromises()
+    expect(wrapper.get('main h1').text()).toBe('Data Models')
 
-    expect(takeawayBulletClass).toContain('bg-brand-500')
-    expect(takeawayBulletClass).not.toContain('bg-amber')
+    destination.resolve(fullSlice(1))
+    await flushPromises()
+    expect(wrapper.get('main h1').text()).toBe('Reliability')
   })
 
-  it('validates floating toolbar Dev-Learning Studio Iris Violet buttons and absence of amber colors', () => {
-    const readerSource = fs.readFileSync(path.resolve(__dirname, '../../app/pages/read/[bookId].vue'), 'utf-8')
-    const toolbarBlock = readerSource.slice(readerSource.indexOf('<Teleport to="body">'))
-
-    // Ensure Highlight/Note does not use legacy amber tokens
-    expect(toolbarBlock).not.toContain('bg-amber')
-    expect(toolbarBlock).not.toContain('text-amber')
-
-    // Ensure Iris Violet brand glass tokens are present
-    expect(toolbarBlock).toContain('bg-brand-500/10')
-    expect(toolbarBlock).toContain('text-brand-300')
-    expect(toolbarBlock).toContain('border-brand-500/20')
-    expect(toolbarBlock).toContain('hover:bg-brand-500/20')
-
-    // Ensure active state transitions to solid brand violet
-    expect(toolbarBlock).toContain("'bg-brand-600 text-white shadow-sm'")
-  })
-
-  it('validates reflection popover placeholder bindings, soft focus rings, and glassmorphic tokens', () => {
-    const readerSource = fs.readFileSync(path.resolve(__dirname, '../../app/pages/read/[bookId].vue'), 'utf-8')
-
-    // Ensure explicit placeholder bindings exist
-    expect(readerSource).toContain(':placeholder="$t(\'reader.note_placeholder\')"')
-    expect(readerSource).toContain(':placeholder="$t(\'reader.tags_placeholder\')"')
-
-    // Ensure refined hairline borders and focus states are applied
-    expect(readerSource).toContain('focus:border-brand-500')
-    expect(readerSource).toContain('border-slate-700/80')
-    expect(readerSource).toContain('dark:border-white/[0.10]')
-
-    // Ensure quote preview uses Iris Violet border accent
-    expect(readerSource).toContain('border-brand-500/60')
+  it('honors a valid external slice-query change without remounting the reader', async () => {
+    const wrapper = shallowMount(ReaderPage)
+    await flushPromises()
+    query.value = { slice: '3' }
+    await flushPromises()
+    expect(wrapper.get('main h1').text()).toBe('Storage')
   })
 })

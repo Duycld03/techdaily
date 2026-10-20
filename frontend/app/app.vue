@@ -61,7 +61,7 @@ onMounted(() => {
       <div class="flex-1 flex overflow-hidden">
         <AppSidebar v-if="!isReaderMode" />
         <main class="flex-1 overflow-y-auto">
-          <NuxtPage :page-key="route => route.fullPath" />
+          <NuxtPage :page-key="pageRoute => pageRoute.path.startsWith('/read/') ? pageRoute.path : pageRoute.fullPath" />
         </main>
       </div>
     </template>

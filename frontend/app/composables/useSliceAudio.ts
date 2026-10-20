@@ -1,18 +1,26 @@
-// Orchestrates on-device narration for a reader slice: derive the script,
-// resolve the language voice, reuse cached audio, otherwise stream synthesis
-// from the worker, assemble a complete seekable WAV, cache it, and drive an
-// <audio> element (play/pause/seek/speed). All heavy work is client-only.
+// System-first narration orchestration. Engine policy, media operation ownership,
+// worker transport, Local PCM playback, and listening records have separate owners.
+// Persisted cursors describe only the resolved engine's actual playback surface.
 
-import { computed, getCurrentScope, onScopeDispose, ref, shallowRef, watch } from 'vue'
+import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue'
 import { useStorage } from '@vueuse/core'
 import { computeContentHash, extractNarrationScript, splitSentences } from '~/utils/narrationScript'
 import { resolveVoiceForLanguage } from '~/utils/ttsVoices'
-import { concatFloat32, encodeWav } from '~/utils/audioWav'
+import { playLocalAudio } from '~/utils/audioLocalPlayback'
+import { createAudioPlaybackMedia } from '~/utils/audioPlaybackMedia'
+import { createWorkerEngine } from '~/utils/audioSynthesisWorker'
+import { discoverSystemVoices, downstreamFailureReason, engineCandidates, isDownstreamFailure } from '~/utils/audioEnginePolicy'
+import type { AudioFallbackReason } from '~/utils/audioEnginePolicy'
+import { AUDIO_PROGRESS_INTERVAL_MS, createAudioPlaybackProgress } from '~/utils/audioPlaybackProgress'
+import type { AudioPlaybackCheckpoint, AudioPlaybackCursor, AudioPlaybackIdentity } from '~/utils/audioPlaybackProgress'
+import { browserStorage, readAudioPreference, readStored, writeAudioPreference } from '~/utils/clientStorage'
+import type { AudioEnginePreference } from '~/utils/clientStorage'
 import { buildAudioKey, createIdbBackend, createSliceAudioCache } from '~/utils/sliceAudioCache'
 import type { SliceAudioCache } from '~/utils/sliceAudioCache'
 import type { AudioQuotaInfo } from '~/types/audio'
 
 export type AudioEngine = 'cloud' | 'device' | 'system'
+export type AudioStartReason = 'play' | 'engine-change' | 'voice-change' | 'source-change' | 'auto-advance' | 'recovery' | 'fallback'
 
 export interface NarrationSource {
   chunkId: string
@@ -52,15 +60,17 @@ export interface SliceAudioDeps {
   fetchClient?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   defaultEngine?: AudioEngine
   onQuotaExhausted?: () => void
-  onSliceEnded?: () => void
-  onNextTrack?: () => void
-  onPreviousTrack?: () => void
+  onSliceEnded?: (isCurrent: () => boolean) => void
+  onPause?: () => void
+  onNextTrack?: (isCurrent: () => boolean) => void
+  onPreviousTrack?: (isCurrent: () => boolean) => void
   speechSynthesis?: SpeechSynthesis
-  onFallbackToCloud?: () => void
+  getAccount?: () => { accountId: string | null; sessionGeneration: number }
+  onFallback?: (transition: { from: AudioEngine; to: AudioEngine; reason: AudioFallbackReason }) => void
+  onPersistenceUnavailable?: () => void
 }
 
 export const AUDIO_SPEED_STORAGE_KEY = 'deeppace_reader_audio_speed'
-export const AUDIO_ENGINE_STORAGE_KEY = 'deeppace_reader_audio_engine'
 export const AUDIO_VOICE_STORAGE_KEY = 'deeppace_reader_audio_voice'
 export const AUDIO_SYSTEM_VOICE_STORAGE_KEY = 'deeppace_reader_audio_system_voice'
 export const AUDIO_AUTO_ADVANCE_STORAGE_KEY = 'deeppace_reader_audio_auto_advance'
@@ -100,30 +110,6 @@ export function filterSystemVoicesForLanguage(voices: SystemVoiceOption[], lang?
   return voices.filter(v => v.lang.toLowerCase().replace('_', '-').startsWith(prefix))
 }
 
-export function resolveCascadedEngine(options: {
-  manualOverride?: AudioEngine | null
-  sliceLanguage?: string | null
-  availableSystemVoices?: SystemVoiceOption[]
-  isOnline?: boolean
-  isQuotaExhausted?: boolean
-  hasDeviceEngineOnly?: boolean
-}): AudioEngine {
-  if (options.manualOverride) {
-    return options.manualOverride
-  }
-  if (options.hasDeviceEngineOnly) {
-    return 'device'
-  }
-  const matchingVoices = filterSystemVoicesForLanguage(options.availableSystemVoices ?? [], options.sliceLanguage)
-  if (matchingVoices.length > 0) {
-    return 'system'
-  }
-  const isOnline = options.isOnline ?? (typeof navigator !== 'undefined' ? navigator.onLine : true)
-  if (isOnline && !options.isQuotaExhausted) {
-    return 'cloud'
-  }
-  return 'device'
-}
 
 export function playSliceTransitionChime(): Promise<void> {
   if (typeof window === 'undefined') return Promise.resolve()
@@ -262,107 +248,13 @@ export function categorizeAudioError(err: unknown, engine: AudioEngine): AudioEr
   return { code: 'UNKNOWN', rawMessage, suggestCloudFallback: false }
 }
 
-interface WorkerMessage {
-  type: 'progress' | 'chunk' | 'done' | 'error' | 'device'
-  reqId: number
-  stage?: 'download' | 'synth'
-  progress?: number
-  index?: number
-  count?: number
-  sampleRate?: number
-  samples?: Float32Array
-  message?: string
-  device?: ComputeDevice
-}
-
-// Production engine: a module Web Worker running Transformers.js.
-function createWorkerEngine(): TtsEngine {
-  let worker: Worker | null = null
-  let reqCounter = 0
-  const pending = new Map<number, { handlers: SynthHandlers, resolve: () => void, reject: (e: Error) => void }>()
-
-  function ensureWorker(): Worker {
-    if (!worker) {
-      worker = new Worker(new URL('../workers/ttsSynth.worker.ts', import.meta.url), { type: 'module' })
-      worker.onerror = (event: ErrorEvent) => {
-        const message = event.message || 'Worker initialization failed'
-        console.error('[useSliceAudio] Device TTS Error (worker.onerror):', message, event)
-        const err = new Error(message)
-        for (const p of pending.values()) {
-          p.reject(err)
-        }
-        pending.clear()
-        worker = null
-      }
-      worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
-        const m = event.data
-        const p = pending.get(m.reqId)
-        if (!p) return
-        if (m.type === 'progress') {
-          p.handlers.onProgress({ stage: m.stage ?? 'download', progress: m.progress, index: m.index, count: m.count })
-        }
-        else if (m.type === 'chunk' && m.samples && m.sampleRate) {
-          p.handlers.onChunk(m.samples, m.sampleRate)
-        }
-        else if (m.type === 'device' && m.device) {
-          p.handlers.onDevice?.(m.device)
-        }
-        else if (m.type === 'done') {
-          pending.delete(m.reqId)
-          p.resolve()
-        }
-        else if (m.type === 'error') {
-          console.error('[useSliceAudio] Device TTS Error (worker message):', m.message)
-          pending.delete(m.reqId)
-          p.reject(new Error(m.message ?? 'Synthesis failed'))
-        }
-      }
-    }
-    return worker
-  }
-
-  return {
-    synthesize(model, sentences, handlers, offsetIndex = 0) {
-      return new Promise<void>((resolve, reject) => {
-        const w = ensureWorker()
-        const reqId = ++reqCounter
-        pending.set(reqId, { handlers, resolve, reject })
-        w.postMessage({ type: 'synth', reqId, model, sentences, offsetIndex })
-      })
-    },
-    cancel(reqId) {
-      if (worker) {
-        worker.postMessage({ type: 'cancel', reqId })
-      }
-      const cancelError = new Error('Synthesis cancelled')
-      if (reqId != null) {
-        const p = pending.get(reqId)
-        if (p) {
-          pending.delete(reqId)
-          p.reject(cancelError)
-        }
-      } else {
-        for (const p of pending.values()) {
-          p.reject(cancelError)
-        }
-        pending.clear()
-      }
-    },
-    dispose() {
-      worker?.terminate()
-      worker = null
-      // Reject in-flight synths so an awaiting loadAndPlay unwinds instead of
-      // leaking a suspended promise when the reader is left mid-synthesis.
-      for (const p of pending.values()) p.reject(new Error('Synthesis cancelled'))
-      pending.clear()
-    },
-  }
-}
 
 export function useSliceAudio(deps: SliceAudioDeps = {}) {
   const isClient = typeof window !== 'undefined'
-
+  const storage = browserStorage('localStorage')
+  const progress = createAudioPlaybackProgress(storage)
   const speed = useStorage(AUDIO_SPEED_STORAGE_KEY, 1)
+  const autoAdvance = useStorage(AUDIO_AUTO_ADVANCE_STORAGE_KEY, true)
   const status = ref<AudioStatus>('idle')
   const playing = ref(false)
   const currentTime = ref(0)
@@ -374,1024 +266,615 @@ export function useSliceAudio(deps: SliceAudioDeps = {}) {
   const errorMessage = ref<string | null>(null)
   const errorInfo = ref<AudioErrorInfo | null>(null)
   const device = ref<ComputeDevice | null>(null)
-  const initialEngine: AudioEngine =
-    deps.defaultEngine
-    ?? (isClient ? (localStorage.getItem(AUDIO_ENGINE_STORAGE_KEY) as AudioEngine) : null)
-    ?? (deps.engine && !deps.fetchClient ? 'device' : 'cloud')
-
-  const engineMode = ref<AudioEngine>(initialEngine)
-  const activeCascadeTier = ref<AudioEngine>(initialEngine)
-  const selectedVoice = ref<string>(
-    (isClient ? localStorage.getItem(AUDIO_VOICE_STORAGE_KEY) : null) ?? ''
-  )
-  const volume = ref<number>(1)
-  const selectedSystemVoice = ref<string>(
-    (isClient ? localStorage.getItem(AUDIO_SYSTEM_VOICE_STORAGE_KEY) : null) ?? ''
-  )
-  const autoAdvance = useStorage(AUDIO_AUTO_ADVANCE_STORAGE_KEY, true)
+  const enginePreference = ref<AudioEnginePreference>(deps.defaultEngine ?? readAudioPreference(storage))
+  const engineMode = ref<AudioEngine>(enginePreference.value === 'auto' ? 'system' : enginePreference.value)
+  const activeCascadeTier = computed(() => engineMode.value)
+  const selectedVoice = ref(readStored(storage, AUDIO_VOICE_STORAGE_KEY) ?? '')
+  const selectedSystemVoice = ref(readStored(storage, AUDIO_SYSTEM_VOICE_STORAGE_KEY) ?? '')
   const systemVoices = ref<SystemVoiceOption[]>([])
-
-  let activeUtterance: SpeechSynthesisUtterance | null = null
-  let isSilentCarrierActive = false
-  let systemSentences: string[] = []
-  let systemSentenceDurations: number[] = []
-  let systemSentenceIndex = 0
-  let isSystemStopped = false
-  let systemTimeTicker: number | null = null
-  let resumeSystemSpeech: (() => void) | null = null
-  const SILENT_AUDIO_URI = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
-
-  function computeSystemSentenceDurations(sentences: string[], speechSpeed: number): number[] {
-    const CHARS_PER_SECOND = 16
-    const s = Math.max(0.5, Math.min(2.0, speechSpeed))
-    return sentences.map(text => Math.max(1.0, (text.trim().length / CHARS_PER_SECOND) / s))
-  }
-
-  function stopSystemTimeTicker(): void {
-    if (systemTimeTicker) {
-      clearInterval(systemTimeTicker)
-      systemTimeTicker = null
-    }
-  }
-
-  function startSystemTimeTicker(sentenceIdx: number): void {
-    stopSystemTimeTicker()
-    if (!isClient) return
-    const startSentenceTime = performance.now()
-    const baseElapsed = systemSentenceDurations.slice(0, sentenceIdx).reduce((a, b) => a + b, 0)
-    const currentSentenceDuration = systemSentenceDurations[sentenceIdx] || 1
-    systemTimeTicker = window.setInterval(() => {
-      if (!playing.value || isSystemStopped) {
-        stopSystemTimeTicker()
-        return
-      }
-      const elapsedInSentence = (performance.now() - startSentenceTime) / 1000
-      const clampedInSentence = Math.min(currentSentenceDuration, elapsedInSentence)
-      currentTime.value = Math.min(duration.value, baseElapsed + clampedInSentence)
-    }, 200)
-  }
-
-  function getSpeechSynth(): SpeechSynthesis | null {
-    if (deps.speechSynthesis) return deps.speechSynthesis
-    if (isClient && typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
-      return window.speechSynthesis
-    }
-    return null
-  }
-
-  function loadSystemVoices(): void {
-    const synth = getSpeechSynth()
-    if (!synth) return
-    const raw = synth.getVoices()
-    if (raw && raw.length > 0) {
-      systemVoices.value = raw.map(v => ({
-        id: v.voiceURI || v.name,
-        name: v.name,
-        lang: v.lang,
-        default: v.default,
-        localService: v.localService,
-      }))
-    }
-  }
-
-  if (isClient) {
-    loadSystemVoices()
-    const synth = getSpeechSynth()
-    if (synth && 'onvoiceschanged' in synth) {
-      synth.onvoiceschanged = () => loadSystemVoices()
-    }
-    if ('mediaSession' in navigator) {
-      try {
-        navigator.mediaSession.setActionHandler('play', () => { void play() })
-        navigator.mediaSession.setActionHandler('pause', () => { pause() })
-        if (deps.onNextTrack) {
-          navigator.mediaSession.setActionHandler('nexttrack', () => { deps.onNextTrack?.() })
-        }
-        if (deps.onPreviousTrack) {
-          navigator.mediaSession.setActionHandler('previoustrack', () => { deps.onPreviousTrack?.() })
-        }
-      } catch {
-        // Non-fatal
-      }
-    }
-  }
-
-  function startSilentCarrier(): void {
-    if (!isClient) return
-    const el = ensureAudio()
-    if (!el || isSilentCarrierActive) return
-    try {
-      if (el.src !== SILENT_AUDIO_URI) {
-        el.src = SILENT_AUDIO_URI
-        el.loop = true
-      }
-      el.volume = 0
-      void el.play()
-      isSilentCarrierActive = true
-    } catch {
-      // Non-fatal
-    }
-  }
-
-  function stopSilentCarrier(): void {
-    if (!isSilentCarrierActive) return
-    isSilentCarrierActive = false
-    const el = audio.value
-    if (el) {
-      el.pause()
-      el.loop = false
-      if (el.src === SILENT_AUDIO_URI) {
-        try {
-          el.removeAttribute('src')
-          el.load()
-        } catch {
-          // Non-fatal
-        }
-      }
-      el.volume = volume.value
-    }
-  }
-
-
+  const volume = ref(1)
+  const persistenceAvailable = ref(true)
+  const restoredProgress = ref(false)
   const audioQuota = ref<AudioQuotaInfo | null>(null)
   const isNearQuota = computed(() => (audioQuota.value?.usedCharacters ?? 0) >= 900_000 || !!audioQuota.value?.isNearLimit)
   const isQuotaExhausted = computed(() => (audioQuota.value?.usedCharacters ?? 0) >= 950_000 || !!audioQuota.value?.isExhausted)
-
-  const audio = shallowRef<HTMLAudioElement | null>(null)
-  let objectUrl: string | null = null
-  let activeKey: string | null = null
-  let onChunkEndedCallback: (() => void) | null = null
-  let isUserPaused = false
-  let cancelWaitingForChunk: (() => void) | null = null
-  // Engine and cache are created lazily on first playback so merely rendering
-  // the reader never opens IndexedDB or instantiates the worker.
   let engineInstance: TtsEngine | null = null
   let cacheInstance: SliceAudioCache | null = null
+  let disposed = false
+  let noticeSent = false
+  let lastSource: NarrationSource | null = null
+  let pendingReason: AudioStartReason | null = null
+  let transitionFrom: AudioEngine | null = null
+  let systemTicker: ReturnType<typeof setInterval> | null = null
+  let utterance: SpeechSynthesisUtterance | null = null
 
-  function getEngine(): TtsEngine | null {
-    if (deps.engine) return deps.engine
-    if (!isClient) return null
-    engineInstance ??= createWorkerEngine()
-    return engineInstance
+  interface Session {
+    source: NarrationSource
+    contentHash: string
+    account: { accountId: string | null; sessionGeneration: number }
+    controller: AbortController
+    intent: boolean
+    preparing: boolean
+    localStarted: boolean
+    attempted: AudioEngine[]
+    reason: AudioStartReason
+    restartPending: boolean
+    identity: AudioPlaybackIdentity | null
+    cursor: (() => AudioPlaybackCursor) | null
+    completed: boolean
+    operation: number
+    sentenceIndex: number
+    sentences: string[]
+    sentenceDurations: number[]
+    speak: (() => void) | null
+    resumeLocal: (() => boolean) | null
+    seekLocal: ((seconds: number) => boolean) | null
   }
-  function getFetchClient(): (input: string | URL | Request, init?: RequestInit) => Promise<Response> {
-    if (deps.fetchClient) return deps.fetchClient
-    return async (input, init) => {
-      let url = typeof input === 'string' ? input : input.toString()
-      let baseUrl: string
-      try {
-        if (process.env.API_INTERNAL_URL) {
-          baseUrl = process.env.API_INTERNAL_URL
-        } else {
-          const config = useRuntimeConfig()
-          baseUrl = (config?.public?.apiBaseUrl as string | undefined)?.trim() || ''
-        }
-      } catch {
-        baseUrl = ''
-      }
-      if (url.startsWith('/')) {
-        url = `${baseUrl}${url}`
-      }
+  let session: Session | null = null
+  const account = () => deps.getAccount?.() ?? { accountId: null, sessionGeneration: 0 }
+  const speechSynth = () => deps.speechSynthesis ?? (isClient ? window.speechSynthesis : null) ?? null
+  const current = (value: Session) => !disposed && session === value
+    && value.account.accountId === account().accountId && value.account.sessionGeneration === account().sessionGeneration
+  const intendsPlay = () => !!session && current(session) && session.intent
+  const media = createAudioPlaybackMedia({
+    createAudio: () => deps.createAudio?.() ?? (isClient ? new Audio() : null),
+    speed: () => speed.value, volume: () => volume.value, intendsPlay,
+    onTime: (time, total) => { currentTime.value = time; duration.value = total },
+    onBlocked: () => { if (session) session.intent = false; playing.value = false },
+  })
 
-      const headers = new Headers(init?.headers || {})
-      try {
-        const authStore = useAuthStore()
-        const token = authStore?.token
-        if (token && !headers.has('Authorization')) {
-          headers.set('Authorization', `Bearer ${token}`)
-        }
-      } catch {
-        // Outside store or unauthenticated
-      }
+  // Resolve Nuxt-bound dependencies during setup, never for an injected transport.
+  let baseUrl = ''
+  let auth: { token: string | null } | null = null
+  if (!deps.fetchClient) {
+    try { baseUrl = process.env.API_INTERNAL_URL || String(useRuntimeConfig().public.apiBaseUrl || '').trim() } catch { /* Relative backend routes are the default. */ }
+    try { auth = useAuthStore() } catch { /* Pure composable consumers inject their transport. */ }
+  }
+  const fetchClient = deps.fetchClient ?? ((input: RequestInfo | URL, init?: RequestInit) => {
+    const headers = new Headers(init?.headers)
+    if (auth?.token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${auth.token}`)
+    const url = typeof input === 'string' && input.startsWith('/') ? `${baseUrl}${input}` : input
+    return globalThis.fetch(url, { ...init, headers })
+  })
+  const getCache = () => deps.cache ?? (cacheInstance ??= createSliceAudioCache(createIdbBackend()))
+  const getEngine = () => deps.engine ?? (engineInstance ??= createWorkerEngine())
 
-      return globalThis.fetch(url, {
-        ...init,
-        headers,
-      })
+  function unavailable(): void {
+    persistenceAvailable.value = false
+    if (!noticeSent) { noticeSent = true; deps.onPersistenceUnavailable?.() }
+  }
+
+  function save(value = session, completed = false): void {
+    if (!value || !current(value) || !value.account.accountId || !value.identity || !value.cursor || !persistenceAvailable.value) return
+    if (!progress.save(value.identity, value.cursor(), completed || value.completed)) unavailable()
+  }
+
+  function checkpoint(value: Session): AudioPlaybackCheckpoint | null {
+    if (!value.account.accountId || !value.identity || value.reason !== 'play' || !persistenceAvailable.value) return null
+    const result = progress.read(value.identity)
+    if (!result.available) unavailable()
+    return result.checkpoint?.completed ? null : result.checkpoint
+  }
+
+  function stopTicker(): void {
+    clearInterval(systemTicker ?? undefined)
+    systemTicker = null
+  }
+
+  function retire(): void {
+    const previous = session
+    session = null
+    previous?.controller.abort()
+    if (previous) previous.operation++
+    stopTicker()
+    speechSynth()?.cancel()
+    utterance = null
+    media.retire()
+    if (previous) (deps.engine ?? engineInstance)?.cancel?.()
+    playing.value = false
+    synthIndex.value = 0
+    synthTotal.value = 0
+    targetBufferCount.value = 0
+    downloadProgress.value = 0
+    device.value = null
+  }
+
+  function resetSource(): void {
+    save()
+    retire()
+    lastSource = null
+    status.value = 'idle'
+    currentTime.value = 0
+    duration.value = 0
+    restoredProgress.value = false
+    errorMessage.value = null
+    errorInfo.value = null
+  }
+
+  function setEnginePreference(preference: AudioEnginePreference): void {
+    if (!writeAudioPreference(preference, storage)) unavailable()
+    enginePreference.value = preference
+    errorMessage.value = null
+    errorInfo.value = null
+    if (preference === engineMode.value) return
+    save()
+    if (preference === 'auto' && session && engineMode.value === 'system'
+      && filterSystemVoicesForLanguage(systemVoices.value, session.source.language).length) return
+    transitionFrom = engineMode.value
+    if (preference !== 'auto') pendingReason = 'engine-change'
+    retire()
+    if (preference !== 'auto') engineMode.value = preference
+    status.value = 'idle'
+    currentTime.value = 0
+    duration.value = 0
+    restoredProgress.value = false
+  }
+
+  function storeVoice(key: string, voiceId: string): void {
+    try { storage?.setItem(key, voiceId) } catch { unavailable() }
+  }
+
+  function changeVoice(): void {
+    save()
+    pendingReason = 'voice-change'
+    retire()
+    status.value = 'idle'
+    restoredProgress.value = false
+  }
+
+  function setVoice(voiceId: string): void {
+    if (voiceId === selectedVoice.value) return
+    changeVoice()
+    selectedVoice.value = voiceId
+    storeVoice(`${AUDIO_VOICE_STORAGE_KEY}_${voiceId.startsWith('vi-') ? 'vi' : 'en'}`, voiceId)
+    storeVoice(AUDIO_VOICE_STORAGE_KEY, voiceId)
+  }
+
+  function setSystemVoice(voiceId: string): void {
+    if (voiceId === selectedSystemVoice.value) return
+    changeVoice()
+    selectedSystemVoice.value = voiceId
+    storeVoice(AUDIO_SYSTEM_VOICE_STORAGE_KEY, voiceId)
+  }
+
+  async function fetchQuota(value?: Session): Promise<AudioQuotaInfo | null> {
+    const admission = { ...account() }
+    try {
+      const response = await fetchClient('/api/v1/library/audio/quota', { signal: value?.controller.signal })
+      if (!response.ok) {
+        if (response.status >= 400 && response.status < 500) {
+          throw Object.assign(new Error(`Cloud audio quota failed (${response.status})`), { status: response.status })
+        }
+        return null
+      }
+      const quota: unknown = await response.json()
+      if (!quota || typeof quota !== 'object' || !('monthlyLimit' in quota) || !('usedCharacters' in quota)
+        || !('remainingCharacters' in quota) || !('isNearLimit' in quota) || !('isExhausted' in quota)
+        || typeof quota.monthlyLimit !== 'number' || !Number.isFinite(quota.monthlyLimit) || quota.monthlyLimit < 0
+        || typeof quota.usedCharacters !== 'number' || !Number.isFinite(quota.usedCharacters) || quota.usedCharacters < 0
+        || typeof quota.remainingCharacters !== 'number' || !Number.isFinite(quota.remainingCharacters) || quota.remainingCharacters < 0
+        || typeof quota.isNearLimit !== 'boolean' || typeof quota.isExhausted !== 'boolean') throw new Error('Invalid Cloud audio quota response')
+      if (disposed || (value && !current(value)) || admission.accountId !== account().accountId
+        || admission.sessionGeneration !== account().sessionGeneration) return null
+      const validated: AudioQuotaInfo = {
+        monthlyLimit: quota.monthlyLimit, usedCharacters: quota.usedCharacters, remainingCharacters: quota.remainingCharacters,
+        isNearLimit: quota.isNearLimit, isExhausted: quota.isExhausted,
+      }
+      audioQuota.value = validated
+      return validated
+    } catch (error) {
+      if (error && typeof error === 'object' && 'status' in error
+        && typeof error.status === 'number' && error.status >= 400 && error.status < 500) throw error
+      if (!(error instanceof DOMException && error.name === 'AbortError')) console.warn('[useSliceAudio] Could not read Cloud quota', error)
+      return null
     }
   }
 
-  function getCache(): SliceAudioCache | null {
-    if (deps.cache) return deps.cache
-    if (!isClient) return null
-    cacheInstance ??= createSliceAudioCache(createIdbBackend())
-    return cacheInstance
+  function finish(value: Session): void {
+    if (!current(value) || !value.intent || value.completed) return
+    value.completed = true
+    const completedCursor = value.cursor?.()
+    if (completedCursor) value.cursor = () => completedCursor
+    save(value, true)
+    value.intent = false
+    value.operation++
+    stopTicker()
+    media.retire()
+    playing.value = false
+    currentTime.value = duration.value
+    const operation = value.operation
+    deps.onSliceEnded?.(() => current(value) && value.operation === operation)
   }
 
-  function ensureAudio(): HTMLAudioElement | null {
-    if (!audio.value) {
-      if (deps.createAudio) audio.value = deps.createAudio()
-      else if (isClient) audio.value = new Audio()
-      else return null
-      const el = audio.value
-      el.addEventListener('timeupdate', () => {
-        if (!isSilentCarrierActive && engineMode.value !== 'system') {
-          currentTime.value = el.currentTime
-        }
-      })
-      el.addEventListener('durationchange', () => {
-        if (!isSilentCarrierActive && engineMode.value !== 'system') {
-          duration.value = Number.isFinite(el.duration) ? el.duration : 0
-        }
-      })
-      el.addEventListener('play', () => { playing.value = true })
-      el.addEventListener('pause', () => { playing.value = false })
-      el.addEventListener('ended', () => {
-        if (isSilentCarrierActive || isUserPaused || engineMode.value === 'system') {
-          return
-        }
-        if (onChunkEndedCallback) {
-          onChunkEndedCallback()
-        } else {
-          playing.value = false
-          deps.onSliceEnded?.()
-        }
-      })
-      el.playbackRate = speed.value
-      el.volume = volume.value
+  function showError(error: unknown, value: Session): void {
+    if (!current(value)) return
+    value.preparing = false
+    value.intent = false
+    playing.value = false
+    status.value = 'error'
+    const info = categorizeAudioError(error, engineMode.value)
+    errorMessage.value = info.rawMessage
+    errorInfo.value = info
+    media.pause()
+    stopTicker()
+  }
+
+  function ready(value: Session, restored: boolean): void {
+    if (!current(value)) return
+    status.value = 'ready'
+    value.restartPending = false
+    restoredProgress.value = restored
+    // This also converts a paused streaming cursor at complete-file handoff.
+    save(value)
+  }
+
+  function selectIdentity(value: Session, engine: AudioEngine, voiceId: string, hash: string): void {
+    value.identity = { accountId: value.account.accountId ?? '', chunkId: value.source.chunkId, engine, voiceId, contentHash: hash }
+    value.cursor = null
+  }
+
+  function startSystem(value: Session, voice: SystemVoiceOption, hash: string): void {
+    const synth = speechSynth()
+    if (!synth || typeof SpeechSynthesisUtterance === 'undefined') throw new Error('System speech is unavailable')
+    selectedSystemVoice.value = voice.id
+    selectIdentity(value, 'system', voice.id, hash)
+    const saved = checkpoint(value)?.cursor
+    value.sentenceIndex = saved?.kind === 'system' && saved.sentenceIndex < value.sentences.length ? saved.sentenceIndex : 0
+    restoredProgress.value = value.sentenceIndex > 0
+    value.sentenceDurations = value.sentences.map(text => Math.max(1, text.trim().length / 16 / Math.max(0.5, Math.min(2, speed.value))))
+    duration.value = value.sentenceDurations.reduce((sum, seconds) => sum + seconds, 0)
+    const elapsed = () => value.sentenceDurations.slice(0, value.sentenceIndex).reduce((sum, seconds) => sum + seconds, 0)
+    currentTime.value = elapsed()
+    value.cursor = () => ({ kind: 'system', sentenceIndex: Math.min(value.sentenceIndex, value.sentences.length - 1) })
+    value.preparing = false
+    status.value = 'ready'
+    value.speak = () => {
+      if (!current(value) || !value.intent) return
+      stopTicker()
+      const operation = ++value.operation
+      synth.cancel()
+      const valid = () => current(value) && value.operation === operation && value.intent
+      const index = value.sentenceIndex
+      const text = value.sentences[index]
+      if (!text) { finish(value); return }
+      const speech = new SpeechSynthesisUtterance(text)
+      utterance = speech
+      speech.voice = synth.getVoices().find(item => (item.voiceURI || item.name) === voice.id) ?? null
+      speech.lang = voice.lang
+      speech.rate = Math.max(0.5, Math.min(2, speed.value))
+      speech.volume = volume.value
+      speech.onstart = () => {
+        if (!valid()) return
+        playing.value = true
+        const startedAt = performance.now()
+        systemTicker = setInterval(() => {
+          if (!valid()) return
+          currentTime.value = elapsed() + Math.min(value.sentenceDurations[index] ?? 0, (performance.now() - startedAt) / 1000)
+        }, 200)
+      }
+      speech.onpause = () => { if (valid()) stopTicker() }
+      speech.onresume = () => { if (valid()) playing.value = true }
+      speech.onend = () => {
+        if (!valid()) return
+        stopTicker()
+        value.sentenceIndex++
+        if (value.sentenceIndex >= value.sentences.length) finish(value)
+        else { currentTime.value = elapsed(); save(value); value.speak?.() }
+      }
+      speech.onerror = event => {
+        if (!valid() || event.error === 'canceled' || event.error === 'interrupted') return
+        stopTicker()
+        value.operation++
+        media.retire()
+        void advance(value, new Error(event.error), 'system-failed')
+      }
+      media.mount('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=', { valid, carrier: true })
+      try {
+        synth.speak(speech)
+        if (valid()) playing.value = true
+      } catch (error) {
+        if (valid()) void advance(value, error, 'system-failed')
+      }
     }
-    return audio.value
+    value.speak()
   }
 
-  function setSource(blob: Blob, initialOffset = 0): void {
-    const el = ensureAudio()
-    if (!el) return
-    if (objectUrl) URL.revokeObjectURL(objectUrl)
-    objectUrl = URL.createObjectURL(blob)
-    el.src = objectUrl
-    el.playbackRate = speed.value
+  async function startCloud(value: Session, hash: string): Promise<void> {
+    const language = value.source.language?.toLowerCase().startsWith('vi') ? 'vi' : 'en'
+    const scoped = readStored(storage, `${AUDIO_VOICE_STORAGE_KEY}_${language}`)
+    const voiceId = resolveCloudVoiceForLanguage(value.source.language, selectedVoice.value || scoped)
+    selectedVoice.value = voiceId
+    selectIdentity(value, 'cloud', voiceId, hash)
+    const saved = checkpoint(value)?.cursor
+    const key = buildAudioKey(value.source.chunkId, voiceId, hash)
+    const cache = getCache()
+    let blob = await cache.get(key)
+    if (!current(value) || !value.intent) return
+    const cached = !!blob?.size
+    if (!cached) {
+      if (!audioQuota.value) await fetchQuota(value)
+      if (!current(value) || !value.intent) return
+      if (isNearQuota.value || isQuotaExhausted.value) {
+        throw Object.assign(new Error('QUOTA_EXHAUSTED'), { status: 429, quotaGuard: !isQuotaExhausted.value })
+      }
+      const response = await fetchClient(`/api/v1/library/chunks/${value.source.chunkId}/audio`, {
+        method: 'POST', signal: value.controller.signal, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voiceId, contentHash: hash, narrationScript: extractNarrationScript(value.source.markdown) }),
+      })
+      if (!current(value) || !value.intent) return
+      if (!response.ok) throw Object.assign(new Error(`Synthesis failed (${response.status})`), { status: response.status })
+      blob = await response.blob()
+      if (!current(value) || !value.intent) return
+      if (!blob.size) throw Object.assign(new Error('Cloud speech returned empty audio'), { status: 503 })
+      await cache.set(key, blob)
+      if (!current(value) || !value.intent) return
+    }
+    value.cursor = () => ({ kind: 'file', seconds: media.time() })
+    value.preparing = false
+    media.mount(blob!, {
+      valid: () => current(value), offset: cached && saved?.kind === 'file' ? saved.seconds : 0,
+      onReady: (_offset, restored) => ready(value, restored), onEnded: () => finish(value),
+      onError: error => { if (current(value) && value.intent) void advance(value, Object.assign(error, { status: 503 })) },
+    })
+    status.value = 'ready'
+  }
 
-    if (initialOffset > 0) {
-      const applyOffset = () => {
-        try {
-          el.currentTime = initialOffset
-        } catch {
-          // Ignored if media element prevents seeking
+  async function startDevice(value: Session, hash: string): Promise<void> {
+    const voice = resolveVoiceForLanguage(value.source.language)
+    selectIdentity(value, 'device', voice.id, hash)
+    value.localStarted = true
+    await playLocalAudio({
+      engine: getEngine, cache: getCache(), key: buildAudioKey(value.source.chunkId, voice.id, hash),
+      model: voice.model, sentences: value.sentences, checkpoint: checkpoint(value)?.cursor ?? null,
+      valid: () => current(value), intendsPlay: () => current(value) && value.intent,
+      mount: (blob, source) => { if (current(value)) media.mount(blob, source) }, time: media.time,
+      setCursor: read => { value.cursor = read },
+      setResume: resume => { value.resumeLocal = resume },
+      setSeek: seek => { value.seekLocal = seek },
+      onProgress: (generated, total, buffered) => { synthIndex.value = generated; synthTotal.value = total; targetBufferCount.value = buffered },
+      onDownload: percent => { downloadProgress.value = percent },
+      onDevice: resolved => { device.value = resolved },
+      onReady: restored => { value.preparing = false; ready(value, restored) },
+      onBuffering: () => { if (current(value)) status.value = 'loading' },
+      onCompleted: () => finish(value), onError: error => showError(error, value),
+    })
+  }
+
+  async function advance(value: Session, failure?: unknown, reason?: AudioFallbackReason): Promise<void> {
+    if (!current(value) || !value.intent) return
+    const from = engineMode.value
+    if (failure && !isDownstreamFailure(failure, from)) { showError(failure, value); return }
+    if (failure) {
+      save(value)
+      value.reason = 'fallback'
+      value.operation++
+      speechSynth()?.cancel()
+      media.retire()
+      playing.value = true
+      currentTime.value = 0
+      duration.value = 0
+      restoredProgress.value = false
+    }
+    const hash = value.contentHash
+    if (!current(value) || !value.intent) return
+    const candidates = engineCandidates(enginePreference.value)
+    let skippedReason = reason
+    for (const candidate of candidates) {
+      if (value.attempted.includes(candidate)) continue
+      value.attempted = [...value.attempted, candidate]
+      let voices: SystemVoiceOption[] = []
+      if (candidate === 'system') {
+        voices = await discoverSystemVoices(speechSynth(), value.source.language, value.controller.signal)
+        if (!current(value) || !value.intent) return
+        systemVoices.value = getAvailableSystemVoices(speechSynth())
+        if (!voices.length || typeof SpeechSynthesisUtterance === 'undefined') { skippedReason = 'voice-unavailable'; continue }
+      }
+      if (candidate === 'cloud' && (!navigator.onLine || isNearQuota.value || isQuotaExhausted.value)) {
+        skippedReason = navigator.onLine ? 'quota-exhausted' : 'offline'
+        if (isQuotaExhausted.value) deps.onQuotaExhausted?.()
+        continue
+      }
+      if (transitionFrom !== null) value.reason = transitionFrom !== candidate || value.restartPending ? 'engine-change' : 'play'
+      transitionFrom = null
+      engineMode.value = candidate
+      if (failure || skippedReason) deps.onFallback?.({ from, to: candidate, reason: skippedReason ?? downstreamFailureReason(failure, from) })
+      value.preparing = true
+      try {
+        if (candidate === 'system') {
+          const voice = voices.find(item => item.id === selectedSystemVoice.value) ?? voices[0]!
+          startSystem(value, voice, hash)
+        } else if (candidate === 'cloud') await startCloud(value, hash)
+        else await startDevice(value, hash)
+        return
+      } catch (error) {
+        if (!current(value) || !value.intent) return
+        if (!isDownstreamFailure(error, candidate)) { showError(error, value); return }
+        if (error && typeof error === 'object' && 'status' in error && error.status === 429
+          && !('quotaGuard' in error && error.quotaGuard)) {
+          deps.onQuotaExhausted?.()
+          if (audioQuota.value) audioQuota.value = { ...audioQuota.value, isExhausted: true }
         }
+        await advance(value, error, downstreamFailureReason(error, candidate))
+        return
       }
-      if (el.readyState >= 1) {
-        applyOffset()
-      } else {
-        el.addEventListener('loadedmetadata', applyOffset, { once: true })
-      }
+    }
+    showError(failure ?? new Error('No narration engine is available'), value)
+  }
+
+  async function loadAndPlay(source: NarrationSource, options: { autoplay?: boolean; reason?: AudioStartReason } = {}): Promise<void> {
+    save()
+    retire()
+    lastSource = { ...source }
+    errorMessage.value = null
+    errorInfo.value = null
+    restoredProgress.value = false
+    currentTime.value = 0
+    duration.value = 0
+    status.value = 'idle'
+    if (disposed || !isClient || !source.isAiFormatted || !source.markdown) return
+    if (options.autoplay === false) {
+      if (options.reason && options.reason !== 'play') pendingReason ??= options.reason
+      return
+    }
+    const script = extractNarrationScript(source.markdown)
+    if (!script) return
+    const value: Session = {
+      source: { ...source }, contentHash: '', account: { ...account() }, controller: new AbortController(), intent: true, preparing: true, localStarted: false,
+      attempted: [], reason: pendingReason ?? options.reason ?? 'play', restartPending: pendingReason !== null, identity: null, cursor: null, completed: false,
+      operation: 0, sentenceIndex: 0, sentences: splitSentences(script), sentenceDurations: [], speak: null, resumeLocal: null, seekLocal: null,
+    }
+    pendingReason = null
+    session = value
+    status.value = 'loading'
+    playing.value = true
+    try {
+      value.contentHash = await computeContentHash(script)
+      if (current(value) && value.intent) await advance(value)
+    } catch (error) {
+      if (current(value) && value.intent && !(error instanceof DOMException && error.name === 'AbortError')) showError(error, value)
     }
   }
 
   async function play(): Promise<void> {
-    isUserPaused = false
-    if (engineMode.value === 'system') {
-      isSystemStopped = false
-      const synth = getSpeechSynth()
-      if (synth) {
-        if (resumeSystemSpeech) {
-          startSilentCarrier()
-          resumeSystemSpeech()
-          playing.value = true
-          return
-        }
-        if (activeUtterance) {
-          startSilentCarrier()
-          synth.speak(activeUtterance)
-          playing.value = true
-          return
-        }
-      }
+    const value = session
+    if (!value || !current(value) || value.completed || status.value === 'error') {
+      if (lastSource) await loadAndPlay(lastSource, { reason: value?.completed || status.value === 'error' ? 'recovery' : 'play' })
+      return
     }
-    const el = ensureAudio()
-    if (!el) return
-    try {
-      if (el.ended || (el.duration > 0 && el.currentTime >= el.duration)) {
-        el.currentTime = 0
-      }
-      await el.play()
-    }
-    catch {
-      // Autoplay rejections are non-fatal; the user can press play again.
+    value.operation++
+    value.intent = true
+    playing.value = true
+    if (engineMode.value === 'system') value.speak?.()
+    else {
+      if (value.resumeLocal?.()) return
+      const element = media.element()
+      if (element?.ended || (element && element.duration > 0 && element.currentTime >= element.duration)) media.seek(0)
+      await media.play()
     }
   }
 
   function pause(): void {
-    isUserPaused = true
-    cancelWaitingForChunk?.()
-    if (engineMode.value === 'system') {
-      stopSystemTimeTicker()
-      isSystemStopped = true
-      const synth = getSpeechSynth()
-      if (synth) {
-        synth.cancel()
+    deps.onPause?.()
+    const value = session
+    save(value)
+    if (value) {
+      value.intent = false
+      value.operation++
+      if (value.preparing && !value.localStarted) {
+        if (value.reason !== 'play') pendingReason = value.reason
+        retire()
+        status.value = 'ready'
       }
-      stopSilentCarrier()
     }
-    audio.value?.pause()
+    stopTicker()
+    if (engineMode.value === 'system') { speechSynth()?.cancel(); media.retire() }
+    else media.pause()
     playing.value = false
-    if (status.value === 'loading') {
-      status.value = 'ready'
-    }
-  }
-
-  function cancelWorkerSynthesis(): void {
-    if (engineInstance?.cancel) {
-      engineInstance.cancel()
-    }
-    if (deps.engine?.cancel) {
-      deps.engine.cancel()
-    }
-    synthIndex.value = 0
-    synthTotal.value = 0
-    targetBufferCount.value = 0
-  }
-
-  function setEngineMode(mode: AudioEngine): void {
-    engineMode.value = mode
-    activeCascadeTier.value = mode
-    errorMessage.value = null
-    errorInfo.value = null
-    if (mode === 'cloud' || mode === 'system') {
-      cancelWorkerSynthesis()
-    }
-    if (mode !== 'system') {
-      stopSystemTimeTicker()
-      isSystemStopped = true
-      const synth = getSpeechSynth()
-      if (synth) {
-        synth.cancel()
-        stopSilentCarrier()
-      }
-    }
-    if (isClient) {
-      localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, mode)
-    }
-  }
-
-  function setVoice(voiceId: string): void {
-    selectedVoice.value = voiceId
-    if (isClient) {
-      const isVi = voiceId.startsWith('vi-')
-      localStorage.setItem(`${AUDIO_VOICE_STORAGE_KEY}_${isVi ? 'vi' : 'en'}`, voiceId)
-      localStorage.setItem(AUDIO_VOICE_STORAGE_KEY, voiceId)
-    }
-  }
-
-  function setSystemVoice(voiceId: string): void {
-    selectedSystemVoice.value = voiceId
-    if (isClient) {
-      localStorage.setItem(AUDIO_SYSTEM_VOICE_STORAGE_KEY, voiceId)
-    }
-  }
-
-  async function fetchQuota(): Promise<AudioQuotaInfo | null> {
-    try {
-      const client = getFetchClient()
-      const res = await client('/api/v1/library/audio/quota')
-      if (res.ok) {
-        const data = await res.json() as AudioQuotaInfo
-        audioQuota.value = data
-        if (data.isNearLimit || data.isExhausted) {
-          if (engineMode.value === 'cloud') {
-            setEngineMode('device')
-          }
-        }
-        return data
-      }
-    } catch {
-      // Non-fatal
-    }
-    return null
-  }
-
-  async function synthesizeOnSystem(
-    source: NarrationSource,
-    script: string,
-    contentHash: string,
-    cache: SliceAudioCache,
-    autoPlay = true,
-    initialOffset = 0,
-  ): Promise<void> {
-    const synth = getSpeechSynth()
-    if (!synth) {
-      engineMode.value = 'cloud'
-      activeCascadeTier.value = 'cloud'
-      if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
-      deps.onFallbackToCloud?.()
-      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, initialOffset)
-      return
-    }
-
-    synth.cancel()
-    loadSystemVoices()
-    const matching = filterSystemVoicesForLanguage(systemVoices.value, source.language)
-    if (matching.length === 0) {
-      engineMode.value = 'cloud'
-      activeCascadeTier.value = 'cloud'
-      if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
-      deps.onFallbackToCloud?.()
-      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, initialOffset)
-      return
-    }
-
-    const matched = matching.find(v => v.id === selectedSystemVoice.value) || matching[0]
-    if (!matched) {
-      engineMode.value = 'cloud'
-      activeCascadeTier.value = 'cloud'
-      if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
-      deps.onFallbackToCloud?.()
-      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, initialOffset)
-      return
-    }
-    selectedSystemVoice.value = matched.id
-    activeCascadeTier.value = 'system'
-
-    const UtteranceCtor = typeof SpeechSynthesisUtterance !== 'undefined'
-      ? SpeechSynthesisUtterance
-      : (typeof globalThis !== 'undefined' && 'SpeechSynthesisUtterance' in globalThis
-          ? (globalThis.SpeechSynthesisUtterance as typeof SpeechSynthesisUtterance)
-          : null)
-    if (!UtteranceCtor) {
-      engineMode.value = 'cloud'
-      activeCascadeTier.value = 'cloud'
-      if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
-      deps.onFallbackToCloud?.()
-      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, initialOffset)
-      return
-    }
-
-    const split = splitSentences(script)
-    systemSentences = split.length > 0 ? split : [script.trim()].filter(Boolean)
-    if (systemSentences.length === 0) {
-      status.value = 'ready'
-      currentTime.value = 0
-      duration.value = 0
-      playing.value = false
-      return
-    }
-
-    systemSentenceDurations = computeSystemSentenceDurations(systemSentences, speed.value)
-    duration.value = systemSentenceDurations.reduce((a, b) => a + b, 0)
-
-    let startSentenceIndex = 0
-    if (initialOffset > 0 && duration.value > 0) {
-      let acc = 0
-      for (let i = 0; i < systemSentenceDurations.length; i++) {
-        const dur = systemSentenceDurations[i]
-        if (typeof dur === 'number') {
-          if (acc + dur > initialOffset || i === systemSentenceDurations.length - 1) {
-            startSentenceIndex = i
-            break
-          }
-          acc += dur
-        }
-      }
-    }
-
-    systemSentenceIndex = startSentenceIndex
-    isSystemStopped = false
-    activeKey = `system:${source.chunkId}:${matched.id}:${contentHash}`
-    status.value = 'ready'
-    currentTime.value = initialOffset
-
-    function speakSentence(idx: number): void {
-      if (isSystemStopped || idx >= systemSentences.length) {
-        if (idx >= systemSentences.length) {
-          playing.value = false
-          stopSystemTimeTicker()
-          stopSilentCarrier()
-          deps.onSliceEnded?.()
-        }
-        return
-      }
-      if (!UtteranceCtor || !synth || !matched) {
-        return
-      }
-
-      const text = systemSentences[idx]
-      if (typeof text !== 'string') {
-        return
-      }
-      const utterance = new UtteranceCtor(text)
-      const allRaw = synth.getVoices()
-      const actualVoice = allRaw ? allRaw.find(v => (v.voiceURI || v.name) === matched.id) : undefined
-      if (actualVoice) {
-        utterance.voice = actualVoice
-      }
-      utterance.lang = matched.lang
-      utterance.rate = Math.max(0.5, Math.min(2.0, speed.value))
-      utterance.volume = Math.max(0, Math.min(1.0, volume.value))
-      activeUtterance = utterance
-
-      utterance.onstart = () => {
-        playing.value = true
-        status.value = 'ready'
-        startSystemTimeTicker(idx)
-      }
-      utterance.onpause = () => {
-        playing.value = false
-        stopSystemTimeTicker()
-      }
-      utterance.onresume = () => {
-        playing.value = true
-        startSystemTimeTicker(idx)
-      }
-      utterance.onend = () => {
-        stopSystemTimeTicker()
-        if (isSystemStopped || isUserPaused) return
-        systemSentenceIndex = idx + 1
-        if (systemSentenceIndex < systemSentences.length) {
-          speakSentence(systemSentenceIndex)
-        } else {
-          playing.value = false
-          currentTime.value = duration.value
-          stopSilentCarrier()
-          deps.onSliceEnded?.()
-        }
-      }
-      utterance.onerror = async (e) => {
-        stopSystemTimeTicker()
-        if (e.error === 'canceled' || e.error === 'interrupted') return
-        playing.value = false
-        stopSilentCarrier()
-        isSystemStopped = true
-
-        const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
-        if (isOnline && !isQuotaExhausted.value) {
-          engineMode.value = 'cloud'
-          activeCascadeTier.value = 'cloud'
-          if (isClient) localStorage.setItem(AUDIO_ENGINE_STORAGE_KEY, 'cloud')
-          deps.onFallbackToCloud?.()
-          await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, currentTime.value)
-          return
-        }
-
-        status.value = 'error'
-        const info = categorizeAudioError(new Error(`System TTS Error: ${e.error}`), 'system')
-        errorMessage.value = info.rawMessage
-        errorInfo.value = info
-      }
-
-      startSilentCarrier()
-      synth.speak(utterance)
-      playing.value = true
-    }
-
-    resumeSystemSpeech = () => {
-      speakSentence(systemSentenceIndex)
-    }
-
-    if (autoPlay) {
-      speakSentence(startSentenceIndex)
-    }
-  }
-
-  async function synthesizeOnCloud(
-    source: NarrationSource,
-    script: string,
-    contentHash: string,
-    cache: SliceAudioCache,
-    autoPlay = true,
-    initialOffset = 0,
-  ): Promise<void> {
-    activeCascadeTier.value = 'cloud'
-    const langKey = (source.language || '').toLowerCase().startsWith('vi') ? 'vi' : 'en'
-    const scopedVoice = isClient ? localStorage.getItem(`${AUDIO_VOICE_STORAGE_KEY}_${langKey}`) : null
-    const requestedVoice = selectedVoice.value || scopedVoice
-    const voiceId = resolveCloudVoiceForLanguage(source.language, requestedVoice)
-    selectedVoice.value = voiceId
-    const key = buildAudioKey(source.chunkId, voiceId, contentHash)
-    activeKey = key
-
-    // Cache hit in browser IndexedDB
-    const cached = await cache.get(key)
-    if (cached) {
-      setSource(cached, initialOffset)
-      status.value = 'ready'
-      if (autoPlay) {
-        await play()
-      }
-      return
-    }
-
-    // Cache miss -> Fetch from backend proxy
-    status.value = 'loading'
-    downloadProgress.value = 0
-
-    try {
-      const client = getFetchClient()
-      const response = await client(`/api/v1/library/chunks/${source.chunkId}/audio`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          voiceId,
-          contentHash,
-          narrationScript: script,
-        }),
-      })
-
-      if (response.status === 429) {
-        deps.onQuotaExhausted?.()
-        setEngineMode('device')
-        if (audioQuota.value) {
-          audioQuota.value.isExhausted = true
-        }
-        const info = categorizeAudioError(new Error('QUOTA_EXHAUSTED'), 'cloud')
-        errorMessage.value = 'QUOTA_EXHAUSTED'
-        errorInfo.value = info
-        // Automatic fallback to On-Device Web Worker
-        await synthesizeOnDevice(source, script, contentHash, cache, autoPlay, initialOffset)
-        return
-      }
-
-      if (!response.ok) {
-        status.value = 'error'
-        const info = categorizeAudioError(new Error(`Synthesis failed (${response.status})`), 'cloud')
-        errorMessage.value = info.rawMessage
-        errorInfo.value = info
-        return
-      }
-      const blob = await response.blob()
-      if (activeKey !== key) return
-
-      await cache.set(key, blob)
-      setSource(blob, initialOffset)
-      status.value = 'ready'
-      if (autoPlay) {
-        await play()
-      }
-    } catch (err) {
-      status.value = 'error'
-      const info = categorizeAudioError(err, 'cloud')
-      errorMessage.value = info.rawMessage
-      errorInfo.value = info
-    }
-  }
-
-  async function loadAndPlay(source: NarrationSource, autoPlay = true, initialOffset = 0): Promise<void> {
-    errorMessage.value = null
-    errorInfo.value = null
-    device.value = null
-    isUserPaused = !autoPlay
-    const cache = getCache()
-    if (!source.isAiFormatted || !source.markdown || !cache) return
-    const script = extractNarrationScript(source.markdown)
-    if (!script) return
-
-    const contentHash = await computeContentHash(script)
-    cancelWorkerSynthesis()
-
-    const manualStored = isClient ? (localStorage.getItem(AUDIO_ENGINE_STORAGE_KEY) as AudioEngine | null) : null
-    const effectiveEngine = resolveCascadedEngine({
-      manualOverride: deps.defaultEngine || manualStored,
-      sliceLanguage: source.language,
-      availableSystemVoices: systemVoices.value,
-      isQuotaExhausted: isQuotaExhausted.value,
-      hasDeviceEngineOnly: !!(deps.engine && !deps.fetchClient),
-    })
-    activeCascadeTier.value = effectiveEngine
-    engineMode.value = effectiveEngine
-
-    if (effectiveEngine === 'system') {
-      await synthesizeOnSystem(source, script, contentHash, cache, autoPlay, initialOffset)
-    } else if (effectiveEngine === 'cloud') {
-      await synthesizeOnCloud(source, script, contentHash, cache, autoPlay, initialOffset)
-    } else {
-      await synthesizeOnDevice(source, script, contentHash, cache, autoPlay, initialOffset)
-    }
-  }
-
-  async function synthesizeOnDevice(
-    source: NarrationSource,
-    script: string,
-    contentHash: string,
-    cache: SliceAudioCache,
-    autoPlay = true,
-    initialOffset = 0,
-  ): Promise<void> {
-    const engine = getEngine()
-    if (!engine) return
-
-    const voice = resolveVoiceForLanguage(source.language)
-    const key = buildAudioKey(source.chunkId, voice.id, contentHash)
-    activeKey = key
-
-    // Cache hit
-    const cached = await cache.get(key)
-    if (cached) {
-      setSource(cached, initialOffset)
-      status.value = 'ready'
-      if (autoPlay) {
-        await play()
-      }
-      return
-    }
-
-    // Cache miss -> synthesize via worker (check partial cache first)
-    status.value = 'loading'
-    const sentences = splitSentences(script)
-    let target = Math.min(2, sentences.length)
-
-    let buffers: Float32Array[] = []
-    let sampleRate = 16000
-
-    const cachedPartial = cache.getPartial ? await cache.getPartial(key) : undefined
-    if (
-      cachedPartial
-      && cachedPartial.total === sentences.length
-      && cachedPartial.chunks.length > 0
-      && cachedPartial.chunks.length < sentences.length
-    ) {
-      buffers = [...cachedPartial.chunks]
-      sampleRate = cachedPartial.sampleRate
-      synthIndex.value = buffers.length
-      target = Math.max(target, buffers.length)
-    } else {
-      synthIndex.value = 0
-    }
-    const startIndex = buffers.length
-    targetBufferCount.value = target
-    synthTotal.value = sentences.length
-    let currentPlayingIndex = 0
-    let isPlayingPreRoll = false
-    let isStreaming = true
-    let isWaitingForNextChunk = false
-    cancelWaitingForChunk = () => {
-      isWaitingForNextChunk = false
-    }
-    const playPreRoll = (count = target) => {
-      if (activeKey !== key || buffers.length < count) return
-      isPlayingPreRoll = true
-      currentPlayingIndex = count - 1
-      const preRollWav = encodeWav(concatFloat32(buffers.slice(0, count)), sampleRate)
-      setSource(preRollWav, initialOffset)
-      status.value = 'ready'
-      if (autoPlay && !isUserPaused) {
-        void play()
-      }
-    }
-
-    const playChunk = (index: number, shouldPlay = playing.value) => {
-      if (activeKey !== key || index >= buffers.length) return
-      const chunk = buffers[index]
-      if (!chunk) return
-      isPlayingPreRoll = false
-      currentPlayingIndex = index
-      const chunkWav = encodeWav(chunk, sampleRate)
-      setSource(chunkWav)
-      status.value = 'ready'
-      if (shouldPlay && !isUserPaused) {
-        void play()
-      }
-    }
-
-    if (buffers.length >= target && !isPlayingPreRoll) {
-      playPreRoll(buffers.length)
-    }
-
-    onChunkEndedCallback = () => {
-      if (!isStreaming || isUserPaused) {
-        playing.value = false
-        return
-      }
-      if (currentPlayingIndex + 1 < buffers.length) {
-        isWaitingForNextChunk = false
-        isPlayingPreRoll = false
-        playChunk(currentPlayingIndex + 1, true)
-      } else {
-        isWaitingForNextChunk = true
-        status.value = 'loading'
-      }
-    }
-    try {
-      const remainingSentences = sentences.slice(startIndex)
-      if (remainingSentences.length > 0) {
-        await engine.synthesize(voice.model, remainingSentences, {
-          onProgress: (progress) => {
-            if (progress.stage === 'download' && progress.progress != null) {
-              downloadProgress.value = progress.progress
-            }
-          },
-          onChunk: (samples, sr) => {
-            sampleRate = sr
-            buffers.push(samples)
-            synthIndex.value = buffers.length
-            if (cache.savePartial) {
-              void cache.savePartial(key, {
-                chunks: buffers,
-                sampleRate,
-                total: sentences.length,
-              })
-            }
-
-            if (buffers.length === target && activeKey === key && !isPlayingPreRoll) {
-              playPreRoll()
-            } else if (isStreaming && isWaitingForNextChunk && !isUserPaused && currentPlayingIndex + 1 < buffers.length) {
-              isWaitingForNextChunk = false
-              playChunk(currentPlayingIndex + 1, true)
-            }
-          },
-          onDevice: (d) => {
-            device.value = d
-          },
-        }, startIndex)
-      }
-    } catch (error) {
-      const isCancelled = error instanceof Error && error.message === 'Synthesis cancelled'
-      if (isCancelled) {
-        if (cache.savePartial && buffers.length > 0 && buffers.length < sentences.length) {
-          await cache.savePartial(key, {
-            chunks: buffers,
-            sampleRate,
-            total: sentences.length,
-          })
-        }
-        return
-      }
-      console.error('[useSliceAudio] Device TTS Error (synthesizeOnDevice):', error)
-      onChunkEndedCallback = null
-      status.value = 'error'
-      const info = categorizeAudioError(error, 'device')
-      errorMessage.value = info.rawMessage
-      errorInfo.value = info
-      return
-    }
-    if (activeKey !== key || buffers.length < sentences.length) {
-      onChunkEndedCallback = null
-      return
-    }
-
-    if (buffers.length === 0) {
-      onChunkEndedCallback = null
-      status.value = 'error'
-      const info = categorizeAudioError(new Error('Synthesis returned empty audio buffer'), 'device')
-      errorMessage.value = info.rawMessage
-      errorInfo.value = info
-      return
-    }
-    isStreaming = false
-    onChunkEndedCallback = null
-    cancelWaitingForChunk = null
-    if (buffers.length === sentences.length) {
-      const complete = encodeWav(concatFloat32(buffers), sampleRate)
-      await cache.set(key, complete)
-      if (cache.deletePartial) {
-        await cache.deletePartial(key)
-      }
-
-      if (buffers.length > 1) {
-        const el = ensureAudio()
-        if (el) {
-          let offsetSec = 0
-          if (isPlayingPreRoll) {
-            offsetSec = el.currentTime
-          } else {
-            for (let i = 0; i < currentPlayingIndex; i++) {
-              const buf = buffers[i]
-              if (buf) {
-                offsetSec += buf.length / sampleRate
-              }
-            }
-            offsetSec += el.currentTime
-          }
-
-          const wasPlaying = playing.value
-          setSource(complete, offsetSec)
-          status.value = 'ready'
-          if (wasPlaying) {
-            void play()
-          }
-        }
-      } else {
-        status.value = 'ready'
-      }
-    }
-  }
-
-  function setSpeed(value: number): void {
-    speed.value = value
-    const el = ensureAudio()
-    if (el) el.playbackRate = value
-    if (engineMode.value === 'system' && activeUtterance) {
-      activeUtterance.rate = value
-    }
-  }
-
-  function setVolume(value: number): void {
-    const bounded = Math.max(0, Math.min(1.0, value))
-    volume.value = bounded
-    if (audio.value) audio.value.volume = bounded
-    if (engineMode.value === 'system' && activeUtterance) {
-      activeUtterance.volume = bounded
-    }
+    if (status.value === 'loading') status.value = 'ready'
   }
 
   function seek(time: number): void {
-    if (engineMode.value === 'system') {
-      if (systemSentences.length === 0) return
-
-      const targetTime = Math.max(0, Math.min(duration.value, time))
-      currentTime.value = targetTime
-
-      let accumulated = 0
-      let targetIndex = 0
-      for (let i = 0; i < systemSentenceDurations.length; i++) {
-        const dur = systemSentenceDurations[i]
-        if (typeof dur === 'number') {
-          if (accumulated + dur > targetTime || i === systemSentenceDurations.length - 1) {
-            targetIndex = i
-            break
-          }
-          accumulated += dur
-        }
-      }
-
-      systemSentenceIndex = targetIndex
-      if (playing.value && !isUserPaused) {
-        stopSystemTimeTicker()
-        const synth = getSpeechSynth()
-        if (synth) {
-          isSystemStopped = true
-          synth.cancel()
-          isSystemStopped = false
-        }
-        if (resumeSystemSpeech) {
-          resumeSystemSpeech()
-        }
-      }
+    const value = session
+    if (!value || !current(value) || !Number.isFinite(time)) return
+    value.operation++
+    if (engineMode.value !== 'system') {
+      if (value.seekLocal ? value.seekLocal(time) : media.seek(time)) save(value)
       return
     }
-
-    if (audio.value) audio.value.currentTime = time
+    const target = Math.max(0, Math.min(duration.value, time))
+    let elapsed = 0
+    value.sentenceIndex = value.sentences.length - 1
+    for (let index = 0; index < value.sentenceDurations.length; index++) {
+      const seconds = value.sentenceDurations[index]!
+      if (elapsed + seconds > target) { value.sentenceIndex = index; break }
+      elapsed += seconds
+    }
+    currentTime.value = target
+    stopTicker()
+    speechSynth()?.cancel()
+    if (value.intent) value.speak?.()
+    save(value)
   }
 
-  watch(speed, (value) => {
-    const el = ensureAudio()
-    if (el) el.playbackRate = value
-    if (engineMode.value === 'system' && systemSentences.length > 0) {
-      systemSentenceDurations = computeSystemSentenceDurations(systemSentences, value)
-      duration.value = systemSentenceDurations.reduce((a, b) => a + b, 0)
+  function setSpeed(value: number): void { speed.value = value; media.setSpeed(value); if (utterance) utterance.rate = value }
+  function setVolume(value: number): void { volume.value = Math.max(0, Math.min(1, value)); media.setVolume(volume.value); if (utterance) utterance.volume = volume.value }
+  const stopSpeedWatch = watch(speed, value => {
+    media.setSpeed(value)
+    if (session?.sentenceDurations.length) {
+      session.sentenceDurations = session.sentences.map(text => Math.max(1, text.trim().length / 16 / Math.max(0.5, Math.min(2, value))))
+      duration.value = session.sentenceDurations.reduce((sum, seconds) => sum + seconds, 0)
     }
   })
+  const stopAccountWatch = watch([() => account().accountId, () => account().sessionGeneration], () => {
+    // Admission already changed: never flush the outgoing session as the new account.
+    retire()
+    audioQuota.value = null
+    lastSource = null
+    pendingReason = null
+    transitionFrom = null
+    restoredProgress.value = false
+    persistenceAvailable.value = true
+    noticeSent = false
+    status.value = 'idle'
+    currentTime.value = 0
+    duration.value = 0
+  }, { flush: 'sync' })
+  const loadVoices = () => { systemVoices.value = getAvailableSystemVoices(speechSynth()) }
+  const hidden = () => { if (document.visibilityState === 'hidden') save() }
+  const pagehide = () => save()
+  const checkpointTimer = isClient ? setInterval(() => { if (intendsPlay()) save() }, AUDIO_PROGRESS_INTERVAL_MS) : null
+  function navigateTrack(callback: ((isCurrent: () => boolean) => void) | undefined): void {
+    const value = session
+    const operation = value?.operation
+    const { accountId, sessionGeneration } = account()
+    callback?.(() => {
+      const admission = account()
+      return !disposed && session === value && value?.operation === operation
+        && admission.accountId === accountId && admission.sessionGeneration === sessionGeneration
+    })
+  }
+
+  if (isClient) {
+    loadVoices()
+    speechSynth()?.addEventListener?.('voiceschanged', loadVoices)
+    document.addEventListener('visibilitychange', hidden)
+    window.addEventListener('pagehide', pagehide)
+    try {
+      navigator.mediaSession?.setActionHandler('play', () => { void play() })
+      navigator.mediaSession?.setActionHandler('pause', pause)
+      if (deps.onNextTrack) navigator.mediaSession?.setActionHandler('nexttrack', () => navigateTrack(deps.onNextTrack))
+      if (deps.onPreviousTrack) navigator.mediaSession?.setActionHandler('previoustrack', () => navigateTrack(deps.onPreviousTrack))
+    } catch { /* Browser support varies by action. */ }
+  }
 
   function dispose(): void {
-    stopSystemTimeTicker()
-    const engineToDispose = deps.engine ?? engineInstance
-    engineToDispose?.dispose()
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl)
-      objectUrl = null
+    if (disposed) return
+    save()
+    retire()
+    disposed = true
+    stopSpeedWatch()
+    stopAccountWatch()
+    clearInterval(checkpointTimer ?? undefined)
+    speechSynth()?.removeEventListener?.('voiceschanged', loadVoices)
+    if (isClient) {
+      document.removeEventListener('visibilitychange', hidden)
+      window.removeEventListener('pagehide', pagehide)
+      try {
+        for (const action of ['play', 'pause', 'nexttrack', 'previoustrack'] as const) navigator.mediaSession?.setActionHandler(action, null)
+      } catch { /* Browser support varies by action. */ }
     }
-    audio.value?.pause()
-    stopSilentCarrier()
-    const synth = getSpeechSynth()
-    if (synth) {
-      synth.cancel()
-    }
-    isSystemStopped = true
-    resumeSystemSpeech = null
-    systemSentences = []
-    systemSentenceDurations = []
-    systemSentenceIndex = 0
-    activeKey = null
-    activeUtterance = null
+    ;(deps.engine ?? engineInstance)?.dispose()
+    lastSource = null
     status.value = 'idle'
-    device.value = null
-    errorMessage.value = null
-    errorInfo.value = null
   }
-  if (getCurrentScope()) onScopeDispose(() => dispose())
+  if (getCurrentScope()) onScopeDispose(dispose)
 
   return {
-    status,
-    playing,
-    currentTime,
-    duration,
-    downloadProgress,
-    synthIndex,
-    synthTotal,
-    targetBufferCount,
-    errorMessage,
-    errorInfo,
-    device,
-    speed,
-    engineMode,
-    activeCascadeTier,
-    selectedVoice,
-    selectedSystemVoice,
-    systemVoices,
-    autoAdvance,
-    audioQuota,
-    isNearQuota,
-    isQuotaExhausted,
-    setEngineMode,
-    setVoice,
-    setSystemVoice,
-    fetchQuota,
-    loadAndPlay,
-    play,
-    pause,
-    setSpeed,
-    volume,
-    setVolume,
-    seek,
-    dispose,
-    playSliceTransitionChime,
-    updateMediaSessionMetadata,
+    status, playing, currentTime, duration, downloadProgress, synthIndex, synthTotal, targetBufferCount,
+    errorMessage, errorInfo, device, speed, enginePreference, engineMode, activeCascadeTier,
+    selectedVoice, selectedSystemVoice, systemVoices, autoAdvance, audioQuota, isNearQuota, isQuotaExhausted,
+    persistenceAvailable, restoredProgress, setEnginePreference, resetSource, setVoice, setSystemVoice,
+    fetchQuota, loadAndPlay, play, pause, setSpeed, volume, setVolume, seek, dispose,
+    playSliceTransitionChime, updateMediaSessionMetadata,
   }
 }
